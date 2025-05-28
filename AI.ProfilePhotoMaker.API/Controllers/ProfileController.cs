@@ -10,7 +10,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers;
 [Authorize]
 public class ProfileController : ControllerBase
 {
-
     private readonly IImageProcessingService _imageProcessingService;
 
     public ProfileController(IImageProcessingService imageProcessingService)
