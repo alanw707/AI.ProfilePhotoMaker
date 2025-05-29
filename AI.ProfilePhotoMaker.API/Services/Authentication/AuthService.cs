@@ -24,12 +24,17 @@ public class AuthService : IAuthService
             return new AuthResponseDto(false, "User already exists!", "", DateTime.MinValue);
         }
 
-        ApplicationUser user = new ApplicationUser(model.UserName, model.FirstName, model.LastName, model.Email);
+        ApplicationUser user = new ApplicationUser(model.UserName, model.Email, model.FirstName, model.LastName);
 
         var result = await _userManager.CreateAsync(user, model.Password);
         if (!result.Succeeded)
         {
-            return new AuthResponseDto(false, "User creation failed! Please check user details and try again.", "", DateTime.MinValue);
+            return new AuthResponseDto(
+                false,
+                $"User creation failed! Please check user details and try again. Reason: {string.Join("; ", result.Errors.Select(e => e.Description))}",
+                "",
+                DateTime.MinValue
+            );
         }
 
         return new AuthResponseDto(true, "User created successfully!", "", DateTime.MinValue);

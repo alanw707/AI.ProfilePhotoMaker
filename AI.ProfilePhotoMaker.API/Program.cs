@@ -113,7 +113,28 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigins",
+        builder =>
+        {
+            builder.WithOrigins("https://aiprofilephotomaker.com")
+                   .AllowAnyMethod()
+                   .AllowAnyHeader();
+        });
+
+     options.AddPolicy("AllowAll", builder =>
+    {
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+});
+
 var app = builder.Build();
+
+// In middleware pipeline
+app.UseCors("AllowAll");
 
 // Configure middleware
 if (app.Environment.IsDevelopment())
