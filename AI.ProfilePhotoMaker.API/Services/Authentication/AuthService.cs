@@ -1,7 +1,11 @@
-﻿using AI.ProfilePhotoMaker.API.Models;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Tokens;
 
 namespace AI.ProfilePhotoMaker.API.Services.Authentication;
 
@@ -63,6 +67,32 @@ public class AuthService : IAuthService
     private (string Token, DateTime Expiration) GenerateJwtToken(ApplicationUser user)
     {
         // Example dummy token and expiration
-        return ("dummy-jwt-token", DateTime.UtcNow.AddHours(1));
+        if (user.UserName != null)
+        {
+            var authClaims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Name, user.UserName),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new Claim(ClaimTypes.Email, user.Email ?? "")
+            };
+
+            var authSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(_configuration["JWT:Secret"] ?? throw new InvalidOperationException("Missing JWT Secret in config file"))
+            );
+
+            var expires = DateTime.UtcNow.AddHours(1);
+
+            var token = new JwtSecurityToken(
+                issuer: _configuration["JWT:ValidIssuer"],
+                audience: _configuration["JWT:ValidAudience"],
+                expires: expires,
+                claims: authClaims,
+                signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
+            );
+
+            return (new JwtSecurityTokenHandler().WriteToken(token), expires);
+        }
+
+        throw new InvalidOperationException("User name is null. Cannot generate JWT token.");
     }
 }
