@@ -1,4 +1,5 @@
 # Copilot Instructions for AI.ProfilePhotoMaker
+Always reference my project plan and coding guidelines when generating code or documentation. The project is an AI-powered profile photo generator with a .NET 8 Web API backend and an Angular frontend. Follow the structure and requirements outlined below.
 
 ## Project Overview
 This project is an AI-powered profile photo generator with a .NET 8 Web API backend and an Angular frontend. The backend handles authentication, user management, and image processing. The application will leverage a 3rd party AI service API Replicate.com with Flux AI Model
