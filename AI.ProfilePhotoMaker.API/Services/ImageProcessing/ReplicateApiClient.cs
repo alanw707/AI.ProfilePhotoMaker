@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using AI.ProfilePhotoMaker.API.Models;
+using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Models.Replicate;
 
 namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
@@ -400,5 +401,21 @@ public class ReplicateApiClient : IReplicateApiClient
         }
 
         return ethnicityDesc;
+    }
+
+    /// <summary>
+    /// Generates images using a DTO with all parameters
+    /// </summary>
+    /// <param name="request">The generate images request</param>
+    /// <returns>The prediction result URL</returns>
+    public async Task<string> GenerateImagesAsync(GenerateImagesRequestDto request)
+    {
+        var result = await GenerateImagesAsync(
+            request.TrainedModelVersion,
+            request.UserId,
+            request.Style,
+            request.UserInfo);
+
+        return result.Id ?? ""; // Return prediction ID
     }
 }

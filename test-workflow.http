@@ -1,0 +1,95 @@
+# AI.ProfilePhotoMaker API Testing Workflow
+# Run these requests in order to test the complete workflow
+
+### 1. Register a new user
+POST http://localhost:5035/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "TestPassword123!",
+  "firstName": "John",
+  "lastName": "Doe"
+}
+
+### 2. Login to get JWT token
+POST http://localhost:5035/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "TestPassword123!"
+}
+
+### Store the JWT token from step 2 response in a variable
+@token = {{login.response.body.token}}
+
+### 3. Check available styles (no auth required)
+GET http://localhost:5035/api/profile/styles
+
+### 4. Try to get profile (should return 404 - not found)
+GET http://localhost:5035/api/profile
+Authorization: Bearer {{token}}
+
+### 5. Create a user profile
+POST http://localhost:5035/api/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "firstName": "John",
+  "lastName": "Doe", 
+  "gender": "Male",
+  "ethnicity": "Caucasian"
+}
+
+### 6. Get the created profile
+GET http://localhost:5035/api/profile
+Authorization: Bearer {{token}}
+
+### 7. Update the profile
+PUT http://localhost:5035/api/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "firstName": "John",
+  "lastName": "Smith",
+  "gender": "Male", 
+  "ethnicity": "Caucasian"
+}
+
+### 8. Upload images for training (multipart/form-data)
+# Note: This requires actual image files
+POST http://localhost:5035/api/profile/upload
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images"; filename="selfie1.jpg"
+Content-Type: image/jpeg
+
+< ./test-images/selfie1.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images"; filename="selfie2.jpg" 
+Content-Type: image/jpeg
+
+< ./test-images/selfie2.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 9. Generate images (requires trained model - will fail without Replicate setup)
+POST http://localhost:5035/api/profile/generate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "style": "Professional"
+}
+
+### 10. Get user's images
+GET http://localhost:5035/api/profile/images
+Authorization: Bearer {{token}}
+
+### 11. Delete profile (cleanup)
+DELETE http://localhost:5035/api/profile
+Authorization: Bearer {{token}}
