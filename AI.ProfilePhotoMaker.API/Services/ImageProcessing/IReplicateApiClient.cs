@@ -1,4 +1,5 @@
 using AI.ProfilePhotoMaker.API.Models;
+using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Models.Replicate;
 
 namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
@@ -43,4 +44,11 @@ public interface IReplicateApiClient
     /// <param name="predictionId">The prediction ID</param>
     /// <returns>The current prediction status</returns>
     Task<ReplicatePredictionResult> GetPredictionStatusAsync(string predictionId);
+
+    /// <summary>
+    /// Generates images using a DTO with all parameters
+    /// </summary>
+    /// <param name="request">The generate images request</param>
+    /// <returns>The prediction result URL</returns>
+    Task<string> GenerateImagesAsync(GenerateImagesRequestDto request);
 }
