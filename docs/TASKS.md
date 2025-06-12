@@ -58,19 +58,26 @@ This document tracks actionable tasks for the development of the AI.ProfilePhoto
 - [x] Add training status and progress tracking
 - [x] Serve uploaded images via static file hosting
 
+### Webhook Integration & Security
+- [x] Implement Replicate webhook signature validation
+- [x] Fix webhook payload reading before model binding
+- [x] Add comprehensive webhook debugging and logging
+- [x] Secure webhook endpoints with proper authentication
+
+### File Management
+- [x] Create training ZIP file listing endpoints
+- [x] Add training ZIP file deletion endpoints (individual and bulk)
+- [x] Implement secure file access validation
+
 ---
 
 ## 🔄 IN PROGRESS
 
 ### Style Management
-- [ ] Move hardcoded styles to database
-- [ ] Create style selection endpoints
-- [ ] Implement user style preferences
+- [x] Move hardcoded styles to database
+- [x] Create style selection endpoints
+- [x] Implement user style preferences
 - [ ] Add style preview functionality
-
-### Generated Image Management
-- [ ] Add image favoriting/rating system
-- [ ] Create image sharing functionality (optional)
 
 ### Database Associations & Cleanup
 - [x] Associate uploaded images with user profiles in database
@@ -148,4 +155,4 @@ This document tracks actionable tasks for the development of the AI.ProfilePhoto
 
 ---
 
-*Last updated: June 2023*
+*Last updated: December 12, 2025*

@@ -1,9 +1,11 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Models.Replicate;
+using Microsoft.EntityFrameworkCore;
 
 namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 
@@ -15,15 +17,18 @@ public class ReplicateApiClient : IReplicateApiClient
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
     private readonly ILogger<ReplicateApiClient> _logger;
+    private readonly ApplicationDbContext _context;
 
     public ReplicateApiClient(
         HttpClient httpClient,
         IConfiguration configuration,
-        ILogger<ReplicateApiClient> logger)
+        ILogger<ReplicateApiClient> logger,
+        ApplicationDbContext context)
     {
         _httpClient = httpClient;
         _configuration = configuration;
         _logger = logger;
+        _context = context;
 
         // Configure HTTP client
         _httpClient.BaseAddress = new Uri("https://api.replicate.com/v1/");
@@ -36,6 +41,99 @@ public class ReplicateApiClient : IReplicateApiClient
     }
 
     /// <summary>
+    /// Creates a new model in Replicate
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="modelName">The model name</param>
+    /// <param name="description">Optional model description</param>
+    /// <returns>The created model's full name (owner/model-name)</returns>
+    public async Task<string> CreateModelAsync(string userId, string modelName, string description = null)
+    {
+        try
+        {
+            var modelRequest = new
+            {
+                owner = "alanw707",
+                name = modelName,
+                description = description ?? $"Custom trained model for user {userId}",
+                visibility = "private",
+                hardware = "gpu-h100"
+            };
+
+            var content = new StringContent(JsonSerializer.Serialize(modelRequest), Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("models", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Replicate model creation failed: {ErrorContent}", errorContent);
+                throw new Exception($"Failed to create model: {response.StatusCode}, {errorContent}");
+            }
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("Model creation response: {Response}", responseJson);
+            
+            var modelResult = JsonSerializer.Deserialize<JsonElement>(
+                responseJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // Extract the full model name (owner/model-name) from the response
+            if (modelResult.TryGetProperty("name", out var nameProperty) &&
+                modelResult.TryGetProperty("owner", out var ownerProperty))
+            {
+                var extractedModelName = nameProperty.GetString() ?? throw new Exception("Model name not found in response");
+                var owner = ownerProperty.GetString() ?? throw new Exception("Owner not found in response");
+                var fullModelName = $"{owner}/{extractedModelName}";
+                _logger.LogInformation("Model created with full name: {FullModelName}", fullModelName);
+                return fullModelName;
+            }
+
+            // Fallback: try to get the URL and extract the name from it
+            if (modelResult.TryGetProperty("url", out var urlProperty))
+            {
+                var url = urlProperty.GetString();
+                if (!string.IsNullOrEmpty(url))
+                {
+                    // Extract model name from URL like https://api.replicate.com/v1/models/owner/model-name
+                    var urlParts = url.Split('/');
+                    if (urlParts.Length >= 2)
+                    {
+                        var owner = urlParts[^2];
+                        var name = urlParts[^1];
+                        var fullModelName = $"{owner}/{name}";
+                        _logger.LogInformation("Model created with name extracted from URL: {ModelName}", fullModelName);
+                        return fullModelName;
+                    }
+                }
+            }
+
+            // Log the full response for debugging
+            _logger.LogError("Unable to extract model name from response: {Response}", responseJson);
+            throw new Exception("Model name not found in response");
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
+        {
+            _logger.LogError(ex, "Replicate API authentication failed for user {UserId}", userId);
+            throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("429") || ex.Message.Contains("rate limit"))
+        {
+            _logger.LogWarning(ex, "Replicate API rate limit reached for user {UserId}", userId);
+            throw new InvalidOperationException("Replicate API rate limit reached. Please try again later.", ex);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("402") || ex.Message.Contains("payment"))
+        {
+            _logger.LogError(ex, "Replicate API payment required for user {UserId}", userId);
+            throw new InvalidOperationException("Replicate API payment required. Please check your billing.", ex);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating model for user {UserId}", userId);
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Creates a new training for a user's custom model
     /// </summary>
     /// <param name="userId">The user ID</param>
@@ -45,24 +143,32 @@ public class ReplicateApiClient : IReplicateApiClient
     {
         try
         {
+            // First, create the model to use as destination
+            var modelName = $"user-{userId}-{DateTime.UtcNow:yyyyMMddHHmmss}";
+            _logger.LogInformation("Creating model {ModelName} for user {UserId}", modelName, userId);
+            var destination = await CreateModelAsync(userId, modelName, $"Custom trained model for user {userId}");
+            
+            _logger.LogInformation("Model created successfully: {Destination}", destination);
+            _logger.LogInformation("Using destination for training: {Destination}", destination);
+
             var trainingRequest = new
             {
-                // Use Flux AI training model (replace with actual model ID)
-                version = _configuration["Replicate:FluxTrainingModelId"],
+                destination = destination,
                 input = new
                 {
-                    train_data = imageZipUrl,
-                    instance_name = $"user_{userId}_{DateTime.UtcNow:yyyyMMdd}",
-                    instance_prompt = "a photo of a person",
-                    use_face_detection = true,
-                    num_training_steps = 1500,
-                    webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/training-complete"
+                    input_images = imageZipUrl,
+                    trigger_word = $"user_{userId}",
+                    lora_type = "subject",
+                    training_steps = 1000
                 },
-                webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/training-complete"
+                webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/training-complete",
+                webhook_events_filter = new[] { "completed" }
             };
 
             var content = new StringContent(JsonSerializer.Serialize(trainingRequest), Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync("trainings", content);
+            var modelVersion = _configuration["Replicate:FluxTrainingModelId"];
+            var endpoint = $"models/replicate/fast-flux-trainer/versions/{modelVersion.Split(':')[1]}/trainings";
+            var response = await _httpClient.PostAsync(endpoint, content);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -82,6 +188,21 @@ public class ReplicateApiClient : IReplicateApiClient
             }
 
             return result;
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
+        {
+            _logger.LogError(ex, "Replicate API authentication failed for user {UserId}", userId);
+            throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("429") || ex.Message.Contains("rate limit"))
+        {
+            _logger.LogWarning(ex, "Replicate API rate limit reached for user {UserId}", userId);
+            throw new InvalidOperationException("Replicate API rate limit reached. Please try again later.", ex);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("402") || ex.Message.Contains("payment"))
+        {
+            _logger.LogError(ex, "Replicate API payment required for user {UserId}", userId);
+            throw new InvalidOperationException("Replicate API payment required. Please check your billing.", ex);
         }
         catch (Exception ex)
         {
@@ -120,6 +241,16 @@ public class ReplicateApiClient : IReplicateApiClient
 
             return result;
         }
+        catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
+        {
+            _logger.LogError(ex, "Replicate API authentication failed for training {TrainingId}", trainingId);
+            throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("404") || ex.Message.Contains("not found"))
+        {
+            _logger.LogWarning(ex, "Training {TrainingId} not found", trainingId);
+            throw new InvalidOperationException($"Training {trainingId} not found.", ex);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting training status for training {TrainingId}", trainingId);
@@ -143,9 +274,10 @@ public class ReplicateApiClient : IReplicateApiClient
     {
         try
         {
-            // Create style prompt based on user info
-            string stylePrompt = CreateFluxStylePrompt(style, userInfo);
-            string negativePrompt = CreateNegativePrompt(style);
+            // Get style template from database and create prompt
+            var stylePrompts = await GetStylePromptsFromDatabase(style);
+            string stylePrompt = CreateFluxStylePrompt(stylePrompts.PromptTemplate, userInfo);
+            string negativePrompt = stylePrompts.NegativePromptTemplate;
             
             var predictionRequest = new
             {
@@ -190,6 +322,21 @@ public class ReplicateApiClient : IReplicateApiClient
 
             return result;
         }
+        catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
+        {
+            _logger.LogError(ex, "Replicate API authentication failed for user {UserId} with style {Style}", userId, style);
+            throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("429") || ex.Message.Contains("rate limit"))
+        {
+            _logger.LogWarning(ex, "Replicate API rate limit reached for user {UserId} with style {Style}", userId, style);
+            throw new InvalidOperationException("Replicate API rate limit reached. Please try again later.", ex);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("402") || ex.Message.Contains("payment"))
+        {
+            _logger.LogError(ex, "Replicate API payment required for user {UserId} with style {Style}", userId, style);
+            throw new InvalidOperationException("Replicate API payment required. Please check your billing.", ex);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error generating images for user {UserId} with style {Style}", userId, style);
@@ -227,6 +374,16 @@ public class ReplicateApiClient : IReplicateApiClient
 
             return result;
         }
+        catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
+        {
+            _logger.LogError(ex, "Replicate API authentication failed for prediction {PredictionId}", predictionId);
+            throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("404") || ex.Message.Contains("not found"))
+        {
+            _logger.LogWarning(ex, "Prediction {PredictionId} not found", predictionId);
+            throw new InvalidOperationException($"Prediction {predictionId} not found.", ex);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting prediction status for prediction {PredictionId}", predictionId);
@@ -235,139 +392,48 @@ public class ReplicateApiClient : IReplicateApiClient
     }
 
     /// <summary>
-    /// Creates a comprehensive FLUX.1 style prompt based on user information and selected style
-    /// Following the FLUX.1 prompt guide structure: subject, style, composition, lighting, color palette, mood, technical details
+    /// Gets style prompts from database
     /// </summary>
-    private string CreateFluxStylePrompt(string style, UserInfo? userInfo)
+    private async Task<(string PromptTemplate, string NegativePromptTemplate)> GetStylePromptsFromDatabase(string styleName)
+    {
+        var style = await _context.Styles
+            .Where(s => s.Name.ToLower() == styleName.ToLower() && s.IsActive)
+            .Select(s => new { s.PromptTemplate, s.NegativePromptTemplate })
+            .FirstOrDefaultAsync();
+
+        if (style == null)
+        {
+            // Fallback to default professional style
+            var defaultStyle = await _context.Styles
+                .Where(s => s.Name.ToLower() == "professional" && s.IsActive)
+                .Select(s => new { s.PromptTemplate, s.NegativePromptTemplate })
+                .FirstOrDefaultAsync();
+
+            if (defaultStyle == null)
+            {
+                // Ultimate fallback if no styles exist in database
+                return (
+                    "{subject}, professional portrait, composition: well-balanced frame with subject focus, lighting: flattering soft light with subtle highlighting, color palette: balanced natural tones, mood: confident and approachable, technical details: high resolution with excellent clarity, additional elements: simple professional background, appropriate attire for industry",
+                    "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation"
+                );
+            }
+
+            return (defaultStyle.PromptTemplate, defaultStyle.NegativePromptTemplate);
+        }
+
+        return (style.PromptTemplate, style.NegativePromptTemplate);
+    }
+
+    /// <summary>
+    /// Creates a comprehensive FLUX.1 style prompt by replacing placeholders in the template
+    /// </summary>
+    private string CreateFluxStylePrompt(string promptTemplate, UserInfo? userInfo)
     {
         // Get base subject description
         string subject = GetSubjectDescription(userInfo);
 
-        // Style-specific prompts with FLUX.1 structure
-        return style.ToLower() switch
-        {
-            "professional" => 
-                $"{subject}, professional headshot, corporate portrait style, " +
-                $"composition: centered subject with neutral background, slight angle, " +
-                $"lighting: three-point studio lighting with soft key light, fill light, and rim light, " +
-                $"color palette: muted blues and grays with natural skin tones, " +
-                $"mood: confident and approachable, " +
-                $"technical details: shot with 85mm lens at f/2.8, shallow depth of field, 4K resolution, " +
-                $"additional elements: subtle office or gradient background, professional attire, well-groomed appearance",
-            
-            "casual" => 
-                $"{subject}, casual lifestyle portrait, " +
-                $"composition: rule of thirds with natural framing, " +
-                $"lighting: golden hour natural sunlight with soft diffusion, " +
-                $"color palette: warm earthy tones with vibrant accents, " +
-                $"mood: relaxed, friendly and authentic, " +
-                $"technical details: shot with 50mm lens at f/2.0, medium depth of field, " +
-                $"additional elements: outdoor setting with natural elements, casual stylish clothing, genuine smile",
-            
-            "creative" => 
-                $"{subject}, artistic creative portrait, " +
-                $"composition: dynamic asymmetrical framing with creative negative space, " +
-                $"lighting: dramatic side lighting with colored gels and intentional shadows, " +
-                $"color palette: bold contrasting colors with artistic color grading, " +
-                $"mood: intriguing and expressive, " +
-                $"technical details: shot with wide angle lens, creative perspective, high contrast, " +
-                $"additional elements: artistic background elements, creative props or styling, unique fashion elements",
-            
-            "corporate" => 
-                $"{subject}, executive corporate portrait, " +
-                $"composition: formal centered composition with professional framing, " +
-                $"lighting: classic Rembrandt lighting with soft fill, " +
-                $"color palette: deep blues, grays and blacks with subtle accents, " +
-                $"mood: authoritative, trustworthy and professional, " +
-                $"technical details: shot with medium telephoto lens, optimal clarity and sharpness, " +
-                $"additional elements: elegant business attire, office or branded environment subtly visible, power posture",
-            
-            "linkedin" => 
-                $"{subject}, optimized LinkedIn profile photo, " +
-                $"composition: head and shoulders framing with balanced negative space above head, " +
-                $"lighting: flattering soft light with subtle highlighting, " +
-                $"color palette: professional neutral tones with complementary background, " +
-                $"mood: approachable yet professional, " +
-                $"technical details: 1000x1000 pixel square format, sharp focus on eyes, " +
-                $"additional elements: simple clean background, professional but approachable expression, business casual attire",
-            
-            "academic" => 
-                $"{subject}, scholarly academic portrait, " +
-                $"composition: dignified framing with intellectual elements, " +
-                $"lighting: soft even lighting with subtle gradient, " +
-                $"color palette: rich traditional tones with subtle depth, " +
-                $"mood: thoughtful, knowledgeable and authoritative, " +
-                $"technical details: medium format quality, excellent clarity, " +
-                $"additional elements: books, laboratory or campus environment, academic attire or professional clothing, scholarly posture",
-            
-            "tech" => 
-                $"{subject}, modern tech industry portrait, " +
-                $"composition: contemporary framing with technical elements, " +
-                $"lighting: modern high-key lighting with subtle blue accents, " +
-                $"color palette: tech blues and cool grays with vibrant accents, " +
-                $"mood: innovative, forward-thinking and approachable, " +
-                $"technical details: ultra-high definition, perfect clarity, " +
-                $"additional elements: minimal tech environment, modern casual professional attire, confident engaged expression",
-            
-            "medical" => 
-                $"{subject}, healthcare professional portrait, " +
-                $"composition: trustworthy frontal composition with medical context, " +
-                $"lighting: clean even lighting with healthy glow, " +
-                $"color palette: whites, blues and comforting tones, " +
-                $"mood: compassionate, competent and reassuring, " +
-                $"technical details: sharp focus throughout, excellent clarity, " +
-                $"additional elements: medical attire or lab coat, stethoscope or medical environment, caring expression",
-            
-            "legal" => 
-                $"{subject}, legal professional portrait, " +
-                $"composition: balanced formal composition with legal elements, " +
-                $"lighting: classical portrait lighting with defined shadows, " +
-                $"color palette: deep rich tones with mahogany and navy accents, " +
-                $"mood: authoritative, trustworthy and dignified, " +
-                $"technical details: perfect focus and formal composition, " +
-                $"additional elements: legal books, office with wooden elements, formal suit, confident and serious expression",
-            
-            "executive" => 
-                $"{subject}, premium executive portrait, " +
-                $"composition: powerful centered composition with prestigious elements, " +
-                $"lighting: dramatic executive lighting with defined highlights, " +
-                $"color palette: luxury tones with gold, navy and charcoal accents, " +
-                $"mood: powerful, successful and commanding, " +
-                $"technical details: medium format quality with perfect detail rendering, " +
-                $"additional elements: luxury office environment, premium suit or executive attire, leadership pose and expression",
-            
-            // Default professional fallback
-            _ => $"{subject}, professional portrait, " +
-                 $"composition: well-balanced frame with subject focus, " +
-                 $"lighting: flattering soft light with subtle highlighting, " +
-                 $"color palette: balanced natural tones, " +
-                 $"mood: confident and approachable, " +
-                 $"technical details: high resolution with excellent clarity, " +
-                 $"additional elements: simple professional background, appropriate attire for industry"
-        };
-    }
-
-    /// <summary>
-    /// Creates a negative prompt to help the AI avoid common issues
-    /// </summary>
-    private string CreateNegativePrompt(string style)
-    {
-        // Base negative prompt to avoid common issues
-        string baseNegative = "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation";
-        
-        // Style-specific negative prompts
-        return style.ToLower() switch
-        {
-            "professional" => $"{baseNegative}, casual clothing, t-shirt, vacation setting, party scene, inappropriate attire",
-            "creative" => $"{baseNegative}, boring, plain background, standard pose, conventional lighting",
-            "corporate" => $"{baseNegative}, casual attire, beach, party scene, inappropriate setting",
-            "linkedin" => $"{baseNegative}, full body shot, distracting background, extreme filters, unprofessional setting",
-            "tech" => $"{baseNegative}, outdated technology, traditional office, formal suit",
-            "medical" => $"{baseNegative}, inappropriate medical setting, casual vacation clothing",
-            "legal" => $"{baseNegative}, casual setting, inappropriate attire, party scene",
-            "executive" => $"{baseNegative}, casual clothing, unprofessional setting, low quality office",
-            _ => baseNegative
-        };
+        // Replace {subject} placeholder in the template
+        return promptTemplate.Replace("{subject}", subject);
     }
 
     /// <summary>
@@ -401,6 +467,113 @@ public class ReplicateApiClient : IReplicateApiClient
         }
 
         return ethnicityDesc;
+    }
+
+    /// <summary>
+    /// Creates a new training using an existing model destination (for webhook-based flow)
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="imageZipUrl">URL to the zipped training images</param>
+    /// <param name="destination">The model destination (owner/model-name)</param>
+    /// <returns>The training ID and status</returns>
+    public async Task<ReplicateTrainingResult> CreateModelTrainingWithDestinationAsync(string userId, string imageZipUrl, string destination)
+    {
+        try
+        {
+            _logger.LogInformation("Creating training for user {UserId} with destination {Destination}", userId, destination);
+
+            var trainingRequest = new
+            {
+                destination = destination,
+                input = new
+                {
+                    input_images = imageZipUrl,
+                    trigger_word = $"user_{userId}",
+                    lora_type = "subject",
+                    training_steps = 1000
+                },
+                webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/training-complete",
+                webhook_events_filter = new[] { "completed" }
+            };
+
+            var content = new StringContent(JsonSerializer.Serialize(trainingRequest), Encoding.UTF8, "application/json");
+            var modelVersion = _configuration["Replicate:FluxTrainingModelId"];
+            var endpoint = $"models/replicate/fast-flux-trainer/versions/{modelVersion.Split(':')[1]}/trainings";
+            var response = await _httpClient.PostAsync(endpoint, content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Replicate training creation failed: {ErrorContent}", errorContent);
+                throw new Exception($"Failed to create training: {response.StatusCode}, {errorContent}");
+            }
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<ReplicateTrainingResult>(
+                responseJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (result == null)
+            {
+                throw new Exception("Failed to deserialize training response");
+            }
+
+            _logger.LogInformation("Training created successfully for user {UserId} with ID {TrainingId}", userId, result.Id);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating training with destination for user {UserId}", userId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Initiates model creation and training workflow (webhook-based)
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="imageZipUrl">URL to the zipped training images</param>
+    /// <returns>The model creation request ID</returns>
+    public async Task<string> InitiateModelCreationAndTrainingAsync(string userId, string imageZipUrl)
+    {
+        try
+        {
+            // Create a model creation request record
+            var modelCreationRequest = new ModelCreationRequest
+            {
+                UserId = userId,
+                ModelName = $"user-{userId}-{DateTime.UtcNow:yyyyMMddHHmmss}",
+                Status = ModelCreationStatus.Pending,
+                TrainingImageZipUrl = imageZipUrl,
+                PendingTrainingRequestId = Guid.NewGuid().ToString()
+            };
+
+            // Add to database first
+            _context.ModelCreationRequests.Add(modelCreationRequest);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Created model creation request {RequestId} for user {UserId}",
+                modelCreationRequest.Id, userId);
+
+            // Initiate model creation
+            var destination = await CreateModelAsync(userId, modelCreationRequest.ModelName,
+                $"Custom trained model for user {userId}");
+
+            // Update the request with the Replicate model ID
+            modelCreationRequest.ReplicateModelId = destination;
+            modelCreationRequest.Status = ModelCreationStatus.Creating;
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Model creation initiated for request {RequestId} with destination {Destination}",
+                modelCreationRequest.Id, destination);
+
+            return modelCreationRequest.Id;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initiating model creation and training for user {UserId}", userId);
+            throw;
+        }
     }
 
     /// <summary>

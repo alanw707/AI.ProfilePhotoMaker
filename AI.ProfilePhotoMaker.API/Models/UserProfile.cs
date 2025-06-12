@@ -11,6 +11,11 @@ public class UserProfile
     public string? Ethnicity { get; set; }
     public string? TrainedModelId { get; set; }
     public DateTime? ModelTrainedAt { get; set; }
+    
+    // Style relationship
+    public int? StyleId { get; set; }
+    public Style? Style { get; set; }
+    
     public List<ProcessedImage> ProcessedImages { get; set; } = new List<ProcessedImage>();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

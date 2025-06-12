@@ -105,20 +105,26 @@ dotnet build AI.ProfilePhotoMaker.sln
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=...;Database=AIProfileMaker;..."
+    "DefaultConnection": "Data Source=aiprofilemaker.db"
   },
   "JWT": {
-    "ValidAudience": "http://localhost:4200",
-    "ValidIssuer": "http://localhost:5001",
-    "Secret": "your-secret-key"
+    "ValidAudience": "http://localhost:5035",
+    "ValidIssuer": "http://localhost:5035", 
+    "Secret": "STORED_IN_USER_SECRETS"    
   },
   "Replicate": {
-    "ApiToken": "r_your_api_token",
-    "FluxTrainingModelId": "ostris/flux-dev-lora-trainer",
+    "ApiToken": "STORED_IN_USER_SECRETS",
+    "FluxTrainingModelId": "replicate/fast-flux-trainer:e65b43286cf1fc648ebac89c32149769637c0410f5346b97c251cdbc3fc3da1a",
     "FluxGenerationModelId": "black-forest-labs/flux-dev",
-    "WebhookSecret": "your-webhook-secret"
+    "WebhookSecret": "STORED_IN_USER_SECRETS"
   },
-  "AppBaseUrl": "https://localhost:5001"
+  "AppBaseUrl": "https://057a-71-38-148-86.ngrok-free.app",
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  }
 }
 ```
 
@@ -133,7 +139,7 @@ dotnet build AI.ProfilePhotoMaker.sln
 ### Webhook Testing
 Use ngrok for local webhook testing:
 ```bash
-ngrok http https://localhost:5001
+ngrok http https://localhost:5035
 # Update Replicate webhook URLs to use ngrok tunnel
 ```
 

@@ -85,6 +85,9 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IImageProcessingService, AzureImageProcessingService>();
 builder.Services.AddHttpClient<IReplicateApiClient, ReplicateApiClient>();
 
+// Register background services
+builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelCreationPollingService>();
+
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -163,6 +166,14 @@ app.UseStaticFiles(new StaticFileOptions
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
         Path.Combine(builder.Environment.ContentRootPath, "uploads")),
     RequestPath = "/uploads"
+});
+
+// Serve static files from training-zips directory
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+        Path.Combine(builder.Environment.ContentRootPath, "training-zips")),
+    RequestPath = "/training-zips"
 });
 
 app.UseAuthentication();

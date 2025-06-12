@@ -206,3 +206,46 @@ Planned implementation of background jobs for:
 ---
 
 *Last updated: June 2023*
+---
+
+## Architectural Review & Recommendations (June 2025)
+
+This section provides an analysis of the current backend architecture and offers recommendations for improvement. The review is based on an analysis of the controllers, services, and data context.
+
+### 1. Controller Layer
+
+**Observation:** The `ProfileController` has a very broad set of responsibilities, including profile management, image uploading, and AI model training. This violates the Single Responsibility Principle and makes the controller large and complex.
+
+**Recommendation:** Refactor the `ProfileController` into smaller, more focused controllers:
+-   A new `ImageController` for handling image uploads and management.
+-   A new `TrainingController` for managing the AI model training process.
+-   The existing `ProfileController` would then be responsible only for user profile CRUD operations.
+
+### 2. Service Layer
+
+**Observation:** A significant amount of business logic (e.g., file validation, ZIP creation) is implemented directly within the `ProfileController`. This makes the code harder to test, maintain, and reuse.
+
+**Recommendation:** Extract business logic to dedicated service classes. This will make the controllers "thin" and focused on handling HTTP requests and responses, while the services encapsulate the core application logic.
+
+### 3. AI Integration
+
+**Observation:** The `ReplicateApiClient` is tightly coupled to the Replicate.com API and contains hardcoded values (e.g., model owner).
+
+**Recommendations:**
+-   **Externalize Configuration:** Move hardcoded values like the model `owner` to `appsettings.json`.
+-   **Introduce an Abstraction Layer:** To improve flexibility, introduce a more generic `IAiModelService` interface. This would decouple the application from the specifics of the Replicate API and make it easier to integrate other AI services in the future.
+-   **Separate Concerns:** The business logic for creating prompts should be extracted from the `ReplicateApiClient` and moved into a dedicated `IPromptGenerationService`.
+
+### 4. Data Layer
+
+**Observation:** The `ApplicationDbContext` is well-structured, but the data seeding for the `Style` entity contains very long, hardcoded strings for the prompt templates. Additionally, the `Subscription` and `SubscriptionPlan` entities from the initial design are not yet implemented.
+
+**Recommendations:**
+-   **Data Seeding Strategy:** For the `Style` data, move the long prompt templates out of the source code and into a separate seed data file (e.g., a JSON file) that can be read during the migration process.
+-   **Explicit Cascade Deletes:** Configure cascading deletes directly in the database schema using `OnDelete(DeleteBehavior.Cascade)` to ensure that when a `UserProfile` is deleted, all of its associated `ProcessedImages` are automatically removed.
+
+### 5. File Storage
+
+**Observation:** The `ProfileController` directly uses `System.IO` and `IWebHostEnvironment` for file operations, creating a tight coupling to the local file system.
+
+**Recommendation:** Introduce a file storage service (e.g., `IFileStorageService`) to abstract away the file system details. This will allow for easy switching between local storage and the planned Azure Blob Storage.

@@ -10,12 +10,38 @@ namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 public interface IReplicateApiClient
 {
     /// <summary>
+    /// Creates a new model in Replicate
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="modelName">The model name</param>
+    /// <param name="description">Optional model description</param>
+    /// <returns>The created model's full name (owner/model-name)</returns>
+    Task<string> CreateModelAsync(string userId, string modelName, string description = null);
+
+    /// <summary>
     /// Creates a new training for a user's custom model
     /// </summary>
     /// <param name="userId">The user ID</param>
     /// <param name="imageZipUrl">URL to the zipped training images</param>
     /// <returns>The training ID and status</returns>
     Task<ReplicateTrainingResult> CreateModelTrainingAsync(string userId, string imageZipUrl);
+
+    /// <summary>
+    /// Creates a new training using an existing model destination (for polling-based flow)
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="imageZipUrl">URL to the zipped training images</param>
+    /// <param name="destination">The model destination (owner/model-name)</param>
+    /// <returns>The training ID and status</returns>
+    Task<ReplicateTrainingResult> CreateModelTrainingWithDestinationAsync(string userId, string imageZipUrl, string destination);
+
+    /// <summary>
+    /// Initiates model creation and training workflow (polling-based)
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="imageZipUrl">URL to the zipped training images</param>
+    /// <returns>The model creation request ID</returns>
+    Task<string> InitiateModelCreationAndTrainingAsync(string userId, string imageZipUrl);
 
     /// <summary>
     /// Gets the status of a model training
