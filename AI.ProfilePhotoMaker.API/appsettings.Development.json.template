@@ -1,0 +1,23 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Data Source=aiprofilemaker.db"
+  },
+  "JWT": {
+    "ValidAudience": "http://localhost:5035",
+    "ValidIssuer": "http://localhost:5035", 
+    "Secret": "STORED_IN_USER_SECRETS"    
+  },
+  "Replicate": {
+    "ApiToken": "STORED_IN_USER_SECRETS",
+    "FluxTrainingModelId": "ostris/flux-dev-lora-trainer",
+    "FluxGenerationModelId": "black-forest-labs/flux-dev",
+    "WebhookSecret": "STORED_IN_USER_SECRETS"
+  },
+  "AppBaseUrl": "http://localhost:5035",
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  }
+}

@@ -7,3 +7,33 @@
 /AI.ProfilePhotoMaker.API/obj/Debug/net8.0
 /AI.ProfilePhotoMaker.API/obj/Release/net8.0
 /AI.ProfilePhotoMaker.API/obj
+
+# Security & Environment files
+*.env
+*.env.local
+*.env.production
+appsettings.Production.json
+appsettings.*.Production.json
+secrets.json
+
+# User secrets (stored separately by .NET)
+UserSecrets/
+
+# Certificates and keys
+*.pfx
+*.p12
+*.key
+*.pem
+*.crt
+
+# Azure publish profiles
+PublishProfiles/
+*.PublishSettings
+
+# Backup files
+*.bak
+*.backup
+
+# Logs
+logs/
+*.log
