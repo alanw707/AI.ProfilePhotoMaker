@@ -470,4 +470,294 @@ public class ProfileController : ControllerBase
         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
         return allowedExtensions.Contains(extension.ToLowerInvariant());
     }
+
+    /// <summary>
+    /// Set the user's preferred style for image generation
+    /// </summary>
+    [HttpPost("set-style")]
+    public async Task<IActionResult> SetUserStyle([FromBody] SetStyleRequest request)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            // Validate that the style exists and is active
+            var style = await _context.Styles
+                .FirstOrDefaultAsync(s => s.Id == request.StyleId && s.IsActive);
+
+            if (style == null)
+                return BadRequest(new { success = false, error = new { code = "StyleNotFound", message = "Style not found or inactive." } });
+
+            // Get or create user profile
+            var profile = await _context.UserProfiles
+                .FirstOrDefaultAsync(p => p.UserId == userId);
+
+            if (profile == null)
+                return BadRequest(new { success = false, error = new { code = "ProfileNotFound", message = "User profile not found. Please create a profile first." } });
+
+            // Update user's style preference
+            profile.StyleId = request.StyleId;
+            profile.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { 
+                success = true, 
+                data = new { 
+                    styleId = style.Id, 
+                    styleName = style.Name, 
+                    styleDescription = style.Description 
+                }, 
+                error = (object?)null 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error setting user style");
+            return StatusCode(500, new { success = false, error = new { code = "DatabaseError", message = "Failed to set user style." } });
+        }
+    }
+
+    /// <summary>
+    /// Get the user's current style preference
+    /// </summary>
+    [HttpGet("style")]
+    public async Task<IActionResult> GetUserStyle()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            var profile = await _context.UserProfiles
+                .Include(p => p.Style)
+                .FirstOrDefaultAsync(p => p.UserId == userId);
+
+            if (profile?.Style == null)
+                return Ok(new { success = true, data = (object?)null, error = (object?)null });
+
+            return Ok(new { 
+                success = true, 
+                data = new { 
+                    styleId = profile.Style.Id, 
+                    styleName = profile.Style.Name, 
+                    styleDescription = profile.Style.Description 
+                }, 
+                error = (object?)null 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting user style");
+            return StatusCode(500, new { success = false, error = new { code = "DatabaseError", message = "Failed to get user style." } });
+        }
+    }
+
+    /// <summary>
+    /// Get list of available training ZIP files for the user with public URLs
+    /// </summary>
+    [HttpGet("training-zips")]
+    public async Task<IActionResult> GetTrainingZips()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
+            
+            if (!Directory.Exists(trainingZipsPath))
+            {
+                return Ok(new { success = true, data = new List<object>(), error = (object?)null });
+            }
+
+            var userZipFiles = Directory.GetFiles(trainingZipsPath, $"{userId}_*.zip")
+                .Select(filePath => 
+                {
+                    var fileName = Path.GetFileName(filePath);
+                    var fileInfo = new FileInfo(filePath);
+                    var publicUrl = $"{Request.Scheme}://{Request.Host}/training-zips/{fileName}";
+                    
+                    return new
+                    {
+                        fileName = fileName,
+                        filePath = filePath,
+                        publicUrl = publicUrl,
+                        createdAt = fileInfo.CreationTime,
+                        sizeBytes = fileInfo.Length
+                    };
+                })
+                .OrderByDescending(f => f.createdAt)
+                .ToList();
+
+            return Ok(new { 
+                success = true, 
+                data = userZipFiles, 
+                error = (object?)null 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting training ZIP files for user");
+            return StatusCode(500, new { success = false, error = new { code = "FileSystemError", message = "Failed to get training ZIP files." } });
+        }
+    }
+
+    /// <summary>
+    /// Get the most recent training ZIP public URL for the user
+    /// </summary>
+    [HttpGet("latest-training-zip")]
+    public async Task<IActionResult> GetLatestTrainingZip()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
+            
+            if (!Directory.Exists(trainingZipsPath))
+            {
+                return NotFound(new { success = false, error = new { code = "NoZipFiles", message = "No training ZIP files found." } });
+            }
+
+            var latestZipFile = Directory.GetFiles(trainingZipsPath, $"{userId}_*.zip")
+                .Select(filePath => new { filePath, createdAt = new FileInfo(filePath).CreationTime })
+                .OrderByDescending(f => f.createdAt)
+                .FirstOrDefault();
+
+            if (latestZipFile == null)
+            {
+                return NotFound(new { success = false, error = new { code = "NoZipFiles", message = "No training ZIP files found for user." } });
+            }
+
+            var fileName = Path.GetFileName(latestZipFile.filePath);
+            var publicUrl = $"{Request.Scheme}://{Request.Host}/training-zips/{fileName}";
+            var fileInfo = new FileInfo(latestZipFile.filePath);
+
+            return Ok(new { 
+                success = true, 
+                data = new { 
+                    fileName = fileName,
+                    publicUrl = publicUrl,
+                    createdAt = fileInfo.CreationTime,
+                    sizeBytes = fileInfo.Length
+                }, 
+                error = (object?)null 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting latest training ZIP file for user");
+            return StatusCode(500, new { success = false, error = new { code = "FileSystemError", message = "Failed to get latest training ZIP file." } });
+        }
+    }
+
+    /// <summary>
+    /// Delete a specific training ZIP file by filename
+    /// </summary>
+    [HttpDelete("training-zips/{fileName}")]
+    public async Task<IActionResult> DeleteTrainingZip(string fileName)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            // Validate that the filename belongs to the current user
+            if (!fileName.StartsWith($"{userId}_") || !fileName.EndsWith(".zip"))
+            {
+                return BadRequest(new { success = false, error = new { code = "InvalidFileName", message = "Invalid filename or access denied." } });
+            }
+
+            var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
+            var filePath = Path.Combine(trainingZipsPath, fileName);
+
+            if (!System.IO.File.Exists(filePath))
+            {
+                return NotFound(new { success = false, error = new { code = "FileNotFound", message = "Training ZIP file not found." } });
+            }
+
+            System.IO.File.Delete(filePath);
+            
+            _logger.LogInformation("Deleted training ZIP file {FileName} for user {UserId}", fileName, userId);
+
+            return Ok(new { 
+                success = true, 
+                data = new { 
+                    fileName = fileName,
+                    message = "Training ZIP file deleted successfully." 
+                }, 
+                error = (object?)null 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting training ZIP file {FileName} for user", fileName);
+            return StatusCode(500, new { success = false, error = new { code = "FileSystemError", message = "Failed to delete training ZIP file." } });
+        }
+    }
+
+    /// <summary>
+    /// Delete all training ZIP files for the current user
+    /// </summary>
+    [HttpDelete("training-zips")]
+    public async Task<IActionResult> DeleteAllTrainingZips()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
+            
+            if (!Directory.Exists(trainingZipsPath))
+            {
+                return Ok(new { success = true, data = new { deletedCount = 0, message = "No training ZIP files found." }, error = (object?)null });
+            }
+
+            var userZipFiles = Directory.GetFiles(trainingZipsPath, $"{userId}_*.zip");
+            var deletedCount = 0;
+
+            foreach (var filePath in userZipFiles)
+            {
+                try
+                {
+                    System.IO.File.Delete(filePath);
+                    deletedCount++;
+                    _logger.LogInformation("Deleted training ZIP file {FilePath} for user {UserId}", filePath, userId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to delete training ZIP file {FilePath} for user {UserId}", filePath, userId);
+                }
+            }
+
+            return Ok(new { 
+                success = true, 
+                data = new { 
+                    deletedCount = deletedCount,
+                    message = $"Deleted {deletedCount} training ZIP files successfully." 
+                }, 
+                error = (object?)null 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting all training ZIP files for user");
+            return StatusCode(500, new { success = false, error = new { code = "FileSystemError", message = "Failed to delete training ZIP files." } });
+        }
+    }
 }
+
+/// <summary>
+/// DTO for setting user style preference
+/// </summary>
+public record SetStyleRequest(int StyleId);
