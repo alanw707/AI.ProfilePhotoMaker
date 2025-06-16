@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "sqlite": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-sqlite",
+        "--db-path",
+        "/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.API/aiprofilemaker.db"
+      ]
+    }
+  }
+}
