@@ -5,7 +5,7 @@ This project plan outlines the major milestones, features, and tasks required to
 
 ---
 
-## Project Status (Updated June 2023)
+## Project Status (Updated June 2025)
 
 ### Phase 1: Foundation ✅ COMPLETED
 - [x] .NET 8 Web API setup
@@ -23,15 +23,18 @@ This project plan outlines the major milestones, features, and tasks required to
 - [x] Webhook endpoint for training completion
 - [x] Style-specific image generation
 - [x] Secure webhook with signature verification
+- [x] Training ZIP file management
+- [x] Webhook signature validation
 
-### Phase 3: User & Business Features 🔄 IN PROGRESS
-- [ ] Image upload system (max 10 selfies)
-- [ ] User profile CRUD operations
-- [ ] Style selection API and persistence
+### Phase 3: User & Business Features ✅ MOSTLY COMPLETED
+- [x] Image upload system (max 10 selfies)
+- [x] User profile CRUD operations
+- [x] Style selection API and persistence
 - [x] Subscription data model
+- [x] File management and cleanup
 - [ ] Payment integration (Stripe)
 
-### Phase 4: Frontend Development 🔄 STARTING
+### Phase 4: Frontend Development 🔄 EARLY STAGE
 - [x] Angular project structure
 - [ ] Authentication UI
 - [ ] User profile management UI
@@ -51,20 +54,20 @@ This project plan outlines the major milestones, features, and tasks required to
 
 2. **User Management & Authentication** ✅ COMPLETED
    - [x] Implement user registration and login endpoints
-   - [ ] Add user profile management (CRUD)
+   - [x] Add user profile management (CRUD)
    - [x] Enforce validation and error handling
    - [ ] Implement rate limiting for auth endpoints
 
-3. **Profile Photo Styles & Selection** 🔄 IN PROGRESS
+3. **Profile Photo Styles & Selection** ✅ COMPLETED
    - [x] Define available photo styles in ReplicateApiClient
-   - [ ] Create database schema for style persistence
-   - [ ] Create endpoints to fetch and select styles (max 10 per user)
+   - [x] Create database schema for style persistence
+   - [x] Create endpoints to fetch and select styles (max 10 per user)
    - [ ] Integrate style selection in Angular UI
 
-4. **Image Upload & Processing** 🔄 IN PROGRESS
-   - [ ] Implement image upload endpoint (max 10 selfies)
-   - [ ] Validate and securely store images
-   - [ ] Zip images for AI processing
+4. **Image Upload & Processing** ✅ COMPLETED
+   - [x] Implement image upload endpoint (max 10 selfies)
+   - [x] Validate and securely store images
+   - [x] Zip images for AI processing
 
 5. **AI Service Integration (Replicate.com)** ✅ COMPLETED
    - [x] Integrate with Replicate.com API for model training
@@ -72,9 +75,10 @@ This project plan outlines the major milestones, features, and tasks required to
    - [x] Secure webhook with signature verification
    - [x] Trigger image generation for selected styles
 
-6. **Generated Image Management** 🔄 IN PROGRESS
+6. **Generated Image Management** ✅ COMPLETED
    - [x] Store generated images metadata in database
-   - [ ] Implement download functionality
+   - [x] Implement download functionality
+   - [x] Implement image deletion with file cleanup
    - [ ] Enforce data retention (delete after 7 days)
 
 7. **Payments & Transactions** ⏳ NOT STARTED
@@ -111,13 +115,13 @@ This project plan outlines the major milestones, features, and tasks required to
 
 ---
 
-## Updated Timeline
+## Updated Timeline (June 2025)
 
-- **Week 1-2:** ✅ Backend foundation and AI integration
-- **Week 3:** 🔄 Complete API endpoints (upload, profile management)
-- **Week 4:** Frontend core features
-- **Week 5:** Payment integration and background jobs
-- **Week 6:** Testing and deployment
+- **Weeks 1-4:** ✅ Backend foundation, AI integration, and core APIs
+- **Week 5:** 🔄 Frontend development (authentication, profile, upload)
+- **Week 6:** Frontend completion and payment integration
+- **Week 7:** Background jobs and automated cleanup
+- **Week 8:** Testing, documentation, and deployment
 
 ---
 
