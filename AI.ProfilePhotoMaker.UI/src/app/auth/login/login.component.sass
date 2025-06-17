@@ -1,0 +1,255 @@
+.login-container
+  min-height: 100vh
+  display: flex
+  align-items: center
+  justify-content: center
+  background: linear-gradient(135deg, #F5A5A5 0%, #F5C85A 25%, #A8E6A1 50%, #7DD3D8 75%, #6BB6FF 100%)
+  padding: 20px
+
+.login-card
+  background: rgba(30, 34, 42, 0.95)
+  border-radius: 16px
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3)
+  backdrop-filter: blur(10px)
+  border: 1px solid rgba(255, 255, 255, 0.1)
+  padding: 40px
+  max-width: 400px
+  width: 100%
+
+.login-header
+  text-align: center
+  margin-bottom: 30px
+
+  .logo-container
+    margin-bottom: 20px
+    display: flex
+    justify-content: center
+
+  .logo
+    width: 90px
+    height: 90px
+    object-fit: contain
+    margin: 0 auto
+    display: block
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))
+
+  h1
+    font-family: 'Poppins', sans-serif
+    color: #ffffff
+    font-size: 24px
+    font-weight: 700
+    margin-bottom: 10px
+
+  h2
+    font-family: 'Poppins', sans-serif
+    color: #e2e8f0
+    font-size: 20px
+    font-weight: 600
+    margin-bottom: 8px
+
+  p
+    color: #a0a9c0
+    font-size: 14px
+    margin: 0
+
+.login-form
+  .form-group
+    margin-bottom: 20px
+
+    label
+      display: block
+      font-weight: 600
+      color: #e2e8f0
+      margin-bottom: 5px
+      font-size: 14px
+
+    .form-control
+      width: 100%
+      padding: 12px 16px
+      border: 2px solid rgba(255, 255, 255, 0.1)
+      border-radius: 8px
+      font-size: 16px
+      transition: all 0.3s ease
+      box-sizing: border-box
+      background: rgba(255, 255, 255, 0.05)
+      color: #ffffff
+
+      &:focus
+        outline: none
+        border-color: #7DD3D8
+        box-shadow: 0 0 0 3px rgba(125, 211, 216, 0.2)
+        background: rgba(255, 255, 255, 0.08)
+
+      &.is-invalid
+        border-color: #ff6b6b
+        background: rgba(255, 107, 107, 0.1)
+
+      &::placeholder
+        color: #a0a9c0
+
+    .invalid-feedback
+      color: #ff6b6b
+      font-size: 12px
+      margin-top: 5px
+
+  .alert
+    padding: 12px 16px
+    border-radius: 8px
+    margin-bottom: 20px
+    font-size: 14px
+
+    &.alert-danger
+      background-color: rgba(255, 107, 107, 0.15)
+      border: 1px solid rgba(255, 107, 107, 0.3)
+      color: #ff9999
+
+  .btn
+    padding: 12px 20px
+    border: none
+    border-radius: 6px
+    font-size: 16px
+    font-weight: 600
+    cursor: pointer
+    transition: all 0.3s ease
+    text-decoration: none
+    display: inline-flex
+    align-items: center
+    justify-content: center
+    gap: 8px
+
+    &.btn-primary
+      background: linear-gradient(135deg, #7DD3D8 0%, #6BB6FF 100%)
+      color: white
+
+      &:hover:not(:disabled)
+        transform: translateY(-2px)
+        box-shadow: 0 5px 15px rgba(123, 211, 216, 0.4)
+
+      &:disabled
+        opacity: 0.7
+        cursor: not-allowed
+
+    &.btn-block
+      width: 100%
+
+    .spinner
+      width: 16px
+      height: 16px
+      border: 2px solid transparent
+      border-top: 2px solid currentColor
+      border-radius: 50%
+      animation: spin 1s linear infinite
+
+.social-login-divider
+  text-align: center
+  margin: 30px 0 20px
+  position: relative
+
+  &::before
+    content: ''
+    position: absolute
+    top: 50%
+    left: 0
+    right: 0
+    height: 1px
+    background: rgba(255, 255, 255, 0.1)
+    z-index: 1
+
+  span
+    background: rgba(30, 34, 42, 0.95)
+    padding: 0 15px
+    color: #a0a9c0
+    font-size: 14px
+    font-weight: 500
+    position: relative
+    z-index: 2
+
+.social-login-buttons
+  display: flex
+  flex-direction: column
+  gap: 12px
+
+  .btn
+    width: 100%
+    padding: 12px 20px
+    border: 2px solid rgba(255, 255, 255, 0.1)
+    border-radius: 8px
+    background: rgba(255, 255, 255, 0.05)
+    color: #e2e8f0
+    font-size: 16px
+    font-weight: 500
+    cursor: pointer
+    transition: all 0.3s ease
+    display: flex
+    align-items: center
+    justify-content: center
+    gap: 12px
+    text-decoration: none
+
+    &:hover:not(:disabled)
+      transform: translateY(-2px)
+      background: rgba(255, 255, 255, 0.08)
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2)
+
+    &:disabled
+      opacity: 0.4
+      cursor: not-allowed
+      transform: none
+      box-shadow: none
+
+    svg
+      flex-shrink: 0
+
+    &.btn-google
+      &:hover:not(:disabled)
+        border-color: #4285f4
+        box-shadow: 0 8px 20px rgba(66, 133, 244, 0.3)
+
+    &.btn-facebook
+      &:hover:not(:disabled)
+        border-color: #1877f2
+        box-shadow: 0 8px 20px rgba(24, 119, 242, 0.3)
+
+    &.btn-apple
+      &:hover:not(:disabled)
+        border-color: #ffffff
+        box-shadow: 0 8px 20px rgba(255, 255, 255, 0.2)
+
+.login-footer
+  text-align: center
+  margin-top: 20px
+
+  p
+    color: #a0a9c0
+    font-size: 14px
+    margin: 0
+
+  .btn-link
+    background: none
+    border: none
+    color: #7DD3D8
+    cursor: pointer
+    text-decoration: underline
+    font-size: 14px
+    padding: 0
+    margin-left: 4px
+
+    &:hover
+      color: #6BB6FF
+
+@keyframes spin
+  0%
+    transform: rotate(0deg)
+  100%
+    transform: rotate(360deg)
+
+@media (max-width: 480px)
+  .login-card
+    padding: 30px 20px
+    margin: 10px
+
+  .login-header h1
+    font-size: 20px
+
+  .login-header h2
+    font-size: 18px

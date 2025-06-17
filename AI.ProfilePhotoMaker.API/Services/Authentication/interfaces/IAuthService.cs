@@ -6,4 +6,6 @@ public interface IAuthService
 {
     Task<AuthResponseDto> RegisterAsync(RegisterDto model);
     Task<AuthResponseDto> LoginAsync(LoginDto model);
+    Task<string> GetExternalLoginUrlAsync(string provider, string returnUrl);
+    Task<AuthResponseDto> ProcessExternalLoginAsync(string provider, string code, string? state = null);
 }

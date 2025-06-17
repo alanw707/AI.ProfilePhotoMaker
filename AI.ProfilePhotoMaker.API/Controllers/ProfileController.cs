@@ -10,23 +10,31 @@ using System.Security.Claims;
 
 namespace AI.ProfilePhotoMaker.API.Controllers;
 
+public static class ProfileControllerConstants
+{
+    public const string OriginalStyle = "Original";
+}
+
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
 public class ProfileController : ControllerBase
 {
     private readonly IImageProcessingService _imageProcessingService;
-    private readonly ApplicationDbContext _context;
+    private readonly IUserProfileRepository _userProfileRepository;
+    private readonly ApplicationDbContext _context; // Keep for now for other operations
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<ProfileController> _logger;
 
     public ProfileController(
         IImageProcessingService imageProcessingService,
+        IUserProfileRepository userProfileRepository,
         ApplicationDbContext context,
         IWebHostEnvironment environment,
         ILogger<ProfileController> logger)
     {
         _imageProcessingService = imageProcessingService;
+        _userProfileRepository = userProfileRepository;
         _context = context;
         _environment = environment;
         _logger = logger;
@@ -39,9 +47,7 @@ public class ProfileController : ControllerBase
         if (userId == null)
             return Unauthorized();
 
-        var profile = await _context.UserProfiles
-            .Include(p => p.ProcessedImages)
-            .FirstOrDefaultAsync(p => p.UserId == userId);
+        var profile = await _userProfileRepository.GetByUserIdAsync(userId);
 
         if (profile == null)
             return NotFound("Profile not found");
@@ -68,8 +74,7 @@ public class ProfileController : ControllerBase
         if (userId == null)
             return Unauthorized();
 
-        var existingProfile = await _context.UserProfiles
-            .FirstOrDefaultAsync(p => p.UserId == userId);
+        var existingProfile = await _userProfileRepository.GetByUserIdAsync(userId);
 
         if (existingProfile != null)
             return BadRequest("Profile already exists");
@@ -83,8 +88,7 @@ public class ProfileController : ControllerBase
             Ethnicity = dto.Ethnicity
         };
 
-        _context.UserProfiles.Add(profile);
-        await _context.SaveChangesAsync();
+        await _userProfileRepository.AddAsync(profile);
 
         var profileDto = new UserProfileDto
         {
@@ -144,16 +148,12 @@ public class ProfileController : ControllerBase
         if (userId == null)
             return Unauthorized();
 
-        var profile = await _context.UserProfiles
-            .Include(p => p.ProcessedImages)
-            .FirstOrDefaultAsync(p => p.UserId == userId);
+        var profile = await _userProfileRepository.GetByUserIdAsync(userId);
 
         if (profile == null)
             return NotFound("Profile not found");
 
-        _context.ProcessedImages.RemoveRange(profile.ProcessedImages);
-        _context.UserProfiles.Remove(profile);
-        await _context.SaveChangesAsync();
+        await _userProfileRepository.DeleteAsync(profile);
 
         return NoContent();
     }
@@ -192,8 +192,7 @@ public class ProfileController : ControllerBase
                 Gender = dto.Gender,
                 Ethnicity = dto.Ethnicity
             };
-            _context.UserProfiles.Add(profile);
-            await _context.SaveChangesAsync();
+            await _userProfileRepository.AddAsync(profile);
         }
 
         try
@@ -224,12 +223,12 @@ public class ProfileController : ControllerBase
                 {
                     OriginalImageUrl = relativeUrl,
                     ProcessedImageUrl = "", // Will be updated when AI processing completes
-                    Style = "Original", // Mark as original upload
+                    Style = ProfileControllerConstants.OriginalStyle, // Mark as original upload
                     UserProfileId = profile.Id,
                     CreatedAt = DateTime.UtcNow
                 };
 
-                _context.ProcessedImages.Add(processedImage);
+                profile.ProcessedImages.Add(processedImage);
                 uploadedImages.Add(processedImage);
 
                 uploadResults.Add(new { 
@@ -240,7 +239,7 @@ public class ProfileController : ControllerBase
             }
 
             // Save all uploaded image records to database
-            await _context.SaveChangesAsync();
+            await _userProfileRepository.UpdateAsync(profile);
 
             var zipPath = await CreateTrainingZip(uploadDir, userId);
 
@@ -268,8 +267,7 @@ public class ProfileController : ControllerBase
         if (userId == null)
             return Unauthorized();
 
-        var profile = await _context.UserProfiles
-            .FirstOrDefaultAsync(p => p.UserId == userId);
+        var profile = await _userProfileRepository.GetByUserIdAsync(userId);
 
         if (profile == null)
             return NotFound("Profile not found");
@@ -305,9 +303,7 @@ public class ProfileController : ControllerBase
         if (userId == null)
             return Unauthorized();
 
-        var profile = await _context.UserProfiles
-            .Include(p => p.ProcessedImages)
-            .FirstOrDefaultAsync(p => p.UserId == userId);
+        var profile = await _userProfileRepository.GetByUserIdAsync(userId);
 
         if (profile == null)
             return NotFound("Profile not found");
@@ -346,14 +342,12 @@ public class ProfileController : ControllerBase
         if (userId == null)
             return Unauthorized();
 
-        var profile = await _context.UserProfiles
-            .Include(p => p.ProcessedImages)
-            .FirstOrDefaultAsync(p => p.UserId == userId);
+        var profile = await _userProfileRepository.GetByUserIdAsync(userId);
 
         if (profile == null)
             return NotFound("Profile not found");
 
-        var uploadedImages = profile.ProcessedImages.Where(i => i.Style == "Original").ToList();
+        var uploadedImages = profile.ProcessedImages.Where(i => i.Style == ProfileControllerConstants.OriginalStyle).ToList();
         var zipPath = Path.Combine(_environment.ContentRootPath, "training-zips", $"{userId}_*.zip");
         var zipFiles = Directory.GetFiles(Path.GetDirectoryName(zipPath)!, Path.GetFileName(zipPath));
 
@@ -384,9 +378,7 @@ public class ProfileController : ControllerBase
         if (userId == null)
             return Unauthorized();
 
-        var profile = await _context.UserProfiles
-            .Include(p => p.ProcessedImages)
-            .FirstOrDefaultAsync(p => p.UserId == userId);
+        var profile = await _userProfileRepository.GetByUserIdAsync(userId);
 
         if (profile == null)
             return NotFound("Profile not found");
@@ -408,9 +400,9 @@ public class ProfileController : ControllerBase
                 }
             }
 
-            // Delete database record
-            _context.ProcessedImages.Remove(image);
-            await _context.SaveChangesAsync();
+            // Delete database record - remove from profile and update
+            profile.ProcessedImages.Remove(image);
+            await _userProfileRepository.UpdateAsync(profile);
 
             return NoContent();
         }
@@ -434,7 +426,24 @@ public class ProfileController : ControllerBase
         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
         
-        return allowedExtensions.Contains(extension);
+        if (!allowedExtensions.Contains(extension))
+            return false;
+
+        // File signature validation
+        using (var reader = new BinaryReader(file.OpenReadStream()))
+        {
+            var signatures = new Dictionary<string, byte[]>
+            {
+                { ".jpg", new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 } },
+                { ".jpeg", new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 } },
+                { ".png", new byte[] { 0x89, 0x50, 0x4E, 0x47 } },
+                { ".webp", new byte[] { 0x52, 0x49, 0x46, 0x46 } }
+            };
+
+            var headerBytes = reader.ReadBytes(signatures.Values.Max(m => m.Length));
+
+            return signatures.Any(sig => headerBytes.Take(sig.Value.Length).SequenceEqual(sig.Value));
+        }
     }
 
     private async Task<string?> CreateTrainingZip(string uploadDir, string userId)
@@ -447,7 +456,12 @@ public class ProfileController : ControllerBase
             using (var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create))
             {
                 var imageFiles = Directory.GetFiles(uploadDir, "*.*")
-                    .Where(f => IsValidImageExtension(Path.GetExtension(f)))
+                    .Where(f =>
+                    {
+                        var extension = Path.GetExtension(f);
+                        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+                        return allowedExtensions.Contains(extension.ToLowerInvariant());
+                    })
                     .ToArray();
 
                 foreach (var file in imageFiles)
@@ -463,12 +477,6 @@ public class ProfileController : ControllerBase
             _logger.LogError(ex, "Error creating training ZIP for user {UserId}", userId);
             return null;
         }
-    }
-
-    private static bool IsValidImageExtension(string extension)
-    {
-        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
-        return allowedExtensions.Contains(extension.ToLowerInvariant());
     }
 
     /// <summary>
@@ -491,8 +499,7 @@ public class ProfileController : ControllerBase
                 return BadRequest(new { success = false, error = new { code = "StyleNotFound", message = "Style not found or inactive." } });
 
             // Get or create user profile
-            var profile = await _context.UserProfiles
-                .FirstOrDefaultAsync(p => p.UserId == userId);
+            var profile = await _userProfileRepository.GetByUserIdAsync(userId);
 
             if (profile == null)
                 return BadRequest(new { success = false, error = new { code = "ProfileNotFound", message = "User profile not found. Please create a profile first." } });
@@ -501,7 +508,7 @@ public class ProfileController : ControllerBase
             profile.StyleId = request.StyleId;
             profile.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
+            await _userProfileRepository.UpdateAsync(profile);
 
             return Ok(new { 
                 success = true, 

@@ -1,0 +1,239 @@
+<div class="dashboard-container">
+  <!-- Navigation Header -->
+  <header class="dashboard-header">
+    <div class="header-content">
+      <div class="logo-section">
+        <img src="Logo.PNG" alt="AI Profile Photo Maker" class="header-logo">
+        <h1>AI Profile Photo Maker</h1>
+      </div>
+      <div class="user-section">
+        <div class="user-info">
+          <span class="user-name">Welcome, {{userName}}!</span>
+          <span class="user-email">{{userEmail}}</span>
+        </div>
+        <button class="btn btn-logout" (click)="logout()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M16 17L21 12M21 12L16 7M21 12H9M9 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Logout
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Dashboard Content -->
+  <main class="dashboard-main">
+    <div class="dashboard-content">
+      
+      <!-- Quick Stats -->
+      <section class="stats-section">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">📸</div>
+            <div class="stat-content">
+              <h3>{{uploadedImages}}</h3>
+              <p>Selfies Uploaded</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🎨</div>
+            <div class="stat-content">
+              <h3>{{selectedStyles}}</h3>
+              <p>Styles Selected</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">⚡</div>
+            <div class="stat-content">
+              <h3>{{generatedPhotos.length}}</h3>
+              <p>Photos Generated</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">⏱️</div>
+            <div class="stat-content">
+              <h3>{{modelStatus}}</h3>
+              <p>Model Status</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Workflow Steps -->
+      <section class="workflow-section">
+        <h2>Create Your Professional Photos</h2>
+        <p class="workflow-subtitle">Follow these simple steps to generate stunning AI-powered profile photos</p>
+        
+        <div class="workflow-steps">
+          
+          <!-- Step 1: Upload Selfies -->
+          <div class="step-card" [class.completed]="uploadedImages > 0" [class.active]="currentStep === 1">
+            <div class="step-header">
+              <div class="step-number">1</div>
+              <div class="step-title">
+                <h3>Upload Your Selfies</h3>
+                <p>Upload 5-10 high-quality selfies for the best results</p>
+              </div>
+              <div class="step-status">
+                <span class="status-badge" [ngClass]="getStepStatus(1)">
+                  {{getStepStatusText(1)}}
+                </span>
+              </div>
+            </div>
+            <div class="step-content" *ngIf="currentStep === 1 || uploadedImages === 0">
+              <div class="upload-area" 
+                   (click)="triggerFileUpload()"
+                   (dragover)="onDragOver($event)"
+                   (dragleave)="onDragLeave($event)"
+                   (drop)="onDrop($event)"
+                   [class.drag-over]="isDragOver">
+                <div class="upload-icon">📷</div>
+                <h4>Drop your selfies here or click to browse</h4>
+                <p>Maximum 10 images • JPG, PNG • Up to 10MB each</p>
+                <input type="file" #fileInput multiple accept="image/*" (change)="onFileSelected($event)" style="display: none">
+              </div>
+              <div class="uploaded-images" *ngIf="selectedFiles.length > 0">
+                <div class="image-preview" *ngFor="let file of selectedFiles; index as i">
+                  <img [src]="getFilePreview(file)" alt="Preview">
+                  <button class="remove-btn" (click)="removeFile(i)">×</button>
+                </div>
+              </div>
+              <button class="btn btn-primary" 
+                      *ngIf="selectedFiles.length > 0" 
+                      (click)="uploadImages()"
+                      [disabled]="isUploading">
+                <span *ngIf="isUploading">Uploading...</span>
+                <span *ngIf="!isUploading">Upload {{selectedFiles.length}} Images</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Step 2: AI Model Training -->
+          <div class="step-card" [class.completed]="modelStatus === 'trained'" [class.active]="currentStep === 2">
+            <div class="step-header">
+              <div class="step-number">2</div>
+              <div class="step-title">
+                <h3>AI Model Training</h3>
+                <p>Our AI learns your unique features to create personalized photos</p>
+              </div>
+              <div class="step-status">
+                <span class="status-badge" [ngClass]="getStepStatus(2)">
+                  {{getStepStatusText(2)}}
+                </span>
+              </div>
+            </div>
+            <div class="step-content" *ngIf="currentStep === 2">
+              <div class="training-progress">
+                <div class="progress-circle">
+                  <div class="progress-text">{{trainingProgress}}%</div>
+                </div>
+                <div class="training-info">
+                  <h4>Training in Progress</h4>
+                  <p>This usually takes 15-25 minutes. You'll be notified when it's complete!</p>
+                  <p class="eta">Estimated completion: {{estimatedCompletion}}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3: Choose Styles -->
+          <div class="step-card" [class.completed]="selectedStyles > 0" [class.active]="currentStep === 3">
+            <div class="step-header">
+              <div class="step-number">3</div>
+              <div class="step-title">
+                <h3>Choose Your Styles</h3>
+                <p>Select up to 10 professional photo styles</p>
+              </div>
+              <div class="step-status">
+                <span class="status-badge" [ngClass]="getStepStatus(3)">
+                  {{getStepStatusText(3)}}
+                </span>
+              </div>
+            </div>
+            <div class="step-content" *ngIf="currentStep === 3">
+              <div class="styles-grid">
+                <div class="style-card" 
+                     *ngFor="let style of availableStyles" 
+                     [class.selected]="style.selected"
+                     (click)="toggleStyle(style)">
+                  <div class="style-image">
+                    <img [src]="style.previewUrl" [alt]="style.name">
+                  </div>
+                  <div class="style-info">
+                    <h4>{{style.name}}</h4>
+                    <p>{{style.description}}</p>
+                  </div>
+                  <div class="style-checkbox">
+                    <input type="checkbox" [checked]="style.selected" (change)="toggleStyle(style)">
+                  </div>
+                </div>
+              </div>
+              <button class="btn btn-primary" 
+                      *ngIf="selectedStyles > 0" 
+                      (click)="generatePhotos()"
+                      [disabled]="isGenerating">
+                <span *ngIf="isGenerating">Generating Photos...</span>
+                <span *ngIf="!isGenerating">Generate {{selectedStyles}} Photo Styles</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Step 4: Download Results -->
+          <div class="step-card" [class.completed]="generatedPhotos.length > 0" [class.active]="currentStep === 4">
+            <div class="step-header">
+              <div class="step-number">4</div>
+              <div class="step-title">
+                <h3>Download Your Photos</h3>
+                <p>Your professional AI-generated profile photos are ready!</p>
+              </div>
+              <div class="step-status">
+                <span class="status-badge" [ngClass]="getStepStatus(4)">
+                  {{getStepStatusText(4)}}
+                </span>
+              </div>
+            </div>
+            <div class="step-content" *ngIf="currentStep === 4">
+              <div class="results-grid">
+                <div class="result-card" *ngFor="let photo of generatedPhotos">
+                  <img [src]="photo.url" [alt]="photo.style">
+                  <div class="result-overlay">
+                    <h4>{{photo.style}}</h4>
+                    <div class="result-actions">
+                      <button class="btn btn-sm btn-download" (click)="downloadPhoto(photo)">
+                        Download
+                      </button>
+                      <button class="btn btn-sm btn-share" (click)="sharePhoto(photo)">
+                        Share
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="bulk-actions" *ngIf="generatedPhotos.length > 1">
+                <button class="btn btn-primary" (click)="downloadAll()">
+                  Download All Photos
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Recent Activity -->
+      <section class="activity-section" *ngIf="recentActivity.length > 0">
+        <h3>Recent Activity</h3>
+        <div class="activity-list">
+          <div class="activity-item" *ngFor="let activity of recentActivity">
+            <div class="activity-icon">{{activity.icon}}</div>
+            <div class="activity-content">
+              <p>{{activity.message}}</p>
+              <span class="activity-time">{{activity.time}}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
