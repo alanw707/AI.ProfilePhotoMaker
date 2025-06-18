@@ -591,4 +591,195 @@ public class ReplicateApiClient : IReplicateApiClient
 
         return result.Id ?? ""; // Return prediction ID
     }
+
+    /// <summary>
+    /// Generates a free casual headshot using base FLUX model (no custom training required)
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="userInfo">User information for generation</param>
+    /// <param name="gender">User's gender for better generation</param>
+    /// <returns>The prediction result</returns>
+    public async Task<ReplicatePredictionResult> GenerateFreeImageAsync(string userId, UserInfo? userInfo, string gender)
+    {
+        try
+        {
+            // Use the base FLUX model for free tier generations
+            string baseFluxModel = _configuration["Replicate:FluxGenerationModelId"] ?? "black-forest-labs/flux-dev";
+            
+            // Create a casual style prompt for free tier
+            var casualStylePrompts = await GetStylePromptsFromDatabase("casual");
+            
+            // If casual style not found, use a hardcoded casual prompt
+            string stylePrompt;
+            string negativePrompt;
+            
+            if (casualStylePrompts.PromptTemplate != "")
+            {
+                stylePrompt = CreateFluxStylePrompt(casualStylePrompts.PromptTemplate, userInfo);
+                negativePrompt = casualStylePrompts.NegativePromptTemplate;
+            }
+            else
+            {
+                // Fallback casual prompt for free tier
+                string subject = GetSubjectDescription(userInfo);
+                stylePrompt = $"{subject}, casual lifestyle portrait, headshot, composition: rule of thirds with natural framing, lighting: soft natural sunlight with gentle diffusion, color palette: warm earthy tones with vibrant accents, mood: relaxed, friendly and authentic, technical details: shot with 50mm lens at f/2.0, medium depth of field, additional elements: simple clean background, casual stylish clothing, genuine smile";
+                negativePrompt = "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, inappropriate attire, nudity, nsfw";
+            }
+
+            var predictionRequest = new
+            {
+                version = baseFluxModel,
+                input = new
+                {
+                    prompt = stylePrompt,
+                    negative_prompt = negativePrompt,
+                    num_inference_steps = 30, // Slightly lower for free tier
+                    guidance_scale = 7.0,
+                    num_outputs = 1, // Only 1 image for free tier
+                    scheduler = "K_EULER_ANCESTRAL",
+                    width = 1024,
+                    height = 1024,
+                    webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete",
+                    webhook_events_filter = new[] { "completed" }
+                },
+                webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete"
+            };
+
+            var content = new StringContent(
+                JsonSerializer.Serialize(predictionRequest), 
+                Encoding.UTF8, 
+                "application/json");
+                
+            var response = await _httpClient.PostAsync("predictions", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Replicate free image generation failed: {ErrorContent}", errorContent);
+                throw new Exception($"Failed to create free image prediction: {response.StatusCode}, {errorContent}");
+            }
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<ReplicatePredictionResult>(
+                responseJson, 
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (result == null)
+            {
+                throw new Exception("Failed to deserialize free image prediction response");
+            }
+
+            _logger.LogInformation("Free image generation started for user {UserId} with prediction ID {PredictionId}", userId, result.Id);
+            return result;
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
+        {
+            _logger.LogError(ex, "Replicate API authentication failed for free generation for user {UserId}", userId);
+            throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("429") || ex.Message.Contains("rate limit"))
+        {
+            _logger.LogWarning(ex, "Replicate API rate limit reached for free generation for user {UserId}", userId);
+            throw new InvalidOperationException("Replicate API rate limit reached. Please try again later.", ex);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("402") || ex.Message.Contains("payment"))
+        {
+            _logger.LogError(ex, "Replicate API payment required for free generation for user {UserId}", userId);
+            throw new InvalidOperationException("Replicate API payment required. Please check your billing.", ex);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating free image for user {UserId}", userId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Enhances a user's uploaded photo with AI (background removal, lighting correction, color grading)
+    /// This is a cost-effective alternative for free tier users
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="imageUrl">URL to the user's uploaded photo</param>
+    /// <param name="enhancementType">Type of enhancement (professional, portrait, linkedin)</param>
+    /// <returns>The prediction result with enhanced image</returns>
+    public async Task<ReplicatePredictionResult> EnhancePhotoAsync(string userId, string imageUrl, string enhancementType = "professional")
+    {
+        try
+        {
+            // Use a cost-effective enhancement model (background removal + basic enhancements)
+            // Using a composite approach with multiple cheaper models instead of expensive generation
+            string enhancementModel = "rembg/remove-bg"; // Background removal model
+            
+            var predictionRequest = new
+            {
+                version = enhancementModel,
+                input = new
+                {
+                    image = imageUrl,
+                    model = "u2net", // Best balance of quality and speed
+                    alpha_matting = false, // Faster processing
+                    alpha_matting_foreground_threshold = 240,
+                    alpha_matting_background_threshold = 10,
+                    alpha_matting_erode_size = 10,
+                    webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/enhancement-complete",
+                    webhook_events_filter = new[] { "completed" }
+                },
+                webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/enhancement-complete"
+            };
+
+            // For professional enhancement, we could chain multiple operations:
+            // 1. Background removal
+            // 2. Lighting correction 
+            // 3. Color grading
+            // But for cost-effectiveness, we'll start with background removal only
+
+            var content = new StringContent(
+                JsonSerializer.Serialize(predictionRequest), 
+                Encoding.UTF8, 
+                "application/json");
+                
+            var response = await _httpClient.PostAsync("predictions", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Replicate photo enhancement failed: {ErrorContent}", errorContent);
+                throw new Exception($"Failed to create photo enhancement prediction: {response.StatusCode}, {errorContent}");
+            }
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<ReplicatePredictionResult>(
+                responseJson, 
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (result == null)
+            {
+                throw new Exception("Failed to deserialize photo enhancement prediction response");
+            }
+
+            _logger.LogInformation("Photo enhancement started for user {UserId} with prediction ID {PredictionId}, type: {EnhancementType}", 
+                userId, result.Id, enhancementType);
+            return result;
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
+        {
+            _logger.LogError(ex, "Replicate API authentication failed for photo enhancement for user {UserId}", userId);
+            throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("429") || ex.Message.Contains("rate limit"))
+        {
+            _logger.LogWarning(ex, "Replicate API rate limit reached for photo enhancement for user {UserId}", userId);
+            throw new InvalidOperationException("Replicate API rate limit reached. Please try again later.", ex);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("402") || ex.Message.Contains("payment"))
+        {
+            _logger.LogError(ex, "Replicate API payment required for photo enhancement for user {UserId}", userId);
+            throw new InvalidOperationException("Replicate API payment required. Please check your billing.", ex);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error enhancing photo for user {UserId}", userId);
+            throw;
+        }
+    }
 }

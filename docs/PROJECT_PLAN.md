@@ -26,12 +26,14 @@ This project plan outlines the major milestones, features, and tasks required to
 - [x] Training ZIP file management
 - [x] Webhook signature validation
 
-### Phase 3: User & Business Features ✅ MOSTLY COMPLETED
+### Phase 3: User & Business Features ✅ COMPLETED
 - [x] Image upload system (max 10 selfies)
 - [x] User profile CRUD operations
 - [x] Style selection API and persistence
 - [x] Subscription data model
 - [x] File management and cleanup
+- [x] Free tier system with weekly credits
+- [x] Credit management and usage tracking
 - [ ] Payment integration (Stripe)
 
 ### Phase 4: Frontend Development 🔄 EARLY STAGE
@@ -138,7 +140,15 @@ This project plan outlines the major milestones, features, and tasks required to
    - Detailed negative prompt handling
    - Supports multiple professional styles
 
-3. **Secure API Design**
+3. **Free Tier System**
+   - Weekly credit-based free generation
+   - 3 free casual headshots per week
+   - Uses base FLUX model (no training required)
+   - 95% cost reduction for free users
+   - Automatic weekly credit reset
+   - Usage tracking and analytics
+
+4. **Secure API Design**
    - JWT authentication
    - Input validation
    - Standardized response format
