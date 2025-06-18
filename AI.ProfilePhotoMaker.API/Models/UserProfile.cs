@@ -16,7 +16,13 @@ public class UserProfile
     public int? StyleId { get; set; }
     public Style? Style { get; set; }
     
+    // Free tier and subscription management
+    public SubscriptionTier SubscriptionTier { get; set; } = SubscriptionTier.Free;
+    public int FreeCredits { get; set; } = 3; // Weekly free credits
+    public DateTime LastCreditReset { get; set; } = DateTime.UtcNow;
+    
     public List<ProcessedImage> ProcessedImages { get; set; } = new List<ProcessedImage>();
+    public List<UsageLog> UsageLogs { get; set; } = new List<UsageLog>();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

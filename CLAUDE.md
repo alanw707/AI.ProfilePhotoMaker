@@ -88,6 +88,12 @@ dotnet build AI.ProfilePhotoMaker.sln
 3. User selects styles → API generates images using trained model
 4. Webhook receives generation completion → Stores image URLs
 
+**Free Tier Workflow (NEW):**
+1. User requests free generation → API checks available credits
+2. API generates casual headshot using base FLUX model (no training)
+3. Credit consumed and tracked in UsageLog
+4. Weekly background service resets credits every 7 days
+
 **Authentication Flow:**
 - ASP.NET Identity with JWT tokens
 - Protected endpoints require `[Authorize]` attribute
@@ -95,8 +101,10 @@ dotnet build AI.ProfilePhotoMaker.sln
 
 ### Database Schema
 - `ApplicationUser` (ASP.NET Identity extended)
-- `UserProfile` (user demographics, has many ProcessedImages)
+- `UserProfile` (user demographics, free tier credits, subscription tier)
 - `ProcessedImage` (original/processed URLs, style, timestamps)
+- `UsageLog` (credit consumption tracking, actions, timestamps)
+- `SubscriptionTier` (enum: Free, Premium, Pro)
 - `Subscription` & `SubscriptionPlan` (payment features, planned)
 
 ## Configuration Requirements
