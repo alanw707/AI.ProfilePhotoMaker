@@ -1,5 +1,124 @@
 @import '../../../styles.sass'
 
+// Container and Theme Toggle
+.photo-enhancement-container
+  min-height: 100vh
+  position: relative
+
+.theme-toggle
+  position: fixed
+  top: 1rem
+  right: 1rem
+  z-index: 1000
+  background: var(--background-secondary)
+  border: 1px solid var(--border-color)
+  border-radius: 50%
+  width: 3rem
+  height: 3rem
+  display: flex
+  align-items: center
+  justify-content: center
+  cursor: pointer
+  transition: all 0.2s ease
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1)
+
+  svg
+    width: 1.5rem
+    height: 1.5rem
+    color: var(--text-primary)
+
+  &:hover
+    background: var(--background-tertiary)
+    transform: scale(1.05)
+
+// Header Navigation
+.enhancement-header-nav
+  background: var(--background-primary)
+  border-bottom: 1px solid var(--border-color)
+  padding: 1rem 2rem
+  position: sticky
+  top: 0
+  z-index: 100
+  backdrop-filter: blur(10px)
+
+.header-content
+  max-width: 1200px
+  margin: 0 auto
+  display: flex
+  justify-content: space-between
+  align-items: center
+
+.logo-section
+  display: flex
+  align-items: center
+  gap: 1rem
+
+  .header-logo
+    width: 2.5rem
+    height: 2.5rem
+    border-radius: 8px
+
+  h1
+    color: var(--text-primary)
+    font-size: 1.5rem
+    font-weight: 600
+    margin: 0
+
+.nav-actions
+  display: flex
+  align-items: center
+  gap: 1rem
+
+.user-section
+  display: flex
+  align-items: center
+  gap: 1rem
+
+.user-info
+  display: flex
+  flex-direction: column
+  align-items: flex-end
+  
+  .user-name
+    color: var(--text-primary)
+    font-weight: 500
+    font-size: 0.875rem
+    
+  .user-email
+    color: var(--text-secondary)
+    font-size: 0.75rem
+
+.btn
+  padding: 0.5rem 1rem
+  border-radius: 6px
+  font-weight: 500
+  text-decoration: none
+  cursor: pointer
+  border: none
+  display: inline-flex
+  align-items: center
+  gap: 0.5rem
+  transition: all 0.2s ease
+  font-size: 0.875rem
+
+  &.btn-outline
+    background: transparent
+    color: var(--text-primary)
+    border: 1px solid var(--border-color)
+
+    &:hover
+      background: var(--background-secondary)
+
+  &.btn-logout
+    background: transparent
+    color: var(--text-secondary)
+    border: 1px solid transparent
+
+    &:hover
+      background: rgba(255, 99, 71, 0.1)
+      color: #ff6347
+      border-color: rgba(255, 99, 71, 0.3)
+
 .photo-enhancement
   max-width: 800px
   margin: 0 auto
@@ -292,12 +411,14 @@
 
     &.btn-primary
       background: var(--primary-color)
-      color: white
+      color: #2c3e50
       border: 1px solid var(--primary-dark)
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1)
+      font-weight: 600
 
       &:hover
         background: var(--primary-dark)
+        color: #2c3e50
         transform: translateY(-1px)
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15)
 
@@ -387,6 +508,33 @@
 
 // Responsive Design
 @media (max-width: 768px)
+  .enhancement-header-nav
+    padding: 1rem
+
+  .header-content
+    padding: 0 1rem
+
+  .logo-section
+    h1
+      font-size: 1.25rem
+
+    .header-logo
+      width: 2rem
+      height: 2rem
+
+  .nav-actions
+    gap: 0.5rem
+
+  .user-info
+    .user-name
+      font-size: 0.75rem
+    .user-email
+      font-size: 0.65rem
+
+  .btn
+    padding: 0.4rem 0.8rem
+    font-size: 0.75rem
+
   .photo-enhancement
     padding: 1rem
 
@@ -419,3 +567,27 @@
 
   .option-card
     padding: 0.75rem
+
+// Extra small devices (phones in portrait)
+@media (max-width: 480px)
+  .nav-actions
+    flex-direction: column
+    align-items: flex-end
+    gap: 0.25rem
+
+  .user-section
+    gap: 0.5rem
+
+  .logo-section
+    h1
+      display: none  // Hide title on very small screens
+
+  .theme-toggle
+    top: 0.5rem
+    right: 0.5rem
+    width: 2.5rem
+    height: 2.5rem
+
+    svg
+      width: 1.25rem
+      height: 1.25rem
