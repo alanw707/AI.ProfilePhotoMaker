@@ -4,7 +4,6 @@ import { CommonModule } from '@angular/common';
 import { AuthService } from '../services/auth.service';
 import { ThemeService } from '../services/theme.service';
 import { PhotoGalleryComponent, GalleryImage } from '../components/photo-gallery/photo-gallery.component';
-import { PhotoEnhancementComponent } from '../components/photo-enhancement/photo-enhancement.component';
 import { FileUploadService, ProcessedImage } from '../services/file-upload.service';
 import { ProfileService, UserProfile } from '../services/profile.service';
 import { ReplicateService, CreditsInfo } from '../services/replicate.service';
@@ -29,7 +28,7 @@ interface GeneratedPhoto {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, PhotoGalleryComponent, PhotoEnhancementComponent],
+  imports: [CommonModule, PhotoGalleryComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.sass'
 })
@@ -120,7 +119,6 @@ export class DashboardComponent implements OnInit {
   // Photo Gallery
   galleryImages: GalleryImage[] = [];
   showGallery: boolean = false;
-  showEnhancement: boolean = false;
 
   constructor(
     private authService: AuthService,
@@ -684,14 +682,10 @@ export class DashboardComponent implements OnInit {
     this.showGallery = !this.showGallery;
     if (this.showGallery) {
       this.loadUserImages();
-      this.showEnhancement = false;
     }
   }
 
-  toggleEnhancementView() {
-    this.showEnhancement = !this.showEnhancement;
-    if (this.showEnhancement) {
-      this.showGallery = false;
-    }
+  goToEnhancement() {
+    this.router.navigate(['/enhance']);
   }
 }

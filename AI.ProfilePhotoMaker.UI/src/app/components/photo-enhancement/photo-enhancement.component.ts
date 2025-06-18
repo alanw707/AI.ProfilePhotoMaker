@@ -1,15 +1,59 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ReplicateService, GenerateFreeImageRequest, CreditsInfo } from '../../services/replicate.service';
 import { FileUploadService } from '../../services/file-upload.service';
+import { AuthService } from '../../services/auth.service';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-photo-enhancement',
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="photo-enhancement">
+    <div class="photo-enhancement-container">
+      <!-- Theme Toggle Button -->
+      <button class="theme-toggle" (click)="toggleTheme()" [attr.aria-label]="'Switch to ' + (themeService.isDark() ? 'light' : 'dark') + ' theme'">
+        <svg *ngIf="!themeService.isDark()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+        </svg>
+        <svg *ngIf="themeService.isDark()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+        </svg>
+      </button>
+
+      <!-- Navigation Header -->
+      <header class="enhancement-header-nav">
+        <div class="header-content">
+          <div class="logo-section">
+            <img src="Logo.PNG" alt="AI Profile Photo Maker" class="header-logo">
+            <h1>AI Profile Photo Maker</h1>
+          </div>
+          <div class="nav-actions">
+            <button class="btn btn-outline" (click)="goToDashboard()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M3 12L5 10M5 10L12 3L19 10M5 10V20C5 20.5523 5.44772 21 6 21H9M19 10L21 12M19 10V20C19 20.5523 18.4477 21 18 21H15M9 21C9.55228 21 10 20.5523 10 20V16C10 15.4477 10.4477 15 11 15H13C13.5523 15 14 15.4477 14 16V20C14 20.5523 14.4477 21 15 21M9 21H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Dashboard
+            </button>
+            <div class="user-section">
+              <div class="user-info">
+                <span class="user-name">{{userName}}</span>
+                <span class="user-email">{{userEmail}}</span>
+              </div>
+              <button class="btn btn-logout" (click)="logout()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M16 17L21 12M21 12L16 7M21 12H9M9 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="photo-enhancement">
       <div class="enhancement-header">
         <h2>Free Photo Enhancement</h2>
         <p>Upload your photo and enhance it with AI - background removal, lighting correction, and professional styling.</p>
@@ -171,6 +215,7 @@ import { FileUploadService } from '../../services/file-upload.service';
           <button class="btn btn-outline" (click)="resetComponent()">Try Again</button>
         </div>
       </div>
+      </div>
     </div>
   `,
   styleUrls: ['./photo-enhancement.component.sass']
@@ -188,14 +233,20 @@ export class PhotoEnhancementComponent implements OnInit {
   creditsInfo: CreditsInfo | null = null;
   errorMessage: string = '';
   isDragOver: boolean = false;
+  userName: string = '';
+  userEmail: string = '';
 
   constructor(
     private replicateService: ReplicateService,
-    private fileUploadService: FileUploadService
+    private fileUploadService: FileUploadService,
+    private authService: AuthService,
+    private router: Router,
+    public themeService: ThemeService
   ) {}
 
   ngOnInit() {
     this.loadCreditsInfo();
+    this.loadUserInfo();
   }
 
   async loadCreditsInfo() {
@@ -442,5 +493,37 @@ export class PhotoEnhancementComponent implements OnInit {
     } else {
       return `in ${diffDays} days`;
     }
+  }
+
+  loadUserInfo() {
+    // Get user info from auth service
+    this.authService.currentUser$.subscribe(user => {
+      if (user) {
+        this.userEmail = user.email;
+        
+        // Use firstName/lastName from JWT if available, otherwise use email prefix
+        const jwtName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        
+        if (jwtName) {
+          this.userName = jwtName;
+        } else {
+          // Fallback: use part of email before @ symbol
+          this.userName = user.email.split('@')[0] || 'User';
+        }
+      }
+    });
+  }
+
+  toggleTheme() {
+    this.themeService.toggleTheme();
+  }
+
+  logout() {
+    this.authService.logout();
+    this.router.navigate(['/login']);
+  }
+
+  goToDashboard() {
+    this.router.navigate(['/dashboard']);
   }
 }

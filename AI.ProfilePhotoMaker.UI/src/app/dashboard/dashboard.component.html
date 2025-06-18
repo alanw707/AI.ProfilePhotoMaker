@@ -254,18 +254,16 @@
               </svg>
               {{showGallery ? 'Hide Gallery' : 'View Gallery'}}
             </button>
-            <button class="btn btn-primary" (click)="toggleEnhancementView()" [class.active]="showEnhancement">
+            <button class="btn btn-primary" (click)="goToEnhancement()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
                 <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2"/>
               </svg>
-              {{showEnhancement ? 'Hide Enhancement' : 'Enhance Photo'}}
+              Enhance Photo
             </button>
           </div>
         </div>
 
-        <!-- Photo Enhancement Component -->
-        <app-photo-enhancement *ngIf="showEnhancement"></app-photo-enhancement>
 
         <!-- Photo Gallery Component -->
         <app-photo-gallery 
