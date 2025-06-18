@@ -79,17 +79,17 @@ public interface IReplicateApiClient
     Task<string> GenerateImagesAsync(GenerateImagesRequestDto request);
 
     /// <summary>
-    /// Generates a free casual headshot using base FLUX model (no custom training required)
+    /// Generates a basic casual headshot using base FLUX model (no custom training required)
     /// </summary>
     /// <param name="userId">The user ID</param>
     /// <param name="userInfo">User information for generation</param>
     /// <param name="gender">User's gender for better generation</param>
     /// <returns>The prediction result</returns>
-    Task<ReplicatePredictionResult> GenerateFreeImageAsync(string userId, UserInfo? userInfo, string gender);
+    Task<ReplicatePredictionResult> GenerateBasicImageAsync(string userId, UserInfo? userInfo, string gender);
 
     /// <summary>
-    /// Enhances a user's uploaded photo with AI (background removal, lighting correction, color grading)
-    /// This is a cost-effective alternative for free tier users
+    /// Enhances a user's uploaded photo using Flux Kontext Pro for text-based image editing
+    /// Provides professional photo enhancement for basic tier users
     /// </summary>
     /// <param name="userId">The user ID</param>
     /// <param name="imageUrl">URL to the user's uploaded photo</param>

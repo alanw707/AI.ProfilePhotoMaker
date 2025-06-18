@@ -2,15 +2,15 @@ using AI.ProfilePhotoMaker.API.Services;
 
 namespace AI.ProfilePhotoMaker.API.Services;
 
-public class FreeTierBackgroundService : BackgroundService
+public class BasicTierBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<FreeTierBackgroundService> _logger;
+    private readonly ILogger<BasicTierBackgroundService> _logger;
     private readonly TimeSpan _checkInterval = TimeSpan.FromHours(1); // Check every hour
 
-    public FreeTierBackgroundService(
+    public BasicTierBackgroundService(
         IServiceProvider serviceProvider,
-        ILogger<FreeTierBackgroundService> logger)
+        ILogger<BasicTierBackgroundService> logger)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
@@ -18,7 +18,7 @@ public class FreeTierBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Free Tier Background Service started");
+        _logger.LogInformation("Basic Tier Background Service started");
 
         try
         {
@@ -39,14 +39,14 @@ public class FreeTierBackgroundService : BackgroundService
         }
         catch (TaskCanceledException)
         {
-            _logger.LogInformation("Free Tier Background Service cancellation requested.");
+            _logger.LogInformation("Basic Tier Background Service cancellation requested.");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled exception in Free Tier Background Service");
+            _logger.LogError(ex, "Unhandled exception in Basic Tier Background Service");
         }
 
-        _logger.LogInformation("Free Tier Background Service stopped");
+        _logger.LogInformation("Basic Tier Background Service stopped");
     }
 
     private async Task ProcessCreditResets()
@@ -54,10 +54,10 @@ public class FreeTierBackgroundService : BackgroundService
         try
         {
             using var scope = _serviceProvider.CreateScope();
-            var freeTierService = scope.ServiceProvider.GetRequiredService<IFreeTierService>();
+            var basicTierService = scope.ServiceProvider.GetRequiredService<IBasicTierService>();
 
             _logger.LogInformation("Starting weekly credit reset check");
-            await freeTierService.ResetAllExpiredCreditsAsync();
+            await basicTierService.ResetAllExpiredCreditsAsync();
             _logger.LogInformation("Completed weekly credit reset check");
         }
         catch (Exception ex)
@@ -68,7 +68,7 @@ public class FreeTierBackgroundService : BackgroundService
 
     public override Task StopAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Free Tier Background Service is stopping");
+        _logger.LogInformation("Basic Tier Background Service is stopping");
         return base.StopAsync(cancellationToken);
     }
 }

@@ -13,7 +13,7 @@ public class UsageLog
     
     [Required]
     [MaxLength(50)]
-    public string Action { get; set; } = string.Empty; // "free_generation", "credit_reset", etc.
+    public string Action { get; set; } = string.Empty; // "basic_generation", "credit_reset", etc.
     
     [MaxLength(500)]
     public string? Details { get; set; }

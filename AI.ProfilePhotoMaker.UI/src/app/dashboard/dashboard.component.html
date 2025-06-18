@@ -112,9 +112,17 @@
                       *ngIf="selectedFiles.length > 0" 
                       (click)="uploadImages()"
                       [disabled]="isUploading">
-                <span *ngIf="isUploading">Uploading...</span>
+                <span *ngIf="isUploading">Uploading... {{uploadProgress}}%</span>
                 <span *ngIf="!isUploading">Upload {{selectedFiles.length}} Images</span>
               </button>
+              
+              <!-- Upload Progress Bar -->
+              <div class="upload-progress" *ngIf="isUploading">
+                <div class="progress-bar">
+                  <div class="progress-fill" [style.width.%]="uploadProgress"></div>
+                </div>
+                <p class="progress-text">{{uploadProgress}}% uploaded</p>
+              </div>
             </div>
           </div>
 
@@ -230,8 +238,8 @@
         </div>
       </section>
 
-      <!-- Free Tier Enhancement Section -->
-      <section class="free-tier-section">
+      <!-- Basic Tier Enhancement Section -->
+      <section class="basic-tier-section">
         <div class="section-header">
           <h2>Free Photo Enhancement</h2>
           <p>Try our AI photo enhancement service for free - no custom training required!</p>

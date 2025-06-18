@@ -309,13 +309,13 @@ if (string.IsNullOrEmpty(jwtSecret) || jwtSecret.Length < 32)
 // Register the Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IImageProcessingService, AzureImageProcessingService>();
-builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IFreeTierService, AI.ProfilePhotoMaker.API.Services.FreeTierService>();
+builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IBasicTierService, AI.ProfilePhotoMaker.API.Services.BasicTierService>();
 builder.Services.AddHttpClient<IReplicateApiClient, ReplicateApiClient>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository, AI.ProfilePhotoMaker.API.Data.UserProfileRepository>();
 
 // Register background services
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelCreationPollingService>();
-builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.FreeTierBackgroundService>();
+builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.BasicTierBackgroundService>();
 
 
 builder.Services.AddControllers();

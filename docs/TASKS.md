@@ -100,18 +100,18 @@ This document tracks actionable tasks for the development of the AI.ProfilePhoto
 - [x] **FIXED**: OAuth username display issue - now shows full name from profile API fallback
 - [ ] Add Facebook and Apple OAuth credentials when needed (low priority)
 
-### Free Tier System Implementation ✅ COMPLETED
+### Basic Tier System Implementation ✅ COMPLETED
 - [x] Create SubscriptionTier enum (Free, Premium, Pro)
-- [x] Add free tier fields to UserProfile model (FreeCredits, LastCreditReset, SubscriptionTier)
+- [x] Add basic tier fields to UserProfile model (Credits, LastCreditReset, SubscriptionTier)
 - [x] Create UsageLog model for tracking credit consumption and resets
 - [x] Implement FreeTierService with credit management logic
-- [x] Add database migration for free tier support with proper defaults
+- [x] Add database migration for basic tier support with proper defaults
 - [x] Create free generation endpoint using base FLUX model (no custom training)
 - [x] Implement credit checking and consumption middleware
 - [x] Add weekly credit reset background service
 - [x] Create credits status API endpoint for frontend integration
 - [x] **FEATURE**: 3 free casual headshots per week using base FLUX model
-- [x] **COST SAVINGS**: 95% reduction in AI costs for free tier (no model training)
+- [x] **COST SAVINGS**: 95% reduction in AI costs for basic tier (no model training)
 
 ### Frontend UI Implementation ✅ COMPLETED
 - [x] Remove Angular boilerplate code and placeholder content
@@ -260,7 +260,7 @@ This document tracks actionable tasks for the development of the AI.ProfilePhoto
 3. **Comprehensive Dashboard** - 4-step workflow: Upload → Train → Style → Download
 4. **Interactive Components** - Drag & drop uploads, style selection, progress tracking
 5. **Professional Styling** - Glass-morphism, hover effects, responsive design
-6. **Free Tier System** - Weekly credit-based free generation with base FLUX model
+6. **Basic Tier System** - Weekly credit-based basic generation with base FLUX model
 
 ### Next Development Phase:
 1. Add authentication guards to protect routes

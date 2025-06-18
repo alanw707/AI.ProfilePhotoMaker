@@ -13,12 +13,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers;
 public class ReplicateController : ControllerBase
 {
     private readonly IReplicateApiClient _replicateApiClient;
-    private readonly IFreeTierService _freeTierService;
+    private readonly IBasicTierService _basicTierService;
 
-    public ReplicateController(IReplicateApiClient replicateApiClient, IFreeTierService freeTierService)
+    public ReplicateController(IReplicateApiClient replicateApiClient, IBasicTierService basicTierService)
     {
         _replicateApiClient = replicateApiClient;
-        _freeTierService = freeTierService;
+        _basicTierService = basicTierService;
     }
 
     /// <summary>
@@ -68,10 +68,10 @@ public class ReplicateController : ControllerBase
     }
 
     /// <summary>
-    /// Generates a free casual headshot using base FLUX model (no custom training)
+    /// Generates a basic casual headshot using base FLUX model (no custom training)
     /// </summary>
-    [HttpPost("generate/free")]
-    public async Task<IActionResult> GenerateFreeImage([FromBody] GenerateFreeImageRequestDto dto)
+    [HttpPost("generate/basic")]
+    public async Task<IActionResult> GenerateBasicImage([FromBody] GenerateBasicImageRequestDto dto)
     {
         if (!ModelState.IsValid)
             return BadRequest(new { success = false, error = new { code = "InvalidModel", message = "Invalid input." } });
@@ -81,21 +81,21 @@ public class ReplicateController : ControllerBase
             return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
 
         // Check if user has available credits
-        var hasCredits = await _freeTierService.HasAvailableCreditsAsync(userId);
+        var hasCredits = await _basicTierService.HasAvailableCreditsAsync(userId);
         if (!hasCredits)
         {
-            var availableCredits = await _freeTierService.GetAvailableCreditsAsync(userId);
+            var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
             return BadRequest(new { 
                 success = false, 
                 error = new { 
                     code = "InsufficientCredits", 
-                    message = $"No free credits available. You have {availableCredits} credits remaining. Credits reset weekly." 
+                    message = $"No credits available. You have {availableCredits} credits remaining. Credits reset weekly." 
                 } 
             });
         }
 
         // Consume a credit for this generation
-        var creditConsumed = await _freeTierService.ConsumeCreditsAsync(userId, 1, "free_generation");
+        var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, 1, "basic_generation");
         if (!creditConsumed)
         {
             return BadRequest(new { 
@@ -109,10 +109,10 @@ public class ReplicateController : ControllerBase
 
         try
         {
-            // Use base FLUX model for free tier - no custom training required
-            var result = await _replicateApiClient.GenerateFreeImageAsync(userId, dto.UserInfo, dto.Gender);
+            // Use base FLUX model for basic tier - no custom training required
+            var result = await _replicateApiClient.GenerateBasicImageAsync(userId, dto.UserInfo, dto.Gender);
             
-            var remainingCredits = await _freeTierService.GetAvailableCreditsAsync(userId);
+            var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
             
             return Ok(new { 
                 success = true, 
@@ -147,8 +147,8 @@ public class ReplicateController : ControllerBase
         if (string.IsNullOrEmpty(userId))
             return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
 
-        var availableCredits = await _freeTierService.GetAvailableCreditsAsync(userId);
-        var profile = await _freeTierService.GetUserProfileWithCreditsAsync(userId);
+        var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
+        var profile = await _basicTierService.GetUserProfileWithCreditsAsync(userId);
         
         if (profile == null)
             return NotFound(new { success = false, error = new { code = "ProfileNotFound", message = "User profile not found." } });
@@ -166,8 +166,8 @@ public class ReplicateController : ControllerBase
     }
 
     /// <summary>
-    /// Enhances a user's uploaded photo (free tier alternative)
-    /// Provides background removal, lighting correction, and basic enhancements
+    /// Enhances a user's uploaded photo using Flux Kontext Pro (basic tier feature)
+    /// Provides professional photo enhancement using text-based image editing
     /// </summary>
     [HttpPost("enhance")]
     public async Task<IActionResult> EnhancePhoto([FromBody] EnhancePhotoRequestDto dto)
@@ -180,24 +180,24 @@ public class ReplicateController : ControllerBase
             return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
 
         // Check if user has available credits
-        var availableCredits = await _freeTierService.GetAvailableCreditsAsync(userId);
+        var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
         if (availableCredits < 1)
         {
-            var profile = await _freeTierService.GetUserProfileWithCreditsAsync(userId);
+            var profile = await _basicTierService.GetUserProfileWithCreditsAsync(userId);
             var nextReset = profile?.LastCreditReset.AddDays(7) ?? DateTime.UtcNow.AddDays(7);
             
             return Ok(new { 
                 success = false, 
                 error = new { 
                     code = "InsufficientCredits", 
-                    message = "No free credits remaining. Credits reset weekly.",
+                    message = "No credits remaining. Credits reset weekly.",
                     nextResetDate = nextReset
                 } 
             });
         }
 
         // Consume credit for enhancement
-        var creditConsumed = await _freeTierService.ConsumeCreditsAsync(userId, 1, "photo_enhancement");
+        var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, 1, "photo_enhancement");
         if (!creditConsumed)
         {
             return StatusCode(500, new { 
@@ -214,7 +214,7 @@ public class ReplicateController : ControllerBase
             // Enhance the uploaded photo
             var result = await _replicateApiClient.EnhancePhotoAsync(userId, dto.ImageUrl, dto.EnhancementType ?? "professional");
             
-            var remainingCredits = await _freeTierService.GetAvailableCreditsAsync(userId);
+            var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
             
             return Ok(new { 
                 success = true, 

@@ -32,7 +32,7 @@ This project plan outlines the major milestones, features, and tasks required to
 - [x] Style selection API and persistence
 - [x] Subscription data model
 - [x] File management and cleanup
-- [x] Free tier system with weekly credits
+- [x] Basic tier system with weekly credits
 - [x] Credit management and usage tracking
 - [ ] Payment integration (Stripe)
 
@@ -140,7 +140,7 @@ This project plan outlines the major milestones, features, and tasks required to
    - Detailed negative prompt handling
    - Supports multiple professional styles
 
-3. **Free Tier System**
+3. **Basic Tier System**
    - Weekly credit-based free generation
    - 3 free casual headshots per week
    - Uses base FLUX model (no training required)
