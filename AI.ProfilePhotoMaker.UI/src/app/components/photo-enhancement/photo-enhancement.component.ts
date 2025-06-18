@@ -55,10 +55,10 @@ import { ThemeService } from '../../services/theme.service';
 
       <div class="photo-enhancement">
       <div class="enhancement-header">
-        <h2>Free Photo Enhancement</h2>
+        <h2>Basic Photo Enhancement</h2>
         <p>Upload your photo and enhance it with AI - background removal, lighting correction, and professional styling.</p>
         
-        <!-- Free Tier Credits Display -->
+        <!-- Basic Tier Credits Display -->
         <div class="credits-info" *ngIf="creditsInfo">
           <div class="credits-card">
             <div class="credits-icon">⚡</div>
@@ -198,7 +198,7 @@ import { ThemeService } from '../../services/theme.service';
         <div class="no-credits-card">
           <div class="no-credits-icon">⏳</div>
           <h3>No Credits Available</h3>
-          <p>Your free enhancement credits will reset {{getNextResetText(creditsInfo.nextResetDate)}}.</p>
+          <p>Your basic enhancement credits will reset {{getNextResetText(creditsInfo.nextResetDate)}}.</p>
           <div class="upgrade-prompt">
             <p>Want unlimited enhancements?</p>
             <button class="btn btn-primary">Upgrade to Premium</button>

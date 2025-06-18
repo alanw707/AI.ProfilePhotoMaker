@@ -79,7 +79,7 @@ export class ReplicateService {
     return this.http.get<{ success: boolean; data: ReplicatePredictionResult; error: any }>(this.config.getFullUrl(`/replicate/generate/status/${predictionId}`));
   }
 
-  // Free Tier Generation
+  // Basic Tier Generation
   generateFreeImage(request: GenerateFreeImageRequest): Observable<{ 
     success: boolean; 
     data: { 

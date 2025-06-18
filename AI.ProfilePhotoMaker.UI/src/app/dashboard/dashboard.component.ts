@@ -59,6 +59,7 @@ export class DashboardComponent implements OnInit {
   // File Upload
   selectedFiles: File[] = [];
   isUploading: boolean = false;
+  uploadProgress: number = 0;
   isDragOver: boolean = false;
 
   // AI Training
@@ -305,30 +306,81 @@ export class DashboardComponent implements OnInit {
     }
 
     this.isUploading = true;
+    this.uploadProgress = 0;
+    
     try {
-      this.fileUploadService.uploadImages(this.selectedFiles).subscribe({
+      // Get profile data for upload
+      const profileData = this.userProfile ? {
+        firstName: this.userProfile.firstName,
+        lastName: this.userProfile.lastName,
+        gender: this.userProfile.gender,
+        ethnicity: this.userProfile.ethnicity
+      } : undefined;
+
+      this.fileUploadService.uploadImages(this.selectedFiles, profileData).subscribe({
         next: (result) => {
+          this.uploadProgress = result.progress;
+          
           if (result.response) {
-            // Upload completed
-            this.uploadedImages = result.response.totalFiles;
+            // Upload completed successfully
+            this.uploadedImages = result.response.uploadedFiles.length;
             this.selectedFiles = [];
+            
+            // Update user profile if we got profile ID back
+            if (result.response.profileId && this.userProfile) {
+              this.userProfile.id = result.response.profileId;
+            }
+            
+            // Check if training ZIP was created
+            if (result.response.zipCreated) {
+              this.notificationService.success('Upload Complete', 
+                `${this.uploadedImages} images uploaded successfully. Training package prepared!`);
+            } else {
+              this.notificationService.success('Upload Complete', 
+                `${this.uploadedImages} images uploaded successfully.`);
+            }
+            
             this.updateCurrentStep();
-            this.notificationService.uploadSuccess(this.uploadedImages);
+            this.loadTrainingStatus(); // Check if we can start training
             this.isUploading = false;
           }
-          // You could also handle progress updates here if needed
         },
         error: (error) => {
           console.error('Upload failed:', error);
-          const errorMessage = error.error?.message || error.message || 'Unknown error occurred';
-          this.notificationService.uploadError(errorMessage);
+          const errorMessage = error.error?.message || error.message || 'Upload failed. Please try again.';
+          this.notificationService.error('Upload Failed', errorMessage);
           this.isUploading = false;
+          this.uploadProgress = 0;
         }
       });
     } catch (error: any) {
       console.error('Upload failed:', error);
       this.notificationService.uploadError('An unexpected error occurred during upload.');
       this.isUploading = false;
+    }
+  }
+
+  async loadTrainingStatus() {
+    try {
+      this.fileUploadService.getTrainingStatus().subscribe({
+        next: (status) => {
+          console.log('Training status:', status);
+          this.modelStatus = status.status;
+          
+          if (status.hasTrainedModel) {
+            this.userProfile = this.userProfile || {} as UserProfile;
+            this.userProfile.trainedModelId = status.trainedModelId;
+            this.uploadedImages = status.totalUploadedImages;
+          }
+          
+          this.updateCurrentStep();
+        },
+        error: (error) => {
+          console.error('Failed to load training status:', error);
+        }
+      });
+    } catch (error) {
+      console.error('Error loading training status:', error);
     }
   }
 
@@ -563,16 +615,21 @@ export class DashboardComponent implements OnInit {
   checkTrainingStatus() {
     this.fileUploadService.getTrainingStatus().subscribe({
       next: (response) => {
-        if (response.success && response.data) {
-          this.modelStatus = response.data.status || 'Not Started';
-          this.trainingProgress = response.data.progress || 0;
-          if (response.data.estimatedCompletion) {
-            this.estimatedCompletion = response.data.estimatedCompletion;
-          }
+        console.log('Training status:', response);
+        this.modelStatus = response.status || 'Not Started';
+        this.uploadedImages = response.totalUploadedImages || 0;
+        
+        if (response.hasTrainedModel) {
+          this.userProfile = this.userProfile || {} as UserProfile;
+          this.userProfile.trainedModelId = response.trainedModelId;
+          this.modelStatus = 'trained';
         }
+        
+        this.updateCurrentStep();
       },
       error: (error) => {
         console.error('Failed to check training status:', error);
+        this.modelStatus = 'Error';
       }
     });
   }
@@ -593,23 +650,31 @@ export class DashboardComponent implements OnInit {
     this.isLoadingImages = true;
     try {
       const response = await this.fileUploadService.getUserImages().toPromise();
-      if (response?.success) {
-        this.galleryImages = response.data.map((img: ProcessedImage) => ({
+      if (response) {
+        console.log('User images response:', response);
+        
+        // Update dashboard stats
+        this.uploadedImages = response.originalUploads || 0;
+        
+        // Map images for gallery
+        this.galleryImages = response.images.map((img: ProcessedImage) => ({
           id: img.id,
           url: img.processedImageUrl || img.originalImageUrl,
           thumbnailUrl: img.originalImageUrl,
-          title: `${img.style} Photo`,
-          description: `Generated ${img.style} style profile photo`,
-          style: img.style,
+          title: img.isGenerated ? `${img.style} Photo` : 'Uploaded Photo',
+          description: img.isGenerated ? `Generated ${img.style} style profile photo` : 'Original uploaded image',
+          style: img.style || 'original',
           createdAt: img.createdAt,
           status: 'completed' as const,
-          type: img.processedImageUrl ? 'generated' as const : 'original' as const,
+          type: img.isGenerated ? 'generated' as const : 'original' as const,
           downloadUrl: img.processedImageUrl || img.originalImageUrl
         }));
         
         if (this.galleryImages.length === 0) {
           this.notificationService.info('No Images Yet', 'Upload some selfies and generate photos to see them here!');
         }
+        
+        this.updateCurrentStep();
       } else {
         this.notificationService.error('Images Load Failed', 'Failed to load your images.');
       }

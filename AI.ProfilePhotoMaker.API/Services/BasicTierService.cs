@@ -4,14 +4,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AI.ProfilePhotoMaker.API.Services;
 
-public class FreeTierService : IFreeTierService
+public class BasicTierService : IBasicTierService
 {
     private readonly ApplicationDbContext _context;
-    private readonly ILogger<FreeTierService> _logger;
-    private const int WeeklyFreeCredits = 3;
+    private readonly ILogger<BasicTierService> _logger;
+    private const int WeeklyCredits = 3;
     private const int DaysInWeek = 7;
 
-    public FreeTierService(ApplicationDbContext context, ILogger<FreeTierService> logger)
+    public BasicTierService(ApplicationDbContext context, ILogger<BasicTierService> logger)
     {
         _context = context;
         _logger = logger;
@@ -26,10 +26,10 @@ public class FreeTierService : IFreeTierService
         if (ShouldResetCredits(profile.LastCreditReset))
         {
             await ResetWeeklyCreditsAsync(userId);
-            return WeeklyFreeCredits > 0;
+            return WeeklyCredits > 0;
         }
 
-        return profile.FreeCredits > 0;
+        return profile.Credits > 0;
     }
 
     public async Task<int> GetAvailableCreditsAsync(string userId)
@@ -41,10 +41,10 @@ public class FreeTierService : IFreeTierService
         if (ShouldResetCredits(profile.LastCreditReset))
         {
             await ResetWeeklyCreditsAsync(userId);
-            return WeeklyFreeCredits;
+            return WeeklyCredits;
         }
 
-        return profile.FreeCredits;
+        return profile.Credits;
     }
 
     public async Task<bool> ConsumeCreditsAsync(string userId, int credits = 1, string action = "free_generation")
@@ -63,24 +63,24 @@ public class FreeTierService : IFreeTierService
             profile = await GetUserProfileWithCreditsAsync(userId); // Refresh after reset
         }
 
-        if (profile == null || profile.FreeCredits < credits)
+        if (profile == null || profile.Credits < credits)
         {
             _logger.LogWarning("Insufficient credits for user {UserId}. Available: {Available}, Requested: {Requested}", 
-                userId, profile?.FreeCredits ?? 0, credits);
+                userId, profile?.Credits ?? 0, credits);
             return false;
         }
 
         // Consume credits
-        profile.FreeCredits -= credits;
+        profile.Credits -= credits;
         profile.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
 
         // Log the usage
-        await LogUsageAsync(userId, action, $"Consumed {credits} credits", credits, profile.FreeCredits);
+        await LogUsageAsync(userId, action, $"Consumed {credits} credits", credits, profile.Credits);
 
         _logger.LogInformation("User {UserId} consumed {Credits} credits. Remaining: {Remaining}", 
-            userId, credits, profile.FreeCredits);
+            userId, credits, profile.Credits);
 
         return true;
     }
@@ -94,16 +94,16 @@ public class FreeTierService : IFreeTierService
             return;
         }
 
-        profile.FreeCredits = WeeklyFreeCredits;
+        profile.Credits = WeeklyCredits;
         profile.LastCreditReset = DateTime.UtcNow;
         profile.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
 
         // Log the reset
-        await LogUsageAsync(userId, "credit_reset", $"Weekly credits reset to {WeeklyFreeCredits}", 0, WeeklyFreeCredits);
+        await LogUsageAsync(userId, "credit_reset", $"Weekly credits reset to {WeeklyCredits}", 0, WeeklyCredits);
 
-        _logger.LogInformation("Reset weekly credits for user {UserId} to {Credits}", userId, WeeklyFreeCredits);
+        _logger.LogInformation("Reset weekly credits for user {UserId} to {Credits}", userId, WeeklyCredits);
     }
 
     public async Task ResetAllExpiredCreditsAsync()
@@ -111,17 +111,17 @@ public class FreeTierService : IFreeTierService
         var cutoffDate = DateTime.UtcNow.AddDays(-DaysInWeek);
         
         var expiredProfiles = await _context.UserProfiles
-            .Where(p => p.LastCreditReset < cutoffDate && p.SubscriptionTier == SubscriptionTier.Free)
+            .Where(p => p.LastCreditReset < cutoffDate && p.SubscriptionTier == SubscriptionTier.Basic)
             .ToListAsync();
 
         foreach (var profile in expiredProfiles)
         {
-            profile.FreeCredits = WeeklyFreeCredits;
+            profile.Credits = WeeklyCredits;
             profile.LastCreditReset = DateTime.UtcNow;
             profile.UpdatedAt = DateTime.UtcNow;
 
             // Log the reset
-            await LogUsageAsync(profile.UserId, "credit_reset", $"Weekly credits reset to {WeeklyFreeCredits} (batch job)", 0, WeeklyFreeCredits);
+            await LogUsageAsync(profile.UserId, "credit_reset", $"Weekly credits reset to {WeeklyCredits} (batch job)", 0, WeeklyCredits);
         }
 
         if (expiredProfiles.Any())
@@ -137,10 +137,10 @@ public class FreeTierService : IFreeTierService
         if (profile == null) return false;
 
         // Premium users can always generate
-        if (profile.SubscriptionTier != SubscriptionTier.Free)
+        if (profile.SubscriptionTier != SubscriptionTier.Basic)
             return true;
 
-        // Free users need available credits
+        // Basic users need available credits
         return await HasAvailableCreditsAsync(userId);
     }
 

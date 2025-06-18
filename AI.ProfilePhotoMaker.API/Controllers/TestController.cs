@@ -14,14 +14,14 @@ namespace AI.ProfilePhotoMaker.API.Controllers;
 public class TestController : ControllerBase
 {
     private readonly IReplicateApiClient _replicateApiClient;
-    private readonly IFreeTierService _freeTierService;
+    private readonly IBasicTierService _basicTierService;
     private readonly ILogger<TestController> _logger;
     private readonly ApplicationDbContext _context;
 
-    public TestController(IReplicateApiClient replicateApiClient, IFreeTierService freeTierService, ILogger<TestController> logger, ApplicationDbContext context)
+    public TestController(IReplicateApiClient replicateApiClient, IBasicTierService basicTierService, ILogger<TestController> logger, ApplicationDbContext context)
     {
         _replicateApiClient = replicateApiClient;
-        _freeTierService = freeTierService;
+        _basicTierService = basicTierService;
         _logger = logger;
         _context = context;
     }
@@ -213,11 +213,11 @@ public class TestController : ControllerBase
     }
 
     /// <summary>
-    /// Test the free tier image generation workflow
+    /// Test the basic tier image generation workflow
     /// This tests the complete flow: credit check -> consumption -> generation
     /// </summary>
-    [HttpPost("free-generation-test")]
-    public async Task<IActionResult> TestFreeGeneration([FromBody] TestFreeGenerationRequest request)
+    [HttpPost("basic-generation-test")]
+    public async Task<IActionResult> TestBasicGeneration([FromBody] TestBasicGenerationRequest request)
     {
         try
         {
@@ -230,27 +230,27 @@ public class TestController : ControllerBase
                 });
             }
 
-            _logger.LogInformation("Testing free generation for user {UserId} with gender {Gender}", userId, request.Gender);
+            _logger.LogInformation("Testing basic generation for user {UserId} with gender {Gender}", userId, request.Gender);
 
             // Step 1: Check available credits
-            var availableCredits = await _freeTierService.GetAvailableCreditsAsync(userId);
+            var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
             _logger.LogInformation("User {UserId} has {Credits} available credits", userId, availableCredits);
 
             if (availableCredits <= 0)
             {
                 return Ok(new {
                     success = false,
-                    message = "No free credits available",
+                    message = "No credits available",
                     data = new {
                         availableCredits = availableCredits,
                         creditStatus = "exhausted"
                     },
-                    error = new { code = "InsufficientCredits", message = "No free credits remaining. Credits reset weekly." }
+                    error = new { code = "InsufficientCredits", message = "No credits remaining. Credits reset weekly." }
                 });
             }
 
             // Step 2: Consume a credit
-            var creditConsumed = await _freeTierService.ConsumeCreditsAsync(userId, 1, "test_free_generation");
+            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, 1, "test_basic_generation");
             if (!creditConsumed)
             {
                 return Ok(new {
@@ -263,23 +263,23 @@ public class TestController : ControllerBase
 
             _logger.LogInformation("Successfully consumed 1 credit for user {UserId}", userId);
 
-            // Step 3: Generate free image using base FLUX model
+            // Step 3: Generate basic image using base FLUX model
             var userInfo = request.UserInfo ?? new Models.UserInfo { Gender = request.Gender };
-            var generationResult = await _replicateApiClient.GenerateFreeImageAsync(userId, userInfo, request.Gender);
+            var generationResult = await _replicateApiClient.GenerateBasicImageAsync(userId, userInfo, request.Gender);
 
             // Step 4: Get updated credits
-            var remainingCredits = await _freeTierService.GetAvailableCreditsAsync(userId);
+            var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
 
             return Ok(new {
                 success = true,
-                message = "Free image generation started successfully",
+                message = "Basic image generation started successfully",
                 data = new {
                     predictionId = generationResult.Id,
                     status = generationResult.Status,
                     createdAt = generationResult.CreatedAt,
                     creditsConsumed = 1,
                     creditsRemaining = remainingCredits,
-                    generationType = "free_tier_casual",
+                    generationType = "basic_tier_casual",
                     modelUsed = "base_flux"
                 },
                 error = (object?)null
@@ -287,10 +287,10 @@ public class TestController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Free generation test failed for user");
+            _logger.LogError(ex, "Basic generation test failed for user");
             return StatusCode(500, new {
                 success = false,
-                message = "Free generation test failed",
+                message = "Basic generation test failed",
                 data = (object?)null,
                 error = new { code = "GenerationError", message = ex.Message }
             });
@@ -298,9 +298,9 @@ public class TestController : ControllerBase
     }
 
     /// <summary>
-    /// Test endpoint to check current user's free tier status
+    /// Test endpoint to check current user's basic tier status
     /// </summary>
-    [HttpGet("free-tier-status")]
+    [HttpGet("basic-tier-status")]
     public async Task<IActionResult> GetFreeTierStatus()
     {
         try
@@ -314,7 +314,7 @@ public class TestController : ControllerBase
                 });
             }
 
-            var profile = await _freeTierService.GetUserProfileWithCreditsAsync(userId);
+            var profile = await _basicTierService.GetUserProfileWithCreditsAsync(userId);
             if (profile == null)
             {
                 return Ok(new {
@@ -325,16 +325,16 @@ public class TestController : ControllerBase
                 });
             }
 
-            var availableCredits = await _freeTierService.GetAvailableCreditsAsync(userId);
+            var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
 
             return Ok(new {
                 success = true,
-                message = "Free tier status retrieved successfully",
+                message = "Basic tier status retrieved successfully",
                 data = new {
                     userId = userId,
                     subscriptionTier = profile.SubscriptionTier.ToString(),
                     availableCredits = availableCredits,
-                    totalFreeCredits = profile.FreeCredits,
+                    totalCredits = profile.Credits,
                     lastCreditReset = profile.LastCreditReset,
                     nextResetDate = profile.LastCreditReset.AddDays(7),
                     daysUntilReset = Math.Max(0, 7 - (DateTime.UtcNow - profile.LastCreditReset).Days),
@@ -345,10 +345,10 @@ public class TestController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get free tier status");
+            _logger.LogError(ex, "Failed to get basic tier status");
             return StatusCode(500, new {
                 success = false,
-                message = "Failed to get free tier status",
+                message = "Failed to get basic tier status",
                 data = (object?)null,
                 error = new { code = "StatusError", message = ex.Message }
             });
@@ -372,8 +372,8 @@ public class TestController : ControllerBase
                 });
             }
 
-            await _freeTierService.ResetWeeklyCreditsAsync(userId);
-            var newCredits = await _freeTierService.GetAvailableCreditsAsync(userId);
+            await _basicTierService.ResetWeeklyCreditsAsync(userId);
+            var newCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
 
             return Ok(new {
                 success = true,
@@ -399,7 +399,7 @@ public class TestController : ControllerBase
     }
 
     /// <summary>
-    /// Test endpoint to enhance a user's photo (free tier alternative)
+    /// Test endpoint to enhance a user's photo (basic tier alternative)
     /// </summary>
     [HttpPost("photo-enhancement-test")]
     public async Task<IActionResult> TestPhotoEnhancement([FromBody] TestPhotoEnhancementRequest request)
@@ -418,24 +418,24 @@ public class TestController : ControllerBase
             _logger.LogInformation("Testing photo enhancement for user {UserId} with image {ImageUrl}", userId, request.ImageUrl);
 
             // Step 1: Check available credits
-            var availableCredits = await _freeTierService.GetAvailableCreditsAsync(userId);
+            var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
             _logger.LogInformation("User {UserId} has {Credits} available credits", userId, availableCredits);
 
             if (availableCredits <= 0)
             {
                 return Ok(new {
                     success = false,
-                    message = "No free credits available",
+                    message = "No credits available",
                     data = new {
                         availableCredits = availableCredits,
                         creditStatus = "exhausted"
                     },
-                    error = new { code = "InsufficientCredits", message = "No free credits remaining. Credits reset weekly." }
+                    error = new { code = "InsufficientCredits", message = "No credits remaining. Credits reset weekly." }
                 });
             }
 
             // Step 2: Consume a credit
-            var creditConsumed = await _freeTierService.ConsumeCreditsAsync(userId, 1, "test_photo_enhancement");
+            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, 1, "test_photo_enhancement");
             if (!creditConsumed)
             {
                 return Ok(new {
@@ -452,7 +452,7 @@ public class TestController : ControllerBase
             var enhancementResult = await _replicateApiClient.EnhancePhotoAsync(userId, request.ImageUrl, request.EnhancementType ?? "professional");
 
             // Step 4: Get updated credits
-            var remainingCredits = await _freeTierService.GetAvailableCreditsAsync(userId);
+            var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
 
             return Ok(new {
                 success = true,
@@ -503,7 +503,7 @@ public record TestGenerationRequest(
 /// <summary>
 /// DTO for testing free generation workflow
 /// </summary>
-public record TestFreeGenerationRequest(
+public record TestBasicGenerationRequest(
     string Gender,
     Models.UserInfo? UserInfo = null
 );

@@ -323,6 +323,30 @@
         transform: scale(1.1)
 
 // Training Progress
+// Progress Bars
+.upload-progress
+  margin-top: 1rem
+  
+  .progress-bar
+    width: 100%
+    height: 8px
+    background: var(--border-color)
+    border-radius: 4px
+    overflow: hidden
+    margin-bottom: 0.5rem
+    
+    .progress-fill
+      height: 100%
+      background: var(--accent-primary)
+      transition: width 0.3s ease
+      border-radius: 4px
+      
+  .progress-text
+    text-align: center
+    color: var(--text-secondary)
+    font-size: 0.875rem
+    margin: 0
+
 .training-progress
   display: flex
   align-items: center
@@ -667,8 +691,8 @@
   .workflow-steps
     gap: 16px
 
-// Free Tier Section
-.free-tier-section
+// Basic Tier Section
+.basic-tier-section
   background: var(--card-bg)
   border-radius: 16px
   padding: 2rem
@@ -715,7 +739,7 @@
       transform: scale(1.1)
 
 @media (max-width: 768px)
-  .free-tier-section
+  .basic-tier-section
     padding: 1.5rem
     margin-bottom: 1.5rem
 
