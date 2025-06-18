@@ -2,7 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { AuthService, LoginRequest } from '../../auth.service';
+import { AuthService, LoginDto } from '../../services/auth.service';
+import { ThemeService } from '../../services/theme.service';
+import { ConfigService } from '../../services/config.service';
 
 @Component({
   selector: 'app-login',
@@ -20,7 +22,9 @@ export class LoginComponent implements OnInit {
     private formBuilder: FormBuilder,
     private authService: AuthService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    public themeService: ThemeService,
+    private configService: ConfigService
   ) {
     this.loginForm = this.formBuilder.group({
       email: ['', [Validators.required, Validators.email]],
@@ -32,23 +36,47 @@ export class LoginComponent implements OnInit {
   }
 
   ngOnInit() {
+    console.log('LoginComponent ngOnInit');
+    console.log('Return URL:', this.returnUrl);
+    
+    // Check if user is already logged in
+    const isAuthenticated = this.authService.isAuthenticated();
+    console.log('User already authenticated:', isAuthenticated);
+    
+    if (isAuthenticated) {
+      console.log('Redirecting authenticated user to:', this.returnUrl);
+      this.router.navigate([this.returnUrl]);
+      return;
+    }
+
     // Check if this is an OAuth callback
     this.route.queryParams.subscribe(params => {
+      console.log('Query params:', params);
+      
+      // Check if token is directly in params
       if (params['token']) {
-        // OAuth successful - store token and redirect
-        localStorage.setItem('authToken', params['token']);
-        if (params['expiration']) {
-          localStorage.setItem('tokenExpiration', params['expiration']);
-        }
+        console.log('Direct OAuth token detected');
+        this.authService.handleOAuthCallback(params['token'], params['expiration']);
+        this.router.navigate(['/dashboard']);
+        return;
+      }
+      
+      // Check if token is embedded in returnUrl (OAuth callback scenario)
+      if (params['returnUrl'] && params['returnUrl'].includes('token=')) {
+        console.log('OAuth token found in returnUrl');
+        const urlObj = new URL('http://dummy.com' + params['returnUrl']);
+        const token = urlObj.searchParams.get('token');
+        const expiration = urlObj.searchParams.get('expiration');
         
-        // Get user info from token and update auth service
-        const user = this.extractUserFromToken(params['token']);
-        if (user) {
-          localStorage.setItem('currentUser', JSON.stringify(user));
+        if (token) {
+          console.log('Extracted token from returnUrl');
+          this.authService.handleOAuthCallback(token, expiration || undefined);
+          this.router.navigate(['/dashboard']);
+          return;
         }
-        
-        this.router.navigate([this.returnUrl]);
-      } else if (params['error']) {
+      }
+      
+      if (params['error']) {
         // OAuth failed
         this.error = 'OAuth login failed: ' + params['error'];
       }
@@ -71,32 +99,39 @@ export class LoginComponent implements OnInit {
   get f() { return this.loginForm.controls; }
 
   onSubmit() {
+    console.log('Login form submitted');
     this.error = '';
     
     if (this.loginForm.invalid) {
+      console.log('Form is invalid');
       return;
     }
 
     this.loading = true;
-    const loginData: LoginRequest = {
+    const loginData: LoginDto = {
       email: this.f['email'].value,
       password: this.f['password'].value
     };
 
+    console.log('Attempting login with:', { email: loginData.email });
+
     this.authService.login(loginData).subscribe({
       next: (response) => {
-        if (response.isSuccess) {
-          this.router.navigate([this.returnUrl]);
-        } else {
-          this.error = response.message;
-          this.loading = false;
-        }
+        console.log('Login successful, response:', response);
+        console.log('Navigating to:', this.returnUrl);
+        this.loading = false;
+        this.router.navigate([this.returnUrl]);
       },
       error: (error) => {
-        this.error = error.error?.message || 'Login failed. Please try again.';
+        console.error('Login error:', error);
+        this.error = error.message || 'Login failed. Please try again.';
         this.loading = false;
       }
     });
+  }
+
+  toggleTheme() {
+    this.themeService.toggleTheme();
   }
 
   navigateToRegister() {
@@ -104,29 +139,17 @@ export class LoginComponent implements OnInit {
   }
 
   loginWithGoogle() {
-    // Direct redirect to Google OAuth
-    window.location.href = `https://057a-71-38-148-86.ngrok-free.app/api/auth/external-login/Google?returnUrl=${this.returnUrl}`;
+    // Use configuration-based URL for Google OAuth
+    window.location.href = `${this.configService.appBaseUrl}/api/auth/external-login/Google?returnUrl=${this.returnUrl}`;
   }
 
   loginWithFacebook() {
-    this.authService.externalLogin('Facebook', this.returnUrl).subscribe({
-      next: (response) => {
-        window.location.href = response.redirectUrl;
-      },
-      error: (error) => {
-        this.error = 'Facebook login failed. Please try again.';
-      }
-    });
+    // TODO: Implement Facebook OAuth when needed
+    this.error = 'Facebook login not yet implemented.';
   }
 
   loginWithApple() {
-    this.authService.externalLogin('Apple', this.returnUrl).subscribe({
-      next: (response) => {
-        window.location.href = response.redirectUrl;
-      },
-      error: (error) => {
-        this.error = 'Apple login failed. Please try again.';
-      }
-    });
+    // TODO: Implement Apple OAuth when needed  
+    this.error = 'Apple login not yet implemented.';
   }
 }
