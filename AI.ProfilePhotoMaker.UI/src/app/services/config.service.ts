@@ -18,7 +18,7 @@ export interface ApiConfig {
     replicate: {
       train: string;
       generate: string;
-      generateFree: string;
+      generateBasic: string;
       credits: string;
     };
     styles: {
@@ -44,7 +44,7 @@ export class ConfigService {
       },
       profile: {
         base: '/profile',
-        uploadImages: '/profile/upload-images',
+        uploadImages: '/profile/upload',
         images: '/profile/images',
         trainingStatus: '/profile/training-status',
         trainingFiles: '/profile/training-files'
@@ -52,7 +52,7 @@ export class ConfigService {
       replicate: {
         train: '/replicate/train',
         generate: '/replicate/generate',
-        generateFree: '/replicate/generate/free',
+        generateBasic: '/replicate/generate/basic',
         credits: '/replicate/credits'
       },
       styles: {
@@ -97,8 +97,8 @@ export class ConfigService {
     return this.getFullUrl(this.config.endpoints.replicate.credits);
   }
 
-  get generateFreeUrl(): string {
-    return this.getFullUrl(this.config.endpoints.replicate.generateFree);
+  get generateBasicUrl(): string {
+    return this.getFullUrl(this.config.endpoints.replicate.generateBasic);
   }
 
   get activeStylesUrl(): string {
