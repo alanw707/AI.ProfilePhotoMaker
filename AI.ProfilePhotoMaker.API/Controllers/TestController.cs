@@ -301,7 +301,7 @@ public class TestController : ControllerBase
     /// Test endpoint to check current user's basic tier status
     /// </summary>
     [HttpGet("basic-tier-status")]
-    public async Task<IActionResult> GetFreeTierStatus()
+    public async Task<IActionResult> GetBasicTierStatus()
     {
         try
         {
@@ -501,7 +501,7 @@ public record TestGenerationRequest(
 );
 
 /// <summary>
-/// DTO for testing free generation workflow
+/// DTO for testing basic generation workflow
 /// </summary>
 public record TestBasicGenerationRequest(
     string Gender,

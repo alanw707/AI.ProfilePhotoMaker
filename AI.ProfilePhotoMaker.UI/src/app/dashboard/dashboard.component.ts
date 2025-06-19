@@ -114,7 +114,7 @@ export class DashboardComponent implements OnInit {
 
   // Generation
   isGenerating: boolean = false;
-  isGeneratingFree: boolean = false;
+  isGeneratingBasic: boolean = false;
 
 
   // Photo Gallery
@@ -477,7 +477,7 @@ export class DashboardComponent implements OnInit {
     }
   }
 
-  async generateFreePhoto() {
+  async generateBasicPhoto() {
     if (!this.creditsInfo || this.creditsInfo.availableCredits <= 0) {
       this.notificationService.creditsExhausted();
       return;
@@ -488,7 +488,7 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
-    this.isGeneratingFree = true;
+    this.isGeneratingBasic = true;
     
     try {
       const freeRequest = {
@@ -499,7 +499,7 @@ export class DashboardComponent implements OnInit {
         }
       };
 
-      this.replicateService.generateFreeImage(freeRequest).subscribe({
+      this.replicateService.generateBasicImage(freeRequest).subscribe({
         next: (response) => {
           if (response.success) {
             this.creditsInfo!.availableCredits = response.data.creditsRemaining;
@@ -509,19 +509,19 @@ export class DashboardComponent implements OnInit {
           }
         },
         error: (error) => {
-          console.error('Free generation failed:', error);
+          console.error('Basic generation failed:', error);
           const errorMessage = error.error?.message || error.message || 'Unknown error occurred';
           this.notificationService.generationError(errorMessage);
         },
         complete: () => {
-          this.isGeneratingFree = false;
+          this.isGeneratingBasic = false;
         }
       });
       
     } catch (error: any) {
       console.error('Free generation failed:', error);
       this.notificationService.generationError('An unexpected error occurred during generation.');
-      this.isGeneratingFree = false;
+      this.isGeneratingBasic = false;
     }
   }
 
@@ -664,7 +664,7 @@ export class DashboardComponent implements OnInit {
           title: img.isGenerated ? `${img.style} Photo` : 'Uploaded Photo',
           description: img.isGenerated ? `Generated ${img.style} style profile photo` : 'Original uploaded image',
           style: img.style || 'original',
-          createdAt: img.createdAt,
+          createdAt: new Date(img.createdAt),
           status: 'completed' as const,
           type: img.isGenerated ? 'generated' as const : 'original' as const,
           downloadUrl: img.processedImageUrl || img.originalImageUrl

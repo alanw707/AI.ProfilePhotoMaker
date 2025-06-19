@@ -257,11 +257,11 @@ export class DashboardService {
   }
 
   // Free Generation
-  generateFreeImage(gender: string, userInfo?: any): Observable<{ success: boolean; creditsRemaining?: number }> {
+  generateBasicImage(gender: string, userInfo?: any): Observable<{ success: boolean; creditsRemaining?: number }> {
     this.updateLoadingState({ generation: true });
     this.clearError('generation');
 
-    return this.replicateService.generateFreeImage({ gender, userInfo }).pipe(
+    return this.replicateService.generateBasicImage({ gender, userInfo }).pipe(
       tap(response => {
         if (response.success) {
           // Update credits info
