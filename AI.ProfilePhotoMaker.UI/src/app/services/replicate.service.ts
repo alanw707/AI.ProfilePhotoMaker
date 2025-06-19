@@ -15,7 +15,7 @@ export interface GenerateImagesRequest {
   userInfo?: UserInfo;
 }
 
-export interface GenerateFreeImageRequest {
+export interface GenerateBasicImageRequest {
   gender: string;
   userInfo?: UserInfo;
   enhancementType?: string;
@@ -46,6 +46,8 @@ export interface ReplicatePredictionResult {
   output?: string[];
   error?: string;
   logs?: string;
+  // Add dataUrl for enhanced image (base64)
+  dataUrl?: string;
 }
 
 export interface CreditsInfo {
@@ -80,7 +82,7 @@ export class ReplicateService {
   }
 
   // Basic Tier Generation
-  generateFreeImage(request: GenerateFreeImageRequest): Observable<{ 
+  generateBasicImage(request: GenerateBasicImageRequest): Observable<{ 
     success: boolean; 
     data: { 
       prediction: ReplicatePredictionResult; 
@@ -95,7 +97,7 @@ export class ReplicateService {
         creditsRemaining: number 
       }; 
       error: any 
-    }>(this.config.generateFreeUrl, request);
+    }>(this.config.generateBasicUrl, request);
   }
 
   // Credits Management

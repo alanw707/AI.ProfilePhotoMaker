@@ -47,7 +47,7 @@ public class BasicTierService : IBasicTierService
         return profile.Credits;
     }
 
-    public async Task<bool> ConsumeCreditsAsync(string userId, int credits = 1, string action = "free_generation")
+    public async Task<bool> ConsumeCreditsAsync(string userId, int credits = 1, string action = "basic_generation")
     {
         var profile = await GetUserProfileWithCreditsAsync(userId);
         if (profile == null)
