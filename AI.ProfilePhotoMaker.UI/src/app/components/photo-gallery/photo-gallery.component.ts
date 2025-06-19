@@ -240,6 +240,8 @@ export class PhotoGalleryComponent implements OnInit {
 
   ngOnChanges() {
     this.updateFilteredImages();
+    // Deselect any images that no longer exist after deletion
+    this.selectedImages = this.selectedImages.filter(sel => this.images.some(img => img.id === sel.id));
   }
 
   setViewMode(mode: 'grid' | 'list') {
