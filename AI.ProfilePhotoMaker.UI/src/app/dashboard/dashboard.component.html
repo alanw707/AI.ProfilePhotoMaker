@@ -241,18 +241,18 @@
       <!-- Basic Tier Enhancement Section -->
       <section class="basic-tier-section">
         <div class="section-header">
-          <h2>Free Photo Enhancement</h2>
-          <p>Try our AI photo enhancement service for free - no custom training required!</p>
+          <h2>Basic Photo Enhancement</h2>
+          <p>Try our AI photo enhancement service with basic tier - no custom training required!</p>
           <div class="section-actions">
             <button class="btn btn-accent" 
-                    (click)="generateFreePhoto()" 
-                    [disabled]="isGeneratingFree || !creditsInfo || creditsInfo.availableCredits <= 0">
+                    (click)="generateBasicPhoto()" 
+                    [disabled]="isGeneratingBasic || !creditsInfo || creditsInfo.availableCredits <= 0">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              <span *ngIf="isGeneratingFree">Generating...</span>
-              <span *ngIf="!isGeneratingFree && creditsInfo && creditsInfo.availableCredits > 0">Generate Free Photo ({{creditsInfo.availableCredits}} credits)</span>
-              <span *ngIf="!isGeneratingFree && (!creditsInfo || creditsInfo.availableCredits <= 0)">No Credits Available</span>
+              <span *ngIf="isGeneratingBasic">Generating...</span>
+              <span *ngIf="!isGeneratingBasic && creditsInfo && creditsInfo.availableCredits > 0">Generate Basic Photo ({{creditsInfo.availableCredits}} credits)</span>
+              <span *ngIf="!isGeneratingBasic && (!creditsInfo || creditsInfo.availableCredits <= 0)">No Credits Available</span>
             </button>
             <button class="btn btn-secondary" (click)="toggleGalleryView()" [class.active]="showGallery">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">

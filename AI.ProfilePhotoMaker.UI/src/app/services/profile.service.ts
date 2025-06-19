@@ -13,7 +13,7 @@ export interface UserProfile {
   trainedModelId?: string;
   modelTrainedAt?: Date;
   subscriptionTier: string;
-  freeCredits: number;
+  basicCredits: number;
   lastCreditReset: Date;
   createdAt: Date;
   updatedAt: Date;
