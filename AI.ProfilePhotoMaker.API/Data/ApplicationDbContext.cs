@@ -15,6 +15,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ProcessedImage> ProcessedImages { get; set; }
     public DbSet<Style> Styles { get; set; }
     public DbSet<ModelCreationRequest> ModelCreationRequests { get; set; }
+    public DbSet<UsageLog> UsageLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -30,6 +31,18 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasOne(i => i.UserProfile)
             .WithMany(p => p.ProcessedImages)
             .HasForeignKey(i => i.UserProfileId);
+
+        // Configure UsageLog relationships
+        builder.Entity<UsageLog>()
+            .HasOne(l => l.User)
+            .WithMany()
+            .HasForeignKey(l => l.UserId);
+
+        builder.Entity<UserProfile>()
+            .HasMany(p => p.UsageLogs)
+            .WithOne()
+            .HasForeignKey(l => l.UserId)
+            .HasPrincipalKey(p => p.UserId);
 
         // Configure Style entity
         builder.Entity<Style>()

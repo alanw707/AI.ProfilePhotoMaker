@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Debug</title>
+</head>
+<body>
+    <h1>Authentication Debug</h1>
+    <button onclick="testLogin()">Test Login</button>
+    <button onclick="checkLocalStorage()">Check LocalStorage</button>
+    <button onclick="clearStorage()">Clear Storage</button>
+    <button onclick="testAuthStatus()">Test Auth Status</button>
+    <button onclick="testStyles()">Test Styles API</button>
+    <button onclick="forceLogout()">Force Logout</button>
+    <div id="result"></div>
+
+    <script>
+        async function testLogin() {
+            const result = document.getElementById('result');
+            try {
+                const response = await fetch('http://localhost:5035/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'alanw707@gmail.com',
+                        password: 'TestPassword123!'
+                    })
+                });
+
+                const data = await response.json();
+                result.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                
+                if (data.isSuccess) {
+                    localStorage.setItem('auth_token', data.token);
+                    localStorage.setItem('currentUser', JSON.stringify({
+                        token: data.token,
+                        email: data.email,
+                        firstName: data.firstName,
+                        lastName: data.lastName
+                    }));
+                    result.innerHTML += '<p style="color: green;">Token and user data saved to localStorage</p>';
+                }
+            } catch (error) {
+                result.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        function checkLocalStorage() {
+            const result = document.getElementById('result');
+            const storage = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                storage[key] = localStorage.getItem(key);
+            }
+            result.innerHTML = `<h3>LocalStorage Contents:</h3><pre>${JSON.stringify(storage, null, 2)}</pre>`;
+        }
+
+        function clearStorage() {
+            localStorage.clear();
+            document.getElementById('result').innerHTML = '<p style="color: orange;">LocalStorage cleared</p>';
+        }
+
+        function testAuthStatus() {
+            const token = localStorage.getItem('auth_token');
+            const user = localStorage.getItem('currentUser');
+            const result = document.getElementById('result');
+            
+            result.innerHTML = `
+                <h3>Auth Status:</h3>
+                <p>Token exists: ${!!token}</p>
+                <p>User data exists: ${!!user}</p>
+                <p>Token: ${token ? token.substring(0, 50) + '...' : 'None'}</p>
+                <p>User: ${user || 'None'}</p>
+            `;
+        }
+
+        async function testStyles() {
+            const token = localStorage.getItem('auth_token');
+            const result = document.getElementById('result');
+            
+            if (!token) {
+                result.innerHTML = '<p style="color: red;">No auth token found. Please login first.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:5035/api/style', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    result.innerHTML = `<h3>Styles API Response:</h3><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    result.innerHTML = `<p style="color: red;">Styles API failed: ${response.status} ${response.statusText}</p>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<p style="color: red;">Styles API error: ${error.message}</p>`;
+            }
+        }
+
+        function forceLogout() {
+            localStorage.clear();
+            sessionStorage.clear();
+            document.getElementById('result').innerHTML = '<p style="color: orange;">All storage cleared - please refresh the page</p>';
+        }
+    </script>
+</body>
+</html>

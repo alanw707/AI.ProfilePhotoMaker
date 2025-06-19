@@ -211,113 +211,148 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2025, 6, 10, 21, 56, 52, 4, DateTimeKind.Utc).AddTicks(2199),
+                            CreatedAt = new DateTime(2025, 6, 18, 21, 57, 28, 253, DateTimeKind.Utc).AddTicks(5184),
                             Description = "Professional headshot with corporate styling",
                             IsActive = true,
                             Name = "professional",
                             NegativePromptTemplate = "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, casual clothing, t-shirt, vacation setting, party scene, inappropriate attire",
                             PromptTemplate = "{subject}, professional headshot, corporate portrait style, composition: centered subject with neutral background, slight angle, lighting: three-point studio lighting with soft key light, fill light, and rim light, color palette: muted blues and grays with natural skin tones, mood: confident and approachable, technical details: shot with 85mm lens at f/2.8, shallow depth of field, 4K resolution, additional elements: subtle office or gradient background, professional attire, well-groomed appearance",
-                            UpdatedAt = new DateTime(2025, 6, 10, 21, 56, 52, 4, DateTimeKind.Utc).AddTicks(2199)
+                            UpdatedAt = new DateTime(2025, 6, 18, 21, 57, 28, 253, DateTimeKind.Utc).AddTicks(5185)
                         },
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2025, 6, 10, 21, 56, 52, 4, DateTimeKind.Utc).AddTicks(2201),
+                            CreatedAt = new DateTime(2025, 6, 18, 21, 57, 28, 253, DateTimeKind.Utc).AddTicks(5187),
                             Description = "Relaxed lifestyle portrait with natural styling",
                             IsActive = true,
                             Name = "casual",
                             NegativePromptTemplate = "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation",
                             PromptTemplate = "{subject}, casual lifestyle portrait, composition: rule of thirds with natural framing, lighting: golden hour natural sunlight with soft diffusion, color palette: warm earthy tones with vibrant accents, mood: relaxed, friendly and authentic, technical details: shot with 50mm lens at f/2.0, medium depth of field, additional elements: outdoor setting with natural elements, casual stylish clothing, genuine smile",
-                            UpdatedAt = new DateTime(2025, 6, 10, 21, 56, 52, 4, DateTimeKind.Utc).AddTicks(2202)
+                            UpdatedAt = new DateTime(2025, 6, 18, 21, 57, 28, 253, DateTimeKind.Utc).AddTicks(5187)
                         },
                         new
                         {
                             Id = 3,
-                            CreatedAt = new DateTime(2025, 6, 10, 21, 56, 52, 4, DateTimeKind.Utc).AddTicks(2204),
+                            CreatedAt = new DateTime(2025, 6, 18, 21, 57, 28, 253, DateTimeKind.Utc).AddTicks(5189),
                             Description = "Artistic creative portrait with dynamic composition",
                             IsActive = true,
                             Name = "creative",
                             NegativePromptTemplate = "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, boring, plain background, standard pose, conventional lighting",
                             PromptTemplate = "{subject}, artistic creative portrait, composition: dynamic asymmetrical framing with creative negative space, lighting: dramatic side lighting with colored gels and intentional shadows, color palette: bold contrasting colors with artistic color grading, mood: intriguing and expressive, technical details: shot with wide angle lens, creative perspective, high contrast, additional elements: artistic background elements, creative props or styling, unique fashion elements",
-                            UpdatedAt = new DateTime(2025, 6, 10, 21, 56, 52, 4, DateTimeKind.Utc).AddTicks(2204)
+                            UpdatedAt = new DateTime(2025, 6, 18, 21, 57, 28, 253, DateTimeKind.Utc).AddTicks(5189)
                         },
                         new
                         {
                             Id = 4,
-                            CreatedAt = new DateTime(2025, 6, 10, 21, 56, 52, 4, DateTimeKind.Utc).AddTicks(2206),
+                            CreatedAt = new DateTime(2025, 6, 18, 21, 57, 28, 253, DateTimeKind.Utc).AddTicks(5191),
                             Description = "Executive corporate portrait with formal styling",
                             IsActive = true,
                             Name = "corporate",
                             NegativePromptTemplate = "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, casual attire, beach, party scene, inappropriate setting",
                             PromptTemplate = "{subject}, executive corporate portrait, composition: formal centered composition with professional framing, lighting: classic Rembrandt lighting with soft fill, color palette: deep blues, grays and blacks with subtle accents, mood: authoritative, trustworthy and professional, technical details: shot with medium telephoto lens, optimal clarity and sharpness, additional elements: elegant business attire, office or branded environment subtly visible, power posture",
-                            UpdatedAt = new DateTime(2025, 6, 10, 21, 56, 52, 4, DateTimeKind.Utc).AddTicks(2206)
+                            UpdatedAt = new DateTime(2025, 6, 18, 21, 57, 28, 253, DateTimeKind.Utc).AddTicks(5191)
                         },
                         new
                         {
                             Id = 5,
-                            CreatedAt = new DateTime(2025, 6, 10, 21, 56, 52, 4, DateTimeKind.Utc).AddTicks(2208),
+                            CreatedAt = new DateTime(2025, 6, 18, 21, 57, 28, 253, DateTimeKind.Utc).AddTicks(5193),
                             Description = "Optimized LinkedIn profile photo with professional appeal",
                             IsActive = true,
                             Name = "linkedin",
                             NegativePromptTemplate = "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, full body shot, distracting background, extreme filters, unprofessional setting",
                             PromptTemplate = "{subject}, optimized LinkedIn profile photo, composition: head and shoulders framing with balanced negative space above head, lighting: flattering soft light with subtle highlighting, color palette: professional neutral tones with complementary background, mood: approachable yet professional, technical details: 1000x1000 pixel square format, sharp focus on eyes, additional elements: simple clean background, professional but approachable expression, business casual attire",
-                            UpdatedAt = new DateTime(2025, 6, 10, 21, 56, 52, 4, DateTimeKind.Utc).AddTicks(2208)
+                            UpdatedAt = new DateTime(2025, 6, 18, 21, 57, 28, 253, DateTimeKind.Utc).AddTicks(5193)
                         },
                         new
                         {
                             Id = 6,
-                            CreatedAt = new DateTime(2025, 6, 10, 21, 56, 52, 4, DateTimeKind.Utc).AddTicks(2210),
+                            CreatedAt = new DateTime(2025, 6, 18, 21, 57, 28, 253, DateTimeKind.Utc).AddTicks(5195),
                             Description = "Scholarly academic portrait with intellectual elements",
                             IsActive = true,
                             Name = "academic",
                             NegativePromptTemplate = "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation",
                             PromptTemplate = "{subject}, scholarly academic portrait, composition: dignified framing with intellectual elements, lighting: soft even lighting with subtle gradient, color palette: rich traditional tones with subtle depth, mood: thoughtful, knowledgeable and authoritative, technical details: medium format quality, excellent clarity, additional elements: books, laboratory or campus environment, academic attire or professional clothing, scholarly posture",
-                            UpdatedAt = new DateTime(2025, 6, 10, 21, 56, 52, 4, DateTimeKind.Utc).AddTicks(2210)
+                            UpdatedAt = new DateTime(2025, 6, 18, 21, 57, 28, 253, DateTimeKind.Utc).AddTicks(5195)
                         },
                         new
                         {
                             Id = 7,
-                            CreatedAt = new DateTime(2025, 6, 10, 21, 56, 52, 4, DateTimeKind.Utc).AddTicks(2212),
+                            CreatedAt = new DateTime(2025, 6, 18, 21, 57, 28, 253, DateTimeKind.Utc).AddTicks(5197),
                             Description = "Modern tech industry portrait with contemporary styling",
                             IsActive = true,
                             Name = "tech",
                             NegativePromptTemplate = "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, outdated technology, traditional office, formal suit",
                             PromptTemplate = "{subject}, modern tech industry portrait, composition: contemporary framing with technical elements, lighting: modern high-key lighting with subtle blue accents, color palette: tech blues and cool grays with vibrant accents, mood: innovative, forward-thinking and approachable, technical details: ultra-high definition, perfect clarity, additional elements: minimal tech environment, modern casual professional attire, confident engaged expression",
-                            UpdatedAt = new DateTime(2025, 6, 10, 21, 56, 52, 4, DateTimeKind.Utc).AddTicks(2212)
+                            UpdatedAt = new DateTime(2025, 6, 18, 21, 57, 28, 253, DateTimeKind.Utc).AddTicks(5197)
                         },
                         new
                         {
                             Id = 8,
-                            CreatedAt = new DateTime(2025, 6, 10, 21, 56, 52, 4, DateTimeKind.Utc).AddTicks(2214),
+                            CreatedAt = new DateTime(2025, 6, 18, 21, 57, 28, 253, DateTimeKind.Utc).AddTicks(5199),
                             Description = "Healthcare professional portrait with trustworthy appeal",
                             IsActive = true,
                             Name = "medical",
                             NegativePromptTemplate = "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, inappropriate medical setting, casual vacation clothing",
                             PromptTemplate = "{subject}, healthcare professional portrait, composition: trustworthy frontal composition with medical context, lighting: clean even lighting with healthy glow, color palette: whites, blues and comforting tones, mood: compassionate, competent and reassuring, technical details: sharp focus throughout, excellent clarity, additional elements: medical attire or lab coat, stethoscope or medical environment, caring expression",
-                            UpdatedAt = new DateTime(2025, 6, 10, 21, 56, 52, 4, DateTimeKind.Utc).AddTicks(2214)
+                            UpdatedAt = new DateTime(2025, 6, 18, 21, 57, 28, 253, DateTimeKind.Utc).AddTicks(5199)
                         },
                         new
                         {
                             Id = 9,
-                            CreatedAt = new DateTime(2025, 6, 10, 21, 56, 52, 4, DateTimeKind.Utc).AddTicks(2216),
+                            CreatedAt = new DateTime(2025, 6, 18, 21, 57, 28, 253, DateTimeKind.Utc).AddTicks(5201),
                             Description = "Legal professional portrait with authoritative presence",
                             IsActive = true,
                             Name = "legal",
                             NegativePromptTemplate = "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, casual setting, inappropriate attire, party scene",
                             PromptTemplate = "{subject}, legal professional portrait, composition: balanced formal composition with legal elements, lighting: classical portrait lighting with defined shadows, color palette: deep rich tones with mahogany and navy accents, mood: authoritative, trustworthy and dignified, technical details: perfect focus and formal composition, additional elements: legal books, office with wooden elements, formal suit, confident and serious expression",
-                            UpdatedAt = new DateTime(2025, 6, 10, 21, 56, 52, 4, DateTimeKind.Utc).AddTicks(2216)
+                            UpdatedAt = new DateTime(2025, 6, 18, 21, 57, 28, 253, DateTimeKind.Utc).AddTicks(5201)
                         },
                         new
                         {
                             Id = 10,
-                            CreatedAt = new DateTime(2025, 6, 10, 21, 56, 52, 4, DateTimeKind.Utc).AddTicks(2217),
+                            CreatedAt = new DateTime(2025, 6, 18, 21, 57, 28, 253, DateTimeKind.Utc).AddTicks(5203),
                             Description = "Premium executive portrait with commanding presence",
                             IsActive = true,
                             Name = "executive",
                             NegativePromptTemplate = "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, casual clothing, unprofessional setting, low quality office",
                             PromptTemplate = "{subject}, premium executive portrait, composition: powerful centered composition with prestigious elements, lighting: dramatic executive lighting with defined highlights, color palette: luxury tones with gold, navy and charcoal accents, mood: powerful, successful and commanding, technical details: medium format quality with perfect detail rendering, additional elements: luxury office environment, premium suit or executive attire, leadership pose and expression",
-                            UpdatedAt = new DateTime(2025, 6, 10, 21, 56, 52, 4, DateTimeKind.Utc).AddTicks(2218)
+                            UpdatedAt = new DateTime(2025, 6, 18, 21, 57, 28, 253, DateTimeKind.Utc).AddTicks(5203)
                         });
+                });
+
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UsageLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("CreditsCost")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("CreditsRemaining")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UsageLogs");
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UserProfile", b =>
@@ -329,6 +364,9 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Credits")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Ethnicity")
                         .HasColumnType("TEXT");
 
@@ -338,6 +376,9 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.Property<string>("Gender")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("LastCreditReset")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("LastName")
                         .HasColumnType("TEXT");
 
@@ -345,6 +386,9 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("StyleId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SubscriptionTier")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("TrainedModelId")
@@ -360,9 +404,6 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("StyleId");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
 
                     b.ToTable("UserProfiles");
                 });
@@ -506,6 +547,24 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.Navigation("UserProfile");
                 });
 
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UsageLog", b =>
+                {
+                    b.HasOne("AI.ProfilePhotoMaker.API.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AI.ProfilePhotoMaker.API.Models.UserProfile", null)
+                        .WithMany("UsageLogs")
+                        .HasForeignKey("UserId")
+                        .HasPrincipalKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UserProfile", b =>
                 {
                     b.HasOne("AI.ProfilePhotoMaker.API.Models.Style", "Style")
@@ -582,6 +641,8 @@ namespace AI.ProfilePhotoMaker.API.Migrations
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UserProfile", b =>
                 {
                     b.Navigation("ProcessedImages");
+
+                    b.Navigation("UsageLogs");
                 });
 #pragma warning restore 612, 618
         }

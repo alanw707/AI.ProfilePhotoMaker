@@ -1,4 +1,14 @@
 <div class="dashboard-container">
+  <!-- Theme Toggle Button -->
+  <button class="theme-toggle" (click)="toggleTheme()" [attr.aria-label]="'Switch to ' + (themeService.isDark() ? 'light' : 'dark') + ' theme'">
+    <svg *ngIf="!themeService.isDark()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+    </svg>
+    <svg *ngIf="themeService.isDark()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+    </svg>
+  </button>
+
   <!-- Navigation Header -->
   <header class="dashboard-header">
     <div class="header-content">
@@ -36,13 +46,6 @@
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon">🎨</div>
-            <div class="stat-content">
-              <h3>{{selectedStyles}}</h3>
-              <p>Styles Selected</p>
-            </div>
-          </div>
-          <div class="stat-card">
             <div class="stat-icon">⚡</div>
             <div class="stat-content">
               <h3>{{generatedPhotos.length}}</h3>
@@ -54,6 +57,13 @@
             <div class="stat-content">
               <h3>{{modelStatus}}</h3>
               <p>Model Status</p>
+            </div>
+          </div>
+          <div class="stat-card" *ngIf="creditsInfo">
+            <div class="stat-icon">💎</div>
+            <div class="stat-content">
+              <h3>{{creditsInfo.availableCredits}}</h3>
+              <p>Credits</p>
             </div>
           </div>
         </div>
@@ -72,7 +82,7 @@
               <div class="step-number">1</div>
               <div class="step-title">
                 <h3>Upload Your Selfies</h3>
-                <p>Upload 5-10 high-quality selfies for the best results</p>
+                <p>Upload at least 10 high-quality selfies for the best results</p>
               </div>
               <div class="step-status">
                 <span class="status-badge" [ngClass]="getStepStatus(1)">
@@ -89,7 +99,7 @@
                    [class.drag-over]="isDragOver">
                 <div class="upload-icon">📷</div>
                 <h4>Drop your selfies here or click to browse</h4>
-                <p>Maximum 10 images • JPG, PNG • Up to 10MB each</p>
+                <p>Maximum 20 images • JPG, PNG, WebP • Up to 5MB each</p>
                 <input type="file" #fileInput multiple accept="image/*" (change)="onFileSelected($event)" style="display: none">
               </div>
               <div class="uploaded-images" *ngIf="selectedFiles.length > 0">
@@ -102,9 +112,17 @@
                       *ngIf="selectedFiles.length > 0" 
                       (click)="uploadImages()"
                       [disabled]="isUploading">
-                <span *ngIf="isUploading">Uploading...</span>
+                <span *ngIf="isUploading">Uploading... {{uploadProgress}}%</span>
                 <span *ngIf="!isUploading">Upload {{selectedFiles.length}} Images</span>
               </button>
+              
+              <!-- Upload Progress Bar -->
+              <div class="upload-progress" *ngIf="isUploading">
+                <div class="progress-bar">
+                  <div class="progress-fill" [style.width.%]="uploadProgress"></div>
+                </div>
+                <p class="progress-text">{{uploadProgress}}% uploaded</p>
+              </div>
             </div>
           </div>
 
@@ -220,19 +238,54 @@
         </div>
       </section>
 
-      <!-- Recent Activity -->
-      <section class="activity-section" *ngIf="recentActivity.length > 0">
-        <h3>Recent Activity</h3>
-        <div class="activity-list">
-          <div class="activity-item" *ngFor="let activity of recentActivity">
-            <div class="activity-icon">{{activity.icon}}</div>
-            <div class="activity-content">
-              <p>{{activity.message}}</p>
-              <span class="activity-time">{{activity.time}}</span>
-            </div>
+      <!-- Basic Tier Enhancement Section -->
+      <section class="basic-tier-section">
+        <div class="section-header">
+          <h2>Basic Photo Enhancement</h2>
+          <p>Try our AI photo enhancement service with basic tier - no custom training required!</p>
+          <div class="section-actions">
+            <button class="btn btn-accent" 
+                    (click)="generateBasicPhoto()" 
+                    [disabled]="isGeneratingBasic || !creditsInfo || creditsInfo.availableCredits <= 0">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span *ngIf="isGeneratingBasic">Generating...</span>
+              <span *ngIf="!isGeneratingBasic && creditsInfo && creditsInfo.availableCredits > 0">Generate Basic Photo ({{creditsInfo.availableCredits}} credits)</span>
+              <span *ngIf="!isGeneratingBasic && (!creditsInfo || creditsInfo.availableCredits <= 0)">No Credits Available</span>
+            </button>
+            <button class="btn btn-secondary" (click)="toggleGalleryView()" [class.active]="showGallery">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
+                <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              {{showGallery ? 'Hide Gallery' : 'View Gallery'}}
+            </button>
+            <button class="btn btn-primary" (click)="goToEnhancement()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              Enhance Photo
+            </button>
           </div>
         </div>
+
+
+        <!-- Photo Gallery Component -->
+        <app-photo-gallery 
+          *ngIf="showGallery"
+          [images]="galleryImages"
+          [title]="'Your Photos'"
+          (imageClick)="onImageClick($event)"
+          (imageDownload)="onImageDownload($event)"
+          (imageShare)="onImageShare($event)"
+          (imageDelete)="onImageDelete($event)"
+          (bulkDownload)="onBulkDownload($event)">
+        </app-photo-gallery>
       </section>
+
 
     </div>
   </main>

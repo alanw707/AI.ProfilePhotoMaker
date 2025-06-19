@@ -66,8 +66,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         [HttpGet("external-login/{provider}")]
         public IActionResult ExternalLogin(string provider, string returnUrl = "")
         {
-            // Always use HTTPS ngrok URL for OAuth callbacks in development
-            var baseUrl = "https://057a-71-38-148-86.ngrok-free.app";
+            // Use AppBaseUrl from configuration
+            var baseUrl = _configuration["AppBaseUrl"] ?? "http://localhost:5035";
             
             var redirectUrl = $"{baseUrl}/api/auth/external-login/callback?returnUrl={returnUrl}";
             var properties = new Microsoft.AspNetCore.Authentication.AuthenticationProperties 
@@ -265,7 +265,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 new KeyValuePair<string, string>("client_secret", _configuration["Authentication:Google:ClientSecret"] ?? ""),
                 new KeyValuePair<string, string>("code", code),
                 new KeyValuePair<string, string>("grant_type", "authorization_code"),
-                new KeyValuePair<string, string>("redirect_uri", "https://057a-71-38-148-86.ngrok-free.app/api/auth/external-login/callback")
+                new KeyValuePair<string, string>("redirect_uri", $"{_configuration["AppBaseUrl"] ?? "http://localhost:5035"}/api/auth/external-login/callback")
             });
 
             var tokenResponse = await httpClient.PostAsync("https://oauth2.googleapis.com/token", tokenRequest);
@@ -300,12 +300,19 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
         private async Task<IActionResult> ProcessGoogleUserAsync(string email, string? firstName, string? lastName, string returnUrl)
         {
+            Console.WriteLine($"ProcessGoogleUserAsync called with email: {email}, returnUrl: {returnUrl}");
+            
             var existingUser = await _userManager.FindByEmailAsync(email);
             if (existingUser != null)
             {
                 Console.WriteLine($"Found existing user with email: {email}");
                 var token = ((AuthService)_authService).GenerateJwtToken(existingUser);
-                return Redirect($"http://localhost:4200{returnUrl}?token={token.Token}&expiration={token.Expiration}");
+                Console.WriteLine($"Generated JWT token, length: {token.Token.Length}");
+                
+                var redirectUrl = $"http://localhost:4200{returnUrl}?token={Uri.EscapeDataString(token.Token)}&expiration={Uri.EscapeDataString(token.Expiration.ToString())}";
+                Console.WriteLine($"Redirecting to: {redirectUrl}");
+                
+                return Redirect(redirectUrl);
             }
             else
             {
@@ -318,7 +325,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 if (createResult.Succeeded)
                 {
                     var token = ((AuthService)_authService).GenerateJwtToken(newUser);
-                    return Redirect($"http://localhost:4200{returnUrl}?token={token.Token}&expiration={token.Expiration}");
+                    Console.WriteLine($"Generated JWT token for new user, length: {token.Token.Length}");
+                    
+                    var redirectUrl = $"http://localhost:4200{returnUrl}?token={Uri.EscapeDataString(token.Token)}&expiration={Uri.EscapeDataString(token.Expiration.ToString())}";
+                    Console.WriteLine($"Redirecting to: {redirectUrl}");
+                    
+                    return Redirect(redirectUrl);
                 }
                 else
                 {

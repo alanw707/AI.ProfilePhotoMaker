@@ -1,24 +1,120 @@
-/* Global styles matching the logo theme */
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap')
+/* Global Styles with Theme Support */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700;800&display=swap')
 
+// CSS Custom Properties for Theming
+:root
+  // Light Theme Variables
+  --bg-primary: #f8f9fa
+  --bg-secondary: #ffffff
+  --bg-tertiary: #f1f3f4
+  --bg-gradient: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #f1f3f4 100%)
+  
+  --text-primary: #2c3e50
+  --text-secondary: #6c757d
+  --text-tertiary: #495057
+  
+  --border-color: #e9ecef
+  --border-hover: #dee2e6
+  
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08)
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.12)
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.15)
+  
+  --accent-primary: #7DD3D8
+  --accent-secondary: #6BB6FF
+  --accent-success: #A8E6A1
+  --accent-warning: #F5C85A
+  --accent-danger: #dc3545
+  
+  // Primary brand colors
+  --primary-color: #7DD3D8
+  --primary-dark: #6BB6FF
+  --primary-rgb: 125, 211, 216
+  
+  // Semantic colors
+  --warning-color: #F5C85A
+  --warning-rgb: 245, 200, 90
+  --error-color: #dc3545
+  --error-rgb: 220, 53, 69
+  
+  --card-bg: #ffffff
+  --input-bg: #ffffff
+  --header-bg: #ffffff
+  
+  // Component backgrounds
+  --background-primary: #ffffff
+  --background-secondary: #f8f9fa
+  --background-tertiary: #e9ecef
+
+// Dark Theme Variables
+[data-theme="dark"]
+  --bg-primary: #1a1d23
+  --bg-secondary: #2c3e50
+  --bg-tertiary: #34495e
+  --bg-gradient: linear-gradient(135deg, #1a1d23 0%, #2c3e50 50%, #34495e 100%)
+  
+  --text-primary: #ffffff
+  --text-secondary: #e2e8f0
+  --text-tertiary: #a0a9c0
+  
+  --border-color: rgba(255, 255, 255, 0.1)
+  --border-hover: rgba(255, 255, 255, 0.2)
+  
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3)
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4)
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5)
+  
+  --accent-primary: #7DD3D8
+  --accent-secondary: #6BB6FF
+  --accent-success: #A8E6A1
+  --accent-warning: #F5C85A
+  --accent-danger: #ff6b6b
+  
+  // Primary brand colors (same in dark theme)
+  --primary-color: #7DD3D8
+  --primary-dark: #6BB6FF
+  --primary-rgb: 125, 211, 216
+  
+  // Semantic colors
+  --warning-color: #F5C85A
+  --warning-rgb: 245, 200, 90
+  --error-color: #ff6b6b
+  --error-rgb: 255, 107, 107
+  
+  --card-bg: rgba(44, 62, 80, 0.95)
+  --input-bg: rgba(255, 255, 255, 0.05)
+  --header-bg: rgba(44, 62, 80, 0.95)
+  
+  // Component backgrounds
+  --background-primary: #1a1d23
+  --background-secondary: #2c3e50
+  --background-tertiary: #34495e
+
+// Global Styles
 *
-  box-sizing: border-box
   margin: 0
   padding: 0
+  box-sizing: border-box
+
+html, body
+  height: 100%
+  font-family: 'Inter', sans-serif
+  background: var(--bg-primary)
+  color: var(--text-primary)
+  transition: background-color 0.3s ease, color 0.3s ease
 
 body
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif
-  line-height: 1.6
-  color: #333
-  background-color: #f8f9fa
+  margin: 0
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif
   -webkit-font-smoothing: antialiased
   -moz-osx-font-smoothing: grayscale
+  line-height: 1.6
 
 h1, h2, h3, h4, h5, h6
   font-family: 'Poppins', sans-serif
   font-weight: 600
   margin-bottom: 0.5em
-  color: #2c3e50
+  color: var(--text-primary)
 
 h1
   font-size: 2.5rem
@@ -40,18 +136,50 @@ h6
 
 p
   margin-bottom: 1rem
-  color: #666
+  color: var(--text-secondary)
 
 a
-  color: #6BB6FF
+  color: var(--accent-secondary)
   text-decoration: none
   transition: color 0.3s ease
 
   &:hover
-    color: #7DD3D8
+    color: var(--accent-primary)
 
 button
   font-family: inherit
 
 input, textarea, select
   font-family: inherit
+
+// Theme Toggle Button Styles
+.theme-toggle
+  position: fixed
+  top: 20px
+  right: 20px
+  z-index: 1000
+  background: var(--card-bg)
+  border: 1px solid var(--border-color)
+  border-radius: 50%
+  width: 48px
+  height: 48px
+  display: flex
+  align-items: center
+  justify-content: center
+  cursor: pointer
+  transition: all 0.3s ease
+  box-shadow: var(--shadow-sm)
+  
+  &:hover
+    transform: translateY(-2px)
+    box-shadow: var(--shadow-md)
+    border-color: var(--accent-primary)
+  
+  svg
+    width: 20px
+    height: 20px
+    color: var(--text-primary)
+    transition: transform 0.3s ease
+  
+  &:hover svg
+    transform: rotate(180deg)

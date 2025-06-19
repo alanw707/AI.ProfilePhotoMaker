@@ -1,83 +1,226 @@
 # Copilot Instructions for AI.ProfilePhotoMaker
-Always reference my project plan and coding guidelines when generating code or documentation. The project is an AI-powered profile photo generator with a .NET 8 Web API backend and an Angular frontend. Follow the structure and requirements outlined below.
+
+This file provides guidance to Copilot and other AI coding assistants when working with code in this repository.
 
 ## Project Overview
-This project is an AI-powered profile photo generator with a .NET 8 Web API backend and an Angular frontend. The backend handles authentication, user management, and image processing. The application will leverage a 3rd party AI service API Replicate.com with Flux AI Model
 
-## Coding Guidelines
-- Use C# 12 and .NET 8 features where appropriate.
-- Follow SOLID principles and clean architecture.
-- Use dependency injection for all services.
-- DTOs should be used for all API input/output.
-- Validate all incoming API models and return meaningful error responses.
-- Use async/await for all I/O operations.
-- Write XML comments for all public methods and classes.
+AI.ProfilePhotoMaker is a full-stack application that generates professional profile photos using AI. Users upload selfies to train custom AI models through Replicate.com's FLUX API, then generate styled professional photos.
 
-## API Design
-- All controllers should inherit from `ControllerBase` and use `[ApiController]`.
-- Use attribute routing (e.g., `[Route("api/[controller]")]`).
-- Return IActionResult or ActionResult<T> for API endpoints.
-- Use consistent response formats for success and error cases.
-- All API responses should use a standard envelope:
-  ```json
-  {
-    "success": true/false,
-    "data": {},
-    "error": {
-      "code": "",
-      "message": ""
+**Tech Stack:**
+- Backend: .NET 8 Web API with Entity Framework Core, ASP.NET Identity, JWT auth
+- Frontend: Angular 19 with TypeScript and SASS
+- Database: SQL Server
+- AI: Replicate.com FLUX.1 models
+- Storage: Local filesystem (Azure Blob planned)
+
+## Common Development Commands
+
+### Backend (.NET API)
+```bash
+# Navigate to API project
+cd AI.ProfilePhotoMaker.API
+
+# Restore packages and build
+dotnet restore
+dotnet build
+
+# Run the API (https://localhost:5001)
+dotnet run
+
+# Database migrations
+dotnet ef migrations add MigrationName
+dotnet ef database update
+
+# Run tests (when available)
+dotnet test
+```
+
+### Frontend (Angular)
+```bash
+# Navigate to UI project
+cd AI.ProfilePhotoMaker.UI
+
+# Install dependencies
+npm install
+
+# Start development server (http://localhost:4200)
+ng serve
+
+# Build for production
+ng build
+
+# Run tests
+ng test
+
+# Generate components/services
+ng generate component component-name
+ng generate service service-name
+```
+
+### Solution-level Commands
+```bash
+# Build entire solution
+dotnet build AI.ProfilePhotoMaker.sln
+
+# Run API and UI concurrently (if using concurrent tooling)
+# API: dotnet run --project AI.ProfilePhotoMaker.API
+# UI: cd AI.ProfilePhotoMaker.UI && ng serve
+```
+
+## Architecture Overview
+
+### Project Structure
+- `AI.ProfilePhotoMaker.API/` - .NET 8 Web API backend
+  - `Controllers/` - API endpoints (Auth, Profile, Replicate, Test)
+  - `Services/` - Business logic (BasicTierService, ReplicateApiClient, Auth services)
+  - `Data/` - EF Core DbContext and repositories
+  - `Models/` - Entity models and DTOs (GenerateBasicImageRequestDto, etc.)
+  - `Migrations/` - EF Core database migrations
+
+- `AI.ProfilePhotoMaker.UI/` - Angular 19 frontend
+  - `src/app/components/` - Angular components (dashboard, photo-enhancement)
+  - `src/app/services/` - Angular services (replicate, config, profile, etc.)
+  - `src/app/` - Routing, authentication, and shared modules
+
+### Key Integrations
+
+**Replicate.com Workflow:**
+1. User uploads selfies → API compresses into ZIP → Sends to Replicate for model training
+2. Webhook receives training completion → Updates database with model ID
+3. User selects styles → API generates images using trained model
+4. Webhook receives generation completion → Stores image URLs
+
+**Basic Tier Workflow:**
+1. **Generation**: User requests basic generation → API checks available credits → Generates casual headshot using base FLUX model (no training required)
+2. **Enhancement**: User uploads photo → API enhances using Flux Kontext Pro model with text-based prompts
+3. Credit consumed (1 per generation/enhancement) and tracked in UsageLog
+4. Weekly background service resets credits every 7 days (3 credits per week)
+
+**Authentication Flow:**
+- ASP.NET Identity with JWT tokens
+- Protected endpoints require `[Authorize]` attribute
+- Frontend includes JWT in Authorization header
+
+### Database Schema
+- `ApplicationUser` (ASP.NET Identity extended)
+- `UserProfile` (user demographics, Credits field for basic tier, subscription tier, last credit reset)
+- `ProcessedImage` (original/processed URLs, style, timestamps)
+- `UsageLog` (credit consumption tracking, actions, timestamps)
+- `SubscriptionTier` (enum: Basic, Premium, Pro)
+- `Subscription` & `SubscriptionPlan` (payment features, planned)
+
+### Key API Endpoints
+- **Authentication**: `/api/auth/login`, `/api/auth/google`, `/api/auth/apple`
+- **Profile Management**: `/api/profile/*` (CRUD operations, file uploads)
+- **Image Generation**: `/api/replicate/generate` (paid tier), `/api/replicate/generate/basic` (basic tier)
+- **Photo Enhancement**: `/api/replicate/enhance` (uses Flux Kontext Pro)
+- **Credit Management**: `/api/test/basic-tier-status`, `/api/test/reset-credits`
+- **Testing**: `/api/test/*` (various development/testing endpoints)
+
+### Key Services
+- **BasicTierService**: Manages credit system, weekly resets, basic tier functionality
+- **BasicTierBackgroundService**: Background service for automated credit resets
+- **ReplicateApiClient**: Handles all Replicate.com API integration (training, generation, enhancement)
+- **Auth Services**: JWT token management, OAuth integration
+
+## Configuration Requirements
+
+### API Configuration (appsettings.Development.json)
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Data Source=aiprofilemaker.db"
+  },
+  "JWT": {
+    "ValidAudience": "http://localhost:5035",
+    "ValidIssuer": "http://localhost:5035", 
+    "Secret": "STORED_IN_USER_SECRETS"    
+  },
+  "Replicate": {
+    "ApiToken": "STORED_IN_USER_SECRETS",
+    "FluxTrainingModelId": "replicate/fast-flux-trainer:e65b43286cf1fc648ebac89c32149769637c0410f5346b97c251cdbc3fc3da1a",
+    "FluxGenerationModelId": "black-forest-labs/flux-dev",
+    "FluxKontextProModelId": "black-forest-labs/flux-kontext-pro",
+    "WebhookSecret": "STORED_IN_USER_SECRETS"
+  },
+  "AppBaseUrl": "https://057a-71-38-148-86.ngrok-free.app",
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
     }
   }
-  ```
-- Document error response structure and HTTP status codes in Swagger/OpenAPI.
+}
+```
 
-## Security
-- Use JWT authentication for all protected endpoints.
-- Never log or expose sensitive information.
-- Implement rate limiting for authentication endpoints.
-- Secure webhook endpoints (e.g., signature verification).
-- Ensure secure storage and transmission of uploaded images.
+### Environment Setup
+- .NET 8 SDK required
+- Node.js 18+ and Angular CLI 19.x required
+- SQL Server (Express acceptable)
+- Replicate.com account with API credits
 
-## Frontend
-- Use Angular best practices (components, services, modules).
-- Use SASS for styling.
-- Handle API errors gracefully and provide user feedback.
-- Use Angular Reactive Forms for user input.
-- Follow Angular style guide for file/folder structure.
+## Testing and Debugging
 
-## Testing
-- Write unit and integration tests for backend services and controllers.
-- Use Angular's testing tools for frontend components and services.
-- Strive for at least 80% code coverage.
-- Mock external AI API calls in tests.
-- Test scheduled/automated cleanup jobs for data retention.
+### Webhook Testing
+Use ngrok for local webhook testing:
+```bash
+ngrok http https://localhost:5035
+# Update Replicate webhook URLs to use ngrok tunnel
+```
 
-## Main Features
+### API Testing
+- Swagger UI available at `/swagger` when running in development
+- Test authentication endpoints first, then use JWT tokens for protected endpoints
 
-- User registration and authentication (JWT-based)
-- AI-powered profile photo generation and editing
-- User profile management
-- Image upload, processing, and download
-- Activity logging and audit trails
-- Responsive Angular frontend for user interaction
+## Troubleshooting: Angular Port 4200 Already in Use
 
-## Application Workflow
+If you see the error:
 
-- User can provide some basic information, like Gender, Ethnicity
-- User can select up to 10 different profile photo styles
-- User can then upload up to 10 selfie images to our application
-- The application will zip the images uploaded and send to Replicate.com API to train a custom model per user
-- Once the user custom model is done training, a webhook will notify the application and we'll send the basic user information along with selected style to generate the images
-- Application will store and present the generated images for our user and allow them to download it
-- Application will charge the user per transaction
-- Application will delete the generated images after 7 days
-- Application will delete the custom model after 24 hours
+    Error: Port 4200 is already in use. Use '--port' to specify a different port.
 
-## AI Service Integration
-- Document and implement webhook security (e.g., signature verification).
-- Handle failures or retries from the AI service gracefully.
+**Do not use a different port.** Instead, free up port 4200 by killing the process using it:
 
-## Data Retention
-- Automate and test cleanup jobs for deleting generated images and custom models according to retention policy.
-- Document where and how data retention is implemented.
+1. Find the process using port 4200:
+   ```bash
+   lsof -i :4200
+   ```
+2. Note the PID (process ID) from the output and kill it:
+   ```bash
+   kill -9 <PID>
+   ```
+   (Replace `<PID>` with the actual number.)
+3. If you want to force kill any process on 4200 in one step:
+   ```bash
+   lsof -t -i :4200 | xargs -r kill -9
+   ```
+4. Now restart the Angular dev server:
+   ```bash
+   ng serve --port 4200
+   ```
+
+If the problem persists, reboot your machine to clear any lingering processes.
+
+## Important Notes
+
+### Development Guidelines
+- The solution file only includes the API project; the UI is managed separately with Angular CLI
+- Database migrations should be created when model changes are made
+- Replicate API requires internet connectivity and valid credits
+- JWT secret should be secure in production environments
+- CORS is configured to allow all origins in development (`AllowAll` policy)
+
+### Recent Major Changes
+- **Terminology Update**: All "Free tier" references updated to "Basic tier" throughout codebase
+- **Database Schema**: `FreeCredits` column renamed to `Credits` in UserProfile table
+- **Service Refactoring**: FreeTierService → BasicTierService, all related interfaces updated
+- **API Endpoints**: `/generate/free` → `/generate/basic`, `/free-tier-status` → `/basic-tier-status`
+- **Flux Integration**: Added Flux Kontext Pro model for photo enhancement (text-based prompts)
+- **Credit System**: Weekly reset system with 3 credits per user per week
+- **UI Components**: Complete terminology update across Angular components and services
+
+### AI Model Configuration
+- **Training**: Uses `replicate/fast-flux-trainer` for custom model training (paid tier)
+- **Generation**: Uses `black-forest-labs/flux-dev` for image generation (paid tier)
+- **Basic Generation**: Uses `black-forest-labs/flux-dev` for basic tier (no training)
+- **Enhancement**: Uses `black-forest-labs/flux-kontext-pro` for photo enhancement (basic tier)
 

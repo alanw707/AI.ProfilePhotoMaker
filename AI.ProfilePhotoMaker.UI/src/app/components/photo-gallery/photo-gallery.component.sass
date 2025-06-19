@@ -1,0 +1,365 @@
+@import '../../../styles.sass'
+
+.photo-gallery
+  margin: 2rem 0
+
+.gallery-header
+  display: flex
+  justify-content: space-between
+  align-items: center
+  margin-bottom: 1.5rem
+  padding-bottom: 1rem
+  border-bottom: 1px solid var(--border-color)
+
+  h3
+    color: var(--text-primary)
+    margin: 0
+
+.gallery-controls
+  display: flex
+  gap: 1rem
+  align-items: center
+
+.view-toggle
+  display: flex
+  border: 1px solid var(--border-color)
+  border-radius: 6px
+  overflow: hidden
+
+.toggle-btn
+  background: var(--background-secondary)
+  border: none
+  padding: 0.5rem
+  cursor: pointer
+  color: var(--text-secondary)
+  transition: all 0.2s ease
+
+  &:hover
+    background: var(--background-hover)
+
+  &.active
+    background: var(--primary-color)
+    color: white
+
+.filter-select
+  background: var(--background-secondary)
+  border: 1px solid var(--border-color)
+  border-radius: 6px
+  padding: 0.5rem 1rem
+  color: var(--text-primary)
+  font-size: 0.875rem
+
+// Empty State
+.empty-state
+  text-align: center
+  padding: 4rem 2rem
+  color: var(--text-secondary)
+
+  .empty-icon
+    font-size: 4rem
+    margin-bottom: 1rem
+
+  h4
+    color: var(--text-primary)
+    margin-bottom: 0.5rem
+
+// Grid View
+.gallery-grid
+  display: grid
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))
+  gap: 1.5rem
+
+.gallery-item
+  background: var(--background-secondary)
+  border-radius: 12px
+  overflow: hidden
+  transition: all 0.2s ease
+  border: 1px solid var(--border-color)
+
+  &:hover
+    transform: translateY(-2px)
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1)
+
+  &.processing
+    opacity: 0.7
+
+  &.failed
+    border-color: var(--error-color)
+
+.image-container
+  position: relative
+  aspect-ratio: 1
+  cursor: pointer
+  overflow: hidden
+
+.gallery-image
+  width: 100%
+  height: 100%
+  object-fit: cover
+  transition: transform 0.2s ease
+
+  &:hover
+    transform: scale(1.05)
+
+.status-overlay
+  position: absolute
+  top: 0
+  left: 0
+  right: 0
+  bottom: 0
+  background: rgba(0, 0, 0, 0.8)
+  display: flex
+  align-items: center
+  justify-content: center
+  color: white
+
+.status-content
+  text-align: center
+
+.spinner
+  width: 2rem
+  height: 2rem
+  border: 2px solid rgba(255, 255, 255, 0.3)
+  border-top: 2px solid white
+  border-radius: 50%
+  animation: spin 1s linear infinite
+  margin: 0 auto 0.5rem
+
+@keyframes spin
+  0%
+    transform: rotate(0deg)
+  100%
+    transform: rotate(360deg)
+
+.error-icon
+  font-size: 2rem
+  margin-bottom: 0.5rem
+
+.type-badge
+  position: absolute
+  top: 0.5rem
+  left: 0.5rem
+  background: rgba(0, 0, 0, 0.8)
+  color: white
+  padding: 0.25rem 0.5rem
+  border-radius: 4px
+  font-size: 0.75rem
+  font-weight: 500
+
+  &.generated
+    background: var(--primary-color)
+
+  &.enhanced
+    background: var(--success-color)
+
+  &.original
+    background: var(--secondary-color)
+
+  &.small
+    position: static
+    display: inline-block
+    margin-left: 0.5rem
+
+.image-info
+  padding: 1rem
+
+.image-title
+  color: var(--text-primary)
+  margin: 0 0 0.5rem 0
+  font-size: 1rem
+  font-weight: 600
+
+.image-meta
+  color: var(--text-secondary)
+  font-size: 0.875rem
+  margin: 0 0 1rem 0
+  display: flex
+  justify-content: space-between
+
+.image-style
+  font-weight: 500
+
+.image-actions
+  display: flex
+  gap: 0.5rem
+
+.action-btn
+  background: none
+  border: 1px solid var(--border-color)
+  border-radius: 6px
+  padding: 0.5rem
+  cursor: pointer
+  color: var(--text-secondary)
+  transition: all 0.2s ease
+
+  &:hover:not(:disabled)
+    background: var(--background-hover)
+    color: var(--text-primary)
+
+  &:disabled
+    opacity: 0.5
+    cursor: not-allowed
+
+  &.download-btn:hover:not(:disabled)
+    background: var(--primary-color)
+    color: white
+    border-color: var(--primary-color)
+
+  &.share-btn:hover:not(:disabled)
+    background: var(--success-color)
+    color: white
+    border-color: var(--success-color)
+
+  &.delete-btn:hover:not(:disabled)
+    background: var(--error-color)
+    color: white
+    border-color: var(--error-color)
+
+// List View
+.gallery-list
+  display: flex
+  flex-direction: column
+  gap: 1rem
+
+.list-item
+  background: var(--background-secondary)
+  border: 1px solid var(--border-color)
+  border-radius: 8px
+  padding: 1rem
+  display: flex
+  gap: 1rem
+  align-items: center
+  transition: all 0.2s ease
+
+  &:hover
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1)
+
+  &.processing
+    opacity: 0.7
+
+  &.failed
+    border-color: var(--error-color)
+
+.list-thumbnail
+  position: relative
+  width: 80px
+  height: 80px
+  border-radius: 6px
+  overflow: hidden
+  cursor: pointer
+  flex-shrink: 0
+
+  img
+    width: 100%
+    height: 100%
+    object-fit: cover
+
+.status-indicator
+  position: absolute
+  top: 4px
+  right: 4px
+  width: 12px
+  height: 12px
+  border-radius: 50%
+  border: 2px solid white
+
+  &.processing
+    background: var(--warning-color)
+
+  &.completed
+    background: var(--success-color)
+
+  &.failed
+    background: var(--error-color)
+
+.list-content
+  flex: 1
+  min-width: 0
+
+.list-header
+  display: flex
+  align-items: center
+  margin-bottom: 0.5rem
+
+.list-title
+  color: var(--text-primary)
+  margin: 0
+  font-size: 1rem
+  font-weight: 600
+
+.list-description
+  color: var(--text-secondary)
+  margin: 0 0 0.5rem 0
+  font-size: 0.875rem
+
+.list-meta
+  display: flex
+  gap: 1rem
+  color: var(--text-secondary)
+  font-size: 0.75rem
+
+.meta-item
+  &.status-text
+    &.processing
+      color: var(--warning-color)
+    &.completed
+      color: var(--success-color)
+    &.failed
+      color: var(--error-color)
+
+.list-actions
+  display: flex
+  gap: 0.5rem
+  flex-shrink: 0
+
+  .action-btn
+    padding: 0.5rem 1rem
+    font-size: 0.875rem
+    white-space: nowrap
+
+// Bulk Actions
+.bulk-actions
+  margin-top: 2rem
+  padding-top: 1rem
+  border-top: 1px solid var(--border-color)
+  display: flex
+  gap: 1rem
+  justify-content: center
+
+// Responsive Design
+@media (max-width: 768px)
+  .gallery-header
+    flex-direction: column
+    gap: 1rem
+    align-items: stretch
+
+  .gallery-controls
+    justify-content: space-between
+
+  .gallery-grid
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr))
+    gap: 1rem
+
+  .list-item
+    flex-direction: column
+    align-items: stretch
+    text-align: center
+
+  .list-thumbnail
+    width: 120px
+    height: 120px
+    align-self: center
+
+  .list-header
+    justify-content: center
+
+  .list-meta
+    justify-content: center
+
+  .list-actions
+    justify-content: center
+    margin-top: 1rem
+
+  .bulk-actions
+    flex-direction: column
+    align-items: stretch

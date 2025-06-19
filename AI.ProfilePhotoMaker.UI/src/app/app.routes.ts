@@ -12,5 +12,10 @@ export const routes: Routes = [
     loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent),
     canActivate: [authGuard]
   },
+  {
+    path: 'enhance',
+    loadComponent: () => import('./components/photo-enhancement/photo-enhancement.component').then(m => m.PhotoEnhancementComponent),
+    canActivate: [authGuard]
+  },
   { path: '**', redirectTo: '/login' }
 ];

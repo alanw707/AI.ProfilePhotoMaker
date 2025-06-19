@@ -591,4 +591,207 @@ public class ReplicateApiClient : IReplicateApiClient
 
         return result.Id ?? ""; // Return prediction ID
     }
+
+    /// <summary>
+    /// Generates a basic casual headshot using base FLUX model (no custom training required)
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="userInfo">User information for generation</param>
+    /// <param name="gender">User's gender for better generation</param>
+    /// <returns>The prediction result</returns>
+    public async Task<ReplicatePredictionResult> GenerateBasicImageAsync(string userId, UserInfo? userInfo, string gender)
+    {
+        try
+        {
+            // Use the base FLUX model for basic tier generations
+            string baseFluxModel = _configuration["Replicate:FluxGenerationModelId"] ?? "black-forest-labs/flux-dev";
+            
+            // Create a casual style prompt for basic tier
+            var casualStylePrompts = await GetStylePromptsFromDatabase("casual");
+            
+            // If casual style not found, use a hardcoded casual prompt
+            string stylePrompt;
+            string negativePrompt;
+            
+            if (casualStylePrompts.PromptTemplate != "")
+            {
+                stylePrompt = CreateFluxStylePrompt(casualStylePrompts.PromptTemplate, userInfo);
+                negativePrompt = casualStylePrompts.NegativePromptTemplate;
+            }
+            else
+            {
+                // Fallback casual prompt for basic tier
+                string subject = GetSubjectDescription(userInfo);
+                stylePrompt = $"{subject}, casual lifestyle portrait, headshot, composition: rule of thirds with natural framing, lighting: soft natural sunlight with gentle diffusion, color palette: warm earthy tones with vibrant accents, mood: relaxed, friendly and authentic, technical details: shot with 50mm lens at f/2.0, medium depth of field, additional elements: simple clean background, casual stylish clothing, genuine smile";
+                negativePrompt = "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, inappropriate attire, nudity, nsfw";
+            }
+
+            var predictionRequest = new
+            {
+                version = baseFluxModel,
+                input = new
+                {
+                    prompt = stylePrompt,
+                    negative_prompt = negativePrompt,
+                    num_inference_steps = 30, // Slightly lower for basic tier
+                    guidance_scale = 7.0,
+                    num_outputs = 1, // Only 1 image for basic tier
+                    scheduler = "K_EULER_ANCESTRAL",
+                    width = 1024,
+                    height = 1024,
+                    webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete",
+                    webhook_events_filter = new[] { "completed" }
+                },
+                webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete"
+            };
+
+            var content = new StringContent(
+                JsonSerializer.Serialize(predictionRequest), 
+                Encoding.UTF8, 
+                "application/json");
+                
+            var response = await _httpClient.PostAsync("predictions", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Replicate basic image generation failed: {ErrorContent}", errorContent);
+                throw new Exception($"Failed to create basic image prediction: {response.StatusCode}, {errorContent}");
+            }
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<ReplicatePredictionResult>(
+                responseJson, 
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (result == null)
+            {
+                throw new Exception("Failed to deserialize basic image prediction response");
+            }
+
+            _logger.LogInformation("Basic image generation started for user {UserId} with prediction ID {PredictionId}", userId, result.Id);
+            return result;
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
+        {
+            _logger.LogError(ex, "Replicate API authentication failed for basic generation for user {UserId}", userId);
+            throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("429") || ex.Message.Contains("rate limit"))
+        {
+            _logger.LogWarning(ex, "Replicate API rate limit reached for basic generation for user {UserId}", userId);
+            throw new InvalidOperationException("Replicate API rate limit reached. Please try again later.", ex);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("402") || ex.Message.Contains("payment"))
+        {
+            _logger.LogError(ex, "Replicate API payment required for basic generation for user {UserId}", userId);
+            throw new InvalidOperationException("Replicate API payment required. Please check your billing.", ex);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating basic image for user {UserId}", userId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Enhances a user's uploaded photo using Flux Kontext Pro for text-based image editing
+    /// Provides professional photo enhancement for basic tier users
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="imageUrl">URL to the user's uploaded photo</param>
+    /// <param name="enhancementType">Type of enhancement (professional, portrait, linkedin)</param>
+    /// <returns>The prediction result with enhanced image</returns>
+    public async Task<ReplicatePredictionResult> EnhancePhotoAsync(string userId, string imageUrl, string enhancementType = "professional")
+    {
+        try
+        {
+            // Use Flux Kontext Pro for text-based photo enhancement
+            string kontextProModel = _configuration["Replicate:FluxKontextProModelId"] ?? "black-forest-labs/flux-kontext-pro";
+            
+            // Create enhancement prompt based on type
+            string enhancementPrompt = GetEnhancementPrompt(enhancementType);
+            
+            var predictionRequest = new
+            {
+                version = kontextProModel,
+                input = new
+                {
+                    input_image = imageUrl, // FIX: was 'image', should be 'input_image'
+                    prompt = enhancementPrompt,
+                    negative_prompt = "blurry, low quality, distorted, deformed, bad anatomy, poor lighting, overexposed, underexposed, artifact, noise",
+                    num_inference_steps = 30,
+                    guidance_scale = 7.5,
+                    strength = 0.8, // How much to modify the original image
+                    width = 1024,
+                    height = 1024,
+                    webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete",
+                    webhook_events_filter = new[] { "completed" }
+                },
+                webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete"
+            };
+
+            var content = new StringContent(
+                JsonSerializer.Serialize(predictionRequest), 
+                Encoding.UTF8, 
+                "application/json");
+                
+            var response = await _httpClient.PostAsync("predictions", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Replicate Kontext Pro enhancement failed: {ErrorContent}", errorContent);
+                throw new Exception($"Failed to create Kontext Pro enhancement prediction: {response.StatusCode}, {errorContent}");
+            }
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<ReplicatePredictionResult>(
+                responseJson, 
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (result == null)
+            {
+                throw new Exception("Failed to deserialize Kontext Pro enhancement response");
+            }
+
+            _logger.LogInformation("Kontext Pro enhancement started for user {UserId} with prediction ID {PredictionId}, type: {EnhancementType}", 
+                userId, result.Id, enhancementType);
+            return result;
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
+        {
+            _logger.LogError(ex, "Replicate API authentication failed for Kontext Pro enhancement for user {UserId}", userId);
+            throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("429") || ex.Message.Contains("rate limit"))
+        {
+            _logger.LogWarning(ex, "Replicate API rate limit reached for Kontext Pro enhancement for user {UserId}", userId);
+            throw new InvalidOperationException("Replicate API rate limit reached. Please try again later.", ex);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("402") || ex.Message.Contains("payment"))
+        {
+            _logger.LogError(ex, "Replicate API payment required for Kontext Pro enhancement for user {UserId}", userId);
+            throw new InvalidOperationException("Replicate API payment required. Please check your billing.", ex);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error enhancing photo with Kontext Pro for user {UserId}", userId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Gets enhancement prompt based on enhancement type for Kontext Pro
+    /// </summary>
+    private string GetEnhancementPrompt(string enhancementType)
+    {
+        return enhancementType.ToLower() switch
+        {
+            "background" => "Remove background and replace with clean professional backdrop, perfect cutout with smooth edges, studio-quality background removal with neutral professional setting",
+            "social" => "Create vibrant social media photo with perfect lighting, engaging colors, Instagram-ready styling, modern aesthetic, bright and appealing for social platforms, photo taken by iPhone 16 pro",
+            "cartoon" => "Transform into fun cartoon/animated style illustration with artistic flair, vibrant colors, and playful animated character appearance with stylized features",
+            _ => "Enhance this photo with improved lighting, better composition, increased sharpness, and professional quality finish"
+        };
+    }
 }
