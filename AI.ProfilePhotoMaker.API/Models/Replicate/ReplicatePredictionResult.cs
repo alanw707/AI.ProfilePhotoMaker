@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace AI.ProfilePhotoMaker.API.Models.Replicate;
@@ -32,10 +33,10 @@ public class ReplicatePredictionResult
     public Dictionary<string, object>? Input { get; set; }
 
     /// <summary>
-    /// The output of the prediction (typically image URLs)
+    /// The output of the prediction (can be array, string, object, or null)
     /// </summary>
     [JsonPropertyName("output")]
-    public List<string>? Output { get; set; }
+    public JsonElement? Output { get; set; }
 
     /// <summary>
     /// Any error messages if the prediction failed
@@ -74,10 +75,23 @@ public class ReplicatePredictionResult
     public DateTime? CompletedAt { get; set; }
 
     /// <summary>
-    /// Returns the generated image URLs
+    /// Returns the generated image URLs as a list of strings, if possible
     /// </summary>
     [JsonIgnore]
-    public IEnumerable<string> GeneratedImageUrls => Output ?? Enumerable.Empty<string>();
+    public IEnumerable<string> GeneratedImageUrls
+    {
+        get
+        {
+            if (Output is null || Output.Value.ValueKind == JsonValueKind.Null)
+                return Enumerable.Empty<string>();
+            if (Output.Value.ValueKind == JsonValueKind.Array)
+                return Output.Value.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.String).Select(e => e.GetString()!).Where(s => !string.IsNullOrEmpty(s));
+            if (Output.Value.ValueKind == JsonValueKind.String)
+                return new[] { Output.Value.GetString()! };
+            // If it's an object or other type, return empty
+            return Enumerable.Empty<string>();
+        }
+    }
 
     /// <summary>
     /// Checks if the prediction has completed successfully

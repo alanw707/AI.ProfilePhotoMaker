@@ -717,7 +717,7 @@ public class ReplicateApiClient : IReplicateApiClient
                 version = kontextProModel,
                 input = new
                 {
-                    image = imageUrl,
+                    input_image = imageUrl, // FIX: was 'image', should be 'input_image'
                     prompt = enhancementPrompt,
                     negative_prompt = "blurry, low quality, distorted, deformed, bad anatomy, poor lighting, overexposed, underexposed, artifact, noise",
                     num_inference_steps = 30,
@@ -725,10 +725,10 @@ public class ReplicateApiClient : IReplicateApiClient
                     strength = 0.8, // How much to modify the original image
                     width = 1024,
                     height = 1024,
-                    webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/enhancement-complete",
+                    webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete",
                     webhook_events_filter = new[] { "completed" }
                 },
-                webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/enhancement-complete"
+                webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete"
             };
 
             var content = new StringContent(
@@ -788,9 +788,9 @@ public class ReplicateApiClient : IReplicateApiClient
     {
         return enhancementType.ToLower() switch
         {
-            "professional" => "Transform this into a professional headshot with perfect lighting, clean background, crisp details, and polished appearance suitable for business profiles",
-            "portrait" => "Enhance this portrait with beautiful natural lighting, smooth skin tones, professional depth of field, and artistic composition",
-            "linkedin" => "Create a LinkedIn-ready professional photo with corporate lighting, neutral background, confident expression, and business-appropriate styling",
+            "background" => "Remove background and replace with clean professional backdrop, perfect cutout with smooth edges, studio-quality background removal with neutral professional setting",
+            "social" => "Create vibrant social media photo with perfect lighting, engaging colors, Instagram-ready styling, modern aesthetic, bright and appealing for social platforms, photo taken by iPhone 16 pro",
+            "cartoon" => "Transform into fun cartoon/animated style illustration with artistic flair, vibrant colors, and playful animated character appearance with stylized features",
             _ => "Enhance this photo with improved lighting, better composition, increased sharpness, and professional quality finish"
         };
     }
