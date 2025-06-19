@@ -54,4 +54,6 @@ public class UploadImagesDto
     public string? Gender { get; set; }
     [StringLength(50)]
     public string? Ethnicity { get; set; }
+    // Add this flag to indicate if upload is for training
+    public bool ForTraining { get; set; } = false;
 }

@@ -97,7 +97,21 @@ This document tracks actionable tasks for the development of the AI.ProfilePhoto
 - [x] **RESOLVED**: Fixed OAuth state validation issues with ngrok proxy using ticket-based approach
 - [x] **COMPLETED**: Google OAuth flow working end-to-end with existing email account linking
 - [x] **VERIFIED**: Successfully finds existing users and generates JWT tokens
+- [x] **FIXED**: OAuth username display issue - now shows full name from profile API fallback
 - [ ] Add Facebook and Apple OAuth credentials when needed (low priority)
+
+### Basic Tier System Implementation ✅ COMPLETED
+- [x] Create SubscriptionTier enum (Free, Premium, Pro)
+- [x] Add basic tier fields to UserProfile model (Credits, LastCreditReset, SubscriptionTier)
+- [x] Create UsageLog model for tracking credit consumption and resets
+- [x] Implement FreeTierService with credit management logic
+- [x] Add database migration for basic tier support with proper defaults
+- [x] Create free generation endpoint using base FLUX model (no custom training)
+- [x] Implement credit checking and consumption middleware
+- [x] Add weekly credit reset background service
+- [x] Create credits status API endpoint for frontend integration
+- [x] **FEATURE**: 3 free casual headshots per week using base FLUX model
+- [x] **COST SAVINGS**: 95% reduction in AI costs for basic tier (no model training)
 
 ### Frontend UI Implementation ✅ COMPLETED
 - [x] Remove Angular boilerplate code and placeholder content
@@ -109,13 +123,15 @@ This document tracks actionable tasks for the development of the AI.ProfilePhoto
 - [x] Create AI model training progress visualization
 - [x] Build interactive style selection grid with 6 professional options
 - [x] Design photo results gallery with download and share actions
-- [x] Add recent activity feed with real-time notifications
+- [x] **REMOVED**: Recent activity section (simplified dashboard UX)
 - [x] Implement glass-morphism design with backdrop blur effects
 - [x] Add hover animations and micro-interactions throughout
 - [x] Create fully responsive design for mobile and tablet devices
 - [x] Integrate logo as favicon and brand elements
 - [x] Update typography with modern Poppins and Inter fonts
 - [x] Fix TypeScript compilation issues and component integration
+- [x] **ADDED**: Free Photo Enhancement component with simulated AI processing
+- [x] **ENHANCED**: Photo enhancement component with proper file selection and styling
 
 ### Next Priority Items
 - [x] Begin frontend authentication implementation (OAuth integration complete)
@@ -193,14 +209,29 @@ This document tracks actionable tasks for the development of the AI.ProfilePhoto
 7. **🔄 Implement user profile management UI** (HIGH PRIORITY)
 8. **🔄 Create image upload interface** (HIGH PRIORITY)
 
-## 🎯 IMMEDIATE NEXT SESSION PRIORITIES
+## 🎯 RECENT SESSION ACCOMPLISHMENTS
 
-1. ✅ **Google OAuth** - COMPLETED! Working end-to-end with existing email account linking
-2. ✅ **Build user dashboard** - COMPLETED! Comprehensive 4-step AI workflow interface
-3. ✅ **Complete authentication UI** - COMPLETED! Dark theme with logo integration and modern styling
-4. **Add auth guards** - Protect routes that require authentication (HIGH PRIORITY) 
-5. **Connect dashboard to real APIs** - Integrate with backend endpoints for upload, training, generation
-6. **Implement API service layer** - Create Angular services for dashboard functionality
+### 📅 June 18, 2025 Session
+- [x] **OAuth Username Display Fix** - Resolved issue where OAuth login showed email username instead of full name
+  - Fixed JWT token extraction to handle missing firstName/lastName claims
+  - Implemented profile API fallback when JWT lacks complete user data
+  - OAuth users now display proper full names in dashboard welcome message
+- [x] **Free Photo Enhancement Component** - Fixed UI and functionality issues
+  - Fixed file input targeting using ViewChild for precise component interaction
+  - Enhanced image preview functionality with proper error handling
+  - Added visual enhancement simulation with different effects per enhancement type
+  - Improved button styling with borders, shadows, and proper visual hierarchy
+  - Added demo mode notification to clarify simulation vs real AI processing
+- [x] **Dashboard UX Improvements** - Removed Recent Activity section for cleaner interface
+- [x] **Created OAUTH_Troubleshoot.md** - Comprehensive troubleshooting guide for OAuth authentication issues
+
+## 🎯 NEXT SESSION PRIORITIES
+
+1. **Add auth guards** - Protect routes that require authentication (HIGH PRIORITY) 
+2. **Connect dashboard to real APIs** - Integrate with backend endpoints for upload, training, generation
+3. **Implement API service layer** - Create Angular services for dashboard functionality
+4. **Real AI Enhancement API** - Replace simulated enhancement with actual AI processing
+5. **Error handling improvements** - Add comprehensive error handling throughout the application
 
 ---
 
@@ -229,6 +260,7 @@ This document tracks actionable tasks for the development of the AI.ProfilePhoto
 3. **Comprehensive Dashboard** - 4-step workflow: Upload → Train → Style → Download
 4. **Interactive Components** - Drag & drop uploads, style selection, progress tracking
 5. **Professional Styling** - Glass-morphism, hover effects, responsive design
+6. **Basic Tier System** - Weekly credit-based basic generation with base FLUX model
 
 ### Next Development Phase:
 1. Add authentication guards to protect routes
@@ -236,4 +268,4 @@ This document tracks actionable tasks for the development of the AI.ProfilePhoto
 3. Implement file upload integration with backend
 4. Add API service layer for dashboard functionality
 
-*Last updated: December 16, 2024*
+*Last updated: June 18, 2025*

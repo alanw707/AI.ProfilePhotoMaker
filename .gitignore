@@ -37,3 +37,15 @@ PublishProfiles/
 # Logs
 logs/
 *.log
+
+# SQLite DB files
+AI.ProfilePhotoMaker.API/aiprofilemaker.db
+AI.ProfilePhotoMaker.API/aiprofilemaker.db-shm
+AI.ProfilePhotoMaker.API/aiprofilemaker.db-wal
+# ngrok binary and logs
+AI.ProfilePhotoMaker.API/ngrok
+AI.ProfilePhotoMaker.API/ngrok.log
+# User uploads
+AI.ProfilePhotoMaker.API/uploads/
+# Package lock (if not needed in repo)
+package-lock.json

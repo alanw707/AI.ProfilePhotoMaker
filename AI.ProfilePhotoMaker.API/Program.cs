@@ -28,12 +28,24 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Add(System.Net.IPAddress.Parse("127.0.0.1"));
 });
 
-// Configure data protection for OAuth state handling with ngrok
+// Configure data protection and session for OAuth state handling with ngrok
 if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddDataProtection()
         .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "keys")))
         .SetApplicationName("AI.ProfilePhotoMaker.API");
+        
+    // Add session services for OAuth state management
+    builder.Services.AddMemoryCache();
+    builder.Services.AddDistributedMemoryCache();
+    builder.Services.AddSession(options =>
+    {
+        options.IdleTimeout = TimeSpan.FromMinutes(30);
+        options.Cookie.HttpOnly = true;
+        options.Cookie.IsEssential = true;
+        options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest;
+    });
 }
 
 // Add services to the container.
@@ -112,53 +124,76 @@ builder.Services.AddAuthentication(options =>
         options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "";
         options.CallbackPath = "/api/auth/external-login/callback";
         
+        // Disable PKCE for development to allow direct code exchange
         if (builder.Environment.IsDevelopment())
         {
-            // Force HTTPS scheme for OAuth state consistency
+            options.UsePkce = false;
+        }
+        
+        if (builder.Environment.IsDevelopment())
+        {
+            // Set the correct redirect URI for development with ngrok
+            var appBaseUrl = builder.Configuration["AppBaseUrl"] ?? "http://localhost:5035";
+            Console.WriteLine($"Configuring OAuth with base URL: {appBaseUrl}");
+            
+            // Override the redirect URI to use the correct base URL
+            var correctRedirectUri = $"{appBaseUrl}/api/auth/external-login/callback";
+            Console.WriteLine($"Setting redirect URI to: {correctRedirectUri}");
+            
+            // Configure cookies for ngrok proxy - more permissive settings
+            options.CorrelationCookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
+            options.CorrelationCookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest;
+            options.CorrelationCookie.IsEssential = true;
+            options.CorrelationCookie.HttpOnly = true;
+            options.CorrelationCookie.Domain = null;
+            
+            // Force the OAuth system to use the correct base URL
             options.Events.OnRedirectToAuthorizationEndpoint = context =>
             {
-                var redirectUri = context.RedirectUri;
+                var originalUri = context.RedirectUri;
                 
-                // Replace localhost with ngrok domain and ensure HTTPS
-                redirectUri = redirectUri.Replace("http://localhost:5035", "https://057a-71-38-148-86.ngrok-free.app");
-                redirectUri = redirectUri.Replace("https://localhost:5035", "https://057a-71-38-148-86.ngrok-free.app");
+                // Parse the original URI to extract query parameters and rebuild with correct base
+                var uri = new Uri(originalUri);
+                var query = uri.Query;
                 
-                Console.WriteLine($"OAuth Redirect URI: {redirectUri}");
-                context.Response.Redirect(redirectUri);
+                // Rebuild the OAuth URL with the correct redirect_uri parameter
+                var newRedirectUri = originalUri.Replace("redirect_uri=" + Uri.EscapeDataString("http://localhost:5035/api/auth/external-login/callback"), 
+                                                        "redirect_uri=" + Uri.EscapeDataString(correctRedirectUri));
+                newRedirectUri = newRedirectUri.Replace("redirect_uri=" + Uri.EscapeDataString("https://localhost:5035/api/auth/external-login/callback"), 
+                                                       "redirect_uri=" + Uri.EscapeDataString(correctRedirectUri));
+                
+                Console.WriteLine($"Original OAuth URI: {originalUri}");
+                Console.WriteLine($"Modified OAuth URI: {newRedirectUri}");
+                context.Response.Redirect(newRedirectUri);
                 return Task.CompletedTask;
             };
             
-            // Enhanced error handling - bypass state validation errors
+            // Enhanced error handling - bypass correlation failures entirely
             options.Events.OnRemoteFailure = context =>
             {
                 var errorMessage = context.Failure?.Message ?? "OAuth authentication failed";
                 Console.WriteLine($"OAuth Remote Failure: {errorMessage}");
                 Console.WriteLine($"Request URL: {context.Request.Path}{context.Request.QueryString}");
                 
-                // If it's a state validation error, redirect to our custom handler instead
-                if (context.Failure?.Message?.Contains("oauth state") == true)
+                // For any OAuth failure (including correlation), try to extract the code and handle it directly
+                var code = context.Request.Query["code"].ToString();
+                Console.WriteLine($"Found authorization code: {code}");
+                
+                if (!string.IsNullOrEmpty(code))
                 {
-                    var code = context.Request.Query["code"].ToString();
-                    Console.WriteLine($"Found authorization code: {code}");
-                    
-                    if (!string.IsNullOrEmpty(code))
-                    {
-                        Console.WriteLine($"State validation failed, redirecting to direct OAuth handler with code: {code}");
-                        var redirectUrl = $"https://057a-71-38-148-86.ngrok-free.app/api/auth/google-direct-callback?code={Uri.EscapeDataString(code)}&returnUrl=/dashboard";
-                        Console.WriteLine($"Redirecting to: {redirectUrl}");
-                        context.Response.Redirect(redirectUrl);
-                    }
-                    else
-                    {
-                        Console.WriteLine("No authorization code found, falling back to error redirect");
-                        context.Response.Redirect("http://localhost:4200/login?error=no_code_in_state_failure");
-                    }
+                    Console.WriteLine($"OAuth failure detected, redirecting to direct OAuth handler with code: {code}");
+                    var appBaseUrl = builder.Configuration["AppBaseUrl"] ?? "http://localhost:5035";
+                    var redirectUrl = $"{appBaseUrl}/api/auth/google-direct-callback?code={Uri.EscapeDataString(code)}&returnUrl=/dashboard";
+                    Console.WriteLine($"Redirecting to: {redirectUrl}");
+                    context.Response.Redirect(redirectUrl);
+                    context.HandleResponse();
                 }
                 else
                 {
+                    Console.WriteLine($"OAuth failed with error: {errorMessage}");
                     context.Response.Redirect($"http://localhost:4200/login?error=oauth_failed&message={Uri.EscapeDataString(errorMessage)}");
+                    context.HandleResponse();
                 }
-                context.HandleResponse();
                 return Task.CompletedTask;
             };
             
@@ -178,7 +213,8 @@ builder.Services.AddAuthentication(options =>
                 if (!string.IsNullOrEmpty(email))
                 {
                     Console.WriteLine("Redirecting to custom OAuth processor with user info");
-                    var redirectUrl = $"https://057a-71-38-148-86.ngrok-free.app/api/auth/google-ticket-callback?email={Uri.EscapeDataString(email)}&firstName={Uri.EscapeDataString(firstName)}&lastName={Uri.EscapeDataString(lastName)}&returnUrl=/dashboard";
+                    var appBaseUrl = builder.Configuration["AppBaseUrl"] ?? "http://localhost:5035";
+                    var redirectUrl = $"{appBaseUrl}/api/auth/google-ticket-callback?email={Uri.EscapeDataString(email)}&firstName={Uri.EscapeDataString(firstName)}&lastName={Uri.EscapeDataString(lastName)}&returnUrl=/dashboard";
                     context.Response.Redirect(redirectUrl);
                     context.HandleResponse();
                 }
@@ -273,11 +309,13 @@ if (string.IsNullOrEmpty(jwtSecret) || jwtSecret.Length < 32)
 // Register the Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IImageProcessingService, AzureImageProcessingService>();
+builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IBasicTierService, AI.ProfilePhotoMaker.API.Services.BasicTierService>();
 builder.Services.AddHttpClient<IReplicateApiClient, ReplicateApiClient>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository, AI.ProfilePhotoMaker.API.Data.UserProfileRepository>();
 
 // Register background services
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelCreationPollingService>();
+builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.BasicTierBackgroundService>();
 
 
 builder.Services.AddControllers();
@@ -338,6 +376,12 @@ var app = builder.Build();
 
 // Use forwarded headers for ngrok proxy
 app.UseForwardedHeaders();
+
+// Use session middleware for OAuth state management
+if (app.Environment.IsDevelopment())
+{
+    app.UseSession();
+}
 
 // In middleware pipeline
 if (app.Environment.IsDevelopment())

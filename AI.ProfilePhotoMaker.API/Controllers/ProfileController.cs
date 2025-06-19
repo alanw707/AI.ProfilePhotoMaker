@@ -25,19 +25,22 @@ public class ProfileController : ControllerBase
     private readonly ApplicationDbContext _context; // Keep for now for other operations
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<ProfileController> _logger;
+    private readonly IConfiguration _configuration;
 
     public ProfileController(
         IImageProcessingService imageProcessingService,
         IUserProfileRepository userProfileRepository,
         ApplicationDbContext context,
         IWebHostEnvironment environment,
-        ILogger<ProfileController> logger)
+        ILogger<ProfileController> logger,
+        IConfiguration configuration)
     {
         _imageProcessingService = imageProcessingService;
         _userProfileRepository = userProfileRepository;
         _context = context;
         _environment = environment;
         _logger = logger;
+        _configuration = configuration;
     }
 
     [HttpGet]
@@ -155,7 +158,7 @@ public class ProfileController : ControllerBase
 
         await _userProfileRepository.DeleteAsync(profile);
 
-        return NoContent();
+        return Ok(new { success = true, message = "Profile deleted" });
     }
 
     [HttpGet("styles")]
@@ -212,6 +215,7 @@ public class ProfileController : ControllerBase
                 var fileName = $"{Guid.NewGuid()}_{image.FileName}";
                 var filePath = Path.Combine(uploadDir, fileName);
                 var relativeUrl = $"/uploads/{userId}/{fileName}";
+                var publicUrl = $"{_configuration["AppBaseUrl"]}{relativeUrl}";
 
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
@@ -221,7 +225,7 @@ public class ProfileController : ControllerBase
                 // Create database record for uploaded image
                 var processedImage = new ProcessedImage
                 {
-                    OriginalImageUrl = relativeUrl,
+                    OriginalImageUrl = publicUrl,
                     ProcessedImageUrl = "", // Will be updated when AI processing completes
                     Style = ProfileControllerConstants.OriginalStyle, // Mark as original upload
                     UserProfileId = profile.Id,
@@ -234,14 +238,18 @@ public class ProfileController : ControllerBase
                 uploadResults.Add(new { 
                     FileName = fileName, 
                     Size = image.Length,
-                    Url = relativeUrl
+                    Url = publicUrl
                 });
             }
 
             // Save all uploaded image records to database
             await _userProfileRepository.UpdateAsync(profile);
 
-            var zipPath = await CreateTrainingZip(uploadDir, userId);
+            string? zipPath = null;
+            if (dto.ForTraining)
+            {
+                zipPath = await CreateTrainingZip(uploadDir, userId);
+            }
 
             return Ok(new
             {
@@ -250,7 +258,7 @@ public class ProfileController : ControllerBase
                 UploadedImageIds = uploadedImages.Select(img => img.Id).ToList(),
                 ZipCreated = !string.IsNullOrEmpty(zipPath),
                 ZipPath = zipPath,
-                Message = "Images uploaded successfully. Ready for training."
+                Message = dto.ForTraining ? "Images uploaded and zipped for training." : "Images uploaded successfully."
             });
         }
         catch (Exception ex)
@@ -404,7 +412,7 @@ public class ProfileController : ControllerBase
             profile.ProcessedImages.Remove(image);
             await _userProfileRepository.UpdateAsync(profile);
 
-            return NoContent();
+            return Ok(new { success = true, message = "Image deleted" });
         }
         catch (Exception ex)
         {
@@ -429,20 +437,32 @@ public class ProfileController : ControllerBase
         if (!allowedExtensions.Contains(extension))
             return false;
 
-        // File signature validation
+        // File signature validation for all types
         using (var reader = new BinaryReader(file.OpenReadStream()))
         {
-            var signatures = new Dictionary<string, byte[]>
+            var signatures = new Dictionary<string, List<byte[]>>
             {
-                { ".jpg", new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 } },
-                { ".jpeg", new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 } },
-                { ".png", new byte[] { 0x89, 0x50, 0x4E, 0x47 } },
-                { ".webp", new byte[] { 0x52, 0x49, 0x46, 0x46 } }
+                { ".jpg", new List<byte[]> { 
+                    new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 }, // JPEG JFIF
+                    new byte[] { 0xFF, 0xD8, 0xFF, 0xE1 }, // JPEG EXIF
+                    new byte[] { 0xFF, 0xD8, 0xFF, 0xE8 }, // JPEG SPIFF
+                    new byte[] { 0xFF, 0xD8, 0xFF, 0xDB }  // JPEG raw
+                }},
+                { ".jpeg", new List<byte[]> { 
+                    new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 }, // JPEG JFIF
+                    new byte[] { 0xFF, 0xD8, 0xFF, 0xE1 }, // JPEG EXIF
+                    new byte[] { 0xFF, 0xD8, 0xFF, 0xE8 }, // JPEG SPIFF
+                    new byte[] { 0xFF, 0xD8, 0xFF, 0xDB }  // JPEG raw
+                }},
+                { ".png", new List<byte[]> { new byte[] { 0x89, 0x50, 0x4E, 0x47 } }},
+                { ".webp", new List<byte[]> { new byte[] { 0x52, 0x49, 0x46, 0x46 } }}
             };
 
-            var headerBytes = reader.ReadBytes(signatures.Values.Max(m => m.Length));
+            var headerBytes = reader.ReadBytes(signatures.Values.SelectMany(list => list).Max(sig => sig.Length));
 
-            return signatures.Any(sig => headerBytes.Take(sig.Value.Length).SequenceEqual(sig.Value));
+            return signatures.Any(kvp => 
+                kvp.Key == extension && 
+                kvp.Value.Any(sig => headerBytes.Take(sig.Length).SequenceEqual(sig)));
         }
     }
 

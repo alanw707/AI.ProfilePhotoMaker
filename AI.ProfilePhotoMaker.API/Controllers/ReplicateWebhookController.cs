@@ -7,6 +7,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.IO;
 
 namespace AI.ProfilePhotoMaker.API.Controllers;
 
@@ -127,25 +130,28 @@ public class ReplicateWebhookController : ControllerBase
             if (payload.Input.TryGetValue("style", out var styleObj))
                 style = styleObj?.ToString();
         }
-        var userProfile = _dbContext.UserProfiles.FirstOrDefault(u => u.UserId == userId);
-        if (userProfile != null && payload.IsCompleted && !payload.HasFailed && payload.GeneratedImageUrls.Any())
+        // Only process if completed and not failed and has output
+        if (payload.IsCompleted && !payload.HasFailed && payload.GeneratedImageUrls.Any())
         {
-            foreach (var imageUrl in payload.GeneratedImageUrls)
+            var imageUrl = payload.GeneratedImageUrls.First();
+            using var httpClient = new HttpClient();
+            try
             {
-                _dbContext.ProcessedImages.Add(new ProcessedImage
-                {
-                    OriginalImageUrl = string.Empty, // Optionally store original if available
-                    ProcessedImageUrl = imageUrl,
-                    Style = style ?? "Unknown",
-                    UserProfileId = userProfile.Id,
-                    CreatedAt = DateTime.UtcNow
-                });
+                var response = await httpClient.GetAsync(imageUrl);
+                response.EnsureSuccessStatusCode();
+                var contentType = response.Content.Headers.ContentType?.MediaType?.ToLowerInvariant() ?? "image/jpeg";
+                var imageBytes = await response.Content.ReadAsByteArrayAsync();
+                var base64 = Convert.ToBase64String(imageBytes);
+                var dataUrl = $"data:{contentType};base64,{base64}";
+                return Ok(new { success = true, dataUrl });
             }
-            userProfile.UpdatedAt = DateTime.UtcNow;
-            await _dbContext.SaveChangesAsync();
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to fetch or convert image for data URL: {ImageUrl}", imageUrl);
+                return StatusCode(500, new { success = false, error = "Failed to fetch or convert image." });
+            }
         }
-        _logger.LogInformation("Handled Replicate prediction-complete webhook: {@Payload}", payload);
-        return Ok(new { success = true });
+        return BadRequest(new { success = false, error = "No image output available." });
     }
 
 }

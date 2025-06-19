@@ -2,7 +2,8 @@ import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { AuthService, RegisterRequest } from '../../auth.service';
+import { AuthService, RegisterDto } from '../../services/auth.service';
+import { ConfigService } from '../../services/config.service';
 
 @Component({
   selector: 'app-register',
@@ -18,7 +19,8 @@ export class RegisterComponent {
   constructor(
     private formBuilder: FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private configService: ConfigService
   ) {
     this.registerForm = this.formBuilder.group({
       firstName: ['', [Validators.required, Validators.minLength(2)]],
@@ -51,7 +53,7 @@ export class RegisterComponent {
     }
 
     this.loading = true;
-    const registerData: RegisterRequest = {
+    const registerData: RegisterDto = {
       firstName: this.f['firstName'].value,
       lastName: this.f['lastName'].value,
       email: this.f['email'].value,
@@ -60,15 +62,11 @@ export class RegisterComponent {
 
     this.authService.register(registerData).subscribe({
       next: (response) => {
-        if (response.isSuccess) {
-          this.router.navigate(['/dashboard']);
-        } else {
-          this.error = response.message;
-          this.loading = false;
-        }
+        // Registration successful, navigate to dashboard
+        this.router.navigate(['/dashboard']);
       },
       error: (error) => {
-        this.error = error.error?.message || 'Registration failed. Please try again.';
+        this.error = error.message || 'Registration failed. Please try again.';
         this.loading = false;
       }
     });
@@ -79,35 +77,17 @@ export class RegisterComponent {
   }
 
   registerWithGoogle() {
-    this.authService.externalLogin('Google', '/dashboard').subscribe({
-      next: (response) => {
-        window.location.href = response.redirectUrl;
-      },
-      error: (error) => {
-        this.error = 'Google registration failed. Please try again.';
-      }
-    });
+    // Use configuration-based URL for Google OAuth registration
+    window.location.href = `${this.configService.appBaseUrl}/api/auth/external-login/Google?returnUrl=/dashboard`;
   }
 
   registerWithFacebook() {
-    this.authService.externalLogin('Facebook', '/dashboard').subscribe({
-      next: (response) => {
-        window.location.href = response.redirectUrl;
-      },
-      error: (error) => {
-        this.error = 'Facebook registration failed. Please try again.';
-      }
-    });
+    // TODO: Implement Facebook OAuth when needed
+    this.error = 'Facebook registration not yet implemented.';
   }
 
   registerWithApple() {
-    this.authService.externalLogin('Apple', '/dashboard').subscribe({
-      next: (response) => {
-        window.location.href = response.redirectUrl;
-      },
-      error: (error) => {
-        this.error = 'Apple registration failed. Please try again.';
-      }
-    });
+    // TODO: Implement Apple OAuth when needed
+    this.error = 'Apple registration not yet implemented.';
   }
 }

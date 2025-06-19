@@ -1,4 +1,6 @@
-﻿namespace AI.ProfilePhotoMaker.API.Models;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace AI.ProfilePhotoMaker.API.Models;
 
 public class UserProfile
 {
@@ -16,7 +18,13 @@ public class UserProfile
     public int? StyleId { get; set; }
     public Style? Style { get; set; }
     
+    // Basic tier and subscription management
+    public SubscriptionTier SubscriptionTier { get; set; } = SubscriptionTier.Basic;
+    public int Credits { get; set; } = 3; // Weekly credits
+    public DateTime LastCreditReset { get; set; } = DateTime.UtcNow;
+    
     public List<ProcessedImage> ProcessedImages { get; set; } = new List<ProcessedImage>();
+    public List<UsageLog> UsageLogs { get; set; } = new List<UsageLog>();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
