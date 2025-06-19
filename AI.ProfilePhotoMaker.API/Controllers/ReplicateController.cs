@@ -64,6 +64,51 @@ public class ReplicateController : ControllerBase
     public async Task<IActionResult> GetPredictionStatus(string predictionId)
     {
         var result = await _replicateApiClient.GetPredictionStatusAsync(predictionId);
+        
+        // If prediction succeeded and has output, try to fetch and return dataUrl
+        if (result.Status == "succeeded" && result.Output != null)
+        {
+            string? imageUrl = null;
+            
+            // Handle both array and string outputs
+            if (result.Output.Value.ValueKind == System.Text.Json.JsonValueKind.Array && result.Output.Value.GetArrayLength() > 0)
+            {
+                imageUrl = result.Output.Value[0].GetString();
+            }
+            else if (result.Output.Value.ValueKind == System.Text.Json.JsonValueKind.String)
+            {
+                imageUrl = result.Output.Value.GetString();
+            }
+            
+            if (!string.IsNullOrEmpty(imageUrl))
+            {
+                try
+                {
+                    using var httpClient = new System.Net.Http.HttpClient();
+                    var response = await httpClient.GetAsync(imageUrl);
+                    response.EnsureSuccessStatusCode();
+                    var contentType = response.Content.Headers.ContentType?.MediaType?.ToLowerInvariant() ?? "image/jpeg";
+                    var imageBytes = await response.Content.ReadAsByteArrayAsync();
+                    var base64 = System.Convert.ToBase64String(imageBytes);
+                    var dataUrl = $"data:{contentType};base64,{base64}";
+                    // Attach dataUrl to result by wrapping in a new object
+                    return Ok(new { success = true, data = new {
+                        result.Id,
+                        result.Version,
+                        result.Status,
+                        result.Input,
+                        result.Output,
+                        result.Error,
+                        result.Webhook,
+                        result.Urls,
+                        result.CreatedAt,
+                        result.CompletedAt,
+                        dataUrl
+                    }, error = (object?)null });
+                }
+                catch { /* ignore, fallback below */ }
+            }
+        }
         return Ok(new { success = true, data = result, error = (object?)null });
     }
 

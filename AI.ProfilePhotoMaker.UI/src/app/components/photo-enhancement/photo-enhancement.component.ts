@@ -2,7 +2,7 @@ import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ReplicateService, GenerateFreeImageRequest, CreditsInfo } from '../../services/replicate.service';
+import { ReplicateService, GenerateBasicImageRequest, CreditsInfo } from '../../services/replicate.service';
 import { FileUploadService } from '../../services/file-upload.service';
 import { AuthService } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
@@ -97,30 +97,30 @@ import { ThemeService } from '../../services/theme.service';
           <div class="enhancement-options">
             <h3>Enhancement Options</h3>
             <div class="options-grid">
-              <label class="option-card" [class.selected]="enhancementType === 'professional'">
-                <input type="radio" name="enhancement" value="professional" [(ngModel)]="enhancementType">
+              <label class="option-card" [class.selected]="enhancementType === 'background'">
+                <input type="radio" name="enhancement" value="background" [(ngModel)]="enhancementType">
                 <div class="option-content">
-                  <div class="option-icon">💼</div>
-                  <h4>Professional</h4>
-                  <p>Background removal, lighting correction, business-ready</p>
+                  <div class="option-icon">🖼️</div>
+                  <h4>Background Remover</h4>
+                  <p>Remove/replace background with professional backdrop</p>
                 </div>
               </label>
               
-              <label class="option-card" [class.selected]="enhancementType === 'portrait'">
-                <input type="radio" name="enhancement" value="portrait" [(ngModel)]="enhancementType">
+              <label class="option-card" [class.selected]="enhancementType === 'social'">
+                <input type="radio" name="enhancement" value="social" [(ngModel)]="enhancementType">
+                <div class="option-content">
+                  <div class="option-icon">📱</div>
+                  <h4>Social Media</h4>
+                  <p>Perfect for Instagram, bright and engaging, iPhone 16 Pro quality</p>
+                </div>
+              </label>
+              
+              <label class="option-card" [class.selected]="enhancementType === 'cartoon'">
+                <input type="radio" name="enhancement" value="cartoon" [(ngModel)]="enhancementType">
                 <div class="option-content">
                   <div class="option-icon">🎨</div>
-                  <h4>Portrait</h4>
-                  <p>Artistic enhancement, soft background, personal use</p>
-                </div>
-              </label>
-              
-              <label class="option-card" [class.selected]="enhancementType === 'linkedin'">
-                <input type="radio" name="enhancement" value="linkedin" [(ngModel)]="enhancementType">
-                <div class="option-content">
-                  <div class="option-icon">💻</div>
-                  <h4>LinkedIn</h4>
-                  <p>Optimized for social media, clean background</p>
+                  <h4>Cartoon Mode</h4>
+                  <p>Fun animated style transformation</p>
                 </div>
               </label>
             </div>
@@ -155,7 +155,6 @@ import { ThemeService } from '../../services/theme.service';
       <!-- Results Section -->
       <div class="results-section" *ngIf="enhancedImage">
         <h3>Enhancement Complete!</h3>
-        <p class="demo-note">🔧 Demo Mode: This shows a simulated enhancement. Real AI enhancement coming soon!</p>
         <div class="before-after">
           <div class="comparison-item">
             <h4>Before</h4>
@@ -225,7 +224,7 @@ export class PhotoEnhancementComponent implements OnInit {
   
   selectedFile: File | null = null;
   imagePreview: string | null = null;
-  enhancementType: string = 'professional';
+  enhancementType: string = 'background';
   isProcessing: boolean = false;
   processingProgress: number = 0;
   processingStatus: string = '';
@@ -336,133 +335,183 @@ export class PhotoEnhancementComponent implements OnInit {
 
     this.isProcessing = true;
     this.processingProgress = 0;
-    this.processingStatus = 'Preparing enhancement...';
+    this.processingStatus = 'Uploading image...';
+    this.errorMessage = '';
 
     try {
       console.log('Starting enhancement for:', this.selectedFile.name);
       
-      // For now, just simulate the enhancement process
-      // In the future, this would call the actual enhancement API
-      await this.simulateEnhancement();
+      // Step 1: Upload the image file
+      this.processingStatus = 'Uploading image...';
+      const uploadResult = await this.uploadImageForEnhancement();
+      
+      if (!uploadResult || !uploadResult.url) {
+        throw new Error('Failed to upload image');
+      }
 
-      // Update credits
-      if (this.creditsInfo) {
-        this.creditsInfo.availableCredits -= 1;
+      // Step 2: Call enhancement API
+      this.processingProgress = 30;
+      this.processingStatus = 'Starting AI enhancement...';
+      
+      // Convert relative URL to absolute URL for Replicate API
+      const fullImageUrl = uploadResult.url.startsWith('http') 
+        ? uploadResult.url 
+        : `http://localhost:5035${uploadResult.url}`;
+      
+      const enhanceRequest = {
+        imageUrl: fullImageUrl,
+        enhancementType: this.enhancementType
+      };
+
+      const enhanceResponse = await this.replicateService.enhancePhoto(enhanceRequest).toPromise();
+      
+      if (!enhanceResponse?.success) {
+        throw new Error(enhanceResponse?.error?.message || 'Enhancement failed');
+      }
+
+      // Step 3: Poll for completion
+      this.processingProgress = 50;
+      this.processingStatus = 'AI is enhancing your photo...';
+      
+      const predictionId = enhanceResponse.data.prediction.id;
+      const finalResult = await this.pollForCompletion(predictionId);
+      
+      // Use dataUrl if present, otherwise fallback to output[0]
+      let enhancedUrl = finalResult.output && finalResult.output.length > 0 ? finalResult.output[0] : null;
+      if (finalResult.dataUrl) {
+        enhancedUrl = finalResult.dataUrl;
+      }
+      if (enhancedUrl) {
+        this.enhancedImage = {
+          url: enhancedUrl,
+          type: 'enhanced'
+        };
+        
+        // Update credits info
+        this.creditsInfo.availableCredits = enhanceResponse.data.creditsRemaining;
+        this.isProcessing = false;
+        this.processingProgress = 100;
+        this.processingStatus = 'Enhancement complete!';
+      } else {
+        throw new Error('No enhanced image received');
       }
 
     } catch (error: any) {
+      console.error('Full enhancement error details:', error);
+      console.error('Error status:', error.status);
+      console.error('Error message:', error.message);
+      console.error('Error body:', error.error);
+      
       this.errorMessage = error.error?.message || error.message || 'Enhancement failed. Please try again.';
       this.isProcessing = false;
-      console.error('Enhancement error:', error);
     }
   }
 
 
-  private async simulateEnhancement() {
-    // Simulate enhancement process
-    const steps = [
-      { progress: 40, status: 'Analyzing image...' },
-      { progress: 60, status: 'Removing background...' },
-      { progress: 80, status: 'Enhancing lighting...' },
-      { progress: 90, status: 'Finalizing...' },
-      { progress: 100, status: 'Complete!' }
-    ];
+  private async uploadImageForEnhancement(): Promise<{ url: string; fileName: string } | null> {
+    if (!this.selectedFile) return null;
 
-    for (const step of steps) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      this.processingProgress = step.progress;
-      this.processingStatus = step.status;
-    }
-
-    // Create a mock "enhanced" version by adding a visual overlay
-    const enhancedUrl = await this.createMockEnhancedImage();
-    
-    // Simulate enhanced result
-    this.enhancedImage = {
-      url: enhancedUrl,
-      type: 'enhanced'
-    };
-
-    this.isProcessing = false;
-    
-    // Update credits
-    if (this.creditsInfo) {
-      this.creditsInfo.availableCredits -= 1;
-    }
-  }
-
-  private async createMockEnhancedImage(): Promise<string> {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      
-      img.onload = () => {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        
-        // Draw original image
-        ctx?.drawImage(img, 0, 0);
-        
-        if (ctx) {
-          // Add enhancement effects based on type
-          switch (this.enhancementType) {
-            case 'professional':
-              // Add slight saturation and sharpness effect
-              ctx.globalCompositeOperation = 'overlay';
-              ctx.fillStyle = 'rgba(0, 100, 200, 0.1)';
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
-              break;
-              
-            case 'portrait':
-              // Add warm tone effect
-              ctx.globalCompositeOperation = 'overlay';
-              ctx.fillStyle = 'rgba(255, 200, 150, 0.15)';
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
-              break;
-              
-            case 'linkedin':
-              // Add contrast effect
-              ctx.globalCompositeOperation = 'overlay';
-              ctx.fillStyle = 'rgba(50, 50, 100, 0.1)';
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
-              break;
+    return new Promise((resolve, reject) => {
+      console.log('Starting file upload for:', this.selectedFile!.name);
+      this.fileUploadService.uploadSingleImage(this.selectedFile!).subscribe({
+        next: (result) => {
+          console.log('Upload progress result:', result);
+          if (result.progress < 100) {
+            this.processingProgress = Math.round(result.progress * 0.2); // Upload is 20% of total progress
+          } else if (result.response) {
+            console.log('Upload response:', result.response);
+            if (result.response.success) {
+              console.log('Upload successful, URL:', result.response.data.url);
+              resolve(result.response.data);
+            } else {
+              console.error('Upload failed - response not successful');
+              reject(new Error('Upload failed'));
+            }
           }
-          
-          // Add subtle "Enhanced" watermark
-          ctx.globalCompositeOperation = 'source-over';
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-          ctx.font = '12px Arial';
-          ctx.fillText('✨ Enhanced', 10, canvas.height - 10);
+        },
+        error: (error) => {
+          console.error('Upload error:', error);
+          reject(error);
         }
-        
-        resolve(canvas.toDataURL());
-      };
-      
-      img.src = this.imagePreview || '';
+      });
     });
   }
+
+  private async pollForCompletion(predictionId: string): Promise<any> {
+    const maxAttempts = 60; // 5 minutes max (5 second intervals)
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      try {
+        const statusResponse = await this.replicateService.getPredictionStatus(predictionId).toPromise();
+        if (statusResponse?.success && statusResponse.data) {
+          const prediction = statusResponse.data;
+          // Update progress based on status
+          if (prediction.status === 'processing') {
+            this.processingProgress = Math.min(50 + (attempts * 2), 90);
+            this.processingStatus = 'AI is enhancing your photo...';
+          } else if (prediction.status === 'succeeded') {
+            this.processingProgress = 100;
+            this.processingStatus = 'Enhancement complete!';
+            // Support new backend: prefer dataUrl if present
+            if (prediction.dataUrl) {
+              return { ...prediction, output: [prediction.dataUrl] };
+            }
+            return prediction;
+          } else if (prediction.status === 'failed') {
+            throw new Error(prediction.error || 'Enhancement failed');
+          }
+        }
+        // Wait 5 seconds before next poll
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        attempts++;
+      } catch (error) {
+        console.error('Polling error:', error);
+        throw error;
+      }
+    }
+    throw new Error('Enhancement timed out. Please try again.');
+  }
+
 
   downloadEnhanced() {
     if (this.enhancedImage) {
       const link = document.createElement('a');
       link.href = this.enhancedImage.url;
-      link.download = `enhanced-photo-${Date.now()}.png`;
+      // If data URL, force PNG extension
+      if (this.enhancedImage.url.startsWith('data:image/')) {
+        link.download = `enhanced-photo-${Date.now()}.png`;
+      } else {
+        link.download = `enhanced-photo-${Date.now()}`;
+      }
       link.click();
     }
   }
-
   shareEnhanced() {
     if (navigator.share && this.enhancedImage) {
-      navigator.share({
-        title: 'My Enhanced Photo',
-        text: 'Check out my AI-enhanced photo!',
-        url: this.enhancedImage.url
-      });
-    } else {
-      // Fallback: copy to clipboard
+      // If data URL, use Web Share API with files if supported
+      if (this.enhancedImage.url.startsWith('data:image/')) {
+        fetch(this.enhancedImage.url)
+          .then(res => res.blob())
+          .then(blob => {
+            const file = new File([blob], 'enhanced-photo.png', { type: blob.type });
+            navigator.share({
+              title: 'My Enhanced Photo',
+              text: 'Check out my AI-enhanced photo!',
+              files: [file]
+            });
+          });
+      } else {
+        navigator.share({
+          title: 'My Enhanced Photo',
+          text: 'Check out my AI-enhanced photo!',
+          url: this.enhancedImage.url
+        });
+      }
+    } else if (this.enhancedImage) {
+      // Fallback: copy data URL to clipboard
       navigator.clipboard.writeText(this.enhancedImage.url);
-      // Show toast notification
+      // Optionally show a toast notification
     }
   }
 

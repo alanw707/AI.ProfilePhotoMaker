@@ -112,4 +112,45 @@ export class FileUploadService {
   deleteAllTrainingFiles(): Observable<{ success: boolean; message: string }> {
     return this.http.delete<{ success: boolean; message: string }>(this.config.getFullUrl('/profile/training-files'));
   }
+
+  uploadSingleImage(file: File): Observable<{ progress: number; response?: { success: boolean; data: { url: string; fileName: string } } }> {
+    const formData = new FormData();
+    formData.append('images', file, file.name);
+
+    return this.http.post<any>(this.config.uploadImagesUrl, formData, {
+      reportProgress: true,
+      observe: 'events'
+    }).pipe(
+      map(event => {
+        switch (event.type) {
+          case HttpEventType.UploadProgress:
+            const progress = event.total ? Math.round(100 * event.loaded / event.total) : 0;
+            return { progress };
+          case HttpEventType.Response:
+            // Extract the first uploaded file URL from the response
+            const response = event.body;
+            console.log('Upload API response:', response);
+            
+            if (response && response.uploadedFiles && response.uploadedFiles.length > 0) {
+              const uploadedFile = response.uploadedFiles[0];
+              console.log('Uploaded file details:', uploadedFile);
+              return { 
+                progress: 100, 
+                response: { 
+                  success: true, 
+                  data: { 
+                    url: uploadedFile.url, 
+                    fileName: uploadedFile.fileName 
+                  } 
+                } 
+              };
+            }
+            console.log('Upload response parsing failed. Response structure:', JSON.stringify(response, null, 2));
+            return { progress: 100, response: { success: false, data: { url: '', fileName: '' } } };
+          default:
+            return { progress: 0 };
+        }
+      })
+    );
+  }
 }
