@@ -4,8 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../services/auth.service';
 import { ThemeService } from '../services/theme.service';
-import { PhotoGalleryComponent, GalleryImage } from '../components/photo-gallery/photo-gallery.component';
-import { PremiumPackageSelectionComponent } from '../components/premium-package-selection/premium-package-selection.component';
+import { GalleryImage } from '../components/photo-gallery/photo-gallery.component';
 import { FileUploadService, ProcessedImage } from '../services/file-upload.service';
 import { ProfileService, UserProfile } from '../services/profile.service';
 import { ReplicateService, CreditsInfo } from '../services/replicate.service';
@@ -32,7 +31,7 @@ interface GeneratedPhoto {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, RouterModule, PhotoGalleryComponent, PremiumPackageSelectionComponent, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.sass'
 })
@@ -125,7 +124,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isGeneratingBasic: boolean = false;
 
   // Premium Package
-  showPremiumSelection: boolean = false;
   userPackageStatus: UserPackageStatus | null = null;
 
 
@@ -1040,38 +1038,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
       next: (response) => {
         if (response.success) {
           this.userPackageStatus = response.data;
-          
-          // Show premium selection if user doesn't have an active package
-          if (!this.userPackageStatus.hasActivePackage) {
-            this.showPremiumSelection = true;
-          }
+          console.log('Package status loaded:', this.userPackageStatus);
         }
       },
       error: (error) => {
         console.error('Failed to load premium package status:', error);
-        // User might not have a package yet, that's OK
-        this.showPremiumSelection = true;
+        // Don't redirect on error - just show the dashboard without premium features
       }
     });
   }
 
-  onPackageSelected(pkg: PremiumPackage) {
-    console.log('Package selected:', pkg);
-    // Could show package details or preview
-  }
-
-  onPackagePurchased(packageStatus: UserPackageStatus) {
-    console.log('Package purchased:', packageStatus);
-    this.userPackageStatus = packageStatus;
-    this.showPremiumSelection = false;
-    
-    // Refresh the page to update UI state
-    this.loadDashboardData();
-    this.loadPremiumPackageStatus();
-    
-    this.notificationService.success('Premium Package Active!', 
-      'You can now upload images and start training your custom AI model.');
-  }
 
   isPremiumWorkflow(): boolean {
     return this.userPackageStatus?.hasActivePackage || false;

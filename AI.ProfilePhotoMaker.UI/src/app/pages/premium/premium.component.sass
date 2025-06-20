@@ -1,0 +1,474 @@
+// Import shared styles
+@import '../../../styles.sass'
+
+// Premium Page Styling
+.premium-page-container
+  min-height: 100vh
+  background: var(--bg-gradient)
+  font-family: 'Inter', sans-serif
+
+// Theme Toggle Button (consistent with other pages)
+.theme-toggle
+  position: fixed
+  top: 24px
+  right: 24px
+  z-index: 1000
+  width: 48px
+  height: 48px
+  border-radius: 50%
+  border: none
+  background: var(--surface-primary)
+  color: var(--text-primary)
+  cursor: pointer
+  display: flex
+  align-items: center
+  justify-content: center
+  box-shadow: var(--shadow-lg)
+  transition: all 0.3s ease
+  
+  &:hover
+    transform: scale(1.1)
+    box-shadow: var(--shadow-xl)
+  
+  svg
+    width: 20px
+    height: 20px
+
+// Header Styling (consistent with other pages)
+.dashboard-header
+  background: var(--header-bg)
+  box-shadow: var(--shadow-sm)
+  border-bottom: 1px solid var(--border-color)
+  padding: 16px 0
+  position: sticky
+  top: 0
+  z-index: 100
+
+  .header-content
+    max-width: 1400px
+    margin: 0 auto
+    padding: 0 24px
+    display: flex
+    justify-content: space-between
+    align-items: center
+    gap: 32px
+
+  .logo-section
+    display: flex
+    align-items: center
+    gap: 16px
+
+    .header-logo
+      width: 48px
+      height: 48px
+      object-fit: contain
+      filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3))
+
+    h1
+      font-family: 'Poppins', sans-serif
+      color: var(--text-primary)
+      font-size: 24px
+      font-weight: 700
+      margin: 0
+
+  .nav-menu
+    display: flex
+    gap: 8px
+    flex: 1
+    justify-content: center
+
+    .nav-link
+      display: flex
+      align-items: center
+      gap: 8px
+      padding: 12px 20px
+      border-radius: 12px
+      text-decoration: none
+      color: var(--text-secondary)
+      font-weight: 500
+      font-size: 14px
+      transition: all 0.3s ease
+      border: 2px solid transparent
+
+      &:hover
+        background: var(--surface-secondary)
+        color: var(--text-primary)
+
+      &.active
+        background: var(--primary)
+        color: white
+        border-color: var(--primary)
+
+      svg
+        width: 16px
+        height: 16px
+
+  .user-section
+    display: flex
+    align-items: center
+    gap: 20px
+
+  .user-info
+    display: flex
+    flex-direction: column
+    align-items: flex-end
+    gap: 2px
+
+    .user-name
+      color: var(--text-primary)
+      font-weight: 600
+      font-size: 16px
+
+    .user-email
+      color: var(--text-secondary)
+      font-size: 14px
+
+  .btn-logout
+    display: flex
+    align-items: center
+    gap: 8px
+    padding: 10px 16px
+    border: none
+    border-radius: 8px
+    background: transparent
+    color: var(--text-secondary)
+    cursor: pointer
+    transition: all 0.2s ease
+    font-size: 14px
+    font-weight: 500
+
+    &:hover
+      background: rgba(239, 68, 68, 0.1)
+      color: #ef4444
+
+    svg
+      width: 16px
+      height: 16px
+
+// Main Content
+.premium-main
+  padding: 0
+  max-width: none
+  margin: 0
+
+// Hero Section
+.hero-section
+  background: var(--primary-gradient)
+  color: white
+  padding: 80px 24px
+  text-align: center
+
+  .hero-content
+    max-width: 1200px
+    margin: 0 auto
+
+    h1
+      font-family: 'Poppins', sans-serif
+      font-size: 48px
+      font-weight: 800
+      margin: 0 0 24px 0
+      line-height: 1.1
+
+    .hero-subtitle
+      font-size: 20px
+      margin: 0 0 64px 0
+      opacity: 0.9
+      max-width: 600px
+      margin-left: auto
+      margin-right: auto
+      line-height: 1.5
+
+.features-grid
+  display: grid
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr))
+  gap: 32px
+  margin-top: 64px
+
+.feature-item
+  text-align: center
+  padding: 24px
+  background: rgba(255, 255, 255, 0.1)
+  border-radius: 16px
+  backdrop-filter: blur(10px)
+  border: 1px solid rgba(255, 255, 255, 0.2)
+
+  .feature-icon
+    font-size: 48px
+    margin-bottom: 16px
+
+  h3
+    font-size: 20px
+    font-weight: 600
+    margin: 0 0 12px 0
+
+  p
+    font-size: 14px
+    opacity: 0.9
+    margin: 0
+    line-height: 1.5
+
+// Packages Section
+.packages-section
+  padding: 80px 24px
+  background: var(--surface-primary)
+
+  .packages-header
+    text-align: center
+    margin-bottom: 64px
+    max-width: 800px
+    margin-left: auto
+    margin-right: auto
+
+    h2
+      font-family: 'Poppins', sans-serif
+      font-size: 40px
+      font-weight: 700
+      color: var(--text-primary)
+      margin: 0 0 16px 0
+
+    p
+      font-size: 18px
+      color: var(--text-secondary)
+      margin: 0
+
+// How It Works Section
+.how-it-works-section
+  padding: 80px 24px
+  background: var(--surface-secondary)
+
+  .section-header
+    text-align: center
+    margin-bottom: 64px
+
+    h2
+      font-family: 'Poppins', sans-serif
+      font-size: 40px
+      font-weight: 700
+      color: var(--text-primary)
+      margin: 0 0 16px 0
+
+    p
+      font-size: 18px
+      color: var(--text-secondary)
+      margin: 0
+
+.steps-grid
+  display: grid
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))
+  gap: 32px
+  max-width: 1200px
+  margin: 0 auto
+
+.step-item
+  display: flex
+  flex-direction: column
+  align-items: center
+  text-align: center
+  padding: 32px 24px
+  background: var(--surface-primary)
+  border-radius: 16px
+  box-shadow: var(--shadow-md)
+  transition: all 0.3s ease
+
+  &:hover
+    transform: translateY(-4px)
+    box-shadow: var(--shadow-lg)
+
+.step-number
+  width: 64px
+  height: 64px
+  background: var(--primary)
+  color: white
+  border-radius: 50%
+  display: flex
+  align-items: center
+  justify-content: center
+  font-size: 24px
+  font-weight: 700
+  margin-bottom: 24px
+
+.step-content
+  h3
+    font-size: 20px
+    font-weight: 600
+    color: var(--text-primary)
+    margin: 0 0 12px 0
+
+  p
+    font-size: 14px
+    color: var(--text-secondary)
+    margin: 0
+    line-height: 1.5
+
+// Existing Package Section
+.existing-package-section
+  padding: 40px 24px
+  background: var(--success-bg-light)
+  border-top: 1px solid var(--border-color)
+
+.existing-package-card
+  max-width: 600px
+  margin: 0 auto
+  background: var(--surface-primary)
+  border-radius: 16px
+  padding: 32px
+  text-align: center
+  box-shadow: var(--shadow-lg)
+  border: 2px solid var(--success)
+
+  .package-status
+    margin-bottom: 32px
+
+    h3
+      font-size: 24px
+      font-weight: 600
+      color: var(--success)
+      margin: 0 0 16px 0
+
+    .status-details
+      display: flex
+      flex-direction: column
+      gap: 8px
+
+      .package-name
+        font-size: 18px
+        font-weight: 600
+        color: var(--text-primary)
+
+      .credits-remaining
+        font-size: 16px
+        color: var(--text-secondary)
+
+// Button Styling (consistent with other pages)
+.btn
+  padding: 12px 24px
+  border-radius: 12px
+  border: none
+  font-weight: 600
+  text-decoration: none
+  cursor: pointer
+  display: inline-flex
+  align-items: center
+  gap: 8px
+  transition: all 0.3s ease
+  font-size: 16px
+  line-height: 1.5
+
+  &.btn-primary
+    background: var(--primary)
+    color: white
+    box-shadow: var(--shadow-md)
+
+    &:hover
+      background: var(--primary-dark)
+      transform: translateY(-2px)
+      box-shadow: var(--shadow-lg)
+
+  svg
+    flex-shrink: 0
+
+// Responsive Design
+@media (max-width: 1024px)
+  .features-grid
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))
+    gap: 24px
+
+  .steps-grid
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr))
+    gap: 24px
+
+@media (max-width: 768px)
+  .dashboard-header
+    .header-content
+      padding: 0 16px
+
+    .nav-menu
+      gap: 4px
+
+      .nav-link
+        padding: 8px 12px
+        font-size: 12px
+
+    .user-info
+      .user-name
+        font-size: 14px
+      .user-email
+        font-size: 12px
+
+  .hero-section
+    padding: 60px 16px
+
+    .hero-content
+      h1
+        font-size: 32px
+
+      .hero-subtitle
+        font-size: 16px
+
+  .packages-section, .how-it-works-section
+    padding: 60px 16px
+
+    .packages-header, .section-header
+      margin-bottom: 48px
+
+      h2
+        font-size: 28px
+
+      p
+        font-size: 16px
+
+  .features-grid
+    grid-template-columns: 1fr
+    gap: 16px
+    margin-top: 48px
+
+  .steps-grid
+    grid-template-columns: 1fr
+    gap: 16px
+
+  .step-item
+    padding: 24px 16px
+
+  .existing-package-card
+    padding: 24px 16px
+
+@media (max-width: 480px)
+  .theme-toggle
+    top: 16px
+    right: 16px
+    width: 40px
+    height: 40px
+
+    svg
+      width: 16px
+      height: 16px
+
+  .dashboard-header
+    .logo-section
+      h1
+        display: none
+
+  .hero-section
+    .hero-content
+      h1
+        font-size: 24px
+
+      .hero-subtitle
+        font-size: 14px
+
+  .packages-header, .section-header
+    h2
+      font-size: 20px
+
+  .step-number
+    width: 48px
+    height: 48px
+    font-size: 20px
+    margin-bottom: 16px
+
+  .step-content
+    h3
+      font-size: 16px
+
+    p
+      font-size: 12px
