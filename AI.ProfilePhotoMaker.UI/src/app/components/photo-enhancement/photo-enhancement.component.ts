@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { ReplicateService, GenerateBasicImageRequest, CreditsInfo } from '../../services/replicate.service';
 import { FileUploadService } from '../../services/file-upload.service';
 import { AuthService } from '../../services/auth.service';
@@ -10,7 +10,7 @@ import { ThemeService } from '../../services/theme.service';
 @Component({
   selector: 'app-photo-enhancement',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   template: `
     <div class="photo-enhancement-container">
       <!-- Theme Toggle Button -->
@@ -24,20 +24,41 @@ import { ThemeService } from '../../services/theme.service';
       </button>
 
       <!-- Navigation Header -->
-      <header class="enhancement-header-nav">
+      <header class="dashboard-header">
         <div class="header-content">
           <div class="logo-section">
             <img src="Logo.PNG" alt="AI Profile Photo Maker" class="header-logo">
             <h1>AI Profile Photo Maker</h1>
           </div>
-          <div class="nav-actions">
-            <button class="btn btn-outline" (click)="goToDashboard()">
+          <!-- Navigation Menu -->
+          <nav class="nav-menu">
+            <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M3 12L5 10M5 10L12 3L19 10M5 10V20C5 20.5523 5.44772 21 6 21H9M19 10L21 12M19 10V20C19 20.5523 18.4477 21 18 21H15M9 21C9.55228 21 10 20.5523 10 20V16C10 15.4477 10.4477 15 11 15H13C13.5523 15 14 15.4477 14 16V20C14 20.5523 14.4477 21 15 21M9 21H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect x="3" y="3" width="7" height="9" stroke="currentColor" stroke-width="2"/>
+                <rect x="13" y="3" width="8" height="5" stroke="currentColor" stroke-width="2"/>
+                <rect x="13" y="12" width="8" height="9" stroke="currentColor" stroke-width="2"/>
+                <rect x="3" y="16" width="7" height="5" stroke="currentColor" stroke-width="2"/>
               </svg>
-              Dashboard
-            </button>
-            <div class="user-section">
+              Premium Studio
+            </a>
+            <a routerLink="/enhance" routerLinkActive="active" class="nav-link">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              Enhance
+            </a>
+            <a routerLink="/gallery" routerLinkActive="active" class="nav-link">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
+                <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              Gallery
+            </a>
+          </nav>
+
+          <div class="user-section">
               <div class="user-info">
                 <span class="user-name">{{userName}}</span>
                 <span class="user-email">{{userEmail}}</span>
@@ -49,7 +70,6 @@ import { ThemeService } from '../../services/theme.service';
                 Logout
               </button>
             </div>
-          </div>
         </div>
       </header>
 
@@ -572,7 +592,4 @@ export class PhotoEnhancementComponent implements OnInit {
     this.router.navigate(['/login']);
   }
 
-  goToDashboard() {
-    this.router.navigate(['/dashboard']);
-  }
 }

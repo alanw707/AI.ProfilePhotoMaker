@@ -323,6 +323,7 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Payment.IPaymentSer
 // Register background services
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelCreationPollingService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.BasicTierBackgroundService>();
+builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelExpirationBackgroundService>();
 
 
 builder.Services.AddControllers();
