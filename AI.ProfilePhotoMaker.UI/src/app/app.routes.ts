@@ -28,7 +28,7 @@ export const routes: Routes = [
   },
   {
     path: 'gallery',
-    loadComponent: () => import('./components/photo-gallery/photo-gallery.component').then(m => m.PhotoGalleryComponent),
+    loadComponent: () => import('./pages/gallery/gallery.component').then(m => m.GalleryComponent),
     canActivate: [authGuard]
   },
   { path: '**', redirectTo: '/dashboard' }

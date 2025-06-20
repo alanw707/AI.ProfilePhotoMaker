@@ -1,0 +1,119 @@
+<div class="gallery-page-container">
+  <!-- Theme Toggle Button -->
+  <button class="theme-toggle" (click)="toggleTheme()" [attr.aria-label]="'Switch to ' + (themeService.isDark() ? 'light' : 'dark') + ' theme'">
+    <svg *ngIf="!themeService.isDark()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+    </svg>
+    <svg *ngIf="themeService.isDark()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+    </svg>
+  </button>
+
+  <!-- Navigation Header -->
+  <header class="dashboard-header">
+    <div class="header-content">
+      <div class="logo-section">
+        <img src="Logo.PNG" alt="AI Profile Photo Maker" class="header-logo">
+        <h1>AI Profile Photo Maker</h1>
+      </div>
+      
+      <!-- Navigation Menu -->
+      <nav class="nav-menu">
+        <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="3" width="7" height="9" stroke="currentColor" stroke-width="2"/>
+            <rect x="13" y="3" width="8" height="5" stroke="currentColor" stroke-width="2"/>
+            <rect x="13" y="12" width="8" height="9" stroke="currentColor" stroke-width="2"/>
+            <rect x="3" y="16" width="7" height="5" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          Premium Studio
+        </a>
+        <a routerLink="/enhance" routerLinkActive="active" class="nav-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          Enhance
+        </a>
+        <a routerLink="/gallery" routerLinkActive="active" class="nav-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
+            <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          Gallery
+        </a>
+      </nav>
+
+      <div class="user-section">
+        <div class="user-info">
+          <span class="user-name">{{userName}}</span>
+          <span class="user-email">{{userEmail}}</span>
+        </div>
+        <button class="btn btn-logout" (click)="logout()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M16 17L21 12M21 12L16 7M21 12H9M9 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Logout
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Gallery Content -->
+  <main class="gallery-main">
+    <div class="gallery-content">
+      <!-- Page Header -->
+      <section class="page-header">
+        <h2>Photo Gallery</h2>
+        <p>View, download, and manage all your generated and enhanced photos</p>
+      </section>
+
+      <!-- Loading State -->
+      <div class="loading-section" *ngIf="isLoading">
+        <div class="loading-spinner"></div>
+        <p>Loading your photos...</p>
+      </div>
+
+      <!-- Gallery Component -->
+      <section class="gallery-section" *ngIf="!isLoading">
+        <app-photo-gallery
+          [images]="galleryImages"
+          [title]="'Your Photos'"
+          (imageClick)="onImageClick($event)"
+          (imageDownload)="onImageDownload($event)"
+          (imageShare)="onImageShare($event)"
+          (imageDelete)="onImageDelete($event)"
+          (bulkDownload)="onBulkDownload($event)">
+        </app-photo-gallery>
+      </section>
+
+      <!-- Empty State -->
+      <section class="empty-section" *ngIf="!isLoading && galleryImages.length === 0">
+        <div class="empty-state">
+          <div class="empty-icon">🖼️</div>
+          <h3>No Photos Yet</h3>
+          <p>Start by uploading photos and generating professional headshots in the Premium Studio, or enhance existing photos with our AI enhancement tools.</p>
+          <div class="empty-actions">
+            <button class="btn btn-primary" routerLink="/dashboard">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="3" width="7" height="9" stroke="currentColor" stroke-width="2"/>
+                <rect x="13" y="3" width="8" height="5" stroke="currentColor" stroke-width="2"/>
+                <rect x="13" y="12" width="8" height="9" stroke="currentColor" stroke-width="2"/>
+                <rect x="3" y="16" width="7" height="5" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              Go to Premium Studio
+            </button>
+            <button class="btn btn-outline" routerLink="/enhance">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              Enhance Photos
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
