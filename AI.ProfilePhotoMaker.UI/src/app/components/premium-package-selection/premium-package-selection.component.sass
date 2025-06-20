@@ -1,0 +1,332 @@
+.premium-package-selection
+  padding: 2rem
+  max-width: 1200px
+  margin: 0 auto
+
+.section-header
+  text-align: center
+  margin-bottom: 3rem
+  
+  h2
+    font-size: 2.5rem
+    font-weight: 700
+    margin-bottom: 0.5rem
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+    -webkit-background-clip: text
+    -webkit-text-fill-color: transparent
+    background-clip: text
+  
+  p
+    font-size: 1.1rem
+    color: var(--text-secondary)
+    max-width: 600px
+    margin: 0 auto
+
+.current-package-status
+  margin-bottom: 2rem
+  
+  .status-card
+    display: flex
+    align-items: center
+    gap: 1rem
+    padding: 1.5rem
+    background: var(--surface-secondary)
+    border-radius: 12px
+    border: 2px solid var(--border-success)
+    
+    &.active
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(59, 130, 246, 0.1))
+    
+    .status-icon
+      font-size: 2rem
+    
+    .status-content
+      h3
+        margin: 0 0 0.5rem 0
+        color: var(--text-primary)
+        font-weight: 600
+      
+      p
+        margin: 0.25rem 0
+        color: var(--text-secondary)
+        
+        &.expires
+          color: var(--text-warning)
+          
+        &.expired
+          color: var(--text-danger)
+
+.loading-state
+  text-align: center
+  padding: 3rem
+  
+  .spinner
+    width: 40px
+    height: 40px
+    border: 4px solid var(--border-light)
+    border-top: 4px solid var(--primary)
+    border-radius: 50%
+    animation: spin 1s linear infinite
+    margin: 0 auto 1rem
+
+@keyframes spin
+  0%
+    transform: rotate(0deg)
+  100%
+    transform: rotate(360deg)
+
+.packages-grid
+  display: grid
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr))
+  gap: 2rem
+  margin-bottom: 3rem
+
+.package-card
+  position: relative
+  background: var(--surface-primary)
+  border: 2px solid var(--border-light)
+  border-radius: 16px
+  padding: 2rem
+  transition: all 0.3s ease
+  
+  &:hover
+    transform: translateY(-4px)
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1)
+    border-color: var(--primary)
+  
+  &.recommended
+    border-color: var(--primary)
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15)
+    
+    .package-header h3
+      color: var(--primary)
+  
+  &.selected
+    border-color: var(--success)
+    background: rgba(34, 197, 94, 0.05)
+
+.recommended-badge
+  position: absolute
+  top: -10px
+  left: 50%
+  transform: translateX(-50%)
+  background: linear-gradient(135deg, var(--primary), var(--secondary))
+  color: white
+  padding: 0.5rem 1rem
+  border-radius: 20px
+  font-size: 0.875rem
+  font-weight: 600
+  text-transform: uppercase
+  letter-spacing: 0.5px
+
+.package-header
+  text-align: center
+  margin-bottom: 2rem
+  
+  h3
+    font-size: 1.5rem
+    font-weight: 700
+    margin-bottom: 1rem
+    color: var(--text-primary)
+  
+  .package-price
+    margin-bottom: 0.5rem
+    
+    .price
+      font-size: 2.5rem
+      font-weight: 800
+      color: var(--primary)
+      
+    .credits-info
+      display: block
+      font-size: 1rem
+      color: var(--text-secondary)
+      margin-top: 0.25rem
+  
+  .package-recommendation
+    font-size: 0.95rem
+    color: var(--text-secondary)
+    font-style: italic
+    margin: 0
+
+.package-features
+  margin-bottom: 2rem
+  
+  ul
+    list-style: none
+    padding: 0
+    margin: 0
+    
+    li
+      display: flex
+      align-items: center
+      gap: 0.75rem
+      padding: 0.75rem 0
+      border-bottom: 1px solid var(--border-light)
+      
+      &:last-child
+        border-bottom: none
+      
+      .checkmark
+        color: var(--success)
+        font-weight: bold
+        font-size: 1.1rem
+
+.package-actions
+  display: flex
+  flex-direction: column
+  gap: 0.75rem
+
+.btn
+  padding: 0.875rem 1.5rem
+  border-radius: 8px
+  border: none
+  font-weight: 600
+  font-size: 1rem
+  cursor: pointer
+  transition: all 0.3s ease
+  text-align: center
+  text-decoration: none
+  
+  &:disabled
+    opacity: 0.6
+    cursor: not-allowed
+  
+  &.btn-primary
+    background: linear-gradient(135deg, var(--primary), var(--secondary))
+    color: white
+    
+    &:hover:not(:disabled)
+      transform: translateY(-2px)
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3)
+    
+    &.loading
+      background: var(--border-light)
+      color: var(--text-secondary)
+  
+  &.btn-secondary
+    background: var(--surface-secondary)
+    color: var(--text-secondary)
+    border: 1px solid var(--border-light)
+  
+  &.btn-outline
+    background: transparent
+    color: var(--primary)
+    border: 2px solid var(--primary)
+    
+    &:hover
+      background: var(--primary)
+      color: white
+
+.no-packages-state
+  text-align: center
+  padding: 3rem
+  
+  .empty-state
+    .empty-icon
+      font-size: 4rem
+      margin-bottom: 1rem
+    
+    h3
+      font-size: 1.5rem
+      color: var(--text-primary)
+      margin-bottom: 0.5rem
+    
+    p
+      color: var(--text-secondary)
+
+.package-comparison
+  margin: 3rem 0
+  padding: 2rem
+  background: var(--surface-secondary)
+  border-radius: 12px
+  
+  h3
+    text-align: center
+    margin-bottom: 2rem
+    color: var(--text-primary)
+    font-size: 1.5rem
+  
+  .comparison-table
+    overflow-x: auto
+    
+    table
+      width: 100%
+      border-collapse: collapse
+      
+      th, td
+        padding: 1rem
+        text-align: center
+        border-bottom: 1px solid var(--border-light)
+        
+      th
+        background: var(--surface-primary)
+        font-weight: 600
+        color: var(--text-primary)
+        
+      td
+        color: var(--text-secondary)
+
+.info-section
+  margin-top: 3rem
+  
+  h3
+    text-align: center
+    margin-bottom: 2rem
+    color: var(--text-primary)
+    font-size: 1.5rem
+
+.info-grid
+  display: grid
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr))
+  gap: 2rem
+  
+  .info-item
+    text-align: center
+    padding: 1.5rem
+    
+    .info-icon
+      font-size: 2.5rem
+      margin-bottom: 1rem
+    
+    h4
+      font-size: 1.1rem
+      font-weight: 600
+      margin-bottom: 0.75rem
+      color: var(--text-primary)
+    
+    p
+      color: var(--text-secondary)
+      line-height: 1.5
+
+// Responsive Design
+@media (max-width: 768px)
+  .premium-package-selection
+    padding: 1rem
+  
+  .section-header
+    h2
+      font-size: 2rem
+    
+    p
+      font-size: 1rem
+  
+  .packages-grid
+    grid-template-columns: 1fr
+    gap: 1.5rem
+  
+  .package-card
+    padding: 1.5rem
+  
+  .package-comparison
+    padding: 1rem
+    
+    .comparison-table
+      font-size: 0.875rem
+      
+      th, td
+        padding: 0.75rem 0.5rem
+  
+  .info-grid
+    grid-template-columns: 1fr
+    gap: 1.5rem

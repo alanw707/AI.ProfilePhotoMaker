@@ -1,14 +1,18 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { AuthService } from '../services/auth.service';
 import { ThemeService } from '../services/theme.service';
 import { PhotoGalleryComponent, GalleryImage } from '../components/photo-gallery/photo-gallery.component';
+import { PremiumPackageSelectionComponent } from '../components/premium-package-selection/premium-package-selection.component';
 import { FileUploadService, ProcessedImage } from '../services/file-upload.service';
 import { ProfileService, UserProfile } from '../services/profile.service';
 import { ReplicateService, CreditsInfo } from '../services/replicate.service';
 import { StyleService, Style } from '../services/style.service';
 import { NotificationService } from '../services/notification.service';
+import { ConfigService } from '../services/config.service';
+import { PremiumPackageService, PremiumPackage, UserPackageStatus } from '../services/premium-package.service';
 
 interface StyleOption {
   id: string;
@@ -28,11 +32,11 @@ interface GeneratedPhoto {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, PhotoGalleryComponent],
+  imports: [CommonModule, RouterModule, PhotoGalleryComponent, PremiumPackageSelectionComponent, FormsModule],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.sass'
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
   // User Info
@@ -65,8 +69,12 @@ export class DashboardComponent implements OnInit {
   // AI Training
   trainingProgress: number = 0;
   estimatedCompletion: string = '';
+  trainingZipPath: string = '';
+  isTrainingStarted: boolean = false;
+  trainingId: string = '';
 
   // Style Selection
+  imagesPerStyle: number = 2; // Default to 2 images per style
   availableStyles: StyleOption[] = [
     {
       id: 'professional',
@@ -116,10 +124,17 @@ export class DashboardComponent implements OnInit {
   isGenerating: boolean = false;
   isGeneratingBasic: boolean = false;
 
+  // Premium Package
+  showPremiumSelection: boolean = false;
+  userPackageStatus: UserPackageStatus | null = null;
+
 
   // Photo Gallery
   galleryImages: GalleryImage[] = [];
   showGallery: boolean = false;
+  
+  // Uploaded Images Thumbnails
+  uploadedImageThumbnails: Array<{url: string; fileName: string}> = [];
 
   constructor(
     private authService: AuthService,
@@ -130,7 +145,9 @@ export class DashboardComponent implements OnInit {
     private profileService: ProfileService,
     private replicateService: ReplicateService,
     private styleService: StyleService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private configService: ConfigService,
+    private premiumPackageService: PremiumPackageService
   ) {}
 
   ngOnInit() {
@@ -146,6 +163,7 @@ export class DashboardComponent implements OnInit {
     console.log('User is authenticated, loading dashboard data');
     this.loadUserInfo();
     this.loadDashboardData();
+    this.loadPremiumPackageStatus();
   }
 
   loadUserInfo() {
@@ -224,24 +242,42 @@ export class DashboardComponent implements OnInit {
   }
 
   updateCurrentStep() {
-    // Get uploaded images count from user profile or file service
-    if (this.userProfile?.id) {
-      this.uploadedImages = this.userProfile.id ? 1 : 0; // Simplified - should check actual uploaded images
-    }
-
+    // Step 1: Upload Images (required)
     if (this.uploadedImages === 0) {
       this.currentStep = 1;
-    } else if (this.modelStatus !== 'trained' && this.modelStatus !== 'succeeded') {
-      this.currentStep = 2;
-    } else if (this.selectedStyles === 0) {
-      this.currentStep = 3;
+      return;
+    }
+
+    // Step 2: Style Selection (required before training)
+    if (this.uploadedImages > 0 && !this.isTrainingStarted) {
+      this.currentStep = 2; // Move to style selection after upload
       // Load styles on-demand when user reaches style selection step
       if (this.availableStyles.length === 0) {
         this.loadActiveStyles();
       }
-    } else {
-      this.currentStep = 4;
+      return;
     }
+
+    // Step 3: Training in progress
+    if (this.modelStatus === 'training' || (this.isTrainingStarted && this.modelStatus !== 'trained')) {
+      this.currentStep = 3;
+      return;
+    }
+
+    // Step 4: Generation in progress or completed
+    if (this.modelStatus === 'trained' && this.isGenerating) {
+      this.currentStep = 4;
+      return;
+    }
+
+    // Step 5: Download/Results ready
+    if (this.modelStatus === 'trained' && !this.isGenerating) {
+      this.currentStep = 5;
+      return;
+    }
+
+    // Default fallback
+    this.currentStep = 1;
   }
 
   updateSelectedStyles() {
@@ -317,7 +353,7 @@ export class DashboardComponent implements OnInit {
         ethnicity: this.userProfile.ethnicity
       } : undefined;
 
-      this.fileUploadService.uploadImages(this.selectedFiles, profileData).subscribe({
+      this.fileUploadService.uploadImages(this.selectedFiles, profileData, true).subscribe({
         next: (result) => {
           this.uploadProgress = result.progress;
           
@@ -334,7 +370,9 @@ export class DashboardComponent implements OnInit {
             // Check if training ZIP was created
             if (result.response.zipCreated) {
               this.notificationService.success('Upload Complete', 
-                `${this.uploadedImages} images uploaded successfully. Training package prepared!`);
+                `${this.uploadedImages} images uploaded successfully. Ready to select styles and start training!`);
+              // Store ZIP path for later use when starting training
+              this.trainingZipPath = result.response.zipPath;
             } else {
               this.notificationService.success('Upload Complete', 
                 `${this.uploadedImages} images uploaded successfully.`);
@@ -358,6 +396,170 @@ export class DashboardComponent implements OnInit {
       this.notificationService.uploadError('An unexpected error occurred during upload.');
       this.isUploading = false;
     }
+  }
+
+  async startModelTraining(zipPath: string) {
+    if (!zipPath) {
+      console.error('No training ZIP path provided');
+      return;
+    }
+
+    // Convert local path to public URL
+    const userId = this.getCurrentUserId();
+    if (!userId) {
+      console.error('No user ID available for training');
+      return;
+    }
+
+    // Extract filename from the zipPath and construct public URL
+    const fileName = zipPath.split(/[/\\]/).pop();
+    const zipUrl = `${this.configService.appBaseUrl}/training-zips/${fileName}`;
+
+    const trainingRequest = {
+      userId: userId,
+      imageZipUrl: zipUrl
+    };
+
+    console.log('Starting model training with request:', trainingRequest);
+    this.modelStatus = 'training';
+    this.trainingProgress = 5; // Show initial progress
+    this.isTrainingStarted = true;
+
+    this.replicateService.trainModel(trainingRequest).subscribe({
+      next: (response) => {
+        console.log('Training started successfully:', response);
+        if (response.success) {
+          this.notificationService.success('Training Started', 
+            `AI model training has begun with ${this.selectedStyles} selected styles. This will take 15-25 minutes.`);
+          this.modelStatus = 'training';
+          this.currentStep = 3; // Move to training step (Step 3)
+          // Store training ID for status polling
+          if (response.data?.id) {
+            this.trainingId = response.data.id;
+            this.startTrainingStatusPolling();
+          }
+          this.updateCurrentStep();
+        } else {
+          console.error('Training failed:', response.error);
+          this.notificationService.error('Training Failed', 
+            response.error?.message || 'Failed to start model training.');
+          this.modelStatus = 'ready';
+          this.isTrainingStarted = false;
+        }
+      },
+      error: (error) => {
+        console.error('Training request failed:', error);
+        this.notificationService.error('Training Failed', 
+          'Failed to start model training. Please try again.');
+        this.modelStatus = 'ready';
+        this.isTrainingStarted = false;
+      }
+    });
+  }
+
+  private getCurrentUserId(): string | null {
+    // Get current user ID from auth service
+    const token = this.authService.getToken();
+    if (!token) return null;
+    
+    try {
+      // Decode JWT token to get user ID
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || 
+             payload['sub'] || 
+             payload['user_id'] || 
+             null;
+    } catch (error) {
+      console.error('Failed to decode token:', error);
+      return null;
+    }
+  }
+
+  private trainingStatusInterval: any;
+
+  private startTrainingStatusPolling() {
+    if (!this.trainingId) return;
+
+    // Clear any existing polling
+    if (this.trainingStatusInterval) {
+      clearInterval(this.trainingStatusInterval);
+    }
+
+    // Poll every 30 seconds
+    this.trainingStatusInterval = setInterval(() => {
+      this.checkTrainingProgress();
+    }, 30000);
+
+    // Also check immediately
+    this.checkTrainingProgress();
+  }
+
+  private checkTrainingProgress() {
+    if (!this.trainingId) return;
+
+    this.replicateService.getTrainingStatus(this.trainingId).subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          const status = response.data.status;
+          console.log('Training status update:', status);
+
+          if (status === 'succeeded' || status === 'completed') {
+            // Training completed successfully
+            this.modelStatus = 'trained';
+            this.trainingProgress = 100;
+            
+            // Update user profile with trained model
+            if (response.data.version && this.userProfile) {
+              this.userProfile.trainedModelId = response.data.version;
+            }
+
+            // Stop polling
+            if (this.trainingStatusInterval) {
+              clearInterval(this.trainingStatusInterval);
+              this.trainingStatusInterval = null;
+            }
+
+            // Notify user that training is complete
+            this.notificationService.success('Training Complete!', 
+              'Your AI model is now ready. You can now generate photos with your selected styles.');
+            
+            this.updateCurrentStep();
+            
+            // Move to generation step, but don't auto-generate yet
+            // Let user see the completion and manually start generation
+            this.currentStep = 4;
+
+          } else if (status === 'failed' || status === 'canceled') {
+            // Training failed
+            this.modelStatus = 'failed';
+            this.isTrainingStarted = false;
+            
+            // Stop polling
+            if (this.trainingStatusInterval) {
+              clearInterval(this.trainingStatusInterval);
+              this.trainingStatusInterval = null;
+            }
+
+            this.notificationService.error('Training Failed', 
+              'AI model training failed. Please try again with different photos.');
+            
+          } else if (status === 'processing' || status === 'starting') {
+            // Training is still in progress
+            this.modelStatus = 'training';
+            // Update progress based on status (rough estimates)
+            if (status === 'starting') {
+              this.trainingProgress = Math.max(this.trainingProgress, 10);
+            } else if (status === 'processing') {
+              this.trainingProgress = Math.min(Math.max(this.trainingProgress, 30), 90);
+            }
+          }
+        }
+      },
+      error: (error) => {
+        console.error('Failed to check training progress:', error);
+        // Don't stop polling on error - might be temporary network issue
+      }
+    });
   }
 
   async loadTrainingStatus() {
@@ -415,6 +617,21 @@ export class DashboardComponent implements OnInit {
     });
   }
 
+  async startTrainingWithStyles() {
+    if (!this.trainingZipPath) {
+      this.notificationService.warning('Training Package Not Ready', 'Please upload images first to create a training package.');
+      return;
+    }
+
+    if (this.selectedStyles === 0) {
+      this.notificationService.warning('No Styles Selected', 'Please select at least one style before starting training.');
+      return;
+    }
+
+    // Start training with selected styles
+    this.startModelTraining(this.trainingZipPath);
+  }
+
   async generatePhotos() {
     if (!this.userProfile?.trainedModelId) {
       this.notificationService.warning('Model Not Ready', 'Please wait for model training to complete before generating photos.');
@@ -427,6 +644,7 @@ export class DashboardComponent implements OnInit {
     }
 
     this.isGenerating = true;
+    this.updateCurrentStep(); // Move to generation step
     
     const selectedStyleNames = this.availableStyles
       .filter(style => style.selected)
@@ -435,45 +653,86 @@ export class DashboardComponent implements OnInit {
     try {
       let successCount = 0;
       let errorCount = 0;
+      const totalImages = selectedStyleNames.length * this.imagesPerStyle;
       
       // Generate photos for each selected style
       for (const styleName of selectedStyleNames) {
-        const generateRequest = {
-          trainedModelVersion: this.userProfile.trainedModelId,
-          userId: this.userProfile.userId,
-          style: styleName,
-          userInfo: {
-            gender: this.userProfile.gender,
-            ethnicity: this.userProfile.ethnicity
-          }
-        };
-
-        this.replicateService.generateImages(generateRequest).subscribe({
-          next: (response) => {
-            if (response.success) {
-              successCount++;
-            } else {
-              errorCount++;
-              this.notificationService.error('Generation Failed', `Failed to start ${styleName} style generation.`);
+        // Generate the specified number of images per style
+        for (let i = 0; i < this.imagesPerStyle; i++) {
+          const generateRequest = {
+            trainedModelVersion: this.userProfile.trainedModelId,
+            userId: this.userProfile.userId,
+            style: styleName,
+            imageNumber: i + 1, // Track which image this is for the style
+            userInfo: {
+              gender: this.userProfile.gender,
+              ethnicity: this.userProfile.ethnicity
             }
-          },
-          error: (error) => {
-            console.error(`Failed to generate ${styleName} style:`, error);
-            errorCount++;
-            const errorMessage = error.error?.message || error.message || 'Unknown error';
-            this.notificationService.error('Generation Error', `${styleName} style: ${errorMessage}`);
-          }
-        });
+          };
+
+          this.replicateService.generateImages(generateRequest).subscribe({
+            next: (response) => {
+              if (response.success) {
+                successCount++;
+                console.log(`Successfully started generation for ${styleName} style #${i + 1}`);
+                
+                // Check if all generations have been initiated
+                if (successCount + errorCount === totalImages) {
+                  this.checkGenerationCompletion(successCount, errorCount, totalImages);
+                }
+              } else {
+                errorCount++;
+                this.notificationService.error('Generation Failed', `Failed to start ${styleName} style #${i + 1} generation.`);
+                
+                if (successCount + errorCount === totalImages) {
+                  this.checkGenerationCompletion(successCount, errorCount, totalImages);
+                }
+              }
+            },
+            error: (error) => {
+              console.error(`Failed to generate ${styleName} style #${i + 1}:`, error);
+              errorCount++;
+              const errorMessage = error.error?.message || error.message || 'Unknown error';
+              this.notificationService.error('Generation Error', `${styleName} style #${i + 1}: ${errorMessage}`);
+              
+              if (successCount + errorCount === totalImages) {
+                this.checkGenerationCompletion(successCount, errorCount, totalImages);
+              }
+            }
+          });
+        }
       }
       
       this.notificationService.success('Generation Started', `Initiated generation for ${this.selectedStyles} photo styles. You'll be notified when complete.`);
-      this.updateCurrentStep();
       
     } catch (error: any) {
       console.error('Generation failed:', error);
       this.notificationService.error('Generation Failed', 'An unexpected error occurred while starting photo generation.');
-    } finally {
       this.isGenerating = false;
+      this.updateCurrentStep();
+    }
+  }
+
+  private checkGenerationCompletion(successCount: number, errorCount: number, totalImages: number) {
+    console.log(`Generation summary: ${successCount} successful, ${errorCount} failed out of ${totalImages} total`);
+    
+    if (successCount > 0) {
+      // At least some generations succeeded
+      this.notificationService.success('Generation Complete', 
+        `${successCount} out of ${totalImages} images generated successfully! Check your gallery for results.`);
+      
+      // Load updated images to show in results
+      this.loadUserImages();
+      
+      // Move to download step
+      this.isGenerating = false;
+      this.currentStep = 5;
+      this.updateCurrentStep();
+    } else {
+      // All generations failed
+      this.notificationService.error('Generation Failed', 'All photo generation attempts failed. Please try again.');
+      this.isGenerating = false;
+      this.updateCurrentStep();
     }
   }
 
@@ -553,11 +812,19 @@ export class DashboardComponent implements OnInit {
       case 1:
         return this.uploadedImages > 0 ? 'Completed' : 'Upload Selfies';
       case 2:
-        return this.modelStatus === 'trained' ? 'Completed' : 
-               this.modelStatus === 'training' ? 'Training...' : 'Pending';
+        if (this.selectedStyles > 0 && this.isTrainingStarted) return 'Completed';
+        return this.selectedStyles > 0 ? 'Ready to Start' : 'Choose Styles';
       case 3:
-        return this.selectedStyles > 0 ? 'Completed' : 'Choose Styles';
+        if (this.modelStatus === 'trained') return 'Completed';
+        if (this.modelStatus === 'training') return 'Training...';
+        if (this.isTrainingStarted) return 'Training...';
+        return 'Pending';
       case 4:
+        if (this.generatedPhotos.length > 0) return 'Completed';
+        if (this.isGenerating) return 'Generating...';
+        if (this.modelStatus === 'trained') return 'Ready to Generate';
+        return 'Pending';
+      case 5:
         return this.generatedPhotos.length > 0 ? 'Completed' : 'Pending';
       default:
         return 'Pending';
@@ -619,6 +886,11 @@ export class DashboardComponent implements OnInit {
         this.modelStatus = response.status || 'Not Started';
         this.uploadedImages = response.totalUploadedImages || 0;
         
+        // Set training ZIP path if available
+        if (response.latestZipFile) {
+          this.trainingZipPath = response.latestZipFile;
+        }
+        
         if (response.hasTrainedModel) {
           this.userProfile = this.userProfile || {} as UserProfile;
           this.userProfile.trainedModelId = response.trainedModelId;
@@ -655,6 +927,14 @@ export class DashboardComponent implements OnInit {
         
         // Update dashboard stats
         this.uploadedImages = response.originalUploads || 0;
+        
+        // Extract uploaded image thumbnails for step 1 display
+        this.uploadedImageThumbnails = response.images
+          .filter(img => img.isOriginalUpload && !img.isGenerated)
+          .map(img => ({
+            url: img.originalImageUrl,
+            fileName: img.originalImageUrl.split('/').pop() || 'image'
+          }));
         
         // Map images for gallery
         this.galleryImages = response.images.map((img: ProcessedImage) => ({
@@ -752,5 +1032,56 @@ export class DashboardComponent implements OnInit {
 
   goToEnhancement() {
     this.router.navigate(['/enhance']);
+  }
+
+  // Premium Package Methods
+  loadPremiumPackageStatus() {
+    this.premiumPackageService.getUserPackageStatus().subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.userPackageStatus = response.data;
+          
+          // Show premium selection if user doesn't have an active package
+          if (!this.userPackageStatus.hasActivePackage) {
+            this.showPremiumSelection = true;
+          }
+        }
+      },
+      error: (error) => {
+        console.error('Failed to load premium package status:', error);
+        // User might not have a package yet, that's OK
+        this.showPremiumSelection = true;
+      }
+    });
+  }
+
+  onPackageSelected(pkg: PremiumPackage) {
+    console.log('Package selected:', pkg);
+    // Could show package details or preview
+  }
+
+  onPackagePurchased(packageStatus: UserPackageStatus) {
+    console.log('Package purchased:', packageStatus);
+    this.userPackageStatus = packageStatus;
+    this.showPremiumSelection = false;
+    
+    // Refresh the page to update UI state
+    this.loadDashboardData();
+    this.loadPremiumPackageStatus();
+    
+    this.notificationService.success('Premium Package Active!', 
+      'You can now upload images and start training your custom AI model.');
+  }
+
+  isPremiumWorkflow(): boolean {
+    return this.userPackageStatus?.hasActivePackage || false;
+  }
+
+  ngOnDestroy() {
+    // Clean up training status polling to prevent memory leaks
+    if (this.trainingStatusInterval) {
+      clearInterval(this.trainingStatusInterval);
+      this.trainingStatusInterval = null;
+    }
   }
 }
