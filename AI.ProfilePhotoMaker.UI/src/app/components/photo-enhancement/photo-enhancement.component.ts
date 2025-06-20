@@ -12,7 +12,7 @@ import { ThemeService } from '../../services/theme.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
   template: `
-    <div class="photo-enhancement-container">
+    <div class="gallery-page-container">
       <!-- Theme Toggle Button -->
       <button class="theme-toggle" (click)="toggleTheme()" [attr.aria-label]="'Switch to ' + (themeService.isDark() ? 'light' : 'dark') + ' theme'">
         <svg *ngIf="!themeService.isDark()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -30,8 +30,15 @@ import { ThemeService } from '../../services/theme.service';
             <img src="Logo.PNG" alt="AI Profile Photo Maker" class="header-logo">
             <h1>AI Profile Photo Maker</h1>
           </div>
+          
           <!-- Navigation Menu -->
           <nav class="nav-menu">
+            <a routerLink="/packages" routerLinkActive="active" class="nav-link">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L3.09 8.26L12 22L20.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" fill="none"/>
+              </svg>
+              Packages
+            </a>
             <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <rect x="3" y="3" width="7" height="9" stroke="currentColor" stroke-width="2"/>
@@ -39,7 +46,7 @@ import { ThemeService } from '../../services/theme.service';
                 <rect x="13" y="12" width="8" height="9" stroke="currentColor" stroke-width="2"/>
                 <rect x="3" y="16" width="7" height="5" stroke="currentColor" stroke-width="2"/>
               </svg>
-              Premium Studio
+              Studio
             </a>
             <a routerLink="/enhance" routerLinkActive="active" class="nav-link">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -59,39 +66,42 @@ import { ThemeService } from '../../services/theme.service';
           </nav>
 
           <div class="user-section">
-              <div class="user-info">
-                <span class="user-name">{{userName}}</span>
-                <span class="user-email">{{userEmail}}</span>
-              </div>
-              <button class="btn btn-logout" (click)="logout()">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M16 17L21 12M21 12L16 7M21 12H9M9 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Logout
-              </button>
+            <div class="user-info">
+              <span class="user-name">{{userName}}</span>
+              <span class="user-email">{{userEmail}}</span>
             </div>
+            <button class="btn btn-logout" (click)="logout()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M16 17L21 12M21 12L16 7M21 12H9M9 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Logout
+            </button>
+          </div>
         </div>
       </header>
 
-      <div class="photo-enhancement">
-      <div class="enhancement-header">
-        <h2>Basic Photo Enhancement</h2>
-        <p>Upload your photo and enhance it with AI - background removal, lighting correction, and professional styling.</p>
-        
-        <!-- Basic Tier Credits Display -->
-        <div class="credits-info" *ngIf="creditsInfo">
-          <div class="credits-card">
-            <div class="credits-icon">⚡</div>
-            <div class="credits-content">
-              <h3>{{creditsInfo.availableCredits}} Credits</h3>
-              <p>Resets {{getNextResetText(creditsInfo.nextResetDate)}}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- Main Enhancement Content -->
+      <main class="gallery-main">
+        <div class="gallery-content">
+          <!-- Page Header -->
+          <section class="page-header">
+            <h2>Photo Enhancement</h2>
+            <p>Upload your photo and enhance it with AI - background removal, lighting correction, and professional styling.</p>
+          </section>
 
-      <!-- Upload Section -->
-      <div class="upload-section" *ngIf="!selectedFile && !isProcessing">
+          <!-- Basic Tier Credits Display -->
+          <section class="credits-section" *ngIf="creditsInfo">
+            <div class="credits-card">
+              <div class="credits-icon">⚡</div>
+              <div class="credits-content">
+                <h3>{{creditsInfo.availableCredits}} Credits</h3>
+                <p>Resets {{getNextResetText(creditsInfo.nextResetDate)}}</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- Upload Section -->
+          <section class="upload-section" *ngIf="!selectedFile && !isProcessing">
         <div class="upload-area" 
              (click)="triggerFileUpload()"
              (dragover)="onDragOver($event)"
@@ -103,11 +113,11 @@ import { ThemeService } from '../../services/theme.service';
           <p>Drop your photo here or click to browse</p>
           <p class="upload-restrictions">JPG, PNG, WebP • Max 5MB • Best results with headshots</p>
           <input type="file" #fileInput accept="image/*" (change)="onFileSelected($event)" style="display: none">
-        </div>
-      </div>
+            </div>
+          </section>
 
-      <!-- Preview and Enhancement Options -->
-      <div class="enhancement-section" *ngIf="selectedFile && !isProcessing">
+          <!-- Preview and Enhancement Options -->
+          <section class="enhancement-section" *ngIf="selectedFile && !isProcessing">
         <div class="preview-container">
           <div class="image-preview">
             <img [src]="imagePreview" alt="Preview" class="preview-image">
@@ -156,11 +166,11 @@ import { ThemeService } from '../../services/theme.service';
               </span>
             </button>
           </div>
-        </div>
-      </div>
+            </div>
+          </section>
 
-      <!-- Processing State -->
-      <div class="processing-section" *ngIf="isProcessing">
+          <!-- Processing State -->
+          <section class="processing-section" *ngIf="isProcessing">
         <div class="processing-card">
           <div class="processing-spinner"></div>
           <h3>Enhancing Your Photo</h3>
@@ -169,11 +179,11 @@ import { ThemeService } from '../../services/theme.service';
             <div class="progress-bar" [style.width.%]="processingProgress"></div>
           </div>
           <p class="processing-status">{{processingStatus}}</p>
-        </div>
-      </div>
+            </div>
+          </section>
 
-      <!-- Results Section -->
-      <div class="results-section" *ngIf="enhancedImage">
+          <!-- Results Section -->
+          <section class="results-section" *ngIf="enhancedImage">
         <h3>Enhancement Complete!</h3>
         <div class="before-after">
           <div class="comparison-item">
@@ -209,11 +219,11 @@ import { ThemeService } from '../../services/theme.service';
           <button class="btn btn-outline" (click)="enhanceAnother()">
             Enhance Another Photo
           </button>
-        </div>
-      </div>
+            </div>
+          </section>
 
-      <!-- No Credits State -->
-      <div class="no-credits" *ngIf="creditsInfo && creditsInfo.availableCredits <= 0 && !selectedFile">
+          <!-- No Credits State -->
+          <section class="no-credits" *ngIf="creditsInfo && creditsInfo.availableCredits <= 0 && !selectedFile">
         <div class="no-credits-card">
           <div class="no-credits-icon">⏳</div>
           <h3>No Credits Available</h3>
@@ -222,19 +232,20 @@ import { ThemeService } from '../../services/theme.service';
             <p>Want unlimited enhancements?</p>
             <button class="btn btn-primary">Upgrade to Premium</button>
           </div>
-        </div>
-      </div>
+            </div>
+          </section>
 
-      <!-- Error State -->
-      <div class="error-section" *ngIf="errorMessage">
-        <div class="error-card">
-          <div class="error-icon">⚠️</div>
-          <h3>Enhancement Failed</h3>
-          <p>{{errorMessage}}</p>
-          <button class="btn btn-outline" (click)="resetComponent()">Try Again</button>
+          <!-- Error State -->
+          <section class="error-section" *ngIf="errorMessage">
+            <div class="error-card">
+              <div class="error-icon">⚠️</div>
+              <h3>Enhancement Failed</h3>
+              <p>{{errorMessage}}</p>
+              <button class="btn btn-outline" (click)="resetComponent()">Try Again</button>
+            </div>
+          </section>
         </div>
-      </div>
-      </div>
+      </main>
     </div>
   `,
   styleUrls: ['./photo-enhancement.component.sass']

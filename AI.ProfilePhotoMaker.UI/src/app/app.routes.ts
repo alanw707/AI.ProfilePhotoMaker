@@ -31,5 +31,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/gallery/gallery.component').then(m => m.GalleryComponent),
     canActivate: [authGuard]
   },
+  {
+    path: 'packages',
+    loadComponent: () => import('./pages/premium/premium.component').then(m => m.PremiumComponent),
+    canActivate: [authGuard]
+  },
   { path: '**', redirectTo: '/dashboard' }
 ];
