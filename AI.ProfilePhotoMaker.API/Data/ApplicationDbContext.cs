@@ -16,6 +16,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Style> Styles { get; set; }
     public DbSet<ModelCreationRequest> ModelCreationRequests { get; set; }
     public DbSet<UsageLog> UsageLogs { get; set; }
+    
+    // Subscription management
+    public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
+    public DbSet<Subscription> Subscriptions { get; set; }
+    public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -49,6 +54,37 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasIndex(s => s.Name)
             .IsUnique();
 
+        // Configure Subscription relationships
+        builder.Entity<Subscription>()
+            .HasOne(s => s.User)
+            .WithMany()
+            .HasForeignKey(s => s.UserId);
+
+        builder.Entity<Subscription>()
+            .HasOne(s => s.Plan)
+            .WithMany(p => p.Subscriptions)
+            .HasForeignKey(s => s.PlanId);
+
+        // Configure PaymentTransaction relationships
+        builder.Entity<PaymentTransaction>()
+            .HasOne(t => t.User)
+            .WithMany()
+            .HasForeignKey(t => t.UserId);
+
+        builder.Entity<PaymentTransaction>()
+            .HasOne(t => t.Subscription)
+            .WithMany()
+            .HasForeignKey(t => t.SubscriptionId);
+
+        // Configure precision for decimal values
+        builder.Entity<SubscriptionPlan>()
+            .Property(p => p.Price)
+            .HasPrecision(18, 2);
+
+        builder.Entity<PaymentTransaction>()
+            .Property(t => t.Amount)
+            .HasPrecision(18, 2);
+
         // Seed initial styles
         builder.Entity<Style>().HasData(
             new Style { Id = 1, Name = "professional", Description = "Professional headshot with corporate styling", PromptTemplate = "{subject}, professional headshot, corporate portrait style, composition: centered subject with neutral background, slight angle, lighting: three-point studio lighting with soft key light, fill light, and rim light, color palette: muted blues and grays with natural skin tones, mood: confident and approachable, technical details: shot with 85mm lens at f/2.8, shallow depth of field, 4K resolution, additional elements: subtle office or gradient background, professional attire, well-groomed appearance", NegativePromptTemplate = "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, casual clothing, t-shirt, vacation setting, party scene, inappropriate attire", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
@@ -61,6 +97,95 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             new Style { Id = 8, Name = "medical", Description = "Healthcare professional portrait with trustworthy appeal", PromptTemplate = "{subject}, healthcare professional portrait, composition: trustworthy frontal composition with medical context, lighting: clean even lighting with healthy glow, color palette: whites, blues and comforting tones, mood: compassionate, competent and reassuring, technical details: sharp focus throughout, excellent clarity, additional elements: medical attire or lab coat, stethoscope or medical environment, caring expression", NegativePromptTemplate = "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, inappropriate medical setting, casual vacation clothing", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
             new Style { Id = 9, Name = "legal", Description = "Legal professional portrait with authoritative presence", PromptTemplate = "{subject}, legal professional portrait, composition: balanced formal composition with legal elements, lighting: classical portrait lighting with defined shadows, color palette: deep rich tones with mahogany and navy accents, mood: authoritative, trustworthy and dignified, technical details: perfect focus and formal composition, additional elements: legal books, office with wooden elements, formal suit, confident and serious expression", NegativePromptTemplate = "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, casual setting, inappropriate attire, party scene", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
             new Style { Id = 10, Name = "executive", Description = "Premium executive portrait with commanding presence", PromptTemplate = "{subject}, premium executive portrait, composition: powerful centered composition with prestigious elements, lighting: dramatic executive lighting with defined highlights, color palette: luxury tones with gold, navy and charcoal accents, mood: powerful, successful and commanding, technical details: medium format quality with perfect detail rendering, additional elements: luxury office environment, premium suit or executive attire, leadership pose and expression", NegativePromptTemplate = "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, casual clothing, unprofessional setting, low quality office", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+        );
+
+        // Seed subscription plans
+        builder.Entity<SubscriptionPlan>().HasData(
+            new SubscriptionPlan 
+            { 
+                Id = "basic-plan",
+                Name = "Basic",
+                Description = "Perfect for casual users who want to enhance their photos",
+                Price = 0.00m,
+                BillingPeriod = "monthly",
+                ImagesPerMonth = 3,
+                CanTrainCustomModels = false,
+                CanBatchGenerate = false,
+                HighResolutionOutput = false,
+                MaxTrainingImages = 0,
+                MaxStylesAccess = 1,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new SubscriptionPlan 
+            { 
+                Id = "premium-monthly",
+                Name = "Premium",
+                Description = "Ideal for professionals who need custom AI models and advanced features",
+                Price = 19.99m,
+                BillingPeriod = "monthly",
+                ImagesPerMonth = 50,
+                CanTrainCustomModels = true,
+                CanBatchGenerate = true,
+                HighResolutionOutput = true,
+                MaxTrainingImages = 20,
+                MaxStylesAccess = 5,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new SubscriptionPlan 
+            { 
+                Id = "premium-yearly",
+                Name = "Premium (Yearly)",
+                Description = "Premium features with 2 months free when billed annually",
+                Price = 199.99m,
+                BillingPeriod = "yearly",
+                ImagesPerMonth = 50,
+                CanTrainCustomModels = true,
+                CanBatchGenerate = true,
+                HighResolutionOutput = true,
+                MaxTrainingImages = 20,
+                MaxStylesAccess = 5,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new SubscriptionPlan 
+            { 
+                Id = "pro-monthly",
+                Name = "Pro",
+                Description = "For businesses and power users who need unlimited access",
+                Price = 49.99m,
+                BillingPeriod = "monthly",
+                ImagesPerMonth = 200,
+                CanTrainCustomModels = true,
+                CanBatchGenerate = true,
+                HighResolutionOutput = true,
+                MaxTrainingImages = 50,
+                MaxStylesAccess = 10,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new SubscriptionPlan 
+            { 
+                Id = "pro-yearly",
+                Name = "Pro (Yearly)",
+                Description = "Pro features with 2 months free when billed annually",
+                Price = 499.99m,
+                BillingPeriod = "yearly",
+                ImagesPerMonth = 200,
+                CanTrainCustomModels = true,
+                CanBatchGenerate = true,
+                HighResolutionOutput = true,
+                MaxTrainingImages = 50,
+                MaxStylesAccess = 10,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            }
         );
     }
 }

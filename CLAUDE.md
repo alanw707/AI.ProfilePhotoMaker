@@ -143,7 +143,7 @@ dotnet build AI.ProfilePhotoMaker.sln
     "FluxKontextProModelId": "black-forest-labs/flux-kontext-pro",
     "WebhookSecret": "STORED_IN_USER_SECRETS"
   },
-  "AppBaseUrl": "https://057a-71-38-148-86.ngrok-free.app",
+  "AppBaseUrl": "https://8099-71-38-148-86.ngrok-free.app",
   "Logging": {
     "LogLevel": {
       "Default": "Information",
