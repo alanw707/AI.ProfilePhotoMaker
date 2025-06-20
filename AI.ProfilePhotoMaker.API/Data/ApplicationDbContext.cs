@@ -21,6 +21,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
     public DbSet<Subscription> Subscriptions { get; set; }
     public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
+    
+    // Premium Package management
+    public DbSet<PremiumPackage> PremiumPackages { get; set; }
+    public DbSet<UserPackagePurchase> UserPackagePurchases { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -84,6 +88,30 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<PaymentTransaction>()
             .Property(t => t.Amount)
             .HasPrecision(18, 2);
+
+        // Configure PremiumPackage relationships and constraints
+        builder.Entity<PremiumPackage>()
+            .Property(p => p.Price)
+            .HasPrecision(10, 2);
+
+        builder.Entity<PremiumPackage>()
+            .HasIndex(p => p.Name)
+            .IsUnique();
+
+        // Configure UserPackagePurchase relationships
+        builder.Entity<UserPackagePurchase>()
+            .HasOne(p => p.Package)
+            .WithMany(pkg => pkg.Purchases)
+            .HasForeignKey(p => p.PackageId);
+
+        builder.Entity<UserPackagePurchase>()
+            .HasOne(p => p.User)
+            .WithMany()
+            .HasForeignKey(p => p.UserId);
+
+        builder.Entity<UserPackagePurchase>()
+            .Property(p => p.AmountPaid)
+            .HasPrecision(10, 2);
 
         // Seed initial styles
         builder.Entity<Style>().HasData(
@@ -185,6 +213,58 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
+            }
+        );
+
+        // Seed premium packages
+        builder.Entity<PremiumPackage>().HasData(
+            new PremiumPackage
+            {
+                Id = 1,
+                Name = "Quick Shot",
+                Credits = 5,
+                Price = 9.99m,
+                MaxStyles = 2,
+                MaxImagesPerStyle = 2,
+                Description = "Generate up to 4 professional photos with 2 different styles",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new PremiumPackage
+            {
+                Id = 2,
+                Name = "Professional",
+                Credits = 15,
+                Price = 19.99m,
+                MaxStyles = 5,
+                MaxImagesPerStyle = 3,
+                Description = "Generate up to 14 professional photos with 5 different styles",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new PremiumPackage
+            {
+                Id = 3,
+                Name = "Premium Studio",
+                Credits = 35,
+                Price = 34.99m,
+                MaxStyles = 8,
+                MaxImagesPerStyle = 4,
+                Description = "Generate up to 34 professional photos with 8 different styles",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new PremiumPackage
+            {
+                Id = 4,
+                Name = "Ultimate",
+                Credits = 50,
+                Price = 49.99m,
+                MaxStyles = 10,
+                MaxImagesPerStyle = 5,
+                Description = "Generate up to 49 professional photos with 10 different styles",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
             }
         );
     }

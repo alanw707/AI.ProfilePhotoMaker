@@ -314,6 +314,9 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IBasicTierService, 
 builder.Services.AddHttpClient<IReplicateApiClient, ReplicateApiClient>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository, AI.ProfilePhotoMaker.API.Data.UserProfileRepository>();
 
+// Register Premium Package Services
+builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IPremiumPackageService, AI.ProfilePhotoMaker.API.Services.PremiumPackageService>();
+
 // Register Payment Services
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Payment.IPaymentService, AI.ProfilePhotoMaker.API.Services.Payment.StripePaymentService>();
 

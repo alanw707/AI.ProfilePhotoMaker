@@ -784,14 +784,47 @@ public class ReplicateApiClient : IReplicateApiClient
     /// <summary>
     /// Gets enhancement prompt based on enhancement type for Kontext Pro
     /// </summary>
-    private string GetEnhancementPrompt(string enhancementType)
+    private static string GetEnhancementPrompt(string enhancementType)
     {
         return enhancementType.ToLower() switch
         {
             "background" => "Remove background and replace with clean professional backdrop, perfect cutout with smooth edges, studio-quality background removal with neutral professional setting",
-            "social" => "Create vibrant social media photo with perfect lighting, engaging colors, Instagram-ready styling, modern aesthetic, bright and appealing for social platforms, photo taken by iPhone 16 pro",
+            "social" => GetRandomSocialMediaPrompt(),
             "cartoon" => "Transform into fun cartoon/animated style illustration with artistic flair, vibrant colors, and playful animated character appearance with stylized features",
             _ => "Enhance this photo with improved lighting, better composition, increased sharpness, and professional quality finish"
         };
+    }
+
+    /// <summary>
+    /// Gets a random social media enhancement prompt with different background options
+    /// </summary>
+    private static string GetRandomSocialMediaPrompt()
+    {
+        var backgroundOptions = new[]
+        {
+            "tropical beach with palm trees and crystal clear blue water",
+            "in front of the Eiffel Tower in Paris with beautiful architecture",
+            "at the Golden Gate Bridge in San Francisco with stunning cityscape",
+            "in Central Park New York with lush green trees and pathways",
+            "at Santorini Greece with white buildings and blue domed churches",
+            "at the Grand Canyon with breathtaking natural rock formations",
+            "in front of the Colosseum in Rome with ancient architecture",
+            "at Machu Picchu Peru with ancient Incan ruins and mountains",
+            "at the Great Wall of China with historic stone walls",
+            "in front of the Sydney Opera House with harbor views",
+            "at Times Square New York with bright lights and urban energy",
+            "at the Louvre Museum in Paris with classic French architecture",
+            "in a Japanese garden with cherry blossoms and peaceful scenery",
+            "at the Hollywood sign in Los Angeles with city hills",
+            "at Niagara Falls with powerful waterfalls and mist",
+            "in front of Big Ben in London with iconic clock tower",
+            "at the Statue of Liberty in New York with harbor views",
+            "at the Taj Mahal in India with stunning white marble architecture"
+        };
+
+        var random = new Random();
+        var selectedBackground = backgroundOptions[random.Next(backgroundOptions.Length)];
+        
+        return $"Transform this photo for social media with enhanced lighting, vibrant colors, and Instagram-ready styling. Replace the original background placing the person {selectedBackground}. Keep the person optimized with perfect skin tone, sharp details, and appealing aesthetics while creating an exciting travel destination backdrop perfect for social media sharing";
     }
 }

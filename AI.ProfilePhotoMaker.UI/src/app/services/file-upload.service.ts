@@ -56,7 +56,7 @@ export class FileUploadService {
     lastName?: string;
     gender?: string;
     ethnicity?: string;
-  }): Observable<{ progress: number; response?: UploadResponse }> {
+  }, forTraining: boolean = true): Observable<{ progress: number; response?: UploadResponse }> {
     const formData = new FormData();
     
     files.forEach((file, index) => {
@@ -70,6 +70,9 @@ export class FileUploadService {
       if (profileData.gender) formData.append('gender', profileData.gender);
       if (profileData.ethnicity) formData.append('ethnicity', profileData.ethnicity);
     }
+    
+    // Add forTraining flag
+    formData.append('forTraining', forTraining.toString());
 
     return this.http.post<UploadResponse>(this.config.uploadImagesUrl, formData, {
       reportProgress: true,
@@ -116,6 +119,7 @@ export class FileUploadService {
   uploadSingleImage(file: File): Observable<{ progress: number; response?: { success: boolean; data: { url: string; fileName: string } } }> {
     const formData = new FormData();
     formData.append('images', file, file.name);
+    formData.append('forTraining', 'false');
 
     return this.http.post<any>(this.config.uploadImagesUrl, formData, {
       reportProgress: true,
