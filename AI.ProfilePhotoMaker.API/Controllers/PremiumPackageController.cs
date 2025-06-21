@@ -27,51 +27,7 @@ public class PremiumPackageController : ControllerBase
     {
         try
         {
-            // For now, return hardcoded packages to test frontend
-            var packages = new List<PremiumPackageDto>
-            {
-                new PremiumPackageDto
-                {
-                    Id = 1,
-                    Name = "Quick Shot",
-                    Credits = 5,
-                    Price = 9.99m,
-                    MaxStyles = 2,
-                    MaxImagesPerStyle = 2,
-                    Description = "Generate up to 4 professional photos with 2 different styles"
-                },
-                new PremiumPackageDto
-                {
-                    Id = 2,
-                    Name = "Professional",
-                    Credits = 15,
-                    Price = 19.99m,
-                    MaxStyles = 5,
-                    MaxImagesPerStyle = 3,
-                    Description = "Generate up to 14 professional photos with 5 different styles"
-                },
-                new PremiumPackageDto
-                {
-                    Id = 3,
-                    Name = "Premium Studio",
-                    Credits = 35,
-                    Price = 34.99m,
-                    MaxStyles = 8,
-                    MaxImagesPerStyle = 4,
-                    Description = "Generate up to 34 professional photos with 8 different styles"
-                },
-                new PremiumPackageDto
-                {
-                    Id = 4,
-                    Name = "Ultimate",
-                    Credits = 50,
-                    Price = 49.99m,
-                    MaxStyles = 10,
-                    MaxImagesPerStyle = 5,
-                    Description = "Generate up to 49 professional photos with 10 different styles"
-                }
-            };
-
+            var packages = await _premiumPackageService.GetActivePackagesAsync();
             return Ok(new { success = true, data = packages, error = (object?)null });
         }
         catch (Exception ex)

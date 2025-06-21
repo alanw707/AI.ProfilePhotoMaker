@@ -18,9 +18,8 @@ public class PremiumPackageService : IPremiumPackageService
 
     public async Task<IEnumerable<PremiumPackageDto>> GetActivePackagesAsync()
     {
-        return await _context.PremiumPackages
+        var packages = await _context.PremiumPackages
             .Where(p => p.IsActive)
-            .OrderBy(p => p.Price)
             .Select(p => new PremiumPackageDto
             {
                 Id = p.Id,
@@ -32,6 +31,8 @@ public class PremiumPackageService : IPremiumPackageService
                 Description = p.Description
             })
             .ToListAsync();
+            
+        return packages.OrderBy(p => p.Id);
     }
 
     public async Task<UserPackageStatusDto> GetUserPackageStatusAsync(string userId)
