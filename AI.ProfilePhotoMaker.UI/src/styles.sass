@@ -9,16 +9,19 @@
   --bg-tertiary: #f1f3f4
   --bg-gradient: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #f1f3f4 100%)
   
-  --text-primary: #2c3e50
-  --text-secondary: #6c757d
-  --text-tertiary: #495057
+  // Much darker text for better contrast
+  --text-primary: #1a202c
+  --text-secondary: #2d3748
+  --text-tertiary: #4a5568
   
   --border-color: #e9ecef
   --border-hover: #dee2e6
+  --border-success: #22c55e
   
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08)
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.12)
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.15)
+  --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.2)
   
   --accent-primary: #7DD3D8
   --accent-secondary: #6BB6FF
@@ -28,23 +31,35 @@
   
   // Primary brand colors
   --primary-color: #7DD3D8
+  --primary: #7DD3D8
   --primary-dark: #6BB6FF
   --primary-rgb: 125, 211, 216
+  --primary-gradient: linear-gradient(135deg, #7DD3D8 0%, #6BB6FF 100%)
+  --primary-bg-light: rgba(125, 211, 216, 0.1)
   
   // Semantic colors
   --warning-color: #F5C85A
   --warning-rgb: 245, 200, 90
   --error-color: #dc3545
+  --error: #dc3545
   --error-rgb: 220, 53, 69
+  --error-bg-light: rgba(220, 53, 69, 0.1)
+  --text-danger: #dc3545
   
   --card-bg: #ffffff
   --input-bg: #ffffff
   --header-bg: #ffffff
+  --hover-bg: rgba(125, 211, 216, 0.1)
   
   // Component backgrounds
   --background-primary: #ffffff
   --background-secondary: #f8f9fa
   --background-tertiary: #e9ecef
+  
+  // Surface variables (for consistency)
+  --surface-primary: #ffffff
+  --surface-secondary: #f8f9fa
+  --surface-tertiary: #e9ecef
 
 // Dark Theme Variables
 [data-theme="dark"]
@@ -59,10 +74,12 @@
   
   --border-color: rgba(255, 255, 255, 0.1)
   --border-hover: rgba(255, 255, 255, 0.2)
+  --border-success: #22c55e
   
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3)
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4)
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5)
+  --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.6)
   
   --accent-primary: #7DD3D8
   --accent-secondary: #6BB6FF
@@ -70,25 +87,37 @@
   --accent-warning: #F5C85A
   --accent-danger: #ff6b6b
   
-  // Primary brand colors (same in dark theme)
+  // Primary brand colors - darker theme
   --primary-color: #7DD3D8
+  --primary: #7DD3D8
   --primary-dark: #6BB6FF
   --primary-rgb: 125, 211, 216
+  --primary-gradient: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%)
+  --primary-bg-light: rgba(125, 211, 216, 0.15)
   
   // Semantic colors
   --warning-color: #F5C85A
   --warning-rgb: 245, 200, 90
   --error-color: #ff6b6b
+  --error: #ff6b6b
   --error-rgb: 255, 107, 107
+  --error-bg-light: rgba(255, 107, 107, 0.15)
+  --text-danger: #ff6b6b
   
   --card-bg: rgba(44, 62, 80, 0.95)
   --input-bg: rgba(255, 255, 255, 0.05)
   --header-bg: rgba(44, 62, 80, 0.95)
+  --hover-bg: rgba(125, 211, 216, 0.15)
   
   // Component backgrounds
   --background-primary: #1a1d23
   --background-secondary: #2c3e50
   --background-tertiary: #34495e
+  
+  // Surface variables (for consistency)
+  --surface-primary: rgba(44, 62, 80, 0.95)
+  --surface-secondary: #2c3e50
+  --surface-tertiary: #34495e
 
 // Global Styles
 *
@@ -137,6 +166,50 @@ h6
 p
   margin-bottom: 1rem
   color: var(--text-secondary)
+
+
+// Light Theme - Cohesive Design System
+// Using warm navy to teal gradient with better harmony
+
+:root:not([data-theme="dark"]) .premium-package-selection .package-price .price
+  background: linear-gradient(135deg, #1e3a8a 0%, #0f766e 100%) !important
+  -webkit-background-clip: text !important
+  -webkit-text-fill-color: transparent !important
+  background-clip: text !important
+  text-shadow: none !important
+
+:root:not([data-theme="dark"]) .premium-package-selection .package-header h3
+  color: #1f2937 !important
+  background: none !important
+  -webkit-background-clip: unset !important
+  -webkit-text-fill-color: unset !important
+  background-clip: unset !important
+  font-weight: 700 !important
+
+// Section headers with elegant gradient
+:root:not([data-theme="dark"]) .premium-package-selection .section-header h2
+  background: linear-gradient(135deg, #1e3a8a 0%, #0f766e 100%) !important
+  -webkit-background-clip: text !important
+  -webkit-text-fill-color: transparent !important
+  background-clip: text !important
+
+
+// Dark theme hero section override
+[data-theme="dark"] .hero-section
+  background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%) !important
+
+// Dark theme feature cards override  
+[data-theme="dark"] .feature-item
+  background: rgba(51, 65, 85, 0.3) !important
+  border: 1px solid rgba(148, 163, 184, 0.1) !important
+  backdrop-filter: blur(12px) !important
+
+// Fix package features text visibility in light theme
+:root:not([data-theme="dark"]) .premium-package-selection .package-features li
+  color: #374151 !important
+
+:root:not([data-theme="dark"]) .premium-package-selection .package-header .credits-info
+  color: #6b7280 !important
 
 a
   color: var(--accent-secondary)

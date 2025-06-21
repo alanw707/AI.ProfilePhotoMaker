@@ -126,14 +126,15 @@ export class PremiumPackageSelectionComponent implements OnInit {
   }
 
   getPackageFeatures(pkg: PremiumPackage): string[] {
+    const totalImages = pkg.maxStyles * pkg.maxImagesPerStyle;
     const features = [
       `${pkg.credits} total credits`,
-      `Up to ${pkg.maxStyles} photo styles`,
-      `${pkg.maxImagesPerStyle} images per style`,
+      `${pkg.maxStyles} professional photo styles`,
+      `${totalImages} total images`,
       '1 custom AI model training',
       '7-day model access',
-      'High-quality FLUX generation',
-      'Professional photo styles'
+      '1024x1024 photo resolution',
+      'Get your Photos Generated in Minutes'
     ];
     
     return features;
