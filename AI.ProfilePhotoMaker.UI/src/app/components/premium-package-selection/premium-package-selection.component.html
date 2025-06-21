@@ -1,49 +1,7 @@
 <!-- Premium Package Selection Section -->
 <div class="premium-package-selection">
 
-  <!-- Current Package Status (if user has active package) -->
-  <div *ngIf="userPackageStatus?.hasActivePackage" class="current-package-status">
-    <div class="status-card active">
-      <div class="status-icon">✅</div>
-      <div class="status-content">
-        <h3>Active Package: {{ userPackageStatus?.packageName }}</h3>
-        <p>{{ userPackageStatus?.creditsRemaining }} credits remaining</p>
-        <p *ngIf="!userPackageStatus?.modelExpired" class="expires">
-          Expires in {{ userPackageStatus?.daysUntilExpiration }} days
-        </p>
-        <p *ngIf="userPackageStatus?.modelExpired" class="expired">
-          Model expired - please purchase a new package
-        </p>
-      </div>
-    </div>
-  </div>
 
-  <!-- Info Section - How Premium Packages Work -->
-  <div class="info-section">
-    <h3>How Premium Packages Work</h3>
-    <div class="info-grid">
-      <div class="info-item">
-        <div class="info-icon">🎯</div>
-        <h4>Custom AI Training</h4>
-        <p>Upload your photos to train a personalized AI model that learns your unique features</p>
-      </div>
-      <div class="info-item">
-        <div class="info-icon">🎨</div>
-        <h4>Multiple Styles</h4>
-        <p>Generate professional photos in various styles - corporate, creative, casual, and more</p>
-      </div>
-      <div class="info-item">
-        <div class="info-icon">⚡</div>
-        <h4>Credit System</h4>
-        <p>1 credit for training your model + 1 credit per generated image. Use credits flexibly</p>
-      </div>
-      <div class="info-item">
-        <div class="info-icon">🔒</div>
-        <h4>Privacy First</h4>
-        <p>Your custom model expires after 7 days for privacy and security</p>
-      </div>
-    </div>
-  </div>
 
   <!-- Package Selection Header -->
   <div class="section-header">
@@ -111,12 +69,6 @@
           Already Active
         </button>
         
-        <button 
-          class="btn btn-outline"
-          (click)="selectPackage(package)"
-        >
-          View Details
-        </button>
       </div>
     </div>
   </div>
@@ -130,41 +82,5 @@
     </div>
   </div>
 
-  <!-- Package Comparison -->
-  <div *ngIf="packages.length > 0" class="package-comparison">
-    <h3>What's Included</h3>
-    <div class="comparison-table">
-      <table>
-        <thead>
-          <tr>
-            <th>Feature</th>
-            <th *ngFor="let package of packages">{{ package.name }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Total Credits</td>
-            <td *ngFor="let package of packages">{{ package.credits }}</td>
-          </tr>
-          <tr>
-            <td>Max Photo Styles</td>
-            <td *ngFor="let package of packages">{{ package.maxStyles }}</td>
-          </tr>
-          <tr>
-            <td>Images per Style</td>
-            <td *ngFor="let package of packages">{{ package.maxImagesPerStyle }}</td>
-          </tr>
-          <tr>
-            <td>Custom AI Training</td>
-            <td *ngFor="let package of packages">✓</td>
-          </tr>
-          <tr>
-            <td>Model Access Period</td>
-            <td *ngFor="let package of packages">7 days</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
 
 </div>

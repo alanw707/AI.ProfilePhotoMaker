@@ -122,6 +122,9 @@ import { NotificationService } from '../../services/notification.service';
             </app-premium-package-selection>
           </section>
 
+          <!-- Divider -->
+          <div class="section-divider"></div>
+
           <!-- How It Works Section -->
           <section class="how-it-works-section">
             <div class="section-header">
