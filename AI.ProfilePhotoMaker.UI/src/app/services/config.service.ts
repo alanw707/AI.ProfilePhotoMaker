@@ -35,7 +35,7 @@ export interface ApiConfig {
 })
 export class ConfigService {
   private readonly config: ApiConfig = {
-    baseUrl: 'http://localhost:5035/api',
+    baseUrl: 'https://e195-71-38-148-86.ngrok-free.app/api',
     endpoints: {
       auth: {
         login: '/auth/login',

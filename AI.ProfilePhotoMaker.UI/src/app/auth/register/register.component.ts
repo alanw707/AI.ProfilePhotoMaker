@@ -27,7 +27,9 @@ export class RegisterComponent {
       lastName: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(8)]],
-      confirmPassword: ['', Validators.required]
+      confirmPassword: ['', Validators.required],
+      gender: ['', Validators.required],
+      ethnicity: ['', Validators.required]
     }, {
       validators: this.passwordMatchValidator
     });
@@ -57,7 +59,9 @@ export class RegisterComponent {
       firstName: this.f['firstName'].value,
       lastName: this.f['lastName'].value,
       email: this.f['email'].value,
-      password: this.f['password'].value
+      password: this.f['password'].value,
+      gender: this.f['gender'].value,
+      ethnicity: this.f['ethnicity'].value
     };
 
     this.authService.register(registerData).subscribe({

@@ -268,11 +268,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             {
                 Id = 4,
                 Name = "Ultimate",
-                Credits = 105,
+                Credits = 120,
                 Price = 54.99m,
-                MaxStyles = 20,
+                MaxStyles = 23,
                 MaxImagesPerStyle = 5,
-                Description = "Generate 100 professional photos with 20 different styles",
+                Description = "Generate 115 professional photos with 23 different styles",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             }

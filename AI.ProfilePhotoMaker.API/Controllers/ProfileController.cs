@@ -215,17 +215,16 @@ public class ProfileController : ControllerBase
                 var fileName = $"{Guid.NewGuid()}_{image.FileName}";
                 var filePath = Path.Combine(uploadDir, fileName);
                 var relativeUrl = $"/uploads/{userId}/{fileName}";
-                var publicUrl = $"{_configuration["AppBaseUrl"]}{relativeUrl}";
 
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
                     await image.CopyToAsync(stream);
                 }
 
-                // Create database record for uploaded image
+                // Create database record for uploaded image - store relative path
                 var processedImage = new ProcessedImage
                 {
-                    OriginalImageUrl = publicUrl,
+                    OriginalImageUrl = relativeUrl,  // Store relative path instead of absolute URL
                     ProcessedImageUrl = "", // Will be updated when AI processing completes
                     Style = ProfileControllerConstants.OriginalStyle, // Mark as original upload
                     UserProfileId = profile.Id,
@@ -238,7 +237,7 @@ public class ProfileController : ControllerBase
                 uploadResults.Add(new { 
                     FileName = fileName, 
                     Size = image.Length,
-                    Url = publicUrl
+                    Url = GetAbsoluteUrl(relativeUrl)
                 });
             }
 
@@ -321,8 +320,8 @@ public class ProfileController : ControllerBase
             .Select(i => new
             {
                 i.Id,
-                i.OriginalImageUrl,
-                i.ProcessedImageUrl,
+                OriginalImageUrl = !string.IsNullOrEmpty(i.OriginalImageUrl) ? GetAbsoluteUrl(i.OriginalImageUrl) : i.OriginalImageUrl,
+                ProcessedImageUrl = !string.IsNullOrEmpty(i.ProcessedImageUrl) ? GetAbsoluteUrl(i.ProcessedImageUrl) : i.ProcessedImageUrl,
                 i.Style,
                 i.CreatedAt,
                 IsOriginalUpload = i.Style == "Original",
@@ -607,7 +606,7 @@ public class ProfileController : ControllerBase
                 {
                     var fileName = Path.GetFileName(filePath);
                     var fileInfo = new FileInfo(filePath);
-                    var publicUrl = $"{Request.Scheme}://{Request.Host}/training-zips/{fileName}";
+                    var publicUrl = GetAbsoluteUrl($"/training-zips/{fileName}");
                     
                     return new
                     {
@@ -664,7 +663,7 @@ public class ProfileController : ControllerBase
             }
 
             var fileName = Path.GetFileName(latestZipFile.filePath);
-            var publicUrl = $"{Request.Scheme}://{Request.Host}/training-zips/{fileName}";
+            var publicUrl = GetAbsoluteUrl($"/training-zips/{fileName}");
             var fileInfo = new FileInfo(latestZipFile.filePath);
 
             return Ok(new { 
@@ -781,6 +780,11 @@ public class ProfileController : ControllerBase
             _logger.LogError(ex, "Error deleting all training ZIP files for user");
             return StatusCode(500, new { success = false, error = new { code = "FileSystemError", message = "Failed to delete training ZIP files." } });
         }
+    }
+
+    private string GetAbsoluteUrl(string relativePath)
+    {
+        return $"{Request.Scheme}://{Request.Host}{relativePath}";
     }
 }
 
