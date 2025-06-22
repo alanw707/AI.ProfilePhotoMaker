@@ -13,6 +13,8 @@ export interface RegisterDto {
   password: string;
   firstName: string;
   lastName: string;
+  gender: string;
+  ethnicity: string;
 }
 
 export interface AuthResponseDto {
