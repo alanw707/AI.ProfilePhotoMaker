@@ -104,19 +104,19 @@
         </div>
       </section>
 
-      <!-- Premium Package Status (if user has active package) -->
-      <section class="premium-status-section" *ngIf="userPackageStatus?.hasActivePackage">
+      <!-- Credit Status (if user has purchased credits) -->
+      <section class="premium-status-section" *ngIf="userCreditStatus && userCreditStatus.purchasedCredits > 0">
         <div class="premium-status-card">
           <div class="status-header">
-            <h3>🎯 Premium Package Active</h3>
+            <h3>🎯 Credits Available</h3>
             <div class="status-details">
-              <span class="package-name">{{ userPackageStatus?.packageName }}</span>
-              <span class="credits-remaining">{{ userPackageStatus?.creditsRemaining }} credits remaining</span>
-              <span class="expiry-info" *ngIf="!userPackageStatus?.modelExpired">
-                Expires in {{ userPackageStatus?.daysUntilExpiration }} days
+              <span class="package-name">Credit Balance</span>
+              <span class="credits-remaining">{{ userCreditStatus.purchasedCredits }} purchased credits</span>
+              <span class="expiry-info" *ngIf="userCreditStatus.weeklyCredits > 0">
+                + {{ userCreditStatus.weeklyCredits }} weekly credits
               </span>
-              <span class="expiry-warning" *ngIf="userPackageStatus?.modelExpired">
-                Model expired - Upload new images to train again
+              <span class="expiry-warning">
+                Weekly credits: photo enhancement only • Purchased credits: never expire, all features
               </span>
             </div>
           </div>
@@ -189,7 +189,7 @@
       </section>
 
       <!-- Workflow Steps -->
-      <section class="workflow-section" *ngIf="isPremiumWorkflow()">"
+      <section class="workflow-section" *ngIf="isPremiumWorkflow()">
         <h2>Create Your Professional Photos</h2>
         <p class="workflow-subtitle">Follow these simple steps to generate stunning AI-powered profile photos</p>
         
@@ -289,7 +289,10 @@
                      [class.selected]="style.selected"
                      (click)="toggleStyle(style)">
                   <div class="style-checkbox">
-                    <input type="checkbox" [checked]="style.selected" (change)="toggleStyle(style)">
+                    <input type="checkbox" [checked]="style.selected" (change)="toggleStyle(style)" (click)="$event.stopPropagation()">
+                  </div>
+                  <div class="style-preview">
+                    <img [src]="style.previewUrl" [alt]="style.name + ' style preview'" (error)="onImageError($event)">
                   </div>
                   <div class="style-info">
                     <h4>{{style.name}}</h4>
@@ -300,6 +303,38 @@
               
               <div class="style-selection-summary" *ngIf="selectedStyles > 0">
                 <p><strong>{{selectedStyles}} styles selected</strong></p>
+                <div class="credit-breakdown">
+                  <div class="credit-item">
+                    <span class="credit-label">Model Training:</span>
+                    <span class="credit-cost">{{calculateTrainingCredits()}} credits</span>
+                  </div>
+                  <div class="credit-item">
+                    <span class="credit-label">Image Generation:</span>
+                    <span class="credit-cost">{{calculateGenerationCredits()}} credits</span>
+                  </div>
+                  <div class="credit-item total-credits">
+                    <span class="credit-label">Total Cost:</span>
+                    <span class="credit-cost"><strong>{{calculateTotalCredits()}} credits</strong></span>
+                  </div>
+                  <div class="credit-item remaining-credits" [class.insufficient]="!hasEnoughCredits()">
+                    <span class="credit-label">Remaining Credits:</span>
+                    <span class="credit-cost">
+                      <strong [class.negative]="!hasEnoughCredits()">{{getRemainingCredits()}} credits</strong>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Insufficient Credits Warning -->
+              <div class="insufficient-credits-warning" *ngIf="selectedStyles > 0 && !hasEnoughCredits()">
+                <div class="warning-icon">⚠️</div>
+                <div class="warning-content">
+                  <h5>Insufficient Credits</h5>
+                  <p>You need {{calculateTotalCredits() - (creditsInfo?.availableCredits || 0)}} more credits to complete this operation.</p>
+                  <button class="btn btn-secondary btn-sm" routerLink="/credit-packages">
+                    Purchase Credits
+                  </button>
+                </div>
               </div>
               
               <!-- Number of images per style selection -->
@@ -322,7 +357,7 @@
               <button class="btn btn-primary" 
                       *ngIf="selectedStyles > 0 && !isTrainingStarted" 
                       (click)="startTrainingWithStyles()"
-                      [disabled]="modelStatus === 'training' || !uploadedImages || uploadedImages < 5">
+                      [disabled]="modelStatus === 'training' || !uploadedImages || uploadedImages < 5 || !hasEnoughCredits()">
                 <span *ngIf="modelStatus === 'training'">Starting Training...</span>
                 <span *ngIf="modelStatus !== 'training'">Start Training with {{selectedStyles}} Selected Styles ({{selectedStyles * imagesPerStyle}} total images)</span>
               </button>
