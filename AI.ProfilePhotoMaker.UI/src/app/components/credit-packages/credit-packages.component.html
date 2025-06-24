@@ -1,0 +1,127 @@
+<div class="credit-packages-container">
+  <div class="header">
+    <h2>Purchase Credits</h2>
+    <p class="subtitle">Choose a credit package to unlock premium features</p>
+  </div>
+
+  <!-- Current Credit Status -->
+  <div class="current-status" *ngIf="userCreditStatus">
+    <div class="status-card">
+      <h3>Your Current Credits</h3>
+      <div class="credit-breakdown">
+        <div class="credit-item">
+          <span class="label">Total Credits:</span>
+          <span class="value">{{ userCreditStatus.totalCredits }}</span>
+        </div>
+        <div class="credit-item">
+          <span class="label">Weekly Credits:</span>
+          <span class="value">{{ userCreditStatus.weeklyCredits }}</span>
+          <small class="note">(Resets weekly, for basic features only)</small>
+        </div>
+        <div class="credit-item">
+          <span class="label">Purchased Credits:</span>
+          <span class="value">{{ userCreditStatus.purchasedCredits }}</span>
+          <small class="note">(Never expire, all features)</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading" *ngIf="isLoadingPackages">
+    <p>Loading credit packages...</p>
+  </div>
+
+  <!-- Credit Packages -->
+  <div class="packages-grid" *ngIf="!isLoadingPackages">
+    <div 
+      class="package-card" 
+      [class.recommended]="isPackageRecommended(pkg)"
+      *ngFor="let pkg of packages"
+    >
+      <!-- Recommended Badge -->
+      <div class="recommended-badge" *ngIf="isPackageRecommended(pkg)">
+        Most Popular
+      </div>
+
+      <div class="package-header">
+        <h3 class="package-name">{{ pkg.name }}</h3>
+        <div class="package-price">
+          <span class="currency">$</span>
+          <span class="amount">{{ pkg.price }}</span>
+        </div>
+        <p class="package-description">{{ pkg.description }}</p>
+        <p class="package-recommendation">{{ getPackageRecommendation(pkg) }}</p>
+      </div>
+
+      <div class="credit-info">
+        <div class="credit-highlight">
+          <span class="total-credits">{{ pkg.totalCredits }}</span>
+          <span class="credit-label">Total Credits</span>
+        </div>
+        
+        <div class="value-proposition" *ngIf="pkg.bonusCredits > 0">
+          <div class="bonus-highlight">
+            <span>+ {{ pkg.bonusCredits }} bonus credits</span>
+          </div>
+        </div>
+
+        <div class="value-proposition">
+          <span class="credits-per-dollar">{{ getCreditsPerDollar(pkg) }} credits per $</span>
+        </div>
+      </div>
+
+      <div class="package-highlights">
+        <div class="usage-examples">
+          <div class="usage-item" *ngIf="getStyledGenerations(pkg) > 0">
+            <span class="count">~{{ getStyledGenerations(pkg) }}</span>
+            <span class="label">style photo{{ getStyledGenerations(pkg) > 1 ? 's' : '' }}</span>
+          </div>
+          <div class="training-available" *ngIf="canAffordTraining(pkg)">
+            <span class="training-badge">✓ Model Training</span>
+          </div>
+        </div>
+        
+        <div class="key-features">
+          <div class="feature-item">🎨 20 styles to choose from</div>
+          <div class="feature-item">✨ Studio quality photos</div>
+          <div class="feature-item">⚡ Ready in minutes</div>
+          <div class="feature-item">♾️ Credits never expire</div>
+        </div>
+      </div>
+
+
+      <div class="package-actions">
+        <button 
+          class="purchase-btn"
+          [disabled]="isPurchasing"
+          (click)="purchasePackage(pkg)"
+        >
+          {{ isPurchasing ? 'Processing...' : 'Purchase Credits' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Credit Costs Information -->
+  <div class="credit-costs-info">
+    <h3>Credit Costs</h3>
+    <div class="cost-grid">
+      <div class="cost-item">
+        <span class="operation">Photo Enhancement</span>
+        <span class="cost">1 credit</span>
+        <small class="note">(Can use weekly credits)</small>
+      </div>
+      <div class="cost-item">
+        <span class="operation">Model Training</span>
+        <span class="cost">15 credits</span>
+        <small class="note">(Requires purchased credits)</small>
+      </div>
+      <div class="cost-item">
+        <span class="operation">Styled Generation</span>
+        <span class="cost">5 credits</span>
+        <small class="note">(Requires purchased credits)</small>
+      </div>
+    </div>
+  </div>
+</div>

@@ -120,38 +120,82 @@ public class ReplicateWebhookController : ControllerBase
     [ReplicateSignatureValidation]
     public async Task<IActionResult> PredictionComplete([FromBody] ReplicatePredictionResult payload)
     {
-        // Extract user_id and style from payload.Input safely
-        string? userId = null;
-        string? style = null;
-        if (payload.Input != null)
+        _logger.LogInformation("Processing prediction completion webhook: {@Payload}", payload);
+
+        try
         {
-            if (payload.Input.TryGetValue("user_id", out var userIdObj))
-                userId = userIdObj?.ToString();
-            if (payload.Input.TryGetValue("style", out var styleObj))
-                style = styleObj?.ToString();
+            // Extract user_id and style from payload.Input safely
+            string? userId = null;
+            string? style = null;
+            if (payload.Input != null)
+            {
+                if (payload.Input.TryGetValue("user_id", out var userIdObj))
+                    userId = userIdObj?.ToString();
+                if (payload.Input.TryGetValue("style", out var styleObj))
+                    style = styleObj?.ToString();
+            }
+
+            // Only process if completed and not failed and has output
+            if (payload.IsCompleted && !payload.HasFailed && payload.GeneratedImageUrls.Any() && !string.IsNullOrEmpty(userId))
+            {
+                // Find the user profile
+                var userProfile = await _dbContext.UserProfiles.FirstOrDefaultAsync(up => up.UserId == userId);
+                if (userProfile == null)
+                {
+                    _logger.LogWarning("User profile not found for userId: {UserId}", userId);
+                    return Ok(new { success = true, message = "User profile not found" });
+                }
+
+                var imageUrl = payload.GeneratedImageUrls.First();
+                using var httpClient = new HttpClient();
+                
+                try
+                {
+                    var response = await httpClient.GetAsync(imageUrl);
+                    response.EnsureSuccessStatusCode();
+                    var contentType = response.Content.Headers.ContentType?.MediaType?.ToLowerInvariant() ?? "image/jpeg";
+                    var imageBytes = await response.Content.ReadAsByteArrayAsync();
+                    var base64 = Convert.ToBase64String(imageBytes);
+                    var dataUrl = $"data:{contentType};base64,{base64}";
+
+                    // Save the generated image to the database
+                    var processedImage = new ProcessedImage
+                    {
+                        UserProfileId = userProfile.Id,
+                        OriginalImageUrl = imageUrl, // Store the Replicate URL as original
+                        ProcessedImageUrl = imageUrl, // For generated images, both URLs are the same
+                        Style = style ?? "Unknown",
+                        IsGenerated = true,
+                        IsOriginalUpload = false,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    _dbContext.ProcessedImages.Add(processedImage);
+                    await _dbContext.SaveChangesAsync();
+
+                    _logger.LogInformation("Successfully saved generated image for user {UserId} with style {Style}, image ID: {ImageId}", 
+                        userId, style, processedImage.Id);
+
+                    return Ok(new { success = true, dataUrl, imageId = processedImage.Id });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to fetch or convert image for data URL: {ImageUrl}", imageUrl);
+                    return StatusCode(500, new { success = false, error = "Failed to fetch or convert image." });
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Prediction webhook ignored - not completed, failed, no output, or missing userId: {@Payload}", payload);
+            }
+
+            return Ok(new { success = true });
         }
-        // Only process if completed and not failed and has output
-        if (payload.IsCompleted && !payload.HasFailed && payload.GeneratedImageUrls.Any())
+        catch (Exception ex)
         {
-            var imageUrl = payload.GeneratedImageUrls.First();
-            using var httpClient = new HttpClient();
-            try
-            {
-                var response = await httpClient.GetAsync(imageUrl);
-                response.EnsureSuccessStatusCode();
-                var contentType = response.Content.Headers.ContentType?.MediaType?.ToLowerInvariant() ?? "image/jpeg";
-                var imageBytes = await response.Content.ReadAsByteArrayAsync();
-                var base64 = Convert.ToBase64String(imageBytes);
-                var dataUrl = $"data:{contentType};base64,{base64}";
-                return Ok(new { success = true, dataUrl });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to fetch or convert image for data URL: {ImageUrl}", imageUrl);
-                return StatusCode(500, new { success = false, error = "Failed to fetch or convert image." });
-            }
+            _logger.LogError(ex, "Error processing prediction completion webhook");
+            return StatusCode(500, new { error = "Internal server error" });
         }
-        return BadRequest(new { success = false, error = "No image output available." });
     }
 
 }

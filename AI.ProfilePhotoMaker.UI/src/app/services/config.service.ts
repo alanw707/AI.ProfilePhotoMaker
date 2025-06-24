@@ -35,7 +35,7 @@ export interface ApiConfig {
 })
 export class ConfigService {
   private readonly config: ApiConfig = {
-    baseUrl: 'https://e195-71-38-148-86.ngrok-free.app/api',
+    baseUrl: 'http://localhost:5035/api',
     endpoints: {
       auth: {
         login: '/auth/login',
@@ -107,5 +107,18 @@ export class ConfigService {
 
   get appBaseUrl(): string {
     return this.config.baseUrl.replace('/api', '');
+  }
+
+  /**
+   * Get the external URL that can be accessed by third-party services like Replicate
+   * This should be the ngrok URL for local development or the production domain in production
+   */
+  get externalBaseUrl(): string {
+    // Use ngrok URL for external access by third-party services
+    return 'https://e195-71-38-148-86.ngrok-free.app';
+  }
+
+  getApiUrl(): string {
+    return this.appBaseUrl;
   }
 }

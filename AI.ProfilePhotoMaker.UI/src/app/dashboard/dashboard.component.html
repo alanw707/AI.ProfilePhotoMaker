@@ -274,7 +274,7 @@
               <div class="step-number">2</div>
               <div class="step-title">
                 <h3>Choose Your Styles</h3>
-                <p>Select styles and start AI training (up to 10 styles)</p>
+                <p>Select styles based on your available credits (training + generation costs)</p>
               </div>
               <div class="step-status">
                 <span class="status-badge" [ngClass]="getStepStatus(2)">
@@ -283,6 +283,33 @@
               </div>
             </div>
             <div class="step-content" *ngIf="currentStep === 2">
+              <!-- Credit Cost Information -->
+              <div class="credit-info-box">
+                <h5>💳 Credit Costs</h5>
+                <div class="cost-breakdown">
+                  <div class="cost-item">
+                    <span>Model Training:</span>
+                    <span><strong>{{creditService.getCreditCostSync('model_training')}} credits</strong> (one-time)</span>
+                  </div>
+                  <div class="cost-item">
+                    <span>Styled Generation:</span>
+                    <span><strong>{{creditService.getCreditCostSync('styled_generation')}} credits</strong> per image</span>
+                  </div>
+                </div>
+                <p class="cost-note">Select styles based on your available credits: <strong>{{creditsInfo?.availableCredits || 0}} credits</strong></p>
+              </div>
+              
+              <!-- Style Selection Controls -->
+              <div class="style-controls">
+                <button type="button" class="btn btn-outline-secondary btn-sm" (click)="selectAllStyles()">
+                  Select All
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" (click)="deselectAllStyles()">
+                  Deselect All
+                </button>
+                <span class="selection-count">{{selectedStyles}} of {{availableStyles.length}} styles selected</span>
+              </div>
+              
               <div class="styles-grid-compact">
                 <div class="style-option" 
                      *ngFor="let style of availableStyles" 

@@ -3,14 +3,14 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
-import { PremiumPackageSelectionComponent } from '../../components/premium-package-selection/premium-package-selection.component';
-import { PremiumPackageService, PremiumPackage, UserPackageStatus } from '../../services/premium-package.service';
+import { CreditPackagesComponent } from '../../components/credit-packages/credit-packages.component';
+import { CreditService, UserCreditStatus } from '../../services/credit.service';
 import { NotificationService } from '../../services/notification.service';
 
 @Component({
   selector: 'app-premium',
   standalone: true,
-  imports: [CommonModule, RouterModule, PremiumPackageSelectionComponent],
+  imports: [CommonModule, RouterModule, CreditPackagesComponent],
   template: `
     <div class="premium-page-container">
       <!-- Theme Toggle Button -->
@@ -114,12 +114,11 @@ import { NotificationService } from '../../services/notification.service';
             </div>
           </section>
 
-          <!-- Package Selection Section -->
+          <!-- Credit Packages Section -->
           <section class="packages-section">
-            <app-premium-package-selection 
-              (packageSelected)="onPackageSelected($event)"
-              (packagePurchased)="onPackagePurchased($event)">
-            </app-premium-package-selection>
+            <app-credit-packages 
+              (packagePurchased)="onCreditPackagePurchased($event)">
+            </app-credit-packages>
           </section>
 
           <!-- Divider -->
@@ -129,40 +128,33 @@ import { NotificationService } from '../../services/notification.service';
           <section class="how-it-works-section">
             <div class="section-header">
               <h2>How It Works</h2>
-              <p>Get professional AI photos in just 5 simple steps</p>
+              <p>Get professional AI photos in just 4 simple steps</p>
             </div>
 
             <div class="steps-grid">
               <div class="step-item">
                 <div class="step-number">1</div>
                 <div class="step-content">
-                  <h3>Choose Package</h3>
-                  <p>Select the package that fits your needs and budget</p>
-                </div>
-              </div>
-              <div class="step-item">
-                <div class="step-number">2</div>
-                <div class="step-content">
                   <h3>Upload Photos</h3>
                   <p>Upload 10-20 high-quality selfies for the best AI training results</p>
                 </div>
               </div>
               <div class="step-item">
-                <div class="step-number">3</div>
+                <div class="step-number">2</div>
                 <div class="step-content">
                   <h3>Select Styles</h3>
                   <p>Choose from professional, creative, casual, and formal photo styles</p>
                 </div>
               </div>
               <div class="step-item">
-                <div class="step-number">4</div>
+                <div class="step-number">3</div>
                 <div class="step-content">
                   <h3>AI Training</h3>
                   <p>Our AI trains a custom model with your photos (15-25 minutes)</p>
                 </div>
               </div>
               <div class="step-item">
-                <div class="step-number">5</div>
+                <div class="step-number">4</div>
                 <div class="step-content">
                   <h3>Download Photos</h3>
                   <p>Get your professional AI-generated photos ready for use</p>
@@ -171,14 +163,14 @@ import { NotificationService } from '../../services/notification.service';
             </div>
           </section>
 
-          <!-- Already Have Package Section -->
-          <section class="existing-package-section" *ngIf="userPackageStatus?.hasActivePackage">
+          <!-- Already Have Credits Section -->
+          <section class="existing-package-section" *ngIf="userCreditStatus && (userCreditStatus.purchasedCredits > 0 || userCreditStatus.weeklyCredits > 0)">
             <div class="existing-package-card">
               <div class="package-status">
-                <h3>🎯 You Have an Active Package!</h3>
+                <h3>🎯 You Have Credits Available!</h3>
                 <div class="status-details">
-                  <span class="package-name">{{ userPackageStatus?.packageName }}</span>
-                  <span class="credits-remaining">{{ userPackageStatus?.creditsRemaining }} credits remaining</span>
+                  <span class="package-name">Credit Balance</span>
+                  <span class="credits-remaining">{{ userCreditStatus.totalCredits }} total credits available</span>
                 </div>
               </div>
               <button class="btn btn-primary" routerLink="/dashboard">
@@ -201,13 +193,13 @@ import { NotificationService } from '../../services/notification.service';
 export class PremiumComponent implements OnInit {
   userName: string = '';
   userEmail: string = '';
-  userPackageStatus: UserPackageStatus | null = null;
+  userCreditStatus: UserCreditStatus | null = null;
 
   constructor(
     private authService: AuthService,
     private router: Router,
     public themeService: ThemeService,
-    private premiumPackageService: PremiumPackageService,
+    private creditService: CreditService,
     private notificationService: NotificationService
   ) {}
 
@@ -222,7 +214,7 @@ export class PremiumComponent implements OnInit {
     }
     
     this.loadUserInfo();
-    this.loadPremiumPackageStatus();
+    this.loadCreditStatus();
   }
 
   loadUserInfo() {
@@ -243,34 +235,26 @@ export class PremiumComponent implements OnInit {
     });
   }
 
-  loadPremiumPackageStatus() {
-    this.premiumPackageService.getUserPackageStatus().subscribe({
+  loadCreditStatus() {
+    this.creditService.getCreditStatus().subscribe({
       next: (response) => {
         if (response.success) {
-          this.userPackageStatus = response.data;
-          
-          // If user already has an active package, they might want to see their status
-          // but still allow them to purchase additional packages if needed
+          this.userCreditStatus = response.data;
         }
       },
       error: (error) => {
-        console.error('Failed to load premium package status:', error);
-        // User might not have a package yet, that's fine for this page
+        console.error('Failed to load credit status:', error);
+        // User might not have credits yet, that's fine for this page
       }
     });
   }
 
-  onPackageSelected(pkg: PremiumPackage) {
-    console.log('Package selected:', pkg);
-    // Package selection handled by the premium-package-selection component
-  }
-
-  onPackagePurchased(packageStatus: UserPackageStatus) {
-    console.log('Package purchased:', packageStatus);
-    this.userPackageStatus = packageStatus;
+  onCreditPackagePurchased(creditStatus: UserCreditStatus) {
+    console.log('Credit package purchased:', creditStatus);
+    this.userCreditStatus = creditStatus;
     
-    this.notificationService.success('Premium Package Purchased!', 
-      'Welcome to Premium! You can now access the Premium Studio to create professional photos.');
+    this.notificationService.success('Credits Purchased!', 
+      'Credits added to your account! You can now use premium features like model training and styled generation.');
     
     // Redirect to dashboard to start the workflow
     this.router.navigate(['/dashboard']);

@@ -1,4 +1,5 @@
 using AI.ProfilePhotoMaker.API.Models.DTOs;
+using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -14,17 +15,15 @@ public class ReplicateController : ControllerBase
 {
     private readonly IReplicateApiClient _replicateApiClient;
     private readonly IBasicTierService _basicTierService;
-    private readonly IPremiumPackageService _premiumPackageService;
 
-    public ReplicateController(IReplicateApiClient replicateApiClient, IBasicTierService basicTierService, IPremiumPackageService premiumPackageService)
+    public ReplicateController(IReplicateApiClient replicateApiClient, IBasicTierService basicTierService)
     {
         _replicateApiClient = replicateApiClient;
         _basicTierService = basicTierService;
-        _premiumPackageService = premiumPackageService;
     }
 
     /// <summary>
-    /// Initiates model training for a user (Premium Package feature)
+    /// Initiates model training for a user (requires purchased credits)
     /// </summary>
     [HttpPost("train")]
     public async Task<IActionResult> TrainModel([FromBody] TrainModelRequestDto dto)
@@ -36,31 +35,30 @@ public class ReplicateController : ControllerBase
         if (string.IsNullOrEmpty(userId))
             return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
 
-        // Check if user has active premium package with available credits
-        var hasCredits = await _premiumPackageService.HasAvailableCreditsAsync(userId, 1); // 1 credit for training
-        if (!hasCredits)
+        // Check if user has sufficient purchased credits for training (15 credits required)
+        var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
+        var requiredCredits = CreditCostConfig.GetCreditCost("model_training");
+        
+        if (purchasedCredits < requiredCredits)
         {
-            var status = await _premiumPackageService.GetUserPackageStatusAsync(userId);
             return BadRequest(new { 
                 success = false, 
                 error = new { 
                     code = "InsufficientCredits", 
-                    message = status.HasActivePackage 
-                        ? $"No credits remaining. You have {status.CreditsRemaining} credits left."
-                        : "No active premium package found. Please purchase a package to train custom models." 
+                    message = $"Model training requires {requiredCredits} purchased credits. You have {purchasedCredits} purchased credits. Please purchase more credits to train custom models." 
                 } 
             });
         }
 
-        // Consume 1 credit for training
-        var creditConsumed = await _premiumPackageService.ConsumeCreditsAsync(userId, 1, "model_training");
+        // Consume credits for training
+        var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "model_training");
         if (!creditConsumed)
         {
             return BadRequest(new { 
                 success = false, 
                 error = new { 
                     code = "CreditConsumptionFailed", 
-                    message = "Failed to consume credit for training. Please try again." 
+                    message = "Failed to consume credits for training. Please try again." 
                 } 
             });
         }
@@ -69,13 +67,17 @@ public class ReplicateController : ControllerBase
         {
             var result = await _replicateApiClient.CreateModelTrainingAsync(dto.UserId, dto.ImageZipUrl);
             
-            // Update the user's package with the trained model ID when training completes
-            if (result.Status == "succeeded" && !string.IsNullOrEmpty(result.Version))
-            {
-                await _premiumPackageService.UpdateTrainedModelAsync(userId, result.Version);
-            }
+            var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
             
-            return Ok(new { success = true, data = result, error = (object?)null });
+            return Ok(new { 
+                success = true, 
+                data = new {
+                    prediction = result,
+                    creditsRemaining = remainingCredits,
+                    creditsCost = requiredCredits
+                }, 
+                error = (object?)null 
+            });
         }
         catch (Exception)
         {
@@ -102,7 +104,7 @@ public class ReplicateController : ControllerBase
     }
 
     /// <summary>
-    /// Generates images using a trained model and style (Premium Package feature)
+    /// Generates images using a trained model and style (requires purchased credits)
     /// </summary>
     [HttpPost("generate")]
     public async Task<IActionResult> GenerateImages([FromBody] GenerateImagesRequestDto dto)
@@ -114,44 +116,30 @@ public class ReplicateController : ControllerBase
         if (string.IsNullOrEmpty(userId))
             return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
 
-        // Check if user has active premium package with available credits
-        var hasCredits = await _premiumPackageService.HasAvailableCreditsAsync(userId, 1); // 1 credit per image
-        if (!hasCredits)
+        // Check if user has sufficient purchased credits for styled generation (5 credits required)
+        var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
+        var requiredCredits = CreditCostConfig.GetCreditCost("styled_generation");
+        
+        if (purchasedCredits < requiredCredits)
         {
-            var status = await _premiumPackageService.GetUserPackageStatusAsync(userId);
             return BadRequest(new { 
                 success = false, 
                 error = new { 
                     code = "InsufficientCredits", 
-                    message = status.HasActivePackage 
-                        ? $"No credits remaining. You have {status.CreditsRemaining} credits left."
-                        : "No active premium package found. Please purchase a package to generate images." 
+                    message = $"Styled image generation requires {requiredCredits} purchased credits. You have {purchasedCredits} purchased credits. Please purchase more credits to generate styled images." 
                 } 
             });
         }
 
-        // Check if model has expired
-        var packageStatus = await _premiumPackageService.GetUserPackageStatusAsync(userId);
-        if (packageStatus.ModelExpired)
-        {
-            return BadRequest(new { 
-                success = false, 
-                error = new { 
-                    code = "ModelExpired", 
-                    message = "Your trained model has expired. Please upload new images and train a new model." 
-                } 
-            });
-        }
-
-        // Consume 1 credit for image generation
-        var creditConsumed = await _premiumPackageService.ConsumeCreditsAsync(userId, 1, "image_generation");
+        // Consume credits for styled generation
+        var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "styled_generation");
         if (!creditConsumed)
         {
             return BadRequest(new { 
                 success = false, 
                 error = new { 
                     code = "CreditConsumptionFailed", 
-                    message = "Failed to consume credit for generation. Please try again." 
+                    message = "Failed to consume credits for generation. Please try again." 
                 } 
             });
         }
@@ -159,7 +147,18 @@ public class ReplicateController : ControllerBase
         try
         {
             var result = await _replicateApiClient.GenerateImagesAsync(dto.TrainedModelVersion, dto.UserId, dto.Style, dto.UserInfo);
-            return Ok(new { success = true, data = result, error = (object?)null });
+            
+            var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
+            
+            return Ok(new { 
+                success = true, 
+                data = new {
+                    prediction = result,
+                    creditsRemaining = remainingCredits,
+                    creditsCost = requiredCredits
+                }, 
+                error = (object?)null 
+            });
         }
         catch (Exception)
         {
@@ -257,8 +256,8 @@ public class ReplicateController : ControllerBase
             });
         }
 
-        // Consume a credit for this generation
-        var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, 1, "basic_generation");
+        // Consume a credit for this casual headshot generation
+        var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "casual_headshot_generation");
         if (!creditConsumed)
         {
             return BadRequest(new { 
@@ -360,7 +359,7 @@ public class ReplicateController : ControllerBase
         }
 
         // Consume credit for enhancement
-        var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, 1, "photo_enhancement");
+        var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "photo_enhancement");
         if (!creditConsumed)
         {
             return StatusCode(500, new { 
