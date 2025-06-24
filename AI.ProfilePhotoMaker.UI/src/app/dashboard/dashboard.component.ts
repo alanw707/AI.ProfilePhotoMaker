@@ -102,7 +102,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private styleService: StyleService,
     private notificationService: NotificationService,
     private configService: ConfigService,
-    private creditService: CreditService
+    public creditService: CreditService
   ) {}
 
   initializeStyles() {
@@ -137,7 +137,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     ];
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     console.log('Dashboard ngOnInit');
     
     // Initialize styles with sanitized icons
@@ -151,6 +151,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
     
     console.log('User is authenticated, loading dashboard data');
+    
+    // Load credit costs first (needed for calculations)
+    await this.creditService.loadCreditCosts();
+    
     this.loadUserInfo();
     this.loadDashboardData();
     this.loadCreditStatus();
@@ -276,11 +280,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Credit calculation methods
   calculateTrainingCredits(): number {
-    return this.selectedStyles > 0 ? 15 : 0; // 15 credits for model training
+    return this.selectedStyles > 0 ? this.creditService.getCreditCostSync('model_training') : 0;
   }
 
   calculateGenerationCredits(): number {
-    return this.selectedStyles * this.imagesPerStyle * 5; // 5 credits per generated image
+    return this.selectedStyles * this.imagesPerStyle * this.creditService.getCreditCostSync('styled_generation');
   }
 
   calculateTotalCredits(): number {
@@ -411,6 +415,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   async startModelTraining(zipPath: string) {
+    console.log('startModelTraining called with zipPath:', zipPath);
+    
     if (!zipPath) {
       console.error('No training ZIP path provided');
       return;
@@ -418,14 +424,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     // Convert local path to public URL
     const userId = this.getCurrentUserId();
+    console.log('User ID for training:', userId);
+    
     if (!userId) {
       console.error('No user ID available for training');
+      this.notificationService.error('Authentication Error', 'User not authenticated. Please log in again.');
       return;
     }
 
-    // Extract filename from the zipPath and construct public URL
+    // Extract filename from the zipPath and construct public URL accessible by Replicate
     const fileName = zipPath.split(/[/\\]/).pop();
-    const zipUrl = `${this.configService.appBaseUrl}/training-zips/${fileName}`;
+    const zipUrl = `${this.configService.externalBaseUrl}/training-zips/${fileName}`;
+    console.log('Training ZIP URL (external):', zipUrl);
 
     const trainingRequest = {
       userId: userId,
@@ -439,7 +449,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     this.replicateService.trainModel(trainingRequest).subscribe({
       next: (response) => {
-        console.log('Training started successfully:', response);
+        console.log('Training API response:', response);
         if (response.success) {
           this.notificationService.success('Training Started', 
             `AI model training has begun with ${this.selectedStyles} selected styles. This will take 15-25 minutes.`);
@@ -599,17 +609,31 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   // Style Selection Methods
-  toggleStyle(style: StyleOption) {
-    const selectedCount = this.availableStyles.filter(s => s.selected).length;
-    
-    if (!style.selected && selectedCount >= 10) {
-      alert('You can select a maximum of 10 styles.');
-      return;
+  async toggleStyle(style: StyleOption) {
+    // If selecting a new style, check if user has sufficient credits
+    if (!style.selected) {
+      // Calculate what the total cost would be with this additional style
+      const currentSelectedCount = this.availableStyles.filter(s => s.selected).length;
+      const newSelectedCount = currentSelectedCount + 1;
+      const trainingCost = this.creditService.getCreditCostSync('model_training');
+      const generationCost = newSelectedCount * this.imagesPerStyle * this.creditService.getCreditCostSync('styled_generation');
+      const totalCostWithNewStyle = trainingCost + generationCost;
+      
+      // Check available credits
+      const availableCredits = this.creditsInfo?.availableCredits || 0;
+      
+      if (totalCostWithNewStyle > availableCredits) {
+        this.notificationService.error(
+          'Insufficient Credits', 
+          `Selecting this style would require ${totalCostWithNewStyle} credits, but you only have ${availableCredits} credits available. Please purchase more credits to continue.`
+        );
+        return;
+      }
     }
     
     style.selected = !style.selected;
     this.updateSelectedStyles();
-    this.saveStyleSelection();
+    // Note: We don't save immediately - only save when training starts
   }
 
   saveStyleSelection() {
@@ -629,17 +653,83 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  async startTrainingWithStyles() {
-    if (!this.trainingZipPath) {
-      this.notificationService.warning('Training Package Not Ready', 'Please upload images first to create a training package.');
+  selectAllStyles() {
+    // Check if selecting all styles would exceed available credits
+    const trainingCost = this.creditService.getCreditCostSync('model_training');
+    const generationCost = this.availableStyles.length * this.imagesPerStyle * this.creditService.getCreditCostSync('styled_generation');
+    const totalCost = trainingCost + generationCost;
+    const availableCredits = this.creditsInfo?.availableCredits || 0;
+
+    if (totalCost > availableCredits) {
+      this.notificationService.error(
+        'Insufficient Credits', 
+        `Selecting all styles would require ${totalCost} credits, but you only have ${availableCredits} credits available. Please purchase more credits or select fewer styles.`
+      );
       return;
     }
 
+    this.availableStyles.forEach(style => style.selected = true);
+    this.updateSelectedStyles();
+    // Note: We don't save immediately - only save when training starts
+  }
+
+  deselectAllStyles() {
+    this.availableStyles.forEach(style => style.selected = false);
+    this.updateSelectedStyles();
+    // Note: We don't save immediately - only save when training starts
+  }
+
+  async startTrainingWithStyles() {
+    console.log('Start Training button clicked!');
+    console.log('Training conditions:', {
+      trainingZipPath: this.trainingZipPath,
+      selectedStyles: this.selectedStyles,
+      uploadedImages: this.uploadedImages,
+      modelStatus: this.modelStatus,
+      isTrainingStarted: this.isTrainingStarted,
+      hasEnoughCredits: this.hasEnoughCredits()
+    });
+
     if (this.selectedStyles === 0) {
+      console.log('No styles selected');
       this.notificationService.warning('No Styles Selected', 'Please select at least one style before starting training.');
       return;
     }
 
+    // Check if we have uploaded images but no training ZIP
+    if (!this.trainingZipPath && this.uploadedImages >= 4) {
+      console.log('No training ZIP found, creating one from uploaded images...');
+      this.notificationService.info('Preparing Training Package', 'Creating training package from your uploaded images...');
+      
+      try {
+        const zipResponse = await this.fileUploadService.createTrainingZip().toPromise();
+        if (zipResponse?.success && zipResponse.zipPath) {
+          this.trainingZipPath = zipResponse.zipPath;
+          console.log('Training ZIP created successfully:', this.trainingZipPath);
+          this.notificationService.success('Training Package Ready', zipResponse.message);
+        } else {
+          console.error('Failed to create training ZIP:', zipResponse);
+          this.notificationService.error('Training Package Failed', 'Failed to create training package from uploaded images.');
+          return;
+        }
+      } catch (error) {
+        console.error('Error creating training ZIP:', error);
+        this.notificationService.error('Training Package Error', 'An error occurred while creating the training package.');
+        return;
+      }
+    }
+
+    if (!this.trainingZipPath) {
+      console.log('No training ZIP path available');
+      this.notificationService.warning('Training Package Not Ready', 'Please upload at least 4 images first to create a training package.');
+      return;
+    }
+
+    console.log('Starting training process...');
+    
+    // Save style selection before starting training
+    this.saveStyleSelection();
+    
     // Start training with selected styles
     this.startModelTraining(this.trainingZipPath);
   }

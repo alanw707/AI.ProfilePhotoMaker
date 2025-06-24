@@ -73,11 +73,14 @@ This document tracks actionable tasks for the development of the AI.ProfilePhoto
 
 ## 🔄 IN PROGRESS
 
-### Style Management
-- [x] Move hardcoded styles to database
-- [x] Create style selection endpoints
-- [x] Implement user style preferences
-- [ ] Add style preview functionality
+### Dashboard API Integration
+- [x] Complete dashboard UI with 4-step workflow
+- [x] Implement credit system integration in UI
+- [x] Create photo enhancement component with simulation
+- [ ] **PRIORITY**: Connect dashboard components to real backend APIs
+- [ ] Replace simulated data with actual API calls
+- [ ] Integrate file upload with backend storage
+- [ ] Connect training workflow to Replicate API
 
 ### Database Associations & Cleanup
 - [x] Associate uploaded images with user profiles in database
@@ -100,18 +103,19 @@ This document tracks actionable tasks for the development of the AI.ProfilePhoto
 - [x] **FIXED**: OAuth username display issue - now shows full name from profile API fallback
 - [ ] Add Facebook and Apple OAuth credentials when needed (low priority)
 
-### Basic Tier System Implementation ✅ COMPLETED
-- [x] Create SubscriptionTier enum (Free, Premium, Pro)
-- [x] Add basic tier fields to UserProfile model (Credits, LastCreditReset, SubscriptionTier)
-- [x] Create UsageLog model for tracking credit consumption and resets
-- [x] Implement FreeTierService with credit management logic
-- [x] Add database migration for basic tier support with proper defaults
-- [x] Create free generation endpoint using base FLUX model (no custom training)
-- [x] Implement credit checking and consumption middleware
-- [x] Add weekly credit reset background service
-- [x] Create credits status API endpoint for frontend integration
-- [x] **FEATURE**: 3 free casual headshots per week using base FLUX model
-- [x] **COST SAVINGS**: 95% reduction in AI costs for basic tier (no model training)
+### Unified Credit System Implementation ✅ COMPLETED
+- [x] **MAJOR ARCHITECTURE CHANGE**: Removed entire premium package system
+- [x] Create dual credit system: Weekly (3 credits/week) + Purchased (permanent)
+- [x] Implement CreditController with complete API endpoints (/api/credit/*)
+- [x] Create CreditPackageService with 4-tier pricing ($9.99 - $79.99)
+- [x] Add CreditPackage and CreditPurchase database models with migrations
+- [x] Implement credit cost configuration: Enhancement (1), Training (15), Generation (5)
+- [x] Create comprehensive BasicTierService with unified credit management
+- [x] Add weekly credit reset background service with automated scheduling
+- [x] Create complete frontend credit system integration
+- [x] **UI COMPONENTS**: Credit status display, credit packages selection
+- [x] **ANGULAR SERVICES**: Complete credit.service.ts with TypeScript interfaces
+- [x] **API INTEGRATION**: Full frontend-backend credit system connectivity
 
 ### Frontend UI Implementation ✅ COMPLETED
 - [x] Remove Angular boilerplate code and placeholder content
@@ -143,13 +147,19 @@ This document tracks actionable tasks for the development of the AI.ProfilePhoto
 
 ## ⏳ PLANNED TASKS (High Priority)
 
-### Frontend Implementation
-- [ ] Set up authentication components
-- [ ] Create user profile management UI
-- [ ] Build style selection interface
-- [ ] Implement image upload with preview
-- [ ] Create results gallery with download options
-- [ ] Add responsive design for mobile/tablet
+### Payment Integration
+- [ ] **CRITICAL**: Implement Stripe payment processing for credit purchases
+- [ ] Replace demo credit purchases with real transactions
+- [ ] Add payment webhooks for transaction verification
+- [ ] Create transaction history UI components
+- [ ] Implement subscription management for recurring purchases
+
+### Real API Integration
+- [ ] **HIGH PRIORITY**: Connect photo enhancement to actual Replicate API
+- [ ] Integrate dashboard file upload with backend storage
+- [ ] Connect training workflow to real model training
+- [ ] Implement real-time progress tracking for AI operations
+- [ ] Add proper error handling for API failures
 
 ### Payment Integration
 - [ ] Set up Stripe integration
@@ -225,13 +235,14 @@ This document tracks actionable tasks for the development of the AI.ProfilePhoto
 - [x] **Dashboard UX Improvements** - Removed Recent Activity section for cleaner interface
 - [x] **Created OAUTH_Troubleshoot.md** - Comprehensive troubleshooting guide for OAuth authentication issues
 
-## 🎯 NEXT SESSION PRIORITIES
+## 🎯 CURRENT PRIORITIES (Updated)
 
-1. **Add auth guards** - Protect routes that require authentication (HIGH PRIORITY) 
-2. **Connect dashboard to real APIs** - Integrate with backend endpoints for upload, training, generation
-3. **Implement API service layer** - Create Angular services for dashboard functionality
-4. **Real AI Enhancement API** - Replace simulated enhancement with actual AI processing
-5. **Error handling improvements** - Add comprehensive error handling throughout the application
+1. **✅ COMPLETED**: Authentication guards - All routes properly protected
+2. **🔄 IN PROGRESS**: Connect dashboard to real APIs - Replace simulated data with backend integration
+3. **✅ COMPLETED**: API service layer - Complete Angular services implemented
+4. **❌ PENDING**: Real AI Enhancement API - Still using simulated processing
+5. **❌ PENDING**: Payment integration - Credit purchases are simulated
+6. **❌ PENDING**: Testing infrastructure - No unit/integration tests implemented
 
 ---
 
@@ -255,17 +266,53 @@ This document tracks actionable tasks for the development of the AI.ProfilePhoto
 - **Brand Integration**: ✅ Logo colors, favicon, and consistent theming
 
 ### Major Features Completed:
-1. **OAuth Authentication** - Google login with existing user account linking
-2. **Dark Theme UI** - Consistent design system with logo color palette
-3. **Comprehensive Dashboard** - 4-step workflow: Upload → Train → Style → Download
-4. **Interactive Components** - Drag & drop uploads, style selection, progress tracking
-5. **Professional Styling** - Glass-morphism, hover effects, responsive design
-6. **Basic Tier System** - Weekly credit-based basic generation with base FLUX model
+1. **OAuth Authentication** - Google login with existing user account linking ✅
+2. **Dark Theme UI** - Consistent design system with logo color palette ✅
+3. **Comprehensive Dashboard** - 4-step workflow: Upload → Train → Style → Download ✅
+4. **Interactive Components** - Drag & drop uploads, style selection, progress tracking ✅
+5. **Professional Styling** - Glass-morphism, hover effects, responsive design ✅
+6. **Unified Credit System** - Dual credit system with purchase packages ✅
+7. **Credit Management UI** - Complete credit status and purchase components ✅
+8. **Authentication Guards** - All protected routes secured ✅
+9. **Backend API Architecture** - Complete controllers and services ✅
 
 ### Next Development Phase:
-1. Add authentication guards to protect routes
-2. Connect dashboard UI to real API endpoints
-3. Implement file upload integration with backend
-4. Add API service layer for dashboard functionality
+1. **✅ COMPLETED**: Authentication guards protecting all routes
+2. **🔄 IN PROGRESS**: Connect dashboard UI to real API endpoints
+3. **⏳ PLANNED**: Implement Stripe payment processing
+4. **✅ COMPLETED**: Complete API service layer with credit system integration
+5. **⏳ PLANNED**: Replace simulated AI processing with real Replicate API calls
+6. **⏳ PLANNED**: Add comprehensive testing infrastructure
 
-*Last updated: June 18, 2025*
+## 🎯 RECENT SESSION ACCOMPLISHMENTS
+
+### 📅 June 24, 2025 Session - Credit-Based Style Selection Implementation
+- [x] **Dashboard Style Image Updates** - Updated Corporate, Legal, and Influencer style preview images
+  - Replaced old Unsplash images with new unique photos
+  - Swapped Legal and Influencer images per user preference
+  - Ensured all style images are unique across dashboard
+- [x] **Credit Display Text Enhancement** - Clarified credit usage information
+  - Updated dashboard text: "Weekly credits: photo enhancement only • Purchased credits: never expire, all features"
+  - Improved user understanding of dual credit system
+- [x] **TASKS.md Analysis & Update** - Complete codebase analysis and documentation update
+  - Identified major architecture shift from premium packages to unified credit system
+  - Updated task list to reflect current implementation state
+  - Documented completed credit system integration
+- [x] **MAJOR UI LOGIC IMPROVEMENT: Credit-Based Style Selection** - Replaced arbitrary limits with intelligent credit validation
+  - **Backend**: Added `/api/credit/costs` endpoint to expose dynamic pricing from database
+  - **Frontend**: Removed hardcoded 10-style limit, implemented real-time credit cost calculation
+  - **Dynamic Validation**: Users can now select unlimited styles based on available credits
+  - **Smart Cost Display**: Shows training costs (15 credits) + generation costs (5 credits per image)
+  - **Enhanced UX**: Replaced browser alerts with proper notification service
+  - **Database-Driven**: All credit costs now pulled from `CreditCostConfig` instead of hardcoded values
+  - **Fallback Support**: System gracefully handles API failures with cached cost data
+
+### 📊 **MAJOR ARCHITECTURAL CHANGE COMPLETED**
+- **Removed**: Entire premium package system (controllers, services, UI components)
+- **Implemented**: Unified credit system with dual credit types
+- **Credit Packages Available**: 4 tiers from $9.99 (50 credits) to $79.99 (1000 credits)
+- **Frontend Integration**: Complete credit status and purchase components
+- **Backend API**: Full credit management system with usage tracking
+- **Credit-Based Limitations**: Style selection now based on actual credit costs instead of arbitrary limits
+
+*Last updated: June 24, 2025*

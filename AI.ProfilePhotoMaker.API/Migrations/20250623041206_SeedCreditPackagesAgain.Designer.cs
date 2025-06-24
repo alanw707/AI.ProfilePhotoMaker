@@ -3,6 +3,7 @@ using System;
 using AI.ProfilePhotoMaker.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AI.ProfilePhotoMaker.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250623041206_SeedCreditPackagesAgain")]
+    partial class SeedCreditPackagesAgain
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.16");
@@ -148,7 +151,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 1,
                             BonusCredits = 0,
-                            CreatedAt = new DateTime(2025, 6, 24, 12, 13, 26, 174, DateTimeKind.Utc).AddTicks(5236),
+                            CreatedAt = new DateTime(2025, 6, 23, 4, 12, 5, 950, DateTimeKind.Utc).AddTicks(4832),
                             Credits = 50,
                             Description = "Perfect for trying out custom training and styled generations",
                             DisplayOrder = 1,
@@ -160,9 +163,9 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 2,
                             BonusCredits = 30,
-                            CreatedAt = new DateTime(2025, 6, 24, 12, 13, 26, 174, DateTimeKind.Utc).AddTicks(5240),
+                            CreatedAt = new DateTime(2025, 6, 23, 4, 12, 5, 950, DateTimeKind.Utc).AddTicks(4835),
                             Credits = 120,
-                            Description = "Most popular - great for professionals",
+                            Description = "Most popular - great for professionals needing multiple styles",
                             DisplayOrder = 2,
                             IsActive = true,
                             Name = "Professional Pack",
@@ -172,7 +175,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 3,
                             BonusCredits = 100,
-                            CreatedAt = new DateTime(2025, 6, 24, 12, 13, 26, 174, DateTimeKind.Utc).AddTicks(5242),
+                            CreatedAt = new DateTime(2025, 6, 23, 4, 12, 5, 950, DateTimeKind.Utc).AddTicks(4837),
                             Credits = 300,
                             Description = "Best value for content creators and businesses",
                             DisplayOrder = 3,
@@ -184,9 +187,9 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 4,
                             BonusCredits = 250,
-                            CreatedAt = new DateTime(2025, 6, 24, 12, 13, 26, 174, DateTimeKind.Utc).AddTicks(5244),
+                            CreatedAt = new DateTime(2025, 6, 23, 4, 12, 5, 950, DateTimeKind.Utc).AddTicks(4839),
                             Credits = 750,
-                            Description = "Maximum credits for agencies and enterprises",
+                            Description = "Maximum credits for agencies and heavy users",
                             DisplayOrder = 4,
                             IsActive = true,
                             Name = "Enterprise Pack",
@@ -401,12 +404,6 @@ namespace AI.ProfilePhotoMaker.API.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsGenerated")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsOriginalUpload")
-                        .HasColumnType("INTEGER");
 
                     b.Property<string>("OriginalImageUrl")
                         .IsRequired()
@@ -746,31 +743,6 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.ToTable("UserProfiles");
                 });
 
-            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UserStyleSelection", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("SelectedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("StyleId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("UserProfileId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("StyleId");
-
-                    b.HasIndex("UserProfileId", "StyleId")
-                        .IsUnique();
-
-                    b.ToTable("UserStyleSelections");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -1017,25 +989,6 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.Navigation("Style");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UserStyleSelection", b =>
-                {
-                    b.HasOne("AI.ProfilePhotoMaker.API.Models.Style", "Style")
-                        .WithMany()
-                        .HasForeignKey("StyleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("AI.ProfilePhotoMaker.API.Models.UserProfile", "UserProfile")
-                        .WithMany()
-                        .HasForeignKey("UserProfileId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Style");
-
-                    b.Navigation("UserProfile");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

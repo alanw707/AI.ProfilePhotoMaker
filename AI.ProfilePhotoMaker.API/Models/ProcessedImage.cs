@@ -9,4 +9,8 @@ public class ProcessedImage
     public int UserProfileId { get; set; }
     public UserProfile UserProfile { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    
+    // New fields to distinguish image types
+    public bool IsGenerated { get; set; } = false; // True for AI-generated images, false for uploaded
+    public bool IsOriginalUpload { get; set; } = false; // True for user's original uploads
 }

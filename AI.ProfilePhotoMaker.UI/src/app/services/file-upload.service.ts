@@ -104,6 +104,12 @@ export class FileUploadService {
     return this.http.get<TrainingStatusResponse>(this.config.getFullUrl('/profile/training-status'));
   }
 
+  createTrainingZip(): Observable<{ success: boolean; zipCreated: boolean; zipPath: string; message: string; error?: any }> {
+    return this.http.post<{ success: boolean; zipCreated: boolean; zipPath: string; message: string; error?: any }>(
+      this.config.getFullUrl('/profile/create-training-zip'), {}
+    );
+  }
+
   listTrainingFiles(): Observable<{ success: boolean; data: string[]; error: any }> {
     return this.http.get<{ success: boolean; data: string[]; error: any }>(this.config.getFullUrl('/profile/training-files'));
   }

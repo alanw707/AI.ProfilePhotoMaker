@@ -444,6 +444,50 @@
     margin: 0
     text-align: center
 
+// Credit Info Box
+.credit-info-box
+  background: var(--bg-secondary)
+  border: 1px solid var(--border-color)
+  border-radius: 12px
+  padding: 16px
+  margin-bottom: 20px
+
+  h5
+    color: var(--text-primary)
+    font-family: 'Poppins', sans-serif
+    font-size: 16px
+    font-weight: 600
+    margin: 0 0 12px 0
+
+  .cost-breakdown
+    display: flex
+    flex-direction: column
+    gap: 8px
+    margin-bottom: 12px
+
+  .cost-item
+    display: flex
+    justify-content: space-between
+    align-items: center
+    font-size: 14px
+    color: var(--text-secondary)
+
+    strong
+      color: var(--text-primary)
+      font-weight: 600
+
+  .cost-note
+    color: var(--text-secondary)
+    font-size: 14px
+    margin: 0
+    text-align: center
+    padding-top: 8px
+    border-top: 1px solid var(--border-color)
+
+    strong
+      color: var(--accent-primary)
+      font-weight: 600
+
 // Training Progress
 // Progress Bars
 .upload-progress
@@ -517,6 +561,40 @@
     .eta
       color: var(--accent-primary)
       font-weight: 600
+
+// Style Controls
+.style-controls
+  display: flex
+  align-items: center
+  gap: 12px
+  margin-bottom: 20px
+  padding: 16px
+  background: var(--bg-secondary)
+  border-radius: 12px
+  border: 1px solid var(--border-color)
+
+  .btn
+    padding: 8px 16px
+    font-size: 14px
+    font-weight: 500
+    border-radius: 8px
+    transition: all 0.3s ease
+
+    &.btn-outline-secondary
+      background: transparent
+      border: 1px solid var(--border-hover)
+      color: var(--text-primary)
+
+      &:hover
+        background: var(--accent-primary)
+        border-color: var(--accent-primary)
+        color: white
+
+  .selection-count
+    color: var(--text-secondary)
+    font-size: 14px
+    font-weight: 500
+    margin-left: auto
 
 // Styles Grid
 .styles-grid
@@ -604,36 +682,127 @@
           font-size: 14px
           font-weight: bold
 
+// Credit Breakdown Styles
+.credit-breakdown
+  background: rgba(125, 211, 216, 0.1)
+  border: 1px solid var(--accent-primary)
+  border-radius: 8px
+  padding: 16px
+  margin-top: 12px
+
+  .credit-item
+    display: flex
+    justify-content: space-between
+    align-items: center
+    padding: 4px 0
+    font-size: 14px
+
+    .credit-label
+      color: var(--text-secondary)
+
+    .credit-cost
+      color: var(--text-primary)
+      font-weight: 500
+
+    &.total-credits
+      border-top: 1px solid var(--border-color)
+      margin-top: 8px
+      padding-top: 8px
+      font-size: 16px
+
+      .credit-cost
+        color: var(--accent-primary)
+
+    &.remaining-credits
+      padding-top: 8px
+      font-size: 16px
+
+      .credit-cost
+        color: var(--accent-success)
+
+        &.negative
+          color: var(--accent-error)
+
+      &.insufficient
+        background-color: rgba(255, 82, 82, 0.1)
+        border-radius: 4px
+        padding: 8px
+        margin: 4px -8px
+
+// Insufficient Credits Warning
+.insufficient-credits-warning
+  background: rgba(255, 82, 82, 0.1)
+  border: 1px solid rgba(255, 82, 82, 0.3)
+  border-radius: 8px
+  padding: 16px
+  margin: 16px 0
+  display: flex
+  align-items: flex-start
+  gap: 12px
+
+  .warning-icon
+    font-size: 24px
+    flex-shrink: 0
+
+  .warning-content
+    flex: 1
+
+    h5
+      color: var(--accent-error)
+      font-size: 16px
+      font-weight: 600
+      margin: 0 0 8px 0
+
+    p
+      color: var(--text-primary)
+      font-size: 14px
+      margin: 0 0 12px 0
+
+    .btn-sm
+      padding: 8px 16px
+      font-size: 12px
+
 // Compact Styles Grid (for Step 2)
 .styles-grid-compact
-  display: flex
-  flex-direction: column
-  gap: 12px
+  display: grid
+  grid-template-columns: repeat(3, 1fr)
+  gap: 16px
   margin-bottom: 20px
 
   .style-option
     background: var(--card-bg)
     border: 2px solid var(--border-color)
     border-radius: 12px
-    padding: 16px
+    padding: 14px
     cursor: pointer
     transition: all 0.3s ease
     display: flex
     align-items: center
-    gap: 16px
+    gap: 12px
 
     &:hover
       border-color: var(--accent-primary)
       background: var(--bg-tertiary)
 
+      .style-preview
+        border-color: var(--accent-primary)
+        
+        img
+          transform: scale(1.05)
+
     &.selected
       border-color: var(--accent-primary)
-      background: var(--bg-tertiary)
-      box-shadow: var(--shadow-sm)
+      background: rgba(125, 211, 216, 0.1)
+      box-shadow: 0 0 0 1px var(--accent-primary), var(--shadow-sm)
+      transform: translateY(-1px)
 
       .style-checkbox input
         background: var(--accent-primary)
         border-color: var(--accent-primary)
+
+      .style-preview
+        border-color: var(--accent-primary)
+        box-shadow: 0 2px 8px rgba(125, 211, 216, 0.3)
 
     .style-checkbox
       input
@@ -659,20 +828,48 @@
           font-size: 12px
           font-weight: bold
 
+    .style-preview
+      width: 60px
+      height: 60px
+      flex-shrink: 0
+      border-radius: 8px
+      overflow: hidden
+      border: 1px solid var(--border-color)
+      background: var(--bg-tertiary)
+      display: flex
+      align-items: center
+      justify-content: center
+      position: relative
+
+      &::before
+        content: '📸'
+        font-size: 24px
+        opacity: 0.3
+        position: absolute
+        pointer-events: none
+
+      img
+        width: 100%
+        height: 100%
+        object-fit: cover
+        transition: transform 0.3s ease
+        z-index: 1
+
     .style-info
       flex: 1
 
       h4
         color: var(--text-primary)
         font-family: 'Poppins', sans-serif
-        font-size: 16px
+        font-size: 15px
         font-weight: 600
-        margin: 0 0 4px 0
+        margin: 0 0 3px 0
 
       p
         color: var(--text-secondary)
-        font-size: 14px
+        font-size: 13px
         margin: 0
+        line-height: 1.3
 
 .style-selection-summary
   text-align: center
@@ -945,6 +1142,10 @@
   .styles-grid
     grid-template-columns: 1fr
 
+  .styles-grid-compact
+    grid-template-columns: repeat(2, 1fr)
+    gap: 12px
+
   .results-grid
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))
 
@@ -963,6 +1164,10 @@
 
   .workflow-steps
     gap: 16px
+
+  .styles-grid-compact
+    grid-template-columns: 1fr
+    gap: 10px
 
 // Basic Tier Section
 .basic-tier-section

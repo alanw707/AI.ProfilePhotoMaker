@@ -378,6 +378,82 @@ public class ProfileController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// Create training ZIP from existing uploaded images
+    /// </summary>
+    [HttpPost("create-training-zip")]
+    public async Task<IActionResult> CreateTrainingZip()
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null)
+            return Unauthorized();
+
+        var profile = await _userProfileRepository.GetByUserIdAsync(userId);
+        if (profile == null)
+            return NotFound("Profile not found");
+
+        try
+        {
+            // Get uploaded images (original style)
+            var uploadedImages = profile.ProcessedImages.Where(i => i.Style == ProfileControllerConstants.OriginalStyle).ToList();
+            
+            if (uploadedImages.Count < 4)
+            {
+                return BadRequest(new { 
+                    success = false, 
+                    error = new { 
+                        code = "InsufficientImages", 
+                        message = $"Need at least 4 images for training (currently {uploadedImages.Count})" 
+                    } 
+                });
+            }
+
+            var uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
+            if (!Directory.Exists(uploadDir))
+            {
+                return BadRequest(new { 
+                    success = false, 
+                    error = new { 
+                        code = "NoUploadDirectory", 
+                        message = "No uploaded images found" 
+                    } 
+                });
+            }
+
+            // Create training ZIP from existing uploaded images
+            var zipPath = await CreateTrainingZip(uploadDir, userId);
+            
+            if (string.IsNullOrEmpty(zipPath))
+            {
+                return StatusCode(500, new { 
+                    success = false, 
+                    error = new { 
+                        code = "ZipCreationFailed", 
+                        message = "Failed to create training ZIP file" 
+                    } 
+                });
+            }
+
+            return Ok(new { 
+                success = true, 
+                zipCreated = true,
+                zipPath = zipPath,
+                message = $"Training ZIP created with {uploadedImages.Count} images"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating training ZIP for user {UserId}", userId);
+            return StatusCode(500, new { 
+                success = false, 
+                error = new { 
+                    code = "InternalError", 
+                    message = "Error creating training ZIP" 
+                } 
+            });
+        }
+    }
+
     [HttpDelete("images/{imageId}")]
     public async Task<IActionResult> DeleteImage(int imageId)
     {
@@ -784,6 +860,14 @@ public class ProfileController : ControllerBase
 
     private string GetAbsoluteUrl(string relativePath)
     {
+        // Use configured AppBaseUrl (ngrok) instead of localhost for external access
+        var baseUrl = _configuration["AppBaseUrl"];
+        if (!string.IsNullOrEmpty(baseUrl))
+        {
+            return $"{baseUrl.TrimEnd('/')}{relativePath}";
+        }
+        
+        // Fallback to request host for local development
         return $"{Request.Scheme}://{Request.Host}{relativePath}";
     }
 }

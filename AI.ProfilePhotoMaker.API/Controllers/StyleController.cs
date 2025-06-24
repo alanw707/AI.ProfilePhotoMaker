@@ -3,6 +3,7 @@ using AI.ProfilePhotoMaker.API.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace AI.ProfilePhotoMaker.API.Controllers;
 
@@ -149,6 +150,117 @@ public class StyleController : ControllerBase
     }
 
     /// <summary>
+    /// Save user's selected styles for model training
+    /// </summary>
+    [HttpPost("select")]
+    public async Task<IActionResult> SelectStyles([FromBody] StyleSelectionDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(new { success = false, error = new { code = "InvalidModel", message = "Invalid input." } });
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+
+        try
+        {
+            // Get user profile
+            var userProfile = await _context.UserProfiles
+                .FirstOrDefaultAsync(up => up.UserId == userId);
+
+            if (userProfile == null)
+            {
+                return NotFound(new { success = false, error = new { code = "ProfileNotFound", message = "User profile not found." } });
+            }
+
+            // Clear existing style selections for this user
+            var existingSelections = _context.UserStyleSelections
+                .Where(uss => uss.UserProfileId == userProfile.Id);
+            _context.UserStyleSelections.RemoveRange(existingSelections);
+
+            // Add new style selections
+            foreach (var styleId in dto.StyleIds)
+            {
+                // Verify style exists and is active
+                var styleExists = await _context.Styles
+                    .AnyAsync(s => s.Id == styleId && s.IsActive);
+
+                if (styleExists)
+                {
+                    _context.UserStyleSelections.Add(new UserStyleSelection
+                    {
+                        UserProfileId = userProfile.Id,
+                        StyleId = styleId,
+                        SelectedAt = DateTime.UtcNow
+                    });
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { 
+                success = true, 
+                message = $"Successfully selected {dto.StyleIds.Count} styles.",
+                error = (object?)null 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving style selection for user {UserId}", userId);
+            return StatusCode(500, new { success = false, error = new { code = "DatabaseError", message = "Failed to save style selection." } });
+        }
+    }
+
+    /// <summary>
+    /// Get user's previously selected styles
+    /// </summary>
+    [HttpGet("user-selected")]
+    public async Task<IActionResult> GetUserSelectedStyles()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+
+        try
+        {
+            // Get user profile
+            var userProfile = await _context.UserProfiles
+                .FirstOrDefaultAsync(up => up.UserId == userId);
+
+            if (userProfile == null)
+            {
+                return NotFound(new { success = false, error = new { code = "ProfileNotFound", message = "User profile not found." } });
+            }
+
+            // Get user's selected styles
+            var selectedStyles = await _context.UserStyleSelections
+                .Where(uss => uss.UserProfileId == userProfile.Id)
+                .Include(uss => uss.Style)
+                .Where(uss => uss.Style.IsActive)
+                .Select(uss => new
+                {
+                    uss.Style.Id,
+                    uss.Style.Name,
+                    uss.Style.Description,
+                    uss.Style.IsActive,
+                    uss.SelectedAt
+                })
+                .ToListAsync();
+
+            return Ok(new { 
+                success = true, 
+                data = selectedStyles, 
+                error = (object?)null 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving user selected styles for user {UserId}", userId);
+            return StatusCode(500, new { success = false, error = new { code = "DatabaseError", message = "Failed to retrieve user selected styles." } });
+        }
+    }
+
+    /// <summary>
     /// Admin endpoint to create a new style
     /// </summary>
     [HttpPost]
@@ -272,6 +384,13 @@ public class StyleController : ControllerBase
         }
     }
 }
+
+/// <summary>
+/// DTO for user style selection
+/// </summary>
+public record StyleSelectionDto(
+    List<int> StyleIds
+);
 
 /// <summary>
 /// DTO for creating a new style

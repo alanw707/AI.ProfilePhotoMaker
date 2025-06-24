@@ -67,6 +67,69 @@ dotnet build AI.ProfilePhotoMaker.sln
 # UI: cd AI.ProfilePhotoMaker.UI && ng serve
 ```
 
+## Credit System Overview
+
+AI.ProfilePhotoMaker uses a unified credit system that supports both basic tier (free weekly credits) and purchased credits for premium features.
+
+### Credit Types
+
+**Weekly Credits (Basic Tier):**
+- Users receive 3 credits every 7 days (automatically reset)
+- Can be used for Photo Enhancement operations only
+- Managed by `BasicTierService` and `BasicTierBackgroundService`
+- Stored in `UserProfile.Credits` field
+- Reset logic tracks `LastCreditReset` timestamp
+
+**Purchased Credits:**
+- Users can purchase credit packages for premium features
+- Required for Model Training and Styled Generation operations
+- Managed by `CreditPackageService`
+- Stored in separate credit purchase/transaction system
+- No expiration or reset - permanent until consumed
+
+### Credit Costs
+
+| Operation | Cost | Credit Type | Notes |
+|-----------|------|-------------|-------|
+| Photo Enhancement | 1 credit | Weekly or Purchased | Uses Flux Kontext Pro model |
+| Model Training | 15 credits | Purchased only | Custom model training via Replicate |
+| Styled Generation | 5 credits | Purchased only | Generates images using trained model |
+
+### Credit Architecture
+
+**Database Models:**
+- `UserProfile.Credits` - Current weekly credits balance
+- `UserProfile.LastCreditReset` - Timestamp of last weekly reset
+- `CreditPackage` - Available credit packages for purchase
+- `CreditPurchase` - User credit purchase transactions
+- `UsageLog` - Tracks all credit consumption with timestamps
+
+**Key Services:**
+- `BasicTierService` - Manages weekly credits and consumption
+- `BasicTierBackgroundService` - Automated weekly credit resets
+- `CreditPackageService` - Handles credit package purchases
+- `ICreditPackageService` - Interface for credit package operations
+
+**API Endpoints:**
+- `/api/credit/packages` - Get available credit packages
+- `/api/credit/purchase` - Purchase credit packages
+- `/api/test/basic-tier-status` - Check user's credit status
+- `/api/test/reset-credits` - Manually reset weekly credits (testing)
+
+### Credit Validation Logic
+
+Before any operation, the system:
+1. Checks if operation requires weekly or purchased credits
+2. Validates sufficient credits are available
+3. Deducts credits and logs usage in `UsageLog`
+4. Returns appropriate error if insufficient credits
+
+**Weekly Credit Reset:**
+- Runs as background service every hour
+- Checks users where `LastCreditReset` is older than 7 days
+- Resets `Credits` to 3 and updates `LastCreditReset`
+- Only affects basic tier users
+
 ## Architecture Overview
 
 ### Project Structure
@@ -91,10 +154,9 @@ dotnet build AI.ProfilePhotoMaker.sln
 4. Webhook receives generation completion → Stores image URLs
 
 **Basic Tier Workflow:**
-1. **Generation**: User requests basic generation → API checks available credits → Generates casual headshot using base FLUX model (no training required)
-2. **Enhancement**: User uploads photo → API enhances using Flux Kontext Pro model with text-based prompts
-3. Credit consumed (1 per generation/enhancement) and tracked in UsageLog
-4. Weekly background service resets credits every 7 days (3 credits per week)
+1. **Enhancement**: User uploads photo → API enhances using Flux Kontext Pro model with text-based prompts
+2. Credit consumed (1 per enhancement) and tracked in UsageLog
+3. Weekly background service resets credits every 7 days (3 credits per week)
 
 **Authentication Flow:**
 - ASP.NET Identity with JWT tokens
@@ -112,9 +174,9 @@ dotnet build AI.ProfilePhotoMaker.sln
 ### Key API Endpoints
 - **Authentication**: `/api/auth/login`, `/api/auth/google`, `/api/auth/apple`
 - **Profile Management**: `/api/profile/*` (CRUD operations, file uploads)
-- **Image Generation**: `/api/replicate/generate` (paid tier), `/api/replicate/generate/basic` (basic tier)
-- **Photo Enhancement**: `/api/replicate/enhance` (uses Flux Kontext Pro)
-- **Credit Management**: `/api/test/basic-tier-status`, `/api/test/reset-credits`
+- **Image Generation**: `/api/replicate/generate` (premium tier with trained models)
+- **Photo Enhancement**: `/api/replicate/enhance` (uses Flux Kontext Pro, basic tier)
+- **Credit Management**: `/api/credit/*` (packages, purchase), `/api/test/basic-tier-status`, `/api/test/reset-credits`
 - **Testing**: `/api/test/*` (various development/testing endpoints)
 
 ### Key Services
@@ -198,7 +260,6 @@ ngrok http https://localhost:5035
 - **UI Components**: Complete terminology update across Angular components and services
 
 ### AI Model Configuration
-- **Training**: Uses `replicate/fast-flux-trainer` for custom model training (paid tier)
-- **Generation**: Uses `black-forest-labs/flux-dev` for image generation (paid tier)
-- **Basic Generation**: Uses `black-forest-labs/flux-dev` for basic tier (no training)
+- **Training**: Uses `replicate/fast-flux-trainer` for custom model training (premium tier)
+- **Styled Generation**: Uses `black-forest-labs/flux-dev` for image generation with trained models (premium tier)
 - **Enhancement**: Uses `black-forest-labs/flux-kontext-pro` for photo enhancement (basic tier)

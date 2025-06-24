@@ -1,0 +1,114 @@
+<div class="credit-status-container">
+  <!-- Loading State -->
+  <div class="loading" *ngIf="isLoading">
+    <p>Loading credits...</p>
+  </div>
+
+  <!-- Credit Status Display -->
+  <div class="credit-status" *ngIf="!isLoading && creditStatus">
+    <!-- Compact View (Default) -->
+    <div class="compact-view" *ngIf="!showDetailed">
+      <div class="total-credits">
+        <span class="credit-count">{{ creditStatus.totalCredits }}</span>
+        <span class="credit-label">Credits</span>
+      </div>
+      
+      <button class="refresh-btn" (click)="refresh()" title="Refresh credits">
+        ↻
+      </button>
+    </div>
+
+    <!-- Detailed View -->
+    <div class="detailed-view" *ngIf="showDetailed">
+      <div class="header">
+        <h3>Your Credits</h3>
+        <button class="refresh-btn" (click)="refresh()" title="Refresh credits">
+          ↻
+        </button>
+      </div>
+
+      <div class="credit-breakdown">
+        <!-- Total Credits -->
+        <div class="credit-card total">
+          <div class="credit-icon">💳</div>
+          <div class="credit-info">
+            <span class="count">{{ creditStatus.totalCredits }}</span>
+            <span class="label">Total Credits</span>
+          </div>
+        </div>
+
+        <!-- Weekly Credits -->
+        <div class="credit-card weekly">
+          <div class="credit-icon">🔄</div>
+          <div class="credit-info">
+            <span class="count">{{ creditStatus.weeklyCredits }}</span>
+            <span class="label">Weekly Credits</span>
+          </div>
+          <div class="credit-note">
+            <small>Resets in {{ getDaysUntilReset() }} day(s)</small>
+            <small>Basic features only</small>
+          </div>
+        </div>
+
+        <!-- Purchased Credits -->
+        <div class="credit-card purchased">
+          <div class="credit-icon">💎</div>
+          <div class="credit-info">
+            <span class="count">{{ creditStatus.purchasedCredits }}</span>
+            <span class="label">Purchased Credits</span>
+          </div>
+          <div class="credit-note">
+            <small>Never expire</small>
+            <small>All features</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Operation Affordability -->
+      <div class="operation-affordability">
+        <h4>What you can do:</h4>
+        <div class="operations-grid">
+          <div class="operation-item" [class.affordable]="canAffordOperation('photo_enhancement')">
+            <span class="operation-name">Photo Enhancement</span>
+            <span class="operation-cost">{{ getOperationCost('photo_enhancement') }} credit</span>
+            <span class="affordability-status">
+              {{ canAffordOperation('photo_enhancement') ? '✓' : '✗' }}
+            </span>
+          </div>
+
+          <div class="operation-item" [class.affordable]="canAffordOperation('model_training')">
+            <span class="operation-name">Model Training</span>
+            <span class="operation-cost">{{ getOperationCost('model_training') }} credits</span>
+            <span class="affordability-status">
+              {{ canAffordOperation('model_training') ? '✓' : '✗' }}
+            </span>
+          </div>
+
+          <div class="operation-item" [class.affordable]="canAffordOperation('styled_generation')">
+            <span class="operation-name">Styled Generation</span>
+            <span class="operation-cost">{{ getOperationCost('styled_generation') }} credits</span>
+            <span class="affordability-status">
+              {{ canAffordOperation('styled_generation') ? '✓' : '✗' }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <a href="/credits" class="action-btn primary">Buy More Credits</a>
+        <a href="/credits/history" class="action-btn secondary">Purchase History</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- No Credits State -->
+  <div class="no-credits" *ngIf="!isLoading && creditStatus && creditStatus.totalCredits === 0">
+    <div class="empty-state">
+      <div class="empty-icon">💰</div>
+      <h3>No Credits Available</h3>
+      <p>Purchase credits to access premium features</p>
+      <a href="/credits" class="action-btn primary">Buy Credits</a>
+    </div>
+  </div>
+</div>
