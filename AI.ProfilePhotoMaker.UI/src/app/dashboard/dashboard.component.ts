@@ -11,7 +11,7 @@ import { ReplicateService, CreditsInfo } from '../services/replicate.service';
 import { StyleService, Style } from '../services/style.service';
 import { NotificationService } from '../services/notification.service';
 import { ConfigService } from '../services/config.service';
-import { PremiumPackageService, PremiumPackage, UserPackageStatus } from '../services/premium-package.service';
+import { CreditService, UserCreditStatus } from '../services/credit.service';
 
 interface StyleOption {
   id: string;
@@ -74,57 +74,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Style Selection
   imagesPerStyle: number = 2; // Default to 2 images per style
-  availableStyles: StyleOption[] = [
-    {
-      id: 'professional',
-      name: 'Professional',
-      description: 'Clean, corporate headshots perfect for LinkedIn',
-      previewUrl: '/assets/styles/professional.jpg',
-      selected: false
-    },
-    {
-      id: 'creative',
-      name: 'Creative',
-      description: 'Artistic and unique styles for creative professionals',
-      previewUrl: '/assets/styles/creative.jpg',
-      selected: false
-    },
-    {
-      id: 'casual',
-      name: 'Casual',
-      description: 'Relaxed, approachable photos for social media',
-      previewUrl: '/assets/styles/casual.jpg',
-      selected: false
-    },
-    {
-      id: 'formal',
-      name: 'Formal',
-      description: 'Elegant, sophisticated portraits',
-      previewUrl: '/assets/styles/formal.jpg',
-      selected: false
-    },
-    {
-      id: 'outdoor',
-      name: 'Outdoor',
-      description: 'Natural lighting with outdoor backgrounds',
-      previewUrl: '/assets/styles/outdoor.jpg',
-      selected: false
-    },
-    {
-      id: 'studio',
-      name: 'Studio',
-      description: 'Classic studio lighting and backgrounds',
-      previewUrl: '/assets/styles/studio.jpg',
-      selected: false
-    }
-  ];
+  availableStyles: StyleOption[] = [];
 
   // Generation
   isGenerating: boolean = false;
   isGeneratingBasic: boolean = false;
 
   // Premium Package
-  userPackageStatus: UserPackageStatus | null = null;
+  userCreditStatus: UserCreditStatus | null = null;
 
 
   // Photo Gallery
@@ -145,11 +102,46 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private styleService: StyleService,
     private notificationService: NotificationService,
     private configService: ConfigService,
-    private premiumPackageService: PremiumPackageService
+    private creditService: CreditService
   ) {}
+
+  initializeStyles() {
+    this.availableStyles = [
+      // Professional & Career Styles
+      { id: '1', name: 'Corporate', description: 'Professional studio portrait in formal business attire with clean background', previewUrl: 'https://images.unsplash.com/photo-1556157382-97eda2d62296?w=150&h=150&fit=crop&crop=face', selected: false },
+      { id: '2', name: 'Executive', description: 'High-end executive portrait with power pose and luxury office background', previewUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face', selected: false },
+      { id: '3', name: 'Consultant', description: 'Friendly consultant portrait in smart-casual attire with approachable expression', previewUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face', selected: false },
+      { id: '4', name: 'LinkedIn', description: 'Professional LinkedIn-style headshot with confident and warm expression', previewUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&h=150&fit=crop&crop=face', selected: false },
+      { id: '5', name: 'Legal', description: 'Formal lawyer portrait in courtroom or law office setting', previewUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&h=150&fit=crop&crop=face', selected: false },
+      { id: '6', name: 'Medical', description: 'Healthcare professional portrait with lab coat and trustworthy expression', previewUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face', selected: false },
+      { id: '7', name: 'Author', description: 'Intellectual author portrait with bookshelves or writing desk background', previewUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&h=150&fit=crop&crop=face', selected: false },
+      
+      // Modern Entrepreneur & Tech Styles
+      { id: '8', name: 'Entrepreneur', description: 'Modern startup founder portrait in co-working space with confident energy', previewUrl: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150&h=150&fit=crop&crop=face', selected: false },
+      { id: '9', name: 'Startup', description: 'Casual-smart startup founder with t-shirt and blazer combination', previewUrl: 'https://images.unsplash.com/photo-1463453091185-61582044d556?w=150&h=150&fit=crop&crop=face', selected: false },
+      { id: '10', name: 'Tech Professional', description: 'Tech professional portrait with laptop or code in background', previewUrl: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=150&h=150&fit=crop&crop=face', selected: false },
+      { id: '11', name: 'Influencer', description: 'Trendy social media influencer portrait with engaging eye contact', previewUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face', selected: false },
+      { id: '12', name: 'Digital Nomad', description: 'Outdoor lifestyle portrait of remote worker with laptop in natural setting', previewUrl: 'https://images.unsplash.com/photo-1528892952291-009c663ce843?w=150&h=150&fit=crop&crop=face', selected: false },
+      
+      // Creative, Lifestyle & Expressive Styles
+      { id: '13', name: 'Creative', description: 'Colorful and dynamic artist portrait with creative studio background', previewUrl: 'https://images.unsplash.com/photo-1521119989659-a83eee488004?w=150&h=150&fit=crop&crop=face', selected: false },
+      { id: '14', name: 'Casual', description: 'Natural lifestyle photo in everyday clothing with warm lighting', previewUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&h=150&fit=crop&crop=face', selected: false },
+      { id: '15', name: 'Artistic', description: 'Fine art portrait with dramatic lighting and stylized clothing', previewUrl: 'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=150&h=150&fit=crop&crop=face', selected: false },
+      { id: '16', name: 'Edgy/Urban', description: 'Street-style portrait with gritty city background and edgy aesthetic', previewUrl: 'https://images.unsplash.com/photo-1531927557220-a9e23c1e4794?w=150&h=150&fit=crop&crop=face', selected: false },
+      { id: '17', name: 'Glamour', description: 'Fashion-inspired glamorous portrait with studio lighting and luxury feel', previewUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=150&h=150&fit=crop&crop=face', selected: false },
+      
+      // Lifestyle & Identity-Focused Styles
+      { id: '18', name: 'Academic', description: 'Scholar portrait with books or chalkboard in academic setting', previewUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=face', selected: false },
+      { id: '19', name: 'Fitness', description: 'Athletic portrait in workout gear with energetic expression', previewUrl: 'https://images.unsplash.com/photo-1531891437562-4301cf35b7e4?w=150&h=150&fit=crop&crop=face', selected: false },
+      { id: '20', name: 'Spiritual', description: 'Serene portrait in natural light with peaceful spiritual elements', previewUrl: 'https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=150&h=150&fit=crop&crop=face', selected: false }
+    ];
+  }
 
   ngOnInit() {
     console.log('Dashboard ngOnInit');
+    
+    // Initialize styles with sanitized icons
+    this.initializeStyles();
     
     // Check authentication first
     if (!this.authService.isAuthenticated()) {
@@ -161,7 +153,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     console.log('User is authenticated, loading dashboard data');
     this.loadUserInfo();
     this.loadDashboardData();
-    this.loadPremiumPackageStatus();
+    this.loadCreditStatus();
   }
 
   loadUserInfo() {
@@ -280,6 +272,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   updateSelectedStyles() {
     this.selectedStyles = this.availableStyles.filter(s => s.selected).length;
+  }
+
+  // Credit calculation methods
+  calculateTrainingCredits(): number {
+    return this.selectedStyles > 0 ? 15 : 0; // 15 credits for model training
+  }
+
+  calculateGenerationCredits(): number {
+    return this.selectedStyles * this.imagesPerStyle * 5; // 5 credits per generated image
+  }
+
+  calculateTotalCredits(): number {
+    return this.calculateTrainingCredits() + this.calculateGenerationCredits();
+  }
+
+  getRemainingCredits(): number {
+    if (!this.creditsInfo) return 0;
+    return this.creditsInfo.availableCredits - this.calculateTotalCredits();
+  }
+
+  hasEnoughCredits(): boolean {
+    return this.getRemainingCredits() >= 0;
   }
 
   // File Upload Methods
@@ -834,30 +848,79 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.isLoadingStyles = true;
     this.styleService.getActiveStyles().subscribe({
       next: (response) => {
-        if (response.success) {
+        if (response.success && response.data.length > 0) {
           // Map backend styles to UI style options
           this.availableStyles = response.data.map((style: Style) => ({
             id: style.id.toString(),
             name: style.name,
             description: style.description,
-            previewUrl: `/assets/styles/${style.name.toLowerCase()}.jpg`,
+            previewUrl: this.getStylePreviewUrl(style.name),
             selected: false
           }));
 
           // Load user's previously selected styles
           this.loadUserSelectedStyles();
         } else {
-          this.notificationService.error('Styles Load Failed', 'Failed to load available photo styles.');
+          // Fallback to predefined styles if backend has none
+          this.loadFallbackStyles();
         }
       },
       error: (error) => {
         console.error('Failed to load styles:', error);
-        this.notificationService.error('Styles Unavailable', 'Unable to load photo styles. Please refresh the page and try again.');
+        // Load fallback styles on error
+        this.loadFallbackStyles();
       },
       complete: () => {
         this.isLoadingStyles = false;
       }
     });
+  }
+
+
+  loadFallbackStyles() {
+    console.log('Loading fallback styles');
+    // Use the same styles as the default initialization by calling initializeStyles
+    this.initializeStyles();
+  }
+
+  onImageError(event: Event) {
+    const img = event.target as HTMLImageElement;
+    img.style.display = 'none';
+  }
+
+  getStylePreviewUrl(styleName: string): string {
+    const styleMap: { [key: string]: string } = {
+      // Professional & Career Styles
+      'corporate': 'https://images.unsplash.com/photo-1556157382-97eda2d62296?w=150&h=150&fit=crop&crop=face',
+      'executive': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
+      'consultant': 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face',
+      'linkedin': 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&h=150&fit=crop&crop=face',
+      'legal': 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&h=150&fit=crop&crop=face',
+      'medical': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face',
+      'author': 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&h=150&fit=crop&crop=face',
+      
+      // Modern Entrepreneur & Tech Styles
+      'entrepreneur': 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150&h=150&fit=crop&crop=face',
+      'startup': 'https://images.unsplash.com/photo-1463453091185-61582044d556?w=150&h=150&fit=crop&crop=face',
+      'tech professional': 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=150&h=150&fit=crop&crop=face',
+      'influencer': 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face',
+      'digital nomad': 'https://images.unsplash.com/photo-1528892952291-009c663ce843?w=150&h=150&fit=crop&crop=face',
+      
+      // Creative, Lifestyle & Expressive Styles
+      'creative': 'https://images.unsplash.com/photo-1521119989659-a83eee488004?w=150&h=150&fit=crop&crop=face',
+      'casual': 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&h=150&fit=crop&crop=face',
+      'artistic': 'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=150&h=150&fit=crop&crop=face',
+      'edgy/urban': 'https://images.unsplash.com/photo-1531927557220-a9e23c1e4794?w=150&h=150&fit=crop&crop=face',
+      'glamour': 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=150&h=150&fit=crop&crop=face',
+      
+      // Lifestyle & Identity-Focused Styles
+      'academic': 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=face',
+      'fitness': 'https://images.unsplash.com/photo-1531891437562-4301cf35b7e4?w=150&h=150&fit=crop&crop=face',
+      'spiritual': 'https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=150&h=150&fit=crop&crop=face'
+    };
+
+    const key = styleName.toLowerCase();
+    return styleMap[key] || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face';
   }
 
   loadUserSelectedStyles() {
@@ -1032,25 +1095,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.router.navigate(['/enhance']);
   }
 
-  // Premium Package Methods
-  loadPremiumPackageStatus() {
-    this.premiumPackageService.getUserPackageStatus().subscribe({
+  // Credit System Methods
+  loadCreditStatus() {
+    this.creditService.getCreditStatus().subscribe({
       next: (response) => {
         if (response.success) {
-          this.userPackageStatus = response.data;
-          console.log('Package status loaded:', this.userPackageStatus);
+          this.userCreditStatus = response.data;
+          console.log('Credit status loaded:', this.userCreditStatus);
         }
       },
       error: (error) => {
-        console.error('Failed to load premium package status:', error);
-        // Don't redirect on error - just show the dashboard without premium features
+        console.error('Failed to load credit status:', error);
+        // Don't redirect on error - just show the dashboard without credit features
       }
     });
   }
 
 
   isPremiumWorkflow(): boolean {
-    return this.userPackageStatus?.hasActivePackage || false;
+    return (this.userCreditStatus?.purchasedCredits || 0) > 0;
   }
 
   ngOnDestroy() {
