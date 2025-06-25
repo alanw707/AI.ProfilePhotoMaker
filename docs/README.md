@@ -9,6 +9,8 @@ An AI-powered profile photo generator with a .NET 8 Web API backend and Angular 
 - [Setup Guide](SETUP.md) - Development environment setup
 - [Architecture](ARCHITECTURE.md) - System architecture and design
 
+> **Note:** The project uses semantic search tools to assist with code navigation, onboarding, and automated documentation updates. This enables faster onboarding and more accurate code suggestions.
+
 ## Overview
 
 AI.ProfilePhotoMaker is a web application that allows users to create professional profile photos using AI. Users can upload selfies, which are used to train a custom AI model through Replicate.com's FLUX API. The application then generates high-quality professional profile photos in various styles selected by the user.
