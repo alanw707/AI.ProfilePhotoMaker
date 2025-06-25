@@ -12,11 +12,9 @@ public class UserProfile
     public string? Gender { get; set; }
     public string? Ethnicity { get; set; }
     public string? TrainedModelId { get; set; }
+    public string? TrainedModelVersionId { get; set; }
     public DateTime? ModelTrainedAt { get; set; }
     
-    // Style relationship
-    public int? StyleId { get; set; }
-    public Style? Style { get; set; }
     
     // Basic tier and subscription management
     public SubscriptionTier SubscriptionTier { get; set; } = SubscriptionTier.Basic;

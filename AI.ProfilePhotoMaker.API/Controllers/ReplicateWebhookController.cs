@@ -46,6 +46,7 @@ public class ReplicateWebhookController : ControllerBase
         {
             // Find the ModelCreationRequest by looking for the model that was trained
             ModelCreationRequest? modelRequest = null;
+            UserProfile? userProfile = null;
             
             if (!string.IsNullOrEmpty(payload.Version))
             {
@@ -56,38 +57,94 @@ public class ReplicateWebhookController : ControllerBase
                 
                 modelRequest = await _dbContext.ModelCreationRequests
                     .FirstOrDefaultAsync(r => r.ReplicateModelId == baseModelName);
-            }
-
-            if (modelRequest != null && payload.IsCompleted && !payload.HasFailed && !string.IsNullOrEmpty(payload.Version))
-            {
-                // Store the trained model version (the full version string with hash)
-                modelRequest.TrainedModelVersion = payload.Version;
-                _logger.LogInformation("Training completed for model {ModelId}, version: {Version}",
-                    modelRequest.ReplicateModelId, payload.Version);
-
-                // Also update the user profile if it exists
-                var userProfile = await _dbContext.UserProfiles.FirstOrDefaultAsync(u => u.UserId == modelRequest.UserId);
-                if (userProfile != null)
+                
+                // If no ModelCreationRequest found, try to extract user ID from model name
+                if (modelRequest == null && baseModelName.StartsWith("user-"))
                 {
-                    userProfile.TrainedModelId = payload.Version;
-                    userProfile.ModelTrainedAt = DateTime.UtcNow;
-                    userProfile.UpdatedAt = DateTime.UtcNow;
-
-                    // If user has a selected style, start generation automatically
-                    if (userProfile.StyleId.HasValue)
+                    // Extract user ID from model name pattern: user-{userId}-{timestamp}
+                    var parts = baseModelName.Split('-');
+                    if (parts.Length >= 2)
                     {
-                        var style = await _dbContext.Styles.FindAsync(userProfile.StyleId.Value);
-                        if (style != null && style.IsActive)
-                        {
-                            _logger.LogInformation("Starting automatic image generation for user {UserId} with style {StyleName}",
-                                modelRequest.UserId, style.Name);
-                            await _replicateApiClient.GenerateImagesAsync(payload.Version, userProfile.UserId, style.Name, null);
-                        }
+                        var userId = parts[1]; // Extract userId from "user-{userId}-timestamp"
+                        userProfile = await _dbContext.UserProfiles.FirstOrDefaultAsync(u => u.UserId == userId);
+                        _logger.LogInformation("Found user profile by extracted userId {UserId} from model name {ModelName}", userId, baseModelName);
                     }
                 }
+                else if (modelRequest != null)
+                {
+                    userProfile = await _dbContext.UserProfiles.FirstOrDefaultAsync(u => u.UserId == modelRequest.UserId);
+                }
+            }
 
-                await _dbContext.SaveChangesAsync();
-                _logger.LogInformation("Successfully processed training completion for model {ModelId}", modelRequest.ReplicateModelId);
+            if (payload.IsCompleted && !payload.HasFailed && !string.IsNullOrEmpty(payload.Version))
+            {
+                bool updatedSuccessfully = false;
+                
+                // Update ModelCreationRequest if found
+                if (modelRequest != null)
+                {
+                    modelRequest.TrainedModelVersion = payload.Version;
+                    _logger.LogInformation("Training completed for model {ModelId}, version: {Version}",
+                        modelRequest.ReplicateModelId, payload.Version);
+                    updatedSuccessfully = true;
+                }
+
+                // Update UserProfile (either from modelRequest or direct lookup)
+                if (userProfile != null)
+                {
+                    // Extract model name and version ID from payload.Version
+                    string modelName;
+                    string versionId;
+                    
+                    if (payload.Version.Contains(':'))
+                    {
+                        var parts = payload.Version.Split(':', 2);
+                        modelName = parts[0]; // e.g., "alanw707/user-b99678bd-cb87-40c1-a7bf-b889f1e00c08-20250624130213"
+                        versionId = parts[1]; // e.g., "787e9b51e9a943dca35ea5be25d62c10db35af6d43e0b15336a36682c75bc024"
+                    }
+                    else
+                    {
+                        // If no colon, assume payload.Version is just the version ID
+                        modelName = payload.Version;
+                        versionId = payload.Version;
+                    }
+                    
+                    // Set both model ID and version ID correctly
+                    userProfile.TrainedModelId = modelName; // The model name/ID for identification
+                    userProfile.TrainedModelVersionId = versionId; // The version ID for generation API calls
+                    userProfile.ModelTrainedAt = DateTime.UtcNow;
+                    userProfile.UpdatedAt = DateTime.UtcNow;
+                    _logger.LogInformation("Updated UserProfile {UserId} with trained model {ModelId} and version {VersionId}", 
+                        userProfile.UserId, modelName, versionId);
+
+                    // If user has selected styles, start generation automatically for all selected styles
+                    var selectedStyles = await _dbContext.UserStyleSelections
+                        .Include(uss => uss.Style)
+                        .Where(uss => uss.UserProfileId == userProfile.Id && uss.Style.IsActive)
+                        .ToListAsync();
+                    
+                    if (selectedStyles.Any())
+                    {
+                        _logger.LogInformation("Starting automatic image generation for user {UserId} with {StyleCount} selected styles",
+                            userProfile.UserId, selectedStyles.Count);
+                        
+                        foreach (var selectedStyle in selectedStyles)
+                        {
+                            await _replicateApiClient.GenerateImagesAsync(versionId, userProfile.UserId, selectedStyle.Style.Name, null);
+                        }
+                    }
+                    updatedSuccessfully = true;
+                }
+
+                if (updatedSuccessfully)
+                {
+                    await _dbContext.SaveChangesAsync();
+                    _logger.LogInformation("Successfully processed training completion for version {Version}", payload.Version);
+                }
+                else
+                {
+                    _logger.LogError("Could not find user or model request for training completion: {@Payload}", payload);
+                }
             }
             else if (payload.HasFailed)
             {
@@ -101,7 +158,7 @@ public class ReplicateWebhookController : ControllerBase
             }
             else
             {
-                _logger.LogWarning("Could not find matching ModelCreationRequest for training completion: {@Payload}", payload);
+                _logger.LogWarning("Training webhook received but not completed or failed: {@Payload}", payload);
             }
 
             return Ok(new { success = true });
@@ -133,6 +190,15 @@ public class ReplicateWebhookController : ControllerBase
                     userId = userIdObj?.ToString();
                 if (payload.Input.TryGetValue("style", out var styleObj))
                     style = styleObj?.ToString();
+                    
+                // Debug logging for webhook payload
+                _logger.LogInformation("Webhook Input contains user_id: {UserId}, style: {Style}", userId ?? "NULL", style ?? "NULL");
+                _logger.LogInformation("Webhook Status: {Status}, IsCompleted: {IsCompleted}, HasFailed: {HasFailed}, HasOutput: {HasOutput}", 
+                    payload.Status, payload.IsCompleted, payload.HasFailed, payload.GeneratedImageUrls.Any());
+            }
+            else
+            {
+                _logger.LogWarning("Webhook payload.Input is null");
             }
 
             // Only process if completed and not failed and has output

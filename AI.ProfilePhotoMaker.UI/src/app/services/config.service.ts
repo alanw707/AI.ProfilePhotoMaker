@@ -58,8 +58,8 @@ export class ConfigService {
       styles: {
         base: '/style',
         active: '/style',
-        userSelected: '/profile/style',
-        select: '/profile/set-style'
+        userSelected: '/style/user-selected',
+        select: '/style/select'
       }
     }
   };

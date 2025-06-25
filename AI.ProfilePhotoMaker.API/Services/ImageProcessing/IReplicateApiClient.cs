@@ -96,4 +96,11 @@ public interface IReplicateApiClient
     /// <param name="enhancementType">Type of enhancement (professional, portrait, linkedin)</param>
     /// <returns>The prediction result with enhanced image</returns>
     Task<ReplicatePredictionResult> EnhancePhotoAsync(string userId, string imageUrl, string enhancementType = "professional");
+
+    /// <summary>
+    /// Checks if a model exists and is accessible on Replicate
+    /// </summary>
+    /// <param name="modelId">The model ID (owner/model-name)</param>
+    /// <returns>True if model exists and is accessible, false otherwise</returns>
+    Task<bool> CheckModelExistsAsync(string modelId);
 }
