@@ -437,6 +437,29 @@
     &:hover img
       transform: scale(1.05)
 
+    .delete-thumbnail-btn
+      position: absolute
+      top: 4px
+      right: 4px
+      width: 21.6px // 10% smaller than 24px
+      height: 21.6px
+      background: rgba(255, 107, 107, 0.9)
+      border: none
+      border-radius: 50%
+      color: white
+      font-size: 14.4px // 10% smaller than 16px
+      font-weight: bold
+      cursor: pointer
+      display: flex
+      align-items: center
+      justify-content: center
+      transition: all 0.3s ease
+      z-index: 2
+
+      &:hover
+        background: rgba(255, 107, 107, 1)
+        transform: scale(1.1)
+
   .upload-status
     color: var(--accent-success)
     font-size: 14px
@@ -642,6 +665,436 @@
 
     .style-info
       padding: 16px
+
+      h4
+        color: var(--text-primary)
+        font-family: 'Poppins', sans-serif
+        font-size: 16px
+        font-weight: 600
+        margin: 0 0 4px 0
+
+      p
+        color: var(--text-secondary)
+        font-size: 14px
+        margin: 0
+
+    .style-checkbox
+      position: absolute
+      top: 12px
+      right: 12px
+
+      input
+        appearance: none
+        width: 24px
+        height: 24px
+        border: 2px solid var(--border-hover)
+        border-radius: 6px
+        background: var(--card-bg)
+        cursor: pointer
+        transition: all 0.3s ease
+        position: relative
+
+        &:checked::after
+          content: '✓'
+          position: absolute
+          inset: 0
+          display: flex
+          align-items: center
+          justify-content: center
+          color: white
+          font-size: 14px
+          font-weight: bold
+
+// Credit Breakdown Styles
+.credit-breakdown
+  background: rgba(125, 211, 216, 0.1)
+  border: 1px solid var(--accent-primary)
+  border-radius: 8px
+  padding: 16px
+  margin-top: 12px
+
+  .credit-item
+    display: flex
+    justify-content: space-between
+    align-items: center
+    padding: 4px 0
+    font-size: 14px
+
+    .credit-label
+      color: var(--text-secondary)
+
+    .credit-cost
+      color: var(--text-primary)
+      font-weight: 500
+
+    &.total-credits
+      border-top: 1px solid var(--border-color)
+      margin-top: 8px
+      padding-top: 8px
+      font-size: 16px
+
+      .credit-cost
+        color: var(--accent-primary)
+
+    &.remaining-credits
+      padding-top: 8px
+      font-size: 16px
+
+      .credit-cost
+        color: var(--accent-success)
+
+        &.negative
+          color: var(--accent-error)
+
+      &.insufficient
+        background-color: rgba(255, 82, 82, 0.1)
+        border-radius: 4px
+        padding: 8px
+        margin: 4px -8px
+
+// Insufficient Credits Warning
+.insufficient-credits-warning
+  background: rgba(255, 82, 82, 0.1)
+  border: 1px solid rgba(255, 82, 82, 0.3)
+  border-radius: 8px
+  padding: 16px
+  margin: 16px 0
+  display: flex
+  align-items: flex-start
+  gap: 12px
+
+  .warning-icon
+    font-size: 24px
+    flex-shrink: 0
+
+  .warning-content
+    flex: 1
+
+    h5
+      color: var(--accent-error)
+      font-size: 16px
+      font-weight: 600
+      margin: 0 0 8px 0
+
+    p
+      color: var(--text-primary)
+      font-size: 14px
+      margin: 0 0 12px 0
+
+    .btn-sm
+      padding: 8px 16px
+      font-size: 12px
+
+// Compact Styles Grid (for Step 2)
+.styles-grid-compact
+  display: grid
+  grid-template-columns: repeat(3, 1fr)
+  gap: 16px
+  margin-bottom: 20px
+
+  .style-option
+    background: var(--card-bg)
+    border: 2px solid var(--border-color)
+    border-radius: 12px
+    padding: 14px
+    cursor: pointer
+    transition: all 0.3s ease
+    display: flex
+    align-items: center
+    gap: 12px
+
+    &:hover
+      border-color: var(--accent-primary)
+      background: var(--bg-tertiary)
+
+      .style-preview
+        border-color: var(--accent-primary)
+        
+        img
+          transform: scale(1.05)
+
+    &.selected
+      border-color: var(--accent-primary)
+      background: rgba(125, 211, 216, 0.1)
+      box-shadow: 0 0 0 1px var(--accent-primary), var(--shadow-sm)
+      transform: translateY(-1px)
+
+      .style-checkbox input
+        background: var(--accent-primary)
+        border-color: var(--accent-primary)
+
+      .style-preview
+        border-color: var(--accent-primary)
+        box-shadow: 0 2px 8px rgba(125, 211, 216, 0.3)
+
+    .style-checkbox
+      input
+        appearance: none
+        width: 20px
+        height: 20px
+        border: 2px solid var(--border-hover)
+        border-radius: 4px
+        background: var(--card-bg)
+        cursor: pointer
+        transition: all 0.3s ease
+        position: relative
+        flex-shrink: 0
+
+        &:checked::after
+          content: '✓'
+          position: absolute
+          inset: 0
+          display: flex
+          align-items: center
+          justify-content: center
+          color: white
+          font-size: 12px
+          font-weight: bold
+
+    .style-preview
+      width: 60px
+      height: 60px
+      flex-shrink: 0
+      border-radius: 8px
+      overflow: hidden
+      border: 1px solid var(--border-color)
+      background: var(--bg-tertiary)
+      display: flex
+      align-items: center
+      justify-content: center
+      position: relative
+
+      &::before
+        content: '📸'
+        font-size: 24px
+        opacity: 0.3
+        position: absolute
+        pointer-events: none
+
+      img
+        width: 100%
+        height: 100%
+        object-fit: cover
+        transition: transform 0.3s ease
+        z-index: 1
+
+    .style-info
+      flex: 1
+
+      h4
+        color: var(--text-primary)
+        font-family: 'Poppins', sans-serif
+        font-size: 16px
+        font-weight: 600
+        margin: 0 0 4px 0
+
+      p
+        color: var(--text-secondary)
+        font-size: 14px
+        margin: 0
+
+    .style-checkbox
+      position: absolute
+      top: 12px
+      right: 12px
+
+      input
+        appearance: none
+        width: 24px
+        height: 24px
+        border: 2px solid var(--border-hover)
+        border-radius: 6px
+        background: var(--card-bg)
+        cursor: pointer
+        transition: all 0.3s ease
+        position: relative
+
+        &:checked::after
+          content: '✓'
+          position: absolute
+          inset: 0
+          display: flex
+          align-items: center
+          justify-content: center
+          color: white
+          font-size: 14px
+          font-weight: bold
+
+// Credit Breakdown Styles
+.credit-breakdown
+  background: rgba(125, 211, 216, 0.1)
+  border: 1px solid var(--accent-primary)
+  border-radius: 8px
+  padding: 16px
+  margin-top: 12px
+
+  .credit-item
+    display: flex
+    justify-content: space-between
+    align-items: center
+    padding: 4px 0
+    font-size: 14px
+
+    .credit-label
+      color: var(--text-secondary)
+
+    .credit-cost
+      color: var(--text-primary)
+      font-weight: 500
+
+    &.total-credits
+      border-top: 1px solid var(--border-color)
+      margin-top: 8px
+      padding-top: 8px
+      font-size: 16px
+
+      .credit-cost
+        color: var(--accent-primary)
+
+    &.remaining-credits
+      padding-top: 8px
+      font-size: 16px
+
+      .credit-cost
+        color: var(--accent-success)
+
+        &.negative
+          color: var(--accent-error)
+
+      &.insufficient
+        background-color: rgba(255, 82, 82, 0.1)
+        border-radius: 4px
+        padding: 8px
+        margin: 4px -8px
+
+// Insufficient Credits Warning
+.insufficient-credits-warning
+  background: rgba(255, 82, 82, 0.1)
+  border: 1px solid rgba(255, 82, 82, 0.3)
+  border-radius: 8px
+  padding: 16px
+  margin: 16px 0
+  display: flex
+  align-items: flex-start
+  gap: 12px
+
+  .warning-icon
+    font-size: 24px
+    flex-shrink: 0
+
+  .warning-content
+    flex: 1
+
+    h5
+      color: var(--accent-error)
+      font-size: 16px
+      font-weight: 600
+      margin: 0 0 8px 0
+
+    p
+      color: var(--text-primary)
+      font-size: 14px
+      margin: 0 0 12px 0
+
+    .btn-sm
+      padding: 8px 16px
+      font-size: 12px
+
+// Compact Styles Grid (for Step 2)
+.styles-grid-compact
+  display: grid
+  grid-template-columns: repeat(3, 1fr)
+  gap: 16px
+  margin-bottom: 20px
+
+  .style-option
+    background: var(--card-bg)
+    border: 2px solid var(--border-color)
+    border-radius: 12px
+    padding: 14px
+    cursor: pointer
+    transition: all 0.3s ease
+    display: flex
+    align-items: center
+    gap: 12px
+
+    &:hover
+      border-color: var(--accent-primary)
+      background: var(--bg-tertiary)
+
+      .style-preview
+        border-color: var(--accent-primary)
+        
+        img
+          transform: scale(1.05)
+
+    &.selected
+      border-color: var(--accent-primary)
+      background: rgba(125, 211, 216, 0.1)
+      box-shadow: 0 0 0 1px var(--accent-primary), var(--shadow-sm)
+      transform: translateY(-1px)
+
+      .style-checkbox input
+        background: var(--accent-primary)
+        border-color: var(--accent-primary)
+
+      .style-preview
+        border-color: var(--accent-primary)
+        box-shadow: 0 2px 8px rgba(125, 211, 216, 0.3)
+
+    .style-checkbox
+      input
+        appearance: none
+        width: 20px
+        height: 20px
+        border: 2px solid var(--border-hover)
+        border-radius: 4px
+        background: var(--card-bg)
+        cursor: pointer
+        transition: all 0.3s ease
+        position: relative
+        flex-shrink: 0
+
+        &:checked::after
+          content: '✓'
+          position: absolute
+          inset: 0
+          display: flex
+          align-items: center
+          justify-content: center
+          color: white
+          font-size: 12px
+          font-weight: bold
+
+    .style-preview
+      width: 60px
+      height: 60px
+      flex-shrink: 0
+      border-radius: 8px
+      overflow: hidden
+      border: 1px solid var(--border-color)
+      background: var(--bg-tertiary)
+      display: flex
+      align-items: center
+      justify-content: center
+      position: relative
+
+      &::before
+        content: '📸'
+        font-size: 24px
+        opacity: 0.3
+        position: absolute
+        pointer-events: none
+
+      img
+        width: 100%
+        height: 100%
+        object-fit: cover
+        transition: transform 0.3s ease
+        z-index: 1
+
+    .style-info
+      flex: 1
 
       h4
         color: var(--text-primary)

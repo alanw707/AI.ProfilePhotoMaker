@@ -12,6 +12,8 @@ import { StyleService, Style } from '../services/style.service';
 import { NotificationService } from '../services/notification.service';
 import { ConfigService } from '../services/config.service';
 import { CreditService, UserCreditStatus } from '../services/credit.service';
+import JSZip from 'jszip';
+import * as faceapi from 'face-api.js';
 
 interface StyleOption {
   id: string;
@@ -79,6 +81,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // Generation
   isGenerating: boolean = false;
   isGeneratingBasic: boolean = false;
+  isDownloadingZip: boolean = false;
 
   // Premium Package
   userCreditStatus: UserCreditStatus | null = null;
@@ -89,7 +92,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   showGallery: boolean = false;
   
   // Uploaded Images Thumbnails
-  uploadedImageThumbnails: Array<{url: string; fileName: string}> = [];
+  uploadedImageThumbnails: Array<{id: number; url: string; fileName: string}> = [];
 
   constructor(
     private authService: AuthService,
@@ -158,6 +161,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadUserInfo();
     this.loadDashboardData();
     this.loadCreditStatus();
+    
+    // Set up periodic training status checks every 30 seconds if training is in progress
+    const trainingCheckInterval = setInterval(() => {
+      if (this.modelStatus === 'training' || this.isTrainingStarted) {
+        console.log('Periodic training status check...');
+        this.checkTrainingStatus(); // Use regular check for periodic updates (faster)
+      } else if (this.modelStatus === 'trained') {
+        // Stop checking once training is complete
+        clearInterval(trainingCheckInterval);
+      }
+    }, 30000); // Check every 30 seconds
   }
 
   loadUserInfo() {
@@ -230,7 +244,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   loadDashboardData() {
     this.loadUserImages();
-    this.checkTrainingStatus();
+    this.checkModelStatusAndTraining();
     this.updateCurrentStep();
     // Note: Styles are loaded on-demand when user reaches step 3 (style selection)
   }
@@ -242,31 +256,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Step 2: Style Selection (required before training)
-    if (this.uploadedImages > 0 && !this.isTrainingStarted) {
-      this.currentStep = 2; // Move to style selection after upload
-      // Load styles on-demand when user reaches style selection step
+    // Step 2: Generate Images (includes style selection, training, generation, and results)
+    if (this.uploadedImages > 0) {
+      // Load styles on-demand when user reaches this step
       if (this.availableStyles.length === 0) {
         this.loadActiveStyles();
       }
-      return;
-    }
-
-    // Step 3: Training in progress
-    if (this.modelStatus === 'training' || (this.isTrainingStarted && this.modelStatus !== 'trained')) {
-      this.currentStep = 3;
-      return;
-    }
-
-    // Step 4: Generation in progress or completed
-    if (this.modelStatus === 'trained' && this.isGenerating) {
-      this.currentStep = 4;
-      return;
-    }
-
-    // Step 5: Download/Results ready
-    if (this.modelStatus === 'trained' && !this.isGenerating) {
-      this.currentStep = 5;
+      
+      this.currentStep = 2;
       return;
     }
 
@@ -280,6 +277,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Credit calculation methods
   calculateTrainingCredits(): number {
+    // If model is already trained, no training cost
+    if (this.modelStatus === 'trained') return 0;
     return this.selectedStyles > 0 ? this.creditService.getCreditCostSync('model_training') : 0;
   }
 
@@ -327,15 +326,45 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.addFiles(files);
   }
 
-  addFiles(files: File[]) {
-    const validFiles = files.filter(file => {
-      return file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024; // 5MB limit
+  // Helper: Check image resolution and face presence
+  async checkImageQuality(file: File): Promise<{valid: boolean, reason?: string}> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = async () => {
+        if (img.width < 1024 || img.height < 1024) {
+          resolve({valid: false, reason: 'Image must be at least 1024x1024 pixels.'});
+          return;
+        }
+        // Load face-api models if not already loaded
+        if (!faceapi.nets.ssdMobilenetv1.params) {
+          await faceapi.nets.ssdMobilenetv1.loadFromUri('/assets/models');
+        }
+        const detections = await faceapi.detectAllFaces(img);
+        if (!detections || detections.length === 0) {
+          resolve({valid: false, reason: 'No face detected. Please upload a clear selfie.'});
+          return;
+        }
+        resolve({valid: true});
+      };
+      img.onerror = () => resolve({valid: false, reason: 'Could not load image.'});
+      img.src = URL.createObjectURL(file);
     });
+  }
 
+  async addFiles(files: File[]) {
+    const validFiles: File[] = [];
+    for (const file of files) {
+      if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) continue;
+      const quality = await this.checkImageQuality(file);
+      if (!quality.valid) {
+        this.notificationService.warning('Image Rejected', quality.reason || 'Image did not meet requirements.');
+        continue;
+      }
+      validFiles.push(file);
+    }
     // Limit to 20 total files
     const remainingSlots = 20 - this.selectedFiles.length;
     const filesToAdd = validFiles.slice(0, remainingSlots);
-    
     this.selectedFiles.push(...filesToAdd);
   }
 
@@ -375,7 +404,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           
           if (result.response) {
             // Upload completed successfully
-            this.uploadedImages = result.response.uploadedFiles.length;
+            const uploadedCount = result.response.uploadedFiles.length;
             this.selectedFiles = [];
             
             // Update user profile if we got profile ID back
@@ -386,14 +415,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
             // Check if training ZIP was created
             if (result.response.zipCreated) {
               this.notificationService.success('Upload Complete', 
-                `${this.uploadedImages} images uploaded successfully. Ready to select styles and start training!`);
+                `${uploadedCount} images uploaded successfully. Ready to select styles and start training!`);
               // Store ZIP path for later use when starting training
               this.trainingZipPath = result.response.zipPath;
             } else {
               this.notificationService.success('Upload Complete', 
-                `${this.uploadedImages} images uploaded successfully.`);
+                `${uploadedCount} images uploaded successfully.`);
             }
             
+            // Refresh all user images and stats from server
+            this.loadUserImages();
             this.updateCurrentStep();
             this.loadTrainingStatus(); // Check if we can start training
             this.isUploading = false;
@@ -454,7 +485,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.notificationService.success('Training Started', 
             `AI model training has begun with ${this.selectedStyles} selected styles. This will take 15-25 minutes.`);
           this.modelStatus = 'training';
-          this.currentStep = 3; // Move to training step (Step 3)
+          // Training progress is now shown within step 2
           // Store training ID for status polling
           if (response.data?.id) {
             this.trainingId = response.data.id;
@@ -547,9 +578,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
             
             this.updateCurrentStep();
             
-            // Move to generation step, but don't auto-generate yet
-            // Let user see the completion and manually start generation
-            this.currentStep = 4;
+            // Model is now trained, stay in step 2 for generation
+            // User can now select styles and generate
 
           } else if (status === 'failed' || status === 'canceled') {
             // Training failed
@@ -615,7 +645,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       // Calculate what the total cost would be with this additional style
       const currentSelectedCount = this.availableStyles.filter(s => s.selected).length;
       const newSelectedCount = currentSelectedCount + 1;
-      const trainingCost = this.creditService.getCreditCostSync('model_training');
+      const trainingCost = this.modelStatus === 'trained' ? 0 : this.creditService.getCreditCostSync('model_training');
       const generationCost = newSelectedCount * this.imagesPerStyle * this.creditService.getCreditCostSync('styled_generation');
       const totalCostWithNewStyle = trainingCost + generationCost;
       
@@ -655,7 +685,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   selectAllStyles() {
     // Check if selecting all styles would exceed available credits
-    const trainingCost = this.creditService.getCreditCostSync('model_training');
+    const trainingCost = this.modelStatus === 'trained' ? 0 : this.creditService.getCreditCostSync('model_training');
     const generationCost = this.availableStyles.length * this.imagesPerStyle * this.creditService.getCreditCostSync('styled_generation');
     const totalCost = trainingCost + generationCost;
     const availableCredits = this.creditsInfo?.availableCredits || 0;
@@ -693,6 +723,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (this.selectedStyles === 0) {
       console.log('No styles selected');
       this.notificationService.warning('No Styles Selected', 'Please select at least one style before starting training.');
+      return;
+    }
+
+    // Check if model is already trained - prevent re-training
+    if (this.modelStatus === 'trained') {
+      console.log('Model already trained, redirecting to generation');
+      this.notificationService.info('Model Already Trained', 'Your model is already trained! You can now generate photos with your selected styles.');
+      // Auto-start generation with selected styles
+      this.generatePhotos();
       return;
     }
 
@@ -735,15 +774,62 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   async generatePhotos() {
-    if (!this.userProfile?.trainedModelId) {
-      this.notificationService.warning('Model Not Ready', 'Please wait for model training to complete before generating photos.');
-      return;
+    console.log('generatePhotos() called');
+    console.log('userProfile:', this.userProfile);
+    console.log('trainedModelVersionId:', this.userProfile?.trainedModelVersionId);
+    console.log('trainedModelId:', this.userProfile?.trainedModelId);
+    console.log('selectedStyles:', this.selectedStyles);
+    
+    // Check what the API is actually returning for this user
+    this.profileService.getCurrentUserProfile().subscribe({
+      next: (response) => {
+        console.log('Fresh profile from API:', response);
+        if (response.success && response.data) {
+          console.log('API trainedModelId:', response.data.trainedModelId);
+          console.log('API trainedModelVersionId:', response.data.trainedModelVersionId);
+        }
+      },
+      error: (error) => {
+        console.error('Error fetching fresh profile:', error);
+      }
+    });
+    
+    if (!this.userProfile?.trainedModelVersionId) {
+      console.log('No trainedModelVersionId found, checking trainedModelId fallback');
+      if (!this.userProfile?.trainedModelId) {
+        this.notificationService.warning('Model Not Ready', 'Please wait for model training to complete before generating photos.');
+        return;
+      }
+      // Fallback to trainedModelId if trainedModelVersionId is not available
+      console.log('Using trainedModelId as fallback:', this.userProfile.trainedModelId);
     }
 
     if (this.selectedStyles === 0) {
       this.notificationService.warning('No Styles Selected', 'Please select at least one style before generating photos.');
       return;
     }
+
+    const userId = this.getCurrentUserId();
+    if (!userId) {
+      this.notificationService.error('Authentication Error', 'User ID not found. Please log in again.');
+      return;
+    }
+
+    // Get the model version to use for generation
+    let modelVersion = this.userProfile.trainedModelVersionId || this.userProfile.trainedModelId;
+    
+    // TEMPORARY FIX: If we got the model name instead of version ID, use the known version ID
+    if (modelVersion === 'alanw707/user-b99678bd-cb87-40c1-a7bf-b889f1e00c08-20250624130213') {
+      modelVersion = '787e9b51e9a943dca35ea5be25d62c10db35af6d43e0b15336a36682c75bc024';
+      console.log('Applied temporary fix: using known version ID');
+    }
+    
+    if (!modelVersion) {
+      this.notificationService.error('Model Version Error', 'No trained model version found. Please try refreshing the page.');
+      return;
+    }
+
+    console.log('Using model version for generation:', modelVersion);
 
     this.isGenerating = true;
     this.updateCurrentStep(); // Move to generation step
@@ -762,10 +848,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
         // Generate the specified number of images per style
         for (let i = 0; i < this.imagesPerStyle; i++) {
           const generateRequest = {
-            trainedModelVersion: this.userProfile.trainedModelId,
-            userId: this.userProfile.userId,
+            trainedModelVersion: modelVersion,
+            userId: userId,
             style: styleName,
-            imageNumber: i + 1, // Track which image this is for the style
             userInfo: {
               gender: this.userProfile.gender,
               ethnicity: this.userProfile.ethnicity
@@ -826,9 +911,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       // Load updated images to show in results
       this.loadUserImages();
       
-      // Move to download step
+      // Generation complete, stay in step 2 to show results
       this.isGenerating = false;
-      this.currentStep = 5;
       this.updateCurrentStep();
     } else {
       // All generations failed
@@ -888,18 +972,100 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Photo Results Methods
   downloadPhoto(photo: GeneratedPhoto) {
-    // TODO: Implement download
-    console.log('Downloading photo:', photo);
+    const link = document.createElement('a');
+    link.href = photo.url;
+    link.download = `${photo.style.toLowerCase().replace(/\s+/g, '-')}-photo-${photo.id}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   sharePhoto(photo: GeneratedPhoto) {
-    // TODO: Implement sharing
-    console.log('Sharing photo:', photo);
+    if (navigator.share) {
+      navigator.share({
+        title: `${photo.style} Profile Photo`,
+        text: `Check out my AI-generated ${photo.style} profile photo!`,
+        url: photo.url
+      });
+    } else {
+      // Fallback: copy URL to clipboard
+      navigator.clipboard.writeText(photo.url).then(() => {
+        this.notificationService.success('Link Copied', 'Photo URL copied to clipboard!');
+      });
+    }
   }
 
-  downloadAll() {
-    // TODO: Implement bulk download
-    console.log('Downloading all photos');
+  async downloadAll() {
+    if (this.generatedPhotos.length === 0) {
+      this.notificationService.warning('No Photos', 'No generated photos to download.');
+      return;
+    }
+
+    this.isDownloadingZip = true;
+
+    try {
+      // Create new JSZip instance
+      const zip = new JSZip();
+      
+      this.notificationService.info('Preparing Download', 'Creating ZIP file with all your photos...');
+      
+      // Fetch each image and add to ZIP
+      const downloadPromises = this.generatedPhotos.map(async (photo, index) => {
+        try {
+          const response = await fetch(photo.url);
+          const blob = await response.blob();
+          const filename = `${photo.style.toLowerCase().replace(/\s+/g, '-')}-photo-${index + 1}.png`;
+          zip.file(filename, blob);
+          return true;
+        } catch (error) {
+          console.error(`Failed to download photo ${photo.id}:`, error);
+          return false;
+        }
+      });
+      
+      const results = await Promise.all(downloadPromises);
+      const successCount = results.filter(r => r).length;
+      
+      if (successCount === 0) {
+        this.notificationService.error('Download Failed', 'Failed to download any photos. Please try again.');
+        return;
+      }
+      
+      // Generate ZIP file
+      const zipBlob = await zip.generateAsync({type: 'blob'});
+      
+      // Create download link
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(zipBlob);
+      link.download = `ai-profile-photos-${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up object URL
+      URL.revokeObjectURL(link.href);
+      
+      this.notificationService.success('Download Complete', 
+        `Successfully downloaded ${successCount} of ${this.generatedPhotos.length} photos as ZIP file.`);
+        
+    } catch (error) {
+      console.error('ZIP download failed:', error);
+      this.notificationService.error('Download Failed', 
+        'Failed to create ZIP file. Falling back to individual downloads.');
+      
+      // Fallback to individual downloads with delay
+      this.downloadAllIndividually();
+    } finally {
+      this.isDownloadingZip = false;
+    }
+  }
+  
+  private downloadAllIndividually() {
+    this.generatedPhotos.forEach((photo, index) => {
+      setTimeout(() => {
+        this.downloadPhoto(photo);
+      }, index * 1000); // 1 second delay between downloads to avoid browser blocking
+    });
   }
 
   // Status Methods
@@ -914,20 +1080,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
       case 1:
         return this.uploadedImages > 0 ? 'Completed' : 'Upload Selfies';
       case 2:
-        if (this.selectedStyles > 0 && this.isTrainingStarted) return 'Completed';
-        return this.selectedStyles > 0 ? 'Ready to Start' : 'Choose Styles';
-      case 3:
-        if (this.modelStatus === 'trained') return 'Completed';
-        if (this.modelStatus === 'training') return 'Training...';
-        if (this.isTrainingStarted) return 'Training...';
-        return 'Pending';
-      case 4:
         if (this.generatedPhotos.length > 0) return 'Completed';
         if (this.isGenerating) return 'Generating...';
-        if (this.modelStatus === 'trained') return 'Ready to Generate';
-        return 'Pending';
-      case 5:
-        return this.generatedPhotos.length > 0 ? 'Completed' : 'Pending';
+        if (this.modelStatus === 'training') return 'Training Model...';
+        if (this.modelStatus === 'trained') {
+          return this.selectedStyles > 0 ? 'Ready to Generate' : 'Choose Styles';
+        }
+        return this.selectedStyles > 0 ? 'Ready to Start' : 'Choose Styles';
       default:
         return 'Pending';
     }
@@ -1030,11 +1189,43 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  checkModelStatusAndTraining() {
+    // First check if model exists on Replicate, then check training status
+    this.profileService.checkModelStatus().subscribe({
+      next: (response) => {
+        console.log('Model status check:', response);
+        if (response.success) {
+          const { modelExists, modelStatus } = response.data;
+          
+          if (!modelExists && modelStatus === 'deleted') {
+            // Model was deleted from Replicate and cleared from database
+            console.log('Model was deleted from Replicate, updating UI');
+            this.modelStatus = 'Not Started';
+            this.userProfile = this.userProfile || {} as UserProfile;
+            this.userProfile.trainedModelId = undefined;
+            
+            // Show notification to user
+            this.notificationService.warning('Model Deleted', 'Your trained model was deleted from Replicate and has been cleared from your account.');
+          } else if (modelExists && modelStatus === 'active') {
+            console.log('Model exists on Replicate, checking training status');
+          }
+        }
+        
+        // Always check training status after model status check
+        this.checkTrainingStatus();
+      },
+      error: (error) => {
+        console.error('Model status check failed:', error);
+        // Fallback to regular training status check
+        this.checkTrainingStatus();
+      }
+    });
+  }
+
   checkTrainingStatus() {
     this.fileUploadService.getTrainingStatus().subscribe({
       next: (response) => {
         console.log('Training status:', response);
-        this.modelStatus = response.status || 'Not Started';
         this.uploadedImages = response.totalUploadedImages || 0;
         
         // Set training ZIP path if available
@@ -1042,10 +1233,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.trainingZipPath = response.latestZipFile;
         }
         
+        // Priority check: if model is trained, set status to 'trained'
         if (response.hasTrainedModel) {
           this.userProfile = this.userProfile || {} as UserProfile;
           this.userProfile.trainedModelId = response.trainedModelId;
           this.modelStatus = 'trained';
+          console.log('Model is trained, status set to: trained');
+        } else {
+          // Only use API status if model is not trained
+          this.modelStatus = response.status || 'Not Started';
+          console.log('Model not trained, status set to:', this.modelStatus);
         }
         
         this.updateCurrentStep();
@@ -1083,6 +1280,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.uploadedImageThumbnails = response.images
           .filter(img => img.isOriginalUpload && !img.isGenerated)
           .map(img => ({
+            id: img.id, // keep as number
             url: img.originalImageUrl,
             fileName: img.originalImageUrl.split('/').pop() || 'image'
           }));
@@ -1100,6 +1298,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
           type: img.isGenerated ? 'generated' as const : 'original' as const,
           downloadUrl: img.processedImageUrl || img.originalImageUrl
         }));
+        
+        // Extract generated photos for dashboard results
+        this.generatedPhotos = response.images
+          .filter(img => img.isGenerated)
+          .map((img: ProcessedImage) => ({
+            id: img.id.toString(),
+            url: img.processedImageUrl || img.originalImageUrl,
+            style: img.style || 'Unknown',
+            createdAt: new Date(img.createdAt)
+          }));
         
         if (this.galleryImages.length === 0) {
           this.notificationService.info('No Images Yet', 'Upload some selfies and generate photos to see them here!');
@@ -1161,6 +1369,34 @@ export class DashboardComponent implements OnInit, OnDestroy {
         },
         error: (error: any) => {
           console.error('Failed to delete image:', error);
+          const errorMessage = error.error?.message || error.message || 'Unknown error';
+          this.notificationService.error('Delete Error', `Failed to delete image: ${errorMessage}`);
+        }
+      });
+    }
+  }
+
+  deleteUploadedImage(thumb: {id: number; url: string; fileName: string}, index: number) {
+    if (confirm(`Are you sure you want to delete "${thumb.fileName}"?`)) {
+      this.fileUploadService.deleteImage(thumb.id).subscribe({
+        next: (response) => {
+          if (response.success) {
+            // Remove from thumbnails array
+            this.uploadedImageThumbnails.splice(index, 1);
+            // Update uploaded images count
+            this.uploadedImages = this.uploadedImageThumbnails.length;
+            // Also remove from gallery images if present
+            this.galleryImages = this.galleryImages.filter(img => img.id !== thumb.id);
+            this.notificationService.success('Image Deleted', `Successfully deleted "${thumb.fileName}".`);
+            
+            // Update current step if no images left
+            this.updateCurrentStep();
+          } else {
+            this.notificationService.error('Delete Failed', 'Failed to delete the image.');
+          }
+        },
+        error: (error: any) => {
+          console.error('Failed to delete uploaded image:', error);
           const errorMessage = error.error?.message || error.message || 'Unknown error';
           this.notificationService.error('Delete Error', `Failed to delete image: ${errorMessage}`);
         }

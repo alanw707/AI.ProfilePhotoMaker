@@ -26,6 +26,7 @@ public class ProfileController : ControllerBase
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<ProfileController> _logger;
     private readonly IConfiguration _configuration;
+    private readonly IReplicateApiClient _replicateApiClient;
 
     public ProfileController(
         IImageProcessingService imageProcessingService,
@@ -33,7 +34,8 @@ public class ProfileController : ControllerBase
         ApplicationDbContext context,
         IWebHostEnvironment environment,
         ILogger<ProfileController> logger,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IReplicateApiClient replicateApiClient)
     {
         _imageProcessingService = imageProcessingService;
         _userProfileRepository = userProfileRepository;
@@ -41,6 +43,7 @@ public class ProfileController : ControllerBase
         _environment = environment;
         _logger = logger;
         _configuration = configuration;
+        _replicateApiClient = replicateApiClient;
     }
 
     [HttpGet]
@@ -62,6 +65,9 @@ public class ProfileController : ControllerBase
             LastName = profile.LastName,
             Gender = profile.Gender,
             Ethnicity = profile.Ethnicity,
+            TrainedModelId = profile.TrainedModelId,
+            TrainedModelVersionId = profile.TrainedModelVersionId,
+            ModelTrainedAt = profile.ModelTrainedAt,
             CreatedAt = profile.CreatedAt,
             UpdatedAt = profile.UpdatedAt,
             TotalProcessedImages = profile.ProcessedImages.Count
@@ -100,6 +106,9 @@ public class ProfileController : ControllerBase
             LastName = profile.LastName,
             Gender = profile.Gender,
             Ethnicity = profile.Ethnicity,
+            TrainedModelId = null, // New profile won't have trained model
+            TrainedModelVersionId = null,
+            ModelTrainedAt = null,
             CreatedAt = profile.CreatedAt,
             UpdatedAt = profile.UpdatedAt,
             TotalProcessedImages = 0
@@ -136,6 +145,9 @@ public class ProfileController : ControllerBase
             LastName = profile.LastName,
             Gender = profile.Gender,
             Ethnicity = profile.Ethnicity,
+            TrainedModelId = profile.TrainedModelId,
+            TrainedModelVersionId = profile.TrainedModelVersionId,
+            ModelTrainedAt = profile.ModelTrainedAt,
             CreatedAt = profile.CreatedAt,
             UpdatedAt = profile.UpdatedAt,
             TotalProcessedImages = profile.ProcessedImages.Count
@@ -247,7 +259,7 @@ public class ProfileController : ControllerBase
             string? zipPath = null;
             if (dto.ForTraining)
             {
-                zipPath = await CreateTrainingZip(uploadDir, userId);
+                zipPath = CreateTrainingZip(uploadDir, userId);
             }
 
             return Ok(new
@@ -320,12 +332,12 @@ public class ProfileController : ControllerBase
             .Select(i => new
             {
                 i.Id,
-                OriginalImageUrl = !string.IsNullOrEmpty(i.OriginalImageUrl) ? GetAbsoluteUrl(i.OriginalImageUrl) : i.OriginalImageUrl,
-                ProcessedImageUrl = !string.IsNullOrEmpty(i.ProcessedImageUrl) ? GetAbsoluteUrl(i.ProcessedImageUrl) : i.ProcessedImageUrl,
+                OriginalImageUrl = !string.IsNullOrEmpty(i.OriginalImageUrl) ? (i.OriginalImageUrl.StartsWith("http") ? i.OriginalImageUrl : GetAbsoluteUrl(i.OriginalImageUrl)) : i.OriginalImageUrl,
+                ProcessedImageUrl = !string.IsNullOrEmpty(i.ProcessedImageUrl) ? (i.ProcessedImageUrl.StartsWith("http") ? i.ProcessedImageUrl : GetAbsoluteUrl(i.ProcessedImageUrl)) : i.ProcessedImageUrl,
                 i.Style,
                 i.CreatedAt,
                 IsOriginalUpload = i.Style == "Original",
-                IsGenerated = !string.IsNullOrEmpty(i.ProcessedImageUrl),
+                IsGenerated = i.IsGenerated,
                 FileExists = !string.IsNullOrEmpty(i.OriginalImageUrl) && 
                             System.IO.File.Exists(Path.Combine(_environment.ContentRootPath, i.OriginalImageUrl.TrimStart('/')))
             })
@@ -394,42 +406,44 @@ public class ProfileController : ControllerBase
 
         try
         {
-            // Get uploaded images (original style)
+            // Get uploaded images count for response message
             var uploadedImages = profile.ProcessedImages.Where(i => i.Style == ProfileControllerConstants.OriginalStyle).ToList();
             
-            if (uploadedImages.Count < 4)
-            {
-                return BadRequest(new { 
-                    success = false, 
-                    error = new { 
-                        code = "InsufficientImages", 
-                        message = $"Need at least 4 images for training (currently {uploadedImages.Count})" 
-                    } 
-                });
-            }
-
             var uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
-            if (!Directory.Exists(uploadDir))
-            {
-                return BadRequest(new { 
-                    success = false, 
-                    error = new { 
-                        code = "NoUploadDirectory", 
-                        message = "No uploaded images found" 
-                    } 
-                });
-            }
-
-            // Create training ZIP from existing uploaded images
-            var zipPath = await CreateTrainingZip(uploadDir, userId);
+            
+            // Create training ZIP from existing uploaded images (validation handled inside method)
+            var zipPath = CreateTrainingZip(uploadDir, userId);
             
             if (string.IsNullOrEmpty(zipPath))
             {
+                // Check specific reasons for failure
+                if (uploadedImages.Count < 4)
+                {
+                    return BadRequest(new { 
+                        success = false, 
+                        error = new { 
+                            code = "InsufficientImages", 
+                            message = $"Need at least 4 images for training (currently {uploadedImages.Count})" 
+                        } 
+                    });
+                }
+                
+                if (!Directory.Exists(uploadDir))
+                {
+                    return BadRequest(new { 
+                        success = false, 
+                        error = new { 
+                            code = "NoUploadDirectory", 
+                            message = "Upload directory not found. Please upload images first." 
+                        } 
+                    });
+                }
+                
                 return StatusCode(500, new { 
                     success = false, 
                     error = new { 
                         code = "ZipCreationFailed", 
-                        message = "Failed to create training ZIP file" 
+                        message = "Failed to create training ZIP file. Check that all uploaded images are still available." 
                     } 
                 });
             }
@@ -438,7 +452,7 @@ public class ProfileController : ControllerBase
                 success = true, 
                 zipCreated = true,
                 zipPath = zipPath,
-                message = $"Training ZIP created with {uploadedImages.Count} images"
+                message = $"Training ZIP created with all {uploadedImages.Count} uploaded original images"
             });
         }
         catch (Exception ex)
@@ -541,7 +555,7 @@ public class ProfileController : ControllerBase
         }
     }
 
-    private async Task<string?> CreateTrainingZip(string uploadDir, string userId)
+    private string? CreateTrainingZip(string uploadDir, string userId)
     {
         try
         {
@@ -550,6 +564,7 @@ public class ProfileController : ControllerBase
 
             using (var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create))
             {
+                // Get all image files from the upload directory (only contains original uploads)
                 var imageFiles = Directory.GetFiles(uploadDir, "*.*")
                     .Where(f =>
                     {
@@ -559,10 +574,18 @@ public class ProfileController : ControllerBase
                     })
                     .ToArray();
 
+                if (imageFiles.Length < 4)
+                {
+                    _logger.LogWarning("Insufficient images ({Count}) for training ZIP for user {UserId}", imageFiles.Length, userId);
+                    return null;
+                }
+
                 foreach (var file in imageFiles)
                 {
                     archive.CreateEntryFromFile(file, Path.GetFileName(file));
                 }
+
+                _logger.LogInformation("Created training ZIP for user {UserId} with {FileCount} images", userId, imageFiles.Length);
             }
 
             return zipPath;
@@ -574,89 +597,6 @@ public class ProfileController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Set the user's preferred style for image generation
-    /// </summary>
-    [HttpPost("set-style")]
-    public async Task<IActionResult> SetUserStyle([FromBody] SetStyleRequest request)
-    {
-        try
-        {
-            var userId = GetCurrentUserId();
-            if (userId == null)
-                return Unauthorized();
-
-            // Validate that the style exists and is active
-            var style = await _context.Styles
-                .FirstOrDefaultAsync(s => s.Id == request.StyleId && s.IsActive);
-
-            if (style == null)
-                return BadRequest(new { success = false, error = new { code = "StyleNotFound", message = "Style not found or inactive." } });
-
-            // Get or create user profile
-            var profile = await _userProfileRepository.GetByUserIdAsync(userId);
-
-            if (profile == null)
-                return BadRequest(new { success = false, error = new { code = "ProfileNotFound", message = "User profile not found. Please create a profile first." } });
-
-            // Update user's style preference
-            profile.StyleId = request.StyleId;
-            profile.UpdatedAt = DateTime.UtcNow;
-
-            await _userProfileRepository.UpdateAsync(profile);
-
-            return Ok(new { 
-                success = true, 
-                data = new { 
-                    styleId = style.Id, 
-                    styleName = style.Name, 
-                    styleDescription = style.Description 
-                }, 
-                error = (object?)null 
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error setting user style");
-            return StatusCode(500, new { success = false, error = new { code = "DatabaseError", message = "Failed to set user style." } });
-        }
-    }
-
-    /// <summary>
-    /// Get the user's current style preference
-    /// </summary>
-    [HttpGet("style")]
-    public async Task<IActionResult> GetUserStyle()
-    {
-        try
-        {
-            var userId = GetCurrentUserId();
-            if (userId == null)
-                return Unauthorized();
-
-            var profile = await _context.UserProfiles
-                .Include(p => p.Style)
-                .FirstOrDefaultAsync(p => p.UserId == userId);
-
-            if (profile?.Style == null)
-                return Ok(new { success = true, data = (object?)null, error = (object?)null });
-
-            return Ok(new { 
-                success = true, 
-                data = new { 
-                    styleId = profile.Style.Id, 
-                    styleName = profile.Style.Name, 
-                    styleDescription = profile.Style.Description 
-                }, 
-                error = (object?)null 
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting user style");
-            return StatusCode(500, new { success = false, error = new { code = "DatabaseError", message = "Failed to get user style." } });
-        }
-    }
 
     /// <summary>
     /// Get list of available training ZIP files for the user with public URLs
@@ -858,6 +798,79 @@ public class ProfileController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Checks and updates the user's model status by verifying if the model still exists on Replicate
+    /// </summary>
+    [HttpPost("check-model-status")]
+    public async Task<IActionResult> CheckModelStatus()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var userProfile = await _context.UserProfiles.FirstOrDefaultAsync(u => u.UserId == userId);
+            
+            if (userProfile == null)
+                return NotFound(new { success = false, error = new { code = "UserNotFound", message = "User profile not found." } });
+
+            // If user doesn't have a trained model, nothing to check
+            if (string.IsNullOrEmpty(userProfile.TrainedModelId))
+            {
+                return Ok(new { 
+                    success = true, 
+                    data = new { 
+                        modelExists = false, 
+                        modelStatus = "no_model",
+                        message = "No trained model found." 
+                    }, 
+                    error = (object?)null 
+                });
+            }
+
+            // Check if model exists on Replicate
+            bool modelExists = await _replicateApiClient.CheckModelExistsAsync(userProfile.TrainedModelId);
+            
+            if (!modelExists)
+            {
+                // Model was deleted from Replicate, clear it from our database
+                _logger.LogWarning("Model {ModelId} for user {UserId} no longer exists on Replicate, clearing from database", 
+                    userProfile.TrainedModelId, userId);
+                
+                userProfile.TrainedModelId = null;
+                userProfile.TrainedModelVersionId = null;
+                userProfile.ModelTrainedAt = null;
+                userProfile.UpdatedAt = DateTime.UtcNow;
+                
+                await _context.SaveChangesAsync();
+                
+                return Ok(new { 
+                    success = true, 
+                    data = new { 
+                        modelExists = false, 
+                        modelStatus = "deleted",
+                        message = "Model was deleted from Replicate and cleared from database." 
+                    }, 
+                    error = (object?)null 
+                });
+            }
+            
+            return Ok(new { 
+                success = true, 
+                data = new { 
+                    modelExists = true, 
+                    modelStatus = "active",
+                    modelId = userProfile.TrainedModelId,
+                    message = "Model exists and is accessible." 
+                }, 
+                error = (object?)null 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking model status for user");
+            return StatusCode(500, new { success = false, error = new { code = "ModelStatusCheckFailed", message = "Failed to check model status." } });
+        }
+    }
+
     private string GetAbsoluteUrl(string relativePath)
     {
         // Use configured AppBaseUrl (ngrok) instead of localhost for external access
@@ -872,7 +885,3 @@ public class ProfileController : ControllerBase
     }
 }
 
-/// <summary>
-/// DTO for setting user style preference
-/// </summary>
-public record SetStyleRequest(int StyleId);

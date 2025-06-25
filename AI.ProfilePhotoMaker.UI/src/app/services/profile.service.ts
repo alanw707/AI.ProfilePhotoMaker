@@ -11,6 +11,7 @@ export interface UserProfile {
   gender?: string;
   ethnicity?: string;
   trainedModelId?: string;
+  trainedModelVersionId?: string;
   modelTrainedAt?: Date;
   subscriptionTier: string;
   basicCredits: number;
@@ -53,5 +54,9 @@ export class ProfileService {
 
   deleteProfile(): Observable<{ success: boolean; message: string }> {
     return this.http.delete<{ success: boolean; message: string }>(this.config.profileUrl);
+  }
+
+  checkModelStatus(): Observable<{ success: boolean; data: { modelExists: boolean; modelStatus: string; modelId?: string; message: string }; error: any }> {
+    return this.http.post<{ success: boolean; data: { modelExists: boolean; modelStatus: string; modelId?: string; message: string }; error: any }>(`${this.config.profileUrl}/check-model-status`, {});
   }
 }

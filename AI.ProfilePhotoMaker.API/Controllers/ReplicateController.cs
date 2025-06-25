@@ -2,8 +2,10 @@ using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services;
+using AI.ProfilePhotoMaker.API.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace AI.ProfilePhotoMaker.API.Controllers;
@@ -15,11 +17,19 @@ public class ReplicateController : ControllerBase
 {
     private readonly IReplicateApiClient _replicateApiClient;
     private readonly IBasicTierService _basicTierService;
+    private readonly ApplicationDbContext _dbContext;
+    private readonly ILogger<ReplicateController> _logger;
 
-    public ReplicateController(IReplicateApiClient replicateApiClient, IBasicTierService basicTierService)
+    public ReplicateController(
+        IReplicateApiClient replicateApiClient, 
+        IBasicTierService basicTierService,
+        ApplicationDbContext dbContext,
+        ILogger<ReplicateController> logger)
     {
         _replicateApiClient = replicateApiClient;
         _basicTierService = basicTierService;
+        _dbContext = dbContext;
+        _logger = logger;
     }
 
     /// <summary>
@@ -34,6 +44,20 @@ public class ReplicateController : ControllerBase
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId))
             return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+
+        // Check if user already has a trained model to prevent expensive re-training
+        var userProfile = await _dbContext.UserProfiles.FirstOrDefaultAsync(u => u.UserId == userId);
+        if (userProfile != null && !string.IsNullOrEmpty(userProfile.TrainedModelId))
+        {
+            _logger.LogWarning("User {UserId} attempted to train a new model but already has trained model {ModelId}", userId, userProfile.TrainedModelId);
+            return BadRequest(new { 
+                success = false, 
+                error = new { 
+                    code = "ModelAlreadyTrained", 
+                    message = $"You already have a trained model ({userProfile.TrainedModelId}). You can generate photos using your existing model instead of training a new one." 
+                } 
+            });
+        }
 
         // Check if user has sufficient purchased credits for training (15 credits required)
         var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
@@ -50,22 +74,18 @@ public class ReplicateController : ControllerBase
             });
         }
 
-        // Consume credits for training
-        var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "model_training");
-        if (!creditConsumed)
-        {
-            return BadRequest(new { 
-                success = false, 
-                error = new { 
-                    code = "CreditConsumptionFailed", 
-                    message = "Failed to consume credits for training. Please try again." 
-                } 
-            });
-        }
-
         try
         {
             var result = await _replicateApiClient.CreateModelTrainingAsync(dto.UserId, dto.ImageZipUrl);
+            
+            // Only consume credits AFTER successful API call
+            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "model_training");
+            if (!creditConsumed)
+            {
+                _logger.LogError("Successfully created Replicate training but failed to consume credits for user {UserId}", userId);
+                // Note: In this case, the Replicate training is already running but we couldn't charge credits
+                // This is better than charging credits for failed training requests
+            }
             
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
             
@@ -109,6 +129,9 @@ public class ReplicateController : ControllerBase
     [HttpPost("generate")]
     public async Task<IActionResult> GenerateImages([FromBody] GenerateImagesRequestDto dto)
     {
+        _logger.LogInformation("Generation request received: TrainedModelVersion='{TrainedModelVersion}', UserId='{UserId}', Style='{Style}'", 
+            dto.TrainedModelVersion, dto.UserId, dto.Style);
+
         if (!ModelState.IsValid)
             return BadRequest(new { success = false, error = new { code = "InvalidModel", message = "Invalid input." } });
 
@@ -131,22 +154,29 @@ public class ReplicateController : ControllerBase
             });
         }
 
-        // Consume credits for styled generation
-        var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "styled_generation");
-        if (!creditConsumed)
-        {
-            return BadRequest(new { 
-                success = false, 
-                error = new { 
-                    code = "CreditConsumptionFailed", 
-                    message = "Failed to consume credits for generation. Please try again." 
-                } 
-            });
-        }
-
         try
         {
-            var result = await _replicateApiClient.GenerateImagesAsync(dto.TrainedModelVersion, dto.UserId, dto.Style, dto.UserInfo);
+            // Get user info from database for prompt generation
+            var userProfile = await _dbContext.UserProfiles.FirstOrDefaultAsync(u => u.UserId == userId);
+            var userInfo = userProfile != null ? new UserInfo 
+            { 
+                Gender = userProfile.Gender, 
+                Ethnicity = userProfile.Ethnicity 
+            } : null;
+            
+            _logger.LogInformation("Retrieved user info from database: Gender={Gender}, Ethnicity={Ethnicity}", 
+                userInfo?.Gender ?? "NULL", userInfo?.Ethnicity ?? "NULL");
+            
+            var result = await _replicateApiClient.GenerateImagesAsync(dto.TrainedModelVersion, dto.UserId, dto.Style, userInfo);
+            
+            // Only consume credits AFTER successful API call
+            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "styled_generation");
+            if (!creditConsumed)
+            {
+                _logger.LogError("Successfully created Replicate prediction but failed to consume credits for user {UserId}", userId);
+                // Note: In this case, the Replicate prediction is already running but we couldn't charge credits
+                // This is better than charging credits for failed predictions
+            }
             
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
             
@@ -160,15 +190,16 @@ public class ReplicateController : ControllerBase
                 error = (object?)null 
             });
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Error generating images for user {UserId}", userId);
             // If generation fails, we might want to refund the credit
             // For now, we'll just return failure
             return StatusCode(500, new { 
                 success = false, 
                 error = new { 
                     code = "GenerationFailed", 
-                    message = "Failed to start image generation. Please try again later." 
+                    message = $"Failed to start image generation: {ex.Message}" 
                 } 
             });
         }
@@ -358,23 +389,19 @@ public class ReplicateController : ControllerBase
             });
         }
 
-        // Consume credit for enhancement
-        var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "photo_enhancement");
-        if (!creditConsumed)
-        {
-            return StatusCode(500, new { 
-                success = false, 
-                error = new { 
-                    code = "CreditConsumptionFailed", 
-                    message = "Failed to process request. Please try again." 
-                } 
-            });
-        }
-
         try
         {
             // Enhance the uploaded photo
             var result = await _replicateApiClient.EnhancePhotoAsync(userId, dto.ImageUrl, dto.EnhancementType ?? "professional");
+            
+            // Only consume credit AFTER successful API call
+            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "photo_enhancement");
+            if (!creditConsumed)
+            {
+                _logger.LogError("Successfully created Replicate enhancement but failed to consume credits for user {UserId}", userId);
+                // Note: In this case, the Replicate enhancement is already running but we couldn't charge credits
+                // This is better than charging credits for failed enhancement requests
+            }
             
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
             
