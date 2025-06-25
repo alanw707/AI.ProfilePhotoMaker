@@ -186,6 +186,15 @@ Planned implementation of background jobs for:
 - **Model Cleanup**: Delete custom models after 24 hours
 - **Scheduled Notifications**: Email users about pending deletions
 
+### Semantic Search for Codebase Analysis
+
+The project leverages semantic search tools to:
+- Analyze code and documentation for onboarding and refactoring
+- Identify relevant files and code snippets for specific queries
+- Improve developer productivity and documentation accuracy
+
+Semantic search is used in conjunction with Copilot and other AI assistants to provide context-aware suggestions and automate documentation updates.
+
 ---
 
 ## Scalability Considerations
