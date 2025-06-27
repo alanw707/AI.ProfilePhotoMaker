@@ -309,7 +309,6 @@ if (string.IsNullOrEmpty(jwtSecret) || jwtSecret.Length < 32)
 
 // Register the Services
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IImageProcessingService, AzureImageProcessingService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IBasicTierService, AI.ProfilePhotoMaker.API.Services.BasicTierService>();
 builder.Services.AddHttpClient<IReplicateApiClient, ReplicateApiClient>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository, AI.ProfilePhotoMaker.API.Data.UserProfileRepository>();
@@ -322,10 +321,14 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.ICreditPackageServi
 // Register Payment Services
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Payment.IPaymentService, AI.ProfilePhotoMaker.API.Services.Payment.StripePaymentService>();
 
+// Register Retention Policy Services
+builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IRetentionPolicyService, AI.ProfilePhotoMaker.API.Services.RetentionPolicyService>();
+
 // Register background services
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelCreationPollingService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.BasicTierBackgroundService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelExpirationBackgroundService>();
+builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.RetentionPolicyBackgroundService>();
 
 
 builder.Services.AddControllers();
