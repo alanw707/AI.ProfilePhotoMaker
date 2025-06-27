@@ -1,0 +1,556 @@
+// Settings Component Styles
+.settings-container
+  min-height: 100vh
+  background: var(--bg-primary)
+  color: var(--text-primary)
+  position: relative
+
+// Main Content
+.settings-main
+  padding: 2rem
+  max-width: 1200px
+  margin: 0 auto
+
+.settings-content
+  display: flex
+  flex-direction: column
+  gap: 2rem
+
+// Page Header
+.page-header
+  margin-bottom: 1rem
+  
+  .breadcrumb
+    display: flex
+    align-items: center
+    gap: 8px
+    margin-bottom: 12px
+    font-size: 0.9rem
+    
+    .breadcrumb-link
+      color: var(--accent-color)
+      text-decoration: none
+      
+      &:hover
+        text-decoration: underline
+    
+    .breadcrumb-separator
+      color: var(--text-secondary)
+    
+    .breadcrumb-current
+      color: var(--text-secondary)
+  
+  h1
+    font-size: 2.5rem
+    font-weight: 700
+    margin: 0 0 8px 0
+    color: var(--text-primary)
+  
+  .page-subtitle
+    font-size: 1.1rem
+    color: var(--text-secondary)
+    margin: 0
+
+// Loading State
+.loading-section
+  display: flex
+  flex-direction: column
+  align-items: center
+  gap: 16px
+  padding: 4rem 2rem
+  color: var(--text-secondary)
+
+.spinner
+  width: 32px
+  height: 32px
+  border: 3px solid var(--border-color)
+  border-top: 3px solid var(--accent-color)
+  border-radius: 50%
+  animation: spin 1s linear infinite
+
+@keyframes spin
+  0%
+    transform: rotate(0deg)
+  100%
+    transform: rotate(360deg)
+
+// Settings Sections
+.settings-sections
+  display: flex
+  flex-direction: column
+  gap: 2rem
+
+.settings-section
+  background: var(--bg-secondary)
+  border-radius: 12px
+  border: 1px solid var(--border-color)
+  padding: 2rem
+  
+  .section-header
+    margin-bottom: 1.5rem
+    
+    h2
+      font-size: 1.5rem
+      font-weight: 600
+      margin: 0 0 8px 0
+      color: var(--text-primary)
+    
+    p
+      color: var(--text-secondary)
+      margin: 0
+      font-size: 0.95rem
+
+// Account Information
+.info-grid
+  display: grid
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr))
+  gap: 1.5rem
+  margin-bottom: 2rem
+
+.info-item
+  display: flex
+  flex-direction: column
+  gap: 4px
+  
+  label
+    font-size: 0.85rem
+    font-weight: 600
+    color: var(--text-secondary)
+    text-transform: uppercase
+    letter-spacing: 0.5px
+  
+  span
+    font-size: 1rem
+    color: var(--text-primary)
+    font-weight: 500
+
+.tier-badge
+  display: inline-block
+  padding: 4px 12px
+  border-radius: 16px
+  font-size: 0.8rem
+  font-weight: 600
+  text-transform: uppercase
+  
+  &.basic
+    background: var(--bg-tertiary)
+    color: var(--text-secondary)
+  
+  &.premium
+    background: linear-gradient(45deg, #667eea 0%, #764ba2 100%)
+    color: white
+  
+  &.pro
+    background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%)
+    color: white
+
+.section-actions
+  display: flex
+  gap: 12px
+  flex-wrap: wrap
+
+// Data Stats
+.data-stats
+  display: grid
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))
+  gap: 1rem
+  margin-bottom: 2rem
+
+.stat-card
+  background: var(--bg-tertiary)
+  border: 1px solid var(--border-color)
+  border-radius: 8px
+  padding: 1.5rem
+  text-align: center
+  
+  .stat-icon
+    font-size: 2rem
+    margin-bottom: 12px
+  
+  .stat-content
+    h3
+      font-size: 1.8rem
+      font-weight: 700
+      margin: 0 0 4px 0
+      color: var(--text-primary)
+    
+    p
+      font-size: 1rem
+      font-weight: 600
+      margin: 0 0 4px 0
+      color: var(--text-primary)
+    
+    small
+      font-size: 0.8rem
+      color: var(--text-secondary)
+
+// Data Retention Policy
+.retention-policy
+  background: var(--bg-tertiary)
+  border: 1px solid var(--border-color)
+  border-radius: 8px
+  padding: 1.5rem
+  margin-bottom: 2rem
+  
+  .policy-header
+    margin-bottom: 1rem
+    
+    h4
+      font-size: 1.1rem
+      font-weight: 600
+      margin: 0
+      color: var(--text-primary)
+  
+  .policy-content
+    display: flex
+    flex-direction: column
+    gap: 12px
+
+.policy-item
+  display: flex
+  align-items: flex-start
+  gap: 12px
+  
+  .policy-icon
+    font-size: 1.2rem
+    margin-top: 2px
+  
+  .policy-text
+    flex: 1
+    font-size: 0.9rem
+    line-height: 1.4
+    color: var(--text-secondary)
+    
+    strong
+      color: var(--text-primary)
+
+// Data Actions
+.data-actions
+  display: flex
+  flex-direction: column
+  gap: 1.5rem
+  margin-bottom: 3rem
+
+.action-item
+  display: flex
+  align-items: center
+  justify-content: space-between
+  gap: 2rem
+  padding: 1.5rem
+  background: var(--bg-tertiary)
+  border: 1px solid var(--border-color)
+  border-radius: 8px
+  
+  .action-info
+    flex: 1
+    
+    h4
+      font-size: 1.1rem
+      font-weight: 600
+      margin: 0 0 8px 0
+      color: var(--text-primary)
+    
+    p
+      font-size: 0.9rem
+      color: var(--text-secondary)
+      margin: 0
+      line-height: 1.4
+
+// Danger Zone
+.danger-zone
+  background: rgba(239, 68, 68, 0.05)
+  border: 1px solid rgba(239, 68, 68, 0.2)
+  border-radius: 8px
+  padding: 2rem
+  
+  .danger-header
+    margin-bottom: 2rem
+    
+    h3
+      font-size: 1.3rem
+      font-weight: 600
+      margin: 0 0 8px 0
+      color: var(--error-color)
+    
+    p
+      color: var(--text-secondary)
+      margin: 0
+      font-size: 0.95rem
+
+.danger-actions
+  display: flex
+  flex-direction: column
+  gap: 1.5rem
+
+.danger-item
+  display: flex
+  align-items: center
+  justify-content: space-between
+  gap: 2rem
+  padding: 1.5rem
+  background: var(--bg-secondary)
+  border: 1px solid rgba(239, 68, 68, 0.2)
+  border-radius: 8px
+  
+  .danger-info
+    flex: 1
+    
+    h4
+      font-size: 1.1rem
+      font-weight: 600
+      margin: 0 0 8px 0
+      color: var(--text-primary)
+    
+    p
+      font-size: 0.9rem
+      color: var(--text-secondary)
+      margin: 0 0 12px 0
+      line-height: 1.4
+
+.warning-badges
+  display: flex
+  gap: 8px
+  flex-wrap: wrap
+
+.warning-badge
+  display: inline-block
+  padding: 4px 8px
+  background: rgba(239, 68, 68, 0.1)
+  color: var(--error-color)
+  border-radius: 4px
+  font-size: 0.75rem
+  font-weight: 600
+
+// Buttons
+.btn
+  display: inline-flex
+  align-items: center
+  gap: 8px
+  padding: 12px 20px
+  border-radius: 6px
+  font-weight: 500
+  text-decoration: none
+  cursor: pointer
+  transition: all 0.2s ease
+  border: 1px solid transparent
+  font-size: 0.9rem
+  
+  &:disabled
+    opacity: 0.6
+    cursor: not-allowed
+  
+  svg
+    width: 16px
+    height: 16px
+
+.btn-primary
+  background: var(--accent-color)
+  color: white
+  
+  &:hover:not(:disabled)
+    background: var(--accent-hover)
+
+.btn-secondary
+  background: var(--bg-tertiary)
+  color: var(--text-primary)
+  border-color: var(--border-color)
+  
+  &:hover:not(:disabled)
+    background: var(--bg-primary)
+
+.btn-outline-danger
+  background: transparent
+  color: var(--error-color)
+  border-color: var(--error-color)
+  
+  &:hover:not(:disabled)
+    background: var(--error-color)
+    color: white
+
+.btn-danger
+  background: var(--error-color)
+  color: white
+  
+  &:hover:not(:disabled)
+    background: #dc2626
+
+// Modal
+.modal-overlay
+  position: fixed
+  top: 0
+  left: 0
+  right: 0
+  bottom: 0
+  background: rgba(0, 0, 0, 0.6)
+  display: flex
+  align-items: center
+  justify-content: center
+  z-index: 2000
+  padding: 2rem
+
+.modal-content
+  background: var(--bg-secondary)
+  border-radius: 12px
+  border: 1px solid var(--border-color)
+  width: 100%
+  max-width: 500px
+  max-height: 90vh
+  overflow-y: auto
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3)
+
+.modal-header
+  display: flex
+  align-items: center
+  justify-content: space-between
+  padding: 1.5rem 2rem
+  border-bottom: 1px solid var(--border-color)
+  
+  h3
+    font-size: 1.3rem
+    font-weight: 600
+    margin: 0
+    color: var(--text-primary)
+  
+  .modal-close
+    background: none
+    border: none
+    color: var(--text-secondary)
+    cursor: pointer
+    padding: 4px
+    border-radius: 4px
+    
+    &:hover
+      background: var(--bg-tertiary)
+
+.modal-body
+  padding: 2rem
+  text-align: center
+  
+  .confirmation-icon
+    margin: 0 auto 1.5rem auto
+    width: 72px
+    height: 72px
+    border-radius: 50%
+    display: flex
+    align-items: center
+    justify-content: center
+    
+    &.photos
+      background: rgba(59, 130, 246, 0.1)
+      color: #3b82f6
+    
+    &.model
+      background: rgba(168, 85, 247, 0.1)
+      color: #a855f7
+    
+    &.all, &.account
+      background: rgba(239, 68, 68, 0.1)
+      color: var(--error-color)
+  
+  p
+    font-size: 1rem
+    color: var(--text-secondary)
+    margin: 0 0 1.5rem 0
+    line-height: 1.5
+
+.confirmation-details
+  text-align: left
+  background: var(--bg-tertiary)
+  border-radius: 8px
+  padding: 1.5rem
+  margin: 1.5rem 0
+  
+  h4
+    font-size: 1rem
+    font-weight: 600
+    margin: 0 0 12px 0
+    color: var(--text-primary)
+  
+  ul
+    margin: 0
+    padding-left: 20px
+    
+    li
+      margin-bottom: 4px
+      color: var(--text-secondary)
+
+.confirmation-input
+  text-align: left
+  margin-top: 1.5rem
+  
+  label
+    display: block
+    font-size: 0.9rem
+    font-weight: 600
+    color: var(--text-primary)
+    margin-bottom: 8px
+  
+  .form-control
+    width: 100%
+    padding: 12px
+    border: 1px solid var(--border-color)
+    border-radius: 6px
+    background: var(--bg-primary)
+    color: var(--text-primary)
+    font-size: 1rem
+    
+    &:focus
+      outline: none
+      border-color: var(--accent-color)
+
+.modal-footer
+  display: flex
+  gap: 12px
+  justify-content: flex-end
+  padding: 1.5rem 2rem
+  border-top: 1px solid var(--border-color)
+
+// Responsive Design
+@media (max-width: 768px)
+  .settings-main
+    padding: 1rem
+  
+  .header-content
+    padding: 0 1rem
+    height: 70px
+  
+  .nav-menu
+    display: none
+  
+  .page-header h1
+    font-size: 2rem
+  
+  .info-grid
+    grid-template-columns: 1fr
+  
+  .data-stats
+    grid-template-columns: repeat(2, 1fr)
+  
+  .action-item, .danger-item
+    flex-direction: column
+    align-items: stretch
+    gap: 1rem
+  
+  .modal-overlay
+    padding: 1rem
+  
+  .modal-content
+    max-width: none
+
+@media (max-width: 480px)
+  .data-stats
+    grid-template-columns: 1fr
+  
+  .user-section
+    .user-info
+      display: none
+  
+  .theme-toggle
+    top: 15px
+    right: 15px
+    width: 40px
+    height: 40px
+    
+    svg
+      width: 20px
+      height: 20px

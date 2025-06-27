@@ -1,70 +1,6 @@
 <div class="dashboard-container">
-  <!-- Theme Toggle Button -->
-  <button class="theme-toggle" (click)="toggleTheme()" [attr.aria-label]="'Switch to ' + (themeService.isDark() ? 'light' : 'dark') + ' theme'">
-    <svg *ngIf="!themeService.isDark()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-    </svg>
-    <svg *ngIf="themeService.isDark()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-    </svg>
-  </button>
-
-  <!-- Navigation Header -->
-  <header class="dashboard-header">
-    <div class="header-content">
-      <div class="logo-section">
-        <img src="Logo.PNG" alt="AI Profile Photo Maker" class="header-logo">
-        <h1>AI Profile Photo Maker</h1>
-      </div>
-      
-      <!-- Navigation Menu -->
-      <nav class="nav-menu">
-        <a routerLink="/packages" routerLinkActive="active" class="nav-link">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2L3.09 8.26L12 22L20.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" fill="none"/>
-          </svg>
-          Packages
-        </a>
-        <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="3" width="7" height="9" stroke="currentColor" stroke-width="2"/>
-            <rect x="13" y="3" width="8" height="5" stroke="currentColor" stroke-width="2"/>
-            <rect x="13" y="12" width="8" height="9" stroke="currentColor" stroke-width="2"/>
-            <rect x="3" y="16" width="7" height="5" stroke="currentColor" stroke-width="2"/>
-          </svg>
-          Studio
-        </a>
-        <a routerLink="/enhance" routerLinkActive="active" class="nav-link">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-            <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2"/>
-          </svg>
-          Enhance
-        </a>
-        <a routerLink="/gallery" routerLinkActive="active" class="nav-link">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
-            <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2"/>
-          </svg>
-          Gallery
-        </a>
-      </nav>
-
-      <div class="user-section">
-        <div class="user-info">
-          <span class="user-name">Welcome, {{userName}}!</span>
-          <span class="user-email">{{userEmail}}</span>
-        </div>
-        <button class="btn btn-logout" (click)="logout()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M16 17L21 12M21 12L16 7M21 12H9M9 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Logout
-        </button>
-      </div>
-    </div>
-  </header>
+  <!-- Shared Header Navigation -->
+  <app-header-navigation></app-header-navigation>
 
   <!-- Main Dashboard Content -->
   <main class="dashboard-main">
@@ -94,10 +30,10 @@
               <p>Model Status</p>
             </div>
           </div>
-          <div class="stat-card" *ngIf="creditsInfo">
+          <div class="stat-card" *ngIf="creditsInfo || userCreditStatus">
             <div class="stat-icon">💎</div>
             <div class="stat-content">
-              <h3>{{creditsInfo.availableCredits}}</h3>
+              <h3>{{getTotalAvailableCredits()}}</h3>
               <p>Credits</p>
             </div>
           </div>
@@ -142,7 +78,7 @@
                   <li>✨ Train your own custom AI model</li>
                   <li>🎨 Generate photos in multiple professional styles</li>
                   <li>📸 Create 5-50 high-quality photos</li>
-                  <li>🔒 7-day model expiration for privacy</li>
+                  <li>🔒 Complete data control with account settings</li>
                 </ul>
                 <button class="btn btn-primary" routerLink="/packages">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -231,9 +167,86 @@
                 <p class="upload-status">✅ {{uploadedImageThumbnails.length}} images ready for training</p>
               </div>
 
+              <!-- Upload Guidelines -->
+              <div class="upload-guidelines" *ngIf="selectedFiles.length === 0">
+                <div class="guidelines-header">
+                  <div class="guidelines-icon">📝</div>
+                  <h4>Image Quality Guidelines</h4>
+                  <p>Follow these guidelines to ensure your photos pass our quality checks</p>
+                </div>
+                
+                <div class="guidelines-grid">
+                  <!-- Good Examples Column -->
+                  <div class="guidelines-column good-examples">
+                    <h5 class="column-title">✅ Good Examples</h5>
+                    <div class="guideline-item good">
+                      <span class="guideline-icon">✅</span>
+                      <span class="guideline-text">Use shoulders-up images</span>
+                    </div>
+                    <div class="guideline-item good">
+                      <span class="guideline-icon">✅</span>
+                      <span class="guideline-text">Waist-up images are also good</span>
+                    </div>
+                    <div class="guideline-item good">
+                      <span class="guideline-icon">✅</span>
+                      <span class="guideline-text">Looking at the camera</span>
+                    </div>
+                    <div class="guideline-item good">
+                      <span class="guideline-icon">✅</span>
+                      <span class="guideline-text">Good lighting and sharp focus</span>
+                    </div>
+                    <div class="guideline-item good">
+                      <span class="guideline-icon">✅</span>
+                      <span class="guideline-text">Minimum 1024x1024 pixels</span>
+                    </div>
+                  </div>
+
+                  <!-- Bad Examples Column -->
+                  <div class="guidelines-column bad-examples">
+                    <h5 class="column-title">❌ Bad Examples</h5>
+                    <div class="guideline-item bad">
+                      <span class="guideline-icon">❌</span>
+                      <span class="guideline-text">Extra people in photo</span>
+                    </div>
+                    <div class="guideline-item bad">
+                      <span class="guideline-icon">❌</span>
+                      <span class="guideline-text">Multiple photos same day</span>
+                    </div>
+                    <div class="guideline-item bad">
+                      <span class="guideline-icon">❌</span>
+                      <span class="guideline-text">Funny faces or expressions</span>
+                    </div>
+                    <div class="guideline-item bad">
+                      <span class="guideline-icon">❌</span>
+                      <span class="guideline-text">Filters, B&W or Sepia</span>
+                    </div>
+                    <div class="guideline-item bad">
+                      <span class="guideline-icon">❌</span>
+                      <span class="guideline-text">Bad lighting, low quality, blurry</span>
+                    </div>
+                    <div class="guideline-item bad">
+                      <span class="guideline-icon">❌</span>
+                      <span class="guideline-text">Hats, glasses, or face coverings</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Additional Info -->
+                <div class="guidelines-footer">
+                  <div class="guideline-item info">
+                    <span class="guideline-icon">📁</span>
+                    <span class="guideline-text">File Requirements: JPEG/PNG • Max 5MB • 10-20 photos recommended</span>
+                  </div>
+                  <div class="guideline-item info">
+                    <span class="guideline-icon">🗂️</span>
+                    <span class="guideline-text">Data Retention: Input photos 7 days • Generated photos 30 days</span>
+                  </div>
+                </div>
+              </div>
+
               <!-- Upload area for new images -->
               <div class="upload-area" 
-                   *ngIf="uploadedImageThumbnails.length === 0"
+                   *ngIf="selectedFiles.length === 0"
                    (click)="triggerFileUpload()"
                    (dragover)="onDragOver($event)"
                    (dragleave)="onDragLeave($event)"
@@ -260,6 +273,39 @@
                 <span *ngIf="!isUploading">Upload {{selectedFiles.length}} Images</span>
               </button>
               
+              <!-- Quality Check Progress -->
+              <div class="quality-check-progress" *ngIf="isCheckingQuality">
+                <div class="progress-bar">
+                  <div class="progress-fill indeterminate"></div>
+                </div>
+                <p class="progress-text">{{qualityCheckProgress}}</p>
+              </div>
+
+              <!-- Quality Check Errors -->
+              <div class="quality-check-errors" *ngIf="qualityCheckErrors.length > 0">
+                <h4>⚠️ Image Validation Issues</h4>
+                <div class="error-list">
+                  <div class="error-item" *ngFor="let errorFile of qualityCheckErrors">
+                    <div class="error-header">
+                      <span class="error-filename">{{errorFile.fileName}}</span>
+                      <button class="btn-retry" (click)="retryFile(errorFile)" title="Fix and retry this file">
+                        🔄 Retry
+                      </button>
+                    </div>
+                    <ul class="error-reasons">
+                      <li *ngFor="let error of errorFile.errors" class="error-reason">
+                        {{error}}
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="error-actions">
+                  <button class="btn btn-outline-primary" (click)="clearErrors()">
+                    Clear All Errors
+                  </button>
+                </div>
+              </div>
+
               <!-- Upload Progress Bar -->
               <div class="upload-progress" *ngIf="isUploading">
                 <div class="progress-bar">
@@ -418,6 +464,14 @@
                     <h4>🚀 Training Your AI Model</h4>
                     <p>This usually takes 15-25 minutes. You'll be notified when it's complete!</p>
                     <p class="eta">Estimated completion: {{estimatedCompletion}}</p>
+                    <div class="model-retention-info">
+                      <small class="text-muted">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-right: 4px;">
+                          <path d="M12 2L2 7v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7L12 2z" stroke="currentColor" stroke-width="2" fill="none"/>
+                        </svg>
+                        Your training photos will be deleted after 7 days. Generated images stored for 30 days.
+                      </small>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -435,9 +489,19 @@
               <!-- Generated Photos Results -->
               <div class="generated-results" *ngIf="generatedPhotos.length > 0">
                 <h4>🎉 Your Professional Photos Are Ready!</h4>
+                <div class="retention-warning">
+                  <div class="alert alert-info">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-right: 8px;">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                      <path d="M12 8v4l3 3" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    <strong>Data Retention:</strong> Your AI headshots will be stored for <strong>30 days</strong> for easy access and downloads. 
+                    You can delete your data anytime via account settings.
+                  </div>
+                </div>
                 <div class="results-grid">
                   <div class="result-card" *ngFor="let photo of generatedPhotos">
-                    <img [src]="photo.url" [alt]="photo.style">
+                    <img [src]="photo.url" [alt]="photo.style" (error)="onImageError($event)">
                     <div class="result-overlay">
                       <h4>{{photo.style}}</h4>
                       <div class="result-actions">

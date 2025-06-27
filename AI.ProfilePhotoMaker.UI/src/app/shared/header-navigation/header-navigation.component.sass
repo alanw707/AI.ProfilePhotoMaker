@@ -1,0 +1,160 @@
+// Shared Header Navigation Styles
+// This file contains unified styles for the header navigation used across all pages
+
+// Theme Toggle Button
+.theme-toggle
+  position: fixed
+  top: 24px
+  right: 24px
+  z-index: 1000
+  width: 48px
+  height: 48px
+  border-radius: 50%
+  border: none
+  background: var(--surface-primary)
+  color: var(--text-primary)
+  cursor: pointer
+  display: flex
+  align-items: center
+  justify-content: center
+  box-shadow: var(--shadow-lg)
+  transition: all 0.3s ease
+  
+  &:hover
+    transform: scale(1.1)
+    box-shadow: var(--shadow-xl)
+  
+  svg
+    width: 20px
+    height: 20px
+
+// App Header
+.app-header
+  background: var(--header-bg)
+  box-shadow: var(--shadow-sm)
+  border-bottom: 1px solid var(--border-color)
+  padding: 16px 0
+  position: sticky
+  top: 0
+  z-index: 100
+
+  .header-content
+    max-width: 1400px
+    margin: 0 auto
+    padding: 0 24px
+    display: flex
+    justify-content: space-between
+    align-items: center
+    gap: 32px
+
+  .logo-section
+    display: flex
+    align-items: center
+    gap: 16px
+
+    .header-logo
+      width: 48px
+      height: 48px
+      object-fit: contain
+      filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3))
+
+    h1
+      font-family: 'Poppins', sans-serif
+      color: var(--text-primary)
+      font-size: 20px
+      font-weight: 600
+      margin: 0
+
+  .nav-menu
+    display: flex
+    gap: 6px
+    flex: 1
+    justify-content: center
+    overflow: visible
+    flex-wrap: nowrap
+
+    .nav-link
+      display: flex
+      align-items: center
+      gap: 6px
+      padding: 8px 14px
+      border-radius: 8px
+      text-decoration: none
+      color: var(--text-secondary)
+      font-weight: 500
+      font-size: 13px
+      transition: all 0.3s ease
+      border: 1px solid transparent
+      white-space: nowrap
+      flex-shrink: 0
+
+      &:hover
+        background: var(--surface-secondary)
+        color: var(--text-primary)
+
+      &.active
+        background: var(--primary)
+        color: white
+        border-color: var(--primary)
+
+      svg
+        width: 16px
+        height: 16px
+
+  .user-section
+    display: flex
+    align-items: center
+    gap: 16px
+
+    .user-info
+      display: flex
+      flex-direction: column
+      align-items: flex-end
+      gap: 2px
+
+      .user-name
+        color: var(--text-primary)
+        font-weight: 600
+        font-size: 13px
+
+      .user-email
+        color: var(--text-secondary)
+        font-size: 11px
+
+    .btn-logout
+      display: flex
+      align-items: center
+      gap: 8px
+      padding: 8px 16px
+      background: transparent
+      border: 1px solid var(--border-color)
+      color: var(--text-secondary)
+      border-radius: 8px
+      cursor: pointer
+      font-size: 12px
+      transition: all 0.3s ease
+
+      &:hover
+        background: var(--danger)
+        color: white
+        border-color: var(--danger)
+
+// Responsive behavior
+@media (max-width: 768px)
+  .app-header
+    .header-content
+      padding: 0 16px
+      gap: 16px
+    
+    .nav-menu
+      display: none
+    
+    .logo-section h1
+      font-size: 16px
+    
+    .user-info
+      .user-name
+        font-size: 11px
+      
+      .user-email
+        display: none

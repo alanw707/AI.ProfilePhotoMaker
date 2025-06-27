@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
+import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
 import { CreditPackagesComponent } from '../../components/credit-packages/credit-packages.component';
 import { CreditService, UserCreditStatus } from '../../services/credit.service';
 import { NotificationService } from '../../services/notification.service';
@@ -10,75 +11,11 @@ import { NotificationService } from '../../services/notification.service';
 @Component({
   selector: 'app-premium',
   standalone: true,
-  imports: [CommonModule, RouterModule, CreditPackagesComponent],
+  imports: [CommonModule, RouterModule, HeaderNavigationComponent, CreditPackagesComponent],
   template: `
     <div class="premium-page-container">
-      <!-- Theme Toggle Button -->
-      <button class="theme-toggle" (click)="toggleTheme()" [attr.aria-label]="'Switch to ' + (themeService.isDark() ? 'light' : 'dark') + ' theme'">
-        <svg *ngIf="!themeService.isDark()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-        </svg>
-        <svg *ngIf="themeService.isDark()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-        </svg>
-      </button>
-
-      <!-- Navigation Header -->
-      <header class="dashboard-header">
-        <div class="header-content">
-          <div class="logo-section">
-            <img src="Logo.PNG" alt="AI Profile Photo Maker" class="header-logo">
-            <h1>AI Profile Photo Maker</h1>
-          </div>
-          
-          <!-- Navigation Menu -->
-          <nav class="nav-menu">
-            <a routerLink="/packages" routerLinkActive="active" class="nav-link">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L3.09 8.26L12 22L20.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" fill="none"/>
-              </svg>
-              Packages
-            </a>
-            <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="7" height="9" stroke="currentColor" stroke-width="2"/>
-                <rect x="13" y="3" width="8" height="5" stroke="currentColor" stroke-width="2"/>
-                <rect x="13" y="12" width="8" height="9" stroke="currentColor" stroke-width="2"/>
-                <rect x="3" y="16" width="7" height="5" stroke="currentColor" stroke-width="2"/>
-              </svg>
-              Studio
-            </a>
-            <a routerLink="/enhance" routerLinkActive="active" class="nav-link">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2"/>
-              </svg>
-              Enhance
-            </a>
-            <a routerLink="/gallery" routerLinkActive="active" class="nav-link">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
-                <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2"/>
-              </svg>
-              Gallery
-            </a>
-          </nav>
-
-          <div class="user-section">
-            <div class="user-info">
-              <span class="user-name">{{userName}}</span>
-              <span class="user-email">{{userEmail}}</span>
-            </div>
-            <button class="btn btn-logout" (click)="logout()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M16 17L21 12M21 12L16 7M21 12H9M9 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
+      <!-- Shared Header Navigation -->
+      <app-header-navigation></app-header-navigation>
 
       <!-- Main Premium Content -->
       <main class="premium-main">
@@ -103,7 +40,7 @@ import { NotificationService } from '../../services/notification.service';
                 <div class="feature-item">
                   <div class="feature-icon">🔒</div>
                   <h3>Privacy First</h3>
-                  <p>Your trained model expires after 7 days for complete privacy and data protection</p>
+                  <p>Input photos deleted after 7 days, AI headshots stored 30 days. Full data control in account settings.</p>
                 </div>
                 <div class="feature-item">
                   <div class="feature-icon">📸</div>
@@ -191,14 +128,11 @@ import { NotificationService } from '../../services/notification.service';
   styleUrls: ['./premium.component.sass']
 })
 export class PremiumComponent implements OnInit {
-  userName: string = '';
-  userEmail: string = '';
   userCreditStatus: UserCreditStatus | null = null;
 
   constructor(
     private authService: AuthService,
     private router: Router,
-    public themeService: ThemeService,
     private creditService: CreditService,
     private notificationService: NotificationService
   ) {}
@@ -213,27 +147,9 @@ export class PremiumComponent implements OnInit {
       return;
     }
     
-    this.loadUserInfo();
     this.loadCreditStatus();
   }
 
-  loadUserInfo() {
-    // Get user info from auth service
-    this.authService.currentUser$.subscribe(user => {
-      if (user) {
-        this.userEmail = user.email;
-        
-        // Use firstName/lastName from JWT if available, otherwise use email prefix
-        const jwtName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
-        if (jwtName) {
-          this.userName = jwtName;
-        } else {
-          // Fallback to email username if no JWT names
-          this.userName = this.userEmail.split('@')[0];
-        }
-      }
-    });
-  }
 
   loadCreditStatus() {
     this.creditService.getCreditStatus().subscribe({
@@ -260,12 +176,4 @@ export class PremiumComponent implements OnInit {
     this.router.navigate(['/dashboard']);
   }
 
-  toggleTheme() {
-    this.themeService.toggleTheme();
-  }
-
-  logout() {
-    this.authService.logout();
-    this.router.navigate(['/login']);
-  }
 }

@@ -2,26 +2,24 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
-import { ThemeService } from '../../services/theme.service';
+import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
 import { PhotoGalleryComponent, GalleryImage } from '../../components/photo-gallery/photo-gallery.component';
 import { FileUploadService, ProcessedImage } from '../../services/file-upload.service';
 
 @Component({
   selector: 'app-gallery',
-  imports: [CommonModule, RouterModule, PhotoGalleryComponent],
+  standalone: true,
+  imports: [CommonModule, RouterModule, PhotoGalleryComponent, HeaderNavigationComponent],
   templateUrl: './gallery.component.html',
-  styleUrl: './gallery.component.sass'
+  styleUrls: ['./gallery.component.sass']
 })
 export class GalleryComponent implements OnInit {
-  userName: string = '';
-  userEmail: string = '';
   galleryImages: GalleryImage[] = [];
   isLoading = false;
 
   constructor(
     private authService: AuthService,
     private router: Router,
-    public themeService: ThemeService,
     private fileUploadService: FileUploadService
   ) {}
 
@@ -31,23 +29,7 @@ export class GalleryComponent implements OnInit {
       return;
     }
     
-    this.loadUserInfo();
     this.loadImages();
-  }
-
-  loadUserInfo() {
-    this.authService.currentUser$.subscribe(user => {
-      if (user) {
-        this.userEmail = user.email;
-        
-        const jwtName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
-        if (jwtName) {
-          this.userName = jwtName;
-        } else {
-          this.userName = this.userEmail.split('@')[0];
-        }
-      }
-    });
   }
 
   async loadImages() {
@@ -119,14 +101,5 @@ export class GalleryComponent implements OnInit {
     images.forEach(image => {
       this.onImageDownload(image);
     });
-  }
-
-  toggleTheme() {
-    this.themeService.toggleTheme();
-  }
-
-  logout() {
-    this.authService.logout();
-    this.router.navigate(['/login']);
   }
 }
