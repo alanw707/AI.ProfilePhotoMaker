@@ -2,252 +2,18 @@ import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { ReplicateService, GenerateBasicImageRequest, CreditsInfo } from '../../services/replicate.service';
+import { ReplicateService, CreditsInfo } from '../../services/replicate.service';
 import { FileUploadService } from '../../services/file-upload.service';
 import { AuthService } from '../../services/auth.service';
-import { ThemeService } from '../../services/theme.service';
+import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
+import { DashboardStateService } from '../../services/dashboard-state.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-photo-enhancement',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
-  template: `
-    <div class="gallery-page-container">
-      <!-- Theme Toggle Button -->
-      <button class="theme-toggle" (click)="toggleTheme()" [attr.aria-label]="'Switch to ' + (themeService.isDark() ? 'light' : 'dark') + ' theme'">
-        <svg *ngIf="!themeService.isDark()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-        </svg>
-        <svg *ngIf="themeService.isDark()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-        </svg>
-      </button>
-
-      <!-- Navigation Header -->
-      <header class="dashboard-header">
-        <div class="header-content">
-          <div class="logo-section">
-            <img src="Logo.PNG" alt="AI Profile Photo Maker" class="header-logo">
-            <h1>AI Profile Photo Maker</h1>
-          </div>
-          
-          <!-- Navigation Menu -->
-          <nav class="nav-menu">
-            <a routerLink="/packages" routerLinkActive="active" class="nav-link">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L3.09 8.26L12 22L20.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" fill="none"/>
-              </svg>
-              Packages
-            </a>
-            <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="7" height="9" stroke="currentColor" stroke-width="2"/>
-                <rect x="13" y="3" width="8" height="5" stroke="currentColor" stroke-width="2"/>
-                <rect x="13" y="12" width="8" height="9" stroke="currentColor" stroke-width="2"/>
-                <rect x="3" y="16" width="7" height="5" stroke="currentColor" stroke-width="2"/>
-              </svg>
-              Studio
-            </a>
-            <a routerLink="/enhance" routerLinkActive="active" class="nav-link">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2"/>
-              </svg>
-              Enhance
-            </a>
-            <a routerLink="/gallery" routerLinkActive="active" class="nav-link">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
-                <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2"/>
-              </svg>
-              Gallery
-            </a>
-          </nav>
-
-          <div class="user-section">
-            <div class="user-info">
-              <span class="user-name">{{userName}}</span>
-              <span class="user-email">{{userEmail}}</span>
-            </div>
-            <button class="btn btn-logout" (click)="logout()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M16 17L21 12M21 12L16 7M21 12H9M9 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <!-- Main Enhancement Content -->
-      <main class="gallery-main">
-        <div class="gallery-content">
-          <!-- Page Header -->
-          <section class="page-header">
-            <h2>Photo Enhancement</h2>
-            <p>Upload your photo and enhance it with AI - background removal, lighting correction, and professional styling.</p>
-          </section>
-
-          <!-- Basic Tier Credits Display -->
-          <section class="credits-section" *ngIf="creditsInfo">
-            <div class="credits-card">
-              <div class="credits-icon">⚡</div>
-              <div class="credits-content">
-                <h3>{{creditsInfo.availableCredits}} Credits</h3>
-                <p>Resets {{getNextResetText(creditsInfo.nextResetDate)}}</p>
-              </div>
-            </div>
-          </section>
-
-          <!-- Upload Section -->
-          <section class="upload-section" *ngIf="!selectedFile && !isProcessing">
-        <div class="upload-area" 
-             (click)="triggerFileUpload()"
-             (dragover)="onDragOver($event)"
-             (dragleave)="onDragLeave($event)"
-             (drop)="onDrop($event)"
-             [class.drag-over]="isDragOver">
-          <div class="upload-icon">📸</div>
-          <h3>Upload Your Photo</h3>
-          <p>Drop your photo here or click to browse</p>
-          <p class="upload-restrictions">JPG, PNG, WebP • Max 5MB • Best results with headshots</p>
-          <input type="file" #fileInput accept="image/*" (change)="onFileSelected($event)" style="display: none">
-            </div>
-          </section>
-
-          <!-- Preview and Enhancement Options -->
-          <section class="enhancement-section" *ngIf="selectedFile && !isProcessing">
-        <div class="preview-container">
-          <div class="image-preview">
-            <img [src]="imagePreview" alt="Preview" class="preview-image">
-            <button class="remove-btn" (click)="removeFile()" title="Remove image">×</button>
-          </div>
-          
-          <div class="enhancement-options">
-            <h3>Enhancement Options</h3>
-            <div class="options-grid">
-              <label class="option-card" [class.selected]="enhancementType === 'background'">
-                <input type="radio" name="enhancement" value="background" [(ngModel)]="enhancementType">
-                <div class="option-content">
-                  <div class="option-icon">🖼️</div>
-                  <h4>Background Remover</h4>
-                  <p>Remove/replace background with professional backdrop</p>
-                </div>
-              </label>
-              
-              <label class="option-card" [class.selected]="enhancementType === 'social'">
-                <input type="radio" name="enhancement" value="social" [(ngModel)]="enhancementType">
-                <div class="option-content">
-                  <div class="option-icon">📱</div>
-                  <h4>Social Media</h4>
-                  <p>Perfect for Instagram, bright and engaging, iPhone 16 Pro quality</p>
-                </div>
-              </label>
-              
-              <label class="option-card" [class.selected]="enhancementType === 'cartoon'">
-                <input type="radio" name="enhancement" value="cartoon" [(ngModel)]="enhancementType">
-                <div class="option-content">
-                  <div class="option-icon">🎨</div>
-                  <h4>Cartoon Mode</h4>
-                  <p>Fun animated style transformation</p>
-                </div>
-              </label>
-            </div>
-
-            <button class="btn btn-primary enhance-btn" 
-                    (click)="startEnhancement()"
-                    [disabled]="!creditsInfo || creditsInfo.availableCredits <= 0">
-              <span *ngIf="creditsInfo && creditsInfo.availableCredits > 0">
-                Enhance Photo (1 credit)
-              </span>
-              <span *ngIf="!creditsInfo || creditsInfo.availableCredits <= 0">
-                No Credits Available
-              </span>
-            </button>
-          </div>
-            </div>
-          </section>
-
-          <!-- Processing State -->
-          <section class="processing-section" *ngIf="isProcessing">
-        <div class="processing-card">
-          <div class="processing-spinner"></div>
-          <h3>Enhancing Your Photo</h3>
-          <p>AI is working its magic... This usually takes 30-60 seconds.</p>
-          <div class="processing-progress">
-            <div class="progress-bar" [style.width.%]="processingProgress"></div>
-          </div>
-          <p class="processing-status">{{processingStatus}}</p>
-            </div>
-          </section>
-
-          <!-- Results Section -->
-          <section class="results-section" *ngIf="enhancedImage">
-        <h3>Enhancement Complete!</h3>
-        <div class="before-after">
-          <div class="comparison-item">
-            <h4>Before</h4>
-            <img [src]="imagePreview" alt="Original" class="comparison-image">
-          </div>
-          <div class="comparison-arrow">→</div>
-          <div class="comparison-item">
-            <h4>After</h4>
-            <img [src]="enhancedImage.url" alt="Enhanced" class="comparison-image">
-          </div>
-        </div>
-        
-        <div class="result-actions">
-          <button class="btn btn-primary" (click)="downloadEnhanced()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15" stroke="currentColor" stroke-width="2"/>
-              <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2"/>
-              <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2"/>
-            </svg>
-            Download Enhanced Photo
-          </button>
-          <button class="btn btn-secondary" (click)="shareEnhanced()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
-              <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-              <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2"/>
-              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2"/>
-              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
-            </svg>
-            Share
-          </button>
-          <button class="btn btn-outline" (click)="enhanceAnother()">
-            Enhance Another Photo
-          </button>
-            </div>
-          </section>
-
-          <!-- No Credits State -->
-          <section class="no-credits" *ngIf="creditsInfo && creditsInfo.availableCredits <= 0 && !selectedFile">
-        <div class="no-credits-card">
-          <div class="no-credits-icon">⏳</div>
-          <h3>No Credits Available</h3>
-          <p>Your basic enhancement credits will reset {{getNextResetText(creditsInfo.nextResetDate)}}.</p>
-          <div class="upgrade-prompt">
-            <p>Want unlimited enhancements?</p>
-            <button class="btn btn-primary">Upgrade to Premium</button>
-          </div>
-            </div>
-          </section>
-
-          <!-- Error State -->
-          <section class="error-section" *ngIf="errorMessage">
-            <div class="error-card">
-              <div class="error-icon">⚠️</div>
-              <h3>Enhancement Failed</h3>
-              <p>{{errorMessage}}</p>
-              <button class="btn btn-outline" (click)="resetComponent()">Try Again</button>
-            </div>
-          </section>
-        </div>
-      </main>
-    </div>
-  `,
+  imports: [CommonModule, FormsModule, RouterModule, HeaderNavigationComponent],
+  templateUrl: './photo-enhancement.component.html',
   styleUrls: ['./photo-enhancement.component.sass']
 })
 export class PhotoEnhancementComponent implements OnInit {
@@ -263,30 +29,26 @@ export class PhotoEnhancementComponent implements OnInit {
   creditsInfo: CreditsInfo | null = null;
   errorMessage: string = '';
   isDragOver: boolean = false;
-  userName: string = '';
-  userEmail: string = '';
+
+  private stateSubscription!: Subscription;
 
   constructor(
     private replicateService: ReplicateService,
     private fileUploadService: FileUploadService,
     private authService: AuthService,
     private router: Router,
-    public themeService: ThemeService
+    private stateService: DashboardStateService
   ) {}
 
   ngOnInit() {
-    this.loadCreditsInfo();
-    this.loadUserInfo();
+    this.stateSubscription = this.stateService.state$.subscribe(state => {
+      this.creditsInfo = state.creditsInfo;
+    });
   }
 
-  async loadCreditsInfo() {
-    try {
-      const response = await this.replicateService.getCredits().toPromise();
-      if (response?.success) {
-        this.creditsInfo = response.data;
-      }
-    } catch (error) {
-      console.error('Failed to load credits info:', error);
+  ngOnDestroy() {
+    if (this.stateSubscription) {
+      this.stateSubscription.unsubscribe();
     }
   }
 
@@ -419,7 +181,12 @@ export class PhotoEnhancementComponent implements OnInit {
         };
         
         // Update credits info
-        this.creditsInfo.availableCredits = enhanceResponse.data.creditsRemaining;
+        this.stateService.setState({
+            creditsInfo: {
+                ...this.creditsInfo,
+                availableCredits: enhanceResponse.data.creditsRemaining
+            }
+        });
         this.isProcessing = false;
         this.processingProgress = 100;
         this.processingStatus = 'Enhancement complete!';
@@ -557,7 +324,7 @@ export class PhotoEnhancementComponent implements OnInit {
 
   resetComponent() {
     this.enhanceAnother();
-    this.loadCreditsInfo();
+    this.stateService.loadInitialDashboardData();
   }
 
   getNextResetText(resetDate: Date): string {
@@ -575,32 +342,5 @@ export class PhotoEnhancementComponent implements OnInit {
     }
   }
 
-  loadUserInfo() {
-    // Get user info from auth service
-    this.authService.currentUser$.subscribe(user => {
-      if (user) {
-        this.userEmail = user.email;
-        
-        // Use firstName/lastName from JWT if available, otherwise use email prefix
-        const jwtName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
-        
-        if (jwtName) {
-          this.userName = jwtName;
-        } else {
-          // Fallback: use part of email before @ symbol
-          this.userName = user.email.split('@')[0] || 'User';
-        }
-      }
-    });
-  }
-
-  toggleTheme() {
-    this.themeService.toggleTheme();
-  }
-
-  logout() {
-    this.authService.logout();
-    this.router.navigate(['/login']);
-  }
 
 }
