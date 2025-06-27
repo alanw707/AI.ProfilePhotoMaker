@@ -7,9 +7,10 @@ import { ConfigService } from '../../services/config.service';
 
 @Component({
   selector: 'app-register',
+  standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './register.component.html',
-  styleUrl: './register.component.sass'
+  styleUrls: ['./register.component.sass']
 })
 export class RegisterComponent {
   registerForm: FormGroup;

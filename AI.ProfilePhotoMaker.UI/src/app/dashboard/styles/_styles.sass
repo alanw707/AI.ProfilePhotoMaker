@@ -1,0 +1,201 @@
+// Style Selection Grid and Controls  
+.styles-grid
+  display: flex
+  flex-direction: column
+  gap: 10px
+  margin-bottom: 24px
+  max-width: 100%
+
+.style-option
+  display: flex
+  align-items: center
+  gap: 12px
+  background: var(--card-bg)
+  border: 1px solid var(--border-color)
+  border-radius: 8px
+  padding: 16px 18px
+  cursor: pointer
+  transition: all 0.2s ease
+  width: 100%
+  box-sizing: border-box
+
+  &:hover
+    border-color: var(--accent-primary)
+    background: rgba(125, 211, 216, 0.05)
+
+  &.selected
+    border-color: var(--accent-primary)
+    background: rgba(125, 211, 216, 0.1)
+
+  .style-checkbox
+    display: flex
+    align-items: center
+    justify-content: center
+    width: 20px
+    height: 20px
+    flex-shrink: 0
+
+    input[type="checkbox"]
+      width: 16px
+      height: 16px
+      accent-color: var(--accent-primary)
+      cursor: pointer
+
+  .style-preview
+    width: 48px
+    height: 48px
+    flex-shrink: 0
+    overflow: hidden
+    border-radius: 6px
+
+    img
+      width: 100%
+      height: 100%
+      object-fit: cover
+      border-radius: 6px
+
+  .style-info
+    flex: 1
+    min-width: 0
+    overflow: hidden
+
+    h4
+      color: var(--text-primary)
+      font-family: 'Poppins', sans-serif
+      font-size: 15px
+      font-weight: 600
+      margin: 0 0 5px 0
+      white-space: nowrap
+      overflow: hidden
+      text-overflow: ellipsis
+
+    p
+      color: var(--text-secondary)
+      font-size: 13px
+      margin: 0
+      line-height: 1.4
+      white-space: nowrap
+      overflow: hidden
+      text-overflow: ellipsis
+
+// Style Controls
+.style-controls
+  display: flex
+  justify-content: space-between
+  align-items: center
+  margin-bottom: 20px
+  gap: 16px
+
+  .style-count
+    color: var(--text-primary)
+    font-family: 'Poppins', sans-serif
+    font-size: 16px
+    font-weight: 600
+
+  .style-actions
+    display: flex
+    gap: 12px
+
+// Legacy Image Count Selection (deprecated - use .image-count-selection instead)
+.image-count-selector
+  margin-bottom: 20px
+
+  h4
+    color: var(--text-primary)
+    font-family: 'Poppins', sans-serif
+    font-size: 16px
+    font-weight: 600
+    margin: 0 0 12px 0
+
+  .count-options
+    display: flex
+    gap: 12px
+
+  .count-option
+    padding: 12px 20px
+    border: 2px solid var(--border-color)
+    border-radius: 8px
+    background: var(--card-bg)
+    cursor: pointer
+    transition: all 0.3s ease
+    text-align: center
+    min-width: 60px
+
+    &:hover
+      border-color: var(--accent-primary)
+
+    &.selected
+      border-color: var(--accent-primary)
+      background: rgba(125, 211, 216, 0.1)
+      color: var(--accent-primary)
+
+    .count-number
+      font-size: 18px
+      font-weight: 700
+      color: var(--text-primary)
+      margin-bottom: 4px
+
+    .count-label
+      font-size: 12px
+      color: var(--text-secondary)
+      font-weight: 500
+
+// Style Selection Additional Components
+.styles-grid-compact
+  display: grid
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr))
+  gap: 12px
+  margin-bottom: 16px
+  max-width: 100%
+
+.image-count-selection
+  margin-bottom: 20px
+
+  h4
+    color: var(--text-primary)
+    font-family: 'Poppins', sans-serif
+    font-size: 16px
+    font-weight: 600
+    margin: 0 0 12px 0
+
+  .count-options
+    display: flex
+    gap: 8px
+
+  .count-option
+    padding: 10px 16px
+    border: 1px solid var(--border-color)
+    border-radius: 6px
+    background: var(--card-bg)
+    cursor: pointer
+    transition: all 0.2s ease
+    text-align: center
+    min-width: auto
+    display: flex
+    align-items: center
+    justify-content: center
+
+    &:hover
+      border-color: var(--accent-primary)
+      background: rgba(125, 211, 216, 0.05)
+
+    &.selected
+      border-color: var(--accent-primary)
+      background: var(--accent-primary)
+      color: white
+
+    .count-number
+      font-size: 14px
+      font-weight: 600
+      color: inherit
+      margin: 0 4px 0 0
+
+    .count-label
+      font-size: 14px
+      color: inherit
+      font-weight: 500
+
+.count-note
+  color: var(--text-secondary)
+  font-size: 12px
+  margin-top: 8px
