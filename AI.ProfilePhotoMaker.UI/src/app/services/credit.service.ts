@@ -48,6 +48,13 @@ export interface CreditCosts {
   styledGeneration: CreditCost;
 }
 
+export interface PaymentConfig {
+  paymentSimulation: {
+    enabled: boolean;
+    skipStripeIntegration: boolean;
+  };
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data: T;
@@ -80,6 +87,20 @@ export class CreditService {
    */
   getCreditPackages(): Observable<ApiResponse<CreditPackage[]>> {
     return this.http.get<ApiResponse<CreditPackage[]>>(`${this.apiUrl}/api/credit/packages`);
+  }
+
+  /**
+   * Get payment configuration including simulation settings
+   */
+  getPaymentConfig(): Observable<ApiResponse<PaymentConfig>> {
+    return this.http.get<ApiResponse<PaymentConfig>>(`${this.apiUrl}/api/credit/payment-config`);
+  }
+
+  /**
+   * Create a payment intent for Stripe
+   */
+  createPaymentIntent(request: { packageId: number }): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/api/credit/create-payment-intent`, request);
   }
 
   /**

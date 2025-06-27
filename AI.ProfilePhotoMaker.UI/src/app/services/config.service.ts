@@ -115,7 +115,7 @@ export class ConfigService {
    */
   get externalBaseUrl(): string {
     // Use ngrok URL for external access by third-party services
-    return 'https://e195-71-38-148-86.ngrok-free.app';
+    return 'https://16aa-71-38-148-86.ngrok-free.app';
   }
 
   getApiUrl(): string {
