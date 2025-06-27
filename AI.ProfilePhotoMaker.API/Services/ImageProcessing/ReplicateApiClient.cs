@@ -930,4 +930,119 @@ public class ReplicateApiClient : IReplicateApiClient
             return false;
         }
     }
+
+    /// <summary>
+    /// Deletes a model from Replicate
+    /// </summary>
+    /// <param name="modelId">The model ID (owner/model-name)</param>
+    /// <returns>True if deletion was successful, false otherwise</returns>
+    public async Task<bool> DeleteModelAsync(string modelId)
+    {
+        try
+        {
+            _logger.LogInformation("Attempting to delete model {ModelId} from Replicate", modelId);
+            
+            var response = await _httpClient.DeleteAsync($"models/{modelId}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Successfully deleted model {ModelId} from Replicate", modelId);
+                return true;
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogInformation("Model {ModelId} not found for deletion (may already be deleted)", modelId);
+                return true; // Consider this a success since the model is gone
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                _logger.LogWarning("Forbidden to delete model {ModelId} - may not be owned by this account", modelId);
+                return false;
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to delete model {ModelId}: {StatusCode}, {ErrorContent}", 
+                    modelId, response.StatusCode, errorContent);
+                return false;
+            }
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
+        {
+            _logger.LogError(ex, "Replicate API authentication failed when deleting model {ModelId}", modelId);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting model {ModelId} from Replicate", modelId);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Creates a prediction using a specific model and input parameters
+    /// </summary>
+    /// <param name="modelId">The model ID to use for prediction</param>
+    /// <param name="input">Input parameters for the model</param>
+    /// <returns>The prediction result</returns>
+    public async Task<ReplicatePredictionResult> CreatePredictionAsync(string modelId, Dictionary<string, object> input)
+    {
+        try
+        {
+            var predictionRequest = new
+            {
+                version = modelId,
+                input = input,
+                webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete",
+                webhook_events_filter = new[] { "completed" }
+            };
+
+            var content = new StringContent(
+                JsonSerializer.Serialize(predictionRequest), 
+                Encoding.UTF8, 
+                "application/json");
+                
+            var response = await _httpClient.PostAsync("predictions", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Replicate prediction creation failed: {ErrorContent}", errorContent);
+                throw new Exception($"Failed to create prediction: {response.StatusCode}, {errorContent}");
+            }
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<ReplicatePredictionResult>(
+                responseJson, 
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (result == null)
+            {
+                throw new Exception("Failed to deserialize prediction response");
+            }
+
+            _logger.LogInformation("Prediction created successfully with ID {PredictionId} using model {ModelId}", result.Id, modelId);
+            return result;
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
+        {
+            _logger.LogError(ex, "Replicate API authentication failed for model {ModelId}", modelId);
+            throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("429") || ex.Message.Contains("rate limit"))
+        {
+            _logger.LogWarning(ex, "Replicate API rate limit reached for model {ModelId}", modelId);
+            throw new InvalidOperationException("Replicate API rate limit reached. Please try again later.", ex);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("402") || ex.Message.Contains("payment"))
+        {
+            _logger.LogError(ex, "Replicate API payment required for model {ModelId}", modelId);
+            throw new InvalidOperationException("Replicate API payment required. Please check your billing.", ex);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating prediction for model {ModelId}", modelId);
+            throw;
+        }
+    }
 }

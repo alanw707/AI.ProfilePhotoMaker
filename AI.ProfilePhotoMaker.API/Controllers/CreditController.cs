@@ -14,11 +14,13 @@ public class CreditController : ControllerBase
 {
     private readonly ICreditPackageService _creditPackageService;
     private readonly IBasicTierService _basicTierService;
+    private readonly IConfiguration _configuration;
 
-    public CreditController(ICreditPackageService creditPackageService, IBasicTierService basicTierService)
+    public CreditController(ICreditPackageService creditPackageService, IBasicTierService basicTierService, IConfiguration configuration)
     {
         _creditPackageService = creditPackageService;
         _basicTierService = basicTierService;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -160,6 +162,50 @@ public class CreditController : ControllerBase
     }
 
     /// <summary>
+    /// Creates a payment intent for Stripe (placeholder for development)
+    /// </summary>
+    [HttpPost("create-payment-intent")]
+    public async Task<IActionResult> CreatePaymentIntent([FromBody] CreatePaymentIntentRequestDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(new { success = false, error = new { code = "InvalidModel", message = "Invalid input." } });
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+
+        // Get the package to validate it exists
+        var package = await _creditPackageService.GetActiveCreditPackagesAsync();
+        var selectedPackage = package.FirstOrDefault(p => p.Id == dto.PackageId);
+        
+        if (selectedPackage == null)
+        {
+            return BadRequest(new { 
+                success = false, 
+                error = new { 
+                    code = "PackageNotFound", 
+                    message = "Credit package not found or inactive." 
+                } 
+            });
+        }
+
+        // Return mock payment intent for development
+        var mockClientSecret = $"pi_mock_{Guid.NewGuid():N}_secret_{Guid.NewGuid():N}";
+        
+        return Ok(new { 
+            success = true, 
+            data = new {
+                clientSecret = mockClientSecret,
+                packageId = dto.PackageId,
+                amount = selectedPackage.Price,
+                packageName = selectedPackage.Name,
+                isSimulation = true
+            }, 
+            error = (object?)null 
+        });
+    }
+
+    /// <summary>
     /// Gets credit cost configuration for different operations
     /// </summary>
     [HttpGet("costs")]
@@ -191,6 +237,29 @@ public class CreditController : ControllerBase
         return Ok(new { 
             success = true, 
             data = costs, 
+            error = (object?)null 
+        });
+    }
+
+    /// <summary>
+    /// Gets payment configuration including simulation settings
+    /// </summary>
+    [HttpGet("payment-config")]
+    [AllowAnonymous]
+    public IActionResult GetPaymentConfig()
+    {
+        var config = new
+        {
+            PaymentSimulation = new
+            {
+                Enabled = _configuration.GetValue<bool>("PaymentSimulation:Enabled", false),
+                SkipStripeIntegration = _configuration.GetValue<bool>("PaymentSimulation:SkipStripeIntegration", false)
+            }
+        };
+
+        return Ok(new { 
+            success = true, 
+            data = config, 
             error = (object?)null 
         });
     }

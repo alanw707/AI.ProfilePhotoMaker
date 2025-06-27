@@ -18,6 +18,11 @@ public class PurchaseCreditPackageRequestDto
     public string? PaymentTransactionId { get; set; }
 }
 
+public class CreatePaymentIntentRequestDto
+{
+    public int PackageId { get; set; }
+}
+
 public class UserCreditStatusDto
 {
     public int TotalCredits { get; set; }

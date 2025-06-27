@@ -235,6 +235,9 @@ public class ReplicateWebhookController : ControllerBase
                         IsOriginalUpload = false,
                         CreatedAt = DateTime.UtcNow
                     };
+                    
+                    // Set scheduled deletion date based on retention policy
+                    processedImage.SetScheduledDeletionDate();
 
                     _dbContext.ProcessedImages.Add(processedImage);
                     await _dbContext.SaveChangesAsync();

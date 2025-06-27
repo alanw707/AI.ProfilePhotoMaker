@@ -20,7 +20,6 @@ public static class ProfileControllerConstants
 [Authorize]
 public class ProfileController : ControllerBase
 {
-    private readonly IImageProcessingService _imageProcessingService;
     private readonly IUserProfileRepository _userProfileRepository;
     private readonly ApplicationDbContext _context; // Keep for now for other operations
     private readonly IWebHostEnvironment _environment;
@@ -29,7 +28,6 @@ public class ProfileController : ControllerBase
     private readonly IReplicateApiClient _replicateApiClient;
 
     public ProfileController(
-        IImageProcessingService imageProcessingService,
         IUserProfileRepository userProfileRepository,
         ApplicationDbContext context,
         IWebHostEnvironment environment,
@@ -37,7 +35,6 @@ public class ProfileController : ControllerBase
         IConfiguration configuration,
         IReplicateApiClient replicateApiClient)
     {
-        _imageProcessingService = imageProcessingService;
         _userProfileRepository = userProfileRepository;
         _context = context;
         _environment = environment;
@@ -176,7 +173,10 @@ public class ProfileController : ControllerBase
     [HttpGet("styles")]
     public async Task<IActionResult> GetStyles()
     {
-        var styles = await _imageProcessingService.GetAvailableStylesAsync();
+        var styles = await _context.Styles
+            .Where(s => s.IsActive)
+            .Select(s => s.Name)
+            .ToListAsync();
         return Ok(styles);
     }
 
@@ -240,8 +240,13 @@ public class ProfileController : ControllerBase
                     ProcessedImageUrl = "", // Will be updated when AI processing completes
                     Style = ProfileControllerConstants.OriginalStyle, // Mark as original upload
                     UserProfileId = profile.Id,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
+                    IsOriginalUpload = true, // Mark as original upload for retention policy
+                    IsGenerated = false
                 };
+                
+                // Set scheduled deletion date based on retention policy
+                processedImage.SetScheduledDeletionDate();
 
                 profile.ProcessedImages.Add(processedImage);
                 uploadedImages.Add(processedImage);
@@ -304,7 +309,7 @@ public class ProfileController : ControllerBase
                 Ethnicity = profile.Ethnicity
             };
 
-            var processedImageUrl = await _imageProcessingService.GenerateImageAsync(dto);
+            var processedImageUrl = await _replicateApiClient.GenerateImagesAsync(dto);
             
             return Ok(new { ImageUrl = processedImageUrl, Message = "Image generation started" });
         }
@@ -327,27 +332,59 @@ public class ProfileController : ControllerBase
         if (profile == null)
             return NotFound("Profile not found");
 
-        var images = profile.ProcessedImages
-            .OrderByDescending(i => i.CreatedAt)
-            .Select(i => new
+        var images = new List<object>();
+        var expiredImages = new List<ProcessedImage>();
+
+        foreach (var i in profile.ProcessedImages.OrderByDescending(i => i.CreatedAt))
+        {
+            var originalUrl = !string.IsNullOrEmpty(i.OriginalImageUrl) ? (i.OriginalImageUrl.StartsWith("http") ? i.OriginalImageUrl : GetAbsoluteUrl(i.OriginalImageUrl)) : i.OriginalImageUrl;
+            var processedUrl = !string.IsNullOrEmpty(i.ProcessedImageUrl) ? (i.ProcessedImageUrl.StartsWith("http") ? i.ProcessedImageUrl : GetAbsoluteUrl(i.ProcessedImageUrl)) : i.ProcessedImageUrl;
+            
+            // Check if local files exist
+            var localFileExists = !string.IsNullOrEmpty(i.OriginalImageUrl) && 
+                                 !i.OriginalImageUrl.StartsWith("http") &&
+                                 System.IO.File.Exists(Path.Combine(_environment.ContentRootPath, i.OriginalImageUrl.TrimStart('/')));
+            
+            // Check if external URLs are still valid (for generated images)
+            var urlValid = true;
+            if (i.IsGenerated && !string.IsNullOrEmpty(processedUrl) && processedUrl.StartsWith("http"))
+            {
+                urlValid = await IsUrlValidAsync(processedUrl);
+                if (!urlValid)
+                {
+                    // Mark for deletion if URL is expired
+                    expiredImages.Add(i);
+                    continue; // Skip adding to results
+                }
+            }
+            
+            images.Add(new
             {
                 i.Id,
-                OriginalImageUrl = !string.IsNullOrEmpty(i.OriginalImageUrl) ? (i.OriginalImageUrl.StartsWith("http") ? i.OriginalImageUrl : GetAbsoluteUrl(i.OriginalImageUrl)) : i.OriginalImageUrl,
-                ProcessedImageUrl = !string.IsNullOrEmpty(i.ProcessedImageUrl) ? (i.ProcessedImageUrl.StartsWith("http") ? i.ProcessedImageUrl : GetAbsoluteUrl(i.ProcessedImageUrl)) : i.ProcessedImageUrl,
+                OriginalImageUrl = originalUrl,
+                ProcessedImageUrl = processedUrl,
                 i.Style,
                 i.CreatedAt,
                 IsOriginalUpload = i.Style == "Original",
                 IsGenerated = i.IsGenerated,
-                FileExists = !string.IsNullOrEmpty(i.OriginalImageUrl) && 
-                            System.IO.File.Exists(Path.Combine(_environment.ContentRootPath, i.OriginalImageUrl.TrimStart('/')))
-            })
-            .ToList();
+                FileExists = localFileExists || urlValid
+            });
+        }
+        
+        // Clean up expired images from database
+        if (expiredImages.Any())
+        {
+            _context.ProcessedImages.RemoveRange(expiredImages);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation($"Cleaned up {expiredImages.Count} expired images for user {userId}");
+        }
 
+        var imageList = images.Cast<dynamic>().ToList();
         var summary = new
         {
             TotalImages = images.Count,
-            OriginalUploads = images.Count(i => i.IsOriginalUpload),
-            GeneratedImages = images.Count(i => i.IsGenerated && !i.IsOriginalUpload),
+            OriginalUploads = imageList.Count(i => i.IsOriginalUpload),
+            GeneratedImages = imageList.Count(i => i.IsGenerated && !i.IsOriginalUpload),
             Images = images
         };
 
@@ -882,6 +919,589 @@ public class ProfileController : ControllerBase
         
         // Fallback to request host for local development
         return $"{Request.Scheme}://{Request.Host}{relativePath}";
+    }
+    
+    private async Task<bool> IsUrlValidAsync(string url)
+    {
+        if (string.IsNullOrEmpty(url) || !url.StartsWith("http"))
+            return false;
+            
+        try
+        {
+            using var httpClient = new HttpClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(10);
+            
+            var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, url));
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "URL validation failed for {Url}", url);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Get user data statistics for account settings
+    /// </summary>
+    [HttpGet("data-stats")]
+    public async Task<IActionResult> GetDataStats()
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null)
+            return Unauthorized();
+
+        try
+        {
+            var profile = await _userProfileRepository.GetByUserIdAsync(userId);
+            if (profile == null)
+                return NotFound("Profile not found");
+
+            var inputPhotos = profile.ProcessedImages.Where(i => i.Style == ProfileControllerConstants.OriginalStyle && !i.IsDeleted).Count();
+            var generatedPhotos = profile.ProcessedImages.Where(i => i.IsGenerated && !i.IsDeleted).Count();
+            var enhancedPhotos = profile.ProcessedImages.Where(i => 
+                (i.Style == "Enhanced" || i.Style == "Background Remover" || i.Style == "Social Media" || i.Style == "Cartoon") 
+                && !i.IsDeleted).Count();
+
+            // Calculate total data size (approximate)
+            var totalImages = profile.ProcessedImages.Where(i => !i.IsDeleted).Count();
+            var estimatedDataSize = totalImages * 2.5; // Approximate MB per image
+
+            var stats = new
+            {
+                InputPhotos = inputPhotos,
+                GeneratedPhotos = generatedPhotos,
+                EnhancedPhotos = enhancedPhotos,
+                HasTrainedModel = !string.IsNullOrEmpty(profile.TrainedModelId),
+                TotalDataSize = estimatedDataSize,
+                AccountAge = (DateTime.UtcNow - profile.CreatedAt).Days,
+                UsageLogCount = profile.UsageLogs.Count
+            };
+
+            return Ok(new { success = true, data = stats, error = (object?)null });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting data stats for user {UserId}", userId);
+            return StatusCode(500, new { success = false, error = new { code = "DataStatsError", message = "Failed to get data statistics." } });
+        }
+    }
+
+    /// <summary>
+    /// Delete only input photos (original uploads) for the user
+    /// </summary>
+    [HttpDelete("data/photos")]
+    public async Task<IActionResult> DeleteInputPhotos()
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null)
+            return Unauthorized();
+
+        try
+        {
+            var profile = await _userProfileRepository.GetByUserIdAsync(userId);
+            if (profile == null)
+                return NotFound("Profile not found");
+
+            // Get only original upload photos (not generated ones)
+            var inputPhotos = profile.ProcessedImages
+                .Where(i => i.Style == ProfileControllerConstants.OriginalStyle && !i.IsDeleted)
+                .ToList();
+
+            var deletedCount = 0;
+            var uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
+
+            foreach (var photo in inputPhotos)
+            {
+                try
+                {
+                    // Mark as deleted in database
+                    photo.IsDeleted = true;
+                    photo.DeletedAt = DateTime.UtcNow;
+                    photo.UserRequestedDeletionDate = DateTime.UtcNow;
+
+                    // Delete physical file if it exists
+                    if (!string.IsNullOrEmpty(photo.OriginalImageUrl))
+                    {
+                        var fileName = Path.GetFileName(photo.OriginalImageUrl);
+                        var filePath = Path.Combine(uploadDir, fileName);
+                        if (System.IO.File.Exists(filePath))
+                        {
+                            System.IO.File.Delete(filePath);
+                        }
+                    }
+
+                    deletedCount++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to delete photo {PhotoId} for user {UserId}", photo.Id, userId);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Deleted {DeletedCount} input photos for user {UserId}", deletedCount, userId);
+
+            return Ok(new 
+            { 
+                success = true, 
+                data = new { 
+                    deletedCount = deletedCount, 
+                    message = $"Successfully deleted {deletedCount} input photos" 
+                }, 
+                error = (object?)null 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting input photos for user {UserId}", userId);
+            return StatusCode(500, new { success = false, error = new { code = "PhotoDeletionError", message = "Failed to delete input photos." } });
+        }
+    }
+
+    /// <summary>
+    /// Delete the user's trained AI model
+    /// </summary>
+    [HttpDelete("data/model")]
+    public async Task<IActionResult> DeleteAIModel()
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null)
+            return Unauthorized();
+
+        try
+        {
+            var profile = await _userProfileRepository.GetByUserIdAsync(userId);
+            if (profile == null)
+                return NotFound("Profile not found");
+
+            if (string.IsNullOrEmpty(profile.TrainedModelId))
+            {
+                return BadRequest(new { success = false, error = new { code = "NoModel", message = "No trained model found to delete." } });
+            }
+
+            var modelId = profile.TrainedModelId;
+
+            // Try to delete model from Replicate (best effort)
+            try
+            {
+                await _replicateApiClient.DeleteModelAsync(modelId);
+                _logger.LogInformation("Successfully deleted model {ModelId} from Replicate for user {UserId}", modelId, userId);
+            }
+            catch (Exception replicateEx)
+            {
+                _logger.LogWarning(replicateEx, "Failed to delete model {ModelId} from Replicate for user {UserId}, continuing with database cleanup", modelId, userId);
+            }
+
+            // Clear model information from database
+            profile.TrainedModelId = null;
+            profile.TrainedModelVersionId = null;
+            profile.ModelTrainedAt = null;
+            profile.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            // Delete training ZIP files
+            try
+            {
+                var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
+                if (Directory.Exists(trainingZipsPath))
+                {
+                    var userZipFiles = Directory.GetFiles(trainingZipsPath, $"{userId}_*.zip");
+                    foreach (var zipFile in userZipFiles)
+                    {
+                        System.IO.File.Delete(zipFile);
+                    }
+                }
+            }
+            catch (Exception zipEx)
+            {
+                _logger.LogWarning(zipEx, "Failed to delete training ZIP files for user {UserId}", userId);
+            }
+
+            _logger.LogInformation("Successfully deleted AI model and related files for user {UserId}", userId);
+
+            return Ok(new 
+            { 
+                success = true, 
+                data = new { 
+                    message = "AI model and training files have been successfully deleted" 
+                }, 
+                error = (object?)null 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting AI model for user {UserId}", userId);
+            return StatusCode(500, new { success = false, error = new { code = "ModelDeletionError", message = "Failed to delete AI model." } });
+        }
+    }
+
+    /// <summary>
+    /// Delete all user data (photos, models, usage logs) but keep the profile
+    /// </summary>
+    [HttpDelete("data/all")]
+    public async Task<IActionResult> DeleteAllUserData()
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null)
+            return Unauthorized();
+
+        try
+        {
+            var profile = await _userProfileRepository.GetByUserIdAsync(userId);
+            if (profile == null)
+                return NotFound("Profile not found");
+
+            var deletionSummary = new
+            {
+                PhotosDeleted = 0,
+                ModelDeleted = false,
+                UsageLogsDeleted = 0,
+                FilesDeleted = 0
+            };
+
+            // Delete all photos (mark as deleted and remove files)
+            var allPhotos = profile.ProcessedImages.Where(i => !i.IsDeleted).ToList();
+            var photosDeleted = 0;
+            var filesDeleted = 0;
+
+            var uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
+            
+            foreach (var photo in allPhotos)
+            {
+                try
+                {
+                    // Mark as deleted in database
+                    photo.IsDeleted = true;
+                    photo.DeletedAt = DateTime.UtcNow;
+                    photo.UserRequestedDeletionDate = DateTime.UtcNow;
+
+                    // Delete physical file if it exists
+                    if (!string.IsNullOrEmpty(photo.OriginalImageUrl))
+                    {
+                        var fileName = Path.GetFileName(photo.OriginalImageUrl);
+                        var filePath = Path.Combine(uploadDir, fileName);
+                        if (System.IO.File.Exists(filePath))
+                        {
+                            System.IO.File.Delete(filePath);
+                            filesDeleted++;
+                        }
+                    }
+
+                    photosDeleted++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to delete photo {PhotoId} for user {UserId}", photo.Id, userId);
+                }
+            }
+
+            // Delete entire upload directory if it exists
+            try
+            {
+                if (Directory.Exists(uploadDir))
+                {
+                    Directory.Delete(uploadDir, true);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete upload directory for user {UserId}", userId);
+            }
+
+            // Delete AI model if exists
+            var modelDeleted = false;
+            if (!string.IsNullOrEmpty(profile.TrainedModelId))
+            {
+                try
+                {
+                    await _replicateApiClient.DeleteModelAsync(profile.TrainedModelId);
+                    modelDeleted = true;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to delete model from Replicate for user {UserId}", userId);
+                }
+
+                // Clear model information from database
+                profile.TrainedModelId = null;
+                profile.TrainedModelVersionId = null;
+                profile.ModelTrainedAt = null;
+            }
+
+            // Delete training ZIP files
+            try
+            {
+                var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
+                if (Directory.Exists(trainingZipsPath))
+                {
+                    var userZipFiles = Directory.GetFiles(trainingZipsPath, $"{userId}_*.zip");
+                    foreach (var zipFile in userZipFiles)
+                    {
+                        System.IO.File.Delete(zipFile);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete training ZIP files for user {UserId}", userId);
+            }
+
+            // Delete usage logs (soft delete)
+            var usageLogsDeleted = 0;
+            foreach (var log in profile.UsageLogs)
+            {
+                _context.UsageLogs.Remove(log);
+                usageLogsDeleted++;
+            }
+
+            // Reset profile credits and subscription data (but keep basic profile info)
+            profile.Credits = 3; // Reset to default
+            profile.PurchasedCredits = 0;
+            profile.LastCreditReset = DateTime.UtcNow;
+            profile.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            var summary = new
+            {
+                PhotosDeleted = photosDeleted,
+                ModelDeleted = modelDeleted,
+                UsageLogsDeleted = usageLogsDeleted,
+                FilesDeleted = filesDeleted
+            };
+
+            _logger.LogInformation("Deleted all data for user {UserId}: {@Summary}", userId, summary);
+
+            return Ok(new 
+            { 
+                success = true, 
+                data = new { 
+                    message = "All user data has been successfully deleted",
+                    summary = summary
+                }, 
+                error = (object?)null 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting all user data for user {UserId}", userId);
+            return StatusCode(500, new { success = false, error = new { code = "DataDeletionError", message = "Failed to delete all user data." } });
+        }
+    }
+
+    /// <summary>
+    /// Delete the entire user account and all associated data
+    /// </summary>
+    [HttpDelete("account")]
+    public async Task<IActionResult> DeleteUserAccount()
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null)
+            return Unauthorized();
+
+        try
+        {
+            var profile = await _userProfileRepository.GetByUserIdAsync(userId);
+            if (profile == null)
+                return NotFound("Profile not found");
+
+            // First delete all user data using the existing method logic
+            await DeleteAllUserDataInternal(userId, profile);
+
+            // Then delete the profile itself
+            await _userProfileRepository.DeleteAsync(profile);
+
+            // Delete the ApplicationUser record
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user != null)
+            {
+                _context.Users.Remove(user);
+                await _context.SaveChangesAsync();
+            }
+
+            _logger.LogInformation("Successfully deleted entire account for user {UserId}", userId);
+
+            return Ok(new 
+            { 
+                success = true, 
+                data = new { 
+                    message = "Account has been successfully deleted" 
+                }, 
+                error = (object?)null 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting account for user {UserId}", userId);
+            return StatusCode(500, new { success = false, error = new { code = "AccountDeletionError", message = "Failed to delete account." } });
+        }
+    }
+
+    /// <summary>
+    /// Generate and download user data export
+    /// </summary>
+    [HttpGet("data/export")]
+    public async Task<IActionResult> ExportUserData()
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null)
+            return Unauthorized();
+
+        try
+        {
+            var profile = await _userProfileRepository.GetByUserIdAsync(userId);
+            if (profile == null)
+                return NotFound("Profile not found");
+
+            var exportData = new
+            {
+                Profile = new
+                {
+                    profile.Id,
+                    profile.FirstName,
+                    profile.LastName,
+                    profile.Gender,
+                    profile.Ethnicity,
+                    profile.SubscriptionTier,
+                    profile.Credits,
+                    profile.PurchasedCredits,
+                    profile.CreatedAt,
+                    profile.UpdatedAt,
+                    HasTrainedModel = !string.IsNullOrEmpty(profile.TrainedModelId),
+                    ModelTrainedAt = profile.ModelTrainedAt
+                },
+                Images = profile.ProcessedImages.Where(i => !i.IsDeleted).Select(i => new
+                {
+                    i.Id,
+                    i.Style,
+                    i.IsGenerated,
+                    i.IsOriginalUpload,
+                    i.CreatedAt,
+                    HasOriginalFile = !string.IsNullOrEmpty(i.OriginalImageUrl),
+                    HasProcessedFile = !string.IsNullOrEmpty(i.ProcessedImageUrl)
+                }),
+                UsageLogs = profile.UsageLogs.Select(log => new
+                {
+                    log.Id,
+                    log.Action,
+                    CreditsUsed = log.CreditsCost,
+                    Timestamp = log.CreatedAt,
+                    log.Details
+                }),
+                Statistics = new
+                {
+                    TotalImages = profile.ProcessedImages.Count(i => !i.IsDeleted),
+                    OriginalUploads = profile.ProcessedImages.Count(i => i.Style == ProfileControllerConstants.OriginalStyle && !i.IsDeleted),
+                    GeneratedImages = profile.ProcessedImages.Count(i => i.IsGenerated && !i.IsDeleted),
+                    TotalCreditsUsed = profile.UsageLogs.Sum(log => log.CreditsCost ?? 0),
+                    AccountAge = (DateTime.UtcNow - profile.CreatedAt).Days
+                },
+                ExportInfo = new
+                {
+                    ExportedAt = DateTime.UtcNow,
+                    UserId = userId,
+                    Version = "1.0"
+                }
+            };
+
+            var json = System.Text.Json.JsonSerializer.Serialize(exportData, new System.Text.Json.JsonSerializerOptions 
+            { 
+                WriteIndented = true 
+            });
+
+            var fileName = $"profile-data-export-{userId}-{DateTime.UtcNow:yyyyMMddHHmmss}.json";
+            
+            return File(System.Text.Encoding.UTF8.GetBytes(json), "application/json", fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting data for user {UserId}", userId);
+            return StatusCode(500, new { success = false, error = new { code = "ExportError", message = "Failed to export user data." } });
+        }
+    }
+
+    /// <summary>
+    /// Internal helper method for deleting all user data
+    /// </summary>
+    private async Task DeleteAllUserDataInternal(string userId, UserProfile profile)
+    {
+        // Delete all photos (mark as deleted and remove files)
+        var allPhotos = profile.ProcessedImages.Where(i => !i.IsDeleted).ToList();
+        var uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
+        
+        foreach (var photo in allPhotos)
+        {
+            try
+            {
+                photo.IsDeleted = true;
+                photo.DeletedAt = DateTime.UtcNow;
+                photo.UserRequestedDeletionDate = DateTime.UtcNow;
+
+                if (!string.IsNullOrEmpty(photo.OriginalImageUrl))
+                {
+                    var fileName = Path.GetFileName(photo.OriginalImageUrl);
+                    var filePath = Path.Combine(uploadDir, fileName);
+                    if (System.IO.File.Exists(filePath))
+                    {
+                        System.IO.File.Delete(filePath);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete photo {PhotoId} for user {UserId}", photo.Id, userId);
+            }
+        }
+
+        // Delete upload directory
+        try
+        {
+            if (Directory.Exists(uploadDir))
+            {
+                Directory.Delete(uploadDir, true);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to delete upload directory for user {UserId}", userId);
+        }
+
+        // Delete AI model
+        if (!string.IsNullOrEmpty(profile.TrainedModelId))
+        {
+            try
+            {
+                await _replicateApiClient.DeleteModelAsync(profile.TrainedModelId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete model from Replicate for user {UserId}", userId);
+            }
+        }
+
+        // Delete training ZIP files
+        try
+        {
+            var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
+            if (Directory.Exists(trainingZipsPath))
+            {
+                var userZipFiles = Directory.GetFiles(trainingZipsPath, $"{userId}_*.zip");
+                foreach (var zipFile in userZipFiles)
+                {
+                    System.IO.File.Delete(zipFile);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to delete training ZIP files for user {UserId}", userId);
+        }
+
+        // Delete usage logs
+        _context.UsageLogs.RemoveRange(profile.UsageLogs);
     }
 }
 

@@ -103,4 +103,19 @@ public interface IReplicateApiClient
     /// <param name="modelId">The model ID (owner/model-name)</param>
     /// <returns>True if model exists and is accessible, false otherwise</returns>
     Task<bool> CheckModelExistsAsync(string modelId);
+
+    /// <summary>
+    /// Deletes a model from Replicate
+    /// </summary>
+    /// <param name="modelId">The model ID (owner/model-name)</param>
+    /// <returns>True if deletion was successful, false otherwise</returns>
+    Task<bool> DeleteModelAsync(string modelId);
+
+    /// <summary>
+    /// Creates a prediction using a specific model and input parameters
+    /// </summary>
+    /// <param name="modelId">The model ID to use for prediction</param>
+    /// <param name="input">Input parameters for the model</param>
+    /// <returns>The prediction result</returns>
+    Task<ReplicatePredictionResult> CreatePredictionAsync(string modelId, Dictionary<string, object> input);
 }
