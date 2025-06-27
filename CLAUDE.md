@@ -176,13 +176,16 @@ Before any operation, the system:
 - **Profile Management**: `/api/profile/*` (CRUD operations, file uploads)
 - **Image Generation**: `/api/replicate/generate` (premium tier with trained models)
 - **Photo Enhancement**: `/api/replicate/enhance` (uses Flux Kontext Pro, basic tier)
-- **Credit Management**: `/api/credit/*` (packages, purchase), `/api/test/basic-tier-status`, `/api/test/reset-credits`
+- **Credit Management**: `/api/credit/*` (packages, purchase, payment-config), `/api/test/basic-tier-status`, `/api/test/reset-credits`
+- **Payment Simulation**: `/api/credit/create-payment-intent` (development mode placeholder)
 - **Testing**: `/api/test/*` (various development/testing endpoints)
 
 ### Key Services
 - **BasicTierService**: Manages credit system, weekly resets, basic tier functionality
 - **BasicTierBackgroundService**: Background service for automated credit resets
 - **ReplicateApiClient**: Handles all Replicate.com API integration (training, generation, enhancement)
+- **StripeService**: Payment processing with simulation mode for development
+- **CreditPackageService**: Manages credit packages and purchase transactions
 - **Auth Services**: JWT token management, OAuth integration
 
 ## Configuration Requirements
@@ -205,7 +208,16 @@ Before any operation, the system:
     "FluxKontextProModelId": "black-forest-labs/flux-kontext-pro",
     "WebhookSecret": "STORED_IN_USER_SECRETS"
   },
-  "AppBaseUrl": "https://8099-71-38-148-86.ngrok-free.app",
+  "Stripe": {
+    "PublishableKey": "STORED_IN_USER_SECRETS",
+    "SecretKey": "STORED_IN_USER_SECRETS",
+    "WebhookSecret": "STORED_IN_USER_SECRETS"
+  },
+  "PaymentSimulation": {
+    "Enabled": true,
+    "SkipStripeIntegration": true
+  },
+  "AppBaseUrl": "https://16aa-71-38-148-86.ngrok-free.app",
   "Logging": {
     "LogLevel": {
       "Default": "Information",
@@ -244,6 +256,27 @@ ngrok http https://localhost:5035
 - CORS is configured to allow all origins in development (`AllowAll` policy)
 
 ### Recent Major Changes
+
+#### Payment Simulation System (2025-06-27)
+- **Payment Integration Stabilization**: Complete payment simulation system for development
+  - Added `/api/credit/create-payment-intent` placeholder endpoint with mock responses
+  - Added `/api/credit/payment-config` endpoint for frontend configuration checking
+  - Updated `StripeService` to conditionally load Stripe.js based on simulation settings
+  - Implemented 2-second payment simulation workflow in credit-packages component
+  - Added development mode UI notices and simulation status indicators
+  - Eliminated all console errors from Stripe.js loading in development environment
+  - Credits properly added to user accounts during payment simulation
+  - Easy toggle between simulation and real Stripe integration via configuration
+
+#### UI Component Unification (2025-06-27)
+- **Header Navigation Consolidation**: Eliminated duplicate code across components
+  - Created shared `HeaderNavigationComponent` with unified HTML, TypeScript, and styling
+  - Consolidated header code from dashboard, gallery, settings, premium, and photo-enhancement components
+  - Reduced header-related code duplication by ~90% (100+ lines of duplicate code removed)
+  - Unified theme toggle, logout, and user info display functionality
+  - Consistent navigation experience and styling across all pages
+
+#### Previous Infrastructure Improvements
 - **Photo Enhancement Integration**: Complete end-to-end photo enhancement workflow now functional
   - Fixed UI integration from demo mode to real Replicate API calls
   - Updated enhancement options from Professional/Portrait/LinkedIn to Background Remover/Social Media/Cartoon
