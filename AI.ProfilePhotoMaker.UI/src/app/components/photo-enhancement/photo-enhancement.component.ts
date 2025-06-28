@@ -93,8 +93,8 @@ export class PhotoEnhancementComponent implements OnInit {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
-      this.errorMessage = 'File size must be less than 5MB.';
+    if (file.size > 7 * 1024 * 1024) { // 7MB limit
+      this.errorMessage = 'File size must be less than 7MB.';
       console.error('File too large:', file.size);
       return;
     }

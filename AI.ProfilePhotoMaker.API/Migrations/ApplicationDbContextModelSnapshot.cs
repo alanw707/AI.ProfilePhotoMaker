@@ -141,7 +141,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("CreditPackages");
+                    b.ToTable("CreditPackages", (string)null);
 
                     b.HasData(
                         new
@@ -241,7 +241,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("CreditPurchases");
+                    b.ToTable("CreditPurchases", (string)null);
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.ModelCreationRequest", b =>
@@ -283,7 +283,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ModelCreationRequests");
+                    b.ToTable("ModelCreationRequests", (string)null);
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.PaymentTransaction", b =>
@@ -344,7 +344,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("PaymentTransactions");
+                    b.ToTable("PaymentTransactions", (string)null);
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.PremiumPackage", b =>
@@ -390,7 +390,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("PremiumPackages");
+                    b.ToTable("PremiumPackages", (string)null);
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.ProcessedImage", b =>
@@ -442,7 +442,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
 
                     b.HasIndex("UserProfileId");
 
-                    b.ToTable("ProcessedImages");
+                    b.ToTable("ProcessedImages", (string)null);
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.Style", b =>
@@ -485,7 +485,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Styles");
+                    b.ToTable("Styles", (string)null);
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.Subscription", b =>
@@ -553,7 +553,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Subscriptions");
+                    b.ToTable("Subscriptions", (string)null);
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.SubscriptionPlan", b =>
@@ -615,7 +615,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SubscriptionPlans");
+                    b.ToTable("SubscriptionPlans", (string)null);
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UsageLog", b =>
@@ -650,7 +650,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UsageLogs");
+                    b.ToTable("UsageLogs", (string)null);
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UserPackagePurchase", b =>
@@ -702,7 +702,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserPackagePurchases");
+                    b.ToTable("UserPackagePurchases", (string)null);
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UserProfile", b =>
@@ -761,7 +761,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
 
                     b.HasIndex("StyleId");
 
-                    b.ToTable("UserProfiles");
+                    b.ToTable("UserProfiles", (string)null);
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UserStyleSelection", b =>
@@ -786,7 +786,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.HasIndex("UserProfileId", "StyleId")
                         .IsUnique();
 
-                    b.ToTable("UserStyleSelections");
+                    b.ToTable("UserStyleSelections", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>

@@ -10,8 +10,9 @@ import { StyleService, Style } from '../services/style.service';
 import { NotificationService } from '../services/notification.service';
 import { CreditService } from '../services/credit.service';
 import { DashboardStateService } from '../services/dashboard-state.service';
+import { FaceDetectionService, FaceValidationResult, QualityScore } from '../services/face-detection.service';
+import { ConfigService } from '../services/config.service';
 import JSZip from 'jszip';
-import * as faceapi from 'face-api.js';
 import { Observable } from 'rxjs';
 
 interface StyleOption {
@@ -33,6 +34,18 @@ interface QualityCheckError {
   fileName: string;
   file: File;
   errors: string[];
+  warnings?: string[];
+  faceValidation?: FaceValidationResult;
+  qualityScore?: QualityScore;
+}
+
+interface SelectedFileWithQuality {
+  file: File;
+  qualityScore?: QualityScore;
+  faceValidation?: FaceValidationResult;
+  errors: string[];
+  warnings: string[];
+  isValid: boolean;
 }
 
 interface QualityCheckResult {
@@ -56,6 +69,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // Component-specific state
   currentStep: number = 1;
   selectedFiles: File[] = [];
+  selectedFilesWithQuality: SelectedFileWithQuality[] = [];
   isUploading: boolean = false;
   uploadProgress: number = 0;
   isDragOver: boolean = false;
@@ -114,7 +128,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private styleService: StyleService,
     private notificationService: NotificationService,
     public creditService: CreditService,
-    public stateService: DashboardStateService
+    public stateService: DashboardStateService,
+    private faceDetectionService: FaceDetectionService,
+    private config: ConfigService
   ) {
     this.state$ = this.stateService.state$;
   }
@@ -126,12 +142,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     // Subscribe to state changes to update UI
-    this.state$.subscribe(state => {
+    this.state$.subscribe(_state => {
       // Force change detection when state updates
       this.selectedStyles = this.getSelectedStylesCount();
+      
+      // Update current step based on progress
+      this.updateCurrentStep();
     });
 
     this.stateService.loadInitialDashboardData();
+    this.loadAvailableStyles();
   }
 
   ngOnDestroy() {
@@ -146,16 +166,61 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.filePreviewCache.clear();
   }
 
+  private updateCurrentStep() {
+    // Automatically progress to Step 2 when images are uploaded
+    if (this.uploadedImages > 0 && this.currentStep === 1) {
+      this.currentStep = 2;
+    }
+    
+    // Progress to Step 3 if photos are generated (future enhancement)
+    if (this.generatedPhotos.length > 0 && this.currentStep === 2) {
+      this.currentStep = 3;
+    }
+  }
+
+  private loadAvailableStyles() {
+    this.styleService.getActiveStyles().subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.availableStyles = response.data.map(style => ({
+            id: style.id.toString(),
+            name: style.name,
+            description: style.description,
+            previewUrl: this.getStylePreviewUrl(style.name),
+            selected: false
+          }));
+        } else {
+          console.error('Failed to load styles:', response.error);
+          this.notificationService.error('Style Load Failed', 'Could not load available styles. Please refresh the page.');
+        }
+      },
+      error: (error) => {
+        console.error('Error loading styles:', error);
+        this.notificationService.error('Style Load Failed', 'Could not load available styles. Please refresh the page.');
+      }
+    });
+  }
+
+  private getStylePreviewUrl(styleName: string): string {
+    // Use our API server's style preview images
+    // Convert style name to filename format (lowercase, replace spaces and slashes with hyphens)
+    const fileName = styleName.toLowerCase().replace(/[\s\/]+/g, '-');
+    
+    // Return the URL to the style preview image from our API server
+    return `${this.config.getApiUrl()}/style-previews/${fileName}.jpg`;
+  }
+
   // UI Event Handlers
   triggerFileUpload() {
     this.fileInput.nativeElement.click();
   }
 
-  removeFile(index: number) {
-    this.selectedFiles.splice(index, 1);
+  removeFile(idx: number) {
+    this.selectedFiles.splice(idx, 1);
+    this.selectedFilesWithQuality.splice(idx, 1);
   }
 
-  deleteUploadedImage(thumb: any, index: number) {
+  deleteUploadedImage(thumb: any, _idx: number) {
     // Delete from server
     this.fileUploadService.deleteImage(thumb.id).subscribe({
       next: (response) => {
@@ -201,8 +266,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.uploadProgress = 100;
           
           // Add uploaded images to state
-          const newThumbnails = result.response.uploadedFiles.map((file, index) => ({
-            id: result.response!.uploadedImageIds[index] || Date.now() + index,
+          const newThumbnails = result.response.uploadedFiles.map((file, idx) => ({
+            id: result.response!.uploadedImageIds[idx] || Date.now() + idx,
             url: file.url,
             fileName: file.fileName
           }));
@@ -217,6 +282,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           
           // Clear selected files and reset
           this.selectedFiles = [];
+          this.selectedFilesWithQuality = [];
           this.qualityCheckErrors = [];
           this.filePreviewCache.clear();
           
@@ -294,7 +360,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const zip = new JSZip();
     const promises: Promise<void>[] = [];
 
-    this.generatedPhotos.forEach((photo, index) => {
+    this.generatedPhotos.forEach((photo) => {
       const promise = fetch(photo.url)
         .then(response => response.blob())
         .then(blob => {
@@ -330,9 +396,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
 
   onImageError(event: any) {
-    console.error('Image failed to load:', event);
-    // Could replace with a placeholder image
-    event.target.src = 'assets/placeholder-image.png';
+    // Fallback to a dynamically generated placeholder image from our API server
+    event.target.src = `${this.config.getApiUrl()}/api/placeholder/style-preview`;
+    
+    // Remove the error event listener to prevent infinite loop
+    event.target.onerror = null;
   }
 
   // Workflow methods
@@ -341,9 +409,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getStepStatus(step: number): string {
-    if (step < this.currentStep) return 'completed';
-    if (step === this.currentStep) return 'active';
-    return 'pending';
+    switch (step) {
+      case 1:
+        // Step 1 is completed when user has uploaded images
+        if (this.uploadedImages > 0) return 'completed';
+        if (this.currentStep === 1) return 'active';
+        return 'pending';
+      
+      case 2:
+        // Step 2 is active when Step 1 is completed (has uploaded images)
+        if (this.uploadedImages > 0 && this.generatedPhotos.length === 0) return 'active';
+        if (this.generatedPhotos.length > 0) return 'completed';
+        return 'pending';
+      
+      case 3:
+        // Step 3 is active when photos are generated
+        if (this.generatedPhotos.length > 0) return 'active';
+        return 'pending';
+      
+      default:
+        if (step < this.currentStep) return 'completed';
+        if (step === this.currentStep) return 'active';
+        return 'pending';
+    }
   }
 
   getStepStatusText(step: number): string {
@@ -397,11 +485,45 @@ export class DashboardComponent implements OnInit, OnDestroy {
     try {
       const qualityResult = await this.validateImageQuality(files);
       
-      // Add valid files to selected files
+      // Create selected files with quality data for preview
+      const newSelectedFilesWithQuality: SelectedFileWithQuality[] = [];
+      
+      // Add valid files
+      for (const file of qualityResult.validFiles) {
+        // Find quality data for this file from error files (which may contain warnings)
+        const qualityData = qualityResult.errorFiles.find(ef => ef.file === file);
+        newSelectedFilesWithQuality.push({
+          file: file,
+          qualityScore: qualityData?.qualityScore,
+          faceValidation: qualityData?.faceValidation,
+          errors: [],
+          warnings: qualityData?.warnings || [],
+          isValid: true
+        });
+      }
+      
+      // Add invalid files with their error information
+      for (const errorFile of qualityResult.errorFiles) {
+        if (!qualityResult.validFiles.includes(errorFile.file)) {
+          newSelectedFilesWithQuality.push({
+            file: errorFile.file,
+            qualityScore: errorFile.qualityScore,
+            faceValidation: errorFile.faceValidation,
+            errors: errorFile.errors,
+            warnings: errorFile.warnings || [],
+            isValid: false
+          });
+        }
+      }
+      
+      // Update both arrays
+      this.selectedFilesWithQuality.push(...newSelectedFilesWithQuality);
       this.selectedFiles.push(...qualityResult.validFiles);
       
-      // Store quality check errors for display
-      this.qualityCheckErrors = qualityResult.errorFiles;
+      // Store quality check errors for display (only invalid files)
+      this.qualityCheckErrors = qualityResult.errorFiles.filter(ef => 
+        !qualityResult.validFiles.includes(ef.file)
+      );
       
       // Update state service with new selected image count
       this.stateService.setState({ uploadedImages: this.selectedFiles.length });
@@ -413,8 +535,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
       }
       
       if (qualityResult.errorFiles.length > 0) {
-        this.notificationService.warning('Validation Issues', 
-          `${qualityResult.errorFiles.length} image(s) failed validation. See details below.`);
+        const invalidCount = qualityResult.errorFiles.filter(ef => 
+          !qualityResult.validFiles.includes(ef.file)
+        ).length;
+        if (invalidCount > 0) {
+          this.notificationService.warning('Validation Issues', 
+            `${invalidCount} image(s) failed validation. See details below.`);
+        }
       }
       
     } catch (error) {
@@ -451,6 +578,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getSelectedStylesCount(): number {
     return this.availableStyles.filter(s => s.selected).length;
+  }
+
+  // Helper methods for selected files with quality
+  getValidFilesCount(): number {
+    return this.selectedFilesWithQuality.filter(f => f.isValid).length;
+  }
+
+  getInvalidFilesCount(): number {
+    return this.selectedFilesWithQuality.filter(f => !f.isValid).length;
   }
 
   // Quality check methods
@@ -502,44 +638,90 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const validFiles: File[] = [];
     const errorFiles: QualityCheckError[] = [];
 
-    for (const file of files) {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
       const errors: string[] = [];
+      const warnings: string[] = [];
+      
+      // Update progress
+      this.qualityCheckProgress = `Analyzing image ${i + 1} of ${files.length}...`;
 
-      // Check file size (5MB max)
-      if (file.size > 5 * 1024 * 1024) {
-        errors.push('File size exceeds 5MB limit');
+      // Basic file validation first
+      if (file.size > 7 * 1024 * 1024) {
+        errors.push('File size exceeds 7MB limit');
       }
 
-      // Check file type
       const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
       if (!validTypes.includes(file.type.toLowerCase())) {
         errors.push('Invalid file type. Only JPG, PNG, and WebP are allowed');
       }
 
-      // Check image dimensions
+      // Basic dimension check
       try {
         const dimensions = await this.getImageDimensions(file);
-        if (dimensions.width < 1024 || dimensions.height < 1024) {
-          errors.push('Image resolution too low. Minimum 1024x1024 pixels required');
+        if (dimensions.width < 512 || dimensions.height < 512) {
+          errors.push('Image resolution too low. Minimum 512x512 pixels required for processing');
         }
       } catch (error) {
         errors.push('Unable to read image file');
       }
 
-      // Additional quality checks could be added here
-      // (face detection, blur detection, etc.)
-
+      // If basic validation fails, skip advanced analysis
       if (errors.length > 0) {
         errorFiles.push({
           fileName: file.name,
           file: file,
-          errors: errors
+          errors: errors,
+          warnings: warnings
         });
-      } else {
-        validFiles.push(file);
+        continue;
+      }
+
+      // Advanced face detection and quality analysis
+      try {
+        this.qualityCheckProgress = `Analyzing face and quality for ${file.name}...`;
+        const faceValidation = await this.faceDetectionService.validateImage(file);
+        
+        // Add face validation errors
+        if (!faceValidation.isValid) {
+          errors.push(...faceValidation.errors);
+        }
+        
+        // Add quality warnings
+        warnings.push(...faceValidation.warnings);
+
+        // Create error/warning entry
+        const qualityCheckError: QualityCheckError = {
+          fileName: file.name,
+          file: file,
+          errors: errors,
+          warnings: warnings,
+          faceValidation: faceValidation,
+          qualityScore: faceValidation.qualityScore
+        };
+
+        if (errors.length > 0) {
+          errorFiles.push(qualityCheckError);
+        } else {
+          validFiles.push(file);
+          // Still add to errorFiles if there are warnings for UI display
+          if (warnings.length > 0) {
+            errorFiles.push(qualityCheckError);
+          }
+        }
+
+      } catch (error) {
+        console.error('Face detection error for file:', file.name, error);
+        errorFiles.push({
+          fileName: file.name,
+          file: file,
+          errors: ['Unable to analyze image. Please try a different photo.'],
+          warnings: warnings
+        });
       }
     }
 
+    this.qualityCheckProgress = 'Analysis complete';
     return { validFiles, errorFiles };
   }
 
