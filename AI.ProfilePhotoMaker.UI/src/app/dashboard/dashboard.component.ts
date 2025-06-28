@@ -206,8 +206,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // Convert style name to filename format (lowercase, replace spaces and slashes with hyphens)
     const fileName = styleName.toLowerCase().replace(/[\s\/]+/g, '-');
     
-    // Return the URL to the style preview image from our API server
-    return `${this.config.getApiUrl()}/style-previews/${fileName}.jpg`;
+    // Add cache busting parameter to prevent browser caching of updated images
+    const cacheBuster = Date.now();
+    
+    return `${this.config.getApiUrl()}/style-previews/${fileName}.jpg?v=${cacheBuster}`;
   }
 
   // UI Event Handlers
@@ -403,6 +405,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
     event.target.onerror = null;
   }
 
+  // Format style names for display - capitalize first letter and remove dashes
+  formatStyleName(styleName: string): string {
+    if (!styleName) return '';
+    
+    return styleName
+      .split('-') // Split by dashes
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1)) // Capitalize first letter of each word
+      .join(' '); // Join with spaces
+  }
+
   // Workflow methods
   isPremiumWorkflow(): boolean {
     return true; // Always show premium workflow for now
@@ -520,9 +532,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.selectedFilesWithQuality.push(...newSelectedFilesWithQuality);
       this.selectedFiles.push(...qualityResult.validFiles);
       
-      // Store quality check errors for display (only invalid files)
+      // Store quality check errors for display (only invalid files with actual errors)
       this.qualityCheckErrors = qualityResult.errorFiles.filter(ef => 
-        !qualityResult.validFiles.includes(ef.file)
+        ef.errors.length > 0
       );
       
       // Update state service with new selected image count
@@ -536,7 +548,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       
       if (qualityResult.errorFiles.length > 0) {
         const invalidCount = qualityResult.errorFiles.filter(ef => 
-          !qualityResult.validFiles.includes(ef.file)
+          ef.errors.length > 0
         ).length;
         if (invalidCount > 0) {
           this.notificationService.warning('Validation Issues', 
@@ -704,10 +716,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
           errorFiles.push(qualityCheckError);
         } else {
           validFiles.push(file);
-          // Still add to errorFiles if there are warnings for UI display
-          if (warnings.length > 0) {
-            errorFiles.push(qualityCheckError);
-          }
+          // Always add to errorFiles for quality score access, regardless of warnings
+          errorFiles.push(qualityCheckError);
         }
 
       } catch (error) {
