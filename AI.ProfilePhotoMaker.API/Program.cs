@@ -434,6 +434,14 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/training-zips"
 });
 
+// Serve static files from style-previews directory
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+        Path.Combine(builder.Environment.ContentRootPath, "style-previews")),
+    RequestPath = "/style-previews"
+});
+
 // Serve Angular static files
 var angularPath = Path.Combine(builder.Environment.ContentRootPath, "../AI.ProfilePhotoMaker.UI/dist/ai.profile-photo-maker.ui");
 if (Directory.Exists(angularPath))

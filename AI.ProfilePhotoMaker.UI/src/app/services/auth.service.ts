@@ -299,24 +299,20 @@ export class AuthService {
     localStorage.removeItem('current_user');
     this.isAuthenticatedSubject.next(true);
     this.currentUserSubject.next(authResult);
-    console.log('Auth session set, isAuthenticated:', true);
   }
 
   private hasToken(): boolean {
     const token = localStorage.getItem(this.TOKEN_KEY);
-    console.log('hasToken check - token exists:', !!token);
     if (!token) return false;
     
     const isExpired = this.isTokenExpired(token);
-    console.log('Token expired:', isExpired);
     
     if (isExpired) {
-      console.log('Token expired, logging out');
+      console.warn('Auth token has expired');
       this.logout();
       return false;
     }
     
-    console.log('Token is valid');
     return true;
   }
 
