@@ -1,31 +1,26 @@
-import { inject } from '@angular/core';
-import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
-import { Router } from '@angular/router';
-import { catchError, throwError } from 'rxjs';
-import { AuthService } from '../services/auth.service';
+import { HttpInterceptorFn } from '@angular/common/http';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const authService = inject(AuthService);
-  const router = inject(Router);
-  const token = authService.getToken();
+  // Get the auth token from localStorage (check both possible keys for compatibility)
+  const authToken = localStorage.getItem('auth_token') || localStorage.getItem('authToken');
+  
+  // Clone the request and add headers
+  let modifiedReq = req.clone({
+    setHeaders: {
+      // Add ngrok header to skip browser warning
+      'ngrok-skip-browser-warning': 'true'
+    }
+  });
 
-  let authReq = req;
-  if (token) {
-    authReq = req.clone({
-      headers: req.headers.set('Authorization', `Bearer ${token}`)
+  // Add Authorization header if token exists
+  if (authToken) {
+    modifiedReq = modifiedReq.clone({
+      setHeaders: {
+        'Authorization': `Bearer ${authToken}`,
+        'ngrok-skip-browser-warning': 'true'
+      }
     });
   }
 
-  return next(authReq).pipe(
-    catchError((error: HttpErrorResponse) => {
-      // Handle 401 Unauthorized responses (token expired/invalid)
-      if (error.status === 401) {
-        console.log('Unauthorized request detected, logging out');
-        authService.logout();
-        router.navigate(['/login']);
-      }
-      
-      return throwError(() => error);
-    })
-  );
+  return next(modifiedReq);
 };

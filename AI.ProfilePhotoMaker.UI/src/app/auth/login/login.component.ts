@@ -8,9 +8,10 @@ import { ConfigService } from '../../services/config.service';
 
 @Component({
   selector: 'app-login',
+  standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './login.component.html',
-  styleUrl: './login.component.sass'
+  styleUrls: ['./login.component.sass']
 })
 export class LoginComponent implements OnInit {
   loginForm: FormGroup;

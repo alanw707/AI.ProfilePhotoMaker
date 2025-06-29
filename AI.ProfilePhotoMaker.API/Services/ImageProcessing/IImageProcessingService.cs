@@ -7,4 +7,5 @@ public interface IImageProcessingService
     Task<string> ProcessImageAsync(IFormFile image, string userId, string styleOption);
     Task<IEnumerable<string>> GetAvailableStylesAsync();
     Task<string> GenerateImageAsync(GenerateImagesRequestDto request);
+    Task<string> EnhancePhotoQualityAsync(EnhancePhotoRequestDto request);
 }

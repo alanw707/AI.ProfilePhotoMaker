@@ -1,267 +1,182 @@
-@import '../../../styles.sass'
+// Import shared styles
+@use '../../../styles.sass' as *
 
-// Container and Theme Toggle
-.photo-enhancement-container
+// Gallery Page Styling (reused for consistency)
+.gallery-page-container
   min-height: 100vh
-  position: relative
+  background: var(--bg-gradient)
+  font-family: 'Inter', sans-serif
 
-.theme-toggle
-  position: fixed
-  top: 1rem
-  right: 1rem
-  z-index: 1000
-  background: var(--background-secondary)
-  border: 1px solid var(--border-color)
-  border-radius: 50%
-  width: 3rem
-  height: 3rem
-  display: flex
-  align-items: center
-  justify-content: center
-  cursor: pointer
-  transition: all 0.2s ease
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1)
-
-  svg
-    width: 1.5rem
-    height: 1.5rem
-    color: var(--text-primary)
-
-  &:hover
-    background: var(--background-tertiary)
-    transform: scale(1.05)
-
-// Header Navigation
-.enhancement-header-nav
-  background: var(--background-primary)
-  border-bottom: 1px solid var(--border-color)
-  padding: 1rem 2rem
-  position: sticky
-  top: 0
-  z-index: 100
-  backdrop-filter: blur(10px)
-
-.header-content
-  max-width: 1200px
+// Main Content Styling
+.gallery-main
+  padding: 32px 24px
+  max-width: 1400px
   margin: 0 auto
-  display: flex
-  justify-content: space-between
-  align-items: center
 
-.logo-section
-  display: flex
-  align-items: center
-  gap: 1rem
+.gallery-content
+  background: var(--surface-primary)
+  border-radius: 16px
+  padding: 32px
+  box-shadow: var(--shadow-md)
 
-  .header-logo
-    width: 2.5rem
-    height: 2.5rem
-    border-radius: 8px
-
-  h1
-    color: var(--text-primary)
-    font-size: 1.5rem
-    font-weight: 600
-    margin: 0
-
-.nav-actions
-  display: flex
-  align-items: center
-  gap: 1rem
-
-.user-section
-  display: flex
-  align-items: center
-  gap: 1rem
-
-.user-info
-  display: flex
-  flex-direction: column
-  align-items: flex-end
-  
-  .user-name
-    color: var(--text-primary)
-    font-weight: 500
-    font-size: 0.875rem
-    
-  .user-email
-    color: var(--text-secondary)
-    font-size: 0.75rem
-
-.btn
-  padding: 0.5rem 1rem
-  border-radius: 6px
-  font-weight: 500
-  text-decoration: none
-  cursor: pointer
-  border: none
-  display: inline-flex
-  align-items: center
-  gap: 0.5rem
-  transition: all 0.2s ease
-  font-size: 0.875rem
-
-  &.btn-outline
-    background: transparent
-    color: var(--text-primary)
-    border: 1px solid var(--border-color)
-
-    &:hover
-      background: var(--background-secondary)
-
-  &.btn-logout
-    background: transparent
-    color: var(--text-secondary)
-    border: 1px solid transparent
-
-    &:hover
-      background: rgba(255, 99, 71, 0.1)
-      color: #ff6347
-      border-color: rgba(255, 99, 71, 0.3)
-
-.photo-enhancement
-  max-width: 800px
-  margin: 0 auto
-  padding: 2rem
-
-.enhancement-header
+// Page Header
+.page-header
   text-align: center
-  margin-bottom: 3rem
+  margin-bottom: 48px
 
   h2
+    font-family: 'Poppins', sans-serif
+    font-size: 32px
+    font-weight: 700
     color: var(--text-primary)
-    margin-bottom: 1rem
+    margin: 0 0 16px 0
 
   p
+    font-size: 18px
     color: var(--text-secondary)
-    font-size: 1.1rem
+    margin: 0
     max-width: 600px
-    margin: 0 auto 2rem
+    margin-left: auto
+    margin-right: auto
 
-// Credits Info
-.credits-info
+// Credits Section
+.credits-section
   display: flex
   justify-content: center
-  margin-bottom: 2rem
+  margin-bottom: 48px
 
 .credits-card
-  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark))
+  background: var(--primary-gradient)
   color: white
-  padding: 1.5rem 2rem
-  border-radius: 12px
+  padding: 24px 32px
+  border-radius: 16px
   display: flex
   align-items: center
-  gap: 1rem
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1)
+  gap: 16px
+  box-shadow: var(--shadow-lg)
 
-.credits-icon
-  font-size: 2rem
+  .credits-icon
+    font-size: 32px
 
-.credits-content
-  h3
-    margin: 0 0 0.25rem 0
-    font-size: 1.2rem
-    font-weight: 600
+  .credits-content
+    h3
+      margin: 0 0 4px 0
+      font-size: 24px
+      font-weight: 700
 
-  p
-    margin: 0
-    opacity: 0.9
-    font-size: 0.9rem
+    p
+      margin: 0
+      opacity: 0.9
+      font-size: 14px
 
 // Upload Section
 .upload-section
-  margin-bottom: 3rem
+  margin-bottom: 48px
 
 .upload-area
   border: 2px dashed var(--border-color)
-  border-radius: 12px
-  padding: 3rem 2rem
+  border-radius: 16px
+  padding: 48px 32px
   text-align: center
   cursor: pointer
-  transition: all 0.2s ease
-  background: var(--background-secondary)
+  transition: all 0.3s ease
+  background: var(--surface-secondary)
 
   &:hover, &.drag-over
-    border-color: var(--primary-color)
-    background: rgba(var(--primary-rgb), 0.05)
+    border-color: var(--primary)
+    background: var(--primary-bg-light)
+    transform: translateY(-2px)
 
-.upload-icon
-  font-size: 3rem
-  margin-bottom: 1rem
+  .upload-icon
+    font-size: 48px
+    margin-bottom: 16px
 
-.upload-area h3
-  color: var(--text-primary)
-  margin-bottom: 0.5rem
+  h3
+    color: var(--text-primary)
+    margin-bottom: 8px
+    font-size: 24px
+    font-weight: 600
 
-.upload-area p
-  color: var(--text-secondary)
-  margin-bottom: 0.5rem
+  p
+    color: var(--text-secondary)
+    margin-bottom: 8px
+    font-size: 16px
 
-.upload-restrictions
-  font-size: 0.875rem
-  color: var(--text-tertiary)
+  .upload-restrictions
+    font-size: 14px
+    color: var(--text-tertiary)
 
 // Enhancement Section
 .enhancement-section
-  margin-bottom: 3rem
+  margin-bottom: 48px
 
 .preview-container
   display: grid
   grid-template-columns: 1fr 1fr
-  gap: 2rem
+  gap: 32px
   align-items: start
 
 .image-preview
   position: relative
-  border-radius: 12px
+  border-radius: 16px
   overflow: hidden
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1)
+  box-shadow: var(--shadow-lg)
 
-.preview-image
-  width: 100%
-  height: auto
-  display: block
+  .preview-image
+    width: 100%
+    height: auto
+    display: block
 
-.remove-btn
-  position: absolute
-  top: 0.5rem
-  right: 0.5rem
-  background: rgba(0, 0, 0, 0.7)
-  color: white
-  border: none
-  border-radius: 50%
-  width: 2rem
-  height: 2rem
-  font-size: 1.2rem
-  cursor: pointer
-  display: flex
-  align-items: center
-  justify-content: center
+  .remove-btn
+    position: absolute
+    top: 12px
+    right: 12px
+    background: rgba(0, 0, 0, 0.7)
+    color: white
+    border: none
+    border-radius: 50%
+    width: 32px
+    height: 32px
+    font-size: 18px
+    cursor: pointer
+    display: flex
+    align-items: center
+    justify-content: center
+    transition: all 0.2s ease
+
+    &:hover
+      background: rgba(0, 0, 0, 0.9)
+      transform: scale(1.1)
 
 .enhancement-options
   h3
     color: var(--text-primary)
-    margin-bottom: 1.5rem
+    margin-bottom: 24px
+    font-size: 20px
+    font-weight: 600
 
 .options-grid
   display: grid
-  gap: 1rem
-  margin-bottom: 2rem
+  gap: 16px
+  margin-bottom: 32px
 
 .option-card
   border: 2px solid var(--border-color)
-  border-radius: 8px
-  padding: 1rem
+  border-radius: 12px
+  padding: 16px
   cursor: pointer
-  transition: all 0.2s ease
+  transition: all 0.3s ease
   display: block
+  background: var(--surface-secondary)
 
   &:hover
-    border-color: var(--primary-color)
+    border-color: var(--primary)
+    transform: translateY(-2px)
+    box-shadow: var(--shadow-md)
 
   &.selected
-    border-color: var(--primary-color)
-    background: rgba(var(--primary-rgb), 0.05)
+    border-color: var(--primary)
+    background: var(--primary-bg-light)
 
   input[type="radio"]
     display: none
@@ -269,48 +184,131 @@
 .option-content
   text-align: center
 
-.option-icon
-  font-size: 2rem
-  margin-bottom: 0.5rem
+  .option-icon
+    font-size: 32px
+    margin-bottom: 8px
 
-.option-content h4
-  color: var(--text-primary)
-  margin: 0 0 0.5rem 0
-  font-size: 1rem
+  h4
+    color: var(--text-primary)
+    margin: 0 0 8px 0
+    font-size: 16px
+    font-weight: 600
 
-.option-content p
-  color: var(--text-secondary)
-  margin: 0
-  font-size: 0.875rem
+  p
+    color: var(--text-secondary)
+    margin: 0
+    font-size: 14px
+
+// Button Styling (consistent with other pages)
+.btn
+  padding: 12px 24px
+  border-radius: 12px
+  border: none
+  font-weight: 600
+  text-decoration: none
+  cursor: pointer
+  display: inline-flex
+  align-items: center
+  gap: 8px
+  transition: all 0.3s ease
+  font-size: 16px
+  line-height: 1.5
+
+  &.btn-primary
+    background: var(--primary)
+    color: white
+    box-shadow: var(--shadow-md)
+
+    &:hover
+      background: var(--primary-dark)
+      transform: translateY(-2px)
+      box-shadow: var(--shadow-lg)
+
+    &:disabled
+      background: var(--border-color)
+      color: var(--text-tertiary)
+      cursor: not-allowed
+      transform: none
+      box-shadow: none
+
+  &.btn-secondary
+    background: var(--surface-secondary)
+    color: var(--text-primary)
+    border: 1px solid var(--border-color)
+
+    &:hover
+      background: var(--surface-tertiary)
+      transform: translateY(-2px)
+      box-shadow: var(--shadow-md)
+
+  &.btn-outline
+    background: transparent
+    color: var(--primary)
+    border: 2px solid var(--primary)
+
+    &:hover
+      background: var(--primary)
+      color: white
+      transform: translateY(-2px)
+
+  svg
+    flex-shrink: 0
 
 .enhance-btn
   width: 100%
-  padding: 1rem
-  font-size: 1.1rem
-  font-weight: 600
+  padding: 16px
+  font-size: 18px
 
 // Processing Section
 .processing-section
   display: flex
   justify-content: center
-  margin-bottom: 3rem
+  margin-bottom: 48px
 
 .processing-card
-  background: var(--background-secondary)
-  border-radius: 12px
-  padding: 3rem 2rem
+  background: var(--surface-secondary)
+  border-radius: 16px
+  padding: 48px 32px
   text-align: center
   max-width: 400px
   width: 100%
+  box-shadow: var(--shadow-md)
 
-.processing-spinner
-  width: 4rem
-  height: 4rem
-  border: 4px solid var(--border-color)
-  border-top: 4px solid var(--primary-color)
-  border-radius: 50%
-  animation: spin 1s linear infinite
-  margin: 0 auto 1.5rem
+  .processing-spinner
+    width: 64px
+    height: 64px
+    border: 4px solid var(--border-color)
+    border-top: 4px solid var(--primary)
+    border-radius: 50%
+    animation: spin 1s linear infinite
+    margin: 0 auto 24px
+
+  h3
+    color: var(--text-primary)
+    margin-bottom: 8px
+    font-size: 20px
+    font-weight: 600
+
+  p
+    color: var(--text-secondary)
+    margin-bottom: 24px
+
+  .processing-progress
+    background: var(--border-color)
+    border-radius: 8px
+    height: 8px
+    margin-bottom: 16px
+    overflow: hidden
+
+    .progress-bar
+      background: var(--primary)
+      height: 100%
+      transition: width 0.3s ease
+
+  .processing-status
+    color: var(--text-secondary)
+    font-size: 14px
+    font-style: italic
 
 @keyframes spin
   0%
@@ -318,276 +316,174 @@
   100%
     transform: rotate(360deg)
 
-.processing-card h3
-  color: var(--text-primary)
-  margin-bottom: 0.5rem
-
-.processing-card p
-  color: var(--text-secondary)
-  margin-bottom: 1.5rem
-
-.processing-progress
-  background: var(--border-color)
-  border-radius: 4px
-  height: 8px
-  margin-bottom: 1rem
-  overflow: hidden
-
-.progress-bar
-  background: var(--primary-color)
-  height: 100%
-  transition: width 0.3s ease
-
-.processing-status
-  color: var(--text-secondary)
-  font-size: 0.875rem
-  font-style: italic
-
 // Results Section
 .results-section
   text-align: center
-  margin-bottom: 3rem
+  margin-bottom: 48px
 
   h3
     color: var(--text-primary)
-    margin-bottom: 1rem
-
-  .demo-note
-    background: rgba(var(--warning-rgb), 0.1)
-    color: var(--warning-color)
-    padding: 0.75rem 1rem
-    border-radius: 8px
-    margin-bottom: 2rem
-    font-size: 0.875rem
-    border: 1px solid rgba(var(--warning-rgb), 0.3)
+    margin-bottom: 32px
+    font-size: 24px
+    font-weight: 600
 
 .before-after
   display: flex
   align-items: center
   justify-content: center
-  gap: 2rem
-  margin-bottom: 2rem
+  gap: 32px
+  margin-bottom: 32px
 
 .comparison-item
   text-align: center
 
   h4
     color: var(--text-secondary)
-    margin-bottom: 1rem
-    font-size: 0.875rem
+    margin-bottom: 16px
+    font-size: 14px
     text-transform: uppercase
-    letter-spacing: 0.5px
+    letter-spacing: 1px
+    font-weight: 600
 
 .comparison-image
   width: 200px
   height: 200px
   object-fit: cover
-  border-radius: 8px
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1)
+  border-radius: 12px
+  box-shadow: var(--shadow-lg)
 
 .comparison-arrow
-  font-size: 2rem
-  color: var(--primary-color)
+  font-size: 32px
+  color: var(--primary)
   font-weight: bold
 
 .result-actions
   display: flex
-  gap: 1rem
+  gap: 16px
   justify-content: center
   flex-wrap: wrap
 
-  .btn
-    padding: 0.75rem 1.5rem
-    border-radius: 8px
-    font-weight: 500
-    text-decoration: none
-    cursor: pointer
-    border: none
-    display: inline-flex
-    align-items: center
-    gap: 0.5rem
-    transition: all 0.2s ease
-    font-size: 0.875rem
-
-    &.btn-primary
-      background: var(--primary-color)
-      color: #2c3e50
-      border: 1px solid var(--primary-dark)
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1)
-      font-weight: 600
-
-      &:hover
-        background: var(--primary-dark)
-        color: #2c3e50
-        transform: translateY(-1px)
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15)
-
-    &.btn-secondary
-      background: var(--background-secondary)
-      color: var(--text-primary)
-      border: 1px solid var(--border-color)
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1)
-
-      &:hover
-        background: var(--background-tertiary)
-        transform: translateY(-1px)
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15)
-
-    &.btn-outline
-      background: var(--background-secondary)
-      color: var(--primary-color)
-      border: 1px solid var(--primary-color)
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1)
-
-      &:hover
-        background: var(--primary-color)
-        color: white
-        transform: translateY(-1px)
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15)
-
-    svg
-      flex-shrink: 0
-
-// No Credits Section
-.no-credits
+// No Credits & Error States
+.no-credits, .error-section
   display: flex
   justify-content: center
-  margin-bottom: 3rem
+  margin-bottom: 48px
 
-.no-credits-card
-  background: var(--background-secondary)
+.no-credits-card, .error-card
+  background: var(--surface-secondary)
   border: 1px solid var(--border-color)
-  border-radius: 12px
-  padding: 3rem 2rem
+  border-radius: 16px
+  padding: 48px 32px
   text-align: center
   max-width: 400px
+  box-shadow: var(--shadow-md)
 
-.no-credits-icon
-  font-size: 3rem
-  margin-bottom: 1rem
+  .no-credits-icon, .error-icon
+    font-size: 48px
+    margin-bottom: 16px
 
-.no-credits-card h3
-  color: var(--text-primary)
-  margin-bottom: 1rem
+  h3
+    margin-bottom: 16px
+    font-size: 20px
+    font-weight: 600
 
-.no-credits-card p
-  color: var(--text-secondary)
-  margin-bottom: 2rem
+  p
+    color: var(--text-secondary)
+    margin-bottom: 32px
+
+.error-card
+  border-color: var(--error)
+  background: var(--error-bg-light)
+
+  h3
+    color: var(--error)
 
 .upgrade-prompt
   p
     color: var(--text-primary)
     font-weight: 500
-    margin-bottom: 1rem
-
-// Error Section
-.error-section
-  display: flex
-  justify-content: center
-  margin-bottom: 3rem
-
-.error-card
-  background: rgba(var(--error-rgb), 0.05)
-  border: 1px solid var(--error-color)
-  border-radius: 12px
-  padding: 2rem
-  text-align: center
-  max-width: 400px
-
-.error-icon
-  font-size: 3rem
-  margin-bottom: 1rem
-
-.error-card h3
-  color: var(--error-color)
-  margin-bottom: 1rem
-
-.error-card p
-  color: var(--text-secondary)
-  margin-bottom: 2rem
+    margin-bottom: 16px
 
 // Responsive Design
-@media (max-width: 768px)
-  .enhancement-header-nav
-    padding: 1rem
+@media (max-width: 1024px)
+  .gallery-main
+    padding: 24px 16px
 
-  .header-content
-    padding: 0 1rem
-
-  .logo-section
-    h1
-      font-size: 1.25rem
-
-    .header-logo
-      width: 2rem
-      height: 2rem
-
-  .nav-actions
-    gap: 0.5rem
-
-  .user-info
-    .user-name
-      font-size: 0.75rem
-    .user-email
-      font-size: 0.65rem
-
-  .btn
-    padding: 0.4rem 0.8rem
-    font-size: 0.75rem
-
-  .photo-enhancement
-    padding: 1rem
-
-  .enhancement-header
-    margin-bottom: 2rem
+  .gallery-content
+    padding: 24px
 
   .preview-container
     grid-template-columns: 1fr
-    gap: 2rem
+    gap: 24px
+
+@media (max-width: 768px)
+  .dashboard-header
+    .header-content
+      padding: 0 16px
+
+    .nav-menu
+      gap: 4px
+
+      .nav-link
+        padding: 8px 12px
+        font-size: 12px
+
+    .user-info
+      .user-name
+        font-size: 14px
+      .user-email
+        font-size: 12px
+
+  .page-header
+    margin-bottom: 32px
+
+    h2
+      font-size: 24px
+
+    p
+      font-size: 16px
 
   .credits-card
-    padding: 1rem 1.5rem
+    padding: 16px 20px
 
   .upload-area
-    padding: 2rem 1rem
+    padding: 32px 16px
 
   .before-after
     flex-direction: column
-    gap: 1rem
+    gap: 16px
 
   .comparison-arrow
     transform: rotate(90deg)
 
   .result-actions
     flex-direction: column
-    align-items: stretch
 
-  .options-grid
-    gap: 0.75rem
-
-  .option-card
-    padding: 0.75rem
-
-// Extra small devices (phones in portrait)
 @media (max-width: 480px)
-  .nav-actions
-    flex-direction: column
-    align-items: flex-end
-    gap: 0.25rem
-
-  .user-section
-    gap: 0.5rem
-
-  .logo-section
-    h1
-      display: none  // Hide title on very small screens
-
   .theme-toggle
-    top: 0.5rem
-    right: 0.5rem
-    width: 2.5rem
-    height: 2.5rem
+    top: 16px
+    right: 16px
+    width: 40px
+    height: 40px
 
     svg
-      width: 1.25rem
-      height: 1.25rem
+      width: 16px
+      height: 16px
+
+  .dashboard-header
+    .logo-section
+      h1
+        display: none
+
+  .gallery-content
+    padding: 16px
+
+  .page-header
+    h2
+      font-size: 20px
+
+  .options-grid
+    gap: 12px
+
+  .option-card
+    padding: 12px

@@ -13,6 +13,17 @@ AI.ProfilePhotoMaker is a full-stack application that generates professional pro
 - AI: Replicate.com FLUX.1 models
 - Storage: Local filesystem (Azure Blob planned)
 
+## Documentation Structure
+
+Project documentation is organized as follows:
+- `README.md` - Main project overview and getting started (root level for GitHub)
+- `/docs/ARCHITECTURE.md` - System architecture and design patterns
+- `/docs/PROJECT_PLAN.md` - Project milestones and timeline
+- `/docs/TASKS.md` - Detailed task list and current status
+- `/docs/SETUP.md` - Development environment setup instructions
+- `/docs/OAUTH_TROUBLESHOOTING.md` - OAuth implementation guide
+- `/docs/REFACTOR.md` - Comprehensive refactoring documentation
+
 ## Common Development Commands
 
 ### Backend (.NET API)
@@ -67,6 +78,69 @@ dotnet build AI.ProfilePhotoMaker.sln
 # UI: cd AI.ProfilePhotoMaker.UI && ng serve
 ```
 
+## Credit System Overview
+
+AI.ProfilePhotoMaker uses a unified credit system that supports both basic tier (free weekly credits) and purchased credits for premium features.
+
+### Credit Types
+
+**Weekly Credits (Basic Tier):**
+- Users receive 3 credits every 7 days (automatically reset)
+- Can be used for Photo Enhancement operations only
+- Managed by `BasicTierService` and `BasicTierBackgroundService`
+- Stored in `UserProfile.Credits` field
+- Reset logic tracks `LastCreditReset` timestamp
+
+**Purchased Credits:**
+- Users can purchase credit packages for premium features
+- Required for Model Training and Styled Generation operations
+- Managed by `CreditPackageService`
+- Stored in separate credit purchase/transaction system
+- No expiration or reset - permanent until consumed
+
+### Credit Costs
+
+| Operation | Cost | Credit Type | Notes |
+|-----------|------|-------------|-------|
+| Photo Enhancement | 1 credit | Weekly or Purchased | Uses Flux Kontext Pro model |
+| Model Training | 15 credits | Purchased only | Custom model training via Replicate |
+| Styled Generation | 5 credits | Purchased only | Generates images using trained model |
+
+### Credit Architecture
+
+**Database Models:**
+- `UserProfile.Credits` - Current weekly credits balance
+- `UserProfile.LastCreditReset` - Timestamp of last weekly reset
+- `CreditPackage` - Available credit packages for purchase
+- `CreditPurchase` - User credit purchase transactions
+- `UsageLog` - Tracks all credit consumption with timestamps
+
+**Key Services:**
+- `BasicTierService` - Manages weekly credits and consumption
+- `BasicTierBackgroundService` - Automated weekly credit resets
+- `CreditPackageService` - Handles credit package purchases
+- `ICreditPackageService` - Interface for credit package operations
+
+**API Endpoints:**
+- `/api/credit/packages` - Get available credit packages
+- `/api/credit/purchase` - Purchase credit packages
+- `/api/test/basic-tier-status` - Check user's credit status
+- `/api/test/reset-credits` - Manually reset weekly credits (testing)
+
+### Credit Validation Logic
+
+Before any operation, the system:
+1. Checks if operation requires weekly or purchased credits
+2. Validates sufficient credits are available
+3. Deducts credits and logs usage in `UsageLog`
+4. Returns appropriate error if insufficient credits
+
+**Weekly Credit Reset:**
+- Runs as background service every hour
+- Checks users where `LastCreditReset` is older than 7 days
+- Resets `Credits` to 3 and updates `LastCreditReset`
+- Only affects basic tier users
+
 ## Architecture Overview
 
 ### Project Structure
@@ -91,10 +165,9 @@ dotnet build AI.ProfilePhotoMaker.sln
 4. Webhook receives generation completion → Stores image URLs
 
 **Basic Tier Workflow:**
-1. **Generation**: User requests basic generation → API checks available credits → Generates casual headshot using base FLUX model (no training required)
-2. **Enhancement**: User uploads photo → API enhances using Flux Kontext Pro model with text-based prompts
-3. Credit consumed (1 per generation/enhancement) and tracked in UsageLog
-4. Weekly background service resets credits every 7 days (3 credits per week)
+1. **Enhancement**: User uploads photo → API enhances using Flux Kontext Pro model with text-based prompts
+2. Credit consumed (1 per enhancement) and tracked in UsageLog
+3. Weekly background service resets credits every 7 days (3 credits per week)
 
 **Authentication Flow:**
 - ASP.NET Identity with JWT tokens
@@ -112,15 +185,18 @@ dotnet build AI.ProfilePhotoMaker.sln
 ### Key API Endpoints
 - **Authentication**: `/api/auth/login`, `/api/auth/google`, `/api/auth/apple`
 - **Profile Management**: `/api/profile/*` (CRUD operations, file uploads)
-- **Image Generation**: `/api/replicate/generate` (paid tier), `/api/replicate/generate/basic` (basic tier)
-- **Photo Enhancement**: `/api/replicate/enhance` (uses Flux Kontext Pro)
-- **Credit Management**: `/api/test/basic-tier-status`, `/api/test/reset-credits`
+- **Image Generation**: `/api/replicate/generate` (premium tier with trained models)
+- **Photo Enhancement**: `/api/replicate/enhance` (uses Flux Kontext Pro, basic tier)
+- **Credit Management**: `/api/credit/*` (packages, purchase, payment-config), `/api/test/basic-tier-status`, `/api/test/reset-credits`
+- **Payment Simulation**: `/api/credit/create-payment-intent` (development mode placeholder)
 - **Testing**: `/api/test/*` (various development/testing endpoints)
 
 ### Key Services
 - **BasicTierService**: Manages credit system, weekly resets, basic tier functionality
 - **BasicTierBackgroundService**: Background service for automated credit resets
 - **ReplicateApiClient**: Handles all Replicate.com API integration (training, generation, enhancement)
+- **StripeService**: Payment processing with simulation mode for development
+- **CreditPackageService**: Manages credit packages and purchase transactions
 - **Auth Services**: JWT token management, OAuth integration
 
 ## Configuration Requirements
@@ -143,7 +219,16 @@ dotnet build AI.ProfilePhotoMaker.sln
     "FluxKontextProModelId": "black-forest-labs/flux-kontext-pro",
     "WebhookSecret": "STORED_IN_USER_SECRETS"
   },
-  "AppBaseUrl": "https://057a-71-38-148-86.ngrok-free.app",
+  "Stripe": {
+    "PublishableKey": "STORED_IN_USER_SECRETS",
+    "SecretKey": "STORED_IN_USER_SECRETS",
+    "WebhookSecret": "STORED_IN_USER_SECRETS"
+  },
+  "PaymentSimulation": {
+    "Enabled": true,
+    "SkipStripeIntegration": true
+  },
+  "AppBaseUrl": "https://16aa-71-38-148-86.ngrok-free.app",
   "Logging": {
     "LogLevel": {
       "Default": "Information",
@@ -182,6 +267,27 @@ ngrok http https://localhost:5035
 - CORS is configured to allow all origins in development (`AllowAll` policy)
 
 ### Recent Major Changes
+
+#### Payment Simulation System (2025-06-27)
+- **Payment Integration Stabilization**: Complete payment simulation system for development
+  - Added `/api/credit/create-payment-intent` placeholder endpoint with mock responses
+  - Added `/api/credit/payment-config` endpoint for frontend configuration checking
+  - Updated `StripeService` to conditionally load Stripe.js based on simulation settings
+  - Implemented 2-second payment simulation workflow in credit-packages component
+  - Added development mode UI notices and simulation status indicators
+  - Eliminated all console errors from Stripe.js loading in development environment
+  - Credits properly added to user accounts during payment simulation
+  - Easy toggle between simulation and real Stripe integration via configuration
+
+#### UI Component Unification (2025-06-27)
+- **Header Navigation Consolidation**: Eliminated duplicate code across components
+  - Created shared `HeaderNavigationComponent` with unified HTML, TypeScript, and styling
+  - Consolidated header code from dashboard, gallery, settings, premium, and photo-enhancement components
+  - Reduced header-related code duplication by ~90% (100+ lines of duplicate code removed)
+  - Unified theme toggle, logout, and user info display functionality
+  - Consistent navigation experience and styling across all pages
+
+#### Previous Infrastructure Improvements
 - **Photo Enhancement Integration**: Complete end-to-end photo enhancement workflow now functional
   - Fixed UI integration from demo mode to real Replicate API calls
   - Updated enhancement options from Professional/Portrait/LinkedIn to Background Remover/Social Media/Cartoon
@@ -198,7 +304,6 @@ ngrok http https://localhost:5035
 - **UI Components**: Complete terminology update across Angular components and services
 
 ### AI Model Configuration
-- **Training**: Uses `replicate/fast-flux-trainer` for custom model training (paid tier)
-- **Generation**: Uses `black-forest-labs/flux-dev` for image generation (paid tier)
-- **Basic Generation**: Uses `black-forest-labs/flux-dev` for basic tier (no training)
+- **Training**: Uses `replicate/fast-flux-trainer` for custom model training (premium tier)
+- **Styled Generation**: Uses `black-forest-labs/flux-dev` for image generation with trained models (premium tier)
 - **Enhancement**: Uses `black-forest-labs/flux-kontext-pro` for photo enhancement (basic tier)

@@ -1,0 +1,258 @@
+.credit-status-container
+  width: 100%
+
+// Compact View (for navbar/header)
+.compact-view
+  display: flex
+  align-items: center
+  gap: 0.5rem
+  padding: 0.5rem 1rem
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+  color: white
+  border-radius: 25px
+  min-width: 120px
+  
+  .total-credits
+    display: flex
+    flex-direction: column
+    align-items: center
+    
+    .credit-count
+      font-size: 1.2rem
+      font-weight: bold
+      line-height: 1
+      
+    .credit-label
+      font-size: 0.7rem
+      opacity: 0.9
+      line-height: 1
+      
+  .refresh-btn
+    background: transparent
+    border: 1px solid rgba(255, 255, 255, 0.3)
+    color: white
+    border-radius: 50%
+    width: 24px
+    height: 24px
+    display: flex
+    align-items: center
+    justify-content: center
+    cursor: pointer
+    font-size: 0.8rem
+    transition: all 0.3s ease
+    
+    &:hover
+      background: rgba(255, 255, 255, 0.2)
+
+// Detailed View (for dedicated credit pages)
+.detailed-view
+  background: white
+  border-radius: 15px
+  padding: 2rem
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1)
+  
+  .header
+    display: flex
+    justify-content: space-between
+    align-items: center
+    margin-bottom: 2rem
+    
+    h3
+      margin: 0
+      color: #2c3e50
+      font-size: 1.5rem
+      
+    .refresh-btn
+      background: #f8f9fa
+      border: 1px solid #dee2e6
+      color: #6c757d
+      border-radius: 8px
+      padding: 0.5rem 0.75rem
+      cursor: pointer
+      transition: all 0.3s ease
+      
+      &:hover
+        background: #e9ecef
+        color: #495057
+
+.credit-breakdown
+  display: grid
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))
+  gap: 1.5rem
+  margin-bottom: 2rem
+
+.credit-card
+  background: white
+  border: 2px solid #e9ecef
+  border-radius: 12px
+  padding: 1.5rem
+  text-align: center
+  transition: all 0.3s ease
+  
+  &:hover
+    transform: translateY(-2px)
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1)
+    
+  &.total
+    border-color: #667eea
+    background: linear-gradient(135deg, #667eea10, #764ba210)
+    
+  &.weekly
+    border-color: #17a2b8
+    background: linear-gradient(135deg, #17a2b810, #20c99710)
+    
+  &.purchased
+    border-color: #28a745
+    background: linear-gradient(135deg, #28a74510, #20c99710)
+    
+  .credit-icon
+    font-size: 2rem
+    margin-bottom: 0.5rem
+    
+  .credit-info
+    .count
+      display: block
+      font-size: 2rem
+      font-weight: bold
+      color: #2c3e50
+      margin-bottom: 0.25rem
+      
+    .label
+      display: block
+      font-size: 0.9rem
+      color: #6c757d
+      font-weight: 500
+      
+  .credit-note
+    margin-top: 0.75rem
+    
+    small
+      display: block
+      color: #8e9aaf
+      font-size: 0.75rem
+      line-height: 1.2
+
+.operation-affordability
+  margin-bottom: 2rem
+  
+  h4
+    color: #2c3e50
+    margin: 0 0 1rem 0
+    font-size: 1.1rem
+
+.operations-grid
+  display: grid
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))
+  gap: 1rem
+
+.operation-item
+  display: grid
+  grid-template-columns: 1fr auto auto
+  align-items: center
+  gap: 0.5rem
+  padding: 1rem
+  background: #f8f9fa
+  border-radius: 8px
+  border-left: 4px solid #dc3545
+  
+  &.affordable
+    border-left-color: #28a745
+    background: #f8fff8
+    
+  .operation-name
+    font-weight: 500
+    color: #2c3e50
+    
+  .operation-cost
+    font-size: 0.9rem
+    color: #6c757d
+    
+  .affordability-status
+    font-weight: bold
+    
+    // Using text color for affordability
+    color: #dc3545 // Red for not affordable
+    
+  &.affordable .affordability-status
+    color: #28a745 // Green for affordable
+
+.quick-actions
+  display: flex
+  gap: 1rem
+  justify-content: center
+  
+  .action-btn
+    padding: 0.75rem 1.5rem
+    border-radius: 8px
+    text-decoration: none
+    font-weight: 500
+    transition: all 0.3s ease
+    text-align: center
+    min-width: 120px
+    
+    &.primary
+      background: linear-gradient(135deg, #667eea, #764ba2)
+      color: white
+      
+      &:hover
+        transform: translateY(-2px)
+        box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4)
+        
+    &.secondary
+      background: transparent
+      color: #667eea
+      border: 2px solid #667eea
+      
+      &:hover
+        background: #667eea
+        color: white
+
+.no-credits
+  .empty-state
+    text-align: center
+    padding: 3rem 2rem
+    
+    .empty-icon
+      font-size: 4rem
+      margin-bottom: 1rem
+      
+    h3
+      color: #2c3e50
+      margin: 0 0 0.5rem 0
+      
+    p
+      color: #6c757d
+      margin: 0 0 2rem 0
+      
+    .action-btn
+      display: inline-block
+      padding: 1rem 2rem
+      background: linear-gradient(135deg, #667eea, #764ba2)
+      color: white
+      text-decoration: none
+      border-radius: 8px
+      font-weight: 600
+      transition: all 0.3s ease
+      
+      &:hover
+        transform: translateY(-2px)
+        box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4)
+
+.loading
+  text-align: center
+  padding: 2rem
+  color: #6c757d
+
+@media (max-width: 768px)
+  .detailed-view
+    padding: 1rem
+    
+  .credit-breakdown
+    grid-template-columns: 1fr
+    gap: 1rem
+    
+  .operations-grid
+    grid-template-columns: 1fr
+    
+  .quick-actions
+    flex-direction: column

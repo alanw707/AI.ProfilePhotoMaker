@@ -12,15 +12,14 @@ public class UserProfile
     public string? Gender { get; set; }
     public string? Ethnicity { get; set; }
     public string? TrainedModelId { get; set; }
+    public string? TrainedModelVersionId { get; set; }
     public DateTime? ModelTrainedAt { get; set; }
     
-    // Style relationship
-    public int? StyleId { get; set; }
-    public Style? Style { get; set; }
     
     // Basic tier and subscription management
     public SubscriptionTier SubscriptionTier { get; set; } = SubscriptionTier.Basic;
-    public int Credits { get; set; } = 3; // Weekly credits
+    public int Credits { get; set; } = 3; // Weekly credits (max 3, resets weekly)
+    public int PurchasedCredits { get; set; } = 0; // Purchased credits (no expiration, accumulates)
     public DateTime LastCreditReset { get; set; } = DateTime.UtcNow;
     
     public List<ProcessedImage> ProcessedImages { get; set; } = new List<ProcessedImage>();

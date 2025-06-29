@@ -1,10 +1,13 @@
 using System.Security.Claims;
+using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services.Authentication;
 using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AI.ProfilePhotoMaker.API.Controllers
 {
@@ -16,17 +19,20 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IConfiguration _configuration;
+        private readonly ApplicationDbContext _context;
 
         public AuthController(
             IAuthService authService,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ApplicationDbContext context)
         {
             _authService = authService;
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
+            _context = context;
         }
 
         [HttpPost("register")]
@@ -254,6 +260,44 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
         }
 
+        [HttpGet("profile-completion-status")]
+        [Authorize]
+        public async Task<IActionResult> GetProfileCompletionStatus()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { success = false, error = "User not authenticated" });
+            }
+
+            var status = await _authService.CheckProfileCompletionAsync(userId);
+            return Ok(new { success = true, data = status });
+        }
+
+        [HttpPost("complete-profile")]
+        [Authorize]
+        public async Task<IActionResult> CompleteProfile([FromBody] ProfileCompletionDto model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { success = false, error = "User not authenticated" });
+            }
+
+            var result = await _authService.CompleteProfileAsync(userId, model);
+            if (result)
+            {
+                return Ok(new { success = true, message = "Profile completed successfully" });
+            }
+
+            return BadRequest(new { success = false, error = "Failed to complete profile" });
+        }
+
         private async Task<GoogleUserInfo?> GetGoogleUserInfoAsync(string code)
         {
             var httpClient = new HttpClient();
@@ -306,11 +350,25 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             if (existingUser != null)
             {
                 Console.WriteLine($"Found existing user with email: {email}");
+                
+                // Check if profile is complete for existing OAuth users
+                var profileStatus = await _authService.CheckProfileCompletionAsync(existingUser.Id);
                 var token = ((AuthService)_authService).GenerateJwtToken(existingUser);
                 Console.WriteLine($"Generated JWT token, length: {token.Token.Length}");
                 
-                var redirectUrl = $"http://localhost:4200{returnUrl}?token={Uri.EscapeDataString(token.Token)}&expiration={Uri.EscapeDataString(token.Expiration.ToString())}";
-                Console.WriteLine($"Redirecting to: {redirectUrl}");
+                string redirectUrl;
+                if (!profileStatus.IsCompleted)
+                {
+                    // Redirect to profile completion if incomplete
+                    redirectUrl = $"http://localhost:4200/complete-profile?token={Uri.EscapeDataString(token.Token)}&expiration={Uri.EscapeDataString(token.Expiration.ToString())}";
+                    Console.WriteLine($"Redirecting to profile completion: {redirectUrl}");
+                }
+                else
+                {
+                    // Normal login flow
+                    redirectUrl = $"http://localhost:4200{returnUrl}?token={Uri.EscapeDataString(token.Token)}&expiration={Uri.EscapeDataString(token.Expiration.ToString())}";
+                    Console.WriteLine($"Redirecting to: {redirectUrl}");
+                }
                 
                 return Redirect(redirectUrl);
             }
@@ -324,11 +382,31 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 var createResult = await _userManager.CreateAsync(newUser);
                 if (createResult.Succeeded)
                 {
+                    // Create basic UserProfile for OAuth user (incomplete, needs profile completion)
+                    var userProfile = new UserProfile
+                    {
+                        UserId = newUser.Id,
+                        FirstName = firstName,
+                        LastName = lastName,
+                        Gender = null, // Will be completed later
+                        Ethnicity = null, // Will be completed later
+                        SubscriptionTier = SubscriptionTier.Basic,
+                        Credits = 3,
+                        LastCreditReset = DateTime.UtcNow,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    
+                    _context.UserProfiles.Add(userProfile);
+                    await _context.SaveChangesAsync();
+
                     var token = ((AuthService)_authService).GenerateJwtToken(newUser);
                     Console.WriteLine($"Generated JWT token for new user, length: {token.Token.Length}");
                     
-                    var redirectUrl = $"http://localhost:4200{returnUrl}?token={Uri.EscapeDataString(token.Token)}&expiration={Uri.EscapeDataString(token.Expiration.ToString())}";
-                    Console.WriteLine($"Redirecting to: {redirectUrl}");
+                    // TODO: Redirect to profile completion page once frontend is ready
+                    // For now, redirect to dashboard but mark profile as incomplete
+                    var redirectUrl = $"http://localhost:4200{returnUrl}?token={Uri.EscapeDataString(token.Token)}&expiration={Uri.EscapeDataString(token.Expiration.ToString())}&profileIncomplete=true";
+                    Console.WriteLine($"Redirecting new OAuth user to dashboard: {redirectUrl}");
                     
                     return Redirect(redirectUrl);
                 }

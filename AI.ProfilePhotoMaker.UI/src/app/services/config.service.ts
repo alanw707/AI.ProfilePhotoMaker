@@ -58,8 +58,8 @@ export class ConfigService {
       styles: {
         base: '/style',
         active: '/style',
-        userSelected: '/profile/style',
-        select: '/profile/set-style'
+        userSelected: '/style/user-selected',
+        select: '/style/select'
       }
     }
   };
@@ -107,5 +107,18 @@ export class ConfigService {
 
   get appBaseUrl(): string {
     return this.config.baseUrl.replace('/api', '');
+  }
+
+  /**
+   * Get the external URL that can be accessed by third-party services like Replicate
+   * This should be the ngrok URL for local development or the production domain in production
+   */
+  get externalBaseUrl(): string {
+    // Use ngrok URL for external access by third-party services
+    return 'https://16aa-71-38-148-86.ngrok-free.app';
+  }
+
+  getApiUrl(): string {
+    return this.appBaseUrl;
   }
 }

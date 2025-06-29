@@ -1,0 +1,207 @@
+// Credit Info Box
+.credit-info-box
+  background: var(--bg-secondary)
+  border: 1px solid var(--border-color)
+  border-radius: 12px
+  padding: 16px
+  margin-bottom: 20px
+
+  h5
+    color: var(--text-primary)
+    font-family: 'Poppins', sans-serif
+    font-size: 16px
+    font-weight: 600
+    margin: 0 0 12px 0
+
+  .cost-breakdown
+    display: flex
+    flex-direction: column
+    gap: 8px
+    margin-bottom: 12px
+
+  .cost-item
+    display: flex
+    justify-content: space-between
+    align-items: center
+    font-size: 14px
+    color: var(--text-secondary)
+
+    strong
+      color: var(--text-primary)
+      font-weight: 600
+
+  .cost-note
+    color: var(--text-secondary)
+    font-size: 14px
+    margin: 0
+    text-align: center
+    padding-top: 8px
+    border-top: 1px solid var(--border-color)
+
+    strong
+      color: var(--accent-primary)
+      font-weight: 600
+
+// Credit Status Display
+.credits-display
+  display: flex
+  align-items: center
+  gap: 16px
+  margin-bottom: 20px
+
+  .credits-info-card
+    display: flex
+    align-items: center
+    gap: 12px
+    padding: 16px
+    background: var(--card-bg)
+    border: 1px solid var(--border-color)
+    border-radius: 12px
+    flex: 1
+
+    .credits-icon
+      font-size: 24px
+
+    .credits-text
+      .credits-count
+        color: var(--text-primary)
+        font-family: 'Poppins', sans-serif
+        font-size: 18px
+        font-weight: 600
+        margin: 0 0 4px 0
+
+      .credits-note
+        color: var(--text-secondary)
+        font-size: 14px
+        margin: 0
+
+// Premium Package Sections
+.premium-status-section
+  margin-bottom: 24px
+
+  .premium-status-card
+    background: var(--card-bg)
+    border: 1px solid var(--border-color)
+    border-radius: 16px
+    padding: 24px
+
+    &.success
+      background: linear-gradient(135deg, rgba(125, 211, 216, 0.1), rgba(168, 230, 161, 0.1))
+      border: 1px solid rgba(125, 211, 216, 0.3)
+
+    &.warning
+      background: var(--card-bg)
+      border: 1px solid var(--border-color)
+
+    .status-header
+      h3
+        color: var(--text-primary)
+        font-family: 'Poppins', sans-serif
+        font-size: 20px
+        font-weight: 600
+        margin: 0 0 16px 0
+        display: flex
+        align-items: center
+        gap: 8px
+
+        &::before
+          content: "💳"
+          font-size: 24px
+
+      .status-details
+        display: flex
+        flex-direction: column
+        gap: 8px
+
+        span
+          color: var(--text-secondary)
+          font-size: 14px
+
+        .expiry-warning
+          color: #ef4444
+          font-weight: 500
+
+// Credit Breakdown and Selection Summary
+.credit-breakdown
+  display: flex
+  flex-direction: column
+  gap: 8px
+  margin-bottom: 16px
+
+.credit-item
+  display: flex
+  justify-content: space-between
+  align-items: center
+  padding: 8px 0
+
+.credit-label
+  color: var(--text-secondary)
+  font-size: 14px
+
+.credit-cost
+  color: var(--text-primary)
+  font-weight: 600
+
+.total-credits
+  border-top: 1px solid var(--border-color)
+  padding-top: 12px
+  margin-top: 8px
+
+  .credit-label
+    font-weight: 600
+    color: var(--text-primary)
+
+  .credit-cost
+    color: var(--accent-primary)
+    font-size: 18px
+
+.remaining-credits
+  color: var(--accent-success)
+  font-weight: 600
+
+.insufficient-credits-warning
+  background: rgba(239, 68, 68, 0.1)
+  border: 1px solid rgba(239, 68, 68, 0.2)
+  border-radius: 8px
+  padding: 16px
+  margin-bottom: 16px
+
+.warning-icon
+  color: #ef4444
+  font-size: 20px
+  margin-right: 8px
+
+.warning-content
+  color: var(--text-primary)
+
+  h5
+    color: #ef4444
+    margin: 0 0 8px 0
+
+.style-selection-summary
+  background: var(--bg-secondary)
+  border: 1px solid var(--border-color)
+  border-radius: 12px
+  padding: 20px
+  margin-bottom: 20px
+
+  .summary-header
+    margin-bottom: 16px
+    
+    h5
+      color: var(--text-primary)
+      font-family: 'Poppins', sans-serif
+      font-size: 16px
+      font-weight: 600
+      margin: 0 0 8px 0
+      display: flex
+      align-items: center
+      gap: 8px
+      
+    p
+      color: var(--text-secondary)
+      font-size: 14px
+      margin: 0
+      
+      strong
+        color: var(--text-primary)

@@ -56,7 +56,7 @@ export class FileUploadService {
     lastName?: string;
     gender?: string;
     ethnicity?: string;
-  }): Observable<{ progress: number; response?: UploadResponse }> {
+  }, forTraining: boolean = true): Observable<{ progress: number; response?: UploadResponse }> {
     const formData = new FormData();
     
     files.forEach((file, index) => {
@@ -70,6 +70,9 @@ export class FileUploadService {
       if (profileData.gender) formData.append('gender', profileData.gender);
       if (profileData.ethnicity) formData.append('ethnicity', profileData.ethnicity);
     }
+    
+    // Add forTraining flag
+    formData.append('forTraining', forTraining.toString());
 
     return this.http.post<UploadResponse>(this.config.uploadImagesUrl, formData, {
       reportProgress: true,
@@ -101,6 +104,12 @@ export class FileUploadService {
     return this.http.get<TrainingStatusResponse>(this.config.getFullUrl('/profile/training-status'));
   }
 
+  createTrainingZip(): Observable<{ success: boolean; zipCreated: boolean; zipPath: string; message: string; error?: any }> {
+    return this.http.post<{ success: boolean; zipCreated: boolean; zipPath: string; message: string; error?: any }>(
+      this.config.getFullUrl('/profile/create-training-zip'), {}
+    );
+  }
+
   listTrainingFiles(): Observable<{ success: boolean; data: string[]; error: any }> {
     return this.http.get<{ success: boolean; data: string[]; error: any }>(this.config.getFullUrl('/profile/training-files'));
   }
@@ -116,6 +125,7 @@ export class FileUploadService {
   uploadSingleImage(file: File): Observable<{ progress: number; response?: { success: boolean; data: { url: string; fileName: string } } }> {
     const formData = new FormData();
     formData.append('images', file, file.name);
+    formData.append('forTraining', 'false');
 
     return this.http.post<any>(this.config.uploadImagesUrl, formData, {
       reportProgress: true,

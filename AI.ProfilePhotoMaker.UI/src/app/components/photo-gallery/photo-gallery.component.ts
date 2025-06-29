@@ -298,8 +298,39 @@ export class PhotoGalleryComponent implements OnInit {
   }
 
   onImageError(event: any) {
-    // Handle image load error - could set a placeholder
-    event.target.src = 'assets/placeholder-image.png';
+    // Handle image load error gracefully
+    console.warn('Image failed to load:', event.target.src);
+    
+    // Create a simple gray placeholder with an icon
+    const canvas = document.createElement('canvas');
+    canvas.width = 300;
+    canvas.height = 300;
+    const ctx = canvas.getContext('2d');
+    
+    if (ctx) {
+      // Gray background
+      ctx.fillStyle = '#f3f4f6';
+      ctx.fillRect(0, 0, 300, 300);
+      
+      // Darker gray border
+      ctx.strokeStyle = '#e5e7eb';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(1, 1, 298, 298);
+      
+      // Simple image icon
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '48px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('📷', 150, 120);
+      
+      // Error text
+      ctx.font = '14px Arial';
+      ctx.fillText('Image unavailable', 150, 180);
+      
+      // Set the canvas as the image source
+      event.target.src = canvas.toDataURL();
+    }
   }
 
   getTypeBadgeText(type: string): string {

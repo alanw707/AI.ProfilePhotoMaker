@@ -1,0 +1,213 @@
+// Dashboard Theme-Aware Styling
+.dashboard-container
+  min-height: 100vh
+  background: var(--bg-gradient)
+  font-family: 'Inter', sans-serif
+
+// Main Content
+.dashboard-main
+  max-width: 1400px
+  margin: 0 auto
+  padding: 32px 24px
+
+.dashboard-content
+  display: flex
+  flex-direction: column
+  gap: 32px
+
+// Get Started Section
+.get-started-section
+  margin-bottom: 32px
+
+.get-started-card
+  background: var(--card-bg)
+  border: 1px solid var(--border-color)
+  border-radius: 16px
+  padding: 32px
+  text-align: center
+
+.get-started-header
+  margin-bottom: 32px
+
+  h2
+    color: var(--text-primary)
+    font-family: 'Poppins', sans-serif
+    font-size: 28px
+    font-weight: 700
+    margin: 0 0 12px 0
+
+  p
+    color: var(--text-secondary)
+    font-size: 16px
+    margin: 0
+
+.options-grid
+  display: grid
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr))
+  gap: 24px
+  margin-bottom: 32px
+
+.option-card
+  background: var(--card-bg)
+  border: 2px solid var(--border-color)
+  border-radius: 16px
+  padding: 24px
+  transition: all 0.3s ease
+
+  &.premium-option
+    border-color: var(--accent-primary)
+    box-shadow: 0 0 0 2px rgba(125, 211, 216, 0.1)
+
+  &.basic-option
+    border-color: var(--border-color)
+
+  &:hover
+    transform: translateY(-2px)
+    box-shadow: var(--shadow-md)
+
+.option-header
+  display: flex
+  align-items: center
+  gap: 16px
+  margin-bottom: 16px
+
+.option-icon
+  font-size: 32px
+
+.option-content
+  h3
+    color: var(--text-primary)
+    font-family: 'Poppins', sans-serif
+    font-size: 20px
+    font-weight: 600
+    margin: 0 0 16px 0
+
+  ul
+    list-style: none
+    padding: 0
+    margin: 0 0 24px 0
+
+    li
+      color: var(--text-secondary)
+      font-size: 14px
+      margin-bottom: 8px
+      text-align: left
+
+// Stats Section
+.stats-section
+  h2
+    color: var(--text-primary)
+    font-family: 'Poppins', sans-serif
+    font-size: 24px
+    font-weight: 600
+    margin: 0 0 24px 0
+    text-align: center
+
+.stats-grid
+  display: grid
+  grid-template-columns: repeat(4, 1fr)
+  gap: 16px
+  margin-bottom: 24px
+
+.stat-card
+  background: var(--card-bg)
+  border: 1px solid var(--border-color)
+  border-radius: 12px
+  padding: 16px
+  text-align: center
+  transition: all 0.3s ease
+
+  &:hover
+    transform: translateY(-2px)
+    box-shadow: var(--shadow-md)
+
+  .stat-icon
+    font-size: 32px
+    margin-bottom: 8px
+
+  .stat-content
+    h3
+      color: var(--text-primary)
+      font-family: 'Poppins', sans-serif
+      font-size: 24px
+      font-weight: 700
+      margin: 0 0 4px 0
+
+    p
+      color: var(--text-secondary)
+      font-size: 13px
+      margin: 0
+
+// Common Buttons
+.btn
+  display: inline-flex
+  align-items: center
+  gap: 8px
+  padding: 12px 24px
+  border-radius: 8px
+  font-size: 14px
+  font-weight: 500
+  text-decoration: none
+  cursor: pointer
+  transition: all 0.3s ease
+  border: 1px solid transparent
+
+  &.btn-primary
+    background: var(--accent-primary)
+    color: white
+
+    &:hover
+      background: var(--accent-secondary)
+      transform: translateY(-1px)
+      box-shadow: var(--shadow-md)
+
+  &.btn-secondary
+    background: var(--card-bg)
+    color: var(--text-primary)
+    border: 1px solid var(--border-color)
+
+    &:hover
+      background: var(--hover-bg)
+      border-color: var(--accent-primary)
+
+  &.btn-sm
+    padding: 6px 12px
+    font-size: 12px
+    border-radius: 6px
+
+  &.btn-md
+    padding: 8px 16px
+    font-size: 14px
+    border-radius: 8px
+
+  &:disabled
+    opacity: 0.6
+    cursor: not-allowed
+    transform: none
+
+// Theme Toggle
+.theme-toggle
+  position: fixed
+  top: 24px
+  right: 24px
+  width: 48px
+  height: 48px
+  background: var(--card-bg)
+  border: 1px solid var(--border-color)
+  border-radius: 12px
+  display: flex
+  align-items: center
+  justify-content: center
+  cursor: pointer
+  transition: all 0.3s ease
+  z-index: 1000
+
+  &:hover
+    background: var(--hover-bg)
+    transform: translateY(-2px)
+    box-shadow: var(--shadow-md)
+
+  svg
+    width: 24px
+    height: 24px
+    color: var(--text-primary)

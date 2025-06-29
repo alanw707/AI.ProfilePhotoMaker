@@ -1,0 +1,67 @@
+<div class="gallery-page-container">
+  <!-- Shared Header Navigation -->
+  <app-header-navigation></app-header-navigation>
+
+  <!-- Main Gallery Content -->
+  <main class="gallery-main">
+    <div class="gallery-content">
+      <!-- Page Header -->
+      <section class="page-header">
+        <h2>Photo Gallery</h2>
+        <p>View, download, and manage all your generated and enhanced photos</p>
+        <div class="retention-info">
+          <small class="text-muted">
+            📅 AI headshots stored for 30 days • Input photos deleted after 7 days • 
+            <strong>Manage your data in account settings</strong>
+          </small>
+        </div>
+      </section>
+
+      <!-- Loading State -->
+      <div class="loading-section" *ngIf="isLoading">
+        <div class="loading-spinner"></div>
+        <p>Loading your photos...</p>
+      </div>
+
+      <!-- Gallery Component -->
+      <section class="gallery-section" *ngIf="!isLoading">
+        <app-photo-gallery
+          [images]="galleryImages"
+          [title]="'Your Photos'"
+          (imageClick)="onImageClick($event)"
+          (imageDownload)="onImageDownload($event)"
+          (imageShare)="onImageShare($event)"
+          (imageDelete)="onImageDelete($event)"
+          (bulkDownload)="onBulkDownload($event)">
+        </app-photo-gallery>
+      </section>
+
+      <!-- Empty State -->
+      <section class="empty-section" *ngIf="!isLoading && galleryImages.length === 0">
+        <div class="empty-state">
+          <div class="empty-icon">🖼️</div>
+          <h3>No Photos Yet</h3>
+          <p>Start by uploading photos and generating professional headshots in the Studio, or enhance existing photos with our AI enhancement tools.</p>
+          <div class="empty-actions">
+            <button class="btn btn-primary" routerLink="/dashboard">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="3" width="7" height="9" stroke="currentColor" stroke-width="2"/>
+                <rect x="13" y="3" width="8" height="5" stroke="currentColor" stroke-width="2"/>
+                <rect x="13" y="12" width="8" height="9" stroke="currentColor" stroke-width="2"/>
+                <rect x="3" y="16" width="7" height="5" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              Go to Studio
+            </button>
+            <button class="btn btn-outline" routerLink="/enhance">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              Enhance Photos
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>

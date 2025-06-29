@@ -1,0 +1,432 @@
+// =============================================================================
+// STYLE GALLERY - MODERN CARD DESIGN
+// =============================================================================
+// Redesigned style selection with larger previews and better UX
+// Addresses user feedback: "images too small", "use designer talent"
+
+// Gallery Container - 5x4 Grid for 20 Styles
+.styles-gallery
+  display: grid
+  gap: 16px
+  margin: 24px 0
+  
+  // Mobile-first responsive grid
+  grid-template-columns: repeat(2, 1fr)
+  
+  // Tablet: 3 columns
+  @media (min-width: 768px)
+    grid-template-columns: repeat(3, 1fr)
+  
+  // Desktop: 4 columns
+  @media (min-width: 1024px)
+    grid-template-columns: repeat(4, 1fr)
+  
+  // Large desktop: 5 columns for 20 styles (5x4 grid)
+  @media (min-width: 1200px)
+    grid-template-columns: repeat(5, 1fr)
+
+// Style Card
+.style-card
+  background: var(--card-bg)
+  border: 2px solid var(--border-color)
+  border-radius: 16px
+  overflow: hidden
+  cursor: pointer
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  position: relative
+  
+  // Hover state - subtle lift and glow
+  &:hover
+    transform: translateY(-4px)
+    border-color: var(--accent-primary)
+    box-shadow: 0 8px 32px rgba(125, 211, 216, 0.2), 0 4px 16px rgba(0, 0, 0, 0.1)
+    
+    .style-image
+      transform: scale(1.05)
+  
+  // Selected state - enhanced border and subtle glow
+  &.selected
+    border-color: var(--accent-primary)
+    border-width: 3px
+    background: var(--card-bg)
+    box-shadow: 0 0 0 2px rgba(125, 211, 216, 0.3), 0 4px 24px rgba(125, 211, 216, 0.15)
+    transform: translateY(-2px)
+    
+    .style-content
+      background: var(--card-bg)
+
+// Card Inner Wrapper
+.style-card-inner
+  display: flex
+  flex-direction: column
+  height: 100%
+
+// Image Container - Much Larger Preview
+.style-image-container
+  position: relative
+  width: 100%
+  height: 200px // Increased from 48px to 200px
+  overflow: hidden
+  background: var(--bg-tertiary)
+  display: flex
+  align-items: center
+  justify-content: center
+  
+  // Mobile: slightly smaller
+  @media (max-width: 767px)
+    height: 160px
+
+// Style Image - High Quality Preview
+.style-image
+  width: 100%
+  height: 100%
+  object-fit: cover
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1)
+  
+  // Ensure images load properly
+  &:not([src]),
+  &[src=""]
+    background: var(--bg-tertiary)
+    display: flex
+    align-items: center
+    justify-content: center
+    
+    &::before
+      content: "📷"
+      font-size: 48px
+      opacity: 0.5
+
+// Selection Overlay - Corner-positioned checkmark design
+.style-overlay
+  position: absolute
+  top: 12px
+  right: 12px
+  width: 40px
+  height: 40px
+  background: rgba(0, 0, 0, 0.7)
+  border-radius: 50%
+  display: flex
+  align-items: center
+  justify-content: center
+  opacity: 0
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  backdrop-filter: blur(4px)
+  border: 2px solid white
+  
+  .checkmark
+    background: transparent
+    border-radius: 0
+    width: 24px
+    height: 24px
+    display: flex
+    align-items: center
+    justify-content: center
+    transform: scale(0.8)
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+    
+    svg
+      color: white
+      width: 20px
+      height: 20px
+      stroke-width: 3
+
+  // Show overlay when card is selected
+  .style-card.selected &
+    opacity: 1
+    
+    .checkmark
+      transform: scale(1)
+
+// Content Area - Better Typography
+.style-content
+  padding: 20px
+  flex: 1
+  display: flex
+  flex-direction: column
+  gap: 8px
+  transition: all 0.3s ease
+  
+  // Mobile: slightly less padding
+  @media (max-width: 767px)
+    padding: 16px
+
+// Style Name - Prominent heading
+.style-name
+  font-family: 'Poppins', sans-serif
+  font-size: 18px
+  font-weight: 600
+  color: var(--text-primary)
+  margin: 0
+  line-height: 1.3
+  
+  // Mobile: slightly smaller
+  @media (max-width: 767px)
+    font-size: 16px
+
+// Style Description - Full Text Display with More Space
+.style-description
+  font-size: 14px
+  color: var(--text-secondary)
+  margin: 0
+  line-height: 1.5
+  flex: 1
+  
+  // Allow full description display with proper wrapping
+  word-wrap: break-word
+  overflow-wrap: break-word
+  hyphens: auto
+  
+  // Increased max-height to show more text (approximately 4-5 lines)
+  max-height: 7.5em // Approximately 5 lines at 1.5 line-height
+  overflow: hidden
+  
+  // Remove the fade effect for cleaner look
+  position: relative
+
+// =============================================================================
+// STYLE CONTROLS - Enhanced Design with Better Contrast
+// =============================================================================
+
+.style-controls
+  display: flex
+  justify-content: space-between
+  align-items: center
+  margin-bottom: 24px
+  padding: 20px
+  background: linear-gradient(135deg, var(--card-bg), var(--bg-tertiary))
+  border: 2px solid var(--border-color)
+  border-radius: 16px
+  gap: 16px
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05)
+  
+  // Mobile: stack vertically
+  @media (max-width: 767px)
+    flex-direction: column
+    align-items: stretch
+    gap: 12px
+    padding: 16px
+
+  // Control Buttons Container
+  .style-control-buttons
+    display: flex
+    gap: 12px
+    
+    @media (max-width: 767px)
+      justify-content: stretch
+      gap: 8px
+
+  .btn
+    font-family: 'Poppins', sans-serif
+    font-size: 14px
+    padding: 10px 20px
+    font-weight: 600
+    border-radius: 8px
+    transition: all 0.3s ease
+    cursor: pointer
+    border: 2px solid transparent
+    
+    // Mobile: flex-grow
+    @media (max-width: 767px)
+      flex: 1
+    
+    &.btn-outline-secondary
+      background: var(--bg-secondary)
+      border-color: var(--accent-primary)
+      color: var(--accent-primary)
+      
+      &:hover
+        background: var(--accent-primary)
+        color: white
+        transform: translateY(-1px)
+        box-shadow: 0 4px 12px rgba(125, 211, 216, 0.3)
+      
+      &:active
+        transform: translateY(0)
+
+  .selection-count
+    font-family: 'Poppins', sans-serif
+    font-weight: 700
+    color: var(--text-primary)
+    font-size: 16px
+    background: var(--accent-primary)
+    color: white
+    padding: 8px 16px
+    border-radius: 8px
+    border: 2px solid var(--accent-primary)
+    
+    // Mobile: center align and full width
+    @media (max-width: 767px)
+      text-align: center
+      margin-top: 8px
+
+// =============================================================================
+// STYLE SELECTION SUMMARY - Modern Card Design
+// =============================================================================
+
+.style-selection-summary
+  background: linear-gradient(135deg, rgba(125, 211, 216, 0.05), rgba(59, 130, 246, 0.05))
+  border: 1px solid rgba(125, 211, 216, 0.2)
+  border-radius: 16px
+  padding: 16px
+  margin: 20px 0
+  
+  // Mobile: less padding
+  @media (max-width: 767px)
+    padding: 14px
+    margin: 16px 0
+
+  p
+    font-family: 'Poppins', sans-serif
+    font-size: 16px
+    font-weight: 600
+    color: var(--text-primary)
+    margin: 0 0 12px 0
+
+// Credit Breakdown - Clean List Design
+.credit-breakdown
+  display: flex
+  flex-direction: column
+  gap: 8px
+
+.credit-item
+  display: flex
+  justify-content: space-between
+  align-items: center
+  padding: 12px 16px
+  background: var(--card-bg)
+  border: 1px solid var(--border-color)
+  border-radius: 8px
+  
+  .credit-label
+    font-size: 14px
+    color: var(--text-secondary)
+    font-weight: 500
+  
+  .credit-cost
+    font-size: 14px
+    color: var(--text-primary)
+    font-weight: 600
+  
+  // Total credits - highlight
+  &.total-credits
+    background: var(--accent-primary)
+    color: white
+    border-color: var(--accent-primary)
+    
+    .credit-label,
+    .credit-cost
+      color: white
+  
+  // Insufficient credits warning
+  &.insufficient
+    background: rgba(239, 68, 68, 0.05)
+    border-color: rgba(239, 68, 68, 0.2)
+    
+    .credit-cost.negative
+      color: #ef4444
+
+// =============================================================================
+// IMAGE COUNT SELECTION - Enhanced Design
+// =============================================================================
+
+.image-count-selection
+  margin: 24px 0
+  padding: 24px
+  background: linear-gradient(135deg, var(--card-bg), var(--bg-tertiary))
+  border: 2px solid var(--border-color)
+  border-radius: 16px
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05)
+  
+  h5
+    font-family: 'Poppins', sans-serif
+    font-size: 18px
+    font-weight: 600
+    color: var(--text-primary)
+    margin: 0 0 16px 0
+    display: flex
+    align-items: center
+    gap: 8px
+    
+
+  .count-options
+    display: flex
+    gap: 12px
+    margin-bottom: 16px
+    flex-wrap: wrap
+    
+    // Mobile: smaller gaps and full width
+    @media (max-width: 767px)
+      gap: 8px
+
+  .count-option
+    display: flex
+    align-items: center
+    gap: 10px
+    padding: 14px 18px
+    border: 2px solid var(--border-color)
+    border-radius: 12px
+    background: var(--card-bg)
+    cursor: pointer
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+    font-size: 15px
+    font-weight: 600
+    min-width: 90px
+    justify-content: center
+    position: relative
+    
+    // Mobile: smaller padding and full width
+    @media (max-width: 767px)
+      padding: 12px 16px
+      font-size: 14px
+      flex: 1
+    
+    &:hover
+      border-color: var(--accent-primary)
+      background: rgba(125, 211, 216, 0.1)
+      transform: translateY(-2px)
+      box-shadow: 0 4px 12px rgba(125, 211, 216, 0.2)
+    
+    input[type="radio"]
+      margin: 0
+      accent-color: var(--accent-primary)
+      width: 18px
+      height: 18px
+    
+    // Selected state - enhanced
+    &:has(input:checked)
+      border-color: var(--accent-primary)
+      background: var(--accent-primary)
+      color: white
+      transform: translateY(-2px)
+      box-shadow: 0 6px 20px rgba(125, 211, 216, 0.3)
+      
+      &::after
+        content: "✓"
+        position: absolute
+        top: -6px
+        right: -6px
+        background: #22c55e
+        color: white
+        width: 20px
+        height: 20px
+        border-radius: 50%
+        display: flex
+        align-items: center
+        justify-content: center
+        font-size: 12px
+        font-weight: bold
+        border: 2px solid white
+
+  .count-note
+    font-size: 14px
+    color: var(--text-secondary)
+    margin: 0
+    text-align: center
+    padding: 12px
+    background: rgba(125, 211, 216, 0.05)
+    border-radius: 8px
+    font-weight: 500
+    
+    strong
+      color: var(--accent-primary)
+      font-weight: 600
