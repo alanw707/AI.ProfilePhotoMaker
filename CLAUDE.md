@@ -13,6 +13,17 @@ AI.ProfilePhotoMaker is a full-stack application that generates professional pro
 - AI: Replicate.com FLUX.1 models
 - Storage: Local filesystem (Azure Blob planned)
 
+## Documentation Structure
+
+Project documentation is organized as follows:
+- `README.md` - Main project overview and getting started (root level for GitHub)
+- `/docs/ARCHITECTURE.md` - System architecture and design patterns
+- `/docs/PROJECT_PLAN.md` - Project milestones and timeline
+- `/docs/TASKS.md` - Detailed task list and current status
+- `/docs/SETUP.md` - Development environment setup instructions
+- `/docs/OAUTH_TROUBLESHOOTING.md` - OAuth implementation guide
+- `/docs/REFACTOR.md` - Comprehensive refactoring documentation
+
 ## Common Development Commands
 
 ### Backend (.NET API)

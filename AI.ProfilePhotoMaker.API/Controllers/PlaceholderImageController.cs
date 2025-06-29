@@ -22,7 +22,7 @@ public class PlaceholderImageController : ControllerBase
         try
         {
             // Return a simple SVG as an image
-            var svg = @"<svg width=""400"" height=""400"" viewBox=""0 0 400 400"" fill=""none"" xmlns=""http://www.w3.org/2000/svg"">
+            var svg = @"<svg width=""48"" height=""48"" viewBox=""0 0 48 48"" fill=""none"" xmlns=""http://www.w3.org/2000/svg"">
   <defs>
     <linearGradient id=""bgGradient"" x1=""0%"" y1=""0%"" x2=""100%"" y2=""100%"">
       <stop offset=""0%"" style=""stop-color:#6366f1;stop-opacity:1"" />
@@ -31,19 +31,19 @@ public class PlaceholderImageController : ControllerBase
   </defs>
   
   <!-- Background -->
-  <rect width=""400"" height=""400"" fill=""url(#bgGradient)"" rx=""8""/>
+  <rect width=""48"" height=""48"" fill=""url(#bgGradient)"" rx=""6""/>
   
   <!-- Person silhouette -->
-  <g opacity=""0.3"">
+  <g opacity=""0.4"">
     <!-- Head -->
-    <circle cx=""200"" cy=""120"" r=""45"" fill=""white""/>
+    <circle cx=""24"" cy=""16"" r=""6"" fill=""white""/>
     <!-- Body -->
-    <path d=""M 140 170 Q 200 150 260 170 L 240 350 L 160 350 Z"" fill=""white""/>
+    <path d=""M 16 24 Q 24 22 32 24 L 30 42 L 18 42 Z"" fill=""white""/>
   </g>
   
-  <!-- Text -->
-  <text x=""200"" y=""380"" font-family=""Arial, sans-serif"" font-size=""24"" font-weight=""bold"" fill=""white"" text-anchor=""middle"">
-    Style Preview
+  <!-- Icon -->
+  <text x=""24"" y=""40"" font-family=""Arial, sans-serif"" font-size=""8"" font-weight=""bold"" fill=""white"" text-anchor=""middle"">
+    🎨
   </text>
 </svg>";
 

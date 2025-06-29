@@ -1,32 +1,9 @@
 // Shared Header Navigation Styles
 // This file contains unified styles for the header navigation used across all pages
 
-// Theme Toggle Button
-.theme-toggle
-  position: fixed
-  top: 24px
-  right: 24px
-  z-index: 1000
-  width: 48px
-  height: 48px
-  border-radius: 50%
-  border: none
-  background: var(--surface-primary)
-  color: var(--text-primary)
-  cursor: pointer
-  display: flex
-  align-items: center
-  justify-content: center
-  box-shadow: var(--shadow-lg)
-  transition: all 0.3s ease
-  
-  &:hover
-    transform: scale(1.1)
-    box-shadow: var(--shadow-xl)
-  
-  svg
-    width: 20px
-    height: 20px
+@import '../styles/index'
+
+// Theme toggle uses global styles from styles.sass - no duplication needed
 
 // App Header
 .app-header

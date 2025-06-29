@@ -132,7 +132,7 @@
         <div class="workflow-steps">
           
           <!-- Step 1: Upload Selfies -->
-          <div class="step-card" [class.completed]="uploadedImages > 0" [class.active]="currentStep === 1">
+          <div class="step-card" [class.completed]="uploadedImages > 0 || uploadedImageThumbnails.length > 0" [class.active]="currentStep === 1">
             <div class="step-header">
               <div class="step-number">1</div>
               <div class="step-title">
@@ -268,7 +268,7 @@
               <!-- Selected files preview (active work) -->
               <div class="selected-files-preview active-work-area" *ngIf="selectedFilesWithQuality.length > 0">
                 <div class="section-header">
-                  <h4>📋 Review Selected Files ({{selectedFilesWithQuality.length}})</h4>
+                  <h4>📋 Review Selected Images ({{selectedFilesWithQuality.length}})</h4>
                   <p class="section-subtitle">Check quality scores and fix any issues before uploading</p>
                 </div>
                 <div class="selected-files-grid-enhanced">
@@ -278,28 +278,26 @@
                        [class.file-invalid]="!fileData.isValid">
                     <img [src]="getFilePreview(fileData.file)" alt="Preview">
                     
-                    <!-- Quality Score Badge -->
-                    <div class="quality-badge" *ngIf="fileData.qualityScore">
-                      <span class="quality-score-compact" 
-                            [class.score-red]="fileData.qualityScore.overall < 50"
-                            [class.score-yellow]="fileData.qualityScore.overall >= 50 && fileData.qualityScore.overall < 75"
-                            [class.score-green]="fileData.qualityScore.overall >= 75">
-                        {{fileData.qualityScore.overall}}
-                      </span>
-                    </div>
-                    
-                    <!-- Status Badge -->
-                    <div class="status-badge-compact">
-                      <span class="status-icon" *ngIf="fileData.isValid">✓</span>
+                    <!-- Quality Score Header - Clean, minimal design -->
+                    <div class="file-status-header">
+                      <!-- Quality Score Badge Only -->
+                      <div class="quality-badge" *ngIf="fileData.qualityScore">
+                        <span class="quality-score-compact" 
+                              [class.score-red]="fileData.qualityScore.overall < 50"
+                              [class.score-yellow]="fileData.qualityScore.overall >= 50 && fileData.qualityScore.overall < 75"
+                              [class.score-green]="fileData.qualityScore.overall >= 75">
+                          {{fileData.qualityScore.overall}}
+                        </span>
+                      </div>
                     </div>
                     
                     <div class="file-info-enhanced">
                       <span class="file-name">{{fileData.file.name}}</span>
                       
-                      <!-- Quick quality summary -->
+                      <!-- Clean quality summary -->
                       <div class="file-quality-summary" *ngIf="fileData.qualityScore || fileData.faceValidation">
                         <div class="summary-item" *ngIf="fileData.faceValidation">
-                          <span class="summary-label">{{fileData.faceValidation.faceCount}} face(s)</span>
+                          <span class="summary-label">{{fileData.faceValidation.faceCount}} face(s) detected</span>
                           <span class="summary-value">{{fileData.faceValidation.bodyType | titlecase}}</span>
                         </div>
                         <div class="summary-item" *ngIf="fileData.warnings && fileData.warnings.length > 0">
@@ -307,6 +305,49 @@
                         </div>
                         <div class="summary-item" *ngIf="fileData.errors && fileData.errors.length > 0">
                           <span class="error-count">{{fileData.errors.length}} error(s)</span>
+                        </div>
+                      </div>
+                      
+                    </div>
+                    
+                    <!-- Info Button for Invalid Files -->
+                    <div class="file-info-popup" *ngIf="!fileData.isValid">
+                      <button class="info-btn" 
+                              (click)="fileData.showDetails = !fileData.showDetails"
+                              [class.active]="fileData.showDetails"
+                              type="button">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                          <path d="M12 16V12M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </button>
+                      
+                      <!-- Popup Notification -->
+                      <div class="popup-details" 
+                           *ngIf="fileData.showDetails"
+                           (click)="$event.stopPropagation()">
+                        <div class="popup-arrow"></div>
+                        <div class="popup-content">
+                          <!-- Errors Section -->
+                          <div class="popup-section" *ngIf="fileData.errors && fileData.errors.length > 0">
+                            <h6 class="popup-title">❌ Issues</h6>
+                            <ul class="popup-list">
+                              <li *ngFor="let error of fileData.errors">{{error}}</li>
+                            </ul>
+                          </div>
+                          
+                          <!-- Warnings Section -->
+                          <div class="popup-section" *ngIf="fileData.warnings && fileData.warnings.length > 0">
+                            <h6 class="popup-title">⚠️ Warnings</h6>
+                            <ul class="popup-list">
+                              <li *ngFor="let warning of fileData.warnings">{{warning}}</li>
+                            </ul>
+                          </div>
+                          
+                          <!-- Quick Fix -->
+                          <div class="popup-fix" *ngIf="fileData.qualityScore && fileData.qualityScore.suggestions && fileData.qualityScore.suggestions.length > 0">
+                            💡 {{fileData.qualityScore.suggestions[0]}}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -319,7 +360,7 @@
                   </div>
                 </div>
                 
-                <!-- Upload Summary -->
+                <!-- Upload Summary with Add More Button -->
                 <div class="upload-summary-enhanced" *ngIf="selectedFilesWithQuality.length > 0">
                   <div class="summary-stats">
                     <span class="stat-item valid" *ngIf="getValidFilesCount() > 0">
@@ -328,100 +369,46 @@
                     <span class="stat-item invalid" *ngIf="getInvalidFilesCount() > 0">
                       ✗ {{getInvalidFilesCount()}} need attention
                     </span>
+                    <!-- Add More Button in Summary -->
+                    <button class="btn btn-secondary add-more-inline-btn" 
+                            *ngIf="uploadedImageThumbnails.length > 0 && getInvalidFilesCount() > 0 && !isUploading"
+                            (click)="triggerFileUpload()">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-right: 6px;">
+                        <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      Add More
+                    </button>
                   </div>
                 </div>
               </div>
               
-              <button class="btn btn-primary" 
-                      *ngIf="selectedFiles.length > 0" 
-                      (click)="uploadImages()"
-                      [disabled]="isUploading">
-                <span *ngIf="isUploading">Uploading... {{uploadProgress}}%</span>
-                <span *ngIf="!isUploading">Upload {{selectedFiles.length}} Images</span>
-              </button>
-              
-              <!-- Quality Check Progress -->
-              <div class="quality-check-progress" *ngIf="isCheckingQuality">
-                <div class="progress-bar">
-                  <div class="progress-fill indeterminate"></div>
-                </div>
-                <p class="progress-text">{{qualityCheckProgress}}</p>
-              </div>
-
-              <!-- Upload More Images Button (outside analysis results) -->
-              <div class="upload-more-section" *ngIf="qualityCheckErrors.length > 0 && uploadedImageThumbnails.length > 0 && !isUploading">
-                <button class="btn btn-secondary btn-sm" (click)="triggerFileUpload()">
-                  Upload More Images
-                </button>
-              </div>
-
-              <!-- Quality Check Errors -->
-              <div class="quality-check-errors" *ngIf="qualityCheckErrors.length > 0">
-                <div class="analysis-header">
-                  <h4>⚠️ Image Analysis Results</h4>
-                </div>
-                <div class="error-list">
-                  <div class="error-item" *ngFor="let errorFile of qualityCheckErrors">
-                    <div class="error-header">
-                      <span class="error-filename">{{errorFile.fileName}}</span>
-                      <div class="file-info">
-                        <!-- Quality Score Display -->
-                        <div class="quality-score" *ngIf="errorFile.qualityScore">
-                          <span class="score-label">Quality Score:</span>
-                          <span class="score-value" 
-                                [class.score-red]="errorFile.qualityScore.overall < 50"
-                                [class.score-yellow]="errorFile.qualityScore.overall >= 50 && errorFile.qualityScore.overall < 75"
-                                [class.score-green]="errorFile.qualityScore.overall >= 75">
-                            {{errorFile.qualityScore.overall}}/100
-                          </span>
-                        </div>
-                        <!-- Face Detection Info -->
-                        <div class="face-info" *ngIf="errorFile.faceValidation">
-                          <span class="face-count">
-                            {{errorFile.faceValidation.faceCount}} face(s) detected
-                          </span>
-                          <span class="body-type" *ngIf="errorFile.faceValidation.bodyType !== 'invalid'">
-                            {{errorFile.faceValidation.bodyType | titlecase}}
-                          </span>
-                        </div>
-                        <button class="btn-retry" (click)="retryFile(errorFile)" title="Fix and retry this file">
-                          🔄 Retry
-                        </button>
-                      </div>
-                    </div>
-
-                    <!-- Errors -->
-                    <ul class="error-reasons" *ngIf="errorFile.errors && errorFile.errors.length > 0">
-                      <li *ngFor="let error of errorFile.errors" class="error-reason">
-                        ❌ {{error}}
-                      </li>
-                    </ul>
-
-                    <!-- Warnings -->
-                    <ul class="warning-reasons" *ngIf="errorFile.warnings && errorFile.warnings.length > 0">
-                      <li *ngFor="let warning of errorFile.warnings" class="warning-reason">
-                        ⚠️ {{warning}}
-                      </li>
-                    </ul>
-
-
-                    <!-- Suggestions -->
-                    <div class="suggestions" *ngIf="errorFile.qualityScore && errorFile.qualityScore.suggestions && errorFile.qualityScore.suggestions.length > 0">
-                      <h5>💡 Suggestions for improvement:</h5>
-                      <ul class="suggestion-list">
-                        <li *ngFor="let suggestion of errorFile.qualityScore.suggestions" class="suggestion-item">
-                          {{suggestion}}
-                        </li>
-                      </ul>
-                    </div>
+              <!-- Unified Upload Actions Section -->
+              <div class="upload-actions-container">
+                <!-- Quality Check Progress -->
+                <div class="quality-check-progress" *ngIf="isCheckingQuality">
+                  <div class="progress-bar">
+                    <div class="progress-fill indeterminate"></div>
                   </div>
+                  <p class="progress-text">{{qualityCheckProgress}}</p>
                 </div>
-                <div class="error-actions">
-                  <button class="btn btn-outline-primary" (click)="clearErrors()">
-                    Clear All Results
+
+                <!-- Primary Upload Button Only -->
+                <div class="upload-actions-row" *ngIf="!isCheckingQuality && selectedFiles.length > 0">
+                  <button class="btn btn-primary upload-primary-btn" 
+                          (click)="uploadImages()"
+                          [disabled]="isUploading">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-right: 8px;" *ngIf="!isUploading">
+                      <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" stroke="currentColor" stroke-width="2"/>
+                      <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/>
+                      <path d="M12 11V17M9 14L12 11L15 14" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    <div class="spinner" *ngIf="isUploading" style="margin-right: 8px; width: 16px; height: 16px;"></div>
+                    <span *ngIf="isUploading">Uploading... {{uploadProgress}}%</span>
+                    <span *ngIf="!isUploading">Upload {{selectedFiles.length}} Images</span>
                   </button>
                 </div>
               </div>
+
 
               <!-- Upload Progress Bar -->
               <div class="upload-progress" *ngIf="isUploading">
@@ -449,61 +436,110 @@
                 </span>
               </div>
             </div>
-            <div class="step-content" *ngIf="uploadedImages > 0">
-              <!-- Credit Cost Information -->
-              <div class="credit-info-box">
-                <h5>💳 Credit Costs</h5>
-                <div class="cost-breakdown">
-                  <div class="cost-item">
-                    <span>Model Training:</span>
-                    <span><strong>{{creditService.getCreditCostSync('model_training')}} credits</strong> (one-time)</span>
-                  </div>
-                  <div class="cost-item">
-                    <span>Styled Generation:</span>
-                    <span><strong>{{creditService.getCreditCostSync('styled_generation')}} credits</strong> per image</span>
-                  </div>
-                </div>
-                <p class="cost-note">Select styles based on your available credits: <strong>{{creditsInfo?.availableCredits || 0}} credits</strong></p>
-              </div>
-              
+            <div class="step-content" *ngIf="uploadedImages > 0 || uploadedImageThumbnails.length > 0">
               <!-- Style Selection Controls -->
               <div class="style-controls">
-                <button type="button" class="btn btn-outline-secondary btn-sm" (click)="selectAllStyles()">
-                  Select All
-                </button>
-                <button type="button" class="btn btn-outline-secondary btn-sm" (click)="deselectAllStyles()">
-                  Deselect All
-                </button>
+                <div class="style-control-buttons">
+                  <button type="button" class="btn btn-outline-secondary" (click)="selectAllStyles()">
+                    Select All
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" (click)="deselectAllStyles()">
+                    Deselect All
+                  </button>
+                </div>
                 <span class="selection-count">{{selectedStyles}} of {{availableStyles.length}} styles selected</span>
               </div>
               
-              <div class="styles-grid-compact">
-                <div class="style-option" 
+              <!-- Static Credit Information - Only when no selections made -->
+              <div class="credit-reference-info" *ngIf="selectedStyles === 0">
+                <div class="info-header">
+                  <div class="info-icon">💳</div>
+                  <span class="info-title">Credit Costs</span>
+                </div>
+                <div class="info-costs">
+                  <span class="cost-ref">Training: {{creditService.getCreditCostSync('model_training')}} credits (one-time)</span>
+                  <span class="cost-ref">Generation: {{creditService.getCreditCostSync('styled_generation')}} credits per image</span>
+                </div>
+              </div>
+              
+              <!-- Top Image Count Selection (when styles selected) -->
+              <div class="top-controls" *ngIf="selectedStyles > 0">
+                <div class="image-count-selection compact">
+                  <h5>📸 Images to Generate per Style</h5>
+                  <div class="count-options">
+                    <label class="count-option" *ngFor="let count of [1, 2, 3, 4, 5]">
+                      <input type="radio" 
+                             name="imageCountTop" 
+                             [value]="count" 
+                             [(ngModel)]="imagesPerStyle"
+                             [checked]="imagesPerStyle === count">
+                      <span>{{count}}</span>
+                    </label>
+                  </div>
+                  <p class="count-note">{{selectedStyles}} styles × {{imagesPerStyle}} images = <strong>{{selectedStyles * imagesPerStyle}} total images</strong></p>
+                </div>
+              </div>
+              
+              
+              <div class="styles-gallery">
+                <div class="style-card" 
                      *ngFor="let style of availableStyles" 
                      [class.selected]="style.selected"
                      (click)="toggleStyle(style)">
-                  <div class="style-checkbox">
-                    <input type="checkbox" [checked]="style.selected" (change)="toggleStyle(style)" (click)="$event.stopPropagation()">
-                  </div>
-                  <div class="style-preview">
-                    <img [src]="style.previewUrl" [alt]="style.name + ' style preview'" (error)="onImageError($event)">
-                  </div>
-                  <div class="style-info">
-                    <h4>{{style.name}}</h4>
-                    <p>{{style.description}}</p>
+                  <div class="style-card-inner">
+                    <div class="style-image-container">
+                      <img [src]="style.previewUrl" 
+                           [alt]="style.name + ' style preview'" 
+                           (error)="onImageError($event)"
+                           loading="lazy"
+                           class="style-image">
+                      <div class="style-overlay" *ngIf="style.selected">
+                        <div class="checkmark">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="style-content">
+                      <h4 class="style-name">{{formatStyleName(style.name)}}</h4>
+                      <p class="style-description">{{style.description}}</p>
+                    </div>
                   </div>
                 </div>
               </div>
               
+              <!-- Bottom Controls - Image Count Selection and Action Button -->
+              <div class="bottom-controls" *ngIf="selectedStyles > 0">
+                <div class="image-count-selection">
+                  <h5>📸 Images to Generate per Style</h5>
+                  <div class="count-options">
+                    <label class="count-option" *ngFor="let count of [1, 2, 3, 4, 5]">
+                      <input type="radio" 
+                             name="imageCountBottom" 
+                             [value]="count" 
+                             [(ngModel)]="imagesPerStyle"
+                             [checked]="imagesPerStyle === count">
+                      <span>{{count}} image{{count > 1 ? 's' : ''}}</span>
+                    </label>
+                  </div>
+                  <p class="count-note">Total: <strong>{{selectedStyles * imagesPerStyle}} images</strong> will be generated</p>
+                </div>
+              </div>
+              
+              <!-- Enhanced Selection Summary -->
               <div class="style-selection-summary" *ngIf="selectedStyles > 0">
-                <p><strong>{{selectedStyles}} styles selected</strong></p>
+                <div class="summary-header">
+                  <h5>💰 Your Selection Will Cost</h5>
+                  <p><strong>{{selectedStyles}} styles selected</strong> • <strong>{{selectedStyles * imagesPerStyle}} total images</strong></p>
+                </div>
                 <div class="credit-breakdown">
                   <div class="credit-item">
                     <span class="credit-label">Model Training:</span>
                     <span class="credit-cost">{{calculateTrainingCredits()}} credits</span>
                   </div>
                   <div class="credit-item">
-                    <span class="credit-label">Image Generation:</span>
+                    <span class="credit-label">Image Generation ({{selectedStyles}} × {{imagesPerStyle}}):</span>
                     <span class="credit-cost">{{calculateGenerationCredits()}} credits</span>
                   </div>
                   <div class="credit-item total-credits">
@@ -511,12 +547,31 @@
                     <span class="credit-cost"><strong>{{calculateTotalCredits()}} credits</strong></span>
                   </div>
                   <div class="credit-item remaining-credits" [class.insufficient]="!hasEnoughCredits()">
-                    <span class="credit-label">Remaining Credits:</span>
+                    <span class="credit-label">Remaining After:</span>
                     <span class="credit-cost">
                       <strong [class.negative]="!hasEnoughCredits()">{{getRemainingCredits()}} credits</strong>
                     </span>
                   </div>
                 </div>
+              </div>
+              
+              <!-- Prominent Action Button -->
+              <div class="action-button-container" *ngIf="selectedStyles > 0">
+                <button class="btn btn-primary action-btn-prominent" 
+                        *ngIf="!isTrainingStarted" 
+                        (click)="startTrainingWithStyles()"
+                        [disabled]="modelStatus === 'training' || (uploadedImages === 0 && uploadedImageThumbnails.length === 0) || uploadedImageThumbnails.length < 5 || !hasEnoughCredits()">
+                  <div class="btn-content">
+                    <div class="btn-icon" *ngIf="modelStatus !== 'training'">🚀</div>
+                    <div class="btn-icon spinning" *ngIf="modelStatus === 'training'">⏳</div>
+                    <div class="btn-text">
+                      <span class="btn-title" *ngIf="modelStatus === 'training'">Starting Training...</span>
+                      <span class="btn-title" *ngIf="modelStatus === 'trained'">Generate {{selectedStyles * imagesPerStyle}} Photos</span>
+                      <span class="btn-title" *ngIf="modelStatus !== 'training' && modelStatus !== 'trained'">Start Training & Generate Photos</span>
+                      <span class="btn-subtitle" *ngIf="modelStatus !== 'training'">{{selectedStyles}} styles • {{selectedStyles * imagesPerStyle}} total images</span>
+                    </div>
+                  </div>
+                </button>
               </div>
               
               <!-- Insufficient Credits Warning -->
@@ -531,38 +586,21 @@
                 </div>
               </div>
               
-              <!-- Number of images per style selection -->
-              <div class="image-count-selection" *ngIf="selectedStyles > 0">
-                <h5>Images to Generate per Style</h5>
-                <div class="count-options">
-                  <label class="count-option" *ngFor="let count of [1, 2, 3, 4, 5]">
-                    <input type="radio" 
-                           name="imageCount" 
-                           [value]="count" 
-                           [(ngModel)]="imagesPerStyle"
-                           [checked]="imagesPerStyle === count">
-                    <span>{{count}} image{{count > 1 ? 's' : ''}}</span>
-                  </label>
-                </div>
-                <p class="count-note">Total: {{selectedStyles * imagesPerStyle}} images will be generated</p>
-              </div>
-              
-              <!-- Action Button: Training or Generation -->
-              <button class="btn btn-primary" 
-                      *ngIf="selectedStyles > 0 && !isTrainingStarted" 
-                      (click)="startTrainingWithStyles()"
-                      [disabled]="modelStatus === 'training' || !uploadedImages || uploadedImages < 5 || !hasEnoughCredits()">
-                <span *ngIf="modelStatus === 'training'">Starting Training...</span>
-                <span *ngIf="modelStatus === 'trained'">Generate Photos with {{selectedStyles}} Selected Styles ({{selectedStyles * imagesPerStyle}} total images)</span>
-                <span *ngIf="modelStatus !== 'training' && modelStatus !== 'trained'">Start Training with {{selectedStyles}} Selected Styles ({{selectedStyles * imagesPerStyle}} total images)</span>
-              </button>
               
               <div class="training-note" *ngIf="selectedStyles === 0">
-                <p>Select at least one style to proceed with training</p>
+                <div class="note-icon">👆</div>
+                <p>Select at least one style above to proceed with training</p>
               </div>
               
-              <div class="training-note" *ngIf="selectedStyles > 0 && uploadedImages < 5">
-                <p>Upload at least 5 images to enable training</p>
+              <div class="training-note" *ngIf="selectedStyles > 0 && uploadedImageThumbnails.length < 5">
+                <div class="note-icon">📸</div>
+                <p>Upload at least 5 images to enable training (currently: {{uploadedImageThumbnails.length}})</p>
+              </div>
+              
+              <div class="training-note insufficient-credits" *ngIf="selectedStyles > 0 && uploadedImageThumbnails.length >= 5 && !hasEnoughCredits()">
+                <div class="note-icon">💳</div>
+                <p>Insufficient credits. You need {{calculateTotalCredits() - getTotalAvailableCredits()}} more credits.</p>
+                <button class="btn btn-secondary btn-sm" routerLink="/credit-packages">Purchase Credits</button>
               </div>
               
               <!-- Training Progress (only shown when actively training) -->

@@ -4,10 +4,10 @@ An AI-powered profile photo generator with a .NET 8 Web API backend and Angular 
 
 ## Project Documentation
 
-- [Project Plan](PROJECT_PLAN.md) - Overall plan and milestones
-- [Tasks](TASKS.md) - Detailed task list and status
-- [Setup Guide](SETUP.md) - Development environment setup
-- [Architecture](ARCHITECTURE.md) - System architecture and design
+- [Project Plan](docs/PROJECT_PLAN.md) - Overall plan and milestones
+- [Tasks](docs/TASKS.md) - Detailed task list and status
+- [Setup Guide](docs/SETUP.md) - Development environment setup
+- [Architecture](docs/ARCHITECTURE.md) - System architecture and design
 
 > **Note:** The project uses semantic search tools to assist with code navigation, onboarding, and automated documentation updates. This enables faster onboarding and more accurate code suggestions.
 
@@ -46,7 +46,7 @@ AI.ProfilePhotoMaker is a web application that allows users to create profession
 
 ## Getting Started
 
-For detailed setup instructions, see the [Setup Guide](SETUP.md).
+For detailed setup instructions, see the [Setup Guide](docs/SETUP.md).
 
 ### Quick Start
 
@@ -107,7 +107,7 @@ For a detailed API reference, run the application and visit `/swagger` endpoint.
 
 ## Development Workflow
 
-1. Choose a task from the [Tasks](TASKS.md) document
+1. Choose a task from the [Tasks](docs/TASKS.md) document
 2. Create a feature branch (`feature/your-feature-name`)
 3. Implement the feature
 4. Add tests
@@ -128,4 +128,11 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ---
 
-*Last updated: June 2023*
+---
+
+## Additional Documentation
+
+- [Refactoring Documentation](docs/REFACTOR.md) - Comprehensive refactoring process and architecture improvements
+- [OAuth Troubleshooting](docs/OAUTH_TROUBLESHOOTING.md) - OAuth implementation and troubleshooting guide
+
+*Last updated: June 28, 2025*

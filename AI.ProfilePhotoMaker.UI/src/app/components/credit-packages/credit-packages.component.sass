@@ -1,6 +1,7 @@
+@import '../../shared/styles/index'
+
 .credit-packages-container
-  max-width: 1400px
-  margin: 0 auto
+  @include content-container
   padding: 2rem 1rem
 
 .header
@@ -9,19 +10,19 @@
   
   h2
     font-size: 2.5rem
-    color: #2c3e50
+    color: var(--text-primary)
     margin-bottom: 0.5rem
     
   .subtitle
     font-size: 1.1rem
-    color: #7f8c8d
+    color: var(--text-secondary)
     margin: 0
 
 .current-status
   margin-bottom: 3rem
   
   .status-card
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+    background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)
     color: white
     padding: 2rem
     border-radius: 15px
