@@ -34,7 +34,11 @@
             "styles": [
               "src/styles.sass"
             ],
-            "scripts": []
+            "scripts": [],
+            "allowedCommonJsDependencies": [
+              "jszip",
+              "face-api.js"
+            ]
           },
           "configurations": {
             "production": {
@@ -46,8 +50,13 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "20kB",
+                  "maximumError": "50kB"
+                },
+                {
+                  "type": "any",
+                  "maximumWarning": "40kB",
+                  "maximumError": "80kB"
                 }
               ],
               "outputHashing": "all"

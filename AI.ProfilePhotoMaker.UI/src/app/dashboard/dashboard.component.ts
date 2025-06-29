@@ -3,6 +3,8 @@ import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HeaderNavigationComponent } from '../shared/header-navigation/header-navigation.component';
+import { StatsCardComponent } from '../components/dashboard/stats-card/stats-card.component';
+import { StyleSelectorComponent, StyleOption } from '../components/dashboard/style-selector/style-selector.component';
 import { AuthService } from '../services/auth.service';
 import { GalleryImage } from '../components/photo-gallery/photo-gallery.component';
 import { FileUploadService } from '../services/file-upload.service';
@@ -15,13 +17,6 @@ import { ConfigService } from '../services/config.service';
 import JSZip from 'jszip';
 import { Observable } from 'rxjs';
 
-interface StyleOption {
-  id: string;
-  name: string;
-  description: string;
-  previewUrl: string;
-  selected: boolean;
-}
 
 interface GeneratedPhoto {
   id: string;
@@ -58,7 +53,7 @@ interface QualityCheckResult {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, HeaderNavigationComponent],
+  imports: [CommonModule, RouterModule, FormsModule, HeaderNavigationComponent, StatsCardComponent, StyleSelectorComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.sass']
 })
@@ -321,6 +316,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.selectedStyles = this.getSelectedStylesCount();
   }
 
+  onStyleToggled(style: StyleOption) {
+    this.toggleStyle(style);
+  }
+
+  onImagesPerStyleChanged(count: number) {
+    this.imagesPerStyle = count;
+  }
+
+  onSelectAllStyles() {
+    this.selectAllStyles();
+  }
+
+  onDeselectAllStyles() {
+    this.deselectAllStyles();
+  }
+
+  onStartTraining() {
+    this.startTrainingWithStyles();
+  }
+
   startTrainingWithStyles() {
     const selectedStyles = this.availableStyles.filter(s => s.selected);
     if (selectedStyles.length === 0) {
@@ -412,15 +427,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     event.target.onerror = null;
   }
 
-  // Format style names for display - capitalize first letter and remove dashes
-  formatStyleName(styleName: string): string {
-    if (!styleName) return '';
-    
-    return styleName
-      .split('-') // Split by dashes
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1)) // Capitalize first letter of each word
-      .join(' '); // Join with spaces
-  }
 
   // Workflow methods
   isPremiumWorkflow(): boolean {

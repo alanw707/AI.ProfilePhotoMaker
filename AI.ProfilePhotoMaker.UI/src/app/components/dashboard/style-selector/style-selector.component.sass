@@ -1,0 +1,42 @@
+// Import only what's needed - reduce CSS duplication
+@import '../../../shared/styles/mixins'
+
+// Import only the specific dashboard styles needed for this component
+@import '../../../dashboard/styles/gallery'
+@import '../../../dashboard/styles/credit-preview'
+
+// Style selector specific styles
+.style-controls
+  display: flex
+  justify-content: space-between
+  align-items: center
+  margin-bottom: 20px
+  padding: 16px 20px
+  background: var(--bg-tertiary)
+  border: 1px solid var(--border-color)
+  border-radius: 12px
+
+  @media (max-width: 767px)
+    flex-direction: column
+    gap: 12px
+    text-align: center
+
+  .style-control-buttons
+    display: flex
+    gap: 12px
+
+    .btn
+      @include btn-base
+      
+      &.btn-outline-secondary
+        @include btn-secondary
+        font-size: 14px
+        padding: 8px 16px
+
+  .selection-count
+    font-size: 14px
+    color: var(--text-secondary)
+    font-weight: 500
+
+    @media (max-width: 767px)
+      margin-top: 8px
