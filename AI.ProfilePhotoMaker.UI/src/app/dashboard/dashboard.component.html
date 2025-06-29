@@ -1,35 +1,6 @@
 <div class="dashboard-container">
-  <!-- Theme Toggle Button -->
-  <button class="theme-toggle" (click)="toggleTheme()" [attr.aria-label]="'Switch to ' + (themeService.isDark() ? 'light' : 'dark') + ' theme'">
-    <svg *ngIf="!themeService.isDark()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-    </svg>
-    <svg *ngIf="themeService.isDark()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-    </svg>
-  </button>
-
-  <!-- Navigation Header -->
-  <header class="dashboard-header">
-    <div class="header-content">
-      <div class="logo-section">
-        <img src="Logo.PNG" alt="AI Profile Photo Maker" class="header-logo">
-        <h1>AI Profile Photo Maker</h1>
-      </div>
-      <div class="user-section">
-        <div class="user-info">
-          <span class="user-name">Welcome, {{userName}}!</span>
-          <span class="user-email">{{userEmail}}</span>
-        </div>
-        <button class="btn btn-logout" (click)="logout()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M16 17L21 12M21 12L16 7M21 12H9M9 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Logout
-        </button>
-      </div>
-    </div>
-  </header>
+  <!-- Shared Header Navigation -->
+  <app-header-navigation></app-header-navigation>
 
   <!-- Main Dashboard Content -->
   <main class="dashboard-main">
@@ -59,25 +30,109 @@
               <p>Model Status</p>
             </div>
           </div>
-          <div class="stat-card" *ngIf="creditsInfo">
+          <div class="stat-card" *ngIf="creditsInfo || userCreditStatus">
             <div class="stat-icon">💎</div>
             <div class="stat-content">
-              <h3>{{creditsInfo.availableCredits}}</h3>
+              <h3>{{getTotalAvailableCredits()}}</h3>
               <p>Credits</p>
             </div>
           </div>
         </div>
       </section>
 
+      <!-- Credit Status (if user has purchased credits) -->
+      <section class="premium-status-section" *ngIf="userCreditStatus && userCreditStatus.purchasedCredits > 0">
+        <div class="premium-status-card">
+          <div class="status-header">
+            <h3>🎯 Credits Available</h3>
+            <div class="status-details">
+              <span class="package-name">Credit Balance</span>
+              <span class="credits-remaining">{{ userCreditStatus.purchasedCredits }} purchased credits</span>
+              <span class="expiry-info" *ngIf="userCreditStatus.weeklyCredits > 0">
+                + {{ userCreditStatus.weeklyCredits }} weekly credits
+              </span>
+              <span class="expiry-warning">
+                Weekly credits: photo enhancement only • Purchased credits: never expire, all features
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- No Package - Get Started Section -->
+      <section class="get-started-section" *ngIf="!isPremiumWorkflow()">
+        <div class="get-started-card">
+          <div class="get-started-header">
+            <h2>Welcome to AI Profile Photo Maker</h2>
+            <p>Create stunning, professional AI-generated profile photos with our advanced technology</p>
+          </div>
+          
+          <div class="options-grid">
+            <div class="option-card premium-option">
+              <div class="option-header">
+                <div class="option-icon">🎯</div>
+                <h3>Premium Studio</h3>
+              </div>
+              <div class="option-content">
+                <ul>
+                  <li>✨ Train your own custom AI model</li>
+                  <li>🎨 Generate photos in multiple professional styles</li>
+                  <li>📸 Create 5-50 high-quality photos</li>
+                  <li>🔒 Complete data control with account settings</li>
+                </ul>
+                <button class="btn btn-primary" routerLink="/packages">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L3.09 8.26L12 22L20.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" fill="none"/>
+                  </svg>
+                  View Packages
+                </button>
+              </div>
+            </div>
+            
+            <div class="option-card basic-option">
+              <div class="option-header">
+                <div class="option-icon">⚡</div>
+                <h3>Basic Enhancement</h3>
+              </div>
+              <div class="option-content">
+                <ul>
+                  <li>🖼️ Background removal & replacement</li>
+                  <li>✨ Professional lighting & styling</li>
+                  <li>📱 Social media optimized photos</li>
+                  <li>🎨 Creative cartoon transformations</li>
+                </ul>
+                <button class="btn btn-secondary" routerLink="/enhance">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  Enhance Photos
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="credits-display" *ngIf="creditsInfo">
+            <div class="credits-info-card">
+              <div class="credits-icon">⚡</div>
+              <div class="credits-text">
+                <span class="credits-count">{{creditsInfo.availableCredits}} Free Credits</span>
+                <span class="credits-note">Use for basic photo enhancement</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Workflow Steps -->
-      <section class="workflow-section">
+      <section class="workflow-section" *ngIf="isPremiumWorkflow()">
         <h2>Create Your Professional Photos</h2>
         <p class="workflow-subtitle">Follow these simple steps to generate stunning AI-powered profile photos</p>
         
         <div class="workflow-steps">
           
           <!-- Step 1: Upload Selfies -->
-          <div class="step-card" [class.completed]="uploadedImages > 0" [class.active]="currentStep === 1">
+          <div class="step-card" [class.completed]="uploadedImages > 0 || uploadedImageThumbnails.length > 0" [class.active]="currentStep === 1">
             <div class="step-header">
               <div class="step-number">1</div>
               <div class="step-title">
@@ -90,8 +145,98 @@
                 </span>
               </div>
             </div>
-            <div class="step-content" *ngIf="currentStep === 1 || uploadedImages === 0">
+            <div class="step-content" *ngIf="currentStep === 1 || uploadedImages === 0 || uploadedImageThumbnails.length > 0">
+              <!-- Hidden file input - always available for Upload More Images button -->
+              <input type="file" #fileInput multiple accept="image/*" (change)="onFileSelected($event)" style="display: none">
+              
+              <!-- Upload Guidelines (always shown for reference) -->
+              <div class="upload-guidelines">
+                <div class="guidelines-header">
+                  <div class="guidelines-icon">📝</div>
+                  <h4>Image Quality Guidelines</h4>
+                  <p>Follow these guidelines to ensure your photos pass our quality checks</p>
+                </div>
+                
+                <div class="guidelines-grid">
+                  <!-- Good Examples Column -->
+                  <div class="guidelines-column good-examples">
+                    <h5 class="column-title">✅ Good Examples</h5>
+                    <div class="guideline-item good">
+                      <span class="guideline-icon">✅</span>
+                      <span class="guideline-text">Use shoulders-up images</span>
+                    </div>
+                    <div class="guideline-item good">
+                      <span class="guideline-icon">✅</span>
+                      <span class="guideline-text">Waist-up images are also good</span>
+                    </div>
+                    <div class="guideline-item good">
+                      <span class="guideline-icon">✅</span>
+                      <span class="guideline-text">Some background space around your head</span>
+                    </div>
+                    <div class="guideline-item good">
+                      <span class="guideline-icon">✅</span>
+                      <span class="guideline-text">Looking at the camera</span>
+                    </div>
+                    <div class="guideline-item good">
+                      <span class="guideline-icon">✅</span>
+                      <span class="guideline-text">Good lighting and sharp focus</span>
+                    </div>
+                    <div class="guideline-item good">
+                      <span class="guideline-icon">✅</span>
+                      <span class="guideline-text">High resolution (1024x1024+ for best results)</span>
+                    </div>
+                  </div>
+
+                  <!-- Bad Examples Column -->
+                  <div class="guidelines-column bad-examples">
+                    <h5 class="column-title">❌ Bad Examples</h5>
+                    <div class="guideline-item bad">
+                      <span class="guideline-icon">❌</span>
+                      <span class="guideline-text">Extra people in photo</span>
+                    </div>
+                    <div class="guideline-item bad">
+                      <span class="guideline-icon">❌</span>
+                      <span class="guideline-text">Multiple photos same day</span>
+                    </div>
+                    <div class="guideline-item bad">
+                      <span class="guideline-icon">❌</span>
+                      <span class="guideline-text">Funny faces or expressions</span>
+                    </div>
+                    <div class="guideline-item bad">
+                      <span class="guideline-icon">❌</span>
+                      <span class="guideline-text">Filters, B&W or Sepia</span>
+                    </div>
+                    <div class="guideline-item bad">
+                      <span class="guideline-icon">❌</span>
+                      <span class="guideline-text">Bad lighting, low quality, blurry</span>
+                    </div>
+                    <div class="guideline-item bad">
+                      <span class="guideline-icon">❌</span>
+                      <span class="guideline-text">Hats, glasses, or face coverings</span>
+                    </div>
+                    <div class="guideline-item bad">
+                      <span class="guideline-icon">❌</span>
+                      <span class="guideline-text">Extreme close-ups or tightly cropped</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Additional Info -->
+                <div class="guidelines-footer">
+                  <div class="guideline-item info">
+                    <span class="guideline-icon">📁</span>
+                    <span class="guideline-text">File Requirements: JPEG/PNG • Max 7MB • 512x512+ pixels • 10-20 photos recommended</span>
+                  </div>
+                  <div class="guideline-item info">
+                    <span class="guideline-icon">🗂️</span>
+                    <span class="guideline-text">Data Retention: Input photos 7 days • Generated photos 30 days</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Upload area for new images -->
               <div class="upload-area" 
+                   *ngIf="selectedFiles.length === 0"
                    (click)="triggerFileUpload()"
                    (dragover)="onDragOver($event)"
                    (dragleave)="onDragLeave($event)"
@@ -99,23 +244,172 @@
                    [class.drag-over]="isDragOver">
                 <div class="upload-icon">📷</div>
                 <h4>Drop your selfies here or click to browse</h4>
-                <p>Maximum 20 images • JPG, PNG, WebP • Up to 5MB each</p>
-                <input type="file" #fileInput multiple accept="image/*" (change)="onFileSelected($event)" style="display: none">
+                <p>Maximum 20 images • JPG, PNG, WebP • Up to 7MB each</p>
               </div>
-              <div class="uploaded-images" *ngIf="selectedFiles.length > 0">
-                <div class="image-preview" *ngFor="let file of selectedFiles; index as i">
-                  <img [src]="getFilePreview(file)" alt="Preview">
-                  <button class="remove-btn" (click)="removeFile(i)">×</button>
+
+              <!-- Show uploaded image thumbnails (completed work) -->
+              <div class="uploaded-thumbnails" *ngIf="uploadedImageThumbnails.length > 0">
+                <h4>Uploaded Images ({{uploadedImageThumbnails.length}})</h4>
+                <div class="thumbnail-grid">
+                  <div class="thumbnail-item" *ngFor="let thumb of uploadedImageThumbnails; index as i">
+                    <img [src]="thumb.url" [alt]="thumb.fileName">
+                    <button class="delete-thumbnail-btn" 
+                            (click)="deleteUploadedImage(thumb, i)" 
+                            title="Delete image">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <p class="upload-status">✅ {{uploadedImageThumbnails.length}} images ready for training</p>
+              </div>
+              
+              <!-- Selected files preview (active work) -->
+              <div class="selected-files-preview active-work-area" *ngIf="selectedFilesWithQuality.length > 0">
+                <div class="section-header">
+                  <h4>📋 Review Selected Images ({{selectedFilesWithQuality.length}})</h4>
+                  <p class="section-subtitle">Check quality scores and fix any issues before uploading</p>
+                </div>
+                <div class="selected-files-grid-enhanced">
+                  <div class="selected-file-item-enhanced" 
+                       *ngFor="let fileData of selectedFilesWithQuality; index as i"
+                       [class.file-valid]="fileData.isValid"
+                       [class.file-invalid]="!fileData.isValid">
+                    <img [src]="getFilePreview(fileData.file)" alt="Preview">
+                    
+                    <!-- Quality Score Header - Clean, minimal design -->
+                    <div class="file-status-header">
+                      <!-- Quality Score Badge Only -->
+                      <div class="quality-badge" *ngIf="fileData.qualityScore">
+                        <span class="quality-score-compact" 
+                              [class.score-red]="fileData.qualityScore.overall < 50"
+                              [class.score-yellow]="fileData.qualityScore.overall >= 50 && fileData.qualityScore.overall < 75"
+                              [class.score-green]="fileData.qualityScore.overall >= 75">
+                          {{fileData.qualityScore.overall}}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div class="file-info-enhanced">
+                      <span class="file-name">{{fileData.file.name}}</span>
+                      
+                      <!-- Clean quality summary -->
+                      <div class="file-quality-summary" *ngIf="fileData.qualityScore || fileData.faceValidation">
+                        <div class="summary-item" *ngIf="fileData.faceValidation">
+                          <span class="summary-label">{{fileData.faceValidation.faceCount}} face(s) detected</span>
+                          <span class="summary-value">{{fileData.faceValidation.bodyType | titlecase}}</span>
+                        </div>
+                        <div class="summary-item" *ngIf="fileData.warnings && fileData.warnings.length > 0">
+                          <span class="warning-count">{{fileData.warnings.length}} warning(s)</span>
+                        </div>
+                        <div class="summary-item" *ngIf="fileData.errors && fileData.errors.length > 0">
+                          <span class="error-count">{{fileData.errors.length}} error(s)</span>
+                        </div>
+                      </div>
+                      
+                    </div>
+                    
+                    <!-- Info Button for Invalid Files -->
+                    <div class="file-info-popup" *ngIf="!fileData.isValid">
+                      <button class="info-btn" 
+                              (click)="fileData.showDetails = !fileData.showDetails"
+                              [class.active]="fileData.showDetails"
+                              type="button">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                          <path d="M12 16V12M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </button>
+                      
+                      <!-- Popup Notification -->
+                      <div class="popup-details" 
+                           *ngIf="fileData.showDetails"
+                           (click)="$event.stopPropagation()">
+                        <div class="popup-arrow"></div>
+                        <div class="popup-content">
+                          <!-- Errors Section -->
+                          <div class="popup-section" *ngIf="fileData.errors && fileData.errors.length > 0">
+                            <h6 class="popup-title">❌ Issues</h6>
+                            <ul class="popup-list">
+                              <li *ngFor="let error of fileData.errors">{{error}}</li>
+                            </ul>
+                          </div>
+                          
+                          <!-- Warnings Section -->
+                          <div class="popup-section" *ngIf="fileData.warnings && fileData.warnings.length > 0">
+                            <h6 class="popup-title">⚠️ Warnings</h6>
+                            <ul class="popup-list">
+                              <li *ngFor="let warning of fileData.warnings">{{warning}}</li>
+                            </ul>
+                          </div>
+                          
+                          <!-- Quick Fix -->
+                          <div class="popup-fix" *ngIf="fileData.qualityScore && fileData.qualityScore.suggestions && fileData.qualityScore.suggestions.length > 0">
+                            💡 {{fileData.qualityScore.suggestions[0]}}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <button class="remove-file-btn" (click)="removeFile(i)" title="Remove file">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                
+                <!-- Upload Summary with Add More Button -->
+                <div class="upload-summary-enhanced" *ngIf="selectedFilesWithQuality.length > 0">
+                  <div class="summary-stats">
+                    <span class="stat-item valid" *ngIf="getValidFilesCount() > 0">
+                      ✓ {{getValidFilesCount()}} ready to upload
+                    </span>
+                    <span class="stat-item invalid" *ngIf="getInvalidFilesCount() > 0">
+                      ✗ {{getInvalidFilesCount()}} need attention
+                    </span>
+                    <!-- Add More Button in Summary -->
+                    <button class="btn btn-secondary add-more-inline-btn" 
+                            *ngIf="uploadedImageThumbnails.length > 0 && getInvalidFilesCount() > 0 && !isUploading"
+                            (click)="triggerFileUpload()">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-right: 6px;">
+                        <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      Add More
+                    </button>
+                  </div>
                 </div>
               </div>
-              <button class="btn btn-primary" 
-                      *ngIf="selectedFiles.length > 0" 
-                      (click)="uploadImages()"
-                      [disabled]="isUploading">
-                <span *ngIf="isUploading">Uploading... {{uploadProgress}}%</span>
-                <span *ngIf="!isUploading">Upload {{selectedFiles.length}} Images</span>
-              </button>
               
+              <!-- Unified Upload Actions Section -->
+              <div class="upload-actions-container">
+                <!-- Quality Check Progress -->
+                <div class="quality-check-progress" *ngIf="isCheckingQuality">
+                  <div class="progress-bar">
+                    <div class="progress-fill indeterminate"></div>
+                  </div>
+                  <p class="progress-text">{{qualityCheckProgress}}</p>
+                </div>
+
+                <!-- Primary Upload Button Only -->
+                <div class="upload-actions-row" *ngIf="!isCheckingQuality && selectedFiles.length > 0">
+                  <button class="btn btn-primary upload-primary-btn" 
+                          (click)="uploadImages()"
+                          [disabled]="isUploading">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-right: 8px;" *ngIf="!isUploading">
+                      <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" stroke="currentColor" stroke-width="2"/>
+                      <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/>
+                      <path d="M12 11V17M9 14L12 11L15 14" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    <div class="spinner" *ngIf="isUploading" style="margin-right: 8px; width: 16px; height: 16px;"></div>
+                    <span *ngIf="isUploading">Uploading... {{uploadProgress}}%</span>
+                    <span *ngIf="!isUploading">Upload {{selectedFiles.length}} Images</span>
+                  </button>
+                </div>
+              </div>
+
+
               <!-- Upload Progress Bar -->
               <div class="upload-progress" *ngIf="isUploading">
                 <div class="progress-bar">
@@ -123,16 +417,18 @@
                 </div>
                 <p class="progress-text">{{uploadProgress}}% uploaded</p>
               </div>
+
             </div>
           </div>
 
-          <!-- Step 2: AI Model Training -->
-          <div class="step-card" [class.completed]="modelStatus === 'trained'" [class.active]="currentStep === 2">
+          <!-- Step 2: Generate Images -->
+          <div class="step-card" [class.completed]="generatedPhotos.length > 0" [class.active]="currentStep === 2">
             <div class="step-header">
               <div class="step-number">2</div>
               <div class="step-title">
-                <h3>AI Model Training</h3>
-                <p>Our AI learns your unique features to create personalized photos</p>
+                <h3>Generate Your Professional Photos</h3>
+                <p *ngIf="modelStatus !== 'trained'">Select styles and we'll train your model then generate photos</p>
+                <p *ngIf="modelStatus === 'trained'">Select styles to generate photos with your trained model</p>
               </div>
               <div class="step-status">
                 <span class="status-badge" [ngClass]="getStepStatus(2)">
@@ -140,27 +436,267 @@
                 </span>
               </div>
             </div>
-            <div class="step-content" *ngIf="currentStep === 2">
-              <div class="training-progress">
-                <div class="progress-circle">
-                  <div class="progress-text">{{trainingProgress}}%</div>
+            <div class="step-content" *ngIf="uploadedImages > 0 || uploadedImageThumbnails.length > 0">
+              <!-- Style Selection Controls -->
+              <div class="style-controls">
+                <div class="style-control-buttons">
+                  <button type="button" class="btn btn-outline-secondary" (click)="selectAllStyles()">
+                    Select All
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" (click)="deselectAllStyles()">
+                    Deselect All
+                  </button>
                 </div>
-                <div class="training-info">
-                  <h4>Training in Progress</h4>
-                  <p>This usually takes 15-25 minutes. You'll be notified when it's complete!</p>
-                  <p class="eta">Estimated completion: {{estimatedCompletion}}</p>
+                <span class="selection-count">{{selectedStyles}} of {{availableStyles.length}} styles selected</span>
+              </div>
+              
+              <!-- Static Credit Information - Only when no selections made -->
+              <div class="credit-reference-info" *ngIf="selectedStyles === 0">
+                <div class="info-header">
+                  <div class="info-icon">💳</div>
+                  <span class="info-title">Credit Costs</span>
+                </div>
+                <div class="info-costs">
+                  <span class="cost-ref">Training: {{creditService.getCreditCostSync('model_training')}} credits (one-time)</span>
+                  <span class="cost-ref">Generation: {{creditService.getCreditCostSync('styled_generation')}} credits per image</span>
+                </div>
+              </div>
+              
+              <!-- Top Image Count Selection (when styles selected) -->
+              <div class="top-controls" *ngIf="selectedStyles > 0">
+                <div class="image-count-selection compact">
+                  <h5>📸 Images to Generate per Style</h5>
+                  <div class="count-options">
+                    <label class="count-option" *ngFor="let count of [1, 2, 3, 4, 5]">
+                      <input type="radio" 
+                             name="imageCountTop" 
+                             [value]="count" 
+                             [(ngModel)]="imagesPerStyle"
+                             [checked]="imagesPerStyle === count">
+                      <span>{{count}}</span>
+                    </label>
+                  </div>
+                  <p class="count-note">{{selectedStyles}} styles × {{imagesPerStyle}} images = <strong>{{selectedStyles * imagesPerStyle}} total images</strong></p>
+                </div>
+              </div>
+              
+              
+              <div class="styles-gallery">
+                <div class="style-card" 
+                     *ngFor="let style of availableStyles" 
+                     [class.selected]="style.selected"
+                     (click)="toggleStyle(style)">
+                  <div class="style-card-inner">
+                    <div class="style-image-container">
+                      <img [src]="style.previewUrl" 
+                           [alt]="style.name + ' style preview'" 
+                           (error)="onImageError($event)"
+                           loading="lazy"
+                           class="style-image">
+                      <div class="style-overlay" *ngIf="style.selected">
+                        <div class="checkmark">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="style-content">
+                      <h4 class="style-name">{{formatStyleName(style.name)}}</h4>
+                      <p class="style-description">{{style.description}}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Bottom Controls - Image Count Selection and Action Button -->
+              <div class="bottom-controls" *ngIf="selectedStyles > 0">
+                <div class="image-count-selection">
+                  <h5>📸 Images to Generate per Style</h5>
+                  <div class="count-options">
+                    <label class="count-option" *ngFor="let count of [1, 2, 3, 4, 5]">
+                      <input type="radio" 
+                             name="imageCountBottom" 
+                             [value]="count" 
+                             [(ngModel)]="imagesPerStyle"
+                             [checked]="imagesPerStyle === count">
+                      <span>{{count}} image{{count > 1 ? 's' : ''}}</span>
+                    </label>
+                  </div>
+                  <p class="count-note">Total: <strong>{{selectedStyles * imagesPerStyle}} images</strong> will be generated</p>
+                </div>
+              </div>
+              
+              <!-- Enhanced Selection Summary -->
+              <div class="style-selection-summary" *ngIf="selectedStyles > 0">
+                <div class="summary-header">
+                  <h5>💰 Your Selection Will Cost</h5>
+                  <p><strong>{{selectedStyles}} styles selected</strong> • <strong>{{selectedStyles * imagesPerStyle}} total images</strong></p>
+                </div>
+                <div class="credit-breakdown">
+                  <div class="credit-item">
+                    <span class="credit-label">Model Training:</span>
+                    <span class="credit-cost">{{calculateTrainingCredits()}} credits</span>
+                  </div>
+                  <div class="credit-item">
+                    <span class="credit-label">Image Generation ({{selectedStyles}} × {{imagesPerStyle}}):</span>
+                    <span class="credit-cost">{{calculateGenerationCredits()}} credits</span>
+                  </div>
+                  <div class="credit-item total-credits">
+                    <span class="credit-label">Total Cost:</span>
+                    <span class="credit-cost"><strong>{{calculateTotalCredits()}} credits</strong></span>
+                  </div>
+                  <div class="credit-item remaining-credits" [class.insufficient]="!hasEnoughCredits()">
+                    <span class="credit-label">Remaining After:</span>
+                    <span class="credit-cost">
+                      <strong [class.negative]="!hasEnoughCredits()">{{getRemainingCredits()}} credits</strong>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Prominent Action Button -->
+              <div class="action-button-container" *ngIf="selectedStyles > 0">
+                <button class="btn btn-primary action-btn-prominent" 
+                        *ngIf="!isTrainingStarted" 
+                        (click)="startTrainingWithStyles()"
+                        [disabled]="modelStatus === 'training' || (uploadedImages === 0 && uploadedImageThumbnails.length === 0) || uploadedImageThumbnails.length < 5 || !hasEnoughCredits()">
+                  <div class="btn-content">
+                    <div class="btn-icon" *ngIf="modelStatus !== 'training'">🚀</div>
+                    <div class="btn-icon spinning" *ngIf="modelStatus === 'training'">⏳</div>
+                    <div class="btn-text">
+                      <span class="btn-title" *ngIf="modelStatus === 'training'">Starting Training...</span>
+                      <span class="btn-title" *ngIf="modelStatus === 'trained'">Generate {{selectedStyles * imagesPerStyle}} Photos</span>
+                      <span class="btn-title" *ngIf="modelStatus !== 'training' && modelStatus !== 'trained'">Start Training & Generate Photos</span>
+                      <span class="btn-subtitle" *ngIf="modelStatus !== 'training'">{{selectedStyles}} styles • {{selectedStyles * imagesPerStyle}} total images</span>
+                    </div>
+                  </div>
+                </button>
+              </div>
+              
+              <!-- Insufficient Credits Warning -->
+              <div class="insufficient-credits-warning" *ngIf="selectedStyles > 0 && !hasEnoughCredits()">
+                <div class="warning-icon">⚠️</div>
+                <div class="warning-content">
+                  <h5>Insufficient Credits</h5>
+                  <p>You need {{calculateTotalCredits() - (creditsInfo?.availableCredits || 0)}} more credits to complete this operation.</p>
+                  <button class="btn btn-secondary btn-sm" routerLink="/credit-packages">
+                    Purchase Credits
+                  </button>
+                </div>
+              </div>
+              
+              
+              <div class="training-note" *ngIf="selectedStyles === 0">
+                <div class="note-icon">👆</div>
+                <p>Select at least one style above to proceed with training</p>
+              </div>
+              
+              <div class="training-note" *ngIf="selectedStyles > 0 && uploadedImageThumbnails.length < 5">
+                <div class="note-icon">📸</div>
+                <p>Upload at least 5 images to enable training (currently: {{uploadedImageThumbnails.length}})</p>
+              </div>
+              
+              <div class="training-note insufficient-credits" *ngIf="selectedStyles > 0 && uploadedImageThumbnails.length >= 5 && !hasEnoughCredits()">
+                <div class="note-icon">💳</div>
+                <p>Insufficient credits. You need {{calculateTotalCredits() - getTotalAvailableCredits()}} more credits.</p>
+                <button class="btn btn-secondary btn-sm" routerLink="/credit-packages">Purchase Credits</button>
+              </div>
+              
+              <!-- Training Progress (only shown when actively training) -->
+              <div class="training-progress-section" *ngIf="modelStatus === 'training'">
+                <div class="training-progress">
+                  <div class="progress-circle">
+                    <div class="progress-text">{{trainingProgress}}%</div>
+                  </div>
+                  <div class="training-info">
+                    <h4>🚀 Training Your AI Model</h4>
+                    <p>This usually takes 15-25 minutes. You'll be notified when it's complete!</p>
+                    <p class="eta">Estimated completion: {{estimatedCompletion}}</p>
+                    <div class="model-retention-info">
+                      <small class="text-muted">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-right: 4px;">
+                          <path d="M12 2L2 7v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7L12 2z" stroke="currentColor" stroke-width="2" fill="none"/>
+                        </svg>
+                        Your training photos will be deleted after 7 days. Generated images stored for 30 days.
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Generation Progress (only shown when actively generating) -->
+              <div class="generation-progress-section" *ngIf="isGenerating">
+                <div class="progress-indicator">
+                  <div class="spinner"></div>
+                  <h4>🎨 Generating Your Photos</h4>
+                  <p>Creating professional photos with your selected styles...</p>
+                  <p class="progress-detail">This usually takes 2-5 minutes per style</p>
+                </div>
+              </div>
+              
+              <!-- Generated Photos Results -->
+              <div class="generated-results" *ngIf="generatedPhotos.length > 0">
+                <h4>🎉 Your Professional Photos Are Ready!</h4>
+                <div class="retention-warning">
+                  <div class="alert alert-info">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-right: 8px;">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                      <path d="M12 8v4l3 3" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    <strong>Data Retention:</strong> Your AI headshots will be stored for <strong>30 days</strong> for easy access and downloads. 
+                    You can delete your data anytime via account settings.
+                  </div>
+                </div>
+                <div class="results-grid">
+                  <div class="result-card" *ngFor="let photo of generatedPhotos">
+                    <img [src]="photo.url" [alt]="photo.style" (error)="onImageError($event)">
+                    <div class="result-overlay">
+                      <h4>{{photo.style}}</h4>
+                      <div class="result-actions">
+                        <button class="btn btn-sm btn-download" (click)="downloadPhoto(photo)">
+                          Download
+                        </button>
+                        <button class="btn btn-sm btn-share" (click)="sharePhoto(photo)">
+                          Share
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="bulk-actions" *ngIf="generatedPhotos.length > 1">
+                  <button class="btn btn-primary" (click)="downloadAll()" [disabled]="isDownloadingZip">
+                    <div class="spinner" *ngIf="isDownloadingZip" style="margin-right: 8px; width: 16px; height: 16px;"></div>
+                    <svg *ngIf="!isDownloadingZip" width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-right: 8px;">
+                      <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" fill="none"/>
+                      <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/>
+                      <path d="M12 18L8 14M12 18L16 14M12 18V11" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    <span *ngIf="isDownloadingZip">Creating ZIP...</span>
+                    <span *ngIf="!isDownloadingZip">Download All as ZIP ({{generatedPhotos.length}} photos)</span>
+                  </button>
+                </div>
+                <div class="view-gallery-action">
+                  <button class="btn btn-secondary" routerLink="/gallery">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
+                      <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    View All Photos in Gallery
+                  </button>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Step 3: Choose Styles -->
-          <div class="step-card" [class.completed]="selectedStyles > 0" [class.active]="currentStep === 3">
+          <!-- Step 3: View Generated Photos -->
+          <div class="step-card" [class.completed]="generatedPhotos.length > 0" [class.active]="getStepStatus(3) === 'active'">
             <div class="step-header">
               <div class="step-number">3</div>
               <div class="step-title">
-                <h3>Choose Your Styles</h3>
-                <p>Select up to 10 professional photo styles</p>
+                <h3>View Your Professional Photos</h3>
+                <p>Download and share your AI-generated professional photos</p>
               </div>
               <div class="step-status">
                 <span class="status-badge" [ngClass]="getStepStatus(3)">
@@ -168,123 +704,55 @@
                 </span>
               </div>
             </div>
-            <div class="step-content" *ngIf="currentStep === 3">
-              <div class="styles-grid">
-                <div class="style-card" 
-                     *ngFor="let style of availableStyles" 
-                     [class.selected]="style.selected"
-                     (click)="toggleStyle(style)">
-                  <div class="style-image">
-                    <img [src]="style.previewUrl" [alt]="style.name">
-                  </div>
-                  <div class="style-info">
-                    <h4>{{style.name}}</h4>
-                    <p>{{style.description}}</p>
-                  </div>
-                  <div class="style-checkbox">
-                    <input type="checkbox" [checked]="style.selected" (change)="toggleStyle(style)">
-                  </div>
-                </div>
+            <div class="step-content" *ngIf="generatedPhotos.length > 0">
+              <div class="completion-message">
+                <div class="success-icon">🎉</div>
+                <h4>Congratulations! Your photos are ready</h4>
+                <p>Your AI model has successfully generated {{generatedPhotos.length}} professional photos.</p>
               </div>
-              <button class="btn btn-primary" 
-                      *ngIf="selectedStyles > 0" 
-                      (click)="generatePhotos()"
-                      [disabled]="isGenerating">
-                <span *ngIf="isGenerating">Generating Photos...</span>
-                <span *ngIf="!isGenerating">Generate {{selectedStyles}} Photo Styles</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Step 4: Download Results -->
-          <div class="step-card" [class.completed]="generatedPhotos.length > 0" [class.active]="currentStep === 4">
-            <div class="step-header">
-              <div class="step-number">4</div>
-              <div class="step-title">
-                <h3>Download Your Photos</h3>
-                <p>Your professional AI-generated profile photos are ready!</p>
-              </div>
-              <div class="step-status">
-                <span class="status-badge" [ngClass]="getStepStatus(4)">
-                  {{getStepStatusText(4)}}
-                </span>
-              </div>
-            </div>
-            <div class="step-content" *ngIf="currentStep === 4">
-              <div class="results-grid">
-                <div class="result-card" *ngFor="let photo of generatedPhotos">
-                  <img [src]="photo.url" [alt]="photo.style">
-                  <div class="result-overlay">
-                    <h4>{{photo.style}}</h4>
-                    <div class="result-actions">
-                      <button class="btn btn-sm btn-download" (click)="downloadPhoto(photo)">
-                        Download
-                      </button>
-                      <button class="btn btn-sm btn-share" (click)="sharePhoto(photo)">
-                        Share
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="bulk-actions" *ngIf="generatedPhotos.length > 1">
-                <button class="btn btn-primary" (click)="downloadAll()">
-                  Download All Photos
+              
+              <div class="quick-actions">
+                <button class="btn btn-primary" (click)="downloadAll()" [disabled]="isDownloadingZip">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-right: 8px;">
+                    <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" fill="none"/>
+                    <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 18L8 14M12 18L16 14M12 18V11" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  <span *ngIf="isDownloadingZip">Creating ZIP...</span>
+                  <span *ngIf="!isDownloadingZip">Download All ({{generatedPhotos.length}} photos)</span>
+                </button>
+                
+                <button class="btn btn-secondary" routerLink="/gallery">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-right: 8px;">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
+                    <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  View in Gallery
                 </button>
               </div>
+
+              <div class="photo-preview-grid">
+                <div class="preview-photo" *ngFor="let photo of generatedPhotos.slice(0, 6)">
+                  <img [src]="photo.url" [alt]="photo.style + ' style'" (error)="onImageError($event)">
+                  <div class="photo-overlay">
+                    <span class="style-name">{{photo.style}}</span>
+                    <button class="btn-download" (click)="downloadPhoto(photo)" title="Download">
+                      ⬇️
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="next-steps" *ngIf="generatedPhotos.length > 6">
+                <p>+ {{generatedPhotos.length - 6}} more photos in your gallery</p>
+              </div>
             </div>
           </div>
 
         </div>
       </section>
 
-      <!-- Basic Tier Enhancement Section -->
-      <section class="basic-tier-section">
-        <div class="section-header">
-          <h2>Basic Photo Enhancement</h2>
-          <p>Try our AI photo enhancement service with basic tier - no custom training required!</p>
-          <div class="section-actions">
-            <button class="btn btn-accent" 
-                    (click)="generateBasicPhoto()" 
-                    [disabled]="isGeneratingBasic || !creditsInfo || creditsInfo.availableCredits <= 0">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <span *ngIf="isGeneratingBasic">Generating...</span>
-              <span *ngIf="!isGeneratingBasic && creditsInfo && creditsInfo.availableCredits > 0">Generate Basic Photo ({{creditsInfo.availableCredits}} credits)</span>
-              <span *ngIf="!isGeneratingBasic && (!creditsInfo || creditsInfo.availableCredits <= 0)">No Credits Available</span>
-            </button>
-            <button class="btn btn-secondary" (click)="toggleGalleryView()" [class.active]="showGallery">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
-                <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2"/>
-              </svg>
-              {{showGallery ? 'Hide Gallery' : 'View Gallery'}}
-            </button>
-            <button class="btn btn-primary" (click)="goToEnhancement()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2"/>
-              </svg>
-              Enhance Photo
-            </button>
-          </div>
-        </div>
-
-
-        <!-- Photo Gallery Component -->
-        <app-photo-gallery 
-          *ngIf="showGallery"
-          [images]="galleryImages"
-          [title]="'Your Photos'"
-          (imageClick)="onImageClick($event)"
-          (imageDownload)="onImageDownload($event)"
-          (imageShare)="onImageShare($event)"
-          (imageDelete)="onImageDelete($event)"
-          (bulkDownload)="onBulkDownload($event)">
-        </app-photo-gallery>
-      </section>
 
 
     </div>

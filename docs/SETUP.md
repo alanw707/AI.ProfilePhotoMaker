@@ -268,4 +268,14 @@ For testing webhooks locally, use ngrok:
 
 ---
 
+## Semantic Search Tools
+
+This project uses semantic search tools (integrated with Copilot and other AI assistants) to:
+- Help new developers onboard quickly
+- Automate codebase and documentation analysis
+- Provide context-aware troubleshooting and suggestions
+- Keep documentation up to date with code changes
+
+---
+
 *Last updated: June 2023*

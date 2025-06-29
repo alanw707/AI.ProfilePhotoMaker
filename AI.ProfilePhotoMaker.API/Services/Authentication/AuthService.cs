@@ -1,11 +1,13 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 namespace AI.ProfilePhotoMaker.API.Services.Authentication;
@@ -15,15 +17,18 @@ public class AuthService : IAuthService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IConfiguration _configuration;
+    private readonly ApplicationDbContext _context;
 
     public AuthService(
         UserManager<ApplicationUser> userManager, 
         SignInManager<ApplicationUser> signInManager,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ApplicationDbContext context)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _configuration = configuration;
+        _context = context;
     }
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterDto model)
@@ -48,6 +53,24 @@ public class AuthService : IAuthService
                 DateTime.MinValue
             );
         }
+
+        // Create UserProfile with the additional information
+        var userProfile = new UserProfile
+        {
+            UserId = user.Id,
+            FirstName = model.FirstName,
+            LastName = model.LastName,
+            Gender = model.Gender,
+            Ethnicity = model.Ethnicity,
+            SubscriptionTier = SubscriptionTier.Basic,
+            Credits = 3,
+            LastCreditReset = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _context.UserProfiles.Add(userProfile);
+        await _context.SaveChangesAsync();
 
         // Generate token for successful registration to automatically log in the user
         var token = GenerateJwtToken(user);
@@ -179,5 +202,61 @@ public class AuthService : IAuthService
         }
 
         return new AuthResponseDto(false, "Failed to create user from external login.", "", DateTime.MinValue);
+    }
+
+    public async Task<ProfileCompletionCheckDto> CheckProfileCompletionAsync(string userId)
+    {
+        var userProfile = await _context.UserProfiles.FirstOrDefaultAsync(up => up.UserId == userId);
+        
+        if (userProfile == null)
+        {
+            return new ProfileCompletionCheckDto(false, false, false, false, false);
+        }
+
+        var hasFirstName = !string.IsNullOrWhiteSpace(userProfile.FirstName);
+        var hasLastName = !string.IsNullOrWhiteSpace(userProfile.LastName);
+        var hasGender = !string.IsNullOrWhiteSpace(userProfile.Gender);
+        var hasEthnicity = !string.IsNullOrWhiteSpace(userProfile.Ethnicity);
+        
+        var isCompleted = hasFirstName && hasLastName && hasGender && hasEthnicity;
+        
+        return new ProfileCompletionCheckDto(isCompleted, hasFirstName, hasLastName, hasGender, hasEthnicity);
+    }
+
+    public async Task<bool> CompleteProfileAsync(string userId, ProfileCompletionDto model)
+    {
+        var userProfile = await _context.UserProfiles.FirstOrDefaultAsync(up => up.UserId == userId);
+        
+        if (userProfile == null)
+        {
+            // Create new profile if it doesn't exist (for OAuth users)
+            userProfile = new UserProfile
+            {
+                UserId = userId,
+                FirstName = model.FirstName,
+                LastName = model.LastName,
+                Gender = model.Gender,
+                Ethnicity = model.Ethnicity,
+                SubscriptionTier = SubscriptionTier.Basic,
+                Credits = 3,
+                LastCreditReset = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            
+            _context.UserProfiles.Add(userProfile);
+        }
+        else
+        {
+            // Update existing profile
+            userProfile.FirstName = model.FirstName;
+            userProfile.LastName = model.LastName;
+            userProfile.Gender = model.Gender;
+            userProfile.Ethnicity = model.Ethnicity;
+            userProfile.UpdatedAt = DateTime.UtcNow;
+        }
+
+        await _context.SaveChangesAsync();
+        return true;
     }
 }

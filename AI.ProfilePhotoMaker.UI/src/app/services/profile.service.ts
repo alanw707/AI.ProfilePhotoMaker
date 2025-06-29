@@ -11,6 +11,7 @@ export interface UserProfile {
   gender?: string;
   ethnicity?: string;
   trainedModelId?: string;
+  trainedModelVersionId?: string;
   modelTrainedAt?: Date;
   subscriptionTier: string;
   basicCredits: number;
@@ -53,5 +54,36 @@ export class ProfileService {
 
   deleteProfile(): Observable<{ success: boolean; message: string }> {
     return this.http.delete<{ success: boolean; message: string }>(this.config.profileUrl);
+  }
+
+  checkModelStatus(): Observable<{ success: boolean; data: { modelExists: boolean; modelStatus: string; modelId?: string; message: string }; error: any }> {
+    return this.http.post<{ success: boolean; data: { modelExists: boolean; modelStatus: string; modelId?: string; message: string }; error: any }>(`${this.config.profileUrl}/check-model-status`, {});
+  }
+
+  // Data deletion endpoints
+  getDataStats(): Observable<{ success: boolean; data: any; error: any }> {
+    return this.http.get<{ success: boolean; data: any; error: any }>(`${this.config.profileUrl}/data-stats`);
+  }
+
+  deleteInputPhotos(): Observable<{ success: boolean; data: any; error: any }> {
+    return this.http.delete<{ success: boolean; data: any; error: any }>(`${this.config.profileUrl}/data/photos`);
+  }
+
+  deleteAIModel(): Observable<{ success: boolean; data: any; error: any }> {
+    return this.http.delete<{ success: boolean; data: any; error: any }>(`${this.config.profileUrl}/data/model`);
+  }
+
+  deleteAllUserData(): Observable<{ success: boolean; data: any; error: any }> {
+    return this.http.delete<{ success: boolean; data: any; error: any }>(`${this.config.profileUrl}/data/all`);
+  }
+
+  deleteUserAccount(): Observable<{ success: boolean; data: any; error: any }> {
+    return this.http.delete<{ success: boolean; data: any; error: any }>(`${this.config.profileUrl}/account`);
+  }
+
+  exportUserData(): Observable<Blob> {
+    return this.http.get(`${this.config.profileUrl}/data/export`, { 
+      responseType: 'blob' 
+    });
   }
 }

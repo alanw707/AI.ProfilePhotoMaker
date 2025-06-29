@@ -1,16 +1,13 @@
+@import '../../shared/styles/index'
+
 .login-container
-  min-height: 100vh
-  display: flex
-  align-items: center
-  justify-content: center
-  background: var(--bg-gradient)
+  @include page-container
+  @include flex-center
   padding: 20px
 
 .login-card
-  background: var(--card-bg)
-  border-radius: 16px
-  box-shadow: var(--shadow-md)
-  border: 1px solid var(--border-color)
+  @include card-base
+  @extend .shadow
   padding: 40px
   max-width: 400px
   width: 100%
@@ -63,27 +60,12 @@
       font-size: 14px
 
     .form-control
-      width: 100%
-      padding: 12px 16px
-      border: 1px solid var(--border-color)
-      border-radius: 8px
+      @include form-control
       font-size: 16px
-      transition: all 0.3s ease
-      box-sizing: border-box
-      background: var(--input-bg)
-      color: var(--text-primary)
-
-      &:focus
-        outline: none
-        border-color: var(--accent-primary)
-        box-shadow: 0 0 0 3px rgba(125, 211, 216, 0.2)
 
       &.is-invalid
         border-color: var(--accent-danger)
         background: rgba(220, 53, 69, 0.05)
-
-      &::placeholder
-        color: var(--text-secondary)
 
     .invalid-feedback
       color: var(--accent-danger)
@@ -102,41 +84,18 @@
       color: var(--accent-danger)
 
   .btn
-    padding: 12px 20px
-    border: none
-    border-radius: 6px
-    font-size: 16px
-    font-weight: 600
-    cursor: pointer
-    transition: all 0.3s ease
-    text-decoration: none
-    display: inline-flex
-    align-items: center
-    justify-content: center
-    gap: 8px
+    @include btn-base
 
     &.btn-primary
-      background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)
-      color: white
-
-      &:hover:not(:disabled)
-        transform: translateY(-2px)
-        box-shadow: 0 5px 15px rgba(123, 211, 216, 0.4)
-
-      &:disabled
-        opacity: 0.7
-        cursor: not-allowed
+      @include btn-primary
 
     &.btn-block
       width: 100%
 
     .spinner
-      width: 16px
-      height: 16px
-      border: 2px solid transparent
-      border-top: 2px solid currentColor
-      border-radius: 50%
-      animation: spin 1s linear infinite
+      @include spinner-small
+      border-top-color: currentColor
+      border-color: transparent
 
 .social-login-divider
   text-align: center
@@ -168,33 +127,12 @@
   gap: 12px
 
   .btn
+    @include btn-secondary
     width: 100%
-    padding: 12px 20px
-    border: 1px solid var(--border-color)
-    border-radius: 8px
-    background: var(--card-bg)
-    color: var(--text-primary)
-    font-size: 16px
-    font-weight: 500
-    cursor: pointer
-    transition: all 0.3s ease
-    display: flex
-    align-items: center
-    justify-content: center
     gap: 12px
-    text-decoration: none
-    box-shadow: var(--shadow-sm)
-
+    
     &:hover:not(:disabled)
-      transform: translateY(-2px)
       background: var(--bg-tertiary)
-      box-shadow: var(--shadow-md)
-
-    &:disabled
-      opacity: 0.4
-      cursor: not-allowed
-      transform: none
-      box-shadow: var(--shadow-sm)
 
     svg
       flex-shrink: 0

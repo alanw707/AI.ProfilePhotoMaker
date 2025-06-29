@@ -9,6 +9,9 @@ public class UserProfileDto
     public string? LastName { get; set; }
     public string? Gender { get; set; }
     public string? Ethnicity { get; set; }
+    public string? TrainedModelId { get; set; }
+    public string? TrainedModelVersionId { get; set; }
+    public DateTime? ModelTrainedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public int TotalProcessedImages { get; set; }

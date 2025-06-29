@@ -1,0 +1,87 @@
+// Responsive Design
+@media (max-width: 1200px)
+  .dashboard-header
+    .header-content
+      max-width: 100%
+      padding: 0 16px
+
+  .dashboard-main
+    max-width: 100%
+    padding: 24px 16px
+
+// Improved responsive breakpoints
+@media (max-width: 768px)
+  .dashboard-header
+    .header-content
+      flex-direction: column
+      gap: 16px
+
+    .nav-menu
+      order: 1
+      justify-content: center
+      flex-wrap: wrap
+
+    .logo-section
+      order: 0
+
+    .user-section
+      order: 2
+
+  .workflow-section
+    h2
+      font-size: 24px
+
+  .step-card
+    .step-header
+      flex-direction: column
+      text-align: center
+      gap: 16px
+
+  .styles-grid,
+  .styles-grid-compact
+    grid-template-columns: 1fr !important
+    gap: 8px !important
+    
+    .style-option
+      padding: 8px !important
+      
+    .style-preview
+      width: 40px !important
+      height: 40px !important
+      
+      img
+        width: 40px !important
+        height: 40px !important
+        max-width: 40px !important
+        max-height: 40px !important
+
+  .results-grid
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr))
+    gap: 12px
+
+  .stats-grid
+    grid-template-columns: 1fr
+
+  .training-progress
+    flex-direction: column
+    text-align: center
+
+@media (max-width: 480px)
+  .dashboard-header
+    .nav-menu
+      .nav-link
+        padding: 8px 12px
+        font-size: 12px
+
+  .step-card
+    .step-header
+      padding: 16px
+
+  .styles-grid
+    grid-template-columns: 1fr
+
+  .results-grid
+    grid-template-columns: 1fr
+
+  .upload-area
+    padding: 32px 16px

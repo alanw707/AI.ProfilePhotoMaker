@@ -276,8 +276,18 @@ public class ReplicateApiClient : IReplicateApiClient
         {
             // Get style template from database and create prompt
             var stylePrompts = await GetStylePromptsFromDatabase(style);
-            string stylePrompt = CreateFluxStylePrompt(stylePrompts.PromptTemplate, userInfo);
+            string stylePrompt = CreateFluxStylePrompt(stylePrompts.PromptTemplate, userInfo, userId);
             string negativePrompt = stylePrompts.NegativePromptTemplate;
+            
+            // Log the model version being used for generation
+            _logger.LogInformation("Generating images with model version: {ModelVersion} for user: {UserId}, style: {Style}", 
+                trainedModelVersion, userId, style);
+            
+            // Debug logging for prompt generation
+            _logger.LogInformation("Style template from DB: {Template}", stylePrompts.PromptTemplate);
+            _logger.LogInformation("UserInfo passed: Gender={Gender}, Ethnicity={Ethnicity}", 
+                userInfo?.Gender ?? "NULL", userInfo?.Ethnicity ?? "NULL");
+            _logger.LogInformation("Generated prompt: {Prompt}", stylePrompt);
             
             var predictionRequest = new
             {
@@ -288,10 +298,14 @@ public class ReplicateApiClient : IReplicateApiClient
                     negative_prompt = negativePrompt,
                     num_inference_steps = 40,
                     guidance_scale = 7.5,
-                    num_outputs = 4,
+                    num_outputs = 1,
                     scheduler = "K_EULER_ANCESTRAL",
+                    output_format = "png",
                     webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete",
-                    webhook_events_filter = new[] { "completed" }
+                    webhook_events_filter = new[] { "completed" },
+                    // Add metadata for webhook processing
+                    user_id = userId,
+                    style = style
                 },
                 webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete"
             };
@@ -427,13 +441,65 @@ public class ReplicateApiClient : IReplicateApiClient
     /// <summary>
     /// Creates a comprehensive FLUX.1 style prompt by replacing placeholders in the template
     /// </summary>
-    private string CreateFluxStylePrompt(string promptTemplate, UserInfo? userInfo)
+    private string CreateFluxStylePrompt(string promptTemplate, UserInfo? userInfo, string userId)
     {
         // Get base subject description
         string subject = GetSubjectDescription(userInfo);
 
-        // Replace {subject} placeholder in the template
-        return promptTemplate.Replace("{subject}", subject);
+        // Add trigger word (user_ + user ID) to activate the trained model
+        string triggerWord = $"user_{userId}";
+
+        // Replace all placeholders in the template
+        string gender = userInfo?.Gender?.ToLower() ?? "person";
+        string ethnicity = userInfo?.Ethnicity?.ToLower() ?? "";
+        
+        // Handle gender + ethnicity combination properly
+        string genderEthnicityCombo = !string.IsNullOrEmpty(ethnicity) ? $"{gender} {ethnicity}" : gender;
+        
+        string result = promptTemplate
+            .Replace("{subject}", subject)
+            .Replace("{gender} {ethnicity}", genderEthnicityCombo)
+            .Replace("{gender}", gender)
+            .Replace("{ethnicity}", ethnicity);
+
+        // Add trigger word at the beginning of the prompt to activate custom model
+        result = $"{triggerWord}, {result}";
+
+        // Clean up extra spaces 
+        result = result.Replace("  ", " ").Trim();
+
+        _logger.LogInformation("Generated prompt with trigger word: {Prompt}", result);
+
+        return result;
+    }
+
+    /// <summary>
+    /// Creates a FLUX.1 style prompt for basic tier (without trigger word)
+    /// </summary>
+    private string CreateFluxStylePromptBasic(string promptTemplate, UserInfo? userInfo)
+    {
+        // Get base subject description
+        string subject = GetSubjectDescription(userInfo);
+
+        // Replace all placeholders in the template
+        string gender = userInfo?.Gender?.ToLower() ?? "person";
+        string ethnicity = userInfo?.Ethnicity?.ToLower() ?? "";
+        
+        // Handle gender + ethnicity combination properly
+        string genderEthnicityCombo = !string.IsNullOrEmpty(ethnicity) ? $"{gender} {ethnicity}" : gender;
+        
+        string result = promptTemplate
+            .Replace("{subject}", subject)
+            .Replace("{gender} {ethnicity}", genderEthnicityCombo)
+            .Replace("{gender}", gender)
+            .Replace("{ethnicity}", ethnicity);
+
+        // Clean up extra spaces 
+        result = result.Replace("  ", " ").Trim();
+
+        _logger.LogInformation("Generated basic prompt: {Prompt}", result);
+
+        return result;
     }
 
     /// <summary>
@@ -615,7 +681,8 @@ public class ReplicateApiClient : IReplicateApiClient
             
             if (casualStylePrompts.PromptTemplate != "")
             {
-                stylePrompt = CreateFluxStylePrompt(casualStylePrompts.PromptTemplate, userInfo);
+                // For basic tier, no trigger word needed (no custom trained model)
+                stylePrompt = CreateFluxStylePromptBasic(casualStylePrompts.PromptTemplate, userInfo);
                 negativePrompt = casualStylePrompts.NegativePromptTemplate;
             }
             else
@@ -637,6 +704,7 @@ public class ReplicateApiClient : IReplicateApiClient
                     guidance_scale = 7.0,
                     num_outputs = 1, // Only 1 image for basic tier
                     scheduler = "K_EULER_ANCESTRAL",
+                    output_format = "png",
                     width = 1024,
                     height = 1024,
                     webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete",
@@ -723,6 +791,7 @@ public class ReplicateApiClient : IReplicateApiClient
                     num_inference_steps = 30,
                     guidance_scale = 7.5,
                     strength = 0.8, // How much to modify the original image
+                    output_format = "png",
                     width = 1024,
                     height = 1024,
                     webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete",
@@ -784,14 +853,196 @@ public class ReplicateApiClient : IReplicateApiClient
     /// <summary>
     /// Gets enhancement prompt based on enhancement type for Kontext Pro
     /// </summary>
-    private string GetEnhancementPrompt(string enhancementType)
+    private static string GetEnhancementPrompt(string enhancementType)
     {
         return enhancementType.ToLower() switch
         {
             "background" => "Remove background and replace with clean professional backdrop, perfect cutout with smooth edges, studio-quality background removal with neutral professional setting",
-            "social" => "Create vibrant social media photo with perfect lighting, engaging colors, Instagram-ready styling, modern aesthetic, bright and appealing for social platforms, photo taken by iPhone 16 pro",
+            "social" => GetRandomSocialMediaPrompt(),
             "cartoon" => "Transform into fun cartoon/animated style illustration with artistic flair, vibrant colors, and playful animated character appearance with stylized features",
             _ => "Enhance this photo with improved lighting, better composition, increased sharpness, and professional quality finish"
         };
+    }
+
+    /// <summary>
+    /// Gets a random social media enhancement prompt with different background options
+    /// </summary>
+    private static string GetRandomSocialMediaPrompt()
+    {
+        var backgroundOptions = new[]
+        {
+            "tropical beach with palm trees and crystal clear blue water",
+            "in front of the Eiffel Tower in Paris with beautiful architecture",
+            "at the Golden Gate Bridge in San Francisco with stunning cityscape",
+            "in Central Park New York with lush green trees and pathways",
+            "at Santorini Greece with white buildings and blue domed churches",
+            "at the Grand Canyon with breathtaking natural rock formations",
+            "in front of the Colosseum in Rome with ancient architecture",
+            "at Machu Picchu Peru with ancient Incan ruins and mountains",
+            "at the Great Wall of China with historic stone walls",
+            "in front of the Sydney Opera House with harbor views",
+            "at Times Square New York with bright lights and urban energy",
+            "at the Louvre Museum in Paris with classic French architecture",
+            "in a Japanese garden with cherry blossoms and peaceful scenery",
+            "at the Hollywood sign in Los Angeles with city hills",
+            "at Niagara Falls with powerful waterfalls and mist",
+            "in front of Big Ben in London with iconic clock tower",
+            "at the Statue of Liberty in New York with harbor views",
+            "at the Taj Mahal in India with stunning white marble architecture"
+        };
+
+        var random = new Random();
+        var selectedBackground = backgroundOptions[random.Next(backgroundOptions.Length)];
+        
+        return $"Transform this photo for social media with enhanced lighting, vibrant colors, and Instagram-ready styling. Replace the original background placing the person {selectedBackground}. Keep the person optimized with perfect skin tone, sharp details, and appealing aesthetics while creating an exciting travel destination backdrop perfect for social media sharing";
+    }
+
+    /// <summary>
+    /// Checks if a model exists and is accessible on Replicate
+    /// </summary>
+    /// <param name="modelId">The model ID (owner/model-name)</param>
+    /// <returns>True if model exists and is accessible, false otherwise</returns>
+    public async Task<bool> CheckModelExistsAsync(string modelId)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"models/{modelId}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Model {ModelId} exists and is accessible", modelId);
+                return true;
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogInformation("Model {ModelId} not found on Replicate", modelId);
+                return false;
+            }
+            else
+            {
+                _logger.LogWarning("Unable to check model {ModelId} status: {StatusCode}", modelId, response.StatusCode);
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking if model {ModelId} exists", modelId);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Deletes a model from Replicate
+    /// </summary>
+    /// <param name="modelId">The model ID (owner/model-name)</param>
+    /// <returns>True if deletion was successful, false otherwise</returns>
+    public async Task<bool> DeleteModelAsync(string modelId)
+    {
+        try
+        {
+            _logger.LogInformation("Attempting to delete model {ModelId} from Replicate", modelId);
+            
+            var response = await _httpClient.DeleteAsync($"models/{modelId}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Successfully deleted model {ModelId} from Replicate", modelId);
+                return true;
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogInformation("Model {ModelId} not found for deletion (may already be deleted)", modelId);
+                return true; // Consider this a success since the model is gone
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                _logger.LogWarning("Forbidden to delete model {ModelId} - may not be owned by this account", modelId);
+                return false;
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to delete model {ModelId}: {StatusCode}, {ErrorContent}", 
+                    modelId, response.StatusCode, errorContent);
+                return false;
+            }
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
+        {
+            _logger.LogError(ex, "Replicate API authentication failed when deleting model {ModelId}", modelId);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting model {ModelId} from Replicate", modelId);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Creates a prediction using a specific model and input parameters
+    /// </summary>
+    /// <param name="modelId">The model ID to use for prediction</param>
+    /// <param name="input">Input parameters for the model</param>
+    /// <returns>The prediction result</returns>
+    public async Task<ReplicatePredictionResult> CreatePredictionAsync(string modelId, Dictionary<string, object> input)
+    {
+        try
+        {
+            var predictionRequest = new
+            {
+                version = modelId,
+                input = input,
+                webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete",
+                webhook_events_filter = new[] { "completed" }
+            };
+
+            var content = new StringContent(
+                JsonSerializer.Serialize(predictionRequest), 
+                Encoding.UTF8, 
+                "application/json");
+                
+            var response = await _httpClient.PostAsync("predictions", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Replicate prediction creation failed: {ErrorContent}", errorContent);
+                throw new Exception($"Failed to create prediction: {response.StatusCode}, {errorContent}");
+            }
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<ReplicatePredictionResult>(
+                responseJson, 
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (result == null)
+            {
+                throw new Exception("Failed to deserialize prediction response");
+            }
+
+            _logger.LogInformation("Prediction created successfully with ID {PredictionId} using model {ModelId}", result.Id, modelId);
+            return result;
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
+        {
+            _logger.LogError(ex, "Replicate API authentication failed for model {ModelId}", modelId);
+            throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("429") || ex.Message.Contains("rate limit"))
+        {
+            _logger.LogWarning(ex, "Replicate API rate limit reached for model {ModelId}", modelId);
+            throw new InvalidOperationException("Replicate API rate limit reached. Please try again later.", ex);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("402") || ex.Message.Contains("payment"))
+        {
+            _logger.LogError(ex, "Replicate API payment required for model {ModelId}", modelId);
+            throw new InvalidOperationException("Replicate API payment required. Please check your billing.", ex);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating prediction for model {ModelId}", modelId);
+            throw;
+        }
     }
 }

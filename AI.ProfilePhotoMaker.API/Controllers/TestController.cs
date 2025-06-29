@@ -250,7 +250,7 @@ public class TestController : ControllerBase
             }
 
             // Step 2: Consume a credit
-            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, 1, "test_basic_generation");
+            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "test_basic_generation");
             if (!creditConsumed)
             {
                 return Ok(new {
@@ -435,7 +435,7 @@ public class TestController : ControllerBase
             }
 
             // Step 2: Consume a credit
-            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, 1, "test_photo_enhancement");
+            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "test_photo_enhancement");
             if (!creditConsumed)
             {
                 return Ok(new {
