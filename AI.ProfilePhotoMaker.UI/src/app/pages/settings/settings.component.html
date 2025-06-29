@@ -73,6 +73,96 @@
           </div>
         </section>
 
+        <!-- Credit Management -->
+        <section class="settings-section" *ngIf="creditsInfo || userCreditStatus">
+          <div class="section-header">
+            <h2>Credit Management</h2>
+            <p>Monitor your credit usage and purchase additional credits</p>
+          </div>
+          <div class="section-content">
+            
+            <!-- Credit Overview Cards -->
+            <div class="credit-overview">
+              <div class="credit-card total-credits">
+                <div class="credit-header">
+                  <div class="credit-icon">💎</div>
+                  <div class="credit-title">
+                    <h3>{{getTotalAvailableCredits()}}</h3>
+                    <p>Total Credits Available</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="credit-card purchased-credits">
+                <div class="credit-header">
+                  <div class="credit-icon">🛒</div>
+                  <div class="credit-title">
+                    <h3>{{getPurchasedCredits()}}</h3>
+                    <p>Purchased Credits</p>
+                  </div>
+                </div>
+                <div class="credit-details">
+                  <small>Never expire • All features</small>
+                </div>
+              </div>
+              
+              <div class="credit-card weekly-credits">
+                <div class="credit-header">
+                  <div class="credit-icon">⚡</div>
+                  <div class="credit-title">
+                    <h3>{{getWeeklyCredits()}}/{{getMaxWeeklyCredits()}}</h3>
+                    <p>Free Credits</p>
+                  </div>
+                </div>
+                <div class="credit-progress">
+                  <div class="progress-bar">
+                    <div class="progress-fill" [style.width.%]="getCreditUsagePercentage()"></div>
+                  </div>
+                  <small>Resets {{getNextCreditReset()}}</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Credit Usage Rules -->
+            <div class="credit-usage-rules">
+              <h4>Credit Usage Guidelines</h4>
+              <div class="usage-grid">
+                <div class="usage-item">
+                  <div class="usage-icon">⚡</div>
+                  <div class="usage-content">
+                    <strong>Free Credits ({{getWeeklyCredits()}})</strong>
+                    <p>Photo enhancement only • Resets weekly</p>
+                  </div>
+                </div>
+                <div class="usage-item">
+                  <div class="usage-icon">💎</div>
+                  <div class="usage-content">
+                    <strong>Purchased Credits ({{getPurchasedCredits()}})</strong>
+                    <p>All features • Never expire</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="section-actions">
+              <button class="btn btn-primary" routerLink="/packages">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2L3.09 8.26L12 22L20.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" fill="none"/>
+                </svg>
+                Purchase Credits
+              </button>
+              <button class="btn btn-secondary" routerLink="/enhance">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                  <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                Use Free Credits
+              </button>
+            </div>
+          </div>
+        </section>
+
         <!-- Data Overview -->
         <section class="settings-section">
           <div class="section-header">

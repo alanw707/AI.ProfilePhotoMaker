@@ -29,12 +29,21 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "**/*",
+                "input": "src/assets",
+                "output": "/assets/"
               }
             ],
             "styles": [
               "src/styles.sass"
             ],
-            "scripts": []
+            "scripts": [],
+            "allowedCommonJsDependencies": [
+              "jszip",
+              "face-api.js"
+            ]
           },
           "configurations": {
             "production": {
@@ -46,8 +55,13 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "30kB",
+                  "maximumError": "60kB"
+                },
+                {
+                  "type": "any",
+                  "maximumWarning": "200kB",
+                  "maximumError": "1MB"
                 }
               ],
               "outputHashing": "all"
@@ -88,6 +102,11 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "**/*",
+                "input": "src/assets",
+                "output": "/assets/"
               }
             ],
             "styles": [

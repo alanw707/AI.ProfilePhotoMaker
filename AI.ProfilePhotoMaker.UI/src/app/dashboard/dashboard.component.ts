@@ -3,6 +3,8 @@ import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HeaderNavigationComponent } from '../shared/header-navigation/header-navigation.component';
+import { StatsCardComponent } from '../components/dashboard/stats-card/stats-card.component';
+import { StyleSelectorComponent, StyleOption } from '../components/dashboard/style-selector/style-selector.component';
 import { AuthService } from '../services/auth.service';
 import { GalleryImage } from '../components/photo-gallery/photo-gallery.component';
 import { FileUploadService } from '../services/file-upload.service';
@@ -12,16 +14,8 @@ import { CreditService } from '../services/credit.service';
 import { DashboardStateService } from '../services/dashboard-state.service';
 import { FaceDetectionService, FaceValidationResult, QualityScore } from '../services/face-detection.service';
 import { ConfigService } from '../services/config.service';
-import JSZip from 'jszip';
 import { Observable } from 'rxjs';
 
-interface StyleOption {
-  id: string;
-  name: string;
-  description: string;
-  previewUrl: string;
-  selected: boolean;
-}
 
 interface GeneratedPhoto {
   id: string;
@@ -58,7 +52,7 @@ interface QualityCheckResult {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, HeaderNavigationComponent],
+  imports: [CommonModule, RouterModule, FormsModule, HeaderNavigationComponent, StatsCardComponent, StyleSelectorComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.sass']
 })
@@ -114,12 +108,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getTotalAvailableCredits(): number {
-    const weeklyCredits = this.creditsInfo?.availableCredits || 0;
-    const purchasedCredits = this.userCreditStatus?.purchasedCredits || 0;
-    const totalCredits = this.userCreditStatus?.totalCredits || 0;
+    const weeklyCredits = this.getWeeklyCredits();
+    const purchasedCredits = this.getPurchasedCredits();
     
-    // Use totalCredits if available, otherwise sum weekly + purchased
-    return totalCredits || (weeklyCredits + purchasedCredits);
+    // Always calculate total from individual components to ensure accuracy
+    return weeklyCredits + purchasedCredits;
+  }
+
+  getPurchasedCredits(): number {
+    return this.userCreditStatus?.purchasedCredits || 0;
+  }
+
+  getWeeklyCredits(): number {
+    // Use weeklyCredits from userCreditStatus first, fallback to creditsInfo.availableCredits
+    return this.userCreditStatus?.weeklyCredits || this.creditsInfo?.availableCredits || 0;
   }
 
   constructor(
@@ -321,6 +323,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.selectedStyles = this.getSelectedStylesCount();
   }
 
+  onStyleToggled(style: StyleOption) {
+    this.toggleStyle(style);
+  }
+
+  onImagesPerStyleChanged(count: number) {
+    this.imagesPerStyle = count;
+  }
+
+  onSelectAllStyles() {
+    this.selectAllStyles();
+  }
+
+  onDeselectAllStyles() {
+    this.deselectAllStyles();
+  }
+
+  onStartTraining() {
+    this.startTrainingWithStyles();
+  }
+
   startTrainingWithStyles() {
     const selectedStyles = this.availableStyles.filter(s => s.selected);
     if (selectedStyles.length === 0) {
@@ -358,7 +380,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  downloadAll() {
+  async downloadAll() {
     if (this.generatedPhotos.length === 0) {
       this.notificationService.error('Download Error', 'No photos to download');
       return;
@@ -366,41 +388,44 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     this.isDownloadingZip = true;
     
-    const zip = new JSZip();
-    const promises: Promise<void>[] = [];
+    try {
+      // Lazy load JSZip only when needed
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+      const promises: Promise<void>[] = [];
 
-    this.generatedPhotos.forEach((photo) => {
-      const promise = fetch(photo.url)
-        .then(response => response.blob())
-        .then(blob => {
-          const filename = `generated-photo-${photo.style}-${photo.id}.jpg`;
-          zip.file(filename, blob);
-        })
-        .catch(error => {
-          console.error(`Failed to download photo ${photo.id}:`, error);
-        });
-      
-      promises.push(promise);
-    });
-
-    Promise.all(promises).then(() => {
-      zip.generateAsync({ type: 'blob' }).then(content => {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(content);
-        link.download = 'generated-photos.zip';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
+      this.generatedPhotos.forEach((photo) => {
+        const promise = fetch(photo.url)
+          .then(response => response.blob())
+          .then(blob => {
+            const filename = `generated-photo-${photo.style}-${photo.id}.jpg`;
+            zip.file(filename, blob);
+          })
+          .catch(error => {
+            console.error(`Failed to download photo ${photo.id}:`, error);
+          });
         
-        this.isDownloadingZip = false;
-        this.notificationService.success('Download Success', 'All photos downloaded successfully');
+        promises.push(promise);
       });
-    }).catch(error => {
+
+      await Promise.all(promises);
+      
+      const content = await zip.generateAsync({ type: 'blob' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(content);
+      link.download = 'generated-photos.zip';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+      
+      this.isDownloadingZip = false;
+      this.notificationService.success('Download Success', 'All photos downloaded successfully');
+    } catch (error) {
       console.error('Failed to create zip file:', error);
       this.isDownloadingZip = false;
       this.notificationService.error('Download Error', 'Failed to download photos');
-    });
+    }
   }
 
 
@@ -412,15 +437,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     event.target.onerror = null;
   }
 
-  // Format style names for display - capitalize first letter and remove dashes
-  formatStyleName(styleName: string): string {
-    if (!styleName) return '';
-    
-    return styleName
-      .split('-') // Split by dashes
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1)) // Capitalize first letter of each word
-      .join(' '); // Join with spaces
-  }
 
   // Workflow methods
   isPremiumWorkflow(): boolean {

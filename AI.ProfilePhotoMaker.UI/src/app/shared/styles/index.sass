@@ -14,5 +14,9 @@
 //   @include card-base
 
 // Import all shared styles
-@import 'mixins'
-@import 'utilities'
+@use '_mixins'
+@use '_utilities'
+
+// Forward all mixins and utilities to make them available when this file is imported
+@forward '_mixins'
+@forward '_utilities'

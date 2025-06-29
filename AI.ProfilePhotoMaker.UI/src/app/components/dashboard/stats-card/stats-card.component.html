@@ -1,0 +1,13 @@
+<div class="stat-card" *ngIf="showCard">
+  <div class="stat-icon">{{icon}}</div>
+  <div class="stat-content">
+    <!-- Simple, clean display for all cards -->
+    <h3 [class.model-status]="isModelStatus">{{value}}</h3>
+    
+    <!-- Clean label without info icon -->
+    <p class="card-label">{{label}}</p>
+    
+    <!-- Optional hint text for credits card -->
+    <a *ngIf="showSettingsHint" routerLink="/settings" class="settings-hint">View breakdown in Settings</a>
+  </div>
+</div>
