@@ -1,10 +1,11 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-stats-card',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   templateUrl: './stats-card.component.html',
   styleUrls: ['./stats-card.component.sass']
 })
@@ -14,8 +15,5 @@ export class StatsCardComponent {
   @Input() label: string = '';
   @Input() showCard: boolean = true;
   @Input() isModelStatus: boolean = false;
-  @Input() isCreditsCard: boolean = false;
-  @Input() purchasedCredits: number = 0;
-  @Input() weeklyCredits: number = 0;
-  @Input() maxWeeklyCredits: number = 3;
+  @Input() showSettingsHint: boolean = false;
 }
