@@ -1,9 +1,9 @@
 // Import only what's needed - reduce CSS duplication
-@import '../../../shared/styles/mixins'
+@use '../../../shared/styles/index' as shared
 
 // Import only the specific dashboard styles needed for this component
-@import '../../../dashboard/styles/gallery'
-@import '../../../dashboard/styles/credit-preview'
+@use '../../../dashboard/styles/gallery'
+@use '../../../dashboard/styles/credit-preview'
 
 // Style selector specific styles
 .style-controls
@@ -26,10 +26,10 @@
     gap: 12px
 
     .btn
-      @include btn-base
+      @include shared.btn-base
       
       &.btn-outline-secondary
-        @include btn-secondary
+        @include shared.btn-secondary
         font-size: 14px
         padding: 8px 16px
 

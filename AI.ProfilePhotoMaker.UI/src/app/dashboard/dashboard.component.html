@@ -20,9 +20,10 @@
             label="Photos Generated">
           </app-stats-card>
           <app-stats-card 
-            icon="⏱️" 
+            icon="🤖" 
             [value]="modelStatus" 
-            label="Model Status">
+            label="Model Status"
+            [isModelStatus]="true">
           </app-stats-card>
           <app-stats-card 
             icon="💎" 
@@ -33,24 +34,6 @@
         </div>
       </section>
 
-      <!-- Credit Status (if user has purchased credits) -->
-      <section class="premium-status-section" *ngIf="userCreditStatus && userCreditStatus.purchasedCredits > 0">
-        <div class="premium-status-card">
-          <div class="status-header">
-            <h3>🎯 Credits Available</h3>
-            <div class="status-details">
-              <span class="package-name">Credit Balance</span>
-              <span class="credits-remaining">{{ userCreditStatus.purchasedCredits }} purchased credits</span>
-              <span class="expiry-info" *ngIf="userCreditStatus.weeklyCredits > 0">
-                + {{ userCreditStatus.weeklyCredits }} weekly credits
-              </span>
-              <span class="expiry-warning">
-                Weekly credits: photo enhancement only • Purchased credits: never expire, all features
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <!-- No Package - Get Started Section -->
       <section class="get-started-section" *ngIf="!isPremiumWorkflow()">

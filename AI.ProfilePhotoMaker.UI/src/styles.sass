@@ -1,4 +1,8 @@
 /* Global Styles with Theme Support */
+
+// Use statements must come first
+@use 'app/shared/styles/index' as shared
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700;800&display=swap')
 
 // CSS Custom Properties for Theming
@@ -225,12 +229,9 @@ button
 input, textarea, select
   font-family: inherit
 
-// Import shared styles for global components
-@import 'app/shared/styles/index'
-
 // Theme Toggle Button Styles - Using Shared Mixin
 .theme-toggle
-  @include theme-toggle-button
+  @include shared.theme-toggle-button
   
   svg
     width: 20px
