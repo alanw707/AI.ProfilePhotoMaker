@@ -46,6 +46,7 @@ interface SelectedFileWithQuality {
   errors: string[];
   warnings: string[];
   isValid: boolean;
+  showDetails?: boolean; // For expandable details UI state
 }
 
 interface QualityCheckResult {
@@ -168,7 +169,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private updateCurrentStep() {
     // Automatically progress to Step 2 when images are uploaded
-    if (this.uploadedImages > 0 && this.currentStep === 1) {
+    if ((this.uploadedImages > 0 || this.uploadedImageThumbnails.length > 0) && this.currentStep === 1) {
       this.currentStep = 2;
     }
     
@@ -304,14 +305,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   selectAllStyles() {
     this.availableStyles.forEach(style => style.selected = true);
+    // Update selected styles count immediately
+    this.selectedStyles = this.getSelectedStylesCount();
   }
 
   deselectAllStyles() {
     this.availableStyles.forEach(style => style.selected = false);
+    // Update selected styles count immediately
+    this.selectedStyles = this.getSelectedStylesCount();
   }
 
   toggleStyle(style: StyleOption) {
     style.selected = !style.selected;
+    // Update selected styles count immediately
+    this.selectedStyles = this.getSelectedStylesCount();
   }
 
   startTrainingWithStyles() {
@@ -421,16 +428,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getStepStatus(step: number): string {
+    const hasUploadedImages = this.uploadedImages > 0 || this.uploadedImageThumbnails.length > 0;
+    
     switch (step) {
       case 1:
         // Step 1 is completed when user has uploaded images
-        if (this.uploadedImages > 0) return 'completed';
+        if (hasUploadedImages) return 'completed';
         if (this.currentStep === 1) return 'active';
         return 'pending';
       
       case 2:
         // Step 2 is active when Step 1 is completed (has uploaded images)
-        if (this.uploadedImages > 0 && this.generatedPhotos.length === 0) return 'active';
+        if (hasUploadedImages && this.generatedPhotos.length === 0) return 'active';
         if (this.generatedPhotos.length > 0) return 'completed';
         return 'pending';
       
@@ -567,24 +576,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Credit calculation methods
   calculateTotalCredits(): number {
-    const modelTrainingCost = 15; // Cost for model training
-    const generationCostPerStyle = 5; // Cost per style generation
-    const selectedStyleCount = this.availableStyles.filter(s => s.selected).length;
-    
-    return modelTrainingCost + (selectedStyleCount * generationCostPerStyle);
+    return this.calculateTrainingCredits() + this.calculateGenerationCredits();
   }
 
   hasEnoughCredits(): boolean {
     const totalRequired = this.calculateTotalCredits();
-    const availableCredits = (this.creditsInfo?.availableCredits || 0) + 
-                           (this.userCreditStatus?.purchasedCredits || 0);
+    const availableCredits = this.getTotalAvailableCredits();
     return availableCredits >= totalRequired;
   }
 
   getRemainingCredits(): number {
     const totalRequired = this.calculateTotalCredits();
-    const availableCredits = (this.creditsInfo?.availableCredits || 0) + 
-                           (this.userCreditStatus?.purchasedCredits || 0);
+    const availableCredits = this.getTotalAvailableCredits();
     return availableCredits - totalRequired;
   }
 
@@ -640,9 +643,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   calculateGenerationCredits(): number {
-    const generationCostPerStyle = 5;
+    const generationCostPerImage = 5;
     const selectedStyleCount = this.availableStyles.filter(s => s.selected).length;
-    return selectedStyleCount * generationCostPerStyle;
+    return selectedStyleCount * this.imagesPerStyle * generationCostPerImage;
   }
 
   // Image Quality Validation Methods
@@ -754,17 +757,5 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Quality Check Error Management
-  retryFile(errorFile: QualityCheckError) {
-    // Remove this file from errors and attempt to reprocess it
-    this.qualityCheckErrors = this.qualityCheckErrors.filter(ef => ef.fileName !== errorFile.fileName);
-    
-    // Re-validate just this file
-    this.handleFileSelection([errorFile.file]);
-  }
-
-  clearErrors() {
-    this.qualityCheckErrors = [];
-  }
 }
 

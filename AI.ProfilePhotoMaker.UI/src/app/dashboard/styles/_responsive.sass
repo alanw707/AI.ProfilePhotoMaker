@@ -9,6 +9,7 @@
     max-width: 100%
     padding: 24px 16px
 
+// Improved responsive breakpoints
 @media (max-width: 768px)
   .dashboard-header
     .header-content
@@ -36,9 +37,23 @@
       text-align: center
       gap: 16px
 
-  .styles-grid
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr))
-    gap: 12px
+  .styles-grid,
+  .styles-grid-compact
+    grid-template-columns: 1fr !important
+    gap: 8px !important
+    
+    .style-option
+      padding: 8px !important
+      
+    .style-preview
+      width: 40px !important
+      height: 40px !important
+      
+      img
+        width: 40px !important
+        height: 40px !important
+        max-width: 40px !important
+        max-height: 40px !important
 
   .results-grid
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr))

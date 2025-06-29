@@ -225,28 +225,12 @@ button
 input, textarea, select
   font-family: inherit
 
-// Theme Toggle Button Styles
+// Import shared styles for global components
+@import 'app/shared/styles/index'
+
+// Theme Toggle Button Styles - Using Shared Mixin
 .theme-toggle
-  position: fixed
-  top: 20px
-  right: 20px
-  z-index: 1000
-  background: var(--card-bg)
-  border: 1px solid var(--border-color)
-  border-radius: 50%
-  width: 48px
-  height: 48px
-  display: flex
-  align-items: center
-  justify-content: center
-  cursor: pointer
-  transition: all 0.3s ease
-  box-shadow: var(--shadow-sm)
-  
-  &:hover
-    transform: translateY(-2px)
-    box-shadow: var(--shadow-md)
-    border-color: var(--accent-primary)
+  @include theme-toggle-button
   
   svg
     width: 20px
