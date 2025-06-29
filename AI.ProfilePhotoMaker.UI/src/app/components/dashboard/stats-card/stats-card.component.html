@@ -1,22 +1,13 @@
 <div class="stat-card" *ngIf="showCard">
   <div class="stat-icon">{{icon}}</div>
   <div class="stat-content">
-    <!-- Credit breakdown display -->
-    <div *ngIf="isCreditsCard; else normalDisplay" class="credit-breakdown">
-      <h3 class="total-credits">{{purchasedCredits + weeklyCredits}}</h3>
-      <div class="credit-details">
-        <span class="purchased-credits" *ngIf="purchasedCredits > 0">{{purchasedCredits}} purchased</span>
-        <span class="separator" *ngIf="purchasedCredits > 0 && weeklyCredits > 0"> + </span>
-        <span class="weekly-credits" *ngIf="weeklyCredits > 0">{{weeklyCredits}}/{{maxWeeklyCredits}} weekly</span>
-        <span class="no-credits" *ngIf="purchasedCredits === 0 && weeklyCredits === 0">No credits</span>
-      </div>
-    </div>
+    <!-- Simple, clean display for all cards -->
+    <h3 [class.model-status]="isModelStatus">{{value}}</h3>
     
-    <!-- Normal display for other cards -->
-    <ng-template #normalDisplay>
-      <h3 [class.model-status]="isModelStatus">{{value}}</h3>
-    </ng-template>
+    <!-- Clean label without info icon -->
+    <p class="card-label">{{label}}</p>
     
-    <p>{{label}}</p>
+    <!-- Optional hint text for credits card -->
+    <a *ngIf="showSettingsHint" routerLink="/settings" class="settings-hint">View breakdown in Settings</a>
   </div>
 </div>

@@ -7,6 +7,7 @@ import { HeaderNavigationComponent } from '../../shared/header-navigation/header
 import { ProfileService, UserProfile } from '../../services/profile.service';
 import { FileUploadService } from '../../services/file-upload.service';
 import { NotificationService } from '../../services/notification.service';
+import { DashboardStateService } from '../../services/dashboard-state.service';
 
 interface DataStats {
   inputPhotos: number;
@@ -53,12 +54,17 @@ export class SettingsComponent implements OnInit {
   confirmationTitle: string = '';
   confirmationMessage: string = '';
 
+  // Credit Management State
+  creditsInfo: any = null;
+  userCreditStatus: any = null;
+
   constructor(
     private authService: AuthService,
     private router: Router,
     private profileService: ProfileService,
     private fileUploadService: FileUploadService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private dashboardStateService: DashboardStateService
   ) {}
 
   async ngOnInit() {
@@ -75,6 +81,7 @@ export class SettingsComponent implements OnInit {
     this.loadUserInfo();
     await this.loadDataStats();
     this.loadUserProfile();
+    this.loadCreditInfo();
     this.isLoading = false;
   }
 
@@ -375,6 +382,53 @@ export class SettingsComponent implements OnInit {
     } finally {
       this.isExporting = false;
     }
+  }
+
+  // Credit Management Methods
+  loadCreditInfo() {
+    // Subscribe to dashboard state for credit information
+    this.dashboardStateService.state$.subscribe(state => {
+      this.creditsInfo = state.creditsInfo;
+      this.userCreditStatus = state.userCreditStatus;
+    });
+    
+    // Load initial credit data
+    this.dashboardStateService.loadInitialDashboardData();
+  }
+
+  getTotalAvailableCredits(): number {
+    const weeklyCredits = this.getWeeklyCredits();
+    const purchasedCredits = this.getPurchasedCredits();
+    return weeklyCredits + purchasedCredits;
+  }
+
+  getPurchasedCredits(): number {
+    return this.userCreditStatus?.purchasedCredits || 0;
+  }
+
+  getWeeklyCredits(): number {
+    return this.userCreditStatus?.weeklyCredits || this.creditsInfo?.availableCredits || 0;
+  }
+
+  getMaxWeeklyCredits(): number {
+    return 3; // Fixed weekly credit limit
+  }
+
+  getCreditUsagePercentage(): number {
+    const weekly = this.getWeeklyCredits();
+    const max = this.getMaxWeeklyCredits();
+    return max > 0 ? (weekly / max) * 100 : 0;
+  }
+
+  getNextCreditReset(): string {
+    // Calculate next weekly reset (simplified)
+    const now = new Date();
+    const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    return nextWeek.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric'
+    });
   }
 
 }

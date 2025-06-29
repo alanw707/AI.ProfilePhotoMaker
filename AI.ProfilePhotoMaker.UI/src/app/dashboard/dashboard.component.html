@@ -30,10 +30,7 @@
             [value]="getTotalAvailableCredits()" 
             label="Credits"
             [showCard]="!!(creditsInfo || userCreditStatus)"
-            [isCreditsCard]="true"
-            [purchasedCredits]="getPurchasedCredits()"
-            [weeklyCredits]="getWeeklyCredits()"
-            [maxWeeklyCredits]="3">
+            [showSettingsHint]="true">
           </app-stats-card>
         </div>
       </section>
@@ -351,7 +348,7 @@
                     </span>
                     <!-- Add More Button in Summary -->
                     <button class="btn btn-secondary add-more-inline-btn" 
-                            *ngIf="uploadedImageThumbnails.length > 0 && getInvalidFilesCount() > 0 && !isUploading"
+                            *ngIf="selectedFilesWithQuality.length > 0 && !isUploading && !isCheckingQuality"
                             (click)="triggerFileUpload()">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-right: 6px;">
                         <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -373,10 +370,10 @@
                 </div>
 
                 <!-- Primary Upload Button Only -->
-                <div class="upload-actions-row" *ngIf="!isCheckingQuality && selectedFiles.length > 0">
+                <div class="upload-actions-row" *ngIf="!isCheckingQuality && getValidFilesCount() > 0">
                   <button class="btn btn-primary upload-primary-btn" 
                           (click)="uploadImages()"
-                          [disabled]="isUploading">
+                          [disabled]="isUploading || getValidFilesCount() === 0">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-right: 8px;" *ngIf="!isUploading">
                       <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" stroke="currentColor" stroke-width="2"/>
                       <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/>
@@ -384,7 +381,7 @@
                     </svg>
                     <div class="spinner" *ngIf="isUploading" style="margin-right: 8px; width: 16px; height: 16px;"></div>
                     <span *ngIf="isUploading">Uploading... {{uploadProgress}}%</span>
-                    <span *ngIf="!isUploading">Upload {{selectedFiles.length}} Images</span>
+                    <span *ngIf="!isUploading">Upload {{getValidFilesCount()}} Image{{getValidFilesCount() !== 1 ? 's' : ''}}</span>
                   </button>
                 </div>
               </div>
