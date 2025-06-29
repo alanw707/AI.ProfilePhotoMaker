@@ -14,7 +14,6 @@ import { CreditService } from '../services/credit.service';
 import { DashboardStateService } from '../services/dashboard-state.service';
 import { FaceDetectionService, FaceValidationResult, QualityScore } from '../services/face-detection.service';
 import { ConfigService } from '../services/config.service';
-import JSZip from 'jszip';
 import { Observable } from 'rxjs';
 
 
@@ -109,12 +108,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getTotalAvailableCredits(): number {
-    const weeklyCredits = this.creditsInfo?.availableCredits || 0;
-    const purchasedCredits = this.userCreditStatus?.purchasedCredits || 0;
-    const totalCredits = this.userCreditStatus?.totalCredits || 0;
+    const weeklyCredits = this.getWeeklyCredits();
+    const purchasedCredits = this.getPurchasedCredits();
     
-    // Use totalCredits if available, otherwise sum weekly + purchased
-    return totalCredits || (weeklyCredits + purchasedCredits);
+    // Always calculate total from individual components to ensure accuracy
+    return weeklyCredits + purchasedCredits;
+  }
+
+  getPurchasedCredits(): number {
+    return this.userCreditStatus?.purchasedCredits || 0;
+  }
+
+  getWeeklyCredits(): number {
+    // Use weeklyCredits from userCreditStatus first, fallback to creditsInfo.availableCredits
+    return this.userCreditStatus?.weeklyCredits || this.creditsInfo?.availableCredits || 0;
   }
 
   constructor(
@@ -373,7 +380,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  downloadAll() {
+  async downloadAll() {
     if (this.generatedPhotos.length === 0) {
       this.notificationService.error('Download Error', 'No photos to download');
       return;
@@ -381,41 +388,44 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     this.isDownloadingZip = true;
     
-    const zip = new JSZip();
-    const promises: Promise<void>[] = [];
+    try {
+      // Lazy load JSZip only when needed
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+      const promises: Promise<void>[] = [];
 
-    this.generatedPhotos.forEach((photo) => {
-      const promise = fetch(photo.url)
-        .then(response => response.blob())
-        .then(blob => {
-          const filename = `generated-photo-${photo.style}-${photo.id}.jpg`;
-          zip.file(filename, blob);
-        })
-        .catch(error => {
-          console.error(`Failed to download photo ${photo.id}:`, error);
-        });
-      
-      promises.push(promise);
-    });
-
-    Promise.all(promises).then(() => {
-      zip.generateAsync({ type: 'blob' }).then(content => {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(content);
-        link.download = 'generated-photos.zip';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
+      this.generatedPhotos.forEach((photo) => {
+        const promise = fetch(photo.url)
+          .then(response => response.blob())
+          .then(blob => {
+            const filename = `generated-photo-${photo.style}-${photo.id}.jpg`;
+            zip.file(filename, blob);
+          })
+          .catch(error => {
+            console.error(`Failed to download photo ${photo.id}:`, error);
+          });
         
-        this.isDownloadingZip = false;
-        this.notificationService.success('Download Success', 'All photos downloaded successfully');
+        promises.push(promise);
       });
-    }).catch(error => {
+
+      await Promise.all(promises);
+      
+      const content = await zip.generateAsync({ type: 'blob' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(content);
+      link.download = 'generated-photos.zip';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+      
+      this.isDownloadingZip = false;
+      this.notificationService.success('Download Success', 'All photos downloaded successfully');
+    } catch (error) {
       console.error('Failed to create zip file:', error);
       this.isDownloadingZip = false;
       this.notificationService.error('Download Error', 'Failed to download photos');
-    });
+    }
   }
 
 

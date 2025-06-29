@@ -14,4 +14,8 @@ export class StatsCardComponent {
   @Input() label: string = '';
   @Input() showCard: boolean = true;
   @Input() isModelStatus: boolean = false;
+  @Input() isCreditsCard: boolean = false;
+  @Input() purchasedCredits: number = 0;
+  @Input() weeklyCredits: number = 0;
+  @Input() maxWeeklyCredits: number = 3;
 }
