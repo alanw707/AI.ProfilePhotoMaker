@@ -1,4 +1,6 @@
 // Upload Guidelines - Unified design matching all step cards
+
+@use '../../shared/styles/index' as shared
 .upload-guidelines
   background: var(--card-bg) !important
   border: none  // Remove border to match step cards
@@ -375,8 +377,8 @@
 
 // Primary Upload Button - Prominent styling
 .upload-primary-btn
-  @include btn-base
-  @include btn-primary
+  @include shared.btn-base
+  @include shared.btn-primary
   font-family: 'Poppins', sans-serif
   font-weight: 600
   padding: 12px 24px

@@ -13,4 +13,5 @@ export class StatsCardComponent {
   @Input() value: string | number = 0;
   @Input() label: string = '';
   @Input() showCard: boolean = true;
+  @Input() isModelStatus: boolean = false;
 }

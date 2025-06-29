@@ -1,14 +1,13 @@
-@import '../../shared/styles/mixins'
-@import '../../shared/styles/utilities'
+@use '../../shared/styles/index' as shared
 
 .login-container
-  @include page-container
-  @include flex-center
+  @include shared.page-container
+  @include shared.flex-center
   padding: 20px
 
 .login-card
-  @include card-base
-  @extend .shadow
+  @include shared.card-base
+  box-shadow: var(--shadow-md)
   padding: 40px
   max-width: 400px
   width: 100%
@@ -61,7 +60,7 @@
       font-size: 14px
 
     .form-control
-      @include form-control
+      @include shared.form-control
       font-size: 16px
 
       &.is-invalid
@@ -85,16 +84,16 @@
       color: var(--accent-danger)
 
   .btn
-    @include btn-base
+    @include shared.btn-base
 
     &.btn-primary
-      @include btn-primary
+      @include shared.btn-primary
 
     &.btn-block
       width: 100%
 
     .spinner
-      @include spinner-small
+      @include shared.spinner-small
       border-top-color: currentColor
       border-color: transparent
 
@@ -128,7 +127,7 @@
   gap: 12px
 
   .btn
-    @include btn-secondary
+    @include shared.btn-secondary
     width: 100%
     gap: 12px
     

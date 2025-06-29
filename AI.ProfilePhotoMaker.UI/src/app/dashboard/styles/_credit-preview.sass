@@ -3,6 +3,8 @@
 // =============================================================================
 // Compact credit preview for top placement - clear but not overwhelming
 
+@use '../../shared/styles/index' as shared
+
 // Static Credit Reference Information
 .credit-reference-info
   background: var(--bg-tertiary)
@@ -287,8 +289,8 @@
   text-align: center
 
 .action-btn-prominent
-  @include btn-base
-  @include btn-primary
+  @include shared.btn-base
+  @include shared.btn-primary
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))
   border: none
   border-radius: 16px
