@@ -29,7 +29,11 @@
             icon="💎" 
             [value]="getTotalAvailableCredits()" 
             label="Credits"
-            [showCard]="!!(creditsInfo || userCreditStatus)">
+            [showCard]="!!(creditsInfo || userCreditStatus)"
+            [isCreditsCard]="true"
+            [purchasedCredits]="getPurchasedCredits()"
+            [weeklyCredits]="getWeeklyCredits()"
+            [maxWeeklyCredits]="3">
           </app-stats-card>
         </div>
       </section>
