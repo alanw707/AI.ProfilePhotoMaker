@@ -427,11 +427,17 @@
                 [isTrainingStarted]="isTrainingStarted"
                 [modelStatus]="modelStatus"
                 [uploadedImageCount]="uploadedImageThumbnails.length"
+                [isTraining]="isTraining"
+                [isGenerating]="isGenerating"
+                [progressPercentage]="progressPercentage"
+                [progressMessage]="progressMessage"
+                [estimatedCompletion]="estimatedCompletion"
                 (styleToggled)="onStyleToggled($event)"
                 (imagesPerStyleChanged)="onImagesPerStyleChanged($event)"
                 (selectAllStyles)="onSelectAllStyles()"
                 (deselectAllStyles)="onDeselectAllStyles()"
-                (startTraining)="onStartTraining()">
+                (startTraining)="onStartTraining()"
+                (continueInBackground)="continueInBackground()">
               </app-style-selector>
               
               <!-- Training Progress (only shown when actively training) -->

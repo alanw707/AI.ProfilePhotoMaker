@@ -121,7 +121,7 @@
 <!-- Prominent Action Button -->
 <div class="action-button-container" *ngIf="selectedStyles > 0">
   <button class="btn btn-primary action-btn-prominent" 
-          *ngIf="!isTrainingStarted" 
+          *ngIf="!isTrainingStarted && !isTraining && !isGenerating" 
           (click)="onStartTraining()"
           [disabled]="modelStatus === 'training' || uploadedImageCount < 5 || !hasEnoughCredits">
     <div class="btn-content">
@@ -135,6 +135,49 @@
       </div>
     </div>
   </button>
+
+  <!-- Training Progress Card -->
+  <div class="training-progress-card" *ngIf="isTraining || isGenerating">
+    <div class="progress-header">
+      <div class="progress-icon spinning">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 6v6l4 2"></path>
+        </svg>
+      </div>
+      <div class="progress-title">
+        <h4 *ngIf="isTraining && !modelStatus.includes('trained')">🤖 Training Your AI Model</h4>
+        <h4 *ngIf="isGenerating || modelStatus === 'trained'">🎨 Generating Your Photos</h4>
+        <p class="progress-subtitle">{{progressMessage}}</p>
+      </div>
+    </div>
+    
+    <div class="progress-details">
+      <div class="progress-bar-container">
+        <div class="progress-bar">
+          <div class="progress-fill" [style.width.%]="progressPercentage"></div>
+        </div>
+        <span class="progress-percent">{{progressPercentage}}%</span>
+      </div>
+      
+      <div class="progress-info">
+        <div class="info-item" *ngIf="estimatedCompletion">
+          <span class="info-label">⏱️ Estimated Time:</span>
+          <span class="info-value">{{estimatedCompletion}}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">📧 Email Notification:</span>
+          <span class="info-value">We'll email you when complete</span>
+        </div>
+      </div>
+
+      <div class="progress-actions">
+        <button class="btn btn-outline-secondary btn-sm" (click)="onContinueInBackground()">
+          Continue in Background
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Training Notes -->

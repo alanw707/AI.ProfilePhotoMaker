@@ -122,6 +122,12 @@ export class FileUploadService {
     return this.http.delete<{ success: boolean; message: string }>(this.config.getFullUrl('/profile/training-files'));
   }
 
+  getLatestTrainingZip(): Observable<{ success: boolean; data: { fileName: string; publicUrl: string; createdAt: string; sizeBytes: number }; error?: any }> {
+    return this.http.get<{ success: boolean; data: { fileName: string; publicUrl: string; createdAt: string; sizeBytes: number }; error?: any }>(
+      this.config.getFullUrl('/profile/latest-training-zip')
+    );
+  }
+
   uploadSingleImage(file: File): Observable<{ progress: number; response?: { success: boolean; data: { url: string; fileName: string } } }> {
     const formData = new FormData();
     formData.append('images', file, file.name);

@@ -13,6 +13,7 @@ export interface GenerateImagesRequest {
   userId: string;
   style: string;
   userInfo?: UserInfo;
+  numOutputs?: number; // Number of images to generate (1-4)
 }
 
 export interface GenerateBasicImageRequest {

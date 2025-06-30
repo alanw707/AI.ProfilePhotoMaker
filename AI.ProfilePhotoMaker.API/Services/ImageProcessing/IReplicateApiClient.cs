@@ -57,12 +57,14 @@ public interface IReplicateApiClient
     /// <param name="userId">The user ID</param>
     /// <param name="style">The style to use for generation</param>
     /// <param name="userInfo">Optional user info for style generation</param>
+    /// <param name="numOutputs">Number of images to generate (1-4)</param>
     /// <returns>The prediction ID and status</returns>
     Task<ReplicatePredictionResult> GenerateImagesAsync(
         string trainedModelVersion, 
         string userId, 
         string style,
-        UserInfo? userInfo = null);
+        UserInfo? userInfo = null,
+        int numOutputs = 2);
 
     /// <summary>
     /// Gets the status of an image generation prediction

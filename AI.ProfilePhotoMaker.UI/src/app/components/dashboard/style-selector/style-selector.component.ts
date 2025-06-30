@@ -29,12 +29,18 @@ export class StyleSelectorComponent {
   @Input() isTrainingStarted: boolean = false;
   @Input() modelStatus: string = '';
   @Input() uploadedImageCount: number = 0;
+  @Input() isTraining: boolean = false;
+  @Input() isGenerating: boolean = false;
+  @Input() progressPercentage: number = 0;
+  @Input() progressMessage: string = '';
+  @Input() estimatedCompletion: string = '';
 
   @Output() styleToggled = new EventEmitter<StyleOption>();
   @Output() imagesPerStyleChanged = new EventEmitter<number>();
   @Output() selectAllStyles = new EventEmitter<void>();
   @Output() deselectAllStyles = new EventEmitter<void>();
   @Output() startTraining = new EventEmitter<void>();
+  @Output() continueInBackground = new EventEmitter<void>();
 
   onToggleStyle(style: StyleOption) {
     this.styleToggled.emit(style);
@@ -57,13 +63,16 @@ export class StyleSelectorComponent {
     this.startTraining.emit();
   }
 
+  onContinueInBackground() {
+    this.continueInBackground.emit();
+  }
+
   formatStyleName(styleName: string): string {
     if (!styleName) return '';
-    
     return styleName
-      .split('-') // Split by dashes
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1)) // Capitalize first letter of each word
-      .join(' '); // Join with spaces
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
 
   onImageError(event: any) {

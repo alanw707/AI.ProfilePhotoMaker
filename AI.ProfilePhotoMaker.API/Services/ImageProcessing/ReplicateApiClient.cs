@@ -270,7 +270,8 @@ public class ReplicateApiClient : IReplicateApiClient
         string trainedModelVersion, 
         string userId, 
         string style,
-        UserInfo? userInfo = null)
+        UserInfo? userInfo = null,
+        int numOutputs = 2)
     {
         try
         {
@@ -298,7 +299,7 @@ public class ReplicateApiClient : IReplicateApiClient
                     negative_prompt = negativePrompt,
                     num_inference_steps = 40,
                     guidance_scale = 7.5,
-                    num_outputs = 1,
+                    num_outputs = Math.Max(1, Math.Min(4, numOutputs)), // Clamp between 1-4
                     scheduler = "K_EULER_ANCESTRAL",
                     output_format = "png",
                     webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete",
@@ -653,7 +654,8 @@ public class ReplicateApiClient : IReplicateApiClient
             request.TrainedModelVersion,
             request.UserId,
             request.Style,
-            request.UserInfo);
+            request.UserInfo,
+            request.NumOutputs);
 
         return result.Id ?? ""; // Return prediction ID
     }

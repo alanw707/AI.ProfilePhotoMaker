@@ -311,6 +311,7 @@ if (string.IsNullOrEmpty(jwtSecret) || jwtSecret.Length < 32)
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IBasicTierService, AI.ProfilePhotoMaker.API.Services.BasicTierService>();
 builder.Services.AddHttpClient<IReplicateApiClient, ReplicateApiClient>();
+builder.Services.AddHttpClient<IImageDownloadService, ImageDownloadService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository, AI.ProfilePhotoMaker.API.Data.UserProfileRepository>();
 
 // Premium Package Services removed - using unified credit system
@@ -440,6 +441,14 @@ app.UseStaticFiles(new StaticFileOptions
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
         Path.Combine(builder.Environment.ContentRootPath, "style-previews")),
     RequestPath = "/style-previews"
+});
+
+// Serve static files from generated images directory
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+        Path.Combine(builder.Environment.ContentRootPath, "generated")),
+    RequestPath = "/generated"
 });
 
 // Serve Angular static files
