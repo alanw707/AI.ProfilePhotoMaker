@@ -419,7 +419,6 @@ if (!app.Environment.IsDevelopment())
 }
 
 // Serve static files from uploads directory
-app.UseStaticFiles();
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
