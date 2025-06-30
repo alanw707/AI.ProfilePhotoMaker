@@ -462,10 +462,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private startTrainingStatusPolling(selectedStyles: StyleOption[]) {
-    const pollInterval = setInterval(async () => {
+    let progressIncrement = 0;
+    const maxTrainingProgress = 90; // Training goes up to 90%, generation takes the last 10%
+    
+    this.pollingInterval = setInterval(async () => {
       try {
         if (!this.trainingId) {
-          clearInterval(pollInterval);
+          clearInterval(this.pollingInterval);
           return;
         }
 
@@ -478,20 +481,54 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
         const status = statusResult.data.status;
         
+        // Increment progress during training (40% to 90%)
+        if (status === 'processing' || status === 'starting') {
+          progressIncrement += 2; // Increment by 2% every 30 seconds
+          this.progressPercentage = Math.min(40 + progressIncrement, maxTrainingProgress);
+          
+          // Update progress messages based on percentage
+          if (this.progressPercentage < 60) {
+            this.progressMessage = 'AI is analyzing your facial features...';
+          } else if (this.progressPercentage < 80) {
+            this.progressMessage = 'Training neural network on your photos...';
+          } else {
+            this.progressMessage = 'Finalizing your custom AI model...';
+          }
+        }
+        
         if (status === 'succeeded') {
-          clearInterval(pollInterval);
+          clearInterval(this.pollingInterval);
+          this.progressPercentage = maxTrainingProgress;
+          this.progressMessage = 'Model training complete! Starting image generation...';
+          this.isTraining = false;
           this.notificationService.success('Training Complete', 'Model training finished! Starting image generation...');
           
-          // Update user profile with trained model info
+          // Force reload dashboard data to get updated model status
+          // Wait a bit for the webhook to update the database
+          await new Promise(resolve => setTimeout(resolve, 3000));
           await this.stateService.loadInitialDashboardData();
+          
+          // Wait for state to update
+          await new Promise(resolve => setTimeout(resolve, 500));
           
           // Start generation with the new model
           const userProfile = this.stateService.getState().userProfile;
           if (userProfile?.trainedModelVersionId) {
             await this.generateImagesWithStyles(selectedStyles, userProfile.trainedModelVersionId);
+          } else {
+            // If model version not found, try to extract from training result
+            const versionId = statusResult.data.version || statusResult.data.output?.version;
+            if (versionId) {
+              await this.generateImagesWithStyles(selectedStyles, versionId);
+            } else {
+              this.notificationService.error('Generation Error', 'Could not find trained model version. Please refresh and try again.');
+            }
           }
         } else if (status === 'failed') {
-          clearInterval(pollInterval);
+          clearInterval(this.pollingInterval);
+          this.isTraining = false;
+          this.progressPercentage = 0;
+          this.progressMessage = '';
           this.notificationService.error('Training Failed', 'Model training failed. Please try again.');
           this.isTrainingStarted = false;
           this.currentStep = 2;
@@ -547,13 +584,33 @@ export class DashboardComponent implements OnInit, OnDestroy {
         }
       }
 
+      // Complete the progress
+      this.progressPercentage = 100;
+      this.progressMessage = 'All generation requests submitted!';
       this.isGenerating = false;
+      
+      // Calculate estimated time for all images to be ready (approximately 2-3 minutes per style)
+      const estimatedMinutes = selectedStyles.length * 2.5;
+      const estimatedCompletion = new Date(Date.now() + estimatedMinutes * 60000);
+      
       this.notificationService.info('Generation Complete', 
-        'All image generation requests have been submitted. Check your gallery for results.');
+        `All image generation requests have been submitted. Images should be ready by ${estimatedCompletion.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Check your gallery for results.`);
+
+      // Reset progress after a short delay
+      setTimeout(() => {
+        this.progressPercentage = 0;
+        this.progressMessage = '';
+        this.isTrainingStarted = false;
+      }, 3000);
+      
+      // Refresh dashboard state to update model status
+      await this.stateService.loadInitialDashboardData();
 
     } catch (error: any) {
       console.error('Error in image generation:', error);
       this.isGenerating = false;
+      this.progressPercentage = 0;
+      this.progressMessage = '';
       this.notificationService.error('Generation Error', error.message || 'Failed to generate images');
     }
   }
