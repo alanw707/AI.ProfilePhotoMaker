@@ -517,7 +517,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             await this.generateImagesWithStyles(selectedStyles, userProfile.trainedModelVersionId);
           } else {
             // If model version not found, try to extract from training result
-            const versionId = statusResult.data.version || statusResult.data.output?.version;
+            const versionId = statusResult.data.version;
             if (versionId) {
               await this.generateImagesWithStyles(selectedStyles, versionId);
             } else {
