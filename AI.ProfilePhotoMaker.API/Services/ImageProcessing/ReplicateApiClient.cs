@@ -150,6 +150,24 @@ public class ReplicateApiClient : IReplicateApiClient
             
             _logger.LogInformation("Model created successfully: {Destination}", destination);
             _logger.LogInformation("Using destination for training: {Destination}", destination);
+            
+            // Create a model creation request record to track the training
+            var modelCreationRequest = new ModelCreationRequest
+            {
+                UserId = userId,
+                ModelName = modelName,
+                ReplicateModelId = destination.Split('/').Last(), // Extract model name from destination
+                Status = ModelCreationStatus.Pending,
+                TrainingImageZipUrl = imageZipUrl,
+                PendingTrainingRequestId = Guid.NewGuid().ToString()
+            };
+
+            // Add to database
+            _context.ModelCreationRequests.Add(modelCreationRequest);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Created model creation request {RequestId} for user {UserId}", 
+                modelCreationRequest.Id, userId);
 
             var trainingRequest = new
             {
@@ -159,7 +177,7 @@ public class ReplicateApiClient : IReplicateApiClient
                     input_images = imageZipUrl,
                     trigger_word = $"user_{userId}",
                     lora_type = "subject",
-                    training_steps = 1000
+                    training_steps = 2000
                 },
                 webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/training-complete",
                 webhook_events_filter = new[] { "completed" }
@@ -186,6 +204,15 @@ public class ReplicateApiClient : IReplicateApiClient
             {
                 throw new Exception("Failed to deserialize training response");
             }
+            
+            // Update the model creation request with the training ID
+            modelCreationRequest.PendingTrainingRequestId = result.Id;
+            modelCreationRequest.Status = ModelCreationStatus.Creating;
+            _context.ModelCreationRequests.Update(modelCreationRequest);
+            await _context.SaveChangesAsync();
+            
+            _logger.LogInformation("Updated model creation request {RequestId} with training ID {TrainingId}", 
+                modelCreationRequest.Id, result.Id);
 
             return result;
         }
@@ -458,13 +485,11 @@ public class ReplicateApiClient : IReplicateApiClient
         string genderEthnicityCombo = !string.IsNullOrEmpty(ethnicity) ? $"{gender} {ethnicity}" : gender;
         
         string result = promptTemplate
+            .Replace("{trigger}", triggerWord)
             .Replace("{subject}", subject)
             .Replace("{gender} {ethnicity}", genderEthnicityCombo)
             .Replace("{gender}", gender)
             .Replace("{ethnicity}", ethnicity);
-
-        // Add trigger word at the beginning of the prompt to activate custom model
-        result = $"{triggerWord}, {result}";
 
         // Clean up extra spaces 
         result = result.Replace("  ", " ").Trim();
@@ -557,7 +582,7 @@ public class ReplicateApiClient : IReplicateApiClient
                     input_images = imageZipUrl,
                     trigger_word = $"user_{userId}",
                     lora_type = "subject",
-                    training_steps = 1000
+                    training_steps = 2000
                 },
                 webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/training-complete",
                 webhook_events_filter = new[] { "completed" }
