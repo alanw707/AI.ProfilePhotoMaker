@@ -21,15 +21,18 @@ public class ReplicateWebhookController : ControllerBase
     private readonly ILogger<ReplicateWebhookController> _logger;
     private readonly ApplicationDbContext _dbContext;
     private readonly IReplicateApiClient _replicateApiClient;
+    private readonly IImageDownloadService _imageDownloadService;
 
     public ReplicateWebhookController(
         ILogger<ReplicateWebhookController> logger,
         ApplicationDbContext dbContext,
-        IReplicateApiClient replicateApiClient)
+        IReplicateApiClient replicateApiClient,
+        IImageDownloadService imageDownloadService)
     {
         _logger = logger;
         _dbContext = dbContext;
         _replicateApiClient = replicateApiClient;
+        _imageDownloadService = imageDownloadService;
     }
 
     /// <summary>
@@ -212,45 +215,72 @@ public class ReplicateWebhookController : ControllerBase
                     return Ok(new { success = true, message = "User profile not found" });
                 }
 
-                var imageUrl = payload.GeneratedImageUrls.First();
-                using var httpClient = new HttpClient();
-                
+                var imageUrls = payload.GeneratedImageUrls.ToList();
+                _logger.LogInformation("Downloading {Count} generated images for user {UserId}, style {Style}", 
+                    imageUrls.Count, userId, style);
+
                 try
                 {
-                    var response = await httpClient.GetAsync(imageUrl);
-                    response.EnsureSuccessStatusCode();
-                    var contentType = response.Content.Headers.ContentType?.MediaType?.ToLowerInvariant() ?? "image/jpeg";
-                    var imageBytes = await response.Content.ReadAsByteArrayAsync();
-                    var base64 = Convert.ToBase64String(imageBytes);
-                    var dataUrl = $"data:{contentType};base64,{base64}";
+                    // Download all generated images to local storage
+                    var localPaths = await _imageDownloadService.DownloadImagesAsync(
+                        imageUrls, 
+                        userId, 
+                        style ?? "Unknown");
 
-                    // Save the generated image to the database
-                    var processedImage = new ProcessedImage
+                    var savedImageIds = new List<int>();
+
+                    // Save each downloaded image to the database
+                    for (int i = 0; i < imageUrls.Count; i++)
                     {
-                        UserProfileId = userProfile.Id,
-                        OriginalImageUrl = imageUrl, // Store the Replicate URL as original
-                        ProcessedImageUrl = imageUrl, // For generated images, both URLs are the same
-                        Style = style ?? "Unknown",
-                        IsGenerated = true,
-                        IsOriginalUpload = false,
-                        CreatedAt = DateTime.UtcNow
-                    };
-                    
-                    // Set scheduled deletion date based on retention policy
-                    processedImage.SetScheduledDeletionDate();
+                        var replicateUrl = imageUrls[i];
+                        var localPath = i < localPaths.Count ? localPaths[i] : null;
+                        
+                        // Convert local path to public URL path
+                        string? publicUrl = null;
+                        if (!string.IsNullOrEmpty(localPath))
+                        {
+                            // Convert local path to relative URL path for serving
+                            var relativePath = Path.GetRelativePath(Path.Combine(Directory.GetCurrentDirectory(), "generated"), localPath);
+                            publicUrl = $"/generated/{relativePath.Replace('\\', '/')}";
+                        }
 
-                    _dbContext.ProcessedImages.Add(processedImage);
-                    await _dbContext.SaveChangesAsync();
+                        var processedImage = new ProcessedImage
+                        {
+                            UserProfileId = userProfile.Id,
+                            OriginalImageUrl = replicateUrl, // Store the original Replicate URL
+                            ProcessedImageUrl = publicUrl ?? replicateUrl, // Use local path if available, fallback to Replicate URL
+                            Style = style ?? "Unknown",
+                            IsGenerated = true,
+                            IsOriginalUpload = false,
+                            CreatedAt = DateTime.UtcNow
+                        };
+                        
+                        // Set scheduled deletion date based on retention policy (7 days for generated images)
+                        processedImage.SetScheduledDeletionDate();
 
-                    _logger.LogInformation("Successfully saved generated image for user {UserId} with style {Style}, image ID: {ImageId}", 
-                        userId, style, processedImage.Id);
+                        _dbContext.ProcessedImages.Add(processedImage);
+                        await _dbContext.SaveChangesAsync();
 
-                    return Ok(new { success = true, dataUrl, imageId = processedImage.Id });
+                        savedImageIds.Add(processedImage.Id);
+                        
+                        _logger.LogInformation("Saved generated image {Index} for user {UserId}: ID={ImageId}, LocalPath={LocalPath}, PublicUrl={PublicUrl}", 
+                            i + 1, userId, processedImage.Id, localPath ?? "None", publicUrl ?? replicateUrl);
+                    }
+
+                    _logger.LogInformation("Successfully processed {Count} generated images for user {UserId}, style {Style}. Image IDs: {ImageIds}", 
+                        imageUrls.Count, userId, style, string.Join(", ", savedImageIds));
+
+                    return Ok(new { 
+                        success = true, 
+                        message = $"Processed {imageUrls.Count} images",
+                        imageIds = savedImageIds,
+                        downloadedCount = localPaths.Count
+                    });
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to fetch or convert image for data URL: {ImageUrl}", imageUrl);
-                    return StatusCode(500, new { success = false, error = "Failed to fetch or convert image." });
+                    _logger.LogError(ex, "Failed to download and save generated images for user {UserId}, style {Style}", userId, style);
+                    return StatusCode(500, new { success = false, error = "Failed to download and save generated images." });
                 }
             }
             else

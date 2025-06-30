@@ -1,0 +1,40 @@
+namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
+
+/// <summary>
+/// Service for downloading and storing images from external URLs
+/// </summary>
+public interface IImageDownloadService
+{
+    /// <summary>
+    /// Downloads images from URLs and stores them locally
+    /// </summary>
+    /// <param name="imageUrls">List of image URLs to download</param>
+    /// <param name="userId">User ID for directory organization</param>
+    /// <param name="style">Style name for file organization</param>
+    /// <returns>List of local file paths for successfully downloaded images</returns>
+    Task<List<string>> DownloadImagesAsync(List<string> imageUrls, string userId, string style);
+
+    /// <summary>
+    /// Downloads a single image from URL and stores it locally
+    /// </summary>
+    /// <param name="imageUrl">Image URL to download</param>
+    /// <param name="userId">User ID for directory organization</param>
+    /// <param name="style">Style name for file organization</param>
+    /// <param name="fileName">Optional custom filename (without extension)</param>
+    /// <returns>Local file path if successful, null if failed</returns>
+    Task<string?> DownloadImageAsync(string imageUrl, string userId, string style, string? fileName = null);
+
+    /// <summary>
+    /// Ensures the generated images directory exists for a user
+    /// </summary>
+    /// <param name="userId">User ID</param>
+    /// <returns>Full path to the user's generated images directory</returns>
+    string EnsureGeneratedImagesDirectory(string userId);
+
+    /// <summary>
+    /// Validates if an image URL is accessible and downloadable
+    /// </summary>
+    /// <param name="imageUrl">Image URL to validate</param>
+    /// <returns>True if URL is accessible, false otherwise</returns>
+    Task<bool> ValidateImageUrlAsync(string imageUrl);
+}
