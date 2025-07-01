@@ -12,6 +12,7 @@
 @use 'styles/file-preview'
 @use 'styles/results'
 @use 'styles/gallery'
+@use 'styles/workflow'
 @use 'styles/responsive'
 
 // =============================================================================
@@ -162,6 +163,67 @@
 
   .step-content
     margin-top: 20px
+    padding: 28px
+    background: var(--bg-tertiary)
+    border-radius: 12px
+
+    // Step 3 specific retention notice
+    .retention-notice
+      margin-bottom: 24px
+      
+      .alert
+        background: rgba(125, 211, 216, 0.08)
+        border: 1px solid rgba(125, 211, 216, 0.2)
+        border-radius: 12px
+        padding: 18px 20px
+        display: flex
+        align-items: flex-start
+        gap: 12px
+        
+        svg
+          flex-shrink: 0
+          stroke: var(--accent-primary)
+          margin-top: 2px
+          opacity: 0.8
+          
+        strong
+          color: var(--text-primary)
+          font-weight: 600
+          margin-right: 4px
+          
+    // Gallery actions for step 3
+    .gallery-actions
+      display: flex
+      justify-content: center
+      margin-top: 8px
+      
+      .gallery-action-btn
+        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))
+        color: #1e222a
+        border: none
+        padding: 14px 32px
+        font-size: 16px
+        font-weight: 600
+        border-radius: 12px
+        display: inline-flex
+        align-items: center
+        gap: 10px
+        cursor: pointer
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+        box-shadow: 0 4px 14px rgba(125, 211, 216, 0.25)
+        text-decoration: none
+        font-family: 'Poppins', sans-serif
+        
+        &:hover
+          transform: translateY(-2px)
+          box-shadow: 0 6px 20px rgba(125, 211, 216, 0.35)
+          background: linear-gradient(135deg, #85dbe0, #a8e6a1)
+          
+        svg
+          width: 20px
+          height: 20px
+          stroke: #1e222a
+          flex-shrink: 0
 
     .step-actions
       display: flex

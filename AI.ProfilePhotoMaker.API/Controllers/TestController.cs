@@ -59,18 +59,10 @@ public class TestController : ControllerBase
 
             _logger.LogInformation("Found user profile: {ProfileId}", userProfile.Id);
 
-            // Check if generated images already exist in database
-            var existingGenerated = userProfile.ProcessedImages.Where(img => img.IsGenerated).Count();
-            _logger.LogInformation("User has {ExistingCount} existing generated images in database", existingGenerated);
-            
-            if (existingGenerated > 0)
-            {
-                return Ok(new { 
-                    success = true, 
-                    message = $"User already has {existingGenerated} generated images in database",
-                    data = new { addedCount = 0, existingCount = existingGenerated }
-                });
-            }
+            // Get existing generated images for duplicate checking
+            var existingGenerated = userProfile.ProcessedImages.Where(img => img.IsGenerated).ToList();
+            var existingGeneratedPaths = existingGenerated.Select(img => img.ProcessedImageUrl).ToHashSet();
+            _logger.LogInformation("User has {ExistingCount} existing generated images in database", existingGenerated.Count);
 
             // Look for generated images in the file system
             var generatedPath = Path.Combine(Directory.GetCurrentDirectory(), "generated", userId);
@@ -82,14 +74,22 @@ public class TestController : ControllerBase
                 return NotFound(new { success = false, error = "No generated images folder found", path = generatedPath });
             }
 
-            var imageFiles = Directory.GetFiles(generatedPath, "*.png").ToList();
-            _logger.LogInformation("Found {FileCount} PNG files in generated folder", imageFiles.Count);
+            // Support multiple image formats
+            var imageExtensions = new[] { "*.png", "*.jpg", "*.jpeg", "*.webp" };
+            var imageFiles = new List<string>();
+            
+            foreach (var extension in imageExtensions)
+            {
+                imageFiles.AddRange(Directory.GetFiles(generatedPath, extension));
+            }
+            
+            _logger.LogInformation("Found {FileCount} image files in generated folder (PNG, JPG, JPEG, WebP)", imageFiles.Count);
 
             if (imageFiles.Count == 0)
             {
                 return Ok(new { 
                     success = true, 
-                    message = "No PNG files found in generated folder",
+                    message = "No image files found in generated folder",
                     data = new { addedCount = 0, folderPath = generatedPath }
                 });
             }
@@ -102,14 +102,24 @@ public class TestController : ControllerBase
                 try
                 {
                     var fileName = Path.GetFileName(filePath);
-                    var parts = fileName.Replace(".png", "").Split('_');
+                    var relativePath = $"/generated/{userId}/{fileName}";
+                    
+                    // Skip if this image already exists in database
+                    if (existingGeneratedPaths.Contains(relativePath))
+                    {
+                        _logger.LogDebug("Skipping existing image: {FileName}", fileName);
+                        continue;
+                    }
+                    
+                    // Remove file extension to parse style
+                    var fileNameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+                    var parts = fileNameWithoutExt.Split('_');
                     
                     _logger.LogDebug("Processing file: {FileName}, parts: {Parts}", fileName, string.Join(", ", parts));
                     
                     if (parts.Length >= 2)
                     {
                         var style = string.Join("_", parts.Take(parts.Length - 1)); // Everything except the last part (number)
-                        var relativePath = $"/generated/{userId}/{fileName}";
 
                         var processedImage = new ProcessedImage
                         {
@@ -156,11 +166,13 @@ public class TestController : ControllerBase
             return Ok(new
             {
                 success = true,
-                message = $"Successfully added {addedImages.Count} generated images to database",
+                message = $"Successfully added {addedImages.Count} generated images to database. {existingGenerated.Count} images already existed.",
                 data = new
                 {
                     addedCount = addedImages.Count,
+                    existingCount = existingGenerated.Count,
                     totalFilesFound = imageFiles.Count,
+                    skippedExisting = imageFiles.Count - addedImages.Count - errorFiles.Count,
                     errorFiles = errorFiles,
                     addedImages = addedImages.Take(5).ToList(), // Show first 5 for brevity
                     folderPath = generatedPath

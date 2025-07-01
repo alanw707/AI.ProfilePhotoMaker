@@ -32,10 +32,11 @@ export class GalleryComponent implements OnInit {
     this.loadImages();
   }
 
-  async loadImages() {
+  async loadImages(forceRefresh: boolean = false) {
     this.isLoading = true;
     try {
-      const response = await this.fileUploadService.getUserImages().toPromise();
+      console.log(`🖼️ Loading gallery images (forceRefresh: ${forceRefresh})`);
+      const response = await this.fileUploadService.getUserImages(forceRefresh).toPromise();
       if (response) {
         this.galleryImages = response.images.map((img: ProcessedImage) => ({
           id: img.id,
@@ -49,12 +50,19 @@ export class GalleryComponent implements OnInit {
           type: img.isGenerated ? 'generated' as const : 'original' as const,
           downloadUrl: img.processedImageUrl || img.originalImageUrl
         }));
+        
+        console.log(`📊 Gallery loaded: ${this.galleryImages.length} total images, ${this.galleryImages.filter(img => img.type === 'generated').length} generated`);
       }
     } catch (error) {
       console.error('Failed to load images:', error);
     } finally {
       this.isLoading = false;
     }
+  }
+
+  refreshGallery() {
+    console.log('🔄 Refreshing gallery with fresh data');
+    this.loadImages(true);
   }
 
   onImageClick(image: GalleryImage) {
