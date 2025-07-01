@@ -48,6 +48,10 @@ This document tracks actionable tasks for the development of the AI.ProfilePhoto
 
 ### Image Upload System  
 - [x] Create secure file upload endpoint with multipart support
+- [x] Implement hybrid filesystem-database approach for generated images
+- [x] Add self-healing mechanism for missing database records
+- [x] Fix dashboard stats showing 0 generated photos
+- [x] Implement auto-sync between filesystem and database
 - [x] Implement file validation (type, size, count limits)
 - [x] Add secure storage for uploaded images (user-specific folders)
 - [x] Create ZIP functionality for Replicate training
@@ -92,6 +96,11 @@ This document tracks actionable tasks for the development of the AI.ProfilePhoto
 - [x] Create ProcessedImage records for uploads
 - [x] Implement image deletion with file cleanup
 - [x] Add training status tracking endpoints
+- [x] **MAJOR REFACTOR**: Database normalization - remove model fields from UserProfile
+- [x] Use ModelCreationRequest as single source of truth for model information
+- [x] Fix dashboard training workflow with proper model status detection
+- [x] Implement model discovery service with version repair functionality
+- [x] Add comprehensive migration to clean up database schema
 
 ### OAuth Authentication Implementation ✅ COMPLETED
 - [x] Add OAuth packages for Google, Facebook, Apple (.NET 8 compatible)
