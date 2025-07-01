@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -150,6 +151,24 @@ public class ReplicateApiClient : IReplicateApiClient
             
             _logger.LogInformation("Model created successfully: {Destination}", destination);
             _logger.LogInformation("Using destination for training: {Destination}", destination);
+            
+            // Create a model creation request record to track the training
+            var modelCreationRequest = new ModelCreationRequest
+            {
+                UserId = userId,
+                ModelName = modelName,
+                ReplicateModelId = destination.Split('/').Last(), // Extract model name from destination
+                Status = ModelCreationStatus.Pending,
+                TrainingImageZipUrl = imageZipUrl,
+                PendingTrainingRequestId = Guid.NewGuid().ToString()
+            };
+
+            // Add to database
+            _context.ModelCreationRequests.Add(modelCreationRequest);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Created model creation request {RequestId} for user {UserId}", 
+                modelCreationRequest.Id, userId);
 
             var trainingRequest = new
             {
@@ -159,7 +178,7 @@ public class ReplicateApiClient : IReplicateApiClient
                     input_images = imageZipUrl,
                     trigger_word = $"user_{userId}",
                     lora_type = "subject",
-                    training_steps = 1000
+                    training_steps = 2000
                 },
                 webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/training-complete",
                 webhook_events_filter = new[] { "completed" }
@@ -186,6 +205,15 @@ public class ReplicateApiClient : IReplicateApiClient
             {
                 throw new Exception("Failed to deserialize training response");
             }
+            
+            // Update the model creation request with the training ID
+            modelCreationRequest.PendingTrainingRequestId = result.Id;
+            modelCreationRequest.Status = ModelCreationStatus.Creating;
+            _context.ModelCreationRequests.Update(modelCreationRequest);
+            await _context.SaveChangesAsync();
+            
+            _logger.LogInformation("Updated model creation request {RequestId} with training ID {TrainingId}", 
+                modelCreationRequest.Id, result.Id);
 
             return result;
         }
@@ -270,7 +298,8 @@ public class ReplicateApiClient : IReplicateApiClient
         string trainedModelVersion, 
         string userId, 
         string style,
-        UserInfo? userInfo = null)
+        UserInfo? userInfo = null,
+        int numOutputs = 2)
     {
         try
         {
@@ -298,7 +327,7 @@ public class ReplicateApiClient : IReplicateApiClient
                     negative_prompt = negativePrompt,
                     num_inference_steps = 40,
                     guidance_scale = 7.5,
-                    num_outputs = 1,
+                    num_outputs = Math.Max(1, Math.Min(4, numOutputs)), // Clamp between 1-4
                     scheduler = "K_EULER_ANCESTRAL",
                     output_format = "png",
                     webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete",
@@ -457,13 +486,11 @@ public class ReplicateApiClient : IReplicateApiClient
         string genderEthnicityCombo = !string.IsNullOrEmpty(ethnicity) ? $"{gender} {ethnicity}" : gender;
         
         string result = promptTemplate
+            .Replace("{trigger}", triggerWord)
             .Replace("{subject}", subject)
             .Replace("{gender} {ethnicity}", genderEthnicityCombo)
             .Replace("{gender}", gender)
             .Replace("{ethnicity}", ethnicity);
-
-        // Add trigger word at the beginning of the prompt to activate custom model
-        result = $"{triggerWord}, {result}";
 
         // Clean up extra spaces 
         result = result.Replace("  ", " ").Trim();
@@ -556,7 +583,7 @@ public class ReplicateApiClient : IReplicateApiClient
                     input_images = imageZipUrl,
                     trigger_word = $"user_{userId}",
                     lora_type = "subject",
-                    training_steps = 1000
+                    training_steps = 2000
                 },
                 webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/training-complete",
                 webhook_events_filter = new[] { "completed" }
@@ -653,7 +680,8 @@ public class ReplicateApiClient : IReplicateApiClient
             request.TrainedModelVersion,
             request.UserId,
             request.Style,
-            request.UserInfo);
+            request.UserInfo,
+            request.NumOutputs);
 
         return result.Id ?? ""; // Return prediction ID
     }
@@ -1043,6 +1071,228 @@ public class ReplicateApiClient : IReplicateApiClient
         {
             _logger.LogError(ex, "Error creating prediction for model {ModelId}", modelId);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Finds existing trained models for a user by scanning Replicate API
+    /// </summary>
+    /// <param name="userId">The user ID to search for</param>
+    /// <returns>List of discovered user models</returns>
+    public async Task<List<ReplicateModelInfo>> FindUserModelsByPatternAsync(string userId)
+    {
+        try
+        {
+            _logger.LogInformation("Searching for models matching pattern 'user-{UserId}-*'", userId);
+            
+            // Get the owner name from configuration
+            string owner = _configuration["Replicate:OwnerName"] ?? "alanw707"; // Default to known owner
+            _logger.LogInformation("Using owner: {Owner} for model search", owner);
+            
+            // Call Replicate API to list models for the owner
+            string requestUrl = $"models?cursor=&owner={owner}";
+            _logger.LogInformation("Making Replicate API request: {RequestUrl}", requestUrl);
+            
+            var response = await _httpClient.GetAsync(requestUrl);
+            
+            _logger.LogInformation("Replicate API response status: {StatusCode}", response.StatusCode);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                string errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to list models from Replicate API: {StatusCode}, Content: {ErrorContent}", 
+                                 response.StatusCode, errorContent);
+                return new List<ReplicateModelInfo>();
+            }
+
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("Replicate API raw response: {JsonResponse}", jsonResponse);
+            
+            var apiResponse = JsonSerializer.Deserialize<ReplicateModelsResponse>(jsonResponse, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+            });
+
+            if (apiResponse?.Results == null)
+            {
+                _logger.LogWarning("No models returned from Replicate API. ApiResponse: {ApiResponse}", apiResponse);
+                return new List<ReplicateModelInfo>();
+            }
+
+            _logger.LogInformation("Found {TotalModels} total models from Replicate API", apiResponse.Results.Count);
+
+            // Filter models matching the user pattern
+            string userPattern = $"user-{userId}";
+            _logger.LogInformation("Filtering models with pattern: {UserPattern}", userPattern);
+            
+            // Log all model names for debugging
+            foreach (var model in apiResponse.Results)
+            {
+                _logger.LogInformation("Available model: {ModelName} (Owner: {Owner})", model.Name, model.Owner);
+            }
+            
+            var userModels = apiResponse.Results
+                .Where(model => model.Name.StartsWith(userPattern, StringComparison.OrdinalIgnoreCase))
+                .Select(model => new ReplicateModelInfo
+                {
+                    Name = model.Name,
+                    Owner = model.Owner,
+                    Description = model.Description,
+                    CreatedAt = model.CreatedAt,
+                    UpdatedAt = model.UpdatedAt,
+                    LatestVersion = model.LatestVersion?.Id,
+                    Visibility = model.Visibility,
+                    CoverImageUrl = model.CoverImageUrl,
+                    RunCount = model.RunCount
+                })
+                .OrderByDescending(m => m.UpdatedAt)
+                .ToList();
+
+            _logger.LogInformation("Found {Count} models matching pattern 'user-{UserId}-*'", userModels.Count, userId);
+            
+            if (userModels.Count > 0)
+            {
+                foreach (var userModel in userModels)
+                {
+                    _logger.LogInformation("Matched user model: {ModelName} (Updated: {UpdatedAt})", 
+                                         userModel.Name, userModel.UpdatedAt);
+                }
+            }
+            
+            return userModels;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error searching for user models for userId {UserId}", userId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Gets the latest version ID for a specific model from Replicate API
+    /// </summary>
+    /// <param name="modelId">The model ID in format owner/model-name</param>
+    /// <returns>The latest version ID hash or null if not found</returns>
+    public async Task<string?> GetModelVersionAsync(string modelId)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(modelId))
+            {
+                return null;
+            }
+
+            // Parse model ID to get owner and name
+            var parts = modelId.Split('/');
+            if (parts.Length != 2)
+            {
+                _logger.LogWarning("Invalid model ID format: {ModelId}", modelId);
+                return null;
+            }
+
+            var owner = parts[0];
+            var modelName = parts[1];
+
+            // Get model details from Replicate API
+            var response = await _httpClient.GetAsync($"models/{owner}/{modelName}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonResponse = await response.Content.ReadAsStringAsync();
+                _logger.LogInformation("Got model details for {ModelId}", modelId);
+                
+                // Parse the response to extract latest version ID
+                using var document = JsonDocument.Parse(jsonResponse);
+                var root = document.RootElement;
+                
+                if (root.TryGetProperty("latest_version", out var latestVersionElement) &&
+                    latestVersionElement.TryGetProperty("id", out var versionIdElement))
+                {
+                    var versionId = versionIdElement.GetString();
+                    _logger.LogInformation("Found version ID {VersionId} for model {ModelId}", versionId, modelId);
+                    return versionId;
+                }
+                else
+                {
+                    _logger.LogWarning("No latest_version.id found in response for model {ModelId}", modelId);
+                    return null;
+                }
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogInformation("Model {ModelId} not found on Replicate", modelId);
+                return null;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to get model details for {ModelId}: {StatusCode}", modelId, response.StatusCode);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting model version for {ModelId}", modelId);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Checks if a model exists and is available on Replicate
+    /// </summary>
+    public async Task<bool> CheckModelAvailabilityAsync(string modelId)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(modelId))
+            {
+                return false;
+            }
+
+            // Parse model ID to get owner and name
+            var parts = modelId.Split('/');
+            if (parts.Length != 2)
+            {
+                _logger.LogWarning("Invalid model ID format: {ModelId}", modelId);
+                return false;
+            }
+
+            var owner = parts[0];
+            var modelName = parts[1];
+
+            // Try to get the model
+            var response = await _httpClient.GetAsync($"models/{owner}/{modelName}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonResponse = await response.Content.ReadAsStringAsync();
+                var modelData = JsonSerializer.Deserialize<JsonElement>(jsonResponse);
+                
+                // Check if model has a latest version (required for predictions)
+                if (modelData.TryGetProperty("latest_version", out var latestVersion))
+                {
+                    var versionId = latestVersion.GetProperty("id").GetString();
+                    _logger.LogInformation("Model {ModelId} is available with version {VersionId}", modelId, versionId);
+                    return !string.IsNullOrEmpty(versionId);
+                }
+                
+                _logger.LogWarning("Model {ModelId} exists but has no latest version", modelId);
+                return false;
+            }
+            else if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("Model {ModelId} not found on Replicate", modelId);
+                return false;
+            }
+            else
+            {
+                _logger.LogError("Failed to check model availability: {StatusCode}", response.StatusCode);
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking model availability for {ModelId}", modelId);
+            return false;
         }
     }
 }

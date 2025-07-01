@@ -310,7 +310,21 @@ if (string.IsNullOrEmpty(jwtSecret) || jwtSecret.Length < 32)
 // Register the Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IBasicTierService, AI.ProfilePhotoMaker.API.Services.BasicTierService>();
+
+// Register Replicate SDK
+builder.Services.AddSingleton<Replicate.ReplicateApi>(provider =>
+{
+    var configuration = provider.GetRequiredService<IConfiguration>();
+    var apiToken = configuration["Replicate:ApiToken"] 
+        ?? throw new InvalidOperationException("Replicate API token not configured");
+    return new Replicate.ReplicateApi(apiToken);
+});
+
+// Register Replicate services
 builder.Services.AddHttpClient<IReplicateApiClient, ReplicateApiClient>();
+builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IModelDiscoveryService, AI.ProfilePhotoMaker.API.Services.ModelDiscoveryService>();
+
+builder.Services.AddHttpClient<IImageDownloadService, ImageDownloadService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository, AI.ProfilePhotoMaker.API.Data.UserProfileRepository>();
 
 // Premium Package Services removed - using unified credit system
@@ -418,7 +432,6 @@ if (!app.Environment.IsDevelopment())
 }
 
 // Serve static files from uploads directory
-app.UseStaticFiles();
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
@@ -440,6 +453,14 @@ app.UseStaticFiles(new StaticFileOptions
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
         Path.Combine(builder.Environment.ContentRootPath, "style-previews")),
     RequestPath = "/style-previews"
+});
+
+// Serve static files from generated images directory
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+        Path.Combine(builder.Environment.ContentRootPath, "generated")),
+    RequestPath = "/generated"
 });
 
 // Serve Angular static files

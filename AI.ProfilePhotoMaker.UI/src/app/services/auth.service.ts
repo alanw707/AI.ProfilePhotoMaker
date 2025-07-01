@@ -291,6 +291,22 @@ export class AuthService {
     return this.hasToken();
   }
 
+  getCurrentUserId(): string | null {
+    const token = this.getToken();
+    if (!token) return null;
+    
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      // .NET Identity uses 'nameid' claim for NameIdentifier
+      const userId = payload.nameid || payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || payload.sub || payload.userId;
+      console.log('Extracted user ID from token:', userId);
+      return userId || null;
+    } catch (error) {
+      console.error('Failed to extract user ID from token:', error);
+      return null;
+    }
+  }
+
   private setSession(authResult: AuthResponseDto): void {
     console.log('Setting auth session:', authResult);
     localStorage.setItem(this.TOKEN_KEY, authResult.token);

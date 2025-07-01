@@ -11,9 +11,7 @@ public class UserProfile
     public string? LastName { get; set; }
     public string? Gender { get; set; }
     public string? Ethnicity { get; set; }
-    public string? TrainedModelId { get; set; }
-    public string? TrainedModelVersionId { get; set; }
-    public DateTime? ModelTrainedAt { get; set; }
+    public DateTime? LastModelSyncCheck { get; set; }
     
     
     // Basic tier and subscription management
