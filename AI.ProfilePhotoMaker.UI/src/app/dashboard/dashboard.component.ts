@@ -91,6 +91,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isTraining: boolean = false;
   progressPercentage: number = 0;
   progressMessage: string = '';
+  generationStartTime: number = 0;
+  expectedGenerationTime: number = 0;
+  timeBasedProgressInterval?: any;
   
   private filePreviewCache = new Map<File, string>();
   private pollingInterval?: any;
@@ -606,10 +609,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
               clearInterval(this.photoCompletionPollingInterval);
               this.onPhotoGenerationComplete(newPhotos);
             } else if (newPhotos > 0) {
-              // Some photos completed, update progress
-              const progress = Math.min(90 + (newPhotos / expectedPhotoCount) * 10, 100);
+              // Some photos completed, update progress - override time-based progress
+              const photoProgress = (newPhotos / expectedPhotoCount) * 15; // 15% range for photo completion
+              const progress = Math.min(85 + photoProgress, 95); // 85% to 95% based on actual photos
               this.progressPercentage = progress;
               this.progressMessage = `Generated ${newPhotos} of ${expectedPhotoCount} photos...`;
+              
+              // Clear time-based progress since we have real progress
+              if (this.timeBasedProgressInterval) {
+                clearInterval(this.timeBasedProgressInterval);
+                this.timeBasedProgressInterval = undefined;
+              }
             }
           },
           error: (error) => {
@@ -622,7 +632,43 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }, 15000); // Poll every 15 seconds
   }
 
+  private startTimeBasedProgress() {
+    // Clear any existing time-based progress interval
+    if (this.timeBasedProgressInterval) {
+      clearInterval(this.timeBasedProgressInterval);
+    }
+
+    this.timeBasedProgressInterval = setInterval(() => {
+      if (!this.isGenerating || this.generationStartTime === 0) {
+        return;
+      }
+
+      const elapsed = Date.now() - this.generationStartTime;
+      const progressRatio = Math.min(elapsed / this.expectedGenerationTime, 0.85); // Cap at 85% for time-based
+      const newProgress = 15 + (progressRatio * 70); // 15% to 85% based on time
+      
+      this.progressPercentage = Math.round(newProgress);
+      
+      // Update progress message based on elapsed time
+      const elapsedMinutes = Math.floor(elapsed / 60000);
+      const remainingTime = Math.max(0, Math.ceil((this.expectedGenerationTime - elapsed) / 60000));
+      
+      if (remainingTime > 0) {
+        this.progressMessage = `Creating professional photos... (~${remainingTime} min remaining)`;
+      } else {
+        this.progressMessage = 'Finalizing your photos...';
+      }
+      
+    }, 10000); // Update every 10 seconds
+  }
+
   private onPhotoGenerationComplete(photoCount: number) {
+    // Clear time-based progress interval
+    if (this.timeBasedProgressInterval) {
+      clearInterval(this.timeBasedProgressInterval);
+      this.timeBasedProgressInterval = undefined;
+    }
+    
     // Complete the generation process
     this.progressPercentage = 100;
     this.progressMessage = 'Photo generation complete!';
@@ -688,14 +734,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
         }
       }
 
-      // Update progress but keep generating state active
-      this.progressPercentage = 90;
-      this.progressMessage = 'Generating your photos...';
-      // Keep isGenerating = true until photos are actually ready
-      
       // Calculate estimated time for all images to be ready (approximately 2-3 minutes per style)
       const estimatedMinutes = selectedStyles.length * 2.5;
       const estimatedCompletion = new Date(Date.now() + estimatedMinutes * 60000);
+      this.estimatedCompletion = `${Math.ceil(estimatedMinutes)} minutes`;
+      
+      // Start with realistic progress and update based on time
+      this.progressPercentage = 15;
+      this.progressMessage = `Creating professional photos with your selected styles...`;
+      this.generationStartTime = Date.now();
+      this.expectedGenerationTime = estimatedMinutes * 60000; // in milliseconds
+      
+      // Start time-based progress updates
+      this.startTimeBasedProgress();
       
       this.notificationService.info('Generation Started', 
         `Generating ${selectedStyles.length} style(s) with ${this.imagesPerStyle} images each. Estimated completion: ${estimatedCompletion.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
