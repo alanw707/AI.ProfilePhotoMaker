@@ -36,7 +36,7 @@ This project plan outlines the major milestones, features, and tasks required to
 - [x] Credit management and usage tracking
 - [ ] Payment integration (Stripe)
 
-### Phase 4: Frontend Development ✅ MAJOR PROGRESS
+### Phase 4: Frontend Development ✅ COMPLETED
 - [x] Angular project structure
 - [x] Authentication UI (login, registration, OAuth)
 - [x] User profile management UI
@@ -48,7 +48,41 @@ This project plan outlines the major milestones, features, and tasks required to
 - [x] Theme system (light/dark mode)
 - [x] Credit management UI
 - [x] Photo enhancement feature
+- [x] **NEW**: Hybrid filesystem-database integration
+- [x] **NEW**: Self-healing dashboard stats and gallery
+- [x] **NEW**: Auto-detection and fixing of missing database records
 - [x] Modern SASS architecture
+
+---
+
+## Recent Major Improvements (July 2025)
+
+### Database Normalization & Hybrid Architecture
+- **Problem**: Dashboard showed 0 generated photos despite 40 images existing in filesystem
+- **Root Cause**: Webhook failures caused database-filesystem sync issues
+- **Solution**: Implemented hybrid approach with auto-healing capabilities
+
+#### Key Architectural Changes:
+1. **Database Normalization**: Removed model fields from UserProfile, use ModelCreationRequest as single source of truth
+2. **Hybrid Approach**: Database-first with filesystem fallback and auto-sync
+3. **Self-Healing**: Automatically detects and fixes missing database records
+4. **Improved Reliability**: System works even when webhooks fail
+5. **Enhanced Debugging**: Comprehensive logging and error handling
+
+#### Technical Implementation:
+- Created `/api/test/fix-generated-images` endpoint for manual repair
+- Added auto-detection in dashboard state service
+- Enhanced authentication with proper JWT token handling  
+- Simplified ZIP file naming (userId only, no timestamps)
+- Added model discovery service with version repair
+- Comprehensive database migration to clean up schema
+
+#### Benefits:
+- Dashboard stats now show correct generated photos count
+- Gallery displays all generated images properly
+- System automatically recovers from webhook failures
+- Future-proof against similar sync issues
+- Improved user experience with reliable data display
 
 ---
 
@@ -87,6 +121,9 @@ This project plan outlines the major milestones, features, and tasks required to
    - [x] Store generated images metadata in database
    - [x] Implement download functionality
    - [x] Implement image deletion with file cleanup
+   - [x] **NEW**: Hybrid filesystem-database approach for reliability
+   - [x] **NEW**: Self-healing mechanism for missing database records
+   - [x] **NEW**: Dashboard and gallery auto-repair functionality
    - [ ] Enforce data retention (delete after 7 days)
 
 7. **Payments & Transactions** ⏳ NOT STARTED
