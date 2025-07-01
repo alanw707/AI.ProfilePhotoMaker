@@ -310,7 +310,20 @@ if (string.IsNullOrEmpty(jwtSecret) || jwtSecret.Length < 32)
 // Register the Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IBasicTierService, AI.ProfilePhotoMaker.API.Services.BasicTierService>();
+
+// Register Replicate SDK
+builder.Services.AddSingleton<Replicate.ReplicateApi>(provider =>
+{
+    var configuration = provider.GetRequiredService<IConfiguration>();
+    var apiToken = configuration["Replicate:ApiToken"] 
+        ?? throw new InvalidOperationException("Replicate API token not configured");
+    return new Replicate.ReplicateApi(apiToken);
+});
+
+// Register Replicate services
 builder.Services.AddHttpClient<IReplicateApiClient, ReplicateApiClient>();
+builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IModelDiscoveryService, AI.ProfilePhotoMaker.API.Services.ModelDiscoveryService>();
+
 builder.Services.AddHttpClient<IImageDownloadService, ImageDownloadService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository, AI.ProfilePhotoMaker.API.Data.UserProfileRepository>();
 

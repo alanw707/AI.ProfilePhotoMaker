@@ -83,17 +83,8 @@ public class ReplicateWebhookController : ControllerBase
             {
                 bool updatedSuccessfully = false;
                 
-                // Update ModelCreationRequest if found
+                // Update ModelCreationRequest with training completion data
                 if (modelRequest != null)
-                {
-                    modelRequest.TrainedModelVersion = payload.Version;
-                    _logger.LogInformation("Training completed for model {ModelId}, version: {Version}",
-                        modelRequest.ReplicateModelId, payload.Version);
-                    updatedSuccessfully = true;
-                }
-
-                // Update UserProfile (either from modelRequest or direct lookup)
-                if (userProfile != null)
                 {
                     // Extract model name and version ID from payload.Version
                     string modelName;
@@ -112,30 +103,38 @@ public class ReplicateWebhookController : ControllerBase
                         versionId = payload.Version;
                     }
                     
-                    // Set both model ID and version ID correctly
-                    userProfile.TrainedModelId = modelName; // The model name/ID for identification
-                    userProfile.TrainedModelVersionId = versionId; // The version ID for generation API calls
-                    userProfile.ModelTrainedAt = DateTime.UtcNow;
-                    userProfile.UpdatedAt = DateTime.UtcNow;
-                    _logger.LogInformation("Updated UserProfile {UserId} with trained model {ModelId} and version {VersionId}", 
-                        userProfile.UserId, modelName, versionId);
+                    // Update ModelCreationRequest as single source of truth
+                    modelRequest.TrainedModelVersion = versionId;
+                    modelRequest.ReplicateModelId = modelName; // Ensure model ID is set correctly
+                    modelRequest.Status = ModelCreationStatus.Ready;
+                    modelRequest.CompletedAt = DateTime.UtcNow;
+                    
+                    _logger.LogInformation("Training completed for model {ModelId}, version: {Version}",
+                        modelName, versionId);
 
                     // If user has selected styles, start generation automatically for all selected styles
-                    var selectedStyles = await _dbContext.UserStyleSelections
-                        .Include(uss => uss.Style)
-                        .Where(uss => uss.UserProfileId == userProfile.Id && uss.Style.IsActive)
-                        .ToListAsync();
-                    
-                    if (selectedStyles.Any())
+                    if (userProfile != null)
                     {
-                        _logger.LogInformation("Starting automatic image generation for user {UserId} with {StyleCount} selected styles",
-                            userProfile.UserId, selectedStyles.Count);
+                        var selectedStyles = await _dbContext.UserStyleSelections
+                            .Include(uss => uss.Style)
+                            .Where(uss => uss.UserProfileId == userProfile.Id && uss.Style.IsActive)
+                            .ToListAsync();
                         
-                        foreach (var selectedStyle in selectedStyles)
+                        if (selectedStyles.Any())
                         {
-                            await _replicateApiClient.GenerateImagesAsync(versionId, userProfile.UserId, selectedStyle.Style.Name, null);
+                            _logger.LogInformation("Starting automatic image generation for user {UserId} with {StyleCount} selected styles",
+                                userProfile.UserId, selectedStyles.Count);
+                            
+                            foreach (var selectedStyle in selectedStyles)
+                            {
+                                await _replicateApiClient.GenerateImagesAsync(versionId, userProfile.UserId, selectedStyle.Style.Name, null);
+                            }
                         }
+                        
+                        // Update UserProfile timestamp to track activity
+                        userProfile.UpdatedAt = DateTime.UtcNow;
                     }
+                    
                     updatedSuccessfully = true;
                 }
 

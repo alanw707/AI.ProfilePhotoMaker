@@ -129,8 +129,8 @@
       <div class="btn-icon spinning" *ngIf="modelStatus === 'training'">⏳</div>
       <div class="btn-text">
         <span class="btn-title" *ngIf="modelStatus === 'training'">Starting Training...</span>
-        <span class="btn-title" *ngIf="modelStatus === 'trained'">Generate {{selectedStyles * imagesPerStyle}} Photos</span>
-        <span class="btn-title" *ngIf="modelStatus !== 'training' && modelStatus !== 'trained'">Start Training & Generate Photos</span>
+        <span class="btn-title" *ngIf="modelStatus === 'Model Ready'">Generate {{selectedStyles * imagesPerStyle}} Photos</span>
+        <span class="btn-title" *ngIf="modelStatus !== 'training' && modelStatus !== 'Model Ready'">Start Training & Generate Photos</span>
         <span class="btn-subtitle" *ngIf="modelStatus !== 'training'">{{selectedStyles}} styles • {{selectedStyles * imagesPerStyle}} total images</span>
       </div>
     </div>
@@ -146,8 +146,8 @@
         </svg>
       </div>
       <div class="progress-title">
-        <h4 *ngIf="isTraining && !modelStatus.includes('trained')">🤖 Training Your AI Model</h4>
-        <h4 *ngIf="isGenerating || modelStatus === 'trained'">🎨 Generating Your Photos</h4>
+        <h4 *ngIf="isTraining && !modelStatus.includes('Model Ready')">🤖 Training Your AI Model</h4>
+        <h4 *ngIf="isGenerating || modelStatus === 'Model Ready'">🎨 Generating Your Photos</h4>
         <p class="progress-subtitle">{{progressMessage}}</p>
       </div>
     </div>

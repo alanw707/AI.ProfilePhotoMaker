@@ -55,6 +55,12 @@ public class ProfileController : ControllerBase
         if (profile == null)
             return NotFound("Profile not found");
 
+        // Get model info from ModelCreationRequest
+        var latestModel = await _context.ModelCreationRequests
+            .Where(m => m.UserId == userId && m.Status == ModelCreationStatus.Ready)
+            .OrderByDescending(m => m.CompletedAt)
+            .FirstOrDefaultAsync();
+
         var profileDto = new UserProfileDto
         {
             Id = profile.Id,
@@ -62,9 +68,9 @@ public class ProfileController : ControllerBase
             LastName = profile.LastName,
             Gender = profile.Gender,
             Ethnicity = profile.Ethnicity,
-            TrainedModelId = profile.TrainedModelId,
-            TrainedModelVersionId = profile.TrainedModelVersionId,
-            ModelTrainedAt = profile.ModelTrainedAt,
+            TrainedModelId = latestModel?.ReplicateModelId,
+            TrainedModelVersionId = latestModel?.TrainedModelVersion,
+            ModelTrainedAt = latestModel?.CompletedAt,
             CreatedAt = profile.CreatedAt,
             UpdatedAt = profile.UpdatedAt,
             TotalProcessedImages = profile.ProcessedImages.Count
@@ -135,6 +141,9 @@ public class ProfileController : ControllerBase
 
         await _context.SaveChangesAsync();
 
+        // Get model info from ModelCreationRequest
+        var latestModel = await GetLatestTrainedModelAsync(userId);
+
         var profileDto = new UserProfileDto
         {
             Id = profile.Id,
@@ -142,9 +151,9 @@ public class ProfileController : ControllerBase
             LastName = profile.LastName,
             Gender = profile.Gender,
             Ethnicity = profile.Ethnicity,
-            TrainedModelId = profile.TrainedModelId,
-            TrainedModelVersionId = profile.TrainedModelVersionId,
-            ModelTrainedAt = profile.ModelTrainedAt,
+            TrainedModelId = latestModel?.ReplicateModelId,
+            TrainedModelVersionId = latestModel?.TrainedModelVersion,
+            ModelTrainedAt = latestModel?.CompletedAt,
             CreatedAt = profile.CreatedAt,
             UpdatedAt = profile.UpdatedAt,
             TotalProcessedImages = profile.ProcessedImages.Count
@@ -296,13 +305,15 @@ public class ProfileController : ControllerBase
         if (profile == null)
             return NotFound("Profile not found");
 
-        if (string.IsNullOrEmpty(profile.TrainedModelId))
+        // Get trained model from ModelCreationRequest
+        var trainedModel = await GetLatestTrainedModelAsync(userId);
+        if (trainedModel == null || string.IsNullOrEmpty(trainedModel.TrainedModelVersion))
             return BadRequest("No trained model available. Please upload training images first.");
 
         try
         {
             dto.UserId = userId;
-            dto.TrainedModelVersion = profile.TrainedModelId;
+            dto.TrainedModelVersion = trainedModel.TrainedModelVersion;
             dto.UserInfo = new UserInfo
             {
                 Gender = profile.Gender,
@@ -404,15 +415,18 @@ public class ProfileController : ControllerBase
             return NotFound("Profile not found");
 
         var uploadedImages = profile.ProcessedImages.Where(i => i.Style == ProfileControllerConstants.OriginalStyle).ToList();
-        var zipPath = Path.Combine(_environment.ContentRootPath, "training-zips", $"{userId}_*.zip");
-        var zipFiles = Directory.GetFiles(Path.GetDirectoryName(zipPath)!, Path.GetFileName(zipPath));
+        var zipPath = Path.Combine(_environment.ContentRootPath, "training-zips", $"{userId}.zip");
+        var zipFiles = System.IO.File.Exists(zipPath) ? new[] { zipPath } : Array.Empty<string>();
+
+        // Get model info from ModelCreationRequest
+        var latestModel = await GetLatestTrainedModelAsync(userId);
 
         return Ok(new
         {
             ProfileId = profile.Id,
-            HasTrainedModel = !string.IsNullOrEmpty(profile.TrainedModelId),
-            TrainedModelId = profile.TrainedModelId,
-            ModelTrainedAt = profile.ModelTrainedAt,
+            HasTrainedModel = latestModel != null,
+            TrainedModelId = latestModel?.ReplicateModelId,
+            ModelTrainedAt = latestModel?.CompletedAt,
             TotalUploadedImages = uploadedImages.Count,
             LatestZipFile = zipFiles.OrderByDescending(f => System.IO.File.GetCreationTime(f)).FirstOrDefault(),
             CanStartTraining = uploadedImages.Count >= 4, // Minimum 4 images for training
@@ -420,8 +434,8 @@ public class ProfileController : ControllerBase
             {
                 0 => "No images uploaded",
                 < 4 => $"Need at least 4 images (currently {uploadedImages.Count})",
-                >= 4 when string.IsNullOrEmpty(profile.TrainedModelId) => "Ready for training",
-                >= 4 when !string.IsNullOrEmpty(profile.TrainedModelId) => "Model trained - ready for generation",
+                >= 4 when latestModel == null => "Ready for training",
+                >= 4 when latestModel != null => "Model trained - ready for generation",
                 _ => "Unknown status"
             }
         });
@@ -552,6 +566,14 @@ public class ProfileController : ControllerBase
         return User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     }
 
+    private async Task<ModelCreationRequest?> GetLatestTrainedModelAsync(string userId)
+    {
+        return await _context.ModelCreationRequests
+            .Where(m => m.UserId == userId && m.Status == ModelCreationStatus.Ready)
+            .OrderByDescending(m => m.CompletedAt)
+            .FirstOrDefaultAsync();
+    }
+
     private static bool IsValidImageFile(IFormFile file)
     {
         if (file.Length == 0 || file.Length > 10 * 1024 * 1024) // 10MB limit
@@ -596,7 +618,7 @@ public class ProfileController : ControllerBase
     {
         try
         {
-            var zipPath = Path.Combine(_environment.ContentRootPath, "training-zips", $"{userId}_{DateTime.UtcNow:yyyyMMddHHmmss}.zip");
+            var zipPath = Path.Combine(_environment.ContentRootPath, "training-zips", $"{userId}.zip");
             Directory.CreateDirectory(Path.GetDirectoryName(zipPath)!);
 
             using (var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create))
@@ -654,24 +676,24 @@ public class ProfileController : ControllerBase
                 return Ok(new { success = true, data = new List<object>(), error = (object?)null });
             }
 
-            var userZipFiles = Directory.GetFiles(trainingZipsPath, $"{userId}_*.zip")
-                .Select(filePath => 
+            var zipFilePath = Path.Combine(trainingZipsPath, $"{userId}.zip");
+            var userZipFiles = new List<object>();
+            
+            if (System.IO.File.Exists(zipFilePath))
+            {
+                var fileInfo = new FileInfo(zipFilePath);
+                var fileName = Path.GetFileName(zipFilePath);
+                var publicUrl = GetAbsoluteUrl($"/training-zips/{fileName}");
+                
+                userZipFiles.Add(new
                 {
-                    var fileName = Path.GetFileName(filePath);
-                    var fileInfo = new FileInfo(filePath);
-                    var publicUrl = GetAbsoluteUrl($"/training-zips/{fileName}");
-                    
-                    return new
-                    {
-                        fileName = fileName,
-                        filePath = filePath,
-                        publicUrl = publicUrl,
-                        createdAt = fileInfo.CreationTime,
-                        sizeBytes = fileInfo.Length
-                    };
-                })
-                .OrderByDescending(f => f.createdAt)
-                .ToList();
+                    fileName = fileName,
+                    filePath = zipFilePath,
+                    publicUrl = publicUrl,
+                    createdAt = fileInfo.CreationTime,
+                    sizeBytes = fileInfo.Length
+                });
+            }
 
             return Ok(new { 
                 success = true, 
@@ -705,19 +727,16 @@ public class ProfileController : ControllerBase
                 return NotFound(new { success = false, error = new { code = "NoZipFiles", message = "No training ZIP files found." } });
             }
 
-            var latestZipFile = Directory.GetFiles(trainingZipsPath, $"{userId}_*.zip")
-                .Select(filePath => new { filePath, createdAt = new FileInfo(filePath).CreationTime })
-                .OrderByDescending(f => f.createdAt)
-                .FirstOrDefault();
+            var zipFilePath = Path.Combine(trainingZipsPath, $"{userId}.zip");
 
-            if (latestZipFile == null)
+            if (!System.IO.File.Exists(zipFilePath))
             {
                 return NotFound(new { success = false, error = new { code = "NoZipFiles", message = "No training ZIP files found for user." } });
             }
 
-            var fileName = Path.GetFileName(latestZipFile.filePath);
+            var fileName = Path.GetFileName(zipFilePath);
             var publicUrl = GetAbsoluteUrl($"/training-zips/{fileName}");
-            var fileInfo = new FileInfo(latestZipFile.filePath);
+            var fileInfo = new FileInfo(zipFilePath);
 
             return Ok(new { 
                 success = true, 
@@ -750,7 +769,7 @@ public class ProfileController : ControllerBase
                 return Unauthorized();
 
             // Validate that the filename belongs to the current user
-            if (!fileName.StartsWith($"{userId}_") || !fileName.EndsWith(".zip"))
+            if (fileName != $"{userId}.zip")
             {
                 return BadRequest(new { success = false, error = new { code = "InvalidFileName", message = "Invalid filename or access denied." } });
             }
@@ -802,20 +821,20 @@ public class ProfileController : ControllerBase
                 return Ok(new { success = true, data = new { deletedCount = 0, message = "No training ZIP files found." }, error = (object?)null });
             }
 
-            var userZipFiles = Directory.GetFiles(trainingZipsPath, $"{userId}_*.zip");
+            var zipFilePath = Path.Combine(trainingZipsPath, $"{userId}.zip");
             var deletedCount = 0;
 
-            foreach (var filePath in userZipFiles)
+            if (System.IO.File.Exists(zipFilePath))
             {
                 try
                 {
-                    System.IO.File.Delete(filePath);
-                    deletedCount++;
-                    _logger.LogInformation("Deleted training ZIP file {FilePath} for user {UserId}", filePath, userId);
+                    System.IO.File.Delete(zipFilePath);
+                    deletedCount = 1;
+                    _logger.LogInformation("Deleted training ZIP file {FilePath} for user {UserId}", zipFilePath, userId);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to delete training ZIP file {FilePath} for user {UserId}", filePath, userId);
+                    _logger.LogWarning(ex, "Failed to delete training ZIP file {FilePath} for user {UserId}", zipFilePath, userId);
                 }
             }
 
@@ -836,6 +855,83 @@ public class ProfileController : ControllerBase
     }
 
     /// <summary>
+    /// Manually set a trained model ID for testing purposes
+    /// </summary>
+    [HttpPost("set-model")]
+    public async Task<IActionResult> SetTrainedModel([FromBody] SetTrainedModelRequest request)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var userProfile = await _context.UserProfiles.FirstOrDefaultAsync(u => u.UserId == userId);
+            
+            if (userProfile == null)
+                return NotFound(new { success = false, error = new { code = "UserNotFound", message = "User profile not found." } });
+
+            if (string.IsNullOrEmpty(request.ModelId))
+                return BadRequest(new { success = false, error = new { code = "InvalidModelId", message = "Model ID cannot be empty." } });
+
+            // Optionally verify the model exists on Replicate
+            if (request.VerifyExists)
+            {
+                bool modelExists = await _replicateApiClient.CheckModelExistsAsync(request.ModelId);
+                if (!modelExists)
+                {
+                    return BadRequest(new { 
+                        success = false, 
+                        error = new { 
+                            code = "ModelNotFound", 
+                            message = $"Model '{request.ModelId}' does not exist on Replicate." 
+                        } 
+                    });
+                }
+            }
+
+            // Create or update ModelCreationRequest with the model information
+            var existingModel = await _context.ModelCreationRequests
+                .Where(m => m.UserId == userId && m.ReplicateModelId == request.ModelId)
+                .FirstOrDefaultAsync();
+
+            if (existingModel != null)
+            {
+                existingModel.TrainedModelVersion = request.VersionId;
+                existingModel.Status = ModelCreationStatus.Ready;
+                existingModel.CompletedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                var newModel = new ModelCreationRequest
+                {
+                    UserId = userId,
+                    ModelName = request.ModelId,
+                    ReplicateModelId = request.ModelId,
+                    TrainedModelVersion = request.VersionId,
+                    Status = ModelCreationStatus.Ready,
+                    CompletedAt = DateTime.UtcNow
+                };
+                _context.ModelCreationRequests.Add(newModel);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { 
+                success = true, 
+                data = new { 
+                    modelId = request.ModelId,
+                    versionId = request.VersionId,
+                    modelTrainedAt = DateTime.UtcNow,
+                    message = "Model ID set successfully." 
+                }, 
+                error = (object?)null 
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, error = new { code = "InternalError", message = "An error occurred while setting the model.", details = ex.Message } });
+        }
+    }
+
+    /// <summary>
     /// Checks and updates the user's model status by verifying if the model still exists on Replicate
     /// </summary>
     [HttpPost("check-model-status")]
@@ -850,7 +946,9 @@ public class ProfileController : ControllerBase
                 return NotFound(new { success = false, error = new { code = "UserNotFound", message = "User profile not found." } });
 
             // If user doesn't have a trained model, nothing to check
-            if (string.IsNullOrEmpty(userProfile.TrainedModelId))
+            // Check ModelCreationRequest table for model availability
+        var hasModel = await GetLatestTrainedModelAsync(userId) != null;
+        if (!hasModel)
             {
                 return Ok(new { 
                     success = true, 
@@ -864,17 +962,16 @@ public class ProfileController : ControllerBase
             }
 
             // Check if model exists on Replicate
-            bool modelExists = await _replicateApiClient.CheckModelExistsAsync(userProfile.TrainedModelId);
+            // bool modelExists = await _replicateApiClient.CheckModelExistsAsync(userProfile.TrainedModelId); // TODO: Use ModelCreationRequest
+            bool modelExists = false;
             
             if (!modelExists)
             {
                 // Model was deleted from Replicate, clear it from our database
                 _logger.LogWarning("Model {ModelId} for user {UserId} no longer exists on Replicate, clearing from database", 
-                    userProfile.TrainedModelId, userId);
+                    "unknown-model", userId); // TODO: Use ModelCreationRequest
                 
-                userProfile.TrainedModelId = null;
-                userProfile.TrainedModelVersionId = null;
-                userProfile.ModelTrainedAt = null;
+                // Model data is now managed in ModelCreationRequest table
                 userProfile.UpdatedAt = DateTime.UtcNow;
                 
                 await _context.SaveChangesAsync();
@@ -895,7 +992,7 @@ public class ProfileController : ControllerBase
                 data = new { 
                     modelExists = true, 
                     modelStatus = "active",
-                    modelId = userProfile.TrainedModelId,
+                    modelId = "unknown", // TODO: Use ModelCreationRequest
                     message = "Model exists and is accessible." 
                 }, 
                 error = (object?)null 
@@ -972,7 +1069,7 @@ public class ProfileController : ControllerBase
                 InputPhotos = inputPhotos,
                 GeneratedPhotos = generatedPhotos,
                 EnhancedPhotos = enhancedPhotos,
-                HasTrainedModel = !string.IsNullOrEmpty(profile.TrainedModelId),
+                HasTrainedModel = false, // Use ModelCreationRequest table for model status
                 TotalDataSize = estimatedDataSize,
                 AccountAge = (DateTime.UtcNow - profile.CreatedAt).Days,
                 UsageLogCount = profile.UsageLogs.Count
@@ -1076,28 +1173,38 @@ public class ProfileController : ControllerBase
             if (profile == null)
                 return NotFound("Profile not found");
 
-            if (string.IsNullOrEmpty(profile.TrainedModelId))
+            // Check ModelCreationRequest table for model availability
+        var hasModel = await GetLatestTrainedModelAsync(userId) != null;
+        if (!hasModel)
             {
                 return BadRequest(new { success = false, error = new { code = "NoModel", message = "No trained model found to delete." } });
             }
 
-            var modelId = profile.TrainedModelId;
-
-            // Try to delete model from Replicate (best effort)
-            try
+            // Get model from ModelCreationRequest
+            var trainedModel = await GetLatestTrainedModelAsync(userId);
+            if (trainedModel != null && !string.IsNullOrEmpty(trainedModel.ReplicateModelId))
             {
-                await _replicateApiClient.DeleteModelAsync(modelId);
-                _logger.LogInformation("Successfully deleted model {ModelId} from Replicate for user {UserId}", modelId, userId);
-            }
-            catch (Exception replicateEx)
-            {
-                _logger.LogWarning(replicateEx, "Failed to delete model {ModelId} from Replicate for user {UserId}, continuing with database cleanup", modelId, userId);
+                var modelId = trainedModel.ReplicateModelId;
+                
+                // Try to delete model from Replicate (best effort)
+                try
+                {
+                    await _replicateApiClient.DeleteModelAsync(modelId);
+                    _logger.LogInformation("Successfully deleted model {ModelId} from Replicate for user {UserId}", modelId, userId);
+                }
+                catch (Exception replicateEx)
+                {
+                    _logger.LogWarning(replicateEx, "Failed to delete model {ModelId} from Replicate for user {UserId}, continuing with database cleanup", modelId, userId);
+                }
+                
+                // Mark model as deleted in ModelCreationRequest
+                trainedModel.Status = ModelCreationStatus.Failed;
+                trainedModel.ErrorMessage = "Model deleted by user";
+                await _context.SaveChangesAsync();
             }
 
             // Clear model information from database
-            profile.TrainedModelId = null;
-            profile.TrainedModelVersionId = null;
-            profile.ModelTrainedAt = null;
+            // Model data is now managed in ModelCreationRequest table
             profile.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -1108,10 +1215,10 @@ public class ProfileController : ControllerBase
                 var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
                 if (Directory.Exists(trainingZipsPath))
                 {
-                    var userZipFiles = Directory.GetFiles(trainingZipsPath, $"{userId}_*.zip");
-                    foreach (var zipFile in userZipFiles)
+                    var userZipFile = Path.Combine(trainingZipsPath, $"{userId}.zip");
+                    if (System.IO.File.Exists(userZipFile))
                     {
-                        System.IO.File.Delete(zipFile);
+                        System.IO.File.Delete(userZipFile);
                     }
                 }
             }
@@ -1213,11 +1320,13 @@ public class ProfileController : ControllerBase
 
             // Delete AI model if exists
             var modelDeleted = false;
-            if (!string.IsNullOrEmpty(profile.TrainedModelId))
+            // Check ModelCreationRequest table for model availability
+        var hasModel = await GetLatestTrainedModelAsync(userId) != null;
+        if (hasModel)
             {
                 try
                 {
-                    await _replicateApiClient.DeleteModelAsync(profile.TrainedModelId);
+                    // await _replicateApiClient.DeleteModelAsync(profile.TrainedModelId); // TODO: Use ModelCreationRequest
                     modelDeleted = true;
                 }
                 catch (Exception ex)
@@ -1226,9 +1335,9 @@ public class ProfileController : ControllerBase
                 }
 
                 // Clear model information from database
-                profile.TrainedModelId = null;
-                profile.TrainedModelVersionId = null;
-                profile.ModelTrainedAt = null;
+                // profile.TrainedModelId = null; // TODO: Mark ModelCreationRequest as deleted
+                // profile.TrainedModelVersionId = null;
+                // profile.ModelTrainedAt = null; // Moved to ModelCreationRequest
             }
 
             // Delete training ZIP files
@@ -1237,10 +1346,10 @@ public class ProfileController : ControllerBase
                 var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
                 if (Directory.Exists(trainingZipsPath))
                 {
-                    var userZipFiles = Directory.GetFiles(trainingZipsPath, $"{userId}_*.zip");
-                    foreach (var zipFile in userZipFiles)
+                    var userZipFile = Path.Combine(trainingZipsPath, $"{userId}.zip");
+                    if (System.IO.File.Exists(userZipFile))
                     {
-                        System.IO.File.Delete(zipFile);
+                        System.IO.File.Delete(userZipFile);
                     }
                 }
             }
@@ -1356,6 +1465,9 @@ public class ProfileController : ControllerBase
             if (profile == null)
                 return NotFound("Profile not found");
 
+            // Get model info from ModelCreationRequest
+            var latestModel = await GetLatestTrainedModelAsync(userId);
+
             var exportData = new
             {
                 Profile = new
@@ -1370,8 +1482,8 @@ public class ProfileController : ControllerBase
                     profile.PurchasedCredits,
                     profile.CreatedAt,
                     profile.UpdatedAt,
-                    HasTrainedModel = !string.IsNullOrEmpty(profile.TrainedModelId),
-                    ModelTrainedAt = profile.ModelTrainedAt
+                    HasTrainedModel = latestModel != null,
+                    ModelTrainedAt = latestModel?.CompletedAt
                 },
                 Images = profile.ProcessedImages.Where(i => !i.IsDeleted).Select(i => new
                 {
@@ -1470,11 +1582,12 @@ public class ProfileController : ControllerBase
         }
 
         // Delete AI model
-        if (!string.IsNullOrEmpty(profile.TrainedModelId))
+        var trainedModel = await GetLatestTrainedModelAsync(userId);
+        if (trainedModel != null && !string.IsNullOrEmpty(trainedModel.ReplicateModelId))
         {
             try
             {
-                await _replicateApiClient.DeleteModelAsync(profile.TrainedModelId);
+                await _replicateApiClient.DeleteModelAsync(trainedModel.ReplicateModelId);
             }
             catch (Exception ex)
             {
@@ -1488,10 +1601,10 @@ public class ProfileController : ControllerBase
             var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
             if (Directory.Exists(trainingZipsPath))
             {
-                var userZipFiles = Directory.GetFiles(trainingZipsPath, $"{userId}_*.zip");
-                foreach (var zipFile in userZipFiles)
+                var userZipFile = Path.Combine(trainingZipsPath, $"{userId}.zip");
+                if (System.IO.File.Exists(userZipFile))
                 {
-                    System.IO.File.Delete(zipFile);
+                    System.IO.File.Delete(userZipFile);
                 }
             }
         }

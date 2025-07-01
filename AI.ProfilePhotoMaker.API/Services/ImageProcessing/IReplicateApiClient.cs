@@ -120,4 +120,25 @@ public interface IReplicateApiClient
     /// <param name="input">Input parameters for the model</param>
     /// <returns>The prediction result</returns>
     Task<ReplicatePredictionResult> CreatePredictionAsync(string modelId, Dictionary<string, object> input);
+
+    /// <summary>
+    /// Finds existing trained models for a user by scanning Replicate API
+    /// </summary>
+    /// <param name="userId">The user ID to search for</param>
+    /// <returns>List of discovered user models</returns>
+    Task<List<ReplicateModelInfo>> FindUserModelsByPatternAsync(string userId);
+    
+    /// <summary>
+    /// Gets the latest version ID for a specific model from Replicate API
+    /// </summary>
+    /// <param name="modelId">The model ID in format owner/model-name</param>
+    /// <returns>The latest version ID hash or null if not found</returns>
+    Task<string?> GetModelVersionAsync(string modelId);
+    
+    /// <summary>
+    /// Checks if a model exists and is available on Replicate
+    /// </summary>
+    /// <param name="modelId">The model ID in format owner/model-name</param>
+    /// <returns>True if model exists and is available</returns>
+    Task<bool> CheckModelAvailabilityAsync(string modelId);
 }
