@@ -48,6 +48,15 @@ export class DashboardStateService {
 
   private readonly _state = new BehaviorSubject<DashboardState>(this.initialState);
   readonly state$ = this._state.asObservable();
+  private lastLoadTime = 0;
+  private readonly LOAD_DEBOUNCE_MS = 1000; // Prevent rapid reloads
+  private cacheExpiry = 0;
+  private readonly CACHE_DURATION_MS = 30000; // 30 seconds cache
+  private fallbackOperationsRun = {
+    filesystemCheck: false,
+    modelDiscovery: false,
+    lastReset: 0
+  };
 
   constructor(
     private profileService: ProfileService,
@@ -73,22 +82,33 @@ export class DashboardStateService {
   }
 
   loadInitialDashboardData() {
-    this.setState({ isLoading: true });
+    const now = Date.now();
+    
+    // Check cache first
+    if (now < this.cacheExpiry && !this.getState().isLoading) {
+      console.log('💾 Using cached dashboard data - cache still valid');
+      return;
+    }
+    
+    // Debounce rapid reloads
+    if (now - this.lastLoadTime < this.LOAD_DEBOUNCE_MS) {
+      console.log('🚫 Skipping dashboard reload - too soon after last load');
+      return;
+    }
+    this.lastLoadTime = now;
 
-    // Load critical data first (non-blocking)
+    this.setState({ isLoading: true });
+    const loadStartTime = performance.now();
+
+    // Load only critical data first for faster initial render
     forkJoin({
       profile: this.profileService.getCurrentUserProfile(),
-      credits: this.replicateService.getCredits(),
       creditStatus: this.creditService.getCreditStatus(),
-      trainingStatus: this.fileUploadService.getTrainingStatus(),
-      userImages: this.fileUploadService.getUserImages(),
-      modelRequests: this.fileUploadService.getUserModelRequests()
+      userImages: this.fileUploadService.getUserImages()
     }).subscribe({
-      next: ({ profile, credits, creditStatus, trainingStatus, userImages, modelRequests }) => {
+      next: ({ profile, creditStatus, userImages }) => {
         const userProfile = profile.success ? profile.data : null;
-        const creditsInfo = credits.success ? credits.data : null;
         const userCreditStatus = creditStatus.success ? creditStatus.data : null;
-        const modelRequestsData = modelRequests.success ? modelRequests.data : null;
         
         // Process uploaded images into thumbnails format
         const uploadedImageThumbnails: UploadedImageThumbnail[] = userImages.images
@@ -103,14 +123,76 @@ export class DashboardStateService {
         let generatedPhotosCount = userImages.generatedImages || 
           userImages.images.filter(img => img.isGenerated).length;
         
-        // Hybrid approach: If database shows 0 generated images but we know they should exist,
-        // try to get count from filesystem as fallback
-        if (generatedPhotosCount === 0 && modelRequestsData?.hasTrainedModel) {
-          console.log('📁 Database shows 0 generated images but model exists - checking filesystem fallback');
-          this.checkGeneratedImagesFromFilesystem();
+        console.log(`📊 Generated Photos Count: ${generatedPhotosCount}`);
+        
+        // Check if we need immediate filesystem repair
+        if (generatedPhotosCount === 0 && uploadedImageThumbnails.length > 0) {
+          console.log('⚠️ Found 0 generated photos but have uploaded images - may need filesystem check');
         }
         
-        console.log(`📊 Generated Photos Count: ${generatedPhotosCount}${generatedPhotosCount === 0 && modelRequestsData?.hasTrainedModel ? ' (checking for missing images...)' : ''}`);
+        // Set initial state with critical data for fast render
+        this.setState({
+          userProfile,
+          userCreditStatus,
+          uploadedImages: uploadedImageThumbnails.length,
+          uploadedImageThumbnails,
+          generatedPhotosCount,
+          modelStatus: 'Loading...', // Temporary status
+          isPremiumWorkflow: (userCreditStatus?.purchasedCredits || 0) > 0,
+          isLoading: false
+        });
+
+        // Set cache expiry for successful load
+        this.cacheExpiry = Date.now() + this.CACHE_DURATION_MS;
+        const loadTime = performance.now() - loadStartTime;
+        console.log(`⚡ Dashboard loaded in ${loadTime.toFixed(2)}ms`);
+        console.log('💾 Dashboard data cached for 30 seconds');
+
+        // Load remaining data asynchronously (non-blocking)
+        this.loadRemainingDataAsync();
+      },
+      error: (error) => {
+        console.error('Dashboard API call failed:', error);
+        this.notificationService.error('Dashboard Load Failed', 'Could not load dashboard data. Please try again.');
+        this.setState({ isLoading: false });
+      }
+    });
+  }
+
+  resetState() {
+    this._state.next(this.initialState);
+    this.cacheExpiry = 0; // Clear cache on reset
+  }
+
+  // Force refresh by clearing cache and reloading
+  forceRefresh() {
+    console.log('🔄 Force refreshing dashboard data...');
+    this.cacheExpiry = 0;
+    this.lastLoadTime = 0;
+    this.fallbackOperationsRun = { filesystemCheck: false, modelDiscovery: false, lastReset: Date.now() };
+    this.fileUploadService.invalidateUserImagesCache();
+    this.loadInitialDashboardData();
+  }
+
+  // Sync user images cache with current state
+  invalidateAndRefreshImages() {
+    console.log('🔄 Invalidating image caches and refreshing data');
+    this.fileUploadService.invalidateUserImagesCache();
+    this.refreshGeneratedPhotosCount();
+  }
+
+  // Load remaining data asynchronously after initial render
+  private loadRemainingDataAsync() {
+    // Load non-critical data in parallel but don't block rendering
+    forkJoin({
+      credits: this.replicateService.getCredits(),
+      trainingStatus: this.fileUploadService.getTrainingStatus(),
+      modelRequests: this.fileUploadService.getUserModelRequests()
+    }).subscribe({
+      next: ({ credits, trainingStatus, modelRequests }) => {
+        const currentState = this.getState();
+        const creditsInfo = credits.success ? credits.data : null;
+        const modelRequestsData = modelRequests.success ? modelRequests.data : null;
         
         // Determine model status from ModelCreationRequest (single source of truth)
         let modelStatus = 'Not Started';
@@ -130,35 +212,45 @@ export class DashboardStateService {
           modelStatus = trainingStatus.status || 'Not Started';
         }
         
+        // Update state with additional data
         this.setState({
-          userProfile,
           creditsInfo,
-          userCreditStatus,
-          uploadedImages: trainingStatus.totalUploadedImages || 0,
-          uploadedImageThumbnails,
-          generatedPhotosCount,
+          uploadedImages: trainingStatus.totalUploadedImages || currentState.uploadedImages,
           modelStatus,
-          isPremiumWorkflow: (userCreditStatus?.purchasedCredits || 0) > 0,
-          isLoading: false,
           latestTrainedModel: modelRequestsData?.latestTrainedModel || null
         });
 
-        // Now run model discovery asynchronously (non-blocking)
-        // Only if model status suggests we might need it
-        if (!hasTrainedModel || modelStatus === 'Not Started') {
+        // Reset fallback tracking every 5 minutes to allow fresh attempts
+        const now = Date.now();
+        if (now - this.fallbackOperationsRun.lastReset > 300000) { // 5 minutes
+          this.fallbackOperationsRun = { filesystemCheck: false, modelDiscovery: false, lastReset: now };
+          console.log('🔄 Reset fallback operation tracking');
+        }
+
+        // Check filesystem if needed - but only once per session unless reset
+        if (currentState.generatedPhotosCount === 0 && 
+            modelRequestsData?.hasTrainedModel && 
+            !this.fallbackOperationsRun.filesystemCheck) {
+          console.log('📁 Database shows 0 generated images but model exists - checking filesystem fallback');
+          this.fallbackOperationsRun.filesystemCheck = true;
+          this.checkGeneratedImagesFromFilesystem();
+        }
+
+        // Run model discovery if needed - but only once per session unless reset
+        if ((!hasTrainedModel || modelStatus === 'Not Started') && 
+            !this.fallbackOperationsRun.modelDiscovery) {
+          console.log('🔍 Running model discovery...');
+          this.fallbackOperationsRun.modelDiscovery = true;
           this.runAsyncModelDiscovery();
         }
+        
+        console.log('✅ Dashboard secondary data loaded successfully');
       },
       error: (error) => {
-        console.error('Dashboard API call failed:', error);
-        this.notificationService.error('Dashboard Load Failed', 'Could not load dashboard data. Please try again.');
-        this.setState({ isLoading: false });
+        console.error('Failed to load additional dashboard data:', error);
+        // Don't show error to user since initial data loaded successfully
       }
     });
-  }
-
-  resetState() {
-    this._state.next(this.initialState);
   }
 
   // Run model discovery asynchronously without blocking the UI
@@ -297,8 +389,26 @@ export class DashboardStateService {
       next: (response: any) => {
         if (response.success && response.data?.addedCount > 0) {
           console.log(`✅ Auto-fixed: Added ${response.data.addedCount} generated images to database`);
-          // Refresh the dashboard data to reflect the newly added images
-          this.loadInitialDashboardData();
+          // Instead of just adding, let's refresh the actual count from the API
+          this.fileUploadService.invalidateUserImagesCache();
+          this.cacheExpiry = 0;
+          
+          // Get fresh data to ensure we have the correct total count
+          this.fileUploadService.getUserImages(true).subscribe({
+            next: (freshData) => {
+              const actualGeneratedCount = freshData.generatedImages || 
+                freshData.images.filter(img => img.isGenerated).length;
+              
+              this.setState({
+                generatedPhotosCount: actualGeneratedCount
+              });
+              
+              console.log(`📊 Refreshed generated photos count: ${actualGeneratedCount} (was ${response.data.addedCount} added)`);
+            },
+            error: (error) => {
+              console.error('Failed to refresh generated photos count after fix:', error);
+            }
+          });
         } else {
           console.log('ℹ️ No missing generated images found to fix');
         }
@@ -310,14 +420,94 @@ export class DashboardStateService {
     });
   }
 
+  // Intelligent fallback operations - only run when actually needed
+  checkIfFallbackNeeded() {
+    const state = this.getState();
+    
+    console.log('🔍 Checking if fallback needed with state:', {
+      generatedPhotosCount: state.generatedPhotosCount,
+      modelStatus: state.modelStatus,
+      hasLatestTrainedModel: !!state.latestTrainedModel,
+      uploadedImages: state.uploadedImages,
+      hasUserProfile: !!state.userProfile
+    });
+    
+    // Check filesystem if we have 0 photos but evidence of a trained model
+    const shouldCheckFilesystem = 
+      state.generatedPhotosCount === 0 && 
+      (state.latestTrainedModel || state.modelStatus === 'Model Ready') &&
+      state.userProfile; // User has been active
+      
+    // Discover models if we're missing model data but have uploads
+    const shouldDiscoverModels = 
+      state.modelStatus === 'Not Started' && 
+      state.uploadedImages > 0 &&
+      !state.latestTrainedModel;
+    
+    if (shouldCheckFilesystem) {
+      console.log('🔍 Data inconsistency detected - checking filesystem for missing images');
+      this.checkGeneratedImagesFromFilesystem();
+    }
+    
+    if (shouldDiscoverModels) {
+      console.log('🔍 Missing model data detected - running model discovery');
+      this.runAsyncModelDiscovery();
+    }
+    
+    if (!shouldCheckFilesystem && !shouldDiscoverModels) {
+      console.log('✅ No fallback operations needed - data appears consistent');
+    }
+  }
+
+  // Debug method to check actual data vs displayed data
+  async debugDataDiscrepancy() {
+    console.log('🔍 Debugging data discrepancy...');
+    
+    try {
+      const freshData = await this.fileUploadService.getUserImages(true).toPromise();
+      const currentState = this.getState();
+      
+      console.log('📊 Data Discrepancy Analysis:');
+      console.log('  Dashboard shows:', currentState.generatedPhotosCount);
+      console.log('  API generatedImages field:', freshData?.generatedImages);
+      console.log('  Filtered generated count:', freshData?.images.filter(img => img.isGenerated).length);
+      console.log('  Total images:', freshData?.totalImages);
+      console.log('  All images:', freshData?.images.map(img => ({
+        id: img.id,
+        isGenerated: img.isGenerated,
+        style: img.style,
+        fileExists: img.fileExists
+      })));
+      
+      return {
+        dashboardCount: currentState.generatedPhotosCount,
+        apiGeneratedField: freshData?.generatedImages,
+        filteredCount: freshData?.images.filter(img => img.isGenerated).length,
+        totalImages: freshData?.totalImages,
+        allImages: freshData?.images
+      };
+    } catch (error) {
+      console.error('Failed to debug data discrepancy:', error);
+      return { error };
+    }
+  }
+
   // Make debug methods globally accessible
   enableGlobalDebug() {
     (window as any).debugDashboard = () => this.debugModelStatus();
     (window as any).discoverModels = () => this.triggerModelDiscovery();
     (window as any).fixGeneratedImages = () => this.checkGeneratedImagesFromFilesystem();
+    (window as any).checkFallback = () => this.checkIfFallbackNeeded();
+    (window as any).forceRefresh = () => this.forceRefresh();
+    (window as any).invalidateImages = () => this.invalidateAndRefreshImages();
+    (window as any).debugData = () => this.debugDataDiscrepancy();
     console.log('🔍 Debug enabled! Available commands:');
     console.log('  - debugDashboard() - Run comprehensive model debug');
     console.log('  - discoverModels() - Manually trigger model discovery');
     console.log('  - fixGeneratedImages() - Fix missing generated images from filesystem');
+    console.log('  - checkFallback() - Check if fallback operations are needed');
+    console.log('  - forceRefresh() - Force refresh dashboard data (clears cache)');
+    console.log('  - invalidateImages() - Invalidate image caches and refresh');
+    console.log('  - debugData() - Check data discrepancy between dashboard and API');
   }
 }

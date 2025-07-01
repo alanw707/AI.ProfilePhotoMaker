@@ -200,7 +200,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
     
     // Progress to Step 3 if photos are generated (future enhancement)
-    if (this.generatedPhotos.length > 0 && this.currentStep === 2) {
+    if (this.generatedPhotosCount > 0 && this.currentStep === 2) {
       this.currentStep = 3;
     }
   }
@@ -741,51 +741,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   async downloadAll() {
-    if (this.generatedPhotos.length === 0) {
-      this.notificationService.error('Download Error', 'No photos to download');
-      return;
-    }
-
-    this.isDownloadingZip = true;
-    
-    try {
-      // Lazy load JSZip only when needed
-      const JSZip = (await import('jszip')).default;
-      const zip = new JSZip();
-      const promises: Promise<void>[] = [];
-
-      this.generatedPhotos.forEach((photo) => {
-        const promise = fetch(photo.url)
-          .then(response => response.blob())
-          .then(blob => {
-            const filename = `generated-photo-${photo.style}-${photo.id}.jpg`;
-            zip.file(filename, blob);
-          })
-          .catch(error => {
-            console.error(`Failed to download photo ${photo.id}:`, error);
-          });
-        
-        promises.push(promise);
-      });
-
-      await Promise.all(promises);
-      
-      const content = await zip.generateAsync({ type: 'blob' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(content);
-      link.download = 'generated-photos.zip';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
-      
-      this.isDownloadingZip = false;
-      this.notificationService.success('Download Success', 'All photos downloaded successfully');
-    } catch (error) {
-      console.error('Failed to create zip file:', error);
-      this.isDownloadingZip = false;
-      this.notificationService.error('Download Error', 'Failed to download photos');
-    }
+    // Since the dashboard doesn't have direct access to photo data,
+    // redirect users to the gallery where they can download photos
+    this.notificationService.info('Gallery Navigation', 'Redirecting to gallery to view and download your photos');
+    this.router.navigate(['/gallery']);
   }
 
 
@@ -815,13 +774,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
       
       case 2:
         // Step 2 is active when Step 1 is completed (has uploaded images)
-        if (hasUploadedImages && this.generatedPhotos.length === 0) return 'active';
-        if (this.generatedPhotos.length > 0) return 'completed';
+        if (hasUploadedImages && this.generatedPhotosCount === 0) return 'active';
+        if (this.generatedPhotosCount > 0) return 'completed';
         return 'pending';
       
       case 3:
-        // Step 3 is active when photos are generated
-        if (this.generatedPhotos.length > 0) return 'active';
+        // Step 3 is completed when photos are generated
+        if (this.generatedPhotosCount > 0) return 'completed';
         return 'pending';
       
       default:

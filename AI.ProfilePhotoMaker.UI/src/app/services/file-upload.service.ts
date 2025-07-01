@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpEventType } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable, map, of, tap } from 'rxjs';
 import { ConfigService } from './config.service';
 
 export interface UploadResponse {
@@ -49,6 +49,10 @@ export interface TrainingStatusResponse {
   providedIn: 'root'
 })
 export class FileUploadService {
+  private userImagesCache: UserImagesResponse | null = null;
+  private userImagesCacheExpiry = 0;
+  private readonly USER_IMAGES_CACHE_DURATION = 60000; // 60 seconds
+
   constructor(private http: HttpClient, private config: ConfigService) {}
 
   uploadImages(files: File[], profileData?: {
@@ -92,12 +96,43 @@ export class FileUploadService {
     );
   }
 
-  getUserImages(): Observable<UserImagesResponse> {
-    return this.http.get<UserImagesResponse>(this.config.getFullUrl('/profile/images'));
+  getUserImages(forceRefresh: boolean = false): Observable<UserImagesResponse> {
+    const now = Date.now();
+    
+    // Return cached data if available and not expired
+    if (!forceRefresh && this.userImagesCache && now < this.userImagesCacheExpiry) {
+      console.log('💾 Using cached user images data');
+      return of(this.userImagesCache);
+    }
+    
+    console.log('🌐 Fetching fresh user images data from API');
+    return this.http.get<UserImagesResponse>(this.config.getFullUrl('/profile/images')).pipe(
+      tap(response => {
+        this.userImagesCache = response;
+        this.userImagesCacheExpiry = now + this.USER_IMAGES_CACHE_DURATION;
+        console.log(`📊 Cached user images: ${response.totalImages} total, ${response.generatedImages} generated`);
+      })
+    );
   }
 
   deleteImage(imageId: number): Observable<{ success: boolean; message: string }> {
-    return this.http.delete<{ success: boolean; message: string }>(this.config.getFullUrl(`/profile/images/${imageId}`));
+    return this.http.delete<{ success: boolean; message: string }>(this.config.getFullUrl(`/profile/images/${imageId}`)).pipe(
+      tap(() => {
+        // Invalidate cache when image is deleted
+        this.invalidateUserImagesCache();
+      })
+    );
+  }
+
+  // Cache management methods
+  invalidateUserImagesCache(): void {
+    console.log('🗑️ Invalidating user images cache');
+    this.userImagesCache = null;
+    this.userImagesCacheExpiry = 0;
+  }
+
+  refreshUserImagesCache(): Observable<UserImagesResponse> {
+    return this.getUserImages(true);
   }
 
   getTrainingStatus(): Observable<TrainingStatusResponse> {
