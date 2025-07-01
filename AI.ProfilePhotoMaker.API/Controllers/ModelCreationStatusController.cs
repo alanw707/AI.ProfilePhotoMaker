@@ -1,7 +1,9 @@
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace AI.ProfilePhotoMaker.API.Controllers;
 
@@ -10,6 +12,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/model-creation")]
+[Authorize]
 public class ModelCreationStatusController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
@@ -21,6 +24,83 @@ public class ModelCreationStatusController : ControllerBase
     {
         _context = context;
         _logger = logger;
+    }
+
+    private string? GetCurrentUserId()
+    {
+        return User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    }
+
+    /// <summary>
+    /// Get all model creation requests for the current authenticated user
+    /// </summary>
+    [HttpGet("user/current")]
+    public async Task<IActionResult> GetCurrentUserModelRequests()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "User not authenticated",
+                    error = new { code = "Unauthorized", message = "User ID not found in token" }
+                });
+            }
+
+            var modelRequests = await _context.ModelCreationRequests
+                .Where(r => r.UserId == userId)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            // Find the most recent completed model
+            var completedModel = modelRequests
+                .FirstOrDefault(r => r.Status == ModelCreationStatus.Ready && !string.IsNullOrEmpty(r.TrainedModelVersion));
+
+            // ModelCreationRequest is now the single source of truth for model data
+
+            return Ok(new
+            {
+                success = true,
+                message = $"Found {modelRequests.Count} model creation requests for current user",
+                data = new
+                {
+                    totalRequests = modelRequests.Count,
+                    hasTrainedModel = completedModel != null,
+                    latestTrainedModel = completedModel != null ? new
+                    {
+                        requestId = completedModel.Id,
+                        modelName = completedModel.ModelName,
+                        replicateModelId = completedModel.ReplicateModelId,
+                        trainedModelVersion = completedModel.TrainedModelVersion,
+                        completedAt = completedModel.CompletedAt
+                    } : null,
+                    allRequests = modelRequests.Select(r => new
+                    {
+                        requestId = r.Id,
+                        modelName = r.ModelName,
+                        replicateModelId = r.ReplicateModelId,
+                        trainedModelVersion = r.TrainedModelVersion,
+                        status = r.Status.ToString().ToLower(),
+                        createdAt = r.CreatedAt,
+                        completedAt = r.CompletedAt,
+                        errorMessage = r.ErrorMessage
+                    })
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving model creation requests for current user");
+            return StatusCode(500, new
+            {
+                success = false,
+                message = "Error retrieving model creation requests",
+                error = new { code = "InternalError", message = ex.Message }
+            });
+        }
     }
 
     /// <summary>

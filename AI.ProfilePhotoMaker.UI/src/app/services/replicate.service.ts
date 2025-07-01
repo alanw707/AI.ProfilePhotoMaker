@@ -13,6 +13,7 @@ export interface GenerateImagesRequest {
   userId: string;
   style: string;
   userInfo?: UserInfo;
+  numOutputs?: number; // Number of images to generate (1-4)
 }
 
 export interface GenerateBasicImageRequest {
@@ -103,6 +104,13 @@ export class ReplicateService {
   // Credits Management
   getCredits(): Observable<{ success: boolean; data: CreditsInfo; error: any }> {
     return this.http.get<{ success: boolean; data: CreditsInfo; error: any }>(this.config.replicateCreditsUrl);
+  }
+
+  // Model Availability Check
+  checkModelAvailability(modelId: string): Observable<{ success: boolean; data: { available: boolean }; error: any }> {
+    return this.http.get<{ success: boolean; data: { available: boolean }; error: any }>(
+      this.config.getFullUrl(`/replicate/model/availability/${encodeURIComponent(modelId)}`)
+    );
   }
 
   // Photo Enhancement

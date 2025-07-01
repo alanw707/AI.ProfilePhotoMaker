@@ -307,3 +307,50 @@ ngrok http https://localhost:5035
 - **Training**: Uses `replicate/fast-flux-trainer` for custom model training (premium tier)
 - **Styled Generation**: Uses `black-forest-labs/flux-dev` for image generation with trained models (premium tier)
 - **Enhancement**: Uses `black-forest-labs/flux-kontext-pro` for photo enhancement (basic tier)
+
+## Development Best Practices
+
+### Code Organization and Structure
+- **Component Size Limits**: Keep Angular components under 400 lines. If larger, break into smaller components or extract logic into services
+- **Service Separation**: Business logic should be in services, not components. Components should only handle UI logic and user interaction
+- **File Organization**: Follow the principle of single responsibility - one class/interface per file
+- **Avoid Code Duplication**: Extract common functionality into shared services, utilities, or components
+
+### Backend (.NET) Best Practices
+- **Controller Responsibility**: Controllers should be thin and delegate business logic to services
+- **Service Layer**: Use dedicated service classes for complex business operations (e.g., `ImageDownloadService`, `BasicTierService`)
+- **Interface Segregation**: Create focused interfaces (e.g., `IImageDownloadService`) rather than large monolithic ones
+- **Error Handling**: Use try-catch blocks with proper logging and return appropriate HTTP status codes
+- **Dependency Injection**: Register all services in `Program.cs` and use constructor injection
+
+### Frontend (Angular) Best Practices
+- **Component Decomposition**: Break large components into smaller, focused components
+- **State Management**: Use services for shared state, avoid complex state in components
+- **Service Injection**: Inject services through constructor, not in methods
+- **Type Safety**: Always use TypeScript interfaces for API responses and data models
+- **Observable Patterns**: Use RxJS observables for asynchronous operations, avoid nested subscriptions
+
+### API Design Principles
+- **Batch Operations**: Use single API calls with parameters (e.g., `numOutputs`) instead of multiple individual calls
+- **Consistent Response Format**: All APIs should return `{ success: boolean, data?: any, error?: any }`
+- **Resource Organization**: Group related endpoints under logical controllers
+- **Validation**: Use DTOs with proper validation attributes
+
+### File and Resource Management
+- **Local Storage**: Store generated images locally in `/generated/{userId}/` for better control and reduced external dependencies
+- **Static File Serving**: Configure proper static file serving for all resource directories
+- **Cleanup Policies**: Implement automated retention policies with background services
+- **URL Management**: Use relative URLs for local resources, absolute URLs for external resources
+
+### Performance Considerations
+- **Image Processing**: Download and store images asynchronously to avoid blocking operations
+- **Database Operations**: Use appropriate indexes and avoid N+1 queries
+- **Background Services**: Use hosted services for long-running operations (e.g., credit resets, image cleanup)
+- **HTTP Clients**: Use `HttpClientFactory` for efficient HTTP client management
+
+### Security Best Practices
+- **Authentication**: Use JWT tokens with proper validation
+- **Authorization**: Apply `[Authorize]` attributes to protected endpoints
+- **Input Validation**: Validate all user inputs and API parameters
+- **Secret Management**: Use configuration and user secrets for sensitive data
+- **File Access**: Validate file paths and prevent directory traversal attacks

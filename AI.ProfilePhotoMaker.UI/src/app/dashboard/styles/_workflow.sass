@@ -101,5 +101,97 @@
         border: 1px solid rgba(160, 169, 192, 0.3)
 
   .step-content
-    padding: 24px
+    padding: 32px
     background: var(--bg-tertiary)
+    
+    // Step 3 specific styles
+    .retention-notice
+      margin-bottom: 28px
+      
+      .alert
+        background: rgba(125, 211, 216, 0.08)
+        border: 1px solid rgba(125, 211, 216, 0.2)
+        border-radius: 16px
+        padding: 20px 24px
+        display: flex
+        align-items: flex-start
+        gap: 12px
+        color: var(--text-secondary)
+        font-size: 14px
+        line-height: 1.6
+        
+        svg
+          flex-shrink: 0
+          stroke: var(--accent-primary)
+          margin-top: 2px
+          opacity: 0.8
+          
+        strong
+          color: var(--text-primary)
+          font-weight: 600
+          
+    .gallery-actions
+      display: flex
+      justify-content: center
+      
+      .gallery-action-btn
+        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))
+        color: #1e222a
+        border: none
+        padding: 16px 40px
+        font-size: 16px
+        font-weight: 600
+        border-radius: 14px
+        display: inline-flex
+        align-items: center
+        gap: 12px
+        cursor: pointer
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+        box-shadow: 0 4px 14px rgba(125, 211, 216, 0.25)
+        text-decoration: none
+        font-family: 'Poppins', sans-serif
+        letter-spacing: 0.02em
+        
+        &:hover
+          transform: translateY(-2px)
+          box-shadow: 0 8px 24px rgba(125, 211, 216, 0.35)
+          background: linear-gradient(135deg, #85dbe0, #a8e6a1)
+          
+        &:active
+          transform: translateY(-1px)
+          box-shadow: 0 4px 12px rgba(125, 211, 216, 0.3)
+          
+        svg
+          width: 20px
+          height: 20px
+          stroke: #1e222a
+          flex-shrink: 0
+          stroke-width: 2.5
+          
+        span
+          font-family: 'Poppins', sans-serif
+          line-height: 1
+          
+// Responsive styles for Step 3
+@media (max-width: 768px)
+  .step-content
+    padding: 24px 20px
+    
+    .retention-notice
+      margin-bottom: 20px
+      
+      .alert
+        padding: 16px
+        font-size: 13px
+        flex-direction: column
+        gap: 8px
+        
+        svg
+          margin-top: 0
+          
+    .gallery-actions
+      .gallery-action-btn
+        padding: 14px 24px
+        font-size: 15px
+        width: 100%
+        justify-content: center

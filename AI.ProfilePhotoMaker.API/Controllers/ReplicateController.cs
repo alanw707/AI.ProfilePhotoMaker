@@ -46,18 +46,25 @@ public class ReplicateController : ControllerBase
             return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
 
         // Check if user already has a trained model to prevent expensive re-training
-        var userProfile = await _dbContext.UserProfiles.FirstOrDefaultAsync(u => u.UserId == userId);
-        if (userProfile != null && !string.IsNullOrEmpty(userProfile.TrainedModelId))
+        var existingModel = await _dbContext.ModelCreationRequests
+            .Where(m => m.UserId == userId && m.Status == ModelCreationStatus.Ready)
+            .OrderByDescending(m => m.CompletedAt)
+            .FirstOrDefaultAsync();
+            
+        if (existingModel != null)
         {
-            _logger.LogWarning("User {UserId} attempted to train a new model but already has trained model {ModelId}", userId, userProfile.TrainedModelId);
+            _logger.LogWarning("User {UserId} attempted to train a new model but already has trained model {ModelId}", userId, existingModel.ReplicateModelId);
             return BadRequest(new { 
                 success = false, 
                 error = new { 
                     code = "ModelAlreadyTrained", 
-                    message = $"You already have a trained model ({userProfile.TrainedModelId}). You can generate photos using your existing model instead of training a new one." 
+                    message = $"You already have a trained model ({existingModel.ReplicateModelId}). You can generate photos using your existing model instead of training a new one." 
                 } 
             });
         }
+
+        // Get user profile for credit checking
+        var userProfile = await _dbContext.UserProfiles.FirstOrDefaultAsync(u => u.UserId == userId);
 
         // Check if user has sufficient purchased credits for training (15 credits required)
         var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
@@ -158,6 +165,56 @@ public class ReplicateController : ControllerBase
         {
             // Get user info from database for prompt generation
             var userProfile = await _dbContext.UserProfiles.FirstOrDefaultAsync(u => u.UserId == userId);
+            
+            // Get user's trained model from ModelCreationRequest
+            var trainedModel = await _dbContext.ModelCreationRequests
+                .Where(m => m.UserId == userId && m.Status == ModelCreationStatus.Ready)
+                .OrderByDescending(m => m.CompletedAt)
+                .FirstOrDefaultAsync();
+            
+            // Check if the model is still available on Replicate
+            if (trainedModel != null && !string.IsNullOrEmpty(trainedModel.ReplicateModelId))
+            {
+                var modelAvailable = await _replicateApiClient.CheckModelAvailabilityAsync(trainedModel.ReplicateModelId);
+                if (!modelAvailable)
+                {
+                    _logger.LogWarning("Model {ModelId} is no longer available on Replicate for user {UserId}", 
+                        trainedModel.ReplicateModelId, userId);
+                    
+                    // Mark the model as failed instead of deleting it
+                    trainedModel.Status = ModelCreationStatus.Failed;
+                    trainedModel.ErrorMessage = "Model no longer available on Replicate";
+                    await _dbContext.SaveChangesAsync();
+                    
+                    return BadRequest(new { 
+                        success = false, 
+                        error = new { 
+                            code = "ModelExpired", 
+                            message = "Your trained model has expired or been deleted. Please train a new model to generate styled images." 
+                        } 
+                    });
+                }
+            }
+            
+            // Ensure we have a model to use for generation
+            var modelVersionToUse = dto.TrainedModelVersion;
+            if (string.IsNullOrEmpty(modelVersionToUse) && trainedModel != null)
+            {
+                modelVersionToUse = trainedModel.TrainedModelVersion;
+                _logger.LogInformation("Using model version from database: {ModelVersion}", modelVersionToUse);
+            }
+            
+            if (string.IsNullOrEmpty(modelVersionToUse))
+            {
+                return BadRequest(new { 
+                    success = false, 
+                    error = new { 
+                        code = "NoModelAvailable", 
+                        message = "No trained model available for generation. Please train a model first." 
+                    } 
+                });
+            }
+            
             var userInfo = userProfile != null ? new UserInfo 
             { 
                 Gender = userProfile.Gender, 
@@ -167,7 +224,7 @@ public class ReplicateController : ControllerBase
             _logger.LogInformation("Retrieved user info from database: Gender={Gender}, Ethnicity={Ethnicity}", 
                 userInfo?.Gender ?? "NULL", userInfo?.Ethnicity ?? "NULL");
             
-            var result = await _replicateApiClient.GenerateImagesAsync(dto.TrainedModelVersion, dto.UserId, dto.Style, userInfo);
+            var result = await _replicateApiClient.GenerateImagesAsync(modelVersionToUse, dto.UserId, dto.Style, userInfo);
             
             // Only consume credits AFTER successful API call
             var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "styled_generation");
@@ -325,6 +382,44 @@ public class ReplicateController : ControllerBase
                 error = new { 
                     code = "GenerationFailed", 
                     message = "Failed to generate image. Please try again later." 
+                } 
+            });
+        }
+    }
+
+    /// <summary>
+    /// Checks if a model is available on Replicate
+    /// </summary>
+    [HttpGet("model/availability/{modelId}")]
+    public async Task<IActionResult> CheckModelAvailability(string modelId)
+    {
+        if (string.IsNullOrEmpty(modelId))
+            return BadRequest(new { success = false, error = new { code = "InvalidModel", message = "Model ID is required." } });
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+
+        try
+        {
+            // URL decode the model ID since it's passed as a path parameter
+            var decodedModelId = Uri.UnescapeDataString(modelId);
+            var isAvailable = await _replicateApiClient.CheckModelAvailabilityAsync(decodedModelId);
+            
+            return Ok(new { 
+                success = true, 
+                data = new { available = isAvailable },
+                error = (object?)null 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking model availability for model {ModelId}", modelId);
+            return StatusCode(500, new { 
+                success = false, 
+                error = new { 
+                    code = "AvailabilityCheckFailed", 
+                    message = "Failed to check model availability. Please try again later." 
                 } 
             });
         }
