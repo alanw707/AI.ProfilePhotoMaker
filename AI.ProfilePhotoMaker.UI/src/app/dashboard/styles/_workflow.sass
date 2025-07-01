@@ -172,6 +172,136 @@
           font-family: 'Poppins', sans-serif
           line-height: 1
           
+// Training Progress Card - Modern subtle design
+.training-progress-card
+  background: var(--card-bg)
+  border: none
+  border-radius: 16px
+  padding: 28px
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1)
+  margin-top: 20px
+  
+  .progress-header
+    display: flex
+    align-items: center
+    gap: 16px
+    margin-bottom: 24px
+    
+    .progress-icon
+      width: 48px
+      height: 48px
+      border-radius: 50%
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))
+      display: flex
+      align-items: center
+      justify-content: center
+      flex-shrink: 0
+      
+      &.spinning
+        animation: spin 2s linear infinite
+      
+      svg
+        stroke: #1e222a
+        stroke-width: 2
+    
+    .progress-title
+      flex: 1
+      
+      h4
+        color: var(--text-primary)
+        font-family: 'Poppins', sans-serif
+        font-size: 20px
+        font-weight: 600
+        margin: 0 0 4px 0
+        
+      .progress-subtitle
+        color: var(--text-secondary)
+        font-size: 14px
+        margin: 0
+        line-height: 1.4
+  
+  .progress-details
+    .progress-bar-container
+      display: flex
+      align-items: center
+      gap: 12px
+      margin-bottom: 20px
+      
+      .progress-bar
+        flex: 1
+        height: 8px
+        background: var(--border-color)
+        border-radius: 4px
+        overflow: hidden
+        
+        .progress-fill
+          height: 100%
+          background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))
+          border-radius: 4px
+          transition: width 0.3s ease
+      
+      .progress-percent
+        color: var(--text-primary)
+        font-family: 'Poppins', sans-serif
+        font-weight: 600
+        font-size: 14px
+        min-width: 35px
+        text-align: right
+    
+    .progress-info
+      display: grid
+      grid-template-columns: 1fr 1fr
+      gap: 16px
+      margin-bottom: 20px
+      
+      .info-item
+        display: flex
+        flex-direction: column
+        gap: 4px
+        
+        .info-label
+          color: var(--text-secondary)
+          font-size: 12px
+          font-weight: 500
+          text-transform: uppercase
+          letter-spacing: 0.5px
+          
+        .info-value
+          color: var(--text-primary)
+          font-size: 14px
+          font-weight: 500
+    
+    .progress-actions
+      display: flex
+      justify-content: center
+      
+      .btn
+        background: var(--bg-tertiary)
+        border: 1px solid var(--border-color)
+        color: var(--text-secondary)
+        padding: 10px 20px
+        font-size: 14px
+        font-weight: 500
+        border-radius: 8px
+        transition: all 0.2s ease
+        font-family: 'Poppins', sans-serif
+        cursor: pointer
+        
+        &:hover
+          background: var(--border-color)
+          color: var(--text-primary)
+          border-color: var(--accent-primary)
+          
+        &:active
+          transform: translateY(1px)
+
+// Spin animation for progress icon
+@keyframes spin
+  from
+    transform: rotate(0deg)
+  to
+    transform: rotate(360deg)
+
 // Responsive styles for Step 3
 @media (max-width: 768px)
   .step-content
@@ -195,3 +325,22 @@
         font-size: 15px
         width: 100%
         justify-content: center
+        
+  .training-progress-card
+    padding: 20px
+    
+    .progress-header
+      gap: 12px
+      margin-bottom: 20px
+      
+      .progress-icon
+        width: 40px
+        height: 40px
+      
+      .progress-title h4
+        font-size: 18px
+    
+    .progress-details
+      .progress-info
+        grid-template-columns: 1fr
+        gap: 12px
