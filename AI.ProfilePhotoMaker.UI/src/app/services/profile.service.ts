@@ -86,4 +86,20 @@ export class ProfileService {
       responseType: 'blob' 
     });
   }
+
+  // Model discovery endpoints using new SDK integration
+  discoverModels(): Observable<{ success: boolean; data: any; message?: string; error?: any }> {
+    return this.http.post<{ success: boolean; data: any; message?: string; error?: any }>(`${this.config.baseUrl}/model-discovery/sync`, {});
+  }
+
+  getModelSyncStatus(): Observable<{ success: boolean; data: any; error?: any }> {
+    return this.http.get<{ success: boolean; data: any; error?: any }>(`${this.config.baseUrl}/model-discovery/status`);
+  }
+
+  syncSpecificModel(modelId: string, versionId: string): Observable<{ success: boolean; message?: string; error?: any }> {
+    return this.http.post<{ success: boolean; message?: string; error?: any }>(`${this.config.baseUrl}/model-discovery/sync-specific`, {
+      modelId,
+      versionId
+    });
+  }
 }

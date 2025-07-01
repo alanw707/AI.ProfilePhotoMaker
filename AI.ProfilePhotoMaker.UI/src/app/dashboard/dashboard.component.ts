@@ -84,6 +84,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   generatedPhotos: GeneratedPhoto[] = [];
   selectedStyles: number = 0;
   qualityCheckErrors: QualityCheckError[] = [];
+  photoCompletionPollingInterval?: any;
+  initialPhotoCount: number = 0;
   
   // Progress tracking properties
   isTraining: boolean = false;
@@ -112,6 +114,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   get uploadedImageThumbnails(): Array<{id: number; url: string; fileName: string}> {
     return this.stateService.getState().uploadedImageThumbnails;
+  }
+
+  get generatedPhotosCount(): number {
+    return this.stateService.getState().generatedPhotosCount;
   }
 
   getTotalAvailableCredits(): number {
@@ -144,6 +150,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private replicateService: ReplicateService
   ) {
     this.state$ = this.stateService.state$;
+    
+    // Enable debug methods for troubleshooting
+    this.stateService.enableGlobalDebug();
   }
 
   ngOnInit() {
@@ -168,9 +177,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.cleanupFilePreviewCache();
     this.stateService.resetState();
-    // Clear any active polling interval
+    // Clear any active polling intervals
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval);
+    }
+    if (this.photoCompletionPollingInterval) {
+      clearInterval(this.photoCompletionPollingInterval);
     }
   }
 
@@ -373,15 +385,44 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.isTrainingStarted = true;
       this.currentStep = 3;
 
-      // Check if user already has a trained model
-      const userProfile = this.stateService.getState().userProfile;
+      // UNIFIED LOGIC: Use the same model status that determines the UI display
+      const currentState = this.stateService.getState();
+      const userProfile = currentState.userProfile;
+      const modelStatus = currentState.modelStatus;
+      const latestTrainedModel = currentState.latestTrainedModel;
       
-      if (userProfile?.trainedModelVersionId) {
-        // User has existing model, skip training and go straight to generation
-        this.notificationService.info('Using Existing Model', 'Using your previously trained model for generation');
-        await this.generateImagesWithStyles(selectedStyles, userProfile.trainedModelVersionId);
+      console.log('🎯 GENERATION LOGIC: Current model status:', modelStatus);
+      console.log('🎯 GENERATION LOGIC: Latest trained model:', latestTrainedModel);
+      
+      if (modelStatus === 'Model Ready') {
+        // If dashboard says Model Ready, we should generate, not train
+        console.log('✅ Model Ready detected - proceeding with generation');
+        
+        // Get the model version from ModelCreationRequest data
+        const modelVersion = latestTrainedModel?.trainedModelVersion || latestTrainedModel?.versionId;
+        const modelId = latestTrainedModel?.replicateModelId || latestTrainedModel?.modelId;
+        
+        if (modelVersion) {
+          console.log('✅ Found model version for generation:', modelVersion);
+          console.log('✅ Model ID:', modelId);
+          this.notificationService.info('Using Existing Model', 'Using your previously trained model for generation');
+          await this.generateImagesWithStyles(selectedStyles, modelVersion);
+        } else if (modelId) {
+          // We have model ID but not version - use the model ID for generation
+          console.log('✅ Using model ID for generation:', modelId);
+          this.notificationService.info('Using Existing Model', 'Using your previously trained model for generation');
+          await this.generateImagesWithStyles(selectedStyles, modelId);
+        } else {
+          // This shouldn't happen if modelStatus is 'Model Ready'
+          console.error('❌ Model Ready but no model data available');
+          this.notificationService.error('Model Error', 'Model data not found. Please refresh and try again.');
+          this.isTrainingStarted = false;
+          this.currentStep = 2;
+          return;
+        }
       } else {
-        // No existing model, need to train first
+        // Model not ready - proceed with training
+        console.log('❌ Model not ready - proceeding with training');
         await this.startModelTraining(selectedStyles);
       }
     } catch (error) {
@@ -539,6 +580,69 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }, 30000); // Poll every 30 seconds
   }
 
+  private startPhotoCompletionPolling(expectedStyleCount: number) {
+    const expectedPhotoCount = expectedStyleCount * this.imagesPerStyle;
+    
+    // Get initial generated photo count
+    this.fileUploadService.getUserImages().subscribe({
+      next: (response) => {
+        this.initialPhotoCount = response.generatedImages || 0;
+      },
+      error: () => {
+        this.initialPhotoCount = 0;
+      }
+    });
+    
+    this.photoCompletionPollingInterval = setInterval(async () => {
+      try {
+        // Check for new generated photos using getUserImages
+        this.fileUploadService.getUserImages().subscribe({
+          next: (response) => {
+            const currentPhotoCount = response.generatedImages || 0;
+            const newPhotos = currentPhotoCount - this.initialPhotoCount;
+            
+            if (newPhotos >= expectedPhotoCount) {
+              // All photos completed
+              clearInterval(this.photoCompletionPollingInterval);
+              this.onPhotoGenerationComplete(newPhotos);
+            } else if (newPhotos > 0) {
+              // Some photos completed, update progress
+              const progress = Math.min(90 + (newPhotos / expectedPhotoCount) * 10, 100);
+              this.progressPercentage = progress;
+              this.progressMessage = `Generated ${newPhotos} of ${expectedPhotoCount} photos...`;
+            }
+          },
+          error: (error) => {
+            console.error('Error checking photo completion:', error);
+          }
+        });
+      } catch (error) {
+        console.error('Error polling for photo completion:', error);
+      }
+    }, 15000); // Poll every 15 seconds
+  }
+
+  private onPhotoGenerationComplete(photoCount: number) {
+    // Complete the generation process
+    this.progressPercentage = 100;
+    this.progressMessage = 'Photo generation complete!';
+    this.isGenerating = false;
+    
+    // Refresh dashboard stats to show updated photo count
+    this.stateService.refreshGeneratedPhotosCount();
+    
+    this.notificationService.success('Photos Ready!', 
+      `${photoCount} professional photos have been generated and are ready to view.`);
+
+    // Reset progress after showing completion
+    setTimeout(() => {
+      this.progressPercentage = 0;
+      this.progressMessage = '';
+      this.isTrainingStarted = false;
+      this.currentStep = 3; // Move to view photos step
+    }, 3000);
+  }
+
   private async generateImagesWithStyles(selectedStyles: StyleOption[], modelVersion: string) {
     try {
       const userId = this.authService.getCurrentUserId();
@@ -584,24 +688,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
         }
       }
 
-      // Complete the progress
-      this.progressPercentage = 100;
-      this.progressMessage = 'All generation requests submitted!';
-      this.isGenerating = false;
+      // Update progress but keep generating state active
+      this.progressPercentage = 90;
+      this.progressMessage = 'Generating your photos...';
+      // Keep isGenerating = true until photos are actually ready
       
       // Calculate estimated time for all images to be ready (approximately 2-3 minutes per style)
       const estimatedMinutes = selectedStyles.length * 2.5;
       const estimatedCompletion = new Date(Date.now() + estimatedMinutes * 60000);
       
-      this.notificationService.info('Generation Complete', 
-        `All image generation requests have been submitted. Images should be ready by ${estimatedCompletion.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Check your gallery for results.`);
+      this.notificationService.info('Generation Started', 
+        `Generating ${selectedStyles.length} style(s) with ${this.imagesPerStyle} images each. Estimated completion: ${estimatedCompletion.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
 
-      // Reset progress after a short delay
-      setTimeout(() => {
-        this.progressPercentage = 0;
-        this.progressMessage = '';
-        this.isTrainingStarted = false;
-      }, 3000);
+      // Start polling for photo completion
+      this.startPhotoCompletionPolling(selectedStyles.length);
       
       // Refresh dashboard state to update model status
       await this.stateService.loadInitialDashboardData();
@@ -915,7 +1015,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Separate credit calculation methods
   calculateTrainingCredits(): number {
-    return 15; // Fixed cost for model training
+    // Check if model already exists - no training cost needed
+    if (this.modelStatus === 'Model Ready') {
+      return 0; // Model already trained, no additional cost
+    }
+    return 15; // Training required - 15 credits
   }
 
   calculateGenerationCredits(): number {

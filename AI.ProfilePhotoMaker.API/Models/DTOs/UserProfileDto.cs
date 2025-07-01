@@ -9,6 +9,7 @@ public class UserProfileDto
     public string? LastName { get; set; }
     public string? Gender { get; set; }
     public string? Ethnicity { get; set; }
+    // Model information now comes from ModelCreationRequest via join
     public string? TrainedModelId { get; set; }
     public string? TrainedModelVersionId { get; set; }
     public DateTime? ModelTrainedAt { get; set; }

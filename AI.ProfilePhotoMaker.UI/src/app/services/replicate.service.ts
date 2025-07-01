@@ -106,6 +106,13 @@ export class ReplicateService {
     return this.http.get<{ success: boolean; data: CreditsInfo; error: any }>(this.config.replicateCreditsUrl);
   }
 
+  // Model Availability Check
+  checkModelAvailability(modelId: string): Observable<{ success: boolean; data: { available: boolean }; error: any }> {
+    return this.http.get<{ success: boolean; data: { available: boolean }; error: any }>(
+      this.config.getFullUrl(`/replicate/model/availability/${encodeURIComponent(modelId)}`)
+    );
+  }
+
   // Photo Enhancement
   enhancePhoto(request: EnhancePhotoRequest): Observable<{ 
     success: boolean; 

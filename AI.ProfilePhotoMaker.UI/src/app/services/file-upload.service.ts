@@ -128,6 +128,51 @@ export class FileUploadService {
     );
   }
 
+  setTrainedModel(modelId: string, versionId?: string, verifyExists: boolean = true): Observable<{ success: boolean; data?: any; error?: any }> {
+    return this.http.post<{ success: boolean; data?: any; error?: any }>(
+      this.config.getFullUrl('/profile/set-model'),
+      { modelId, versionId, verifyExists }
+    );
+  }
+
+  checkModelStatus(): Observable<{ success: boolean; data?: any; error?: any }> {
+    return this.http.post<{ success: boolean; data?: any; error?: any }>(
+      this.config.getFullUrl('/profile/check-model-status'),
+      {}
+    );
+  }
+
+  getUserModelRequests(): Observable<{ success: boolean; data?: { totalRequests: number; hasTrainedModel: boolean; latestTrainedModel: any; allRequests: any[] }; error?: any }> {
+    return this.http.get<{ success: boolean; data?: { totalRequests: number; hasTrainedModel: boolean; latestTrainedModel: any; allRequests: any[] }; error?: any }>(
+      this.config.getFullUrl('/model-creation/user/current')
+    );
+  }
+
+  // Debug methods
+  getDebugModelStatus(): Observable<{ success: boolean; data?: any; error?: any }> {
+    return this.http.get<{ success: boolean; data?: any; error?: any }>(
+      this.config.getFullUrl('/debug/user-model-status')
+    );
+  }
+
+  testModelCreationEndpoint(): Observable<{ success: boolean; data?: any; error?: any }> {
+    return this.http.get<{ success: boolean; data?: any; error?: any }>(
+      this.config.getFullUrl('/debug/test-model-creation-endpoint')
+    );
+  }
+
+  discoverUserModels(): Observable<{ success: boolean; data?: any; error?: any }> {
+    return this.http.get<{ success: boolean; data?: any; error?: any }>(
+      this.config.getFullUrl('/debug/discover-user-models')
+    );
+  }
+
+  testSpecificModel(): Observable<{ success: boolean; data?: any; error?: any }> {
+    return this.http.get<{ success: boolean; data?: any; error?: any }>(
+      this.config.getFullUrl('/debug/test-specific-model')
+    );
+  }
+
   uploadSingleImage(file: File): Observable<{ progress: number; response?: { success: boolean; data: { url: string; fileName: string } } }> {
     const formData = new FormData();
     formData.append('images', file, file.name);
