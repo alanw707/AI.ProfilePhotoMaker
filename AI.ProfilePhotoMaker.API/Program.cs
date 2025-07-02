@@ -436,7 +436,21 @@ app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
         Path.Combine(builder.Environment.ContentRootPath, "uploads")),
-    RequestPath = "/uploads"
+    RequestPath = "/uploads",
+    OnPrepareResponse = ctx =>
+    {
+        // Add CORS headers to allow cross-origin requests for image downloads
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type");
+        
+        // Ensure proper content type for images
+        var extension = Path.GetExtension(ctx.File.Name).ToLowerInvariant();
+        if (extension == ".png") ctx.Context.Response.ContentType = "image/png";
+        else if (extension == ".jpg" || extension == ".jpeg") ctx.Context.Response.ContentType = "image/jpeg";
+        else if (extension == ".gif") ctx.Context.Response.ContentType = "image/gif";
+        else if (extension == ".webp") ctx.Context.Response.ContentType = "image/webp";
+    }
 });
 
 // Serve static files from training-zips directory
@@ -460,7 +474,21 @@ app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
         Path.Combine(builder.Environment.ContentRootPath, "generated")),
-    RequestPath = "/generated"
+    RequestPath = "/generated",
+    OnPrepareResponse = ctx =>
+    {
+        // Add CORS headers to allow cross-origin requests for image downloads
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type");
+        
+        // Ensure proper content type for images
+        var extension = Path.GetExtension(ctx.File.Name).ToLowerInvariant();
+        if (extension == ".png") ctx.Context.Response.ContentType = "image/png";
+        else if (extension == ".jpg" || extension == ".jpeg") ctx.Context.Response.ContentType = "image/jpeg";
+        else if (extension == ".gif") ctx.Context.Response.ContentType = "image/gif";
+        else if (extension == ".webp") ctx.Context.Response.ContentType = "image/webp";
+    }
 });
 
 // Serve Angular static files

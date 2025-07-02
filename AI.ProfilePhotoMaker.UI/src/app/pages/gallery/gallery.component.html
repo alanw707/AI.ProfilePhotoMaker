@@ -23,8 +23,27 @@
         <p>Loading your photos...</p>
       </div>
 
+      <!-- Download Progress -->
+      <section class="download-progress" *ngIf="isDownloading">
+        <div class="progress-card">
+          <div class="progress-header">
+            <div class="progress-icon">📦</div>
+            <div class="progress-info">
+              <h4>Creating Download Package</h4>
+              <p>Preparing your images for download...</p>
+            </div>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="downloadProgress"></div>
+            </div>
+            <span class="progress-percent">{{downloadProgress}}%</span>
+          </div>
+        </div>
+      </section>
+
       <!-- Gallery Component -->
-      <section class="gallery-section" *ngIf="!isLoading">
+      <section class="gallery-section" *ngIf="!isLoading" [class.downloading]="isDownloading">
         <app-photo-gallery
           [images]="galleryImages"
           [title]="'Your Photos'"

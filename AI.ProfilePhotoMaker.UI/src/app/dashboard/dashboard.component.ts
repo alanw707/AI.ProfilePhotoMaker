@@ -94,6 +94,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   generationStartTime: number = 0;
   expectedGenerationTime: number = 0;
   timeBasedProgressInterval?: any;
+  lastGenerationCount: number = 0;
+  showLastGenerationMessage: boolean = false;
   
   private filePreviewCache = new Map<File, string>();
   private pollingInterval?: any;
@@ -674,19 +676,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.progressMessage = 'Photo generation complete!';
     this.isGenerating = false;
     
+    // Store generation count for success message
+    this.lastGenerationCount = photoCount;
+    this.showLastGenerationMessage = true;
+    
     // Refresh dashboard stats to show updated photo count
     this.stateService.refreshGeneratedPhotosCount();
     
     this.notificationService.success('Photos Ready!', 
       `${photoCount} professional photos have been generated and are ready to view.`);
 
-    // Reset progress after showing completion
+    // Reset progress after showing completion but keep generation available
     setTimeout(() => {
       this.progressPercentage = 0;
       this.progressMessage = '';
       this.isTrainingStarted = false;
-      this.currentStep = 3; // Move to view photos step
+      // Don't change currentStep - keep it on the generation step so user can generate more
     }, 3000);
+    
+    // Hide the success message after 10 seconds
+    setTimeout(() => {
+      this.showLastGenerationMessage = false;
+    }, 10000);
   }
 
   private async generateImagesWithStyles(selectedStyles: StyleOption[], modelVersion: string) {
