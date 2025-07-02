@@ -1,3 +1,6 @@
+// Import shared styles for button mixins
+@use '../../shared/styles/index' as shared
+
 // Workflow Section
 .workflow-section
   h2
@@ -274,49 +277,34 @@
     .progress-actions
       display: flex
       justify-content: center
+      margin-top: 16px
       
-      .btn
-        background: var(--bg-tertiary) !important
-        border: 1px solid var(--border-color) !important
-        color: var(--text-secondary) !important
-        padding: 10px 20px !important
-        font-size: 14px !important
-        font-weight: 500 !important
-        border-radius: 8px !important
-        transition: all 0.2s ease !important
-        font-family: 'Poppins', sans-serif !important
-        cursor: pointer !important
-        text-decoration: none !important
-        display: inline-flex !important
-        align-items: center !important
-        justify-content: center !important
-        min-height: auto !important
-        box-shadow: none !important
+      .continue-background-btn
+        background: var(--card-bg)
+        color: var(--text-primary)
+        border: 1px solid var(--border-color)
+        padding: 10px 20px
+        font-size: 14px
+        font-weight: 500
+        border-radius: 8px
+        cursor: pointer
+        transition: all 0.3s ease
+        text-decoration: none
+        display: inline-flex
+        align-items: center
+        justify-content: center
+        font-family: 'Poppins', sans-serif
+        min-width: auto
         
-        &:hover, &:focus
-          background: var(--border-color) !important
-          color: var(--text-primary) !important
-          border-color: var(--accent-primary) !important
-          box-shadow: none !important
+        &:hover
+          background: var(--hover-bg)
+          border-color: var(--accent-primary)
+          transform: translateY(-2px)
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1)
           
         &:active
-          transform: translateY(1px) !important
-          
-        // Override Bootstrap button styles specifically
-        &.btn-outline-secondary
-          background: var(--bg-tertiary) !important
-          border-color: var(--border-color) !important
-          color: var(--text-secondary) !important
-          
-          &:hover, &:focus, &:active
-            background: var(--border-color) !important
-            border-color: var(--accent-primary) !important
-            color: var(--text-primary) !important
-            box-shadow: none !important
-            
-        &.btn-sm
-          padding: 8px 16px !important
-          font-size: 13px !important
+          transform: translateY(0)
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1)
 
 // Generation Success Message - Celebration style
 .generation-success-message

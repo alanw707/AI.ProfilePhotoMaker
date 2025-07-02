@@ -439,40 +439,9 @@
                 (selectAllStyles)="onSelectAllStyles()"
                 (deselectAllStyles)="onDeselectAllStyles()"
                 (startTraining)="onStartTraining()"
-                (continueInBackground)="continueInBackground()">
+                (continueInBackground)="continueInBackground()"
+                (dismissSuccessMessage)="onDismissSuccessMessage()">
               </app-style-selector>
-              
-              <!-- Training Progress (only shown when actively training) -->
-              <div class="training-progress-section" *ngIf="modelStatus === 'training'">
-                <div class="training-progress">
-                  <div class="progress-circle">
-                    <div class="progress-text">{{trainingProgress}}%</div>
-                  </div>
-                  <div class="training-info">
-                    <h4>🚀 Training Your AI Model</h4>
-                    <p>This usually takes 15-25 minutes. You'll be notified when it's complete!</p>
-                    <p class="eta">Estimated completion: {{estimatedCompletion}}</p>
-                    <div class="model-retention-info">
-                      <small class="text-muted">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-right: 4px;">
-                          <path d="M12 2L2 7v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7L12 2z" stroke="currentColor" stroke-width="2" fill="none"/>
-                        </svg>
-                        Your training photos will be deleted after 7 days. Generated images stored for 30 days.
-                      </small>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Generation Progress (only shown when actively generating) -->
-              <div class="generation-progress-section" *ngIf="isGenerating">
-                <div class="progress-indicator">
-                  <div class="spinner"></div>
-                  <h4>🎨 Generating Your Photos</h4>
-                  <p>Creating professional photos with your selected styles...</p>
-                  <p class="progress-detail">This usually takes 2-5 minutes per style</p>
-                </div>
-              </div>
               
             </div>
           </div>
