@@ -147,7 +147,113 @@
 
 @mixin main-content
   margin-top: 80px // Account for header height
-  padding: 40px 0
+
+// =============================================================================
+// OVERLAY AND SELECTION MIXINS
+// =============================================================================
+
+@mixin selection-overlay($top: 12px, $right: 12px, $size: 40px)
+  position: absolute
+  top: $top
+  right: $right
+  width: $size
+  height: $size
+  background: rgba(0, 0, 0, 0.7)
+  border-radius: 50%
+  display: flex
+  align-items: center
+  justify-content: center
+  opacity: 0
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  backdrop-filter: blur(4px)
+  border: 2px solid white
+  cursor: pointer
+  z-index: 10
+
+  .checkmark
+    background: transparent
+    border-radius: 0
+    width: 24px
+    height: 24px
+    display: flex
+    align-items: center
+    justify-content: center
+    transform: scale(0.8)
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+    
+    svg
+      color: white
+      width: 20px
+      height: 20px
+      stroke-width: 3
+
+@mixin selection-overlay-visible
+  opacity: 1
+  
+  .checkmark
+    transform: scale(1)
+
+@mixin selection-overlay-hover
+  opacity: 0.7
+
+// =============================================================================
+// PROGRESS AND STATUS MIXINS
+// =============================================================================
+
+@mixin progress-bar($height: 8px, $border-radius: 4px)
+  width: 100%
+  height: $height
+  background: var(--bg-tertiary)
+  border-radius: $border-radius
+  overflow: hidden
+  position: relative
+
+  .progress-fill
+    height: 100%
+    background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))
+    border-radius: $border-radius
+    transition: width 0.3s ease
+    position: relative
+
+@mixin status-badge($padding: 0.25rem 0.5rem)
+  position: absolute
+  top: 0.5rem
+  left: 0.5rem
+  background: rgba(0, 0, 0, 0.8)
+  color: white
+  padding: $padding
+  border-radius: 4px
+  font-size: 0.75rem
+  font-weight: 500
+
+// =============================================================================
+// GRID AND LAYOUT MIXINS
+// =============================================================================
+
+@mixin responsive-grid($min-width: 280px, $gap: 1.5rem)
+  display: grid
+  grid-template-columns: repeat(auto-fill, minmax($min-width, 1fr))
+  gap: $gap
+
+@mixin responsive-fixed-grid($gap: 16px, $margin: 24px 0)
+  display: grid
+  gap: $gap
+  margin: $margin
+  
+  // Mobile-first responsive grid
+  grid-template-columns: repeat(2, 1fr)
+  
+  // Tablet: 3 columns
+  @media (min-width: 768px)
+    grid-template-columns: repeat(3, 1fr)
+  
+  // Desktop: 4 columns
+  @media (min-width: 1024px)
+    grid-template-columns: repeat(4, 1fr)
+  
+  // Large desktop: 5 columns
+  @media (min-width: 1200px)
+    grid-template-columns: repeat(5, 1fr)
 
 // =============================================================================
 // FORM MIXINS

@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap, map } from 'rxjs';
+import { Router } from '@angular/router';
 import { ConfigService } from './config.service';
 
 export interface LoginDto {
@@ -46,7 +47,7 @@ export class AuthService {
   private currentUserSubject = new BehaviorSubject<AuthResponseDto | null>(this.getCurrentUser());
   public currentUser$ = this.currentUserSubject.asObservable();
 
-  constructor(private http: HttpClient, private config: ConfigService) {
+  constructor(private http: HttpClient, private config: ConfigService, private router: Router) {
     console.log('AuthService constructor - checking initial auth state');
     console.log('localStorage keys on init:', Object.keys(localStorage));
     console.log('TOKEN_KEY:', this.TOKEN_KEY);
@@ -272,6 +273,16 @@ export class AuthService {
     
     console.log('After logout - localStorage keys:', Object.keys(localStorage));
     console.log('isAuthenticated after logout:', this.isAuthenticated());
+    
+    // Navigate to login page after logout
+    console.log('Navigating to login page after logout');
+    this.router.navigate(['/login']).then(success => {
+      if (success) {
+        console.log('✅ Successfully navigated to login page');
+      } else {
+        console.error('❌ Failed to navigate to login page');
+      }
+    });
   }
 
   // Public method to force clear all auth data - useful for debugging
@@ -281,6 +292,9 @@ export class AuthService {
     this.isAuthenticatedSubject.next(false);
     this.currentUserSubject.next(null);
     console.log('All localStorage cleared');
+    
+    // Navigate to login page after force logout
+    this.router.navigate(['/login']);
   }
 
   getToken(): string | null {

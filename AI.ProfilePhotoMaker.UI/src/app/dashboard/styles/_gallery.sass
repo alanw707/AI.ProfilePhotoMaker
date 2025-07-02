@@ -4,26 +4,11 @@
 // Redesigned style selection with larger previews and better UX
 // Addresses user feedback: "images too small", "use designer talent"
 
+@use '../../shared/styles/index' as shared
+
 // Gallery Container - 5x4 Grid for 20 Styles
 .styles-gallery
-  display: grid
-  gap: 16px
-  margin: 24px 0
-  
-  // Mobile-first responsive grid
-  grid-template-columns: repeat(2, 1fr)
-  
-  // Tablet: 3 columns
-  @media (min-width: 768px)
-    grid-template-columns: repeat(3, 1fr)
-  
-  // Desktop: 4 columns
-  @media (min-width: 1024px)
-    grid-template-columns: repeat(4, 1fr)
-  
-  // Large desktop: 5 columns for 20 styles (5x4 grid)
-  @media (min-width: 1200px)
-    grid-template-columns: repeat(5, 1fr)
+  @include shared.responsive-fixed-grid
 
 // Style Card
 .style-card
@@ -96,46 +81,13 @@
       font-size: 48px
       opacity: 0.5
 
-// Selection Overlay - Corner-positioned checkmark design
+// Selection Overlay - Using shared mixin for consistency
 .style-overlay
-  position: absolute
-  top: 12px
-  right: 12px
-  width: 40px
-  height: 40px
-  background: rgba(0, 0, 0, 0.7)
-  border-radius: 50%
-  display: flex
-  align-items: center
-  justify-content: center
-  opacity: 0
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
-  backdrop-filter: blur(4px)
-  border: 2px solid white
-  
-  .checkmark
-    background: transparent
-    border-radius: 0
-    width: 24px
-    height: 24px
-    display: flex
-    align-items: center
-    justify-content: center
-    transform: scale(0.8)
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
-    
-    svg
-      color: white
-      width: 20px
-      height: 20px
-      stroke-width: 3
+  @include shared.selection-overlay
 
   // Show overlay when card is selected
   .style-card.selected &
-    opacity: 1
-    
-    .checkmark
-      transform: scale(1)
+    @include shared.selection-overlay-visible
 
 // Content Area - Better Typography
 .style-content

@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 
 export interface StyleOption {
   id: string;
@@ -13,7 +14,7 @@ export interface StyleOption {
 @Component({
   selector: 'app-style-selector',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './style-selector.component.html',
   styleUrls: ['./style-selector.component.sass']
 })
@@ -34,6 +35,8 @@ export class StyleSelectorComponent {
   @Input() progressPercentage: number = 0;
   @Input() progressMessage: string = '';
   @Input() estimatedCompletion: string = '';
+  @Input() lastGenerationCount: number = 0;
+  @Input() showLastGenerationMessage: boolean = false;
 
   @Output() styleToggled = new EventEmitter<StyleOption>();
   @Output() imagesPerStyleChanged = new EventEmitter<number>();
@@ -41,6 +44,7 @@ export class StyleSelectorComponent {
   @Output() deselectAllStyles = new EventEmitter<void>();
   @Output() startTraining = new EventEmitter<void>();
   @Output() continueInBackground = new EventEmitter<void>();
+  @Output() dismissSuccessMessage = new EventEmitter<void>();
 
   onToggleStyle(style: StyleOption) {
     this.styleToggled.emit(style);
@@ -65,6 +69,10 @@ export class StyleSelectorComponent {
 
   onContinueInBackground() {
     this.continueInBackground.emit();
+  }
+
+  onDismissSuccessMessage() {
+    this.dismissSuccessMessage.emit();
   }
 
   formatStyleName(styleName: string): string {

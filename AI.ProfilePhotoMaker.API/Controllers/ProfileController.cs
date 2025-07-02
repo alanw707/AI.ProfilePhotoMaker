@@ -344,7 +344,6 @@ public class ProfileController : ControllerBase
             return NotFound("Profile not found");
 
         var images = new List<object>();
-        var expiredImages = new List<ProcessedImage>();
 
         foreach (var i in profile.ProcessedImages.OrderByDescending(i => i.CreatedAt))
         {
@@ -352,21 +351,18 @@ public class ProfileController : ControllerBase
             var processedUrl = !string.IsNullOrEmpty(i.ProcessedImageUrl) ? (i.ProcessedImageUrl.StartsWith("http") ? i.ProcessedImageUrl : GetAbsoluteUrl(i.ProcessedImageUrl)) : i.ProcessedImageUrl;
             
             // Check if local files exist
-            var localFileExists = !string.IsNullOrEmpty(i.OriginalImageUrl) && 
-                                 !i.OriginalImageUrl.StartsWith("http") &&
-                                 System.IO.File.Exists(Path.Combine(_environment.ContentRootPath, i.OriginalImageUrl.TrimStart('/')));
+            var localFileExists = false;
             
-            // Check if external URLs are still valid (for generated images)
-            var urlValid = true;
-            if (i.IsGenerated && !string.IsNullOrEmpty(processedUrl) && processedUrl.StartsWith("http"))
+            // For uploaded images, check original URL
+            if (!string.IsNullOrEmpty(i.OriginalImageUrl) && !i.OriginalImageUrl.StartsWith("http"))
             {
-                urlValid = await IsUrlValidAsync(processedUrl);
-                if (!urlValid)
-                {
-                    // Mark for deletion if URL is expired
-                    expiredImages.Add(i);
-                    continue; // Skip adding to results
-                }
+                localFileExists = System.IO.File.Exists(Path.Combine(_environment.ContentRootPath, i.OriginalImageUrl.TrimStart('/')));
+            }
+            
+            // For generated images, check processed URL if it's a local path
+            if (i.IsGenerated && !string.IsNullOrEmpty(i.ProcessedImageUrl) && !i.ProcessedImageUrl.StartsWith("http"))
+            {
+                localFileExists = System.IO.File.Exists(Path.Combine(_environment.ContentRootPath, i.ProcessedImageUrl.TrimStart('/')));
             }
             
             images.Add(new
@@ -378,16 +374,8 @@ public class ProfileController : ControllerBase
                 i.CreatedAt,
                 IsOriginalUpload = i.Style == "Original",
                 IsGenerated = i.IsGenerated,
-                FileExists = localFileExists || urlValid
+                FileExists = localFileExists
             });
-        }
-        
-        // Clean up expired images from database
-        if (expiredImages.Any())
-        {
-            _context.ProcessedImages.RemoveRange(expiredImages);
-            await _context.SaveChangesAsync();
-            _logger.LogInformation($"Cleaned up {expiredImages.Count} expired images for user {userId}");
         }
 
         var imageList = images.Cast<dynamic>().ToList();
@@ -1018,25 +1006,6 @@ public class ProfileController : ControllerBase
         return $"{Request.Scheme}://{Request.Host}{relativePath}";
     }
     
-    private async Task<bool> IsUrlValidAsync(string url)
-    {
-        if (string.IsNullOrEmpty(url) || !url.StartsWith("http"))
-            return false;
-            
-        try
-        {
-            using var httpClient = new HttpClient();
-            httpClient.Timeout = TimeSpan.FromSeconds(10);
-            
-            var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, url));
-            return response.IsSuccessStatusCode;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "URL validation failed for {Url}", url);
-            return false;
-        }
-    }
 
     /// <summary>
     /// Get user data statistics for account settings

@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Standard Workflow
+
+1. First think through the problem, read the codebase for relevant files, and write a plan to tasks/todo.md.
+2. The plan should have a list of todo items that you can check off as you complete them
+3. Before you begin working, check in with me and I will verify the plan.
+4. Then, begin working on the todo items, marking them as complete as you go.
+5. Please every step of the way just give me a high level explanation of what changes you made
+6. Make every task and code change you do as simple as possible. We want to avoid making any massive or complex changes. Every change should impact as little code as possible. Everything is about simplicity.
+7. Finally, add a review section to the TASKS.md under /docs file with a summary of the changes you made and any other relevant information.
+
 ## Project Overview
 
 AI.ProfilePhotoMaker is a full-stack application that generates professional profile photos using AI. Users upload selfies to train custom AI models through Replicate.com's FLUX API, then generate styled professional photos.
@@ -189,7 +199,13 @@ Before any operation, the system:
 - **Photo Enhancement**: `/api/replicate/enhance` (uses Flux Kontext Pro, basic tier)
 - **Credit Management**: `/api/credit/*` (packages, purchase, payment-config), `/api/test/basic-tier-status`, `/api/test/reset-credits`
 - **Payment Simulation**: `/api/credit/create-payment-intent` (development mode placeholder)
-- **Testing**: `/api/test/*` (various development/testing endpoints)
+- **Testing**: `/api/test/*` (cleaned up development/debugging endpoints)
+  - `/api/test/fix-generated-images` (POST) - Repairs missing database records from filesystem
+  - `/api/test/ping` (GET) - Health check endpoint
+  - `/api/test/check-generated-images` (GET) - Debug endpoint for viewing user images
+  - `/api/test/replicate-connection` (GET) - Tests Replicate API connectivity
+  - `/api/test/basic-tier-status` (GET) - Debug user credit status
+  - `/api/test/reset-credits` (POST) - Manually reset user credits for testing
 
 ### Key Services
 - **BasicTierService**: Manages credit system, weekly resets, basic tier functionality
@@ -267,6 +283,31 @@ ngrok http https://localhost:5035
 - CORS is configured to allow all origins in development (`AllowAll` policy)
 
 ### Recent Major Changes
+
+#### Critical Bug Fixes (2025-07-01)
+- **Fixed Data Loss Bug in GetImages() Endpoint**: Resolved critical issue where generated photos were automatically deleted
+  - **Problem**: ProfileController.GetImages() was checking external Replicate URLs and deleting database records when URLs expired
+  - **Impact**: Users lost all previously generated photos (40+ images) when Replicate URLs became invalid
+  - **Solution**: Removed external URL validation logic; now only checks local file existence
+  - **Result**: Images remain in database regardless of external URL status; retention policy controls deletion properly
+- **Cleaned Up TestController Endpoints**: Removed dangerous and redundant test endpoints
+  - **Removed**: 6 endpoints including credit-consuming tests and database deletion endpoint
+  - **Kept**: 6 useful endpoints for development/debugging (ping, check-generated-images, basic-tier-status, etc.)
+  - **Safety**: Eliminated accidental credit consumption and data loss risks from test endpoints
+
+#### Dashboard Performance and UI Improvements (2025-07-01)
+- **Enhanced Photo Generation Success Messaging**: Added celebration-style success notifications
+  - **Feature**: Shows count of newly generated photos with animated success card
+  - **UI**: Modern gradient design with bounce animation and direct gallery navigation
+  - **UX**: Clear feedback when generation completes with easy next-step guidance
+- **Fixed Photo Generation Progress UI**: Replaced stuck 90% progress with realistic time-based estimation
+  - **Problem**: Progress bar would get stuck at 90% during photo generation
+  - **Solution**: Implemented time-based progress estimation (15% to 85% over expected duration)
+  - **Improvement**: Users see realistic progress indication instead of stuck progress bar
+- **Improved Continue in Background Button**: Fixed styling and ensured proper functionality
+  - **Styling**: Updated CSS specificity to override Bootstrap classes properly
+  - **Functionality**: Confirmed navigation to gallery works correctly
+  - **Theme**: Matches modern subtle design system consistently
 
 #### Payment Simulation System (2025-06-27)
 - **Payment Integration Stabilization**: Complete payment simulation system for development
