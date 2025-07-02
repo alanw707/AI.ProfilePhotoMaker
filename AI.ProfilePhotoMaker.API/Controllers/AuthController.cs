@@ -87,8 +87,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         [HttpGet("external-login/callback")]
         public async Task<IActionResult> ExternalLoginCallback(string returnUrl = "", string code = "", string state = "")
         {
-            // Debug logging
-            Console.WriteLine($"OAuth Callback - State: {state}, Code: {code}, ReturnUrl: {returnUrl}");
+            // OAuth callback processing
             
             // If we have a code but GetExternalLoginInfoAsync fails due to state validation,
             // try to manually process the Google OAuth code

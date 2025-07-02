@@ -34,9 +34,6 @@ public class ReplicateSignatureValidationAttribute : Attribute, IAsyncAuthorizat
             var webhookTimestamp = request.Headers["webhook-timestamp"].FirstOrDefault();
             var webhookSignature = request.Headers["webhook-signature"].FirstOrDefault();
 
-            logger.LogInformation("DEBUG: webhook-id: {WebhookId}", webhookId);
-            logger.LogInformation("DEBUG: webhook-timestamp: {WebhookTimestamp}", webhookTimestamp);
-            logger.LogInformation("DEBUG: webhook-signature: {WebhookSignature}", webhookSignature);
 
             if (string.IsNullOrEmpty(webhookSignature))
             {
@@ -104,27 +101,23 @@ public class ReplicateSignatureValidationAttribute : Attribute, IAsyncAuthorizat
                 request.Body.Position = 0; // Reset for model binding
             }
 
-            logger.LogInformation("DEBUG: Request body: {Body}", bodyString);
 
             // 5. Construct the signed payload according to Replicate's spec: webhook_id.webhook_timestamp.body
             var signedPayload = $"{webhookId}.{webhookTimestamp}.{bodyString}";
-            logger.LogInformation("DEBUG: Signed payload format: {SignedPayload}", signedPayload);
 
             // 6. Extract the secret key - Replicate uses base64 encoded secret after whsec_ prefix
             byte[] secretKeyBytes;
             if (secret.StartsWith("whsec_"))
             {
                 var base64Secret = secret.Substring(6); // Remove "whsec_" prefix
-                logger.LogInformation("DEBUG: Base64 secret after removing whsec_: {Base64Secret}", base64Secret);
                 
                 try
                 {
                     secretKeyBytes = Convert.FromBase64String(base64Secret);
-                    logger.LogInformation("DEBUG: Using decoded secret key bytes, length: {Length}", secretKeyBytes.Length);
                 }
                 catch (Exception ex)
                 {
-                    logger.LogWarning("DEBUG: Failed to decode base64 secret, using UTF8 bytes of base64 string: {Error}", ex.Message);
+                    logger.LogWarning("Failed to decode base64 secret, using UTF8 bytes of base64 string: {Error}", ex.Message);
                     secretKeyBytes = Encoding.UTF8.GetBytes(base64Secret);
                 }
             }
@@ -132,7 +125,6 @@ public class ReplicateSignatureValidationAttribute : Attribute, IAsyncAuthorizat
             {
                 // Fallback to using the secret as UTF8 bytes
                 secretKeyBytes = Encoding.UTF8.GetBytes(secret);
-                logger.LogInformation("DEBUG: Using secret key as UTF8 bytes (no whsec_ prefix), length: {Length}", secretKeyBytes.Length);
             }
 
             // 7. Compute the expected signature
@@ -140,8 +132,6 @@ public class ReplicateSignatureValidationAttribute : Attribute, IAsyncAuthorizat
             var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(signedPayload));
             var computedSignature = Convert.ToBase64String(hash);
 
-            logger.LogInformation("DEBUG: Computed signature: {Computed}", computedSignature);
-            logger.LogInformation("DEBUG: Received signatures: {Received}", string.Join(",", signatures));
 
             // 8. Compare with received signatures
             var isValid = signatures.Any(receivedSignature =>
