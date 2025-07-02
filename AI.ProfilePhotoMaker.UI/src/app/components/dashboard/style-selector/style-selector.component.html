@@ -97,7 +97,7 @@
     <p><strong>{{selectedStyles}} styles selected</strong> • <strong>{{selectedStyles * imagesPerStyle}} total images</strong></p>
   </div>
   <div class="credit-breakdown">
-    <div class="credit-item">
+    <div class="credit-item" *ngIf="trainingCredits > 0">
       <span class="credit-label">Model Training:</span>
       <span class="credit-cost">{{trainingCredits}} credits</span>
     </div>
@@ -114,6 +114,34 @@
       <span class="credit-cost">
         <strong [class.negative]="!hasEnoughCredits">{{remainingCredits}} credits</strong>
       </span>
+    </div>
+  </div>
+</div>
+
+<!-- Success Message for Last Generation -->
+<div class="generation-success-message" *ngIf="showLastGenerationMessage && lastGenerationCount > 0">
+  <div class="success-card">
+    <div class="success-icon">🎉</div>
+    <div class="success-content">
+      <h4>Generation Complete!</h4>
+      <p><strong>{{lastGenerationCount}} new photos</strong> have been created and are ready to view in your gallery.</p>
+    </div>
+    <div class="success-actions">
+      <button class="btn btn-primary btn-sm" routerLink="/gallery">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
+          <path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        View Gallery
+      </button>
+      <button class="btn btn-outline-secondary btn-sm" (click)="onDismissSuccessMessage()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2"/>
+          <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        Dismiss
+      </button>
     </div>
   </div>
 </div>
@@ -172,7 +200,7 @@
       </div>
 
       <div class="progress-actions">
-        <button class="btn btn-outline-secondary btn-sm" (click)="onContinueInBackground()">
+        <button class="continue-background-btn" (click)="onContinueInBackground()">
           Continue in Background
         </button>
       </div>

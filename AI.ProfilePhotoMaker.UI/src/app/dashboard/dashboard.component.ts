@@ -2,58 +2,48 @@ import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/co
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Observable } from 'rxjs';
+
 import { HeaderNavigationComponent } from '../shared/header-navigation/header-navigation.component';
 import { StatsCardComponent } from '../components/dashboard/stats-card/stats-card.component';
 import { StyleSelectorComponent, StyleOption } from '../components/dashboard/style-selector/style-selector.component';
+
 import { AuthService } from '../services/auth.service';
-import { GalleryImage } from '../components/photo-gallery/photo-gallery.component';
 import { FileUploadService } from '../services/file-upload.service';
 import { StyleService, Style } from '../services/style.service';
 import { NotificationService } from '../services/notification.service';
 import { CreditService } from '../services/credit.service';
 import { DashboardStateService } from '../services/dashboard-state.service';
-import { FaceDetectionService, FaceValidationResult, QualityScore } from '../services/face-detection.service';
+import { FaceDetectionService } from '../services/face-detection.service';
 import { ConfigService } from '../services/config.service';
 import { ReplicateService, TrainModelRequest, GenerateImagesRequest } from '../services/replicate.service';
-import { Observable } from 'rxjs';
+import { FileUploadManagerService } from '../services/file-upload-manager.service';
+
+import { GalleryImage } from '../components/photo-gallery/photo-gallery.component';
+import { 
+  GeneratedPhoto, 
+  QualityCheckError, 
+  SelectedFileWithQuality, 
+  QualityCheckResult,
+  UploadProgress,
+  TrainingStatus,
+  GenerationStatus
+} from '../models/dashboard.types';
 
 
-interface GeneratedPhoto {
-  id: string;
-  url: string;
-  style: string;
-  createdAt: Date;
-}
-
-interface QualityCheckError {
-  fileName: string;
-  file: File;
-  errors: string[];
-  warnings?: string[];
-  faceValidation?: FaceValidationResult;
-  qualityScore?: QualityScore;
-}
-
-interface SelectedFileWithQuality {
-  file: File;
-  qualityScore?: QualityScore;
-  faceValidation?: FaceValidationResult;
-  errors: string[];
-  warnings: string[];
-  isValid: boolean;
-  showDetails?: boolean; // For expandable details UI state
-}
-
-interface QualityCheckResult {
-  validFiles: File[];
-  errorFiles: QualityCheckError[];
-}
 
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, HeaderNavigationComponent, StatsCardComponent, StyleSelectorComponent],
+  imports: [
+    CommonModule, 
+    RouterModule, 
+    FormsModule, 
+    HeaderNavigationComponent, 
+    StatsCardComponent, 
+    StyleSelectorComponent
+  ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.sass']
 })
@@ -71,7 +61,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isDragOver: boolean = false;
   isCheckingQuality: boolean = false;
   qualityCheckProgress: string = '';
-  trainingProgress: number = 0;
   estimatedCompletion: string = '';
   trainingZipPath: string = '';
   isTrainingStarted: boolean = false;
@@ -91,6 +80,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isTraining: boolean = false;
   progressPercentage: number = 0;
   progressMessage: string = '';
+  generationStartTime: number = 0;
+  expectedGenerationTime: number = 0;
+  timeBasedProgressInterval?: any;
+  lastGenerationCount: number = 0;
+  showLastGenerationMessage: boolean = false;
   
   private filePreviewCache = new Map<File, string>();
   private pollingInterval?: any;
@@ -147,7 +141,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     public stateService: DashboardStateService,
     private faceDetectionService: FaceDetectionService,
     private config: ConfigService,
-    private replicateService: ReplicateService
+    private replicateService: ReplicateService,
+    private fileUploadManager: FileUploadManagerService
   ) {
     this.state$ = this.stateService.state$;
     
@@ -365,6 +360,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   onStartTraining() {
     this.startTrainingWithStyles();
+  }
+
+  onDismissSuccessMessage() {
+    this.showLastGenerationMessage = false;
+    this.lastGenerationCount = 0;
   }
 
   async startTrainingWithStyles() {
@@ -606,10 +606,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
               clearInterval(this.photoCompletionPollingInterval);
               this.onPhotoGenerationComplete(newPhotos);
             } else if (newPhotos > 0) {
-              // Some photos completed, update progress
-              const progress = Math.min(90 + (newPhotos / expectedPhotoCount) * 10, 100);
+              // Some photos completed, update progress - override time-based progress
+              const photoProgress = (newPhotos / expectedPhotoCount) * 15; // 15% range for photo completion
+              const progress = Math.min(85 + photoProgress, 95); // 85% to 95% based on actual photos
               this.progressPercentage = progress;
               this.progressMessage = `Generated ${newPhotos} of ${expectedPhotoCount} photos...`;
+              
+              // Clear time-based progress since we have real progress
+              if (this.timeBasedProgressInterval) {
+                clearInterval(this.timeBasedProgressInterval);
+                this.timeBasedProgressInterval = undefined;
+              }
             }
           },
           error: (error) => {
@@ -622,11 +629,51 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }, 15000); // Poll every 15 seconds
   }
 
+  private startTimeBasedProgress() {
+    // Clear any existing time-based progress interval
+    if (this.timeBasedProgressInterval) {
+      clearInterval(this.timeBasedProgressInterval);
+    }
+
+    this.timeBasedProgressInterval = setInterval(() => {
+      if (!this.isGenerating || this.generationStartTime === 0) {
+        return;
+      }
+
+      const elapsed = Date.now() - this.generationStartTime;
+      const progressRatio = Math.min(elapsed / this.expectedGenerationTime, 0.85); // Cap at 85% for time-based
+      const newProgress = 15 + (progressRatio * 70); // 15% to 85% based on time
+      
+      this.progressPercentage = Math.round(newProgress);
+      
+      // Update progress message based on elapsed time
+      const elapsedMinutes = Math.floor(elapsed / 60000);
+      const remainingTime = Math.max(0, Math.ceil((this.expectedGenerationTime - elapsed) / 60000));
+      
+      if (remainingTime > 0) {
+        this.progressMessage = `Creating professional photos... (~${remainingTime} min remaining)`;
+      } else {
+        this.progressMessage = 'Finalizing your photos...';
+      }
+      
+    }, 10000); // Update every 10 seconds
+  }
+
   private onPhotoGenerationComplete(photoCount: number) {
+    // Clear time-based progress interval
+    if (this.timeBasedProgressInterval) {
+      clearInterval(this.timeBasedProgressInterval);
+      this.timeBasedProgressInterval = undefined;
+    }
+    
     // Complete the generation process
     this.progressPercentage = 100;
     this.progressMessage = 'Photo generation complete!';
     this.isGenerating = false;
+    
+    // Store generation count for success message
+    this.lastGenerationCount = photoCount;
+    this.showLastGenerationMessage = true;
     
     // Refresh dashboard stats to show updated photo count
     this.stateService.refreshGeneratedPhotosCount();
@@ -634,13 +681,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.notificationService.success('Photos Ready!', 
       `${photoCount} professional photos have been generated and are ready to view.`);
 
-    // Reset progress after showing completion
+    // Reset progress after showing completion but keep generation available
     setTimeout(() => {
       this.progressPercentage = 0;
       this.progressMessage = '';
       this.isTrainingStarted = false;
-      this.currentStep = 3; // Move to view photos step
+      // Don't change currentStep - keep it on the generation step so user can generate more
     }, 3000);
+    
+    // Keep the success message visible (removed auto-hide)
   }
 
   private async generateImagesWithStyles(selectedStyles: StyleOption[], modelVersion: string) {
@@ -688,14 +737,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
         }
       }
 
-      // Update progress but keep generating state active
-      this.progressPercentage = 90;
-      this.progressMessage = 'Generating your photos...';
-      // Keep isGenerating = true until photos are actually ready
-      
       // Calculate estimated time for all images to be ready (approximately 2-3 minutes per style)
       const estimatedMinutes = selectedStyles.length * 2.5;
       const estimatedCompletion = new Date(Date.now() + estimatedMinutes * 60000);
+      this.estimatedCompletion = `${Math.ceil(estimatedMinutes)} minutes`;
+      
+      // Start with realistic progress and update based on time
+      this.progressPercentage = 15;
+      this.progressMessage = `Creating professional photos with your selected styles...`;
+      this.generationStartTime = Date.now();
+      this.expectedGenerationTime = estimatedMinutes * 60000; // in milliseconds
+      
+      // Start time-based progress updates
+      this.startTimeBasedProgress();
       
       this.notificationService.info('Generation Started', 
         `Generating ${selectedStyles.length} style(s) with ${this.imagesPerStyle} images each. Estimated completion: ${estimatedCompletion.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);

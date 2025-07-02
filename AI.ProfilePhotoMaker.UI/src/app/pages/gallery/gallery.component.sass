@@ -67,9 +67,77 @@
   100%
     transform: rotate(360deg)
 
+// Download Progress Styles
+.download-progress
+  margin: 2rem 0
+  
+  .progress-card
+    background: var(--bg-secondary)
+    border: 1px solid var(--border-color)
+    border-radius: 12px
+    padding: 24px
+    max-width: 500px
+    margin: 0 auto
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1)
+    
+    .progress-header
+      display: flex
+      align-items: center
+      gap: 16px
+      margin-bottom: 20px
+      
+      .progress-icon
+        font-size: 2rem
+        
+      .progress-info
+        flex: 1
+        
+        h4
+          color: var(--text-primary)
+          margin: 0 0 4px 0
+          font-size: 18px
+          font-weight: 600
+          
+        p
+          color: var(--text-secondary)
+          margin: 0
+          font-size: 14px
+    
+    .progress-bar-container
+      display: flex
+      align-items: center
+      gap: 12px
+      
+      .progress-bar
+        flex: 1
+        height: 8px
+        background: var(--bg-tertiary)
+        border-radius: 4px
+        overflow: hidden
+        position: relative
+        
+        .progress-fill
+          height: 100%
+          background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))
+          border-radius: 4px
+          transition: width 0.3s ease
+          position: relative
+      
+      .progress-percent
+        font-size: 14px
+        font-weight: 600
+        color: var(--text-primary)
+        min-width: 40px
+        text-align: right
+
 // Gallery Section
 .gallery-section
   min-height: 400px
+  
+  &.downloading
+    opacity: 0.7
+    pointer-events: none
+    user-select: none
 
 // Empty State
 .empty-section
