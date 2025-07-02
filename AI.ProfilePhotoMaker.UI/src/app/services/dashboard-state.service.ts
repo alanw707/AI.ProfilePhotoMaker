@@ -112,7 +112,7 @@ export class DashboardStateService {
         
         // Process uploaded images into thumbnails format
         const uploadedImageThumbnails: UploadedImageThumbnail[] = userImages.images
-          .filter(img => img.isOriginalUpload && img.fileExists)
+          .filter(img => img.isOriginalUpload)
           .map(img => ({
             id: img.id,
             url: img.originalImageUrl,
