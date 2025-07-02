@@ -10,7 +10,7 @@ export interface GalleryImage {
   style?: string;
   createdAt: Date;
   status: 'processing' | 'completed' | 'failed';
-  type: 'generated' | 'enhanced' | 'original';
+  type: 'generated' | 'original';
   downloadUrl?: string;
 }
 
@@ -55,7 +55,6 @@ export interface GalleryImage {
             <select class="filter-select" (change)="onFilterChange($event)">
               <option value="all">All Images</option>
               <option value="generated">Generated</option>
-              <option value="enhanced">Enhanced</option>
               <option value="original">Original</option>
             </select>
           </div>
@@ -74,7 +73,7 @@ export interface GalleryImage {
         <div class="gallery-grid" *ngIf="viewMode === 'grid' && filteredImages.length > 0">
           <div 
             class="gallery-item" 
-            *ngFor="let image of filteredImages; trackBy: trackByImageId"
+            *ngFor="let image of paginatedImages; trackBy: trackByImageId"
             [class.processing]="image.status === 'processing'"
             [class.failed]="image.status === 'failed'">
             
@@ -84,7 +83,8 @@ export interface GalleryImage {
                 [alt]="image.title"
                 class="gallery-image"
                 (load)="onImageLoad($event)"
-                (error)="onImageError($event)">
+                (error)="onImageError($event)"
+                (click)="onImageClick(image, $event)">
               
               <!-- Selection Overlay -->
               <div class="selection-overlay" (click)="toggleSelection(image)">
@@ -112,7 +112,7 @@ export interface GalleryImage {
               </div>
               
               <!-- View Button -->
-              <button class="view-btn" (click)="openImage(image)" title="View Image">
+              <button class="view-btn" (click)="openImage(image); $event.stopPropagation()" title="View Image">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/>
                   <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
@@ -123,7 +123,7 @@ export interface GalleryImage {
             <div class="image-info">
               <h4 class="image-title">{{image.title}}</h4>
               <p class="image-meta">
-                <span class="image-style" *ngIf="image.style">{{image.style}}</span>
+                <span class="image-style" *ngIf="image.style">{{formatStyleName(image.style)}}</span>
                 <span class="image-date">{{formatDate(image.createdAt)}}</span>
               </p>
               <div class="image-actions">
@@ -169,14 +169,15 @@ export interface GalleryImage {
         <div class="gallery-list" *ngIf="viewMode === 'list' && filteredImages.length > 0">
           <div 
             class="list-item" 
-            *ngFor="let image of filteredImages; trackBy: trackByImageId"
+            *ngFor="let image of paginatedImages; trackBy: trackByImageId"
             [class.processing]="image.status === 'processing'"
-            [class.failed]="image.status === 'failed'">
+            [class.failed]="image.status === 'failed'"
+            [class.selected]="isSelected(image)">
             
-            <div class="list-thumbnail" (click)="openImage(image)">
+            <div class="list-thumbnail" (click)="onImageClick(image, $event)">
               <img [src]="image.thumbnailUrl || image.url" [alt]="image.title">
-              <div class="status-indicator" [class]="image.status"></div>
             </div>
+
 
             <div class="list-content">
               <div class="list-header">
@@ -187,7 +188,7 @@ export interface GalleryImage {
               </div>
               <p class="list-description" *ngIf="image.description">{{image.description}}</p>
               <div class="list-meta">
-                <span class="meta-item" *ngIf="image.style">Style: {{image.style}}</span>
+                <span class="meta-item" *ngIf="image.style">Style: {{formatStyleName(image.style)}}</span>
                 <span class="meta-item">{{formatDate(image.createdAt)}}</span>
                 <span class="meta-item status-text" [class]="image.status">
                   {{getStatusText(image.status)}}
@@ -196,6 +197,16 @@ export interface GalleryImage {
             </div>
 
             <div class="list-actions">
+              <button 
+                class="action-btn view-btn" 
+                (click)="openImage(image)"
+                [disabled]="image.status !== 'completed'"
+                title="View Image">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </button>
               <button 
                 class="action-btn download-btn" 
                 (click)="downloadImage(image)"
@@ -215,6 +226,46 @@ export interface GalleryImage {
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Pagination Controls -->
+      <div class="pagination-section" *ngIf="filteredImages.length > pageSize">
+        <div class="pagination-info">
+          <span>Showing {{(currentPage - 1) * pageSize + 1}}-{{Math.min(currentPage * pageSize, filteredImages.length)}} of {{filteredImages.length}} images</span>
+          <select class="page-size-select" [value]="pageSize" (change)="onPageSizeChange($event)">
+            <option value="12">12 per page</option>
+            <option value="24">24 per page</option>
+            <option value="48">48 per page</option>
+          </select>
+        </div>
+        
+        <div class="pagination-controls">
+          <button 
+            class="pagination-btn" 
+            (click)="previousPage()" 
+            [disabled]="currentPage === 1">
+            Previous
+          </button>
+          
+          <div class="page-numbers">
+            <button 
+              *ngFor="let page of getPageNumbers()"
+              class="page-btn"
+              [class.active]="page === currentPage"
+              [class.ellipsis]="page === -1"
+              [disabled]="page === -1"
+              (click)="page !== -1 && goToPage(page)">
+              {{page === -1 ? '...' : page}}
+            </button>
+          </div>
+          
+          <button 
+            class="pagination-btn" 
+            (click)="nextPage()" 
+            [disabled]="currentPage === totalPages">
+            Next
+          </button>
         </div>
       </div>
 
@@ -240,6 +291,9 @@ export class PhotoGalleryComponent implements OnInit {
   @Input() allowSelection: boolean = true;
   @Input() showBulkActions: boolean = true;
 
+  // Make Math available in template
+  Math = Math;
+
   @Output() imageClick = new EventEmitter<GalleryImage>();
   @Output() imageDownload = new EventEmitter<GalleryImage>();
   @Output() imageShare = new EventEmitter<GalleryImage>();
@@ -250,6 +304,12 @@ export class PhotoGalleryComponent implements OnInit {
   filterType: string = 'all';
   selectedImages: GalleryImage[] = [];
   filteredImages: GalleryImage[] = [];
+  
+  // Pagination properties
+  currentPage: number = 1;
+  pageSize: number = 12;
+  totalPages: number = 1;
+  paginatedImages: GalleryImage[] = [];
 
   ngOnInit() {
     this.updateFilteredImages();
@@ -276,6 +336,18 @@ export class PhotoGalleryComponent implements OnInit {
     } else {
       this.filteredImages = this.images.filter(img => img.type === this.filterType);
     }
+    this.updatePagination();
+  }
+
+  updatePagination() {
+    this.totalPages = Math.ceil(this.filteredImages.length / this.pageSize);
+    if (this.currentPage > this.totalPages) {
+      this.currentPage = Math.max(1, this.totalPages);
+    }
+    
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    const endIndex = startIndex + this.pageSize;
+    this.paginatedImages = this.filteredImages.slice(startIndex, endIndex);
   }
 
   trackByImageId(index: number, image: GalleryImage): number {
@@ -323,6 +395,13 @@ export class PhotoGalleryComponent implements OnInit {
     }
   }
 
+  onImageClick(image: GalleryImage, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.toggleSelection(image);
+  }
+
   onImageLoad(event: any) {
     // Handle successful image load
   }
@@ -366,7 +445,6 @@ export class PhotoGalleryComponent implements OnInit {
   getTypeBadgeText(type: string): string {
     switch (type) {
       case 'generated': return 'AI Generated';
-      case 'enhanced': return 'Enhanced';
       case 'original': return 'Original';
       default: return type;
     }
@@ -388,5 +466,85 @@ export class PhotoGalleryComponent implements OnInit {
       hour: '2-digit',
       minute: '2-digit'
     }).format(new Date(date));
+  }
+
+  formatStyleName(style: string): string {
+    if (!style) return '';
+    return style
+      .replace(/[-_/]/g, ' ')  // Replace dashes, underscores, and slashes with spaces
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }
+
+  // Pagination methods
+  goToPage(page: number) {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      this.updatePagination();
+    }
+  }
+
+  nextPage() {
+    if (this.currentPage < this.totalPages) {
+      this.currentPage++;
+      this.updatePagination();
+    }
+  }
+
+  previousPage() {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+      this.updatePagination();
+    }
+  }
+
+  changePageSize(size: number) {
+    this.pageSize = size;
+    this.currentPage = 1;
+    this.updatePagination();
+  }
+
+  onPageSizeChange(event: Event) {
+    const target = event.target as HTMLSelectElement;
+    if (target && target.value) {
+      this.changePageSize(+target.value);
+    }
+  }
+
+  getPageNumbers(): number[] {
+    const pages: number[] = [];
+    const maxVisible = 5;
+    
+    if (this.totalPages <= maxVisible) {
+      for (let i = 1; i <= this.totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+      
+      if (this.currentPage > 3) {
+        pages.push(-1); // Ellipsis
+      }
+      
+      const start = Math.max(2, this.currentPage - 1);
+      const end = Math.min(this.totalPages - 1, this.currentPage + 1);
+      
+      for (let i = start; i <= end; i++) {
+        if (i !== 1 && i !== this.totalPages) {
+          pages.push(i);
+        }
+      }
+      
+      if (this.currentPage < this.totalPages - 2) {
+        pages.push(-1); // Ellipsis
+      }
+      
+      if (this.totalPages > 1) {
+        pages.push(this.totalPages);
+      }
+    }
+    
+    return pages;
   }
 }

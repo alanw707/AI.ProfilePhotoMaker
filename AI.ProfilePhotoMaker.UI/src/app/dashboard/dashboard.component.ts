@@ -2,58 +2,48 @@ import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/co
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Observable } from 'rxjs';
+
 import { HeaderNavigationComponent } from '../shared/header-navigation/header-navigation.component';
 import { StatsCardComponent } from '../components/dashboard/stats-card/stats-card.component';
 import { StyleSelectorComponent, StyleOption } from '../components/dashboard/style-selector/style-selector.component';
+
 import { AuthService } from '../services/auth.service';
-import { GalleryImage } from '../components/photo-gallery/photo-gallery.component';
 import { FileUploadService } from '../services/file-upload.service';
 import { StyleService, Style } from '../services/style.service';
 import { NotificationService } from '../services/notification.service';
 import { CreditService } from '../services/credit.service';
 import { DashboardStateService } from '../services/dashboard-state.service';
-import { FaceDetectionService, FaceValidationResult, QualityScore } from '../services/face-detection.service';
+import { FaceDetectionService } from '../services/face-detection.service';
 import { ConfigService } from '../services/config.service';
 import { ReplicateService, TrainModelRequest, GenerateImagesRequest } from '../services/replicate.service';
-import { Observable } from 'rxjs';
+import { FileUploadManagerService } from '../services/file-upload-manager.service';
+
+import { GalleryImage } from '../components/photo-gallery/photo-gallery.component';
+import { 
+  GeneratedPhoto, 
+  QualityCheckError, 
+  SelectedFileWithQuality, 
+  QualityCheckResult,
+  UploadProgress,
+  TrainingStatus,
+  GenerationStatus
+} from '../models/dashboard.types';
 
 
-interface GeneratedPhoto {
-  id: string;
-  url: string;
-  style: string;
-  createdAt: Date;
-}
-
-interface QualityCheckError {
-  fileName: string;
-  file: File;
-  errors: string[];
-  warnings?: string[];
-  faceValidation?: FaceValidationResult;
-  qualityScore?: QualityScore;
-}
-
-interface SelectedFileWithQuality {
-  file: File;
-  qualityScore?: QualityScore;
-  faceValidation?: FaceValidationResult;
-  errors: string[];
-  warnings: string[];
-  isValid: boolean;
-  showDetails?: boolean; // For expandable details UI state
-}
-
-interface QualityCheckResult {
-  validFiles: File[];
-  errorFiles: QualityCheckError[];
-}
 
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, HeaderNavigationComponent, StatsCardComponent, StyleSelectorComponent],
+  imports: [
+    CommonModule, 
+    RouterModule, 
+    FormsModule, 
+    HeaderNavigationComponent, 
+    StatsCardComponent, 
+    StyleSelectorComponent
+  ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.sass']
 })
@@ -71,7 +61,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isDragOver: boolean = false;
   isCheckingQuality: boolean = false;
   qualityCheckProgress: string = '';
-  trainingProgress: number = 0;
   estimatedCompletion: string = '';
   trainingZipPath: string = '';
   isTrainingStarted: boolean = false;
@@ -152,7 +141,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     public stateService: DashboardStateService,
     private faceDetectionService: FaceDetectionService,
     private config: ConfigService,
-    private replicateService: ReplicateService
+    private replicateService: ReplicateService,
+    private fileUploadManager: FileUploadManagerService
   ) {
     this.state$ = this.stateService.state$;
     
@@ -370,6 +360,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   onStartTraining() {
     this.startTrainingWithStyles();
+  }
+
+  onDismissSuccessMessage() {
+    this.showLastGenerationMessage = false;
+    this.lastGenerationCount = 0;
   }
 
   async startTrainingWithStyles() {
@@ -694,10 +689,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       // Don't change currentStep - keep it on the generation step so user can generate more
     }, 3000);
     
-    // Hide the success message after 10 seconds
-    setTimeout(() => {
-      this.showLastGenerationMessage = false;
-    }, 10000);
+    // Keep the success message visible (removed auto-hide)
   }
 
   private async generateImagesWithStyles(selectedStyles: StyleOption[], modelVersion: string) {

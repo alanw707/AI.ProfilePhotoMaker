@@ -44,6 +44,7 @@ export class StyleSelectorComponent {
   @Output() deselectAllStyles = new EventEmitter<void>();
   @Output() startTraining = new EventEmitter<void>();
   @Output() continueInBackground = new EventEmitter<void>();
+  @Output() dismissSuccessMessage = new EventEmitter<void>();
 
   onToggleStyle(style: StyleOption) {
     this.styleToggled.emit(style);
@@ -68,6 +69,10 @@ export class StyleSelectorComponent {
 
   onContinueInBackground() {
     this.continueInBackground.emit();
+  }
+
+  onDismissSuccessMessage() {
+    this.dismissSuccessMessage.emit();
   }
 
   formatStyleName(styleName: string): string {

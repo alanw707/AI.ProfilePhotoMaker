@@ -98,6 +98,17 @@
   &.selected .selection-overlay
     @include shared.selection-overlay-visible
   
+  &.selected::after
+    content: ''
+    position: absolute
+    top: 0
+    left: 0
+    right: 0
+    bottom: 0
+    background: rgba(0, 0, 0, 0.3)
+    pointer-events: none
+    z-index: 5
+  
   &:hover .selection-overlay
     @include shared.selection-overlay-hover
   
@@ -271,6 +282,11 @@
   &.failed
     border-color: var(--error-color)
 
+  &.selected
+    background: rgba(125, 211, 216, 0.1)
+    border-color: var(--accent-primary)
+    box-shadow: 0 0 0 2px rgba(125, 211, 216, 0.2)
+
 .list-thumbnail
   position: relative
   width: 80px
@@ -347,6 +363,81 @@
     padding: 0.5rem 1rem
     font-size: 0.875rem
     white-space: nowrap
+
+// Pagination
+.pagination-section
+  margin: 2rem 0
+  padding: 1.5rem 0
+  border-top: 1px solid var(--border-color)
+
+.pagination-info
+  display: flex
+  justify-content: space-between
+  align-items: center
+  margin-bottom: 1rem
+  color: var(--text-secondary)
+  font-size: 0.875rem
+
+.page-size-select
+  background: var(--background-secondary)
+  border: 1px solid var(--border-color)
+  border-radius: 6px
+  padding: 0.5rem
+  color: var(--text-primary)
+  font-size: 0.875rem
+
+.pagination-controls
+  display: flex
+  justify-content: center
+  align-items: center
+  gap: 0.5rem
+
+.pagination-btn
+  background: var(--background-secondary)
+  border: 1px solid var(--border-color)
+  border-radius: 6px
+  padding: 0.5rem 1rem
+  color: var(--text-primary)
+  cursor: pointer
+  transition: all 0.2s ease
+
+  &:hover:not(:disabled)
+    background: var(--background-hover)
+    border-color: var(--accent-primary)
+
+  &:disabled
+    opacity: 0.5
+    cursor: not-allowed
+
+.page-numbers
+  display: flex
+  gap: 0.25rem
+
+.page-btn
+  background: none
+  border: 1px solid var(--border-color)
+  border-radius: 6px
+  padding: 0.5rem 0.75rem
+  color: var(--text-primary)
+  cursor: pointer
+  transition: all 0.2s ease
+  min-width: 40px
+
+  &:hover:not(:disabled)
+    background: var(--background-hover)
+
+  &.active
+    background: var(--accent-primary)
+    border-color: var(--accent-primary)
+    color: white
+
+  &.ellipsis
+    border: none
+    cursor: default
+    color: var(--text-secondary)
+
+    &:hover
+      background: none
 
 // Bulk Actions
 .bulk-actions
@@ -446,3 +537,16 @@
     .btn
       min-width: unset
       width: 100%
+
+  .pagination-info
+    flex-direction: column
+    gap: 0.75rem
+    text-align: center
+
+  .pagination-controls
+    flex-wrap: wrap
+    justify-content: center
+
+  .page-numbers
+    order: -1
+    margin-bottom: 0.5rem

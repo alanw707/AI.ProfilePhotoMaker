@@ -44,8 +44,8 @@ export class GalleryComponent implements OnInit {
           id: img.id,
           url: img.processedImageUrl || img.originalImageUrl,
           thumbnailUrl: img.originalImageUrl,
-          title: img.isGenerated ? `${img.style} Photo` : 'Uploaded Photo',
-          description: img.isGenerated ? `Generated ${img.style} style profile photo` : 'Original uploaded image',
+          title: img.isGenerated ? `${this.formatStyleName(img.style)} Photo` : 'Uploaded Photo',
+          description: img.isGenerated ? `Generated ${this.formatStyleName(img.style)} style profile photo` : 'Original uploaded image',
           style: img.style || 'original',
           createdAt: new Date(img.createdAt),
           status: 'completed' as const,
@@ -391,5 +391,14 @@ export class GalleryComponent implements OnInit {
       this.isDownloading = false;
       this.downloadProgress = 0;
     }
+  }
+
+  formatStyleName(style: string): string {
+    if (!style) return '';
+    return style
+      .replace(/[-_/]/g, ' ')  // Replace dashes, underscores, and slashes with spaces
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
   }
 }
