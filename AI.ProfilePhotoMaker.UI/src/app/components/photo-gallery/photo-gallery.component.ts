@@ -78,13 +78,22 @@ export interface GalleryImage {
             [class.processing]="image.status === 'processing'"
             [class.failed]="image.status === 'failed'">
             
-            <div class="image-container" (click)="openImage(image)">
+            <div class="image-container" [class.selected]="isSelected(image)">
               <img 
                 [src]="image.thumbnailUrl || image.url" 
                 [alt]="image.title"
                 class="gallery-image"
                 (load)="onImageLoad($event)"
                 (error)="onImageError($event)">
+              
+              <!-- Selection Overlay -->
+              <div class="selection-overlay" (click)="toggleSelection(image)">
+                <div class="checkmark">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              </div>
               
               <!-- Status Overlay -->
               <div class="status-overlay" *ngIf="image.status !== 'completed'">
@@ -101,6 +110,14 @@ export interface GalleryImage {
               <div class="type-badge" [class]="image.type">
                 {{getTypeBadgeText(image.type)}}
               </div>
+              
+              <!-- View Button -->
+              <button class="view-btn" (click)="openImage(image)" title="View Image">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </button>
             </div>
 
             <div class="image-info">
@@ -291,6 +308,19 @@ export class PhotoGalleryComponent implements OnInit {
 
   downloadSelected() {
     this.bulkDownload.emit(this.selectedImages);
+  }
+
+  isSelected(image: GalleryImage): boolean {
+    return this.selectedImages.some(selected => selected.id === image.id);
+  }
+
+  toggleSelection(image: GalleryImage) {
+    const index = this.selectedImages.findIndex(selected => selected.id === image.id);
+    if (index > -1) {
+      this.selectedImages.splice(index, 1);
+    } else {
+      this.selectedImages.push(image);
+    }
   }
 
   onImageLoad(event: any) {
