@@ -347,22 +347,27 @@ public class ProfileController : ControllerBase
 
         foreach (var i in profile.ProcessedImages.OrderByDescending(i => i.CreatedAt))
         {
-            var originalUrl = !string.IsNullOrEmpty(i.OriginalImageUrl) ? (i.OriginalImageUrl.StartsWith("http") ? i.OriginalImageUrl : GetAbsoluteUrl(i.OriginalImageUrl)) : i.OriginalImageUrl;
-            var processedUrl = !string.IsNullOrEmpty(i.ProcessedImageUrl) ? (i.ProcessedImageUrl.StartsWith("http") ? i.ProcessedImageUrl : GetAbsoluteUrl(i.ProcessedImageUrl)) : i.ProcessedImageUrl;
+            // For generated images, construct local URL from generated folder
+            // For uploaded images, use the stored paths
+            string originalUrl = null;
+            string processedUrl = null;
             
-            // Check if local files exist
-            var localFileExists = false;
-            
-            // For uploaded images, check original URL
-            if (!string.IsNullOrEmpty(i.OriginalImageUrl) && !i.OriginalImageUrl.StartsWith("http"))
+            if (i.IsGenerated && !string.IsNullOrEmpty(i.Style) && i.Style != "Original")
             {
-                localFileExists = System.IO.File.Exists(Path.Combine(_environment.ContentRootPath, i.OriginalImageUrl.TrimStart('/')));
+                // For generated images, construct the local path
+                var localImagePath = $"/generated/{i.UserProfile.UserId}/{i.Style.ToLower().Replace(" ", "-")}_{i.Id % 2 + 1}.png";
+                processedUrl = GetAbsoluteUrl(localImagePath);
             }
-            
-            // For generated images, check processed URL if it's a local path
-            if (i.IsGenerated && !string.IsNullOrEmpty(i.ProcessedImageUrl) && !i.ProcessedImageUrl.StartsWith("http"))
+            else
             {
-                localFileExists = System.IO.File.Exists(Path.Combine(_environment.ContentRootPath, i.ProcessedImageUrl.TrimStart('/')));
+                // For uploaded images or other cases, use stored URLs
+                originalUrl = !string.IsNullOrEmpty(i.OriginalImageUrl) ? 
+                    (i.OriginalImageUrl.StartsWith("http") ? i.OriginalImageUrl : GetAbsoluteUrl(i.OriginalImageUrl)) : 
+                    null;
+                    
+                processedUrl = !string.IsNullOrEmpty(i.ProcessedImageUrl) ? 
+                    (i.ProcessedImageUrl.StartsWith("http") ? i.ProcessedImageUrl : GetAbsoluteUrl(i.ProcessedImageUrl)) : 
+                    null;
             }
             
             images.Add(new
@@ -373,8 +378,7 @@ public class ProfileController : ControllerBase
                 i.Style,
                 i.CreatedAt,
                 IsOriginalUpload = i.Style == "Original",
-                IsGenerated = i.IsGenerated,
-                FileExists = localFileExists
+                IsGenerated = i.IsGenerated
             });
         }
 
