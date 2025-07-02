@@ -63,6 +63,71 @@ public class ImageDownloadService : IImageDownloadService
         return downloadedPaths;
     }
 
+    public async Task<List<ImageDownloadResult>> DownloadImagesWithDetailsAsync(List<string> imageUrls, string userId, string style)
+    {
+        var downloadResults = new List<ImageDownloadResult>();
+
+        if (imageUrls == null || imageUrls.Count == 0)
+        {
+            _logger.LogWarning("No image URLs provided for download for user {UserId}", userId);
+            return downloadResults;
+        }
+
+        _logger.LogInformation("Starting download of {Count} images for user {UserId}, style {Style}", 
+            imageUrls.Count, userId, style);
+
+        for (int i = 0; i < imageUrls.Count; i++)
+        {
+            var imageUrl = imageUrls[i];
+            // Let DownloadImageAsync generate unique filename to prevent overwrites
+            var fileName = (string?)null;
+
+            try
+            {
+                var localPath = await DownloadImageAsync(imageUrl, userId, style, fileName);
+                if (!string.IsNullOrEmpty(localPath))
+                {
+                    // Extract the actual filename from the path
+                    var actualFileName = Path.GetFileName(localPath);
+                    downloadResults.Add(new ImageDownloadResult
+                    {
+                        LocalPath = localPath,
+                        FileName = actualFileName,
+                        Success = true
+                    });
+                    _logger.LogInformation("Successfully downloaded image {Index} for user {UserId}: {LocalPath} as {FileName}", 
+                        i + 1, userId, localPath, actualFileName);
+                }
+                else
+                {
+                    downloadResults.Add(new ImageDownloadResult
+                    {
+                        LocalPath = string.Empty,
+                        FileName = string.Empty,
+                        Success = false
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to download image {Index} from {Url} for user {UserId}", 
+                    i + 1, imageUrl, userId);
+                downloadResults.Add(new ImageDownloadResult
+                {
+                    LocalPath = string.Empty,
+                    FileName = string.Empty,
+                    Success = false
+                });
+            }
+        }
+
+        var successCount = downloadResults.Count(r => r.Success);
+        _logger.LogInformation("Downloaded {SuccessCount}/{TotalCount} images for user {UserId}, style {Style}", 
+            successCount, imageUrls.Count, userId, style);
+
+        return downloadResults;
+    }
+
     public async Task<string?> DownloadImageAsync(string imageUrl, string userId, string style, string? fileName = null)
     {
         try

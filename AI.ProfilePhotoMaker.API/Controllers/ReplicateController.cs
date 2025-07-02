@@ -146,9 +146,9 @@ public class ReplicateController : ControllerBase
         if (string.IsNullOrEmpty(userId))
             return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
 
-        // Check if user has sufficient purchased credits for styled generation (5 credits required)
+        // Check if user has sufficient purchased credits for styled generation (5 credits per image)
         var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
-        var requiredCredits = CreditCostConfig.GetCreditCost("styled_generation");
+        var requiredCredits = dto.NumOutputs * CreditCostConfig.GetCreditCost("styled_generation");
         
         if (purchasedCredits < requiredCredits)
         {
@@ -226,8 +226,8 @@ public class ReplicateController : ControllerBase
             
             var result = await _replicateApiClient.GenerateImagesAsync(modelVersionToUse, dto.UserId, dto.Style, userInfo);
             
-            // Only consume credits AFTER successful API call
-            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "styled_generation");
+            // Only consume credits AFTER successful API call (5 credits per image generated)
+            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, requiredCredits, "styled_generation");
             if (!creditConsumed)
             {
                 _logger.LogError("Successfully created Replicate prediction but failed to consume credits for user {UserId}", userId);

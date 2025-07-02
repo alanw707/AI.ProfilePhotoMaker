@@ -196,8 +196,8 @@ public class ProfileController : ControllerBase
         if (dto.Images == null || !dto.Images.Any())
             return BadRequest("No images provided");
 
-        if (dto.Images.Count > 10)
-            return BadRequest("Maximum 10 images allowed");
+        if (dto.Images.Count > 20)
+            return BadRequest("Maximum 20 images allowed");
 
         var userId = GetCurrentUserId();
         if (userId == null)
@@ -354,9 +354,19 @@ public class ProfileController : ControllerBase
             
             if (i.IsGenerated && !string.IsNullOrEmpty(i.Style) && i.Style != "Original")
             {
-                // For generated images, construct the local path
-                var localImagePath = $"/generated/{i.UserProfile.UserId}/{i.Style.ToLower().Replace(" ", "-")}_{i.Id % 2 + 1}.png";
-                processedUrl = GetAbsoluteUrl(localImagePath);
+                // For generated images, use stored filename if available, otherwise fallback to constructed path
+                if (!string.IsNullOrEmpty(i.ActualFileName))
+                {
+                    // Use the actual filename stored in the database
+                    var localImagePath = $"/generated/{i.UserProfile.UserId}/{i.ActualFileName}";
+                    processedUrl = GetAbsoluteUrl(localImagePath);
+                }
+                else
+                {
+                    // Fallback for existing records without stored filenames
+                    var localImagePath = $"/generated/{i.UserProfile.UserId}/{i.Style.ToLower().Replace(" ", "-")}_{i.Id % 2 + 1}.png";
+                    processedUrl = GetAbsoluteUrl(localImagePath);
+                }
             }
             else
             {
@@ -421,13 +431,13 @@ public class ProfileController : ControllerBase
             ModelTrainedAt = latestModel?.CompletedAt,
             TotalUploadedImages = uploadedImages.Count,
             LatestZipFile = zipFiles.OrderByDescending(f => System.IO.File.GetCreationTime(f)).FirstOrDefault(),
-            CanStartTraining = uploadedImages.Count >= 4, // Minimum 4 images for training
+            CanStartTraining = uploadedImages.Count >= 10, // Minimum 10 images for training
             Status = uploadedImages.Count switch
             {
                 0 => "No images uploaded",
-                < 4 => $"Need at least 4 images (currently {uploadedImages.Count})",
-                >= 4 when latestModel == null => "Ready for training",
-                >= 4 when latestModel != null => "Model trained - ready for generation",
+                < 10 => $"Need at least 10 images (currently {uploadedImages.Count})",
+                >= 10 when latestModel == null => "Ready for training",
+                >= 10 when latestModel != null => "Model trained - ready for generation",
                 _ => "Unknown status"
             }
         });
@@ -460,13 +470,13 @@ public class ProfileController : ControllerBase
             if (string.IsNullOrEmpty(zipPath))
             {
                 // Check specific reasons for failure
-                if (uploadedImages.Count < 4)
+                if (uploadedImages.Count < 10)
                 {
                     return BadRequest(new { 
                         success = false, 
                         error = new { 
                             code = "InsufficientImages", 
-                            message = $"Need at least 4 images for training (currently {uploadedImages.Count})" 
+                            message = $"Need at least 10 images for training (currently {uploadedImages.Count})" 
                         } 
                     });
                 }
@@ -625,7 +635,7 @@ public class ProfileController : ControllerBase
                     })
                     .ToArray();
 
-                if (imageFiles.Length < 4)
+                if (imageFiles.Length < 10)
                 {
                     _logger.LogWarning("Insufficient images ({Count}) for training ZIP for user {UserId}", imageFiles.Length, userId);
                     return null;

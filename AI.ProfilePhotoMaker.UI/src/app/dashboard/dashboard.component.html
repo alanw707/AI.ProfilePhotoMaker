@@ -114,7 +114,7 @@
               <div class="step-number">1</div>
               <div class="step-title">
                 <h3>Upload Your Selfies</h3>
-                <p>Upload at least 10 high-quality selfies for the best results</p>
+                <p>Upload 10+ selfies (15 recommended, 20 for best results)</p>
               </div>
               <div class="step-status">
                 <span class="status-badge" [ngClass]="getStepStatus(1)">
@@ -239,7 +239,65 @@
                     </button>
                   </div>
                 </div>
-                <p class="upload-status">✅ {{uploadedImageThumbnails.length}} images ready for training</p>
+                <!-- Upload Progress Bar -->
+                <div class="upload-progress-section">
+                  <div class="progress-header">
+                    <h5>📈 Upload Progress</h5>
+                    <span class="progress-count">{{uploadedImageThumbnails.length}} / 20 images</span>
+                  </div>
+                  
+                  <div class="progress-bar-container">
+                    <div class="progress-bar">
+                      <div class="progress-fill" 
+                           [style.width.%]="(uploadedImageThumbnails.length / 20) * 100"
+                           [ngClass]="{
+                             'progress-red': uploadedImageThumbnails.length < 10,
+                             'progress-yellow': uploadedImageThumbnails.length >= 10 && uploadedImageThumbnails.length < 15,
+                             'progress-green': uploadedImageThumbnails.length >= 15
+                           }">
+                      </div>
+                      
+                      <!-- Milestone markers -->
+                      <div class="milestone-marker" style="left: 50%" title="10 images - Minimum required">
+                        <div class="marker-line"></div>
+                        <span class="marker-label">10</span>
+                      </div>
+                      <div class="milestone-marker" style="left: 75%" title="15 images - Recommended">
+                        <div class="marker-line"></div>
+                        <span class="marker-label">15</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="progress-status">
+                    <div class="status-indicators">
+                      <span class="status-indicator" 
+                            [ngClass]="{
+                              'status-complete': uploadedImageThumbnails.length >= 10,
+                              'status-incomplete': uploadedImageThumbnails.length < 10
+                            }">
+                        {{uploadedImageThumbnails.length >= 10 ? '✅' : '⭕'}} 
+                        <strong>10 minimum</strong> (required)
+                      </span>
+                      <span class="status-indicator"
+                            [ngClass]="{
+                              'status-complete': uploadedImageThumbnails.length >= 15,
+                              'status-incomplete': uploadedImageThumbnails.length < 15
+                            }">
+                        {{uploadedImageThumbnails.length >= 15 ? '✅' : '⭕'}} 
+                        <strong>15 recommended</strong> (good)
+                      </span>
+                      <span class="status-indicator"
+                            [ngClass]="{
+                              'status-complete': uploadedImageThumbnails.length >= 20,
+                              'status-incomplete': uploadedImageThumbnails.length < 20
+                            }">
+                        {{uploadedImageThumbnails.length >= 20 ? '✅' : '⭕'}} 
+                        <strong>20 for best results</strong>
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
               
               <!-- Selected files preview (active work) -->

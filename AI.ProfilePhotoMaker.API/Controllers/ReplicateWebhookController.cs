@@ -220,8 +220,8 @@ public class ReplicateWebhookController : ControllerBase
 
                 try
                 {
-                    // Download all generated images to local storage
-                    var localPaths = await _imageDownloadService.DownloadImagesAsync(
+                    // Download all generated images to local storage with filename tracking
+                    var downloadResults = await _imageDownloadService.DownloadImagesWithDetailsAsync(
                         imageUrls, 
                         userId, 
                         style ?? "Unknown");
@@ -232,7 +232,9 @@ public class ReplicateWebhookController : ControllerBase
                     for (int i = 0; i < imageUrls.Count; i++)
                     {
                         var replicateUrl = imageUrls[i];
-                        var localPath = i < localPaths.Count ? localPaths[i] : null;
+                        var downloadResult = i < downloadResults.Count ? downloadResults[i] : null;
+                        var localPath = downloadResult?.Success == true ? downloadResult.LocalPath : null;
+                        var actualFileName = downloadResult?.Success == true ? downloadResult.FileName : null;
                         
                         // Convert local path to public URL path
                         string? publicUrl = null;
@@ -248,6 +250,7 @@ public class ReplicateWebhookController : ControllerBase
                             UserProfileId = userProfile.Id,
                             OriginalImageUrl = replicateUrl, // Store the original Replicate URL
                             ProcessedImageUrl = publicUrl ?? replicateUrl, // Use local path if available, fallback to Replicate URL
+                            ActualFileName = actualFileName, // Store the actual filename used on disk
                             Style = style ?? "Unknown",
                             IsGenerated = true,
                             IsOriginalUpload = false,
@@ -273,7 +276,7 @@ public class ReplicateWebhookController : ControllerBase
                         success = true, 
                         message = $"Processed {imageUrls.Count} images",
                         imageIds = savedImageIds,
-                        downloadedCount = localPaths.Count
+                        downloadedCount = downloadResults.Count(r => r.Success)
                     });
                 }
                 catch (Exception ex)

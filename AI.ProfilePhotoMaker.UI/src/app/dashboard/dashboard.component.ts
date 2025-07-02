@@ -580,18 +580,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }, 30000); // Poll every 30 seconds
   }
 
-  private startPhotoCompletionPolling(expectedStyleCount: number) {
+  private async startPhotoCompletionPolling(expectedStyleCount: number) {
     const expectedPhotoCount = expectedStyleCount * this.imagesPerStyle;
     
-    // Get initial generated photo count
-    this.fileUploadService.getUserImages().subscribe({
-      next: (response) => {
-        this.initialPhotoCount = response.generatedImages || 0;
-      },
-      error: () => {
-        this.initialPhotoCount = 0;
-      }
-    });
+    // Get initial generated photo count BEFORE starting polling
+    try {
+      const response = await this.fileUploadService.getUserImages().toPromise();
+      this.initialPhotoCount = response?.generatedImages || 0;
+      console.log('📊 Initial photo count set to:', this.initialPhotoCount);
+    } catch (error) {
+      console.error('Error getting initial photo count:', error);
+      this.initialPhotoCount = 0;
+    }
     
     this.photoCompletionPollingInterval = setInterval(async () => {
       try {
@@ -600,10 +600,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
           next: (response) => {
             const currentPhotoCount = response.generatedImages || 0;
             const newPhotos = currentPhotoCount - this.initialPhotoCount;
+            console.log('📊 Photo count polling:', {
+              initialPhotoCount: this.initialPhotoCount,
+              currentPhotoCount: currentPhotoCount,
+              newPhotos: newPhotos,
+              expectedPhotoCount: expectedPhotoCount
+            });
             
             if (newPhotos >= expectedPhotoCount) {
               // All photos completed
               clearInterval(this.photoCompletionPollingInterval);
+              console.log('✅ Photo generation complete! newPhotos:', newPhotos);
               this.onPhotoGenerationComplete(newPhotos);
             } else if (newPhotos > 0) {
               // Some photos completed, update progress - override time-based progress
@@ -755,7 +762,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         `Generating ${selectedStyles.length} style(s) with ${this.imagesPerStyle} images each. Estimated completion: ${estimatedCompletion.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
 
       // Start polling for photo completion
-      this.startPhotoCompletionPolling(selectedStyles.length);
+      await this.startPhotoCompletionPolling(selectedStyles.length);
       
       // Refresh dashboard state to update model status
       await this.stateService.loadInitialDashboardData();
@@ -885,6 +892,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   async handleFileSelection(files: File[]) {
+    const MAX_FILES = 20;
+    const currentFileCount = this.uploadedImageThumbnails.length + this.selectedFiles.length;
+    
+    // Check if adding these files would exceed the 20 file limit
+    if (currentFileCount + files.length > MAX_FILES) {
+      const remaining = MAX_FILES - currentFileCount;
+      if (remaining <= 0) {
+        this.notificationService.error('Upload Limit Reached', 
+          `You have already reached the maximum of ${MAX_FILES} images. Please remove some images before adding more.`);
+        return;
+      } else {
+        // Only take the files that fit within the limit
+        files = files.slice(0, remaining);
+        this.notificationService.warning('Upload Limit', 
+          `You can only add ${remaining} more image(s) to reach the maximum of ${MAX_FILES}. Only the first ${remaining} image(s) will be processed.`);
+      }
+    }
+    
     // Reset previous quality check errors
     this.qualityCheckErrors = [];
     
@@ -1036,9 +1061,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   calculateGenerationCredits(): number {
-    const generationCostPerStyle = 5; // 5 credits per style regardless of number of images (1-4)
+    const generationCostPerImage = 5; // 5 credits per image generated
     const selectedStyleCount = this.availableStyles.filter(s => s.selected).length;
-    return selectedStyleCount * generationCostPerStyle;
+    const totalImages = selectedStyleCount * this.imagesPerStyle;
+    return totalImages * generationCostPerImage;
   }
 
   // Image Quality Validation Methods
