@@ -3,6 +3,7 @@ using System;
 using AI.ProfilePhotoMaker.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AI.ProfilePhotoMaker.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250703030752_RemovePremiumPackageSystem")]
+    partial class RemovePremiumPackageSystem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.16");
@@ -148,7 +151,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 1,
                             BonusCredits = 0,
-                            CreatedAt = new DateTime(2025, 7, 3, 3, 44, 46, 736, DateTimeKind.Utc).AddTicks(4251),
+                            CreatedAt = new DateTime(2025, 7, 3, 3, 7, 52, 248, DateTimeKind.Utc).AddTicks(6495),
                             Credits = 50,
                             Description = "Perfect for trying out custom training and styled generations",
                             DisplayOrder = 1,
@@ -160,7 +163,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 2,
                             BonusCredits = 30,
-                            CreatedAt = new DateTime(2025, 7, 3, 3, 44, 46, 736, DateTimeKind.Utc).AddTicks(4255),
+                            CreatedAt = new DateTime(2025, 7, 3, 3, 7, 52, 248, DateTimeKind.Utc).AddTicks(6498),
                             Credits = 120,
                             Description = "Most popular - great for professionals",
                             DisplayOrder = 2,
@@ -172,7 +175,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 3,
                             BonusCredits = 100,
-                            CreatedAt = new DateTime(2025, 7, 3, 3, 44, 46, 736, DateTimeKind.Utc).AddTicks(4257),
+                            CreatedAt = new DateTime(2025, 7, 3, 3, 7, 52, 248, DateTimeKind.Utc).AddTicks(6500),
                             Credits = 300,
                             Description = "Best value for content creators and businesses",
                             DisplayOrder = 3,
@@ -184,7 +187,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 4,
                             BonusCredits = 250,
-                            CreatedAt = new DateTime(2025, 7, 3, 3, 44, 46, 736, DateTimeKind.Utc).AddTicks(4259),
+                            CreatedAt = new DateTime(2025, 7, 3, 3, 7, 52, 248, DateTimeKind.Utc).AddTicks(6502),
                             Credits = 750,
                             Description = "Maximum credits for agencies and enterprises",
                             DisplayOrder = 4,
@@ -393,9 +396,6 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ProcessedImageUrl")
-                        .IsUnique();
 
                     b.HasIndex("UserProfileId");
 

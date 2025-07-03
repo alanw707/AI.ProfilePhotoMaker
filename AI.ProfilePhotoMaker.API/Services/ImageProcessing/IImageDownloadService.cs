@@ -16,15 +16,6 @@ public class ImageDownloadResult
 public interface IImageDownloadService
 {
     /// <summary>
-    /// Downloads images from URLs and stores them locally
-    /// </summary>
-    /// <param name="imageUrls">List of image URLs to download</param>
-    /// <param name="userId">User ID for directory organization</param>
-    /// <param name="style">Style name for file organization</param>
-    /// <returns>List of local file paths for successfully downloaded images</returns>
-    Task<List<string>> DownloadImagesAsync(List<string> imageUrls, string userId, string style);
-
-    /// <summary>
     /// Downloads images from URLs and stores them locally with filename tracking
     /// </summary>
     /// <param name="imageUrls">List of image URLs to download</param>

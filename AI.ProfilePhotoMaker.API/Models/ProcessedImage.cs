@@ -5,7 +5,6 @@ public class ProcessedImage
     public int Id { get; set; }
     public string OriginalImageUrl { get; set; }
     public string ProcessedImageUrl { get; set; }
-    public string? ActualFileName { get; set; } // Stores the actual filename used on disk
     public string Style { get; set; }
     public int UserProfileId { get; set; }
     public UserProfile UserProfile { get; set; }

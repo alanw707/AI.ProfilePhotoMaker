@@ -5,6 +5,7 @@ using AI.ProfilePhotoMaker.API.Services.Authentication;
 using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Payment;
+using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -326,6 +327,11 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IModelDiscoveryServ
 
 builder.Services.AddHttpClient<IImageDownloadService, ImageDownloadService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository, AI.ProfilePhotoMaker.API.Data.UserProfileRepository>();
+
+// Register Storage Services
+builder.Services.AddScoped<IStorageService, LocalStorageService>();
+// Note: For production with Azure Blob Storage, replace with:
+// builder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
 
 // Premium Package Services removed - using unified credit system
 
