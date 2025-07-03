@@ -188,8 +188,8 @@ describe('DashboardComponent', () => {
   describe('Data Collections', () => {
     it('should manage available styles', () => {
       const mockStyles = [
-        { id: 1, name: 'corporate', displayName: 'Corporate' },
-        { id: 2, name: 'casual', displayName: 'Casual' }
+        { id: '1', name: 'corporate', description: 'Professional corporate style', previewUrl: 'corporate.jpg', selected: false },
+        { id: '2', name: 'casual', description: 'Casual everyday style', previewUrl: 'casual.jpg', selected: false }
       ];
       
       component.availableStyles = mockStyles;
@@ -206,8 +206,9 @@ describe('DashboardComponent', () => {
     });
 
     it('should manage quality check errors', () => {
+      const mockFile = TestingHelpers.createMockFile('test.jpg');
       const mockErrors = [
-        { fileName: 'test.jpg', reason: 'No face detected' }
+        { fileName: 'test.jpg', file: mockFile, errors: ['No face detected'], warnings: [] }
       ];
       
       component.qualityCheckErrors = mockErrors;

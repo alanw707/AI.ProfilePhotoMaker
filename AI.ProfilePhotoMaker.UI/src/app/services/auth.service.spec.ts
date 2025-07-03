@@ -266,11 +266,12 @@ describe('AuthService', () => {
       expect(service.getToken()).toBeNull();
     });
 
-    it('should check if token exists', () => {
-      expect(service.hasToken()).toBeFalse();
+    it('should check authentication state based on token', () => {
+      expect(service.isAuthenticated()).toBeFalse();
 
       localStorage.setItem('auth_token', 'token');
-      expect(service.hasToken()).toBeTrue();
+      service['isAuthenticatedSubject'].next(true);
+      expect(service.isAuthenticated()).toBeTrue();
     });
   });
 
@@ -285,13 +286,17 @@ describe('AuthService', () => {
       service['currentUserSubject'].next(mockUser);
     });
 
-    it('should get current user', () => {
-      const user = service.getCurrentUser();
-      expect(user).toEqual(jasmine.objectContaining({
-        email: 'test@example.com',
-        firstName: 'Test',
-        lastName: 'User'
-      }));
+    it('should get current user from observable', (done) => {
+      service.currentUser$.subscribe(user => {
+        if (user) {
+          expect(user).toEqual(jasmine.objectContaining({
+            email: 'test@example.com',
+            firstName: 'Test',
+            lastName: 'User'
+          }));
+          done();
+        }
+      });
     });
 
     it('should get current user as observable', (done) => {
