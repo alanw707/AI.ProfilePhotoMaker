@@ -64,7 +64,7 @@ export class FileUploadManagerService {
       completed: true
     });
 
-    return { validFiles, errorFiles };
+    return { validFiles, invalidFiles: errorFiles.map(e => e.file), errors: errorFiles, totalProcessed: files.length };
   }
 
   private async validateFile(file: File): Promise<SelectedFileWithQuality> {

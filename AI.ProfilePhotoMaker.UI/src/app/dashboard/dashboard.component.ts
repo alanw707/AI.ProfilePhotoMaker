@@ -7,6 +7,7 @@ import { Observable } from 'rxjs';
 import { HeaderNavigationComponent } from '../shared/header-navigation/header-navigation.component';
 import { StatsCardComponent } from '../components/dashboard/stats-card/stats-card.component';
 import { StyleSelectorComponent, StyleOption } from '../components/dashboard/style-selector/style-selector.component';
+import { FileUploadSectionComponent } from '../components/dashboard/file-upload-section/file-upload-section.component';
 
 import { AuthService } from '../services/auth.service';
 import { FileUploadService } from '../services/file-upload.service';
@@ -42,13 +43,13 @@ import {
     FormsModule, 
     HeaderNavigationComponent, 
     StatsCardComponent, 
-    StyleSelectorComponent
+    StyleSelectorComponent,
+    FileUploadSectionComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.sass']
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
   state$: Observable<any>;
 
@@ -235,37 +236,96 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   // UI Event Handlers
-  triggerFileUpload() {
-    this.fileInput.nativeElement.click();
-  }
+  // File upload is now handled by FileUploadSectionComponent
 
   removeFile(idx: number) {
     this.selectedFiles.splice(idx, 1);
     this.selectedFilesWithQuality.splice(idx, 1);
   }
 
-  deleteUploadedImage(thumb: any, _idx: number) {
-    // Delete from server
-    this.fileUploadService.deleteImage(thumb.id).subscribe({
-      next: (response) => {
-        if (response.success) {
-          // Update state by removing the thumbnail
-          const currentThumbnails = this.stateService.getState().uploadedImageThumbnails;
-          const updatedThumbnails = currentThumbnails.filter(t => t.id !== thumb.id);
-          this.stateService.setState({ 
-            uploadedImageThumbnails: updatedThumbnails,
-            uploadedImages: updatedThumbnails.length 
-          });
-          this.notificationService.success('Image Deleted', 'Image has been successfully deleted.');
-        } else {
-          this.notificationService.error('Delete Failed', 'Failed to delete image. Please try again.');
-        }
-      },
-      error: (error) => {
-        console.error('Delete image error:', error);
-        this.notificationService.error('Delete Failed', 'Failed to delete image. Please try again.');
+  // Event handlers for FileUploadSectionComponent
+  onFilesSelected(files: File[]) {
+    this.selectedFiles = files;
+  }
+
+  onUploadCompleted(uploadedFiles: any[]) {
+    console.log('Upload completed, refreshing images from server:', uploadedFiles);
+    
+    // Instead of manually creating thumbnails with potentially incorrect IDs,
+    // refresh the uploaded images from the server to get accurate data
+    this.refreshUploadedImagesFromServer();
+    
+    // Reset selected files
+    this.selectedFiles = [];
+    this.selectedFilesWithQuality = [];
+    
+    // Check if we should move to next step after refresh
+    setTimeout(() => {
+      const thumbnails = this.stateService.getState().uploadedImageThumbnails;
+      if (thumbnails.length >= 10) {
+        this.currentStep = 2;
       }
+    }, 1000); // Small delay to allow refresh to complete
+  }
+
+  onUploadProgress(progress: number) {
+    this.uploadProgress = progress;
+  }
+
+  onQualityCheckCompleted(result: QualityCheckResult) {
+    this.selectedFilesWithQuality = this.selectedFiles.map(file => {
+      const validFile = result.validFiles.find(vf => vf === file);
+      const errorFile = result.errors.find(ef => ef.file === file);
+      
+      return {
+        file,
+        qualityScore: errorFile?.qualityScore,
+        faceValidation: errorFile?.faceValidation,
+        errors: errorFile?.errors || [],
+        warnings: errorFile?.warnings || [],
+        isValid: !!validFile,
+        showDetails: false
+      };
     });
+  }
+
+  onFileRemoved(index: number) {
+    this.selectedFiles.splice(index, 1);
+    this.selectedFilesWithQuality.splice(index, 1);
+  }
+
+  onUploadedImageDeleted(event: { thumb: any, index: number, refreshRequired?: boolean }) {
+    const { thumb, refreshRequired } = event;
+    
+    // If refresh is required due to sync issues, refresh from server
+    if (refreshRequired) {
+      this.refreshUploadedImagesFromServer();
+      return;
+    }
+    
+    // Handle successful deletion - just update the UI state
+    // The actual deletion was already handled by FileUploadSectionComponent
+    if (thumb && thumb.id) {
+      const currentThumbnails = this.stateService.getState().uploadedImageThumbnails;
+      const updatedThumbnails = currentThumbnails.filter(t => t.id !== thumb.id);
+      this.stateService.setState({ 
+        uploadedImageThumbnails: updatedThumbnails,
+        uploadedImages: updatedThumbnails.length 
+      });
+    }
+  }
+
+  // Method to refresh uploaded images from server
+  private async refreshUploadedImagesFromServer() {
+    try {
+      // Force refresh by clearing cache and reloading dashboard data
+      this.stateService.forceRefresh();
+      
+      console.log('Successfully refreshed uploaded images from server');
+    } catch (error) {
+      console.error('Failed to refresh uploaded images:', error);
+      this.notificationService.error('Refresh Failed', 'Failed to refresh image list from server');
+    }
   }
 
   uploadImages() {
@@ -948,7 +1008,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       // Add valid files
       for (const file of qualityResult.validFiles) {
         // Find quality data for this file from error files (which may contain warnings)
-        const qualityData = qualityResult.errorFiles.find(ef => ef.file === file);
+        const qualityData = qualityResult.errors.find(ef => ef.file === file);
         newSelectedFilesWithQuality.push({
           file: file,
           qualityScore: qualityData?.qualityScore,
@@ -960,7 +1020,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       }
       
       // Add invalid files with their error information
-      for (const errorFile of qualityResult.errorFiles) {
+      for (const errorFile of qualityResult.errors) {
         if (!qualityResult.validFiles.includes(errorFile.file)) {
           newSelectedFilesWithQuality.push({
             file: errorFile.file,
@@ -978,7 +1038,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.selectedFiles.push(...qualityResult.validFiles);
       
       // Store quality check errors for display (only invalid files with actual errors)
-      this.qualityCheckErrors = qualityResult.errorFiles.filter(ef => 
+      this.qualityCheckErrors = qualityResult.errors.filter(ef => 
         ef.errors.length > 0
       );
       
@@ -988,8 +1048,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
           `${qualityResult.validFiles.length} image(s) ready for upload.`);
       }
       
-      if (qualityResult.errorFiles.length > 0) {
-        const invalidCount = qualityResult.errorFiles.filter(ef => 
+      if (qualityResult.errors.length > 0) {
+        const invalidCount = qualityResult.errors.filter(ef => 
           ef.errors.length > 0
         ).length;
         if (invalidCount > 0) {
@@ -1177,7 +1237,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     this.qualityCheckProgress = 'Analysis complete';
-    return { validFiles, errorFiles };
+    return { validFiles, invalidFiles: errorFiles.map(e => e.file), errors: errorFiles, totalProcessed: files.length };
   }
 
   private getImageDimensions(file: File): Promise<{width: number, height: number}> {
