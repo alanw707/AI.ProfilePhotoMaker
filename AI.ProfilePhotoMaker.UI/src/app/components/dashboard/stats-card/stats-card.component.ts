@@ -16,4 +16,5 @@ export class StatsCardComponent {
   @Input() showCard: boolean = true;
   @Input() isModelStatus: boolean = false;
   @Input() showSettingsHint: boolean = false;
+  @Input() isLoading: boolean = false;
 }

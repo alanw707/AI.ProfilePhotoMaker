@@ -42,7 +42,7 @@ export class DashboardStateService {
     generatedPhotosCount: 0,
     modelStatus: 'Not Started',
     isPremiumWorkflow: false,
-    isLoading: true,
+    isLoading: false,
     latestTrainedModel: null
   };
 
@@ -84,8 +84,8 @@ export class DashboardStateService {
   loadInitialDashboardData() {
     const now = Date.now();
     
-    // Check cache first
-    if (now < this.cacheExpiry && !this.getState().isLoading) {
+    // Check cache first (only if we have actual cached data)
+    if (now < this.cacheExpiry && this.getState().creditsInfo) {
       console.log('💾 Using cached dashboard data - cache still valid');
       return;
     }
@@ -100,15 +100,17 @@ export class DashboardStateService {
     this.setState({ isLoading: true });
     const loadStartTime = performance.now();
 
-    // Load only critical data first for faster initial render
+    // Load critical data including credits for immediate display
     forkJoin({
       profile: this.profileService.getCurrentUserProfile(),
       creditStatus: this.creditService.getCreditStatus(),
-      userImages: this.fileUploadService.getUserImages()
+      userImages: this.fileUploadService.getUserImages(),
+      credits: this.replicateService.getCredits()
     }).subscribe({
-      next: ({ profile, creditStatus, userImages }) => {
+      next: ({ profile, creditStatus, userImages, credits }) => {
         const userProfile = profile.success ? profile.data : null;
         const userCreditStatus = creditStatus.success ? creditStatus.data : null;
+        const creditsInfo = credits.success ? credits.data : null;
         
         // Process uploaded images into thumbnails format
         const uploadedImageThumbnails: UploadedImageThumbnail[] = userImages.images
@@ -134,6 +136,7 @@ export class DashboardStateService {
         this.setState({
           userProfile,
           userCreditStatus,
+          creditsInfo,
           uploadedImages: uploadedImageThumbnails.length,
           uploadedImageThumbnails,
           generatedPhotosCount,
@@ -185,13 +188,11 @@ export class DashboardStateService {
   private loadRemainingDataAsync() {
     // Load non-critical data in parallel but don't block rendering
     forkJoin({
-      credits: this.replicateService.getCredits(),
       trainingStatus: this.fileUploadService.getTrainingStatus(),
       modelRequests: this.fileUploadService.getUserModelRequests()
     }).subscribe({
-      next: ({ credits, trainingStatus, modelRequests }) => {
+      next: ({ trainingStatus, modelRequests }) => {
         const currentState = this.getState();
-        const creditsInfo = credits.success ? credits.data : null;
         const modelRequestsData = modelRequests.success ? modelRequests.data : null;
         
         // Determine model status from ModelCreationRequest (single source of truth)
@@ -214,7 +215,6 @@ export class DashboardStateService {
         
         // Update state with additional data
         this.setState({
-          creditsInfo,
           uploadedImages: trainingStatus.totalUploadedImages || currentState.uploadedImages,
           modelStatus,
           latestTrainedModel: modelRequestsData?.latestTrainedModel || null

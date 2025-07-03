@@ -29,8 +29,9 @@
             icon="💎" 
             [value]="getTotalAvailableCredits()" 
             label="Credits"
-            [showCard]="!!(creditsInfo || userCreditStatus)"
-            [showSettingsHint]="true">
+            [showCard]="true"
+            [showSettingsHint]="true"
+            [isLoading]="!creditsInfo && !userCreditStatus">
           </app-stats-card>
         </div>
       </section>
