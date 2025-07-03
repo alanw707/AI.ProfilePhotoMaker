@@ -133,7 +133,12 @@ describe('PhotoEnhancementComponent', () => {
     });
 
     it('should track credits info', () => {
-      const mockCredits = { weeklyCredits: 3, purchasedCredits: 10, totalCredits: 13 };
+      const mockCredits = { 
+        availableCredits: 13, 
+        subscriptionTier: 'basic', 
+        lastCreditReset: new Date(), 
+        nextResetDate: new Date() 
+      };
       
       component.creditsInfo = mockCredits;
       
