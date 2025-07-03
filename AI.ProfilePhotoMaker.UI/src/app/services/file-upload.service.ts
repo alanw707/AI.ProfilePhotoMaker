@@ -249,4 +249,19 @@ export class FileUploadService {
       })
     );
   }
+
+  repairImageDatabase(): Observable<{ success: boolean; message: string; data?: any }> {
+    return this.http.post<{ success: boolean; message: string; data?: any }>(
+      this.config.getFullUrl('/test/fix-generated-images'),
+      {}
+    ).pipe(
+      tap(response => {
+        if (response.success) {
+          // Invalidate cache after repair to reload fresh data
+          this.invalidateUserImagesCache();
+          console.log('🔧 Image database repair completed:', response.message);
+        }
+      })
+    );
+  }
 }

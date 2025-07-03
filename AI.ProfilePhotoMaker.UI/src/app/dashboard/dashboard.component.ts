@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, NgZone } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -16,7 +16,7 @@ import { CreditService } from '../services/credit.service';
 import { DashboardStateService } from '../services/dashboard-state.service';
 import { FaceDetectionService } from '../services/face-detection.service';
 import { ConfigService } from '../services/config.service';
-import { ReplicateService, TrainModelRequest, GenerateImagesRequest } from '../services/replicate.service';
+import { ReplicateService, TrainModelRequest, GenerateImagesRequest, GenerateBatchImagesRequest } from '../services/replicate.service';
 import { FileUploadManagerService } from '../services/file-upload-manager.service';
 
 import { GalleryImage } from '../components/photo-gallery/photo-gallery.component';
@@ -74,7 +74,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   selectedStyles: number = 0;
   qualityCheckErrors: QualityCheckError[] = [];
   photoCompletionPollingInterval?: any;
-  initialPhotoCount: number = 0;
   
   // Progress tracking properties
   isTraining: boolean = false;
@@ -142,7 +141,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private faceDetectionService: FaceDetectionService,
     private config: ConfigService,
     private replicateService: ReplicateService,
-    private fileUploadManager: FileUploadManagerService
+    private fileUploadManager: FileUploadManagerService,
+    private ngZone: NgZone
   ) {
     this.state$ = this.stateService.state$;
     
@@ -506,134 +506,138 @@ export class DashboardComponent implements OnInit, OnDestroy {
     let progressIncrement = 0;
     const maxTrainingProgress = 90; // Training goes up to 90%, generation takes the last 10%
     
-    this.pollingInterval = setInterval(async () => {
-      try {
-        if (!this.trainingId) {
-          clearInterval(this.pollingInterval);
-          return;
-        }
-
-        const statusResult = await this.replicateService.getTrainingStatus(this.trainingId).toPromise();
-        
-        if (!statusResult?.success) {
-          console.error('Failed to get training status:', statusResult?.error);
-          return;
-        }
-
-        const status = statusResult.data.status;
-        
-        // Increment progress during training (40% to 90%)
-        if (status === 'processing' || status === 'starting') {
-          progressIncrement += 2; // Increment by 2% every 30 seconds
-          this.progressPercentage = Math.min(40 + progressIncrement, maxTrainingProgress);
-          
-          // Update progress messages based on percentage
-          if (this.progressPercentage < 60) {
-            this.progressMessage = 'AI is analyzing your facial features...';
-          } else if (this.progressPercentage < 80) {
-            this.progressMessage = 'Training neural network on your photos...';
-          } else {
-            this.progressMessage = 'Finalizing your custom AI model...';
+    this.pollingInterval = this.ngZone.runOutsideAngular(() => setInterval(async () => {
+      this.ngZone.run(async () => {
+        try {
+          if (!this.trainingId) {
+            clearInterval(this.pollingInterval);
+            return;
           }
-        }
-        
-        if (status === 'succeeded') {
-          clearInterval(this.pollingInterval);
-          this.progressPercentage = maxTrainingProgress;
-          this.progressMessage = 'Model training complete! Starting image generation...';
-          this.isTraining = false;
-          this.notificationService.success('Training Complete', 'Model training finished! Starting image generation...');
+
+          const statusResult = await this.replicateService.getTrainingStatus(this.trainingId).toPromise();
           
-          // Force reload dashboard data to get updated model status
-          // Wait a bit for the webhook to update the database
-          await new Promise(resolve => setTimeout(resolve, 3000));
-          await this.stateService.loadInitialDashboardData();
+          if (!statusResult?.success) {
+            console.error('Failed to get training status:', statusResult?.error);
+            return;
+          }
+
+          const status = statusResult.data.status;
           
-          // Wait for state to update
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Start generation with the new model
-          const userProfile = this.stateService.getState().userProfile;
-          if (userProfile?.trainedModelVersionId) {
-            await this.generateImagesWithStyles(selectedStyles, userProfile.trainedModelVersionId);
-          } else {
-            // If model version not found, try to extract from training result
-            const versionId = statusResult.data.version;
-            if (versionId) {
-              await this.generateImagesWithStyles(selectedStyles, versionId);
+          // Increment progress during training (40% to 90%)
+          if (status === 'processing' || status === 'starting') {
+            progressIncrement += 2; // Increment by 2% every 30 seconds
+            this.progressPercentage = Math.min(40 + progressIncrement, maxTrainingProgress);
+            
+            // Update progress messages based on percentage
+            if (this.progressPercentage < 60) {
+              this.progressMessage = 'AI is analyzing your facial features...';
+            } else if (this.progressPercentage < 80) {
+              this.progressMessage = 'Training neural network on your photos...';
             } else {
-              this.notificationService.error('Generation Error', 'Could not find trained model version. Please refresh and try again.');
+              this.progressMessage = 'Finalizing your custom AI model...';
             }
           }
-        } else if (status === 'failed') {
-          clearInterval(this.pollingInterval);
-          this.isTraining = false;
-          this.progressPercentage = 0;
-          this.progressMessage = '';
-          this.notificationService.error('Training Failed', 'Model training failed. Please try again.');
-          this.isTrainingStarted = false;
-          this.currentStep = 2;
+          
+          if (status === 'succeeded') {
+            clearInterval(this.pollingInterval);
+            this.progressPercentage = maxTrainingProgress;
+            this.progressMessage = 'Model training complete! Starting image generation...';
+            this.isTraining = false;
+            this.notificationService.success('Training Complete', 'Model training finished! Starting image generation...');
+            
+            // Force reload dashboard data to get updated model status
+            // Wait a bit for the webhook to update the database
+            await new Promise(resolve => this.ngZone.runOutsideAngular(() => setTimeout(resolve, 3000)));
+            await this.stateService.loadInitialDashboardData();
+            
+            // Wait for state to update
+            await new Promise(resolve => this.ngZone.runOutsideAngular(() => setTimeout(resolve, 500)));
+            
+            // Start generation with the new model
+            const userProfile = this.stateService.getState().userProfile;
+            if (userProfile?.trainedModelVersionId) {
+              await this.generateImagesWithStyles(selectedStyles, userProfile.trainedModelVersionId);
+            } else {
+              // If model version not found, try to extract from training result
+              const versionId = statusResult.data.version;
+              if (versionId) {
+                await this.generateImagesWithStyles(selectedStyles, versionId);
+              } else {
+                this.notificationService.error('Generation Error', 'Could not find trained model version. Please refresh and try again.');
+              }
+            }
+          } else if (status === 'failed') {
+            clearInterval(this.pollingInterval);
+            this.isTraining = false;
+            this.progressPercentage = 0;
+            this.progressMessage = '';
+            this.notificationService.error('Training Failed', 'Model training failed. Please try again.');
+            this.isTrainingStarted = false;
+            this.currentStep = 2;
+          }
+        } catch (error) {
+          console.error('Error polling training status:', error);
         }
-      } catch (error) {
-        console.error('Error polling training status:', error);
-      }
-    }, 30000); // Poll every 30 seconds
+      });
+    }, 30000)); // Poll every 30 seconds
   }
 
   private async startPhotoCompletionPolling(expectedStyleCount: number) {
     const expectedPhotoCount = expectedStyleCount * this.imagesPerStyle;
     
-    // Get initial generated photo count BEFORE starting polling
-    try {
-      const response = await this.fileUploadService.getUserImages().toPromise();
-      this.initialPhotoCount = response?.generatedImages || 0;
-      console.log('📊 Initial photo count set to:', this.initialPhotoCount);
-    } catch (error) {
-      console.error('Error getting initial photo count:', error);
-      this.initialPhotoCount = 0;
-    }
+    console.log('📊 Starting photo completion polling with precise counting');
+    console.log('📊 Generation started at:', new Date(this.generationStartTime).toISOString());
+    console.log('📊 Expected photos for this generation:', expectedPhotoCount);
     
-    this.photoCompletionPollingInterval = setInterval(async () => {
-      try {
-        // Check for new generated photos using getUserImages
-        this.fileUploadService.getUserImages().subscribe({
-          next: (response) => {
-            const currentPhotoCount = response.generatedImages || 0;
-            const newPhotos = currentPhotoCount - this.initialPhotoCount;
-            console.log('📊 Photo count polling:', {
-              initialPhotoCount: this.initialPhotoCount,
-              currentPhotoCount: currentPhotoCount,
-              newPhotos: newPhotos,
-              expectedPhotoCount: expectedPhotoCount
-            });
-            
-            if (newPhotos >= expectedPhotoCount) {
-              // All photos completed
-              clearInterval(this.photoCompletionPollingInterval);
-              console.log('✅ Photo generation complete! newPhotos:', newPhotos);
-              this.onPhotoGenerationComplete(newPhotos);
-            } else if (newPhotos > 0) {
-              // Some photos completed, update progress - override time-based progress
-              const photoProgress = (newPhotos / expectedPhotoCount) * 15; // 15% range for photo completion
-              const progress = Math.min(85 + photoProgress, 95); // 85% to 95% based on actual photos
-              this.progressPercentage = progress;
-              this.progressMessage = `Generated ${newPhotos} of ${expectedPhotoCount} photos...`;
+    this.photoCompletionPollingInterval = this.ngZone.runOutsideAngular(() => setInterval(async () => {
+      this.ngZone.run(async () => {
+        try {
+          // Check for new generated photos using timestamp-based counting
+          this.fileUploadService.getUserImages().subscribe({
+            next: (response) => {
+              // Count only images created after generation started
+              const newPhotos = response.images.filter(img => 
+                img.isGenerated && new Date(img.createdAt).getTime() > this.generationStartTime
+              ).length;
               
-              // Clear time-based progress since we have real progress
-              if (this.timeBasedProgressInterval) {
-                clearInterval(this.timeBasedProgressInterval);
-                this.timeBasedProgressInterval = undefined;
+              console.log('📊 Photo count polling (timestamp-based):', {
+                generationStartTime: new Date(this.generationStartTime).toISOString(),
+                totalGeneratedImages: response.generatedImages,
+                newPhotosAfterGeneration: newPhotos,
+                expectedPhotoCount: expectedPhotoCount,
+                recentImages: response.images
+                  .filter(img => img.isGenerated && new Date(img.createdAt).getTime() > this.generationStartTime)
+                  .map(img => ({ style: img.style, createdAt: img.createdAt }))
+              });
+              
+              if (newPhotos >= expectedPhotoCount) {
+                // All photos completed - use expected count to be precise
+                clearInterval(this.photoCompletionPollingInterval);
+                console.log('✅ Photo generation complete! Using expected count:', expectedPhotoCount);
+                this.onPhotoGenerationComplete(expectedPhotoCount);
+              } else if (newPhotos > 0) {
+                // Some photos completed, update progress - override time-based progress
+                const photoProgress = (newPhotos / expectedPhotoCount) * 15; // 15% range for photo completion
+                const progress = Math.min(85 + photoProgress, 100); // 85% to 100% based on actual photos
+                this.progressPercentage = progress;
+                this.progressMessage = `Generated ${newPhotos} of ${expectedPhotoCount} photos...`;
+                
+                // Clear time-based progress since we have real progress
+                if (this.timeBasedProgressInterval) {
+                  clearInterval(this.timeBasedProgressInterval);
+                  this.timeBasedProgressInterval = undefined;
+                }
               }
+            },
+            error: (error) => {
+              console.error('Error checking photo completion:', error);
             }
-          },
-          error: (error) => {
-            console.error('Error checking photo completion:', error);
-          }
-        });
-      } catch (error) {
-        console.error('Error polling for photo completion:', error);
-      }
-    }, 15000); // Poll every 15 seconds
+          });
+        } catch (error) {
+          console.error('Error polling for photo completion:', error);
+        }
+      });
+    }, 15000)); // Poll every 15 seconds
   }
 
   private startTimeBasedProgress() {
@@ -642,28 +646,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
       clearInterval(this.timeBasedProgressInterval);
     }
 
-    this.timeBasedProgressInterval = setInterval(() => {
-      if (!this.isGenerating || this.generationStartTime === 0) {
-        return;
-      }
+    this.timeBasedProgressInterval = this.ngZone.runOutsideAngular(() => setInterval(() => {
+      this.ngZone.run(() => {
+        if (!this.isGenerating || this.generationStartTime === 0) {
+          return;
+        }
 
-      const elapsed = Date.now() - this.generationStartTime;
-      const progressRatio = Math.min(elapsed / this.expectedGenerationTime, 0.85); // Cap at 85% for time-based
-      const newProgress = 15 + (progressRatio * 70); // 15% to 85% based on time
-      
-      this.progressPercentage = Math.round(newProgress);
-      
-      // Update progress message based on elapsed time
-      const elapsedMinutes = Math.floor(elapsed / 60000);
-      const remainingTime = Math.max(0, Math.ceil((this.expectedGenerationTime - elapsed) / 60000));
-      
-      if (remainingTime > 0) {
-        this.progressMessage = `Creating professional photos... (~${remainingTime} min remaining)`;
-      } else {
-        this.progressMessage = 'Finalizing your photos...';
-      }
-      
-    }, 10000); // Update every 10 seconds
+        const elapsed = Date.now() - this.generationStartTime;
+        const progressRatio = Math.min(elapsed / this.expectedGenerationTime, 0.85); // Cap at 85% for time-based
+        const newProgress = 15 + (progressRatio * 70); // 15% to 85% based on time
+        
+        this.progressPercentage = Math.round(newProgress);
+        
+        // Update progress message based on elapsed time
+        const elapsedMinutes = Math.floor(elapsed / 60000);
+        const remainingTime = Math.max(0, Math.ceil((this.expectedGenerationTime - elapsed) / 60000));
+        
+        if (remainingTime > 0) {
+          this.progressMessage = `Creating professional photos... (~${remainingTime} min remaining)`;
+        } else {
+          this.progressMessage = 'Finalizing your photos...';
+        }
+      });
+    }, 10000)); // Update every 10 seconds
   }
 
   private onPhotoGenerationComplete(photoCount: number) {
@@ -682,19 +687,31 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.lastGenerationCount = photoCount;
     this.showLastGenerationMessage = true;
     
-    // Refresh dashboard stats to show updated photo count
-    this.stateService.refreshGeneratedPhotosCount();
+    console.log('🎉 Photo generation complete! Showing success message with count:', photoCount);
     
     this.notificationService.success('Photos Ready!', 
       `${photoCount} professional photos have been generated and are ready to view.`);
+    
+    // Delay refresh to avoid interfering with success message display
+    this.ngZone.runOutsideAngular(() => {
+      setTimeout(() => {
+        this.ngZone.run(() => {
+          this.stateService.refreshGeneratedPhotosCount();
+        });
+      }, 2000);
+    });
 
     // Reset progress after showing completion but keep generation available
-    setTimeout(() => {
-      this.progressPercentage = 0;
-      this.progressMessage = '';
-      this.isTrainingStarted = false;
-      // Don't change currentStep - keep it on the generation step so user can generate more
-    }, 3000);
+    this.ngZone.runOutsideAngular(() => {
+      setTimeout(() => {
+        this.ngZone.run(() => {
+          this.progressPercentage = 0;
+          this.progressMessage = '';
+          this.isTrainingStarted = false;
+          // Don't change currentStep - keep it on the generation step so user can generate more
+        });
+      }, 3000);
+    });
     
     // Keep the success message visible (removed auto-hide)
   }
@@ -707,45 +724,50 @@ export class DashboardComponent implements OnInit, OnDestroy {
         console.error('Authentication status:', this.authService.isAuthenticated());
         throw new Error('User not authenticated - unable to extract user ID from token');
       }
-      console.log('Starting generation for user ID:', userId);
+      console.log('Starting batch generation for user ID:', userId);
 
       this.isGenerating = true;
-      this.notificationService.info('Generating Images', `Starting generation for ${selectedStyles.length} style(s)...`);
+      this.notificationService.info('Generating Images', `Starting batch generation for ${selectedStyles.length} style(s)...`);
 
-      // Generate images for each selected style
-      for (const style of selectedStyles) {
-        try {
-          const generateRequest: GenerateImagesRequest = {
-            trainedModelVersion: modelVersion,
-            userId: userId,
-            style: style.name,
-            userInfo: {
-              gender: this.stateService.getState().userProfile?.gender,
-              ethnicity: this.stateService.getState().userProfile?.ethnicity
-            },
-            numOutputs: this.imagesPerStyle // Use the selected number of images per style
-          };
+      // CONSOLIDATED APPROACH: Generate images for all selected styles in a single batch request
+      const generateRequest: GenerateBatchImagesRequest = {
+        trainedModelVersion: modelVersion,
+        userId: userId,
+        styles: selectedStyles.map(style => style.name),
+        userInfo: {
+          gender: this.stateService.getState().userProfile?.gender,
+          ethnicity: this.stateService.getState().userProfile?.ethnicity
+        },
+        numOutputsPerStyle: this.imagesPerStyle // Use the selected number of images per style
+      };
 
-          const generateResult = await this.replicateService.generateImages(generateRequest).toPromise();
-          
-          if (!generateResult?.success) {
-            this.notificationService.warning('Generation Warning', 
-              `Failed to generate images for ${style.name}: ${generateResult?.error?.message || 'Unknown error'}`);
-            continue;
-          }
-
-          this.notificationService.success('Generation Started', 
-            `Started generating images for ${style.name}. Images will appear in your gallery when ready.`);
-
-        } catch (error: any) {
-          console.error(`Error generating images for style ${style.name}:`, error);
-          this.notificationService.warning('Generation Warning', 
-            `Failed to start generation for ${style.name}: ${error.message}`);
-        }
+      console.log('🎯 BATCH GENERATION: Making single API call for all styles:', generateRequest.styles);
+      const generateResult = await this.replicateService.generateBatchImages(generateRequest).toPromise();
+      
+      if (!generateResult?.success) {
+        throw new Error(generateResult?.error?.message || 'Batch generation failed');
       }
 
-      // Calculate estimated time for all images to be ready (approximately 2-3 minutes per style)
-      const estimatedMinutes = selectedStyles.length * 2.5;
+      const { successfulStyles, failedStyles, failures, creditsCost } = generateResult.data;
+      
+      // Report results to user
+      if (successfulStyles > 0) {
+        this.notificationService.success('Generation Started', 
+          `Successfully started generation for ${successfulStyles} style(s). Images will appear in your gallery when ready.`);
+      }
+      
+      if (failedStyles > 0) {
+        const failedStyleNames = failures.map(f => f.style).join(', ');
+        this.notificationService.warning('Partial Success', 
+          `Failed to start generation for ${failedStyles} style(s): ${failedStyleNames}`);
+      }
+
+      if (successfulStyles === 0) {
+        throw new Error('No styles were successfully started for generation');
+      }
+
+      // Calculate estimated time for all images to be ready (approximately 2-3 minutes per successful style)
+      const estimatedMinutes = successfulStyles * 2.5;
       const estimatedCompletion = new Date(Date.now() + estimatedMinutes * 60000);
       this.estimatedCompletion = `${Math.ceil(estimatedMinutes)} minutes`;
       
@@ -758,17 +780,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
       // Start time-based progress updates
       this.startTimeBasedProgress();
       
-      this.notificationService.info('Generation Started', 
-        `Generating ${selectedStyles.length} style(s) with ${this.imagesPerStyle} images each. Estimated completion: ${estimatedCompletion.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+      this.notificationService.info('Generation Progress', 
+        `Generating ${successfulStyles} style(s) with ${this.imagesPerStyle} images each. Estimated completion: ${estimatedCompletion.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Cost: ${creditsCost} credits.`);
 
-      // Start polling for photo completion
-      await this.startPhotoCompletionPolling(selectedStyles.length);
+      // Start polling for photo completion (use successful styles count)
+      await this.startPhotoCompletionPolling(successfulStyles);
       
       // Refresh dashboard state to update model status
       await this.stateService.loadInitialDashboardData();
 
     } catch (error: any) {
-      console.error('Error in image generation:', error);
+      console.error('Error in batch image generation:', error);
       this.isGenerating = false;
       this.progressPercentage = 0;
       this.progressMessage = '';
@@ -960,9 +982,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         ef.errors.length > 0
       );
       
-      // Update state service with new selected image count
-      this.stateService.setState({ uploadedImages: this.selectedFiles.length });
-      
       // Show summary of validation results
       if (qualityResult.validFiles.length > 0) {
         this.notificationService.success('Validation Complete', 
@@ -1024,11 +1043,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.qualityCheckProgress = 'Analyzing images...';
     
     // Simulate quality check
-    setTimeout(() => {
-      this.qualityCheckProgress = 'Quality check complete';
-      this.isCheckingQuality = false;
-      this.currentStep = 2;
-    }, 2000);
+    this.ngZone.runOutsideAngular(() => {
+      setTimeout(() => {
+        this.ngZone.run(() => {
+          this.qualityCheckProgress = 'Quality check complete';
+          this.isCheckingQuality = false;
+          this.currentStep = 2;
+        });
+      }, 2000);
+    });
   }
 
   checkAndCorrectImageQuality() {
@@ -1159,20 +1182,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private getImageDimensions(file: File): Promise<{width: number, height: number}> {
     return new Promise((resolve, reject) => {
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-      
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        resolve({ width: img.naturalWidth, height: img.naturalHeight });
-      };
-      
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        reject(new Error('Failed to load image'));
-      };
-      
-      img.src = url;
+      this.ngZone.runOutsideAngular(() => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          this.ngZone.run(() => {
+            resolve({ width: img.naturalWidth, height: img.naturalHeight });
+          });
+        };
+        
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          this.ngZone.run(() => {
+            reject(new Error('Failed to load image'));
+          });
+        };
+        
+        img.src = url;
+      });
     });
   }
 
