@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import * as faceapi from 'face-api.js';
 
 export interface QualityScore {
@@ -29,7 +29,7 @@ export class FaceDetectionService {
   private modelsLoaded = false;
   private modelLoadingPromise: Promise<void> | null = null;
 
-  constructor() {}
+  constructor(private ngZone: NgZone) {}
 
   /**
    * Load face-api.js models (lazy loading)
@@ -48,42 +48,44 @@ export class FaceDetectionService {
   }
 
   private async doLoadModels(): Promise<void> {
-    try {
-      const MODEL_URL = '/assets/models';
-      
-      // Load lightweight models for better performance
-      // Try to load from CDN if local models are not available
-      const modelUrls = [
-        MODEL_URL,
-        'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model'
-      ];
+    return this.ngZone.runOutsideAngular(async () => {
+      try {
+        const MODEL_URL = '/assets/models';
+        
+        // Load lightweight models for better performance
+        // Try to load from CDN if local models are not available
+        const modelUrls = [
+          MODEL_URL,
+          'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model'
+        ];
 
-      let loaded = false;
-      for (const url of modelUrls) {
-        try {
-          await Promise.all([
-            faceapi.nets.tinyFaceDetector.loadFromUri(url),
-            faceapi.nets.faceLandmark68TinyNet.loadFromUri(url),
-            faceapi.nets.faceRecognitionNet.loadFromUri(url),
-            faceapi.nets.ssdMobilenetv1.loadFromUri(url)
-          ]);
-          loaded = true;
-          console.log(`Face detection models loaded successfully from: ${url}`);
-          break;
-        } catch (error) {
-          console.warn(`Failed to load models from ${url}:`, error);
+        let loaded = false;
+        for (const url of modelUrls) {
+          try {
+            await Promise.all([
+              faceapi.nets.tinyFaceDetector.loadFromUri(url),
+              faceapi.nets.faceLandmark68TinyNet.loadFromUri(url),
+              faceapi.nets.faceRecognitionNet.loadFromUri(url),
+              faceapi.nets.ssdMobilenetv1.loadFromUri(url)
+            ]);
+            loaded = true;
+            console.log(`Face detection models loaded successfully from: ${url}`);
+            break;
+          } catch (error) {
+            console.warn(`Failed to load models from ${url}:`, error);
+          }
         }
-      }
 
-      if (!loaded) {
-        throw new Error('Failed to load models from any source');
-      }
+        if (!loaded) {
+          throw new Error('Failed to load models from any source');
+        }
 
-      this.modelsLoaded = true;
-    } catch (error) {
-      console.error('Failed to load face detection models:', error);
-      throw new Error('Failed to initialize face detection');
-    }
+        this.modelsLoaded = true;
+      } catch (error) {
+        console.error('Failed to load face detection models:', error);
+        throw new Error('Failed to initialize face detection');
+      }
+    });
   }
 
   /**
@@ -94,9 +96,11 @@ export class FaceDetectionService {
       await this.loadModels();
 
       const img = await this.loadImageElement(file);
-      const detections = await faceapi
-        .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions())
-        .withFaceLandmarks(true);
+      const detections = await this.ngZone.runOutsideAngular(async () => {
+        return faceapi
+          .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions())
+          .withFaceLandmarks(true);
+      });
 
       const faceCount = detections.length;
       const errors: string[] = [];
@@ -846,10 +850,20 @@ export class FaceDetectionService {
    */
   private loadImageElement(file: File): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
+      this.ngZone.runOutsideAngular(() => {
+        const img = new Image();
+        img.onload = () => {
+          this.ngZone.run(() => {
+            resolve(img);
+          });
+        };
+        img.onerror = () => {
+          this.ngZone.run(() => {
+            reject(new Error('Failed to load image'));
+          });
+        };
+        img.src = URL.createObjectURL(file);
+      });
     });
   }
 
