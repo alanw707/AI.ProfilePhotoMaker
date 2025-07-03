@@ -23,9 +23,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Subscription> Subscriptions { get; set; }
     public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
     
-    // Premium Package management (legacy)
-    public DbSet<PremiumPackage> PremiumPackages { get; set; }
-    public DbSet<UserPackagePurchase> UserPackagePurchases { get; set; }
+    // Premium Package management removed - replaced by unified CreditPackage system
     
     // Credit Package management (new unified system)
     public DbSet<CreditPackage> CreditPackages { get; set; }
@@ -41,10 +39,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .WithOne()
             .HasForeignKey<UserProfile>(p => p.UserId);
 
+        // Configure ProcessedImage relationships and constraints
         builder.Entity<ProcessedImage>()
             .HasOne(i => i.UserProfile)
             .WithMany(p => p.ProcessedImages)
             .HasForeignKey(i => i.UserProfileId);
+
+        // Add unique constraint on ProcessedImageUrl to prevent duplicates
+        builder.Entity<ProcessedImage>()
+            .HasIndex(i => i.ProcessedImageUrl)
+            .IsUnique();
 
         // Configure UsageLog relationships
         builder.Entity<UsageLog>()
@@ -110,29 +114,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .Property(t => t.Amount)
             .HasPrecision(18, 2);
 
-        // Configure PremiumPackage relationships and constraints
-        builder.Entity<PremiumPackage>()
-            .Property(p => p.Price)
-            .HasPrecision(10, 2);
-
-        builder.Entity<PremiumPackage>()
-            .HasIndex(p => p.Name)
-            .IsUnique();
-
-        // Configure UserPackagePurchase relationships
-        builder.Entity<UserPackagePurchase>()
-            .HasOne(p => p.Package)
-            .WithMany(pkg => pkg.Purchases)
-            .HasForeignKey(p => p.PackageId);
-
-        builder.Entity<UserPackagePurchase>()
-            .HasOne(p => p.User)
-            .WithMany()
-            .HasForeignKey(p => p.UserId);
-
-        builder.Entity<UserPackagePurchase>()
-            .Property(p => p.AmountPaid)
-            .HasPrecision(10, 2);
+        // PremiumPackage and UserPackagePurchase configuration removed - replaced by CreditPackage system
 
         // Configure CreditPackage relationships and constraints
         builder.Entity<CreditPackage>()

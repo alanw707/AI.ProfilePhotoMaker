@@ -250,7 +250,6 @@ public class ReplicateWebhookController : ControllerBase
                             UserProfileId = userProfile.Id,
                             OriginalImageUrl = replicateUrl, // Store the original Replicate URL
                             ProcessedImageUrl = publicUrl ?? replicateUrl, // Use local path if available, fallback to Replicate URL
-                            ActualFileName = actualFileName, // Store the actual filename used on disk
                             Style = style ?? "Unknown",
                             IsGenerated = true,
                             IsOriginalUpload = false,

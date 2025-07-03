@@ -246,7 +246,7 @@ public class ProfileController : ControllerBase
                 var processedImage = new ProcessedImage
                 {
                     OriginalImageUrl = relativeUrl,  // Store relative path instead of absolute URL
-                    ProcessedImageUrl = "", // Will be updated when AI processing completes
+                    ProcessedImageUrl = relativeUrl, // Use original URL as processed URL for uploads (unique per file)
                     Style = ProfileControllerConstants.OriginalStyle, // Mark as original upload
                     UserProfileId = profile.Id,
                     CreatedAt = DateTime.UtcNow,
@@ -354,19 +354,10 @@ public class ProfileController : ControllerBase
             
             if (i.IsGenerated && !string.IsNullOrEmpty(i.Style) && i.Style != "Original")
             {
-                // For generated images, use stored filename if available, otherwise fallback to constructed path
-                if (!string.IsNullOrEmpty(i.ActualFileName))
-                {
-                    // Use the actual filename stored in the database
-                    var localImagePath = $"/generated/{i.UserProfile.UserId}/{i.ActualFileName}";
-                    processedUrl = GetAbsoluteUrl(localImagePath);
-                }
-                else
-                {
-                    // Fallback for existing records without stored filenames
-                    var localImagePath = $"/generated/{i.UserProfile.UserId}/{i.Style.ToLower().Replace(" ", "-")}_{i.Id % 2 + 1}.png";
-                    processedUrl = GetAbsoluteUrl(localImagePath);
-                }
+                // For generated images, use ProcessedImageUrl which now contains the full path
+                processedUrl = !string.IsNullOrEmpty(i.ProcessedImageUrl) ? 
+                    (i.ProcessedImageUrl.StartsWith("http") ? i.ProcessedImageUrl : GetAbsoluteUrl(i.ProcessedImageUrl)) : 
+                    null;
             }
             else
             {
@@ -539,27 +530,69 @@ public class ProfileController : ControllerBase
 
         try
         {
-            // Delete physical file if it exists
-            if (!string.IsNullOrEmpty(image.OriginalImageUrl))
+            var physicalFileDeleted = false;
+            
+            // Delete physical file based on image type and storage location
+            if (image.IsGenerated && !string.IsNullOrEmpty(image.ProcessedImageUrl))
             {
-                var filePath = Path.Combine(_environment.ContentRootPath, "uploads", userId, 
-                    Path.GetFileName(image.OriginalImageUrl));
-                if (System.IO.File.Exists(filePath))
+                // Generated images are stored in /generated/{userId}/ directory
+                var fileName = Path.GetFileName(image.ProcessedImageUrl);
+                var generatedFilePath = Path.Combine(_environment.ContentRootPath, "generated", userId, fileName);
+                
+                _logger.LogDebug("Attempting to delete generated image file: {FilePath}", generatedFilePath);
+                
+                if (System.IO.File.Exists(generatedFilePath))
                 {
-                    System.IO.File.Delete(filePath);
+                    System.IO.File.Delete(generatedFilePath);
+                    physicalFileDeleted = true;
+                    _logger.LogInformation("Deleted generated image file: {FilePath}", generatedFilePath);
+                }
+                else
+                {
+                    _logger.LogWarning("Generated image file not found: {FilePath}", generatedFilePath);
+                }
+            }
+            else if (!string.IsNullOrEmpty(image.OriginalImageUrl))
+            {
+                // Uploaded images are stored in /uploads/{userId}/ directory
+                var fileName = Path.GetFileName(image.OriginalImageUrl);
+                var uploadFilePath = Path.Combine(_environment.ContentRootPath, "uploads", userId, fileName);
+                
+                _logger.LogDebug("Attempting to delete uploaded image file: {FilePath}", uploadFilePath);
+                
+                if (System.IO.File.Exists(uploadFilePath))
+                {
+                    System.IO.File.Delete(uploadFilePath);
+                    physicalFileDeleted = true;
+                    _logger.LogInformation("Deleted uploaded image file: {FilePath}", uploadFilePath);
+                }
+                else
+                {
+                    _logger.LogWarning("Uploaded image file not found: {FilePath}", uploadFilePath);
                 }
             }
 
-            // Delete database record - remove from profile and update
-            profile.ProcessedImages.Remove(image);
-            await _userProfileRepository.UpdateAsync(profile);
+            // Delete database record using Entity Framework directly for more reliable deletion
+            _context.ProcessedImages.Remove(image);
+            await _context.SaveChangesAsync();
 
-            return Ok(new { success = true, message = "Image deleted" });
+            _logger.LogInformation("Successfully deleted image {ImageId} for user {UserId}. Physical file deleted: {FileDeleted}", 
+                imageId, userId, physicalFileDeleted);
+
+            return Ok(new { 
+                success = true, 
+                message = "Image deleted successfully",
+                physicalFileDeleted = physicalFileDeleted
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting image {ImageId} for user {UserId}", imageId, userId);
-            return StatusCode(500, "Error deleting image");
+            return StatusCode(500, new { 
+                success = false, 
+                message = "Error deleting image", 
+                error = ex.Message 
+            });
         }
     }
 

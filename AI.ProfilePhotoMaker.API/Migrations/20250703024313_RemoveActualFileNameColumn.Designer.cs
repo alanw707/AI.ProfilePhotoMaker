@@ -3,6 +3,7 @@ using System;
 using AI.ProfilePhotoMaker.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AI.ProfilePhotoMaker.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250703024313_RemoveActualFileNameColumn")]
+    partial class RemoveActualFileNameColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.16");
@@ -148,7 +151,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 1,
                             BonusCredits = 0,
-                            CreatedAt = new DateTime(2025, 7, 3, 3, 44, 46, 736, DateTimeKind.Utc).AddTicks(4251),
+                            CreatedAt = new DateTime(2025, 7, 3, 2, 43, 12, 643, DateTimeKind.Utc).AddTicks(6719),
                             Credits = 50,
                             Description = "Perfect for trying out custom training and styled generations",
                             DisplayOrder = 1,
@@ -160,7 +163,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 2,
                             BonusCredits = 30,
-                            CreatedAt = new DateTime(2025, 7, 3, 3, 44, 46, 736, DateTimeKind.Utc).AddTicks(4255),
+                            CreatedAt = new DateTime(2025, 7, 3, 2, 43, 12, 643, DateTimeKind.Utc).AddTicks(6723),
                             Credits = 120,
                             Description = "Most popular - great for professionals",
                             DisplayOrder = 2,
@@ -172,7 +175,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 3,
                             BonusCredits = 100,
-                            CreatedAt = new DateTime(2025, 7, 3, 3, 44, 46, 736, DateTimeKind.Utc).AddTicks(4257),
+                            CreatedAt = new DateTime(2025, 7, 3, 2, 43, 12, 643, DateTimeKind.Utc).AddTicks(6726),
                             Credits = 300,
                             Description = "Best value for content creators and businesses",
                             DisplayOrder = 3,
@@ -184,7 +187,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 4,
                             BonusCredits = 250,
-                            CreatedAt = new DateTime(2025, 7, 3, 3, 44, 46, 736, DateTimeKind.Utc).AddTicks(4259),
+                            CreatedAt = new DateTime(2025, 7, 3, 2, 43, 12, 643, DateTimeKind.Utc).AddTicks(6728),
                             Credits = 750,
                             Description = "Maximum credits for agencies and enterprises",
                             DisplayOrder = 4,
@@ -347,11 +350,60 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.ToTable("PaymentTransactions");
                 });
 
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.PremiumPackage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Credits")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MaxImagesPerStyle")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MaxStyles")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("PremiumPackages");
+                });
+
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.ProcessedImage", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("ActualFileName")
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
@@ -393,9 +445,6 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ProcessedImageUrl")
-                        .IsUnique();
 
                     b.HasIndex("UserProfileId");
 
@@ -608,6 +657,58 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("UsageLogs");
+                });
+
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UserPackagePurchase", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("AmountPaid")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CreditsRemaining")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("ExpirationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ModelTrainedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PackageId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PaymentTransactionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("PurchaseDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TrainedModelId")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PackageId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserPackagePurchases");
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UserProfile", b =>
@@ -900,6 +1001,25 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UserPackagePurchase", b =>
+                {
+                    b.HasOne("AI.ProfilePhotoMaker.API.Models.PremiumPackage", "Package")
+                        .WithMany("Purchases")
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AI.ProfilePhotoMaker.API.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Package");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UserProfile", b =>
                 {
                     b.HasOne("AI.ProfilePhotoMaker.API.Models.Style", null)
@@ -986,6 +1106,11 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.CreditPackage", b =>
+                {
+                    b.Navigation("Purchases");
+                });
+
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.PremiumPackage", b =>
                 {
                     b.Navigation("Purchases");
                 });
