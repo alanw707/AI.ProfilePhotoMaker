@@ -151,7 +151,7 @@
   <button class="btn btn-primary action-btn-prominent" 
           *ngIf="!isTrainingStarted && !isTraining && !isGenerating" 
           (click)="onStartTraining()"
-          [disabled]="modelStatus === 'training' || uploadedImageCount < 10 || !hasEnoughCredits">
+          [disabled]="modelStatus === 'training' || (modelStatus !== 'Model Ready' && uploadedImageCount < 10) || !hasEnoughCredits">
     <div class="btn-content">
       <div class="btn-icon" *ngIf="modelStatus !== 'training'">🚀</div>
       <div class="btn-icon spinning" *ngIf="modelStatus === 'training'">⏳</div>
