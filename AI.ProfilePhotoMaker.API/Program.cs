@@ -309,8 +309,10 @@ if (string.IsNullOrEmpty(jwtSecret) || jwtSecret.Length < 32)
 }
 
 // Register the Services
+builder.Services.AddHttpContextAccessor(); // Required for UserContextService
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IBasicTierService, AI.ProfilePhotoMaker.API.Services.BasicTierService>();
+builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IUserContextService, AI.ProfilePhotoMaker.API.Services.UserContextService>();
 
 // Register Replicate SDK
 builder.Services.AddSingleton<Replicate.ReplicateApi>(provider =>
@@ -351,7 +353,11 @@ builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelExpirat
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.RetentionPolicyBackgroundService>();
 
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 

@@ -391,7 +391,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   continueInBackground() {
     this.notificationService.info('Continuing in Background', 
       'Training and generation will continue. We\'ll email you when your photos are ready.');
-    this.router.navigate(['/gallery']);
+    // Navigate to gallery with refresh parameter to force reload
+    this.router.navigate(['/gallery'], { 
+      queryParams: { refresh: Date.now() } 
+    });
   }
 
 }

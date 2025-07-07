@@ -19,6 +19,7 @@ export interface WorkflowProgress {
   expectedGenerationTime: number;
   lastGenerationCount: number;
   showLastGenerationMessage: boolean;
+  activePredictionIds: string[]; // Track specific predictions we're waiting for
 }
 
 export interface CreditCalculation {
@@ -43,7 +44,8 @@ export class WorkflowOrchestrationService {
     generationStartTime: 0,
     expectedGenerationTime: 0,
     lastGenerationCount: 0,
-    showLastGenerationMessage: false
+    showLastGenerationMessage: false,
+    activePredictionIds: []
   };
 
   private readonly _progress = new BehaviorSubject<WorkflowProgress>(this.initialProgress);
@@ -382,7 +384,21 @@ export class WorkflowOrchestrationService {
       }
       console.log('Starting batch generation for user ID:', userId);
 
-      this.setProgress({ isGenerating: true });
+      // Clear previous generation state and caches to prevent contamination
+      console.log('🧹 Clearing previous generation state and invalidating caches');
+      this.clearAllIntervals();
+      
+      this.setProgress({
+        isGenerating: true,
+        lastGenerationCount: 0,
+        showLastGenerationMessage: false,
+        generationStartTime: 0, // Will be set after successful API call
+        activePredictionIds: [] // Clear any previous prediction tracking
+      });
+      
+      // Invalidate image cache to ensure fresh data
+      this.fileUploadService.invalidateUserImagesCache();
+      
       this.notificationService.info('Generating Images', `Starting batch generation for ${selectedStyles.length} style(s)...`);
 
       // CONSOLIDATED APPROACH: Generate images for all selected styles in a single batch request
@@ -398,13 +414,28 @@ export class WorkflowOrchestrationService {
       };
 
       console.log('🎯 BATCH GENERATION: Making single API call for all styles:', generateRequest.styles);
+      
+      // Store precise timestamp BEFORE API call to capture all generated images
+      const preciseGenerationStartTime = Date.now();
+      console.log('📊 Generation start time captured:', new Date(preciseGenerationStartTime).toISOString());
+      
       const generateResult = await this.replicateService.generateBatchImages(generateRequest).toPromise();
       
       if (!generateResult?.success) {
         throw new Error(generateResult?.error?.message || 'Batch generation failed');
       }
 
-      const { successfulStyles, failedStyles, failures, creditsCost } = generateResult.data;
+      const { successfulStyles, failedStyles, failures, creditsCost, predictions } = generateResult.data;
+      
+      // Extract prediction IDs for tracking
+      const predictionIds = predictions.map(p => p.result.id);
+      console.log('🎯 Tracking prediction IDs:', predictionIds);
+      
+      // Store prediction IDs for polling
+      this.setProgress({
+        activePredictionIds: predictionIds,
+        generationStartTime: preciseGenerationStartTime
+      });
       
       // Report results to user
       if (successfulStyles > 0) {
@@ -430,7 +461,7 @@ export class WorkflowOrchestrationService {
       this.setProgress({
         progressPercentage: 15,
         progressMessage: `Creating professional photos with your selected styles...`,
-        generationStartTime: Date.now(),
+        generationStartTime: preciseGenerationStartTime,
         expectedGenerationTime: estimatedMinutes * 60000,
         estimatedCompletion: `${Math.ceil(estimatedMinutes)} minutes`
       });
@@ -441,8 +472,8 @@ export class WorkflowOrchestrationService {
       this.notificationService.info('Generation Progress', 
         `Generating ${successfulStyles} style(s) with ${imagesPerStyle} images each. Estimated completion: ${estimatedCompletion.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Cost: ${creditsCost} credits.`);
 
-      // Start polling for photo completion (use successful styles count)
-      await this.startPhotoCompletionPolling(successfulStyles, imagesPerStyle);
+      // Start polling for prediction completion
+      await this.startPredictionCompletionPolling();
       
       // Refresh dashboard state to update model status
       await this.stateService.loadInitialDashboardData();
@@ -458,68 +489,111 @@ export class WorkflowOrchestrationService {
     }
   }
 
-  // Photo completion polling
-  private async startPhotoCompletionPolling(expectedStyleCount: number, imagesPerStyle: number): Promise<void> {
-    const expectedPhotoCount = expectedStyleCount * imagesPerStyle;
+  // Prediction completion polling - tracks specific prediction IDs
+  private async startPredictionCompletionPolling(): Promise<void> {
+    const currentProgress = this.getProgress();
+    const predictionIds = currentProgress.activePredictionIds;
     
-    console.log('📊 Starting photo completion polling with precise counting');
-    console.log('📊 Generation started at:', new Date(this.getProgress().generationStartTime).toISOString());
-    console.log('📊 Expected photos for this generation:', expectedPhotoCount);
+    if (!predictionIds || predictionIds.length === 0) {
+      console.error('❌ No prediction IDs to track');
+      return;
+    }
+    
+    console.log('🎯 Starting prediction completion polling for IDs:', predictionIds);
+    
+    // Clear any existing polling interval to prevent duplicates
+    if (this.photoCompletionPollingInterval) {
+      clearInterval(this.photoCompletionPollingInterval);
+    }
     
     this.photoCompletionPollingInterval = this.ngZone.runOutsideAngular(() => setInterval(async () => {
       this.ngZone.run(async () => {
         try {
           const currentProgress = this.getProgress();
           
-          // Check for new generated photos using timestamp-based counting
-          this.fileUploadService.getUserImages().subscribe({
-            next: (response) => {
-              // Count only images created after generation started
-              const newPhotos = response.images.filter(img => 
-                img.isGenerated && new Date(img.createdAt).getTime() > currentProgress.generationStartTime
-              ).length;
-              
-              console.log('📊 Photo count polling (timestamp-based):', {
-                generationStartTime: new Date(currentProgress.generationStartTime).toISOString(),
-                totalGeneratedImages: response.generatedImages,
-                newPhotosAfterGeneration: newPhotos,
-                expectedPhotoCount: expectedPhotoCount,
-                recentImages: response.images
-                  .filter(img => img.isGenerated && new Date(img.createdAt).getTime() > currentProgress.generationStartTime)
-                  .map(img => ({ style: img.style, createdAt: img.createdAt }))
-              });
-              
-              if (newPhotos >= expectedPhotoCount) {
-                // All photos completed - use expected count to be precise
-                clearInterval(this.photoCompletionPollingInterval);
-                console.log('✅ Photo generation complete! Using expected count:', expectedPhotoCount);
-                this.onPhotoGenerationComplete(expectedPhotoCount);
-              } else if (newPhotos > 0) {
-                // Some photos completed, update progress - override time-based progress
-                const photoProgress = (newPhotos / expectedPhotoCount) * 15; // 15% range for photo completion
-                const progress = Math.min(85 + photoProgress, 100); // 85% to 100% based on actual photos
-                
-                this.setProgress({
-                  progressPercentage: progress,
-                  progressMessage: `Generated ${newPhotos} of ${expectedPhotoCount} photos...`
-                });
-                
-                // Clear time-based progress since we have real progress
-                if (this.timeBasedProgressInterval) {
-                  clearInterval(this.timeBasedProgressInterval);
-                  this.timeBasedProgressInterval = undefined;
-                }
+          // Only poll if we're actively generating
+          if (!currentProgress.isGenerating || !currentProgress.activePredictionIds.length) {
+            console.log('🚫 Not actively generating or no predictions to track');
+            return;
+          }
+          
+          // Check status of each prediction
+          const predictionStatuses = await Promise.all(
+            currentProgress.activePredictionIds.map(async (predictionId) => {
+              try {
+                const result = await this.replicateService.getPredictionStatus(predictionId).toPromise();
+                return {
+                  id: predictionId,
+                  status: result?.success ? result.data.status : 'unknown',
+                  data: result?.data
+                };
+              } catch (error) {
+                console.error(`Error checking prediction ${predictionId}:`, error);
+                return {
+                  id: predictionId,
+                  status: 'error',
+                  data: null
+                };
               }
-            },
-            error: (error) => {
-              console.error('Error checking photo completion:', error);
+            })
+          );
+          
+          // Count completed predictions
+          const completedPredictions = predictionStatuses.filter(p => p.status === 'succeeded');
+          const failedPredictions = predictionStatuses.filter(p => p.status === 'failed' || p.status === 'error');
+          const totalPredictions = currentProgress.activePredictionIds.length;
+          
+          console.log('🎯 Prediction status check:');
+          console.log(`  Completed: ${completedPredictions.length}/${totalPredictions}`);
+          console.log(`  Failed: ${failedPredictions.length}`);
+          console.log('  Details:', predictionStatuses.map(p => ({ id: p.id, status: p.status })));
+          
+          // Update progress based on completion ratio
+          if (completedPredictions.length > 0 || failedPredictions.length > 0) {
+            const completionRatio = completedPredictions.length / totalPredictions;
+            const progress = Math.round(85 + (completionRatio * 15)); // 85% to 100%
+            
+            this.setProgress({
+              progressPercentage: progress,
+              progressMessage: `Processing ${completedPredictions.length} of ${totalPredictions} generations...`
+            });
+            
+            // Clear time-based progress since we have real progress
+            if (this.timeBasedProgressInterval) {
+              clearInterval(this.timeBasedProgressInterval);
+              this.timeBasedProgressInterval = undefined;
             }
-          });
+          }
+          
+          // Check if all predictions are completed (successfully)
+          if (completedPredictions.length === totalPredictions) {
+            // Stop polling and generating
+            clearInterval(this.photoCompletionPollingInterval);
+            this.setProgress({ isGenerating: false });
+            console.log('✅ All predictions completed! Celebrating:', totalPredictions, 'generations');
+            this.onPhotoGenerationComplete(totalPredictions);
+          } else if (failedPredictions.length > 0 && (completedPredictions.length + failedPredictions.length) === totalPredictions) {
+            // All predictions finished but some failed
+            clearInterval(this.photoCompletionPollingInterval);
+            this.setProgress({ isGenerating: false });
+            
+            if (completedPredictions.length > 0) {
+              // Some succeeded
+              console.log('⚠️ Partial completion:', completedPredictions.length, 'succeeded,', failedPredictions.length, 'failed');
+              this.onPhotoGenerationComplete(completedPredictions.length);
+              this.notificationService.warning('Partial Success', 
+                `${completedPredictions.length} photos generated successfully, ${failedPredictions.length} failed.`);
+            } else {
+              // All failed
+              console.log('❌ All predictions failed');
+              this.notificationService.error('Generation Failed', 'All photo generations failed. Please try again.');
+            }
+          }
         } catch (error) {
-          console.error('Error polling for photo completion:', error);
+          console.error('Error polling for prediction completion:', error);
         }
       });
-    }, 15000)); // Poll every 15 seconds
+    }, 5000)); // Poll every 5 seconds for better responsiveness
   }
 
   // Time-based progress tracking
@@ -560,36 +634,41 @@ export class WorkflowOrchestrationService {
 
   // Photo generation completion
   private onPhotoGenerationComplete(photoCount: number): void {
-    // Clear time-based progress interval
+    // Clear all intervals
     if (this.timeBasedProgressInterval) {
       clearInterval(this.timeBasedProgressInterval);
       this.timeBasedProgressInterval = undefined;
     }
     
+    // Invalidate cache BEFORE showing celebration to ensure gallery has fresh data
+    this.fileUploadService.invalidateUserImagesCache();
+    console.log('🗑️ Invalidated image cache before celebration');
+    
     // Complete the generation process
     this.setProgress({
       progressPercentage: 100,
-      progressMessage: 'Photo generation complete!',
+      progressMessage: 'All photos ready!',
       isGenerating: false,
       lastGenerationCount: photoCount,
       showLastGenerationMessage: true
     });
     
-    console.log('🎉 Photo generation complete! Showing success message with count:', photoCount);
+    console.log('🎉 Photo generation complete!', photoCount, 'photos ready');
     
     this.notificationService.success('Photos Ready!', 
-      `${photoCount} professional photos have been generated and are ready to view.`);
+      `${photoCount} professional photos are ready to view in your gallery.`);
     
-    // Delay refresh to avoid interfering with success message display
+    // Refresh photo count and dashboard state
     this.ngZone.runOutsideAngular(() => {
       setTimeout(() => {
         this.ngZone.run(() => {
           this.stateService.refreshGeneratedPhotosCount();
+          this.stateService.invalidateAndRefreshImages();
         });
-      }, 2000);
+      }, 500);
     });
 
-    // Reset progress after showing completion but keep generation available
+    // Reset progress after showing completion
     this.ngZone.runOutsideAngular(() => {
       setTimeout(() => {
         this.ngZone.run(() => {

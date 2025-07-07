@@ -17,7 +17,9 @@
           <app-stats-card 
             icon="⚡" 
             [value]="generatedPhotosCount" 
-            label="Photos Generated">
+            label="Photos Generated"
+            [isClickable]="generatedPhotosCount > 0"
+            clickAction="gallery">
           </app-stats-card>
           <app-stats-card 
             icon="🤖" 
@@ -30,7 +32,8 @@
             [value]="getTotalAvailableCredits()" 
             label="Credits"
             [showCard]="true"
-            [showSettingsHint]="true"
+            [isClickable]="true"
+            clickAction="settings"
             [isLoading]="!creditsInfo && !userCreditStatus">
           </app-stats-card>
         </div>

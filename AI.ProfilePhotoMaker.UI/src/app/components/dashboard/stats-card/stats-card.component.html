@@ -1,4 +1,8 @@
-<div class="stat-card" *ngIf="showCard">
+<div class="stat-card" 
+     *ngIf="showCard" 
+     [class.clickable]="isClickable && !isLoading"
+     [class.loading]="isLoading"
+     (click)="onCardClick()">
   <div class="stat-icon">{{icon}}</div>
   <div class="stat-content">
     <!-- Loading state -->
@@ -9,8 +13,12 @@
     
     <!-- Clean label without info icon -->
     <p class="card-label">{{label}}</p>
-    
-    <!-- Optional hint text for credits card -->
-    <a *ngIf="showSettingsHint && !isLoading" routerLink="/settings" class="settings-hint">View Credits Breakdown</a>
+  </div>
+  
+  <!-- Click indicator for clickable cards -->
+  <div class="click-indicator" *ngIf="isClickable && !isLoading">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
   </div>
 </div>
