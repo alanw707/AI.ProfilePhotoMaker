@@ -157,21 +157,6 @@
             </div>
             <div class="step-content" *ngIf="uploadedImages > 0 || uploadedImageThumbnails.length > 0">
               
-              <!-- Credit Display with Breakdown -->
-              <app-credit-display
-                [creditsInfo]="creditsInfo"
-                [userCreditStatus]="userCreditStatus"
-                [isLoading]="!creditsInfo && !userCreditStatus"
-                [showBreakdown]="true"
-                [showPurchasePrompt]="!hasEnoughCredits()"
-                [requiredCredits]="calculateTotalCredits()"
-                [trainingCredits]="calculateTrainingCredits()"
-                [generationCredits]="calculateGenerationCredits()"
-                [totalCredits]="calculateTotalCredits()"
-                [hasEnoughCredits]="hasEnoughCredits()"
-                [remainingCredits]="getRemainingCredits()"
-                (creditActionRequested)="onCreditAction($event)">
-              </app-credit-display>
               
               <!-- Style Selector Component -->
               <app-style-selector
