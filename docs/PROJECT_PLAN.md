@@ -27,7 +27,7 @@ This project plan outlines the major milestones, features, and tasks required to
 - [x] Webhook signature validation
 
 ### Phase 3: User & Business Features ✅ COMPLETED
-- [x] Image upload system (max 10 selfies)
+- [x] Image upload system (max 20 selfies)
 - [x] User profile CRUD operations
 - [x] Style selection API and persistence
 - [x] Subscription data model
