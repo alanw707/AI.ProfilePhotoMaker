@@ -90,15 +90,14 @@
             </div>
           </div>
           
-          <div class="credits-display" *ngIf="creditsInfo">
-            <div class="credits-info-card">
-              <div class="credits-icon">⚡</div>
-              <div class="credits-text">
-                <span class="credits-count">{{creditsInfo.availableCredits}} Free Credits</span>
-                <span class="credits-note">Use for basic photo enhancement</span>
-              </div>
-            </div>
-          </div>
+          <!-- Credit Display Component -->
+          <app-credit-display
+            [creditsInfo]="creditsInfo"
+            [userCreditStatus]="userCreditStatus"
+            [isLoading]="!creditsInfo && !userCreditStatus"
+            [showPurchasePrompt]="true"
+            (creditActionRequested)="onCreditAction($event)">
+          </app-credit-display>
         </div>
       </section>
 
@@ -157,6 +156,23 @@
               </div>
             </div>
             <div class="step-content" *ngIf="uploadedImages > 0 || uploadedImageThumbnails.length > 0">
+              
+              <!-- Credit Display with Breakdown -->
+              <app-credit-display
+                [creditsInfo]="creditsInfo"
+                [userCreditStatus]="userCreditStatus"
+                [isLoading]="!creditsInfo && !userCreditStatus"
+                [showBreakdown]="true"
+                [showPurchasePrompt]="!hasEnoughCredits()"
+                [requiredCredits]="calculateTotalCredits()"
+                [trainingCredits]="calculateTrainingCredits()"
+                [generationCredits]="calculateGenerationCredits()"
+                [totalCredits]="calculateTotalCredits()"
+                [hasEnoughCredits]="hasEnoughCredits()"
+                [remainingCredits]="getRemainingCredits()"
+                (creditActionRequested)="onCreditAction($event)">
+              </app-credit-display>
+              
               <!-- Style Selector Component -->
               <app-style-selector
                 [availableStyles]="availableStyles"
@@ -170,13 +186,13 @@
                 [isTrainingStarted]="isTrainingStarted"
                 [modelStatus]="modelStatus"
                 [uploadedImageCount]="uploadedImageThumbnails.length"
-                [isTraining]="isTraining"
-                [isGenerating]="isGenerating"
-                [progressPercentage]="progressPercentage"
-                [progressMessage]="progressMessage"
-                [estimatedCompletion]="estimatedCompletion"
-                [lastGenerationCount]="lastGenerationCount"
-                [showLastGenerationMessage]="showLastGenerationMessage"
+                [isTraining]="(workflowProgress$ | async)?.isTraining || false"
+                [isGenerating]="(workflowProgress$ | async)?.isGenerating || false"
+                [progressPercentage]="(workflowProgress$ | async)?.progressPercentage || 0"
+                [progressMessage]="(workflowProgress$ | async)?.progressMessage || ''"
+                [estimatedCompletion]="(workflowProgress$ | async)?.estimatedCompletion || ''"
+                [lastGenerationCount]="(workflowProgress$ | async)?.lastGenerationCount || 0"
+                [showLastGenerationMessage]="(workflowProgress$ | async)?.showLastGenerationMessage || false"
                 (styleToggled)="onStyleToggled($event)"
                 (imagesPerStyleChanged)="onImagesPerStyleChanged($event)"
                 (selectAllStyles)="onSelectAllStyles()"
