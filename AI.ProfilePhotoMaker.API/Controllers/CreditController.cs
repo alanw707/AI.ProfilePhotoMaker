@@ -3,20 +3,18 @@ using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace AI.ProfilePhotoMaker.API.Controllers;
 
-[Route("api/[controller]")]
-[ApiController]
 [Authorize]
-public class CreditController : ControllerBase
+public class CreditController : BaseController
 {
     private readonly ICreditPackageService _creditPackageService;
     private readonly IBasicTierService _basicTierService;
     private readonly IConfiguration _configuration;
 
-    public CreditController(ICreditPackageService creditPackageService, IBasicTierService basicTierService, IConfiguration configuration)
+    public CreditController(ICreditPackageService creditPackageService, IBasicTierService basicTierService, IConfiguration configuration, ILogger<CreditController> logger) 
+        : base(logger)
     {
         _creditPackageService = creditPackageService;
         _basicTierService = basicTierService;
@@ -29,15 +27,15 @@ public class CreditController : ControllerBase
     [HttpGet("status")]
     public async Task<IActionResult> GetCreditStatus()
     {
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userId))
-            return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+        var authCheck = ValidateAuthentication();
+        if (authCheck != null) return authCheck;
+        var userId = GetCurrentUserId()!;
 
         var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
         var profile = await _basicTierService.GetUserProfileWithCreditsAsync(userId);
         
         if (profile == null)
-            return NotFound(new { success = false, error = new { code = "ProfileNotFound", message = "User profile not found." } });
+            return ErrorResponse("ProfileNotFound", "User profile not found.", 404);
 
         var status = new UserCreditStatusDto
         {
@@ -48,11 +46,7 @@ public class CreditController : ControllerBase
             NextResetDate = profile.LastCreditReset.AddDays(7)
         };
 
-        return Ok(new { 
-            success = true, 
-            data = status, 
-            error = (object?)null 
-        });
+        return SuccessResponse(status);
     }
 
     /// <summary>
@@ -64,23 +58,12 @@ public class CreditController : ControllerBase
         try
         {
             var packages = await _creditPackageService.GetActiveCreditPackagesAsync();
-            return Ok(new { 
-                success = true, 
-                data = packages, 
-                error = (object?)null 
-            });
+            return SuccessResponse(packages);
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { 
-                success = false, 
-                data = (object?)null,
-                error = new { 
-                    code = "InternalError", 
-                    message = ex.Message,
-                    details = ex.ToString()
-                } 
-            });
+            LogError(ex, "Failed to get credit packages");
+            return ErrorResponse("InternalError", ex.Message, 500);
         }
     }
 
@@ -92,44 +75,34 @@ public class CreditController : ControllerBase
     public async Task<IActionResult> PurchaseCreditPackage([FromBody] PurchaseCreditPackageRequestDto dto)
     {
         if (!ModelState.IsValid)
-            return BadRequest(new { success = false, error = new { code = "InvalidModel", message = "Invalid input." } });
+            return ErrorResponse("InvalidModel", "Invalid input.");
 
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userId))
-            return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+        var authCheck = ValidateAuthentication();
+        if (authCheck != null) return authCheck;
+        var userId = GetCurrentUserId()!;
 
         var purchase = await _creditPackageService.PurchaseCreditPackageAsync(userId, dto.PackageId, dto.PaymentTransactionId);
         
         if (purchase == null)
         {
-            return BadRequest(new { 
-                success = false, 
-                error = new { 
-                    code = "PurchaseFailed", 
-                    message = "Credit package not found or purchase failed." 
-                } 
-            });
+            return ErrorResponse("PurchaseFailed", "Credit package not found or purchase failed.");
         }
 
         // Get updated credit status
         var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
 
-        return Ok(new { 
-            success = true, 
-            data = new {
-                purchase = new {
-                    purchase.Id,
-                    purchase.CreditsAwarded,
-                    purchase.AmountPaid,
-                    purchase.PurchaseDate
-                },
-                updatedCredits = new {
-                    totalCredits = weeklyCredits + purchasedCredits,
-                    weeklyCredits = weeklyCredits,
-                    purchasedCredits = purchasedCredits
-                }
-            }, 
-            error = (object?)null 
+        return SuccessResponse(new {
+            purchase = new {
+                purchase.Id,
+                purchase.CreditsAwarded,
+                purchase.AmountPaid,
+                purchase.PurchaseDate
+            },
+            updatedCredits = new {
+                totalCredits = weeklyCredits + purchasedCredits,
+                weeklyCredits = weeklyCredits,
+                purchasedCredits = purchasedCredits
+            }
         });
     }
 
@@ -139,9 +112,9 @@ public class CreditController : ControllerBase
     [HttpGet("history")]
     public async Task<IActionResult> GetPurchaseHistory()
     {
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userId))
-            return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+        var authCheck = ValidateAuthentication();
+        if (authCheck != null) return authCheck;
+        var userId = GetCurrentUserId()!;
 
         var history = await _creditPackageService.GetUserPurchaseHistoryAsync(userId);
         
@@ -154,11 +127,7 @@ public class CreditController : ControllerBase
             PackageName = p.Package.Name
         });
 
-        return Ok(new { 
-            success = true, 
-            data = historyData, 
-            error = (object?)null 
-        });
+        return SuccessResponse(historyData);
     }
 
     /// <summary>
@@ -168,11 +137,11 @@ public class CreditController : ControllerBase
     public async Task<IActionResult> CreatePaymentIntent([FromBody] CreatePaymentIntentRequestDto dto)
     {
         if (!ModelState.IsValid)
-            return BadRequest(new { success = false, error = new { code = "InvalidModel", message = "Invalid input." } });
+            return ErrorResponse("InvalidModel", "Invalid input.");
 
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userId))
-            return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+        var authCheck = ValidateAuthentication();
+        if (authCheck != null) return authCheck;
+        var userId = GetCurrentUserId()!;
 
         // Get the package to validate it exists
         var package = await _creditPackageService.GetActiveCreditPackagesAsync();
@@ -180,28 +149,18 @@ public class CreditController : ControllerBase
         
         if (selectedPackage == null)
         {
-            return BadRequest(new { 
-                success = false, 
-                error = new { 
-                    code = "PackageNotFound", 
-                    message = "Credit package not found or inactive." 
-                } 
-            });
+            return ErrorResponse("PackageNotFound", "Credit package not found or inactive.");
         }
 
         // Return mock payment intent for development
         var mockClientSecret = $"pi_mock_{Guid.NewGuid():N}_secret_{Guid.NewGuid():N}";
         
-        return Ok(new { 
-            success = true, 
-            data = new {
-                clientSecret = mockClientSecret,
-                packageId = dto.PackageId,
-                amount = selectedPackage.Price,
-                packageName = selectedPackage.Name,
-                isSimulation = true
-            }, 
-            error = (object?)null 
+        return SuccessResponse(new {
+            clientSecret = mockClientSecret,
+            packageId = dto.PackageId,
+            amount = selectedPackage.Price,
+            packageName = selectedPackage.Name,
+            isSimulation = true
         });
     }
 
@@ -234,11 +193,7 @@ public class CreditController : ControllerBase
             }
         };
 
-        return Ok(new { 
-            success = true, 
-            data = costs, 
-            error = (object?)null 
-        });
+        return SuccessResponse(costs);
     }
 
     /// <summary>
@@ -257,10 +212,6 @@ public class CreditController : ControllerBase
             }
         };
 
-        return Ok(new { 
-            success = true, 
-            data = config, 
-            error = (object?)null 
-        });
+        return SuccessResponse(config);
     }
 }

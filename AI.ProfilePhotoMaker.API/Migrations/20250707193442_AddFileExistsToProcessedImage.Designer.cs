@@ -3,6 +3,7 @@ using System;
 using AI.ProfilePhotoMaker.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AI.ProfilePhotoMaker.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250707193442_AddFileExistsToProcessedImage")]
+    partial class AddFileExistsToProcessedImage
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.16");
@@ -148,7 +151,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 1,
                             BonusCredits = 0,
-                            CreatedAt = new DateTime(2025, 7, 7, 20, 59, 27, 39, DateTimeKind.Utc).AddTicks(3420),
+                            CreatedAt = new DateTime(2025, 7, 7, 19, 34, 41, 226, DateTimeKind.Utc).AddTicks(5004),
                             Credits = 50,
                             Description = "Perfect for trying out custom training and styled generations",
                             DisplayOrder = 1,
@@ -160,7 +163,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 2,
                             BonusCredits = 30,
-                            CreatedAt = new DateTime(2025, 7, 7, 20, 59, 27, 39, DateTimeKind.Utc).AddTicks(3423),
+                            CreatedAt = new DateTime(2025, 7, 7, 19, 34, 41, 226, DateTimeKind.Utc).AddTicks(5009),
                             Credits = 120,
                             Description = "Most popular - great for professionals",
                             DisplayOrder = 2,
@@ -172,7 +175,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 3,
                             BonusCredits = 100,
-                            CreatedAt = new DateTime(2025, 7, 7, 20, 59, 27, 39, DateTimeKind.Utc).AddTicks(3429),
+                            CreatedAt = new DateTime(2025, 7, 7, 19, 34, 41, 226, DateTimeKind.Utc).AddTicks(5011),
                             Credits = 300,
                             Description = "Best value for content creators and businesses",
                             DisplayOrder = 3,
@@ -184,7 +187,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 4,
                             BonusCredits = 250,
-                            CreatedAt = new DateTime(2025, 7, 7, 20, 59, 27, 39, DateTimeKind.Utc).AddTicks(3431),
+                            CreatedAt = new DateTime(2025, 7, 7, 19, 34, 41, 226, DateTimeKind.Utc).AddTicks(5015),
                             Credits = 750,
                             Description = "Maximum credits for agencies and enterprises",
                             DisplayOrder = 4,
@@ -358,6 +361,9 @@ namespace AI.ProfilePhotoMaker.API.Migrations
 
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("FileExists")
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("INTEGER");

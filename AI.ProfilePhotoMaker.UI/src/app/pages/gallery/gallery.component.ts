@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
 import { PhotoGalleryComponent, GalleryImage } from '../../components/photo-gallery/photo-gallery.component';
@@ -26,6 +26,7 @@ export class GalleryComponent implements OnInit {
   constructor(
     private authService: AuthService,
     private router: Router,
+    private route: ActivatedRoute,
     private fileUploadService: FileUploadService
   ) {}
 
@@ -35,7 +36,15 @@ export class GalleryComponent implements OnInit {
       return;
     }
     
-    this.loadImages();
+    // Check for refresh parameter
+    this.route.queryParams.subscribe(params => {
+      if (params['refresh']) {
+        console.log('🔄 Gallery refresh requested via query parameter');
+        this.loadImages(true);
+      } else {
+        this.loadImages();
+      }
+    });
   }
 
   async loadImages(forceRefresh: boolean = false) {

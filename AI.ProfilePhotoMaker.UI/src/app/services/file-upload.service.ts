@@ -24,7 +24,6 @@ export interface ProcessedImage {
   createdAt: string;
   isOriginalUpload: boolean;
   isGenerated: boolean;
-  fileExists: boolean;
 }
 
 export interface UserImagesResponse {
@@ -78,7 +77,7 @@ export class FileUploadService {
     // Add forTraining flag
     formData.append('forTraining', forTraining.toString());
 
-    return this.http.post<UploadResponse>(this.config.uploadImagesUrl, formData, {
+    return this.http.post<UploadResponse>(this.config.getFullUrl(this.config.apiConfig.endpoints.profile.uploadImages), formData, {
       reportProgress: true,
       observe: 'events'
     }).pipe(
@@ -106,7 +105,7 @@ export class FileUploadService {
     }
     
     console.log('🌐 Fetching fresh user images data from API');
-    return this.http.get<UserImagesResponse>(this.config.getFullUrl('/profile/images')).pipe(
+    return this.http.get<UserImagesResponse>(this.config.getFullUrl(this.config.apiConfig.endpoints.profile.images)).pipe(
       tap(response => {
         this.userImagesCache = response;
         this.userImagesCacheExpiry = now + this.USER_IMAGES_CACHE_DURATION;
@@ -116,7 +115,7 @@ export class FileUploadService {
   }
 
   deleteImage(imageId: number): Observable<{ success: boolean; message: string }> {
-    return this.http.delete<{ success: boolean; message: string }>(this.config.getFullUrl(`/profile/images/${imageId}`)).pipe(
+    return this.http.delete<{ success: boolean; message: string }>(`${this.config.getFullUrl(this.config.apiConfig.endpoints.profile.images)}/${imageId}`).pipe(
       tap(() => {
         // Invalidate cache when image is deleted
         this.invalidateUserImagesCache();
@@ -213,7 +212,7 @@ export class FileUploadService {
     formData.append('images', file, file.name);
     formData.append('forTraining', 'false');
 
-    return this.http.post<any>(this.config.uploadImagesUrl, formData, {
+    return this.http.post<any>(this.config.getFullUrl(this.config.apiConfig.endpoints.profile.uploadImages), formData, {
       reportProgress: true,
       observe: 'events'
     }).pipe(

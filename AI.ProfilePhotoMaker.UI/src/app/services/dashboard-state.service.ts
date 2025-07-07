@@ -472,12 +472,6 @@ export class DashboardStateService {
       console.log('  API generatedImages field:', freshData?.generatedImages);
       console.log('  Filtered generated count:', freshData?.images.filter(img => img.isGenerated).length);
       console.log('  Total images:', freshData?.totalImages);
-      console.log('  All images:', freshData?.images.map(img => ({
-        id: img.id,
-        isGenerated: img.isGenerated,
-        style: img.style,
-        fileExists: img.fileExists
-      })));
       
       return {
         dashboardCount: currentState.generatedPhotosCount,
