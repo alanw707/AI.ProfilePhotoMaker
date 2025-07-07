@@ -522,11 +522,30 @@ public class ProfileController : ControllerBase
         var profile = await _userProfileRepository.GetByUserIdAsync(userId);
 
         if (profile == null)
+        {
+            _logger.LogWarning("Profile not found for user {UserId}", userId);
             return NotFound("Profile not found");
-
+        }
+        
         var image = profile.ProcessedImages.FirstOrDefault(i => i.Id == imageId);
         if (image == null)
-            return NotFound("Image not found");
+        {
+            _logger.LogWarning("Image {ImageId} not found for user {UserId}", imageId, userId);
+            return NotFound(new { 
+                success = false, 
+                message = "Image not found"
+            });
+        }
+
+        // Check if image is already deleted
+        if (image.IsDeleted)
+        {
+            _logger.LogWarning("Image {ImageId} for user {UserId} is already marked as deleted", imageId, userId);
+            return BadRequest(new { 
+                success = false, 
+                message = "Image is already deleted" 
+            });
+        }
 
         try
         {
@@ -582,7 +601,8 @@ public class ProfileController : ControllerBase
             return Ok(new { 
                 success = true, 
                 message = "Image deleted successfully",
-                physicalFileDeleted = physicalFileDeleted
+                physicalFileDeleted = physicalFileDeleted,
+                deletedImageId = imageId
             });
         }
         catch (Exception ex)
@@ -655,6 +675,13 @@ public class ProfileController : ControllerBase
         {
             var zipPath = Path.Combine(_environment.ContentRootPath, "training-zips", $"{userId}.zip");
             Directory.CreateDirectory(Path.GetDirectoryName(zipPath)!);
+
+            // Delete existing ZIP file if it exists to avoid conflicts
+            if (System.IO.File.Exists(zipPath))
+            {
+                System.IO.File.Delete(zipPath);
+                _logger.LogInformation("Deleted existing training ZIP file before creating new one for user {UserId}", userId);
+            }
 
             using (var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create))
             {
