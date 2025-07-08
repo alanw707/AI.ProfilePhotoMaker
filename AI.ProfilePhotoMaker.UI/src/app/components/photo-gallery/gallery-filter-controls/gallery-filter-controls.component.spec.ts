@@ -1,0 +1,210 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { GalleryFilterControlsComponent } from './gallery-filter-controls.component';
+import { GalleryImage } from '../photo-gallery.component';
+
+describe('GalleryFilterControlsComponent', () => {
+  let component: GalleryFilterControlsComponent;
+  let fixture: ComponentFixture<GalleryFilterControlsComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [GalleryFilterControlsComponent]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(GalleryFilterControlsComponent);
+    component = fixture.componentInstance;
+  });
+
+  describe('Component Initialization', () => {
+    it('should create', () => {
+      expect(component).toBeTruthy();
+    });
+
+    it('should initialize with default values', () => {
+      expect(component.title).toBe('Photo Gallery');
+      expect(component.filterType).toBe('generated');
+      expect(component.viewMode).toBe('grid');
+      expect(component.pageSize).toBe(12);
+      expect(component.filteredImages).toEqual([]);
+      expect(component.selectedImages).toEqual([]);
+      expect(component.showBulkActions).toBe(true);
+      expect(component.allowSelection).toBe(true);
+    });
+  });
+
+  describe('Filter Controls', () => {
+    it('should emit filterChange when filter selection changes', () => {
+      spyOn(component.filterChange, 'emit');
+      const event = { target: { value: 'original' } };
+      
+      component.onFilterChange(event);
+      
+      expect(component.filterChange.emit).toHaveBeenCalledWith('original');
+    });
+
+    it('should handle empty filter change event', () => {
+      spyOn(component.filterChange, 'emit');
+      const event = { target: { value: '' } };
+      
+      component.onFilterChange(event);
+      
+      expect(component.filterChange.emit).toHaveBeenCalledWith('');
+    });
+  });
+
+  describe('View Mode Controls', () => {
+    it('should emit viewModeChange when switching to grid view', () => {
+      spyOn(component.viewModeChange, 'emit');
+      
+      component.setViewMode('grid');
+      
+      expect(component.viewModeChange.emit).toHaveBeenCalledWith('grid');
+    });
+
+    it('should emit viewModeChange when switching to list view', () => {
+      spyOn(component.viewModeChange, 'emit');
+      
+      component.setViewMode('list');
+      
+      expect(component.viewModeChange.emit).toHaveBeenCalledWith('list');
+    });
+  });
+
+  describe('Page Size Controls', () => {
+    it('should emit pageSizeChange with correct value', () => {
+      spyOn(component.pageSizeChange, 'emit');
+      const event = { target: { value: '24' } } as any;
+      
+      component.onPageSizeChange(event);
+      
+      expect(component.pageSizeChange.emit).toHaveBeenCalledWith(24);
+    });
+
+    it('should handle invalid page size selection', () => {
+      spyOn(component.pageSizeChange, 'emit');
+      const event = { target: { value: 'invalid' } } as any;
+      
+      component.onPageSizeChange(event);
+      
+      expect(component.pageSizeChange.emit).toHaveBeenCalledWith(NaN);
+    });
+
+    it('should not emit when target is null', () => {
+      spyOn(component.pageSizeChange, 'emit');
+      const event = { target: null } as any;
+      
+      component.onPageSizeChange(event);
+      
+      expect(component.pageSizeChange.emit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Bulk Actions', () => {
+    beforeEach(() => {
+      component.filteredImages = [
+        { id: 1, url: 'image1.jpg', title: 'Image 1', type: 'generated', status: 'completed', createdAt: new Date() },
+        { id: 2, url: 'image2.jpg', title: 'Image 2', type: 'generated', status: 'completed', createdAt: new Date() },
+        { id: 3, url: 'image3.jpg', title: 'Image 3', type: 'generated', status: 'completed', createdAt: new Date() }
+      ] as GalleryImage[];
+    });
+
+    it('should emit selectAll when onSelectAll is called', () => {
+      spyOn(component.selectAll, 'emit');
+      
+      component.onSelectAll();
+      
+      expect(component.selectAll.emit).toHaveBeenCalled();
+    });
+
+    it('should emit downloadSelected when onDownloadSelected is called', () => {
+      spyOn(component.downloadSelected, 'emit');
+      
+      component.onDownloadSelected();
+      
+      expect(component.downloadSelected.emit).toHaveBeenCalled();
+    });
+
+    it('should show "Select All" when no images are selected', () => {
+      component.selectedImages = [];
+      
+      expect(component.selectAllText).toBe('Select All');
+    });
+
+    it('should show "Deselect All" when all images are selected', () => {
+      component.selectedImages = [...component.filteredImages];
+      
+      expect(component.selectAllText).toBe('Deselect All');
+    });
+
+    it('should show "Select All" when only some images are selected', () => {
+      component.selectedImages = [component.filteredImages[0]];
+      
+      expect(component.selectAllText).toBe('Select All');
+    });
+
+    it('should show bulk actions when showBulkActions is true and multiple images exist', () => {
+      component.showBulkActions = true;
+      component.filteredImages = [
+        { id: 1 } as GalleryImage,
+        { id: 2 } as GalleryImage
+      ];
+      
+      expect(component.shouldShowBulkActions).toBe(true);
+    });
+
+    it('should hide bulk actions when showBulkActions is false', () => {
+      component.showBulkActions = false;
+      component.filteredImages = [
+        { id: 1 } as GalleryImage,
+        { id: 2 } as GalleryImage
+      ];
+      
+      expect(component.shouldShowBulkActions).toBe(false);
+    });
+
+    it('should hide bulk actions when only one image exists', () => {
+      component.showBulkActions = true;
+      component.filteredImages = [{ id: 1 } as GalleryImage];
+      
+      expect(component.shouldShowBulkActions).toBe(false);
+    });
+
+    it('should hide bulk actions when no images exist', () => {
+      component.showBulkActions = true;
+      component.filteredImages = [];
+      
+      expect(component.shouldShowBulkActions).toBe(false);
+    });
+  });
+
+  describe('Component Integration', () => {
+    it('should handle complete user workflow', () => {
+      // Setup spies
+      spyOn(component.filterChange, 'emit');
+      spyOn(component.viewModeChange, 'emit');
+      spyOn(component.pageSizeChange, 'emit');
+      spyOn(component.selectAll, 'emit');
+      spyOn(component.downloadSelected, 'emit');
+
+      // User changes filter
+      component.onFilterChange({ target: { value: 'all' } });
+      expect(component.filterChange.emit).toHaveBeenCalledWith('all');
+
+      // User changes view mode
+      component.setViewMode('list');
+      expect(component.viewModeChange.emit).toHaveBeenCalledWith('list');
+
+      // User changes page size
+      component.onPageSizeChange({ target: { value: '24' } } as any);
+      expect(component.pageSizeChange.emit).toHaveBeenCalledWith(24);
+
+      // User selects all
+      component.onSelectAll();
+      expect(component.selectAll.emit).toHaveBeenCalled();
+
+      // User downloads selected
+      component.onDownloadSelected();
+      expect(component.downloadSelected.emit).toHaveBeenCalled();
+    });
+  });
+});

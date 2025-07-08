@@ -108,10 +108,10 @@ describe('PhotoGalleryComponent', () => {
     });
 
     it('should handle filter change event', () => {
-      const event = { target: { value: 'original' } };
+      const filterType = 'original';
       spyOn(component, 'updateFilteredImages');
       
-      component.onFilterChange(event);
+      component.onFilterChange(filterType);
       
       expect(component.filterType).toBe('original');
       expect(component.updateFilteredImages).toHaveBeenCalled();
