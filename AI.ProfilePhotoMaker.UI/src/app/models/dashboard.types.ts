@@ -1,4 +1,4 @@
-import { FaceValidationResult, QualityScore } from '../services/face-detection.service';
+import { FaceValidationResult, QualityScore } from '../interfaces/service.interfaces';
 
 export interface GeneratedPhoto {
   id: string;

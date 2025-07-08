@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { FaceDetectionService, FaceValidationResult, QualityScore } from './face-detection.service';
+import { FaceDetectionService } from './face-detection.service';
+import { FaceValidationResult, QualityScore } from '../interfaces/service.interfaces';
 import { SelectedFileWithQuality, QualityCheckError, QualityCheckResult, UploadProgress } from '../models/dashboard.types';
 
 @Injectable({
