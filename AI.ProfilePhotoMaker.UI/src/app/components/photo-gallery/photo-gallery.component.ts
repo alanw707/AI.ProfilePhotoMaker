@@ -1,5 +1,8 @@
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { GalleryFilterControlsComponent } from './gallery-filter-controls/gallery-filter-controls.component';
+import { GalleryPaginationComponent } from './gallery-pagination/gallery-pagination.component';
+import { GalleryImageActionsComponent } from './gallery-image-actions/gallery-image-actions.component';
 
 export interface GalleryImage {
   id: number;
@@ -17,64 +20,24 @@ export interface GalleryImage {
 @Component({
   selector: 'app-photo-gallery',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, GalleryFilterControlsComponent, GalleryPaginationComponent, GalleryImageActionsComponent],
   template: `
     <div class="photo-gallery">
-      <div class="gallery-header">
-        <div class="header-left">
-          <h3>{{title}}</h3>
-          <div class="filter-controls">
-            <select class="filter-select" [value]="filterType" (change)="onFilterChange($event)">
-              <option value="all">All Images</option>
-              <option value="generated">Generated</option>
-              <option value="original">Original</option>
-            </select>
-          </div>
-        </div>
-        <div class="header-center">
-          <div class="view-toggle">
-            <button 
-              class="toggle-btn" 
-              [class.active]="viewMode === 'grid'"
-              (click)="setViewMode('grid')"
-              aria-label="Grid view">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="2"/>
-                <rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="2"/>
-                <rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="2"/>
-                <rect x="14" y="14" width="7" height="7" stroke="currentColor" stroke-width="2"/>
-              </svg>
-            </button>
-            <button 
-              class="toggle-btn" 
-              [class.active]="viewMode === 'list'"
-              (click)="setViewMode('list')"
-              aria-label="List view">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <line x1="8" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="2"/>
-                <line x1="8" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="2"/>
-                <line x1="8" y1="18" x2="21" y2="18" stroke="currentColor" stroke-width="2"/>
-                <line x1="3" y1="6" x2="3.01" y2="6" stroke="currentColor" stroke-width="2"/>
-                <line x1="3" y1="12" x2="3.01" y2="12" stroke="currentColor" stroke-width="2"/>
-                <line x1="3" y1="18" x2="3.01" y2="18" stroke="currentColor" stroke-width="2"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-        <div class="header-right">
-          <div class="action-controls" *ngIf="filteredImages.length > 1">
-            <button class="action-btn select-all-btn" (click)="selectAll()">
-              {{selectedImages.length === filteredImages.length ? 'Deselect All' : 'Select All'}}
-            </button>
-            <button 
-              class="action-btn download-btn" 
-              (click)="downloadSelected()"
-              [disabled]="selectedImages.length === 0">
-              Download ({{selectedImages.length}})
-            </button>
-          </div>
-        </div>
-      </div>
+      <app-gallery-filter-controls
+        [title]="title"
+        [filterType]="filterType"
+        [viewMode]="viewMode"
+        [pageSize]="pageSize"
+        [filteredImages]="filteredImages"
+        [selectedImages]="selectedImages"
+        [showBulkActions]="showBulkActions"
+        [allowSelection]="allowSelection"
+        (filterChange)="onFilterChange($event)"
+        (viewModeChange)="setViewMode($event)"
+        (pageSizeChange)="changePageSize($event)"
+        (selectAll)="selectAll()"
+        (downloadSelected)="downloadSelected()">
+      </app-gallery-filter-controls>
 
       <div class="gallery-content" [class]="viewMode">
         <!-- Empty State -->
@@ -127,12 +90,15 @@ export interface GalleryImage {
               </div>
               
               <!-- View Button -->
-              <button class="view-btn" (click)="openImage(image); $event.stopPropagation()" title="View Image">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/>
-                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                </svg>
-              </button>
+              <app-gallery-image-actions
+                [image]="image"
+                viewMode="grid"
+                [showViewButton]="true"
+                (view)="openImage($event)"
+                (download)="downloadImage($event)"
+                (share)="shareImage($event)"
+                (delete)="deleteImage($event)">
+              </app-gallery-image-actions>
             </div>
 
             <div class="image-info">
@@ -141,41 +107,15 @@ export interface GalleryImage {
                 <span class="image-style" *ngIf="image.style">{{formatStyleName(image.style)}}</span>
                 <span class="image-date">{{formatDate(image.createdAt)}}</span>
               </p>
-              <div class="image-actions">
-                <button 
-                  class="action-btn download-btn" 
-                  (click)="downloadImage(image)"
-                  [disabled]="image.status !== 'completed'"
-                  title="Download">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15" stroke="currentColor" stroke-width="2"/>
-                    <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2"/>
-                    <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2"/>
-                  </svg>
-                </button>
-                <button 
-                  class="action-btn share-btn" 
-                  (click)="shareImage(image)"
-                  [disabled]="image.status !== 'completed'"
-                  title="Share">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
-                    <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                    <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2"/>
-                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2"/>
-                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
-                  </svg>
-                </button>
-                <button 
-                  class="action-btn delete-btn" 
-                  (click)="deleteImage(image)"
-                  title="Delete">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2"/>
-                    <path d="M19,6V20C19,21.1046 18.1046,22 17,22H7C5.89543,22 5,21.1046 5,20V6M8,6V4C8,2.89543 8.89543,2 10,2H14C15.1046,2 16,2.89543 16,4V6" stroke="currentColor" stroke-width="2"/>
-                  </svg>
-                </button>
-              </div>
+              <app-gallery-image-actions
+                [image]="image"
+                viewMode="grid"
+                [showViewButton]="false"
+                (view)="openImage($event)"
+                (download)="downloadImage($event)"
+                (share)="shareImage($event)"
+                (delete)="deleteImage($event)">
+              </app-gallery-image-actions>
             </div>
           </div>
         </div>
@@ -211,78 +151,27 @@ export interface GalleryImage {
               </div>
             </div>
 
-            <div class="list-actions">
-              <button 
-                class="action-btn view-btn" 
-                (click)="openImage(image)"
-                [disabled]="image.status !== 'completed'"
-                title="View Image">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/>
-                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                </svg>
-              </button>
-              <button 
-                class="action-btn download-btn" 
-                (click)="downloadImage(image)"
-                [disabled]="image.status !== 'completed'">
-                Download
-              </button>
-              <button 
-                class="action-btn share-btn" 
-                (click)="shareImage(image)"
-                [disabled]="image.status !== 'completed'">
-                Share
-              </button>
-              <button 
-                class="action-btn delete-btn" 
-                (click)="deleteImage(image)">
-                Delete
-              </button>
-            </div>
+            <app-gallery-image-actions
+              [image]="image"
+              viewMode="list"
+              [showViewButton]="true"
+              (view)="openImage($event)"
+              (download)="downloadImage($event)"
+              (share)="shareImage($event)"
+              (delete)="deleteImage($event)">
+            </app-gallery-image-actions>
           </div>
         </div>
       </div>
 
       <!-- Pagination Controls -->
-      <div class="pagination-section" *ngIf="filteredImages.length > pageSize">
-        <div class="pagination-info">
-          <span>Showing {{(currentPage - 1) * pageSize + 1}}-{{Math.min(currentPage * pageSize, filteredImages.length)}} of {{filteredImages.length}} images</span>
-          <select class="page-size-select" [value]="pageSize" (change)="onPageSizeChange($event)">
-            <option value="12">12 per page</option>
-            <option value="24">24 per page</option>
-            <option value="48">48 per page</option>
-          </select>
-        </div>
-        
-        <div class="pagination-controls">
-          <button 
-            class="pagination-btn" 
-            (click)="previousPage()" 
-            [disabled]="currentPage === 1">
-            Previous
-          </button>
-          
-          <div class="page-numbers">
-            <button 
-              *ngFor="let page of getPageNumbers()"
-              class="page-btn"
-              [class.active]="page === currentPage"
-              [class.ellipsis]="page === -1"
-              [disabled]="page === -1"
-              (click)="page !== -1 && goToPage(page)">
-              {{page === -1 ? '...' : page}}
-            </button>
-          </div>
-          
-          <button 
-            class="pagination-btn" 
-            (click)="nextPage()" 
-            [disabled]="currentPage === totalPages">
-            Next
-          </button>
-        </div>
-      </div>
+      <app-gallery-pagination
+        [totalItems]="filteredImages.length"
+        [pageSize]="pageSize"
+        [currentPage]="currentPage"
+        (pageChange)="goToPage($event)"
+        (pageSizeChange)="changePageSize($event)">
+      </app-gallery-pagination>
 
     </div>
   `,
@@ -328,8 +217,8 @@ export class PhotoGalleryComponent implements OnInit {
     this.viewMode = mode;
   }
 
-  onFilterChange(event: any) {
-    this.filterType = event.target.value;
+  onFilterChange(filterType: string) {
+    this.filterType = filterType;
     this.updateFilteredImages();
   }
 
@@ -486,72 +375,13 @@ export class PhotoGalleryComponent implements OnInit {
 
   // Pagination methods
   goToPage(page: number) {
-    if (page >= 1 && page <= this.totalPages) {
-      this.currentPage = page;
-      this.updatePagination();
-    }
-  }
-
-  nextPage() {
-    if (this.currentPage < this.totalPages) {
-      this.currentPage++;
-      this.updatePagination();
-    }
-  }
-
-  previousPage() {
-    if (this.currentPage > 1) {
-      this.currentPage--;
-      this.updatePagination();
-    }
+    this.currentPage = page;
+    this.updatePagination();
   }
 
   changePageSize(size: number) {
     this.pageSize = size;
     this.currentPage = 1;
     this.updatePagination();
-  }
-
-  onPageSizeChange(event: Event) {
-    const target = event.target as HTMLSelectElement;
-    if (target && target.value) {
-      this.changePageSize(+target.value);
-    }
-  }
-
-  getPageNumbers(): number[] {
-    const pages: number[] = [];
-    const maxVisible = 5;
-    
-    if (this.totalPages <= maxVisible) {
-      for (let i = 1; i <= this.totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      pages.push(1);
-      
-      if (this.currentPage > 3) {
-        pages.push(-1); // Ellipsis
-      }
-      
-      const start = Math.max(2, this.currentPage - 1);
-      const end = Math.min(this.totalPages - 1, this.currentPage + 1);
-      
-      for (let i = start; i <= end; i++) {
-        if (i !== 1 && i !== this.totalPages) {
-          pages.push(i);
-        }
-      }
-      
-      if (this.currentPage < this.totalPages - 2) {
-        pages.push(-1); // Ellipsis
-      }
-      
-      if (this.totalPages > 1) {
-        pages.push(this.totalPages);
-      }
-    }
-    
-    return pages;
   }
 }
