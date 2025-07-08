@@ -29,6 +29,7 @@ export class PhotoEnhancementComponent implements OnInit {
   creditsInfo: CreditsInfo | null = null;
   errorMessage: string = '';
   isDragOver: boolean = false;
+  isLoadingCredits: boolean = true;
 
   private stateSubscription!: Subscription;
 
@@ -41,8 +42,18 @@ export class PhotoEnhancementComponent implements OnInit {
   ) {}
 
   ngOnInit() {
+    // Immediately trigger data loading if needed
+    const currentState = this.stateService.getState();
+    if (!currentState.creditsInfo) {
+      console.log('📊 Credits not available on component init, loading dashboard data...');
+      this.isLoadingCredits = true;
+      this.stateService.loadInitialDashboardData();
+    }
+
     this.stateSubscription = this.stateService.state$.subscribe(state => {
       this.creditsInfo = state.creditsInfo;
+      // Show loading if state is loading OR if we don't have credits yet
+      this.isLoadingCredits = state.isLoading || !state.creditsInfo;
     });
   }
 

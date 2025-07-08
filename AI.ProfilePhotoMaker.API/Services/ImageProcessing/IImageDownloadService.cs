@@ -1,18 +1,28 @@
 namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 
 /// <summary>
+/// Result of image download operation
+/// </summary>
+public class ImageDownloadResult
+{
+    public string LocalPath { get; set; } = string.Empty;
+    public string FileName { get; set; } = string.Empty;
+    public bool Success { get; set; }
+}
+
+/// <summary>
 /// Service for downloading and storing images from external URLs
 /// </summary>
 public interface IImageDownloadService
 {
     /// <summary>
-    /// Downloads images from URLs and stores them locally
+    /// Downloads images from URLs and stores them locally with filename tracking
     /// </summary>
     /// <param name="imageUrls">List of image URLs to download</param>
     /// <param name="userId">User ID for directory organization</param>
     /// <param name="style">Style name for file organization</param>
-    /// <returns>List of local file paths for successfully downloaded images</returns>
-    Task<List<string>> DownloadImagesAsync(List<string> imageUrls, string userId, string style);
+    /// <returns>List of download results containing paths and filenames</returns>
+    Task<List<ImageDownloadResult>> DownloadImagesWithDetailsAsync(List<string> imageUrls, string userId, string style);
 
     /// <summary>
     /// Downloads a single image from URL and stores it locally

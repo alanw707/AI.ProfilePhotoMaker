@@ -15,6 +15,12 @@ export interface ApiConfig {
       trainingStatus: string;
       trainingFiles: string;
     };
+    image: {
+      base: string;
+      upload: string;
+      images: string;
+      styles: string;
+    };
     replicate: {
       train: string;
       generate: string;
@@ -49,11 +55,17 @@ export class ConfigService {
         trainingStatus: '/profile/training-status',
         trainingFiles: '/profile/training-files'
       },
+      image: {
+        base: '/image',
+        upload: '/image/upload',
+        images: '/image/images',
+        styles: '/image/styles'
+      },
       replicate: {
         train: '/replicate/train',
         generate: '/replicate/generate',
         generateBasic: '/replicate/generate/basic',
-        credits: '/replicate/credits'
+        credits: '/test/basic-tier-status'
       },
       styles: {
         base: '/style',
@@ -90,7 +102,19 @@ export class ConfigService {
   }
 
   get uploadImagesUrl(): string {
-    return this.getFullUrl(this.config.endpoints.profile.uploadImages);
+    return this.getFullUrl(this.config.endpoints.image.upload);
+  }
+
+  get imageUploadUrl(): string {
+    return this.getFullUrl(this.config.endpoints.image.upload);
+  }
+
+  get imageListUrl(): string {
+    return this.getFullUrl(this.config.endpoints.image.images);
+  }
+
+  get imageStylesUrl(): string {
+    return this.getFullUrl(this.config.endpoints.image.styles);
   }
 
   get replicateCreditsUrl(): string {

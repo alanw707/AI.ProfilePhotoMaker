@@ -21,15 +21,24 @@ export interface GalleryImage {
   template: `
     <div class="photo-gallery">
       <div class="gallery-header">
-        <h3>{{title}}</h3>
-        <div class="gallery-controls">
+        <div class="header-left">
+          <h3>{{title}}</h3>
+          <div class="filter-controls">
+            <select class="filter-select" [value]="filterType" (change)="onFilterChange($event)">
+              <option value="all">All Images</option>
+              <option value="generated">Generated</option>
+              <option value="original">Original</option>
+            </select>
+          </div>
+        </div>
+        <div class="header-center">
           <div class="view-toggle">
             <button 
               class="toggle-btn" 
               [class.active]="viewMode === 'grid'"
               (click)="setViewMode('grid')"
               aria-label="Grid view">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="2"/>
                 <rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="2"/>
                 <rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="2"/>
@@ -41,7 +50,7 @@ export interface GalleryImage {
               [class.active]="viewMode === 'list'"
               (click)="setViewMode('list')"
               aria-label="List view">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <line x1="8" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="2"/>
                 <line x1="8" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="2"/>
                 <line x1="8" y1="18" x2="21" y2="18" stroke="currentColor" stroke-width="2"/>
@@ -51,12 +60,18 @@ export interface GalleryImage {
               </svg>
             </button>
           </div>
-          <div class="filter-controls">
-            <select class="filter-select" (change)="onFilterChange($event)">
-              <option value="all">All Images</option>
-              <option value="generated">Generated</option>
-              <option value="original">Original</option>
-            </select>
+        </div>
+        <div class="header-right">
+          <div class="action-controls" *ngIf="filteredImages.length > 1">
+            <button class="action-btn select-all-btn" (click)="selectAll()">
+              {{selectedImages.length === filteredImages.length ? 'Deselect All' : 'Select All'}}
+            </button>
+            <button 
+              class="action-btn download-btn" 
+              (click)="downloadSelected()"
+              [disabled]="selectedImages.length === 0">
+              Download ({{selectedImages.length}})
+            </button>
           </div>
         </div>
       </div>
@@ -269,18 +284,6 @@ export interface GalleryImage {
         </div>
       </div>
 
-      <!-- Bulk Actions -->
-      <div class="bulk-actions" *ngIf="filteredImages.length > 1">
-        <button class="btn btn-secondary" (click)="selectAll()">
-          {{selectedImages.length === filteredImages.length ? 'Deselect All' : 'Select All'}}
-        </button>
-        <button 
-          class="btn btn-primary" 
-          (click)="downloadSelected()"
-          [disabled]="selectedImages.length === 0">
-          Download Selected ({{selectedImages.length}})
-        </button>
-      </div>
     </div>
   `,
   styleUrls: ['./photo-gallery.component.sass']
@@ -301,7 +304,7 @@ export class PhotoGalleryComponent implements OnInit {
   @Output() bulkDownload = new EventEmitter<GalleryImage[]>();
 
   viewMode: 'grid' | 'list' = 'grid';
-  filterType: string = 'all';
+  filterType: string = 'generated';
   selectedImages: GalleryImage[] = [];
   filteredImages: GalleryImage[] = [];
   
@@ -380,6 +383,10 @@ export class PhotoGalleryComponent implements OnInit {
 
   downloadSelected() {
     this.bulkDownload.emit(this.selectedImages);
+  }
+
+  clearSelections() {
+    this.selectedImages = [];
   }
 
   isSelected(image: GalleryImage): boolean {

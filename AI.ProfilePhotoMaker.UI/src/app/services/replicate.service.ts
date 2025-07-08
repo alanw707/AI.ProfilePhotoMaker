@@ -16,6 +16,14 @@ export interface GenerateImagesRequest {
   numOutputs?: number; // Number of images to generate (1-4)
 }
 
+export interface GenerateBatchImagesRequest {
+  trainedModelVersion: string;
+  userId: string;
+  styles: string[];
+  userInfo?: UserInfo;
+  numOutputsPerStyle?: number; // Number of images to generate per style (1-4)
+}
+
 export interface GenerateBasicImageRequest {
   gender: string;
   userInfo?: UserInfo;
@@ -76,6 +84,33 @@ export class ReplicateService {
   // Image Generation (Premium)
   generateImages(request: GenerateImagesRequest): Observable<{ success: boolean; data: ReplicatePredictionResult; error: any }> {
     return this.http.post<{ success: boolean; data: ReplicatePredictionResult; error: any }>(this.config.getFullUrl('/replicate/generate'), request);
+  }
+
+  // Batch Image Generation (Premium) - Consolidated multiple styles in one request
+  generateBatchImages(request: GenerateBatchImagesRequest): Observable<{ 
+    success: boolean; 
+    data: { 
+      predictions: { style: string; result: ReplicatePredictionResult }[];
+      creditsRemaining: number;
+      creditsCost: number;
+      successfulStyles: number;
+      failedStyles: number;
+      failures: { style: string; error: string }[];
+    }; 
+    error: any 
+  }> {
+    return this.http.post<{ 
+      success: boolean; 
+      data: { 
+        predictions: { style: string; result: ReplicatePredictionResult }[];
+        creditsRemaining: number;
+        creditsCost: number;
+        successfulStyles: number;
+        failedStyles: number;
+        failures: { style: string; error: string }[];
+      }; 
+      error: any 
+    }>(this.config.getFullUrl('/replicate/generate/batch'), request);
   }
 
   getPredictionStatus(predictionId: string): Observable<{ success: boolean; data: ReplicatePredictionResult; error: any }> {

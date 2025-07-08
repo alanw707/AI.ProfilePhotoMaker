@@ -138,6 +138,71 @@ public class BasicTierService : IBasicTierService
         return true;
     }
 
+    public async Task<bool> ConsumeCreditsAsync(string userId, int customAmount, string action = "styled_generation")
+    {
+        var profile = await GetUserProfileWithCreditsAsync(userId);
+        if (profile == null)
+        {
+            _logger.LogWarning("User profile not found for user {UserId}", userId);
+            return false;
+        }
+
+        // Use custom amount instead of config lookup
+        var creditCost = customAmount;
+        
+        // Check if this operation can use weekly credits (styled_generation cannot)
+        var canUseWeeklyCredits = CreditCostConfig.CanUseWeeklyCredits(action);
+
+        var totalAvailableCredits = profile.PurchasedCredits + (canUseWeeklyCredits ? profile.Credits : 0);
+
+        if (totalAvailableCredits < creditCost)
+        {
+            _logger.LogWarning("Insufficient credits for user {UserId}. Available: {Available} (Purchased: {Purchased}, Weekly: {Weekly}), Required: {Required} for {Action}", 
+                userId, totalAvailableCredits, profile.PurchasedCredits, canUseWeeklyCredits ? profile.Credits : 0, creditCost, action);
+            return false;
+        }
+
+        // Prioritize purchased credits first, then weekly credits (for basic operations only)
+        var creditsToConsume = creditCost;
+        var consumedFromPurchased = 0;
+        var consumedFromWeekly = 0;
+
+        // First, use purchased credits if available
+        if (profile.PurchasedCredits > 0)
+        {
+            consumedFromPurchased = Math.Min(creditsToConsume, profile.PurchasedCredits);
+            profile.PurchasedCredits -= consumedFromPurchased;
+            creditsToConsume -= consumedFromPurchased;
+        }
+
+        // Then use weekly credits if operation allows and still need credits
+        if (creditsToConsume > 0 && canUseWeeklyCredits && profile.Credits > 0)
+        {
+            consumedFromWeekly = Math.Min(creditsToConsume, profile.Credits);
+            profile.Credits -= consumedFromWeekly;
+            creditsToConsume -= consumedFromWeekly;
+        }
+
+        if (creditsToConsume > 0)
+        {
+            _logger.LogError("Credit consumption calculation error for user {UserId}", userId);
+            return false;
+        }
+
+        profile.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        // Log the usage with detailed breakdown
+        var details = $"Consumed {creditCost} credits ({consumedFromPurchased} purchased + {consumedFromWeekly} weekly)";
+        var remainingCredits = profile.PurchasedCredits + profile.Credits;
+        await LogUsageAsync(userId, action, details, creditCost, remainingCredits);
+
+        _logger.LogInformation("User {UserId} consumed {Credits} credits for {Action}. Remaining: {Remaining} ({Purchased} purchased + {Weekly} weekly)", 
+            userId, creditCost, action, remainingCredits, profile.PurchasedCredits, profile.Credits);
+
+        return true;
+    }
+
     public async Task<bool> AddPurchasedCreditsAsync(string userId, int credits, string source = "credit_purchase")
     {
         var profile = await GetUserProfileWithCreditsAsync(userId);

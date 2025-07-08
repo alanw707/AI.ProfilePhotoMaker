@@ -12,12 +12,19 @@
       </section>
 
       <!-- Basic Tier Credits Display -->
-      <section class="credits-section" *ngIf="creditsInfo">
-        <div class="credits-card">
+      <section class="credits-section">
+        <div class="credits-card" *ngIf="creditsInfo">
           <div class="credits-icon">⚡</div>
           <div class="credits-content">
             <h3>{{creditsInfo.availableCredits}} Credits</h3>
             <p>Resets {{getNextResetText(creditsInfo.nextResetDate)}}</p>
+          </div>
+        </div>
+        <div class="credits-card loading-card" *ngIf="isLoadingCredits && !creditsInfo">
+          <div class="credits-icon">⚡</div>
+          <div class="credits-content">
+            <h3>Loading...</h3>
+            <p>Checking available credits</p>
           </div>
         </div>
       </section>

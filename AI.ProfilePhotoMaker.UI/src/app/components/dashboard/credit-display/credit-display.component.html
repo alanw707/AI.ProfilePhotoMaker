@@ -1,0 +1,126 @@
+<!-- Credit Display Component -->
+<div class="credit-display-container">
+  
+  <!-- Loading State -->
+  <div class="credits-loading" *ngIf="isLoading">
+    <div class="credits-info-card">
+      <div class="credits-icon">💎</div>
+      <div class="credits-text">
+        <span class="credits-count">Loading...</span>
+        <span class="credits-note">Fetching credit information</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Credit Display -->
+  <div class="credits-display" *ngIf="!isLoading && (creditsInfo || userCreditStatus)">
+    <div class="credits-info-card">
+      <div class="credits-icon">{{ getCreditIcon() }}</div>
+      <div class="credits-text">
+        <span class="credits-count">{{ getCreditDisplayText() }}</span>
+        <span class="credits-note">{{ getCreditSubtitleText() }}</span>
+      </div>
+      <div class="credits-actions" *ngIf="showSettingsHint">
+        <button class="btn btn-sm btn-outline" (click)="onCreditAction('viewPackages', 'settings-hint')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L3.09 8.26L12 22L20.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" fill="none"/>
+          </svg>
+          Get More
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Credit Breakdown Section -->
+  <div class="credit-breakdown-section" *ngIf="showBreakdown && !isLoading">
+    <div class="credit-info-box">
+      <h5>Credit Breakdown</h5>
+      <div class="cost-breakdown">
+        <div class="cost-item">
+          <span class="credit-label">Weekly Credits:</span>
+          <span class="credit-cost">{{ getWeeklyCredits() }}</span>
+        </div>
+        <div class="cost-item">
+          <span class="credit-label">Purchased Credits:</span>
+          <span class="credit-cost">{{ getPurchasedCredits() }}</span>
+        </div>
+        <div class="cost-item total-credits">
+          <span class="credit-label">Total Available:</span>
+          <span class="credit-cost">{{ getTotalAvailableCredits() }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cost Calculation Section -->
+  <div class="cost-calculation-section" *ngIf="requiredCredits > 0 && !isLoading">
+    <div class="credit-info-box">
+      <h5>Required Credits</h5>
+      <div class="cost-breakdown">
+        <div class="cost-item" *ngIf="trainingCredits > 0">
+          <span class="credit-label">Model Training:</span>
+          <span class="credit-cost">{{ trainingCredits }}</span>
+        </div>
+        <div class="cost-item" *ngIf="generationCredits > 0">
+          <span class="credit-label">Image Generation:</span>
+          <span class="credit-cost">{{ generationCredits }}</span>
+        </div>
+        <div class="cost-item total-credits">
+          <span class="credit-label">Total Required:</span>
+          <span class="credit-cost">{{ totalCredits }}</span>
+        </div>
+      </div>
+      <p class="cost-note" *ngIf="hasEnoughCredits">
+        <strong>{{ remainingCredits }}</strong> credits will remain after this operation
+      </p>
+    </div>
+  </div>
+
+  <!-- Insufficient Credits Warning -->
+  <div class="insufficient-credits-warning" *ngIf="shouldShowInsufficientCreditsWarning()">
+    <div class="warning-content">
+      <div class="warning-header">
+        <span class="warning-icon">⚠️</span>
+        <h5>Insufficient Credits</h5>
+      </div>
+      <p>
+        You need <strong>{{ requiredCredits }}</strong> credits but only have <strong>{{ getTotalAvailableCredits() }}</strong>. 
+        Please purchase more credits to continue.
+      </p>
+      <button class="btn btn-primary" (click)="onCreditAction('purchase', 'insufficient-credits')">
+        Purchase Credits
+      </button>
+    </div>
+  </div>
+
+  <!-- Purchase Prompt -->
+  <div class="purchase-prompt-section" *ngIf="shouldShowPurchasePrompt() && showPurchasePrompt">
+    <div class="purchase-prompt-card">
+      <div class="prompt-icon">💎</div>
+      <div class="prompt-content">
+        <h5>Get Started with Premium Features</h5>
+        <p>Purchase credits to train your custom AI model and generate professional photos.</p>
+        <div class="prompt-actions">
+          <button class="btn btn-primary" (click)="onCreditAction('purchase', 'get-started')">
+            View Credit Packages
+          </button>
+          <button class="btn btn-outline" routerLink="/enhance">
+            Try Basic Enhancement
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Basic Credits Display (for non-premium users) -->
+  <div class="basic-credits-display" *ngIf="!isLoading && creditsInfo && !userCreditStatus">
+    <div class="credits-info-card">
+      <div class="credits-icon">⚡</div>
+      <div class="credits-text">
+        <span class="credits-count">{{ creditsInfo.availableCredits }} Weekly Credits</span>
+        <span class="credits-note">Use for basic photo enhancement</span>
+      </div>
+    </div>
+  </div>
+
+</div>
