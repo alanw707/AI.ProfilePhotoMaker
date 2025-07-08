@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
 import { PhotoGalleryComponent, GalleryImage } from '../../components/photo-gallery/photo-gallery.component';
@@ -15,14 +15,18 @@ import JSZip from 'jszip';
   styleUrls: ['./gallery.component.sass']
 })
 export class GalleryComponent implements OnInit {
+  @ViewChild('photoGallery') photoGallery!: PhotoGalleryComponent;
+  
   galleryImages: GalleryImage[] = [];
   isLoading = false;
   isDownloading = false;
   downloadProgress = 0;
+  private hasRunInitialRepair = false;
 
   constructor(
     private authService: AuthService,
     private router: Router,
+    private route: ActivatedRoute,
     private fileUploadService: FileUploadService
   ) {}
 
@@ -32,15 +36,42 @@ export class GalleryComponent implements OnInit {
       return;
     }
     
-    this.loadImages();
+    // Check for refresh parameter
+    this.route.queryParams.subscribe(params => {
+      if (params['refresh']) {
+        console.log('🔄 Gallery refresh requested via query parameter');
+        this.loadImages(true);
+      } else {
+        this.loadImages();
+      }
+    });
   }
 
   async loadImages(forceRefresh: boolean = false) {
     this.isLoading = true;
     try {
+      // Run image database repair on first load only to sync filesystem with database
+      if (!this.hasRunInitialRepair && !forceRefresh) {
+        console.log('🔧 Running initial image database repair...');
+        try {
+          const repairResponse = await this.fileUploadService.repairImageDatabase().toPromise();
+          if (repairResponse?.success) {
+            console.log('✅ Image repair completed:', repairResponse.message);
+          }
+        } catch (repairError) {
+          console.warn('⚠️ Image repair failed, continuing with normal load:', repairError);
+        }
+        this.hasRunInitialRepair = true;
+      }
+
       const response = await this.fileUploadService.getUserImages(forceRefresh).toPromise();
       if (response) {
-        this.galleryImages = response.images.map((img: ProcessedImage) => ({
+        // Deduplicate images by ID to prevent duplicates in zip downloads
+        const uniqueImages = response.images.filter((img, index, array) => 
+          array.findIndex(i => i.id === img.id) === index
+        );
+        
+        this.galleryImages = uniqueImages.map((img: ProcessedImage) => ({
           id: img.id,
           url: img.processedImageUrl || img.originalImageUrl,
           thumbnailUrl: img.originalImageUrl,
@@ -53,6 +84,10 @@ export class GalleryComponent implements OnInit {
           downloadUrl: img.processedImageUrl || img.originalImageUrl
         }));
         
+        // Log if duplicates were found and removed
+        if (uniqueImages.length < response.images.length) {
+          console.warn(`🔍 Removed ${response.images.length - uniqueImages.length} duplicate images from display`);
+        }
       }
     } catch (error) {
       console.error('Failed to load images:', error);
@@ -284,8 +319,12 @@ export class GalleryComponent implements OnInit {
     if (generatedImages.length === 1) {
       // Single image: use direct download
       await this.onImageDownload(generatedImages[0]);
+      // Clear selections after single image download
+      if (this.photoGallery) {
+        this.photoGallery.clearSelections();
+      }
     } else {
-      // Multiple images: create zip
+      // Multiple images: create zip (clearSelections is handled in createZipDownload finally block)
       await this.createZipDownload(generatedImages);
     }
   }
@@ -390,6 +429,11 @@ export class GalleryComponent implements OnInit {
     } finally {
       this.isDownloading = false;
       this.downloadProgress = 0;
+      
+      // Clear selections after download completes (success or failure)
+      if (this.photoGallery) {
+        this.photoGallery.clearSelections();
+      }
     }
   }
 

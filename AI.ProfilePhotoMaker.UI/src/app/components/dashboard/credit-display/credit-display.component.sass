@@ -1,0 +1,323 @@
+.credit-display-container
+  display: flex
+  flex-direction: column
+  gap: 16px
+
+// Loading State
+.credits-loading
+  .credits-info-card
+    opacity: 0.6
+    
+    .credits-count
+      color: var(--text-secondary)
+      font-style: italic
+
+// Main Credit Display
+.credits-display
+  .credits-info-card
+    display: flex
+    align-items: center
+    gap: 12px
+    padding: 16px
+    background: var(--card-bg)
+    border: 1px solid var(--border-color)
+    border-radius: 12px
+    flex: 1
+    transition: all 0.3s ease
+
+    &:hover
+      border-color: var(--accent-primary)
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1)
+
+    .credits-icon
+      font-size: 24px
+      flex-shrink: 0
+
+    .credits-text
+      flex: 1
+      display: flex
+      flex-direction: column
+      gap: 4px
+
+      .credits-count
+        color: var(--text-primary)
+        font-family: 'Poppins', sans-serif
+        font-size: 18px
+        font-weight: 600
+        margin: 0
+
+      .credits-note
+        color: var(--text-secondary)
+        font-size: 14px
+        margin: 0
+
+    .credits-actions
+      display: flex
+      gap: 8px
+      align-items: center
+
+      .btn
+        padding: 6px 12px
+        font-size: 14px
+        border-radius: 6px
+        display: flex
+        align-items: center
+        gap: 6px
+        
+        svg
+          width: 14px
+          height: 14px
+
+// Credit Breakdown Section
+.credit-breakdown-section
+  .credit-info-box
+    background: var(--bg-secondary)
+    border: 1px solid var(--border-color)
+    border-radius: 12px
+    padding: 16px
+
+    h5
+      color: var(--text-primary)
+      font-family: 'Poppins', sans-serif
+      font-size: 16px
+      font-weight: 600
+      margin: 0 0 12px 0
+
+    .cost-breakdown
+      display: flex
+      flex-direction: column
+      gap: 8px
+
+    .cost-item
+      display: flex
+      justify-content: space-between
+      align-items: center
+      font-size: 14px
+      padding: 4px 0
+
+      .credit-label
+        color: var(--text-secondary)
+
+      .credit-cost
+        color: var(--text-primary)
+        font-weight: 600
+
+    .total-credits
+      border-top: 1px solid var(--border-color)
+      padding-top: 8px
+      margin-top: 4px
+
+      .credit-label
+        font-weight: 600
+        color: var(--text-primary)
+
+      .credit-cost
+        color: var(--accent-primary)
+        font-size: 16px
+        font-weight: 700
+
+// Cost Calculation Section
+.cost-calculation-section
+  .credit-info-box
+    .cost-note
+      color: var(--text-secondary)
+      font-size: 14px
+      margin: 12px 0 0 0
+      text-align: center
+      padding-top: 12px
+      border-top: 1px solid var(--border-color)
+
+      strong
+        color: var(--accent-success)
+        font-weight: 600
+
+// Insufficient Credits Warning
+.insufficient-credits-warning
+  background: rgba(239, 68, 68, 0.1)
+  border: 1px solid rgba(239, 68, 68, 0.2)
+  border-radius: 12px
+  padding: 16px
+
+  .warning-content
+    color: var(--text-primary)
+
+    .warning-header
+      display: flex
+      align-items: center
+      gap: 8px
+      margin-bottom: 12px
+
+      .warning-icon
+        color: #ef4444
+        font-size: 20px
+
+      h5
+        color: #ef4444
+        margin: 0
+        font-family: 'Poppins', sans-serif
+        font-size: 16px
+        font-weight: 600
+
+    p
+      margin: 0 0 16px 0
+      color: var(--text-secondary)
+      font-size: 14px
+
+      strong
+        color: var(--text-primary)
+
+    .btn
+      background: #ef4444
+      color: white
+      border: none
+      
+      &:hover
+        background: #dc2626
+
+// Purchase Prompt Section
+.purchase-prompt-section
+  .purchase-prompt-card
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))
+    border-radius: 16px
+    padding: 24px
+    color: white
+    text-align: center
+    position: relative
+    overflow: hidden
+
+    &::before
+      content: ''
+      position: absolute
+      top: -50%
+      left: -50%
+      width: 200%
+      height: 200%
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%)
+      animation: shimmer 3s ease-in-out infinite
+
+    .prompt-icon
+      font-size: 48px
+      margin-bottom: 16px
+
+    .prompt-content
+      position: relative
+      z-index: 1
+
+      h5
+        color: white
+        margin: 0 0 12px 0
+        font-family: 'Poppins', sans-serif
+        font-size: 20px
+        font-weight: 600
+
+      p
+        color: rgba(255, 255, 255, 0.9)
+        margin: 0 0 20px 0
+        font-size: 16px
+
+      .prompt-actions
+        display: flex
+        gap: 12px
+        justify-content: center
+        flex-wrap: wrap
+
+        .btn
+          padding: 12px 24px
+          font-size: 16px
+          border-radius: 8px
+          font-weight: 600
+          transition: all 0.3s ease
+
+          &.btn-primary
+            background: rgba(255, 255, 255, 0.2)
+            border: 1px solid rgba(255, 255, 255, 0.3)
+            color: white
+
+            &:hover
+              background: rgba(255, 255, 255, 0.3)
+              transform: translateY(-2px)
+
+          &.btn-outline
+            background: transparent
+            border: 1px solid rgba(255, 255, 255, 0.5)
+            color: rgba(255, 255, 255, 0.9)
+
+            &:hover
+              background: rgba(255, 255, 255, 0.1)
+              color: white
+
+// Basic Credits Display (for non-premium users)
+.basic-credits-display
+  .credits-info-card
+    background: var(--card-bg)
+    border: 1px solid var(--border-color)
+    border-radius: 12px
+    padding: 16px
+    display: flex
+    align-items: center
+    gap: 12px
+
+    .credits-icon
+      font-size: 24px
+      color: var(--accent-primary)
+
+    .credits-text
+      .credits-count
+        color: var(--text-primary)
+        font-family: 'Poppins', sans-serif
+        font-size: 18px
+        font-weight: 600
+        margin: 0
+
+      .credits-note
+        color: var(--text-secondary)
+        font-size: 14px
+        margin: 0
+
+// Animation for shimmer effect
+@keyframes shimmer
+  0%
+    transform: translateX(-100%) translateY(-100%) rotate(30deg)
+  100%
+    transform: translateX(100%) translateY(100%) rotate(30deg)
+
+// Responsive Design
+@media (max-width: 768px)
+  .credit-display-container
+    gap: 12px
+
+  .credits-display
+    .credits-info-card
+      padding: 12px
+      gap: 10px
+
+      .credits-icon
+        font-size: 20px
+
+      .credits-text
+        .credits-count
+          font-size: 16px
+
+        .credits-note
+          font-size: 13px
+
+  .purchase-prompt-section
+    .purchase-prompt-card
+      padding: 20px
+
+      .prompt-icon
+        font-size: 36px
+
+      .prompt-content
+        h5
+          font-size: 18px
+
+        p
+          font-size: 15px
+
+        .prompt-actions
+          flex-direction: column
+
+          .btn
+            padding: 10px 20px
+            font-size: 15px

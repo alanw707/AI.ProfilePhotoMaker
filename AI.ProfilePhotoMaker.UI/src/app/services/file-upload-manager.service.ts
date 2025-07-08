@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { FaceDetectionService, FaceValidationResult, QualityScore } from './face-detection.service';
+import { FaceDetectionService } from './face-detection.service';
+import { FaceValidationResult, QualityScore } from '../interfaces/service.interfaces';
 import { SelectedFileWithQuality, QualityCheckError, QualityCheckResult, UploadProgress } from '../models/dashboard.types';
 
 @Injectable({
@@ -64,7 +65,7 @@ export class FileUploadManagerService {
       completed: true
     });
 
-    return { validFiles, errorFiles };
+    return { validFiles, invalidFiles: errorFiles.map(e => e.file), errors: errorFiles, totalProcessed: files.length };
   }
 
   private async validateFile(file: File): Promise<SelectedFileWithQuality> {

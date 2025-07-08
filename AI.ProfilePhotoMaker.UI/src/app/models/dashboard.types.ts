@@ -1,4 +1,4 @@
-import { FaceValidationResult, QualityScore } from '../services/face-detection.service';
+import { FaceValidationResult, QualityScore } from '../interfaces/service.interfaces';
 
 export interface GeneratedPhoto {
   id: string;
@@ -14,6 +14,7 @@ export interface QualityCheckError {
   warnings?: string[];
   faceValidation?: FaceValidationResult;
   qualityScore?: QualityScore;
+  showErrorDetails?: boolean;
 }
 
 export interface SelectedFileWithQuality {
@@ -28,7 +29,9 @@ export interface SelectedFileWithQuality {
 
 export interface QualityCheckResult {
   validFiles: File[];
-  errorFiles: QualityCheckError[];
+  invalidFiles: File[];
+  errors: QualityCheckError[];
+  totalProcessed: number;
 }
 
 export interface UploadProgress {

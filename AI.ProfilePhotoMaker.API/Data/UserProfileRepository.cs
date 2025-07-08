@@ -16,6 +16,7 @@ public class UserProfileRepository : IUserProfileRepository
     {
         return await _context.UserProfiles
             .Include(p => p.ProcessedImages)
+            .AsNoTracking() // Add this to ensure fresh data from database
             .FirstOrDefaultAsync(p => p.UserId == userId);
     }
 

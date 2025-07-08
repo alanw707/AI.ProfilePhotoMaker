@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 
 export interface Notification {
@@ -17,7 +17,7 @@ export class NotificationService {
   private notificationsSubject = new BehaviorSubject<Notification[]>([]);
   public notifications$ = this.notificationsSubject.asObservable();
 
-  constructor() {}
+  constructor(private ngZone: NgZone) {}
 
   private generateId(): string {
     return Math.random().toString(36).substr(2, 9);
@@ -37,9 +37,13 @@ export class NotificationService {
 
     // Auto-remove notification after duration
     if (newNotification.duration && newNotification.duration > 0) {
-      setTimeout(() => {
-        this.removeNotification(id);
-      }, newNotification.duration);
+      this.ngZone.runOutsideAngular(() => {
+        setTimeout(() => {
+          this.ngZone.run(() => {
+            this.removeNotification(id);
+          });
+        }, newNotification.duration);
+      });
     }
 
     return id;

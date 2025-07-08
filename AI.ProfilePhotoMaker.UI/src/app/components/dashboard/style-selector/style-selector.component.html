@@ -28,7 +28,7 @@
   <div class="image-count-selection compact">
     <h5>📸 Images to Generate per Style</h5>
     <div class="count-options">
-      <label class="count-option" *ngFor="let count of [1, 2, 3, 4, 5]">
+      <label class="count-option" *ngFor="let count of [1, 2, 3, 4]">
         <input type="radio" 
                name="imageCountTop" 
                [value]="count" 
@@ -76,7 +76,7 @@
   <div class="image-count-selection">
     <h5>📸 Images to Generate per Style</h5>
     <div class="count-options">
-      <label class="count-option" *ngFor="let count of [1, 2, 3, 4, 5]">
+      <label class="count-option" *ngFor="let count of [1, 2, 3, 4]">
         <input type="radio" 
                name="imageCountBottom" 
                [value]="count" 
@@ -102,7 +102,7 @@
       <span class="credit-cost">{{trainingCredits}} credits</span>
     </div>
     <div class="credit-item">
-      <span class="credit-label">Image Generation ({{selectedStyles}} × {{imagesPerStyle}}):</span>
+      <span class="credit-label">Image Generation ({{selectedStyles * imagesPerStyle}} images × 5 credits):</span>
       <span class="credit-cost">{{generationCredits}} credits</span>
     </div>
     <div class="credit-item total-credits">
@@ -127,7 +127,7 @@
       <p><strong>{{lastGenerationCount}} new photos</strong> have been created and are ready to view in your gallery.</p>
     </div>
     <div class="success-actions">
-      <button class="btn btn-primary btn-sm" routerLink="/gallery">
+      <button class="btn btn-primary btn-sm" (click)="navigateToGallery()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
           <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
           <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
@@ -151,7 +151,7 @@
   <button class="btn btn-primary action-btn-prominent" 
           *ngIf="!isTrainingStarted && !isTraining && !isGenerating" 
           (click)="onStartTraining()"
-          [disabled]="modelStatus === 'training' || uploadedImageCount < 5 || !hasEnoughCredits">
+          [disabled]="modelStatus === 'training' || (modelStatus !== 'Model Ready' && uploadedImageCount < 10) || !hasEnoughCredits">
     <div class="btn-content">
       <div class="btn-icon" *ngIf="modelStatus !== 'training'">🚀</div>
       <div class="btn-icon spinning" *ngIf="modelStatus === 'training'">⏳</div>
@@ -214,12 +214,12 @@
   <p>Select at least one style above to proceed with training</p>
 </div>
 
-<div class="training-note" *ngIf="selectedStyles > 0 && uploadedImageCount < 5">
+<div class="training-note" *ngIf="selectedStyles > 0 && uploadedImageCount < 10">
   <div class="note-icon">📸</div>
-  <p>Upload at least 5 images to enable training (currently: {{uploadedImageCount}})</p>
+  <p>Upload at least 10 images to enable training (currently: {{uploadedImageCount}})</p>
 </div>
 
-<div class="training-note insufficient-credits" *ngIf="selectedStyles > 0 && uploadedImageCount >= 5 && !hasEnoughCredits">
+<div class="training-note insufficient-credits" *ngIf="selectedStyles > 0 && uploadedImageCount >= 10 && !hasEnoughCredits">
   <div class="note-icon">💳</div>
   <p>Insufficient credits. You need {{totalCredits - remainingCredits}} more credits.</p>
   <button class="btn btn-secondary btn-sm">Purchase Credits</button>

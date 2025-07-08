@@ -196,8 +196,8 @@ public class ProfileController : ControllerBase
         if (dto.Images == null || !dto.Images.Any())
             return BadRequest("No images provided");
 
-        if (dto.Images.Count > 10)
-            return BadRequest("Maximum 10 images allowed");
+        if (dto.Images.Count > 20)
+            return BadRequest("Maximum 20 images allowed");
 
         var userId = GetCurrentUserId();
         if (userId == null)
@@ -246,7 +246,7 @@ public class ProfileController : ControllerBase
                 var processedImage = new ProcessedImage
                 {
                     OriginalImageUrl = relativeUrl,  // Store relative path instead of absolute URL
-                    ProcessedImageUrl = "", // Will be updated when AI processing completes
+                    ProcessedImageUrl = relativeUrl, // Use original URL as processed URL for uploads (unique per file)
                     Style = ProfileControllerConstants.OriginalStyle, // Mark as original upload
                     UserProfileId = profile.Id,
                     CreatedAt = DateTime.UtcNow,
@@ -347,22 +347,28 @@ public class ProfileController : ControllerBase
 
         foreach (var i in profile.ProcessedImages.OrderByDescending(i => i.CreatedAt))
         {
-            var originalUrl = !string.IsNullOrEmpty(i.OriginalImageUrl) ? (i.OriginalImageUrl.StartsWith("http") ? i.OriginalImageUrl : GetAbsoluteUrl(i.OriginalImageUrl)) : i.OriginalImageUrl;
-            var processedUrl = !string.IsNullOrEmpty(i.ProcessedImageUrl) ? (i.ProcessedImageUrl.StartsWith("http") ? i.ProcessedImageUrl : GetAbsoluteUrl(i.ProcessedImageUrl)) : i.ProcessedImageUrl;
+            // For generated images, construct local URL from generated folder
+            // For uploaded images, use the stored paths
+            string originalUrl = null;
+            string processedUrl = null;
             
-            // Check if local files exist
-            var localFileExists = false;
-            
-            // For uploaded images, check original URL
-            if (!string.IsNullOrEmpty(i.OriginalImageUrl) && !i.OriginalImageUrl.StartsWith("http"))
+            if (i.IsGenerated && !string.IsNullOrEmpty(i.Style) && i.Style != "Original")
             {
-                localFileExists = System.IO.File.Exists(Path.Combine(_environment.ContentRootPath, i.OriginalImageUrl.TrimStart('/')));
+                // For generated images, use ProcessedImageUrl which now contains the full path
+                processedUrl = !string.IsNullOrEmpty(i.ProcessedImageUrl) ? 
+                    (i.ProcessedImageUrl.StartsWith("http") ? i.ProcessedImageUrl : GetAbsoluteUrl(i.ProcessedImageUrl)) : 
+                    null;
             }
-            
-            // For generated images, check processed URL if it's a local path
-            if (i.IsGenerated && !string.IsNullOrEmpty(i.ProcessedImageUrl) && !i.ProcessedImageUrl.StartsWith("http"))
+            else
             {
-                localFileExists = System.IO.File.Exists(Path.Combine(_environment.ContentRootPath, i.ProcessedImageUrl.TrimStart('/')));
+                // For uploaded images or other cases, use stored URLs
+                originalUrl = !string.IsNullOrEmpty(i.OriginalImageUrl) ? 
+                    (i.OriginalImageUrl.StartsWith("http") ? i.OriginalImageUrl : GetAbsoluteUrl(i.OriginalImageUrl)) : 
+                    null;
+                    
+                processedUrl = !string.IsNullOrEmpty(i.ProcessedImageUrl) ? 
+                    (i.ProcessedImageUrl.StartsWith("http") ? i.ProcessedImageUrl : GetAbsoluteUrl(i.ProcessedImageUrl)) : 
+                    null;
             }
             
             images.Add(new
@@ -373,8 +379,7 @@ public class ProfileController : ControllerBase
                 i.Style,
                 i.CreatedAt,
                 IsOriginalUpload = i.Style == "Original",
-                IsGenerated = i.IsGenerated,
-                FileExists = localFileExists
+                IsGenerated = i.IsGenerated
             });
         }
 
@@ -417,13 +422,13 @@ public class ProfileController : ControllerBase
             ModelTrainedAt = latestModel?.CompletedAt,
             TotalUploadedImages = uploadedImages.Count,
             LatestZipFile = zipFiles.OrderByDescending(f => System.IO.File.GetCreationTime(f)).FirstOrDefault(),
-            CanStartTraining = uploadedImages.Count >= 4, // Minimum 4 images for training
+            CanStartTraining = uploadedImages.Count >= 10, // Minimum 10 images for training
             Status = uploadedImages.Count switch
             {
                 0 => "No images uploaded",
-                < 4 => $"Need at least 4 images (currently {uploadedImages.Count})",
-                >= 4 when latestModel == null => "Ready for training",
-                >= 4 when latestModel != null => "Model trained - ready for generation",
+                < 10 => $"Need at least 10 images (currently {uploadedImages.Count})",
+                >= 10 when latestModel == null => "Ready for training",
+                >= 10 when latestModel != null => "Model trained - ready for generation",
                 _ => "Unknown status"
             }
         });
@@ -456,13 +461,13 @@ public class ProfileController : ControllerBase
             if (string.IsNullOrEmpty(zipPath))
             {
                 // Check specific reasons for failure
-                if (uploadedImages.Count < 4)
+                if (uploadedImages.Count < 10)
                 {
                     return BadRequest(new { 
                         success = false, 
                         error = new { 
                             code = "InsufficientImages", 
-                            message = $"Need at least 4 images for training (currently {uploadedImages.Count})" 
+                            message = $"Need at least 10 images for training (currently {uploadedImages.Count})" 
                         } 
                     });
                 }
@@ -517,35 +522,97 @@ public class ProfileController : ControllerBase
         var profile = await _userProfileRepository.GetByUserIdAsync(userId);
 
         if (profile == null)
+        {
+            _logger.LogWarning("Profile not found for user {UserId}", userId);
             return NotFound("Profile not found");
-
+        }
+        
         var image = profile.ProcessedImages.FirstOrDefault(i => i.Id == imageId);
         if (image == null)
-            return NotFound("Image not found");
+        {
+            _logger.LogWarning("Image {ImageId} not found for user {UserId}", imageId, userId);
+            return NotFound(new { 
+                success = false, 
+                message = "Image not found"
+            });
+        }
+
+        // Check if image is already deleted
+        if (image.IsDeleted)
+        {
+            _logger.LogWarning("Image {ImageId} for user {UserId} is already marked as deleted", imageId, userId);
+            return BadRequest(new { 
+                success = false, 
+                message = "Image is already deleted" 
+            });
+        }
 
         try
         {
-            // Delete physical file if it exists
-            if (!string.IsNullOrEmpty(image.OriginalImageUrl))
+            var physicalFileDeleted = false;
+            
+            // Delete physical file based on image type and storage location
+            if (image.IsGenerated && !string.IsNullOrEmpty(image.ProcessedImageUrl))
             {
-                var filePath = Path.Combine(_environment.ContentRootPath, "uploads", userId, 
-                    Path.GetFileName(image.OriginalImageUrl));
-                if (System.IO.File.Exists(filePath))
+                // Generated images are stored in /generated/{userId}/ directory
+                var fileName = Path.GetFileName(image.ProcessedImageUrl);
+                var generatedFilePath = Path.Combine(_environment.ContentRootPath, "generated", userId, fileName);
+                
+                _logger.LogDebug("Attempting to delete generated image file: {FilePath}", generatedFilePath);
+                
+                if (System.IO.File.Exists(generatedFilePath))
                 {
-                    System.IO.File.Delete(filePath);
+                    System.IO.File.Delete(generatedFilePath);
+                    physicalFileDeleted = true;
+                    _logger.LogInformation("Deleted generated image file: {FilePath}", generatedFilePath);
+                }
+                else
+                {
+                    _logger.LogWarning("Generated image file not found: {FilePath}", generatedFilePath);
+                }
+            }
+            else if (!string.IsNullOrEmpty(image.OriginalImageUrl))
+            {
+                // Uploaded images are stored in /uploads/{userId}/ directory
+                var fileName = Path.GetFileName(image.OriginalImageUrl);
+                var uploadFilePath = Path.Combine(_environment.ContentRootPath, "uploads", userId, fileName);
+                
+                _logger.LogDebug("Attempting to delete uploaded image file: {FilePath}", uploadFilePath);
+                
+                if (System.IO.File.Exists(uploadFilePath))
+                {
+                    System.IO.File.Delete(uploadFilePath);
+                    physicalFileDeleted = true;
+                    _logger.LogInformation("Deleted uploaded image file: {FilePath}", uploadFilePath);
+                }
+                else
+                {
+                    _logger.LogWarning("Uploaded image file not found: {FilePath}", uploadFilePath);
                 }
             }
 
-            // Delete database record - remove from profile and update
-            profile.ProcessedImages.Remove(image);
-            await _userProfileRepository.UpdateAsync(profile);
+            // Delete database record using Entity Framework directly for more reliable deletion
+            _context.ProcessedImages.Remove(image);
+            await _context.SaveChangesAsync();
 
-            return Ok(new { success = true, message = "Image deleted" });
+            _logger.LogInformation("Successfully deleted image {ImageId} for user {UserId}. Physical file deleted: {FileDeleted}", 
+                imageId, userId, physicalFileDeleted);
+
+            return Ok(new { 
+                success = true, 
+                message = "Image deleted successfully",
+                physicalFileDeleted = physicalFileDeleted,
+                deletedImageId = imageId
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting image {ImageId} for user {UserId}", imageId, userId);
-            return StatusCode(500, "Error deleting image");
+            return StatusCode(500, new { 
+                success = false, 
+                message = "Error deleting image", 
+                error = ex.Message 
+            });
         }
     }
 
@@ -609,6 +676,13 @@ public class ProfileController : ControllerBase
             var zipPath = Path.Combine(_environment.ContentRootPath, "training-zips", $"{userId}.zip");
             Directory.CreateDirectory(Path.GetDirectoryName(zipPath)!);
 
+            // Delete existing ZIP file if it exists to avoid conflicts
+            if (System.IO.File.Exists(zipPath))
+            {
+                System.IO.File.Delete(zipPath);
+                _logger.LogInformation("Deleted existing training ZIP file before creating new one for user {UserId}", userId);
+            }
+
             using (var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create))
             {
                 // Get all image files from the upload directory (only contains original uploads)
@@ -621,7 +695,7 @@ public class ProfileController : ControllerBase
                     })
                     .ToArray();
 
-                if (imageFiles.Length < 4)
+                if (imageFiles.Length < 10)
                 {
                     _logger.LogWarning("Insufficient images ({Count}) for training ZIP for user {UserId}", imageFiles.Length, userId);
                     return null;

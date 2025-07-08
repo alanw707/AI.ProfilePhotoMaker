@@ -25,7 +25,7 @@ export class StyleService {
   constructor(private http: HttpClient, private config: ConfigService) {}
 
   getAllStyles(): Observable<{ success: boolean; data: Style[]; error: any }> {
-    return this.http.get<{ success: boolean; data: Style[]; error: any }>(this.config.getFullUrl('/styles'));
+    return this.http.get<{ success: boolean; data: Style[]; error: any }>(this.config.getFullUrl('/style'));
   }
 
   getActiveStyles(): Observable<{ success: boolean; data: Style[]; error: any }> {
@@ -33,14 +33,14 @@ export class StyleService {
   }
 
   getStyleById(id: number): Observable<{ success: boolean; data: Style; error: any }> {
-    return this.http.get<{ success: boolean; data: Style; error: any }>(this.config.getFullUrl(`/styles/${id}`));
+    return this.http.get<{ success: boolean; data: Style; error: any }>(this.config.getFullUrl(`/style/${id}`));
   }
 
   getUserSelectedStyles(): Observable<{ success: boolean; data: Style[]; error: any }> {
-    return this.http.get<{ success: boolean; data: Style[]; error: any }>(this.config.getFullUrl('/styles/user-selected'));
+    return this.http.get<{ success: boolean; data: Style[]; error: any }>(this.config.getFullUrl('/style/user-selected'));
   }
 
   selectStyles(selection: StyleSelection): Observable<{ success: boolean; message: string; error: any }> {
-    return this.http.post<{ success: boolean; message: string; error: any }>(this.config.getFullUrl('/styles/select'), selection);
+    return this.http.post<{ success: boolean; message: string; error: any }>(this.config.getFullUrl('/style/select'), selection);
   }
 }

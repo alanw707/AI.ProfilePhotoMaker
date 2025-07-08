@@ -1,0 +1,737 @@
+@use '../../../shared/styles/mixins'
+@use '../../../dashboard/styles/file-preview'
+
+.file-upload-section
+  padding: 1.5rem
+  background: var(--surface-color)
+  border-radius: 12px
+  border: 1px solid var(--border-color)
+
+// Upload Guidelines
+.upload-guidelines
+  text-align: center
+  padding: 2rem
+  
+  .guidelines-content
+    max-width: 600px
+    margin: 0 auto
+    
+  .upload-icon
+    margin-bottom: 1.5rem
+    color: var(--primary-color)
+    
+  h3
+    font-size: 1.5rem
+    font-weight: 600
+    margin-bottom: 0.5rem
+    color: var(--text-primary)
+    
+  .subtitle
+    color: var(--text-secondary)
+    margin-bottom: 2rem
+    font-size: 1rem
+
+.guidelines-grid
+  display: grid
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr))
+  gap: 1rem
+  margin-top: 2rem
+  text-align: left
+
+.guideline-item
+  display: flex
+  align-items: flex-start
+  gap: 0.75rem
+  padding: 1rem
+  background: var(--background-color)
+  border-radius: 8px
+  border: 1px solid var(--border-color)
+  
+  .guideline-icon
+    flex-shrink: 0
+    width: 32px
+    height: 32px
+    border-radius: 50%
+    display: flex
+    align-items: center
+    justify-content: center
+    
+    &.good
+      background: rgba(34, 197, 94, 0.1)
+      color: #22c55e
+      
+    &.avoid
+      background: rgba(239, 68, 68, 0.1)
+      color: #ef4444
+      
+  .guideline-text
+    strong
+      display: block
+      font-weight: 600
+      color: var(--text-primary)
+      margin-bottom: 0.25rem
+      
+    span
+      color: var(--text-secondary)
+      font-size: 0.875rem
+
+// Uploaded Images Section
+.uploaded-images-section
+  margin-bottom: 1.5rem
+  
+  h4
+    font-size: 1.125rem
+    font-weight: 600
+    margin-bottom: 1rem
+    color: var(--text-primary)
+
+.uploaded-thumbnails
+  display: grid
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr))
+  gap: 0.75rem
+  max-height: 200px
+  overflow-y: auto
+
+.uploaded-thumbnail
+  position: relative
+  aspect-ratio: 1
+  border-radius: 8px
+  overflow: hidden
+  background: var(--background-color)
+  
+  img
+    width: 100%
+    height: 100%
+    object-fit: cover
+    
+  .thumbnail-overlay
+    position: absolute
+    inset: 0
+    background: rgba(0, 0, 0, 0.6)
+    display: flex
+    align-items: center
+    justify-content: center
+    opacity: 0
+    transition: opacity 0.2s ease
+    
+    &:hover
+      opacity: 1
+      
+  .delete-btn
+    background: none
+    border: none
+    color: white
+    padding: 0.5rem
+    border-radius: 4px
+    cursor: pointer
+    transition: background-color 0.2s ease
+    
+    &:hover
+      background: rgba(255, 255, 255, 0.2)
+
+// Upload Area
+.upload-area
+  border: 2px dashed var(--border-color)
+  border-radius: 12px
+  padding: 2rem
+  text-align: center
+  cursor: pointer
+  transition: all 0.3s ease
+  background: var(--background-color)
+  
+  &:hover, &.drag-over
+    border-color: var(--primary-color)
+    background: rgba(var(--primary-rgb), 0.05)
+    
+  &.has-files
+    border-style: solid
+    border-color: var(--success-color)
+    background: rgba(34, 197, 94, 0.05)
+
+.upload-content
+  display: flex
+  flex-direction: column
+  align-items: center
+  gap: 1rem
+  
+  .upload-icon
+    color: var(--text-secondary)
+    
+  .upload-text
+    strong
+      display: block
+      font-weight: 600
+      color: var(--text-primary)
+      margin-bottom: 0.25rem
+      
+    span
+      color: var(--text-secondary)
+      font-size: 0.875rem
+
+// Quality Check Progress
+.quality-check-progress
+  padding: 1.5rem
+  background: rgba(var(--primary-rgb), 0.05)
+  border-radius: 8px
+  margin: 1rem 0
+  
+  .progress-content
+    display: flex
+    align-items: center
+    gap: 1rem
+    
+  .progress-icon
+    color: var(--primary-color)
+    
+    .animate-spin
+      animation: spin 1s linear infinite
+      
+  .progress-text
+    strong
+      display: block
+      font-weight: 600
+      color: var(--text-primary)
+      margin-bottom: 0.25rem
+      
+    span
+      color: var(--text-secondary)
+      font-size: 0.875rem
+
+@keyframes spin
+  from
+    transform: rotate(0deg)
+  to
+    transform: rotate(360deg)
+
+// Selected Files Section
+.selected-files-section
+  margin-top: 1.5rem
+  
+  .section-header
+    display: flex
+    justify-content: space-between
+    align-items: center
+    margin-bottom: 1rem
+    
+    h4
+      font-size: 1.125rem
+      font-weight: 600
+      color: var(--text-primary)
+      
+  .file-stats
+    display: flex
+    gap: 1rem
+    font-size: 0.875rem
+    
+    .valid-count
+      color: var(--success-color)
+      font-weight: 500
+      
+    .invalid-count
+      color: var(--error-color)
+      font-weight: 500
+
+.files-grid
+  display: grid
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr))
+  gap: 1rem
+
+.file-preview
+  position: relative
+  background: var(--background-color)
+  border-radius: 8px
+  overflow: hidden
+  border: 1px solid var(--border-color)
+  transition: border-color 0.2s ease
+  
+  &.valid
+    border-color: var(--success-color)
+    
+  &.invalid
+    border-color: var(--error-color)
+    
+  .file-image
+    position: relative
+    aspect-ratio: 1
+    
+    img
+      width: 100%
+      height: 100%
+      object-fit: cover
+      
+    .quality-score
+      position: absolute
+      top: 0.5rem
+      right: 0.5rem
+      background: rgba(0, 0, 0, 0.7)
+      color: white
+      padding: 0.25rem 0.5rem
+      border-radius: 4px
+      font-size: 0.75rem
+      font-weight: 500
+      
+    .status-indicator
+      position: absolute
+      bottom: 0.5rem
+      right: 0.5rem
+      width: 24px
+      height: 24px
+      border-radius: 50%
+      display: flex
+      align-items: center
+      justify-content: center
+      
+      &.valid
+        background: var(--success-color)
+        color: white
+        
+      &.invalid
+        background: var(--error-color)
+        color: white
+        
+  .file-info
+    padding: 0.75rem
+    
+    .file-name
+      font-weight: 500
+      color: var(--text-primary)
+      margin-bottom: 0.25rem
+      @include mixins.truncate-text
+      
+    .file-size
+      color: var(--text-secondary)
+      font-size: 0.75rem
+      
+    .warnings
+      margin-top: 0.5rem
+      
+      .warning-item
+        font-size: 0.75rem
+        color: var(--warning-color)
+        margin-bottom: 0.25rem
+        
+  .remove-btn
+    position: absolute
+    top: 0.5rem
+    left: 0.5rem
+    background: rgba(0, 0, 0, 0.7)
+    border: none
+    color: white
+    width: 24px
+    height: 24px
+    border-radius: 50%
+    display: flex
+    align-items: center
+    justify-content: center
+    opacity: 0
+    cursor: pointer
+    transition: opacity 0.2s ease
+    
+    &:hover
+      background: rgba(0, 0, 0, 0.8)
+      
+  &:hover .remove-btn
+    opacity: 1
+
+// Quality Errors
+.quality-errors
+  margin-top: 1.5rem
+  padding: 1rem
+  background: rgba(239, 68, 68, 0.05)
+  border-radius: 8px
+  border: 1px solid rgba(239, 68, 68, 0.2)
+  
+  h5
+    font-size: 1rem
+    font-weight: 600
+    color: var(--error-color)
+    margin-bottom: 0.75rem
+
+.error-list
+  display: flex
+  flex-direction: column
+  gap: 0.75rem
+
+.error-item
+  background: var(--background-color)
+  padding: 0.75rem
+  border-radius: 6px
+  border: 1px solid var(--border-color)
+  
+  .error-file
+    font-weight: 500
+    color: var(--text-primary)
+    margin-bottom: 0.5rem
+    
+  .error-messages
+    display: flex
+    flex-direction: column
+    gap: 0.25rem
+    
+    .error-message
+      color: var(--error-color)
+      font-size: 0.875rem
+      
+    .warning-message
+      color: var(--warning-color)
+      font-size: 0.875rem
+
+// Upload Actions
+.upload-actions
+  display: flex
+  justify-content: space-between
+  align-items: center
+  margin-top: 1.5rem
+  padding-top: 1.5rem
+  border-top: 1px solid var(--border-color)
+  
+  .actions-left, .actions-right
+    display: flex
+    align-items: center
+    gap: 1rem
+
+.upload-progress
+  display: flex
+  align-items: center
+  gap: 0.75rem
+  
+  .progress-bar
+    width: 120px
+    height: 6px
+    background: var(--border-color)
+    border-radius: 3px
+    overflow: hidden
+    
+    .progress-fill
+      height: 100%
+      background: var(--primary-color)
+      transition: width 0.3s ease
+      
+  .progress-text
+    font-size: 0.875rem
+    color: var(--text-secondary)
+    white-space: nowrap
+
+// Button Styles
+.btn
+  @include mixins.btn-base
+  
+  &.btn-primary
+    @include mixins.btn-primary
+    
+  &.btn-secondary
+    @include mixins.btn-secondary
+
+// Upload Progress Section
+.upload-progress-section
+  margin-top: 1.5rem
+  padding: 1rem
+  background: var(--background-color)
+  border-radius: 8px
+  border: 1px solid var(--border-color)
+
+  .progress-header
+    display: flex
+    justify-content: space-between
+    align-items: center
+    margin-bottom: 1rem
+
+    h5
+      font-size: 1rem
+      font-weight: 600
+      color: var(--text-primary)
+      margin: 0
+
+    .progress-count
+      font-size: 0.875rem
+      color: var(--text-secondary)
+      font-weight: 500
+
+.progress-bar-container
+  position: relative
+  margin-bottom: 1rem
+
+  .progress-bar
+    width: 100%
+    height: 12px
+    background: var(--border-color)
+    border-radius: 6px
+    overflow: hidden
+    position: relative
+
+    .progress-fill
+      height: 100%
+      border-radius: 6px
+      transition: all 0.3s ease
+
+      &.progress-red
+        background: linear-gradient(90deg, #ef4444, #dc2626)
+
+      &.progress-yellow
+        background: linear-gradient(90deg, #f59e0b, #d97706)
+
+      &.progress-green
+        background: linear-gradient(90deg, #22c55e, #16a34a)
+
+.milestone-marker
+  position: absolute
+  top: -4px
+  transform: translateX(-50%)
+  z-index: 2
+
+  .marker-line
+    width: 2px
+    height: 20px
+    background: var(--text-secondary)
+    margin: 0 auto
+
+  .marker-label
+    display: block
+    text-align: center
+    font-size: 0.75rem
+    color: var(--text-secondary)
+    font-weight: 600
+    margin-top: 2px
+
+.progress-status
+  .status-indicators
+    display: flex
+    flex-direction: column
+    gap: 0.5rem
+
+    @media (min-width: 640px)
+      flex-direction: row
+      justify-content: space-between
+      gap: 1rem
+
+  .status-indicator
+    display: flex
+    align-items: center
+    gap: 0.5rem
+    font-size: 0.875rem
+    padding: 0.5rem
+    border-radius: 6px
+    transition: all 0.2s ease
+
+    &.status-complete
+      background: rgba(34, 197, 94, 0.1)
+      color: var(--success-color)
+      border: 1px solid rgba(34, 197, 94, 0.2)
+
+    &.status-incomplete
+      background: rgba(107, 114, 128, 0.1)
+      color: var(--text-secondary)
+      border: 1px solid var(--border-color)
+
+    strong
+      font-weight: 600
+
+// Enhanced Quality Errors Section
+.quality-errors-enhanced
+  margin-top: 1.5rem
+  padding: 1rem
+  background: rgba(239, 68, 68, 0.05)
+  border-radius: 12px
+  border: 1px solid rgba(239, 68, 68, 0.2)
+
+  .section-header
+    margin-bottom: 1rem
+
+    h5
+      font-size: 1.125rem
+      font-weight: 600
+      color: var(--error-color)
+      margin: 0 0 0.25rem 0
+
+    .section-subtitle
+      font-size: 0.875rem
+      color: var(--text-secondary)
+      margin: 0
+
+.error-cards-grid
+  display: grid
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))
+  gap: 1rem
+
+  .error-card
+    // Inherit all styles from selected-file-item-enhanced and file-invalid
+    // Additional specific styling for error cards
+    .error-details
+      margin-top: 0.75rem
+      padding-top: 0.75rem
+      border-top: 1px solid rgba(239, 68, 68, 0.2)
+
+      .error-message, .warning-message
+        font-size: 0.875rem
+        line-height: 1.4
+        margin-bottom: 0.5rem
+        padding: 0.5rem
+        border-radius: 6px
+
+      .error-message
+        background: rgba(239, 68, 68, 0.1)
+        color: var(--error-color)
+        border: 1px solid rgba(239, 68, 68, 0.2)
+
+      .warning-message
+        background: rgba(245, 158, 11, 0.1)
+        color: var(--warning-color)
+        border: 1px solid rgba(245, 158, 11, 0.2)
+
+// Error Info Popup for Error Cards
+.error-info-popup
+  position: relative
+  display: inline-block
+  margin-left: 0.5rem
+
+  .error-info-btn
+    width: 20px
+    height: 20px
+    border-radius: 50%
+    border: 1px solid rgba(239, 68, 68, 0.3)
+    background: transparent
+    color: #ef4444
+    cursor: pointer
+    display: flex
+    align-items: center
+    justify-content: center
+    transition: all 0.2s ease
+    
+    &:hover
+      background: rgba(239, 68, 68, 0.1)
+      border-color: #ef4444
+      transform: scale(1.1)
+      
+    &.active
+      background: #ef4444
+      color: white
+      border-color: #ef4444
+
+// Modern Error Details Popup
+.error-details-popup
+  position: absolute
+  top: calc(100% + 8px)
+  right: 0
+  z-index: 999
+  background: #ffffff
+  border: 1px solid #e5e7eb
+  border-radius: 8px
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15)
+  padding: 0
+  width: 240px
+  max-height: 200px
+  overflow: hidden
+  opacity: 0
+  animation: popupFadeIn 0.2s ease-out forwards
+  
+  // Fallback positioning to prevent clipping
+  &.popup-left-align
+    left: 0
+    right: auto
+    
+  // Mobile responsive
+  @media (max-width: 768px)
+    width: 220px
+    max-height: 180px
+
+  .popup-content
+    padding: 12px
+    
+  .popup-section
+    &:not(:last-child)
+      margin-bottom: 10px
+      padding-bottom: 8px
+      border-bottom: 1px solid #f3f4f6
+
+  .popup-title
+    font-size: 12px
+    font-weight: 600
+    margin: 0 0 6px 0
+    display: flex
+    align-items: center
+    gap: 4px
+    
+    &.error-title
+      color: #dc2626
+      
+    &.warning-title
+      color: #d97706
+
+  .popup-list
+    margin: 0
+    padding: 0
+    list-style: none
+
+    li
+      margin-bottom: 4px
+      line-height: 1.3
+      font-size: 11px
+      color: #374151
+      display: flex
+      align-items: flex-start
+      gap: 4px
+      
+      &:last-child
+        margin-bottom: 0
+      
+      &:before
+        content: "•"
+        color: #ef4444
+        font-weight: bold
+        margin-top: 1px
+        flex-shrink: 0
+        font-size: 10px
+        
+      // Different bullet colors for warnings
+      .warning-item:before
+        color: #f59e0b
+
+// Popup fade-in animation
+@keyframes popupFadeIn
+  from
+    opacity: 0
+    transform: translateY(-4px)
+  to
+    opacity: 1
+    transform: translateY(0)
+
+// Dark theme support
+@media (prefers-color-scheme: dark)
+  .error-details-popup
+    background: #1f2937
+    border-color: #374151
+    
+    .popup-section
+      border-color: #374151
+    
+    .popup-list li
+      color: #d1d5db
+
+// Responsive Design
+@media (max-width: 768px)
+  .file-upload-section
+    padding: 1rem
+    
+  .guidelines-grid
+    grid-template-columns: 1fr
+    
+  .upload-area
+    padding: 1.5rem 1rem
+    
+  .files-grid
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr))
+    
+  .upload-actions
+    flex-direction: column
+    gap: 1rem
+    align-items: stretch
+    
+    .actions-left, .actions-right
+      justify-content: center
+
+  .upload-progress-section
+    .progress-status .status-indicators
+      flex-direction: column
+
+  .error-cards-grid
+    grid-template-columns: 1fr

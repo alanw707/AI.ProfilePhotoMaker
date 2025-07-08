@@ -146,9 +146,9 @@ public class ReplicateController : ControllerBase
         if (string.IsNullOrEmpty(userId))
             return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
 
-        // Check if user has sufficient purchased credits for styled generation (5 credits required)
+        // Check if user has sufficient purchased credits for styled generation (5 credits per image)
         var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
-        var requiredCredits = CreditCostConfig.GetCreditCost("styled_generation");
+        var requiredCredits = dto.NumOutputs * CreditCostConfig.GetCreditCost("styled_generation");
         
         if (purchasedCredits < requiredCredits)
         {
@@ -226,8 +226,8 @@ public class ReplicateController : ControllerBase
             
             var result = await _replicateApiClient.GenerateImagesAsync(modelVersionToUse, dto.UserId, dto.Style, userInfo);
             
-            // Only consume credits AFTER successful API call
-            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "styled_generation");
+            // Only consume credits AFTER successful API call (5 credits per image generated)
+            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, requiredCredits, "styled_generation");
             if (!creditConsumed)
             {
                 _logger.LogError("Successfully created Replicate prediction but failed to consume credits for user {UserId}", userId);
@@ -257,6 +257,180 @@ public class ReplicateController : ControllerBase
                 error = new { 
                     code = "GenerationFailed", 
                     message = $"Failed to start image generation: {ex.Message}" 
+                } 
+            });
+        }
+    }
+
+    /// <summary>
+    /// Generates images for multiple styles using a trained model in a single consolidated request (requires purchased credits)
+    /// </summary>
+    [HttpPost("generate/batch")]
+    public async Task<IActionResult> GenerateBatchImages([FromBody] GenerateBatchImagesRequestDto dto)
+    {
+        _logger.LogInformation("Batch generation request received: TrainedModelVersion='{TrainedModelVersion}', UserId='{UserId}', Styles=[{Styles}], NumOutputsPerStyle={NumOutputsPerStyle}", 
+            dto.TrainedModelVersion, dto.UserId, string.Join(", ", dto.Styles), dto.NumOutputsPerStyle);
+
+        if (!ModelState.IsValid)
+            return BadRequest(new { success = false, error = new { code = "InvalidModel", message = "Invalid input." } });
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+
+        if (dto.Styles == null || !dto.Styles.Any())
+            return BadRequest(new { success = false, error = new { code = "NoStyles", message = "At least one style must be specified." } });
+
+        // Calculate total credits required (5 credits per image)
+        var totalImages = dto.Styles.Count * dto.NumOutputsPerStyle;
+        var requiredCredits = totalImages * CreditCostConfig.GetCreditCost("styled_generation");
+        
+        // Check if user has sufficient purchased credits for styled generation
+        var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
+        
+        if (purchasedCredits < requiredCredits)
+        {
+            return BadRequest(new { 
+                success = false, 
+                error = new { 
+                    code = "InsufficientCredits", 
+                    message = $"Batch styled image generation requires {requiredCredits} purchased credits. You have {purchasedCredits} purchased credits. Please purchase more credits to generate styled images." 
+                } 
+            });
+        }
+
+        try
+        {
+            // Get user info from database for prompt generation
+            var userProfile = await _dbContext.UserProfiles.FirstOrDefaultAsync(u => u.UserId == userId);
+            
+            // Get user's trained model from ModelCreationRequest
+            var trainedModel = await _dbContext.ModelCreationRequests
+                .Where(m => m.UserId == userId && m.Status == ModelCreationStatus.Ready)
+                .OrderByDescending(m => m.CompletedAt)
+                .FirstOrDefaultAsync();
+            
+            // Check if the model is still available on Replicate
+            if (trainedModel != null && !string.IsNullOrEmpty(trainedModel.ReplicateModelId))
+            {
+                var modelAvailable = await _replicateApiClient.CheckModelAvailabilityAsync(trainedModel.ReplicateModelId);
+                if (!modelAvailable)
+                {
+                    _logger.LogWarning("Model {ModelId} is no longer available on Replicate for user {UserId}", 
+                        trainedModel.ReplicateModelId, userId);
+                    
+                    // Mark the model as failed instead of deleting it
+                    trainedModel.Status = ModelCreationStatus.Failed;
+                    trainedModel.ErrorMessage = "Model no longer available on Replicate";
+                    await _dbContext.SaveChangesAsync();
+                    
+                    return BadRequest(new { 
+                        success = false, 
+                        error = new { 
+                            code = "ModelExpired", 
+                            message = "Your trained model has expired or been deleted. Please train a new model to generate styled images." 
+                        } 
+                    });
+                }
+            }
+            
+            // Ensure we have a model to use for generation
+            var modelVersionToUse = dto.TrainedModelVersion;
+            if (string.IsNullOrEmpty(modelVersionToUse) && trainedModel != null)
+            {
+                modelVersionToUse = trainedModel.TrainedModelVersion;
+                _logger.LogInformation("Using model version from database: {ModelVersion}", modelVersionToUse);
+            }
+            
+            if (string.IsNullOrEmpty(modelVersionToUse))
+            {
+                return BadRequest(new { 
+                    success = false, 
+                    error = new { 
+                        code = "NoModelAvailable", 
+                        message = "No trained model available for generation. Please train a model first." 
+                    } 
+                });
+            }
+            
+            var userInfo = userProfile != null ? new UserInfo 
+            { 
+                Gender = userProfile.Gender, 
+                Ethnicity = userProfile.Ethnicity 
+            } : null;
+            
+            _logger.LogInformation("Retrieved user info from database: Gender={Gender}, Ethnicity={Ethnicity}", 
+                userInfo?.Gender ?? "NULL", userInfo?.Ethnicity ?? "NULL");
+            
+            // Generate images for all styles in parallel
+            var generationTasks = dto.Styles.Select<string, Task<dynamic>>(async (style) =>
+            {
+                try
+                {
+                    var result = await _replicateApiClient.GenerateImagesAsync(modelVersionToUse, dto.UserId, style, userInfo, dto.NumOutputsPerStyle);
+                    return new { Style = style, Success = true, Result = result, Error = (string?)null };
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error generating images for style {Style} for user {UserId}", style, userId);
+                    return new { Style = style, Success = false, Result = (object?)null, Error = ex.Message };
+                }
+            });
+
+            var results = await Task.WhenAll(generationTasks);
+            
+            // Count successful generations
+            var successfulGenerations = results.Where(r => r.Success).ToList();
+            var failedGenerations = results.Where(r => !r.Success).ToList();
+            
+            if (!successfulGenerations.Any())
+            {
+                // All generations failed
+                return StatusCode(500, new { 
+                    success = false, 
+                    error = new { 
+                        code = "AllGenerationsFailed", 
+                        message = "Failed to start generation for any of the selected styles.",
+                        details = failedGenerations.Select(f => new { f.Style, f.Error }).ToList()
+                    } 
+                });
+            }
+            
+            // Only consume credits for successful generations
+            var actualCreditsRequired = successfulGenerations.Count * dto.NumOutputsPerStyle * CreditCostConfig.GetCreditCost("styled_generation");
+            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, actualCreditsRequired, "styled_generation");
+            if (!creditConsumed)
+            {
+                _logger.LogError("Successfully created Replicate predictions but failed to consume credits for user {UserId}", userId);
+                // Note: In this case, the Replicate predictions are already running but we couldn't charge credits
+                // This is better than charging credits for failed predictions
+            }
+            
+            var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
+            
+            return Ok(new { 
+                success = true, 
+                data = new {
+                    predictions = successfulGenerations.Select(g => new { Style = g.Style, Result = g.Result }).ToList(),
+                    creditsRemaining = remainingCredits,
+                    creditsCost = actualCreditsRequired,
+                    successfulStyles = successfulGenerations.Count,
+                    failedStyles = failedGenerations.Count,
+                    failures = failedGenerations.Select(f => new { Style = f.Style, Error = f.Error }).ToList()
+                }, 
+                error = (object?)null 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in batch image generation for user {UserId}", userId);
+            // If generation fails, we might want to refund the credit
+            // For now, we'll just return failure
+            return StatusCode(500, new { 
+                success = false, 
+                error = new { 
+                    code = "BatchGenerationFailed", 
+                    message = $"Failed to start batch image generation: {ex.Message}" 
                 } 
             });
         }

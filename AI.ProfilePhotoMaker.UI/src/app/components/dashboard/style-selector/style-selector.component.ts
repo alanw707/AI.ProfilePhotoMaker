@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 
 export interface StyleOption {
   id: string;
@@ -19,6 +19,7 @@ export interface StyleOption {
   styleUrls: ['./style-selector.component.sass']
 })
 export class StyleSelectorComponent {
+  constructor(private router: Router) {}
   @Input() availableStyles: StyleOption[] = [];
   @Input() imagesPerStyle: number = 2;
   @Input() selectedStyles: number = 0;
@@ -87,5 +88,12 @@ export class StyleSelectorComponent {
     // Placeholder image fallback - could be passed as input
     event.target.src = '/api/placeholder/style-preview';
     event.target.onerror = null;
+  }
+
+  navigateToGallery() {
+    // Navigate to gallery with refresh parameter to force reload
+    this.router.navigate(['/gallery'], { 
+      queryParams: { refresh: Date.now() } 
+    });
   }
 }

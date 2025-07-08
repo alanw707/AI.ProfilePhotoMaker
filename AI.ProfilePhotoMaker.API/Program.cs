@@ -5,6 +5,7 @@ using AI.ProfilePhotoMaker.API.Services.Authentication;
 using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Payment;
+using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -308,8 +309,10 @@ if (string.IsNullOrEmpty(jwtSecret) || jwtSecret.Length < 32)
 }
 
 // Register the Services
+builder.Services.AddHttpContextAccessor(); // Required for UserContextService
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IBasicTierService, AI.ProfilePhotoMaker.API.Services.BasicTierService>();
+builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IUserContextService, AI.ProfilePhotoMaker.API.Services.UserContextService>();
 
 // Register Replicate SDK
 builder.Services.AddSingleton<Replicate.ReplicateApi>(provider =>
@@ -326,6 +329,11 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IModelDiscoveryServ
 
 builder.Services.AddHttpClient<IImageDownloadService, ImageDownloadService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository, AI.ProfilePhotoMaker.API.Data.UserProfileRepository>();
+
+// Register Storage Services
+builder.Services.AddScoped<IStorageService, LocalStorageService>();
+// Note: For production with Azure Blob Storage, replace with:
+// builder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
 
 // Premium Package Services removed - using unified credit system
 
@@ -345,7 +353,11 @@ builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelExpirat
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.RetentionPolicyBackgroundService>();
 
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
