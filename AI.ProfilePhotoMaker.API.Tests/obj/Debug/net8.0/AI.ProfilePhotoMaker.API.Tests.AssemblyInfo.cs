@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AI.ProfilePhotoMaker.API.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+05c9378705d3f1b38151f0e2763219e185a8f823")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+85280f76d0bf1481b3057e32a273f64134caeaac")]
 [assembly: System.Reflection.AssemblyProductAttribute("AI.ProfilePhotoMaker.API.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AI.ProfilePhotoMaker.API.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
