@@ -271,4 +271,30 @@ export class CreditService {
         return false;
     }
   }
+
+  /**
+   * Calculate total available credits (weekly + purchased)
+   */
+  getTotalAvailableCredits(userCreditStatus: UserCreditStatus | null, creditsInfo: unknown): number {
+    const weeklyCredits = this.getWeeklyCredits(userCreditStatus, creditsInfo);
+    const purchasedCredits = this.getPurchasedCredits(userCreditStatus);
+    
+    // Always calculate total from individual components to ensure accuracy
+    return weeklyCredits + purchasedCredits;
+  }
+
+  /**
+   * Get purchased credits from user credit status
+   */
+  getPurchasedCredits(userCreditStatus: UserCreditStatus | null): number {
+    return userCreditStatus?.purchasedCredits || 0;
+  }
+
+  /**
+   * Get weekly credits from user credit status with fallback to creditsInfo
+   */
+  getWeeklyCredits(userCreditStatus: UserCreditStatus | null, creditsInfo: unknown): number {
+    // Use weeklyCredits from userCreditStatus first, fallback to creditsInfo.availableCredits
+    return userCreditStatus?.weeklyCredits || (creditsInfo as { availableCredits?: number })?.availableCredits || 0;
+  }
 }
