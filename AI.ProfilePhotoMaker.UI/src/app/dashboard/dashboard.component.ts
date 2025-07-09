@@ -1,4 +1,4 @@
-import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -11,23 +11,15 @@ import { FileUploadSectionComponent } from '../components/dashboard/file-upload-
 import { CreditDisplayComponent } from '../components/dashboard/credit-display/credit-display.component';
 
 import { AuthService } from '../services/auth.service';
-import { FileUploadService } from '../services/file-upload.service';
-import { Style, StyleService } from '../services/style.service';
+import { StyleService } from '../services/style.service';
 import { NotificationService } from '../services/notification.service';
 import { CreditService } from '../services/credit.service';
 import { DashboardStateService } from '../services/dashboard-state.service';
 import { ConfigService } from '../services/config.service';
 import { WorkflowOrchestrationService, WorkflowProgress } from '../services/workflow-orchestration.service';
 
-import { GalleryImage } from '../components/photo-gallery/photo-gallery.component';
 import { 
-  GeneratedPhoto, 
-  GenerationStatus, 
-  QualityCheckError, 
-  QualityCheckResult,
-  SelectedFileWithQuality,
-  TrainingStatus,
-  UploadProgress
+  QualityCheckResult
 } from '../models/dashboard.types';
 
 @Component({
@@ -84,20 +76,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getTotalAvailableCredits(): number {
-    const weeklyCredits = this.getWeeklyCredits();
-    const purchasedCredits = this.getPurchasedCredits();
-    
-    // Always calculate total from individual components to ensure accuracy
-    return weeklyCredits + purchasedCredits;
+    return this.creditService.getTotalAvailableCredits(this.userCreditStatus, this.creditsInfo);
   }
 
   getPurchasedCredits(): number {
-    return this.userCreditStatus?.purchasedCredits || 0;
+    return this.creditService.getPurchasedCredits(this.userCreditStatus);
   }
 
   getWeeklyCredits(): number {
-    // Use weeklyCredits from userCreditStatus first, fallback to creditsInfo.availableCredits
-    return this.userCreditStatus?.weeklyCredits || this.creditsInfo?.availableCredits || 0;
+    return this.creditService.getWeeklyCredits(this.userCreditStatus, this.creditsInfo);
   }
 
   onCreditAction(event: { action: string, context?: string }): void {
@@ -117,14 +104,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   constructor(
     private authService: AuthService,
     private router: Router,
-    private fileUploadService: FileUploadService,
     private styleService: StyleService,
     private notificationService: NotificationService,
     public creditService: CreditService,
     public stateService: DashboardStateService,
     private config: ConfigService,
-    private workflowService: WorkflowOrchestrationService,
-    private ngZone: NgZone
+    private workflowService: WorkflowOrchestrationService
   ) {
     this.state$ = this.stateService.state$;
     this.workflowProgress$ = this.workflowService.progress$;
@@ -192,9 +177,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   // UI Event Handlers
-  onFilesSelected(files: File[]) { /* Dashboard awareness only */ }
+  onFilesSelected(_files: File[]) { /* Dashboard awareness only */ }
 
-  onUploadCompleted(uploadedFiles: any[]) {
+  onUploadCompleted(uploadedFiles: unknown[]) {
     console.log('Upload completed, refreshing images from server:', uploadedFiles);
     this.refreshUploadedImagesFromServer();
     
@@ -206,11 +191,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }, 1000);
   }
 
-  onUploadProgress(progress: number) { /* Dashboard awareness only */ }
-  onQualityCheckCompleted(result: QualityCheckResult) { /* Dashboard awareness only */ }
-  onFileRemoved(index: number) { /* Dashboard awareness only */ }
+  onUploadProgress(_progress: number) { /* Dashboard awareness only */ }
+  onQualityCheckCompleted(_result: QualityCheckResult) { /* Dashboard awareness only */ }
+  onFileRemoved(_index: number) { /* Dashboard awareness only */ }
 
-  onUploadedImageDeleted(event: { thumb: any, index: number, refreshRequired?: boolean }) {
+  onUploadedImageDeleted(event: { thumb: unknown, index: number, refreshRequired?: boolean }) {
     const { thumb, refreshRequired } = event;
     
     if (refreshRequired) {
@@ -218,9 +203,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return;
     }
     
-    if (thumb?.id) {
+    if ((thumb as { id?: number })?.id) {
       const currentThumbnails = this.stateService.getState().uploadedImageThumbnails;
-      const updatedThumbnails = currentThumbnails.filter(t => t.id !== thumb.id);
+      const updatedThumbnails = currentThumbnails.filter(t => t.id !== (thumb as { id: number }).id);
       this.stateService.setState({ 
         uploadedImageThumbnails: updatedThumbnails,
         uploadedImages: updatedThumbnails.length 
