@@ -51,41 +51,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
   availableStyles: StyleOption[] = [];
   selectedStyles = 0;
 
-  // State-based getters for template
-  get uploadedImages(): number {
-    return this.stateService.getState().uploadedImages;
-  }
-
-  get modelStatus(): string {
-    return this.stateService.getState().modelStatus;
-  }
-
-  get creditsInfo(): any {
-    return this.stateService.getState().creditsInfo;
-  }
-
-  get userCreditStatus(): any {
-    return this.stateService.getState().userCreditStatus;
-  }
-
-  get uploadedImageThumbnails(): {id: number; url: string; fileName: string}[] {
-    return this.stateService.getState().uploadedImageThumbnails;
-  }
-
-  get generatedPhotosCount(): number {
-    return this.stateService.getState().generatedPhotosCount;
-  }
+  // State-based getters for template - removed, using stateService.getState() directly
 
   getTotalAvailableCredits(): number {
-    return this.creditService.getTotalAvailableCredits(this.userCreditStatus, this.creditsInfo);
+    return this.creditService.getTotalAvailableCredits(this.stateService.getState().userCreditStatus, this.stateService.getState().creditsInfo);
   }
 
   getPurchasedCredits(): number {
-    return this.creditService.getPurchasedCredits(this.userCreditStatus);
+    return this.creditService.getPurchasedCredits(this.stateService.getState().userCreditStatus);
   }
 
   getWeeklyCredits(): number {
-    return this.creditService.getWeeklyCredits(this.userCreditStatus, this.creditsInfo);
+    return this.creditService.getWeeklyCredits(this.stateService.getState().userCreditStatus, this.stateService.getState().creditsInfo);
   }
 
   onCreditAction(event: { action: string, context?: string }): void {
@@ -144,9 +121,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
   private updateCurrentStep() {
     this.currentStep = this.workflowStepService.updateCurrentStep(
-      this.uploadedImages,
-      this.uploadedImageThumbnails,
-      this.generatedPhotosCount,
+      this.stateService.getState().uploadedImages,
+      this.stateService.getState().uploadedImageThumbnails,
+      this.stateService.getState().generatedPhotosCount,
       this.currentStep
     );
   }
@@ -289,9 +266,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   getStepStatus(step: number): string {
     return this.workflowStepService.getStepStatus(
       step,
-      this.uploadedImages,
-      this.uploadedImageThumbnails,
-      this.generatedPhotosCount,
+      this.stateService.getState().uploadedImages,
+      this.stateService.getState().uploadedImageThumbnails,
+      this.stateService.getState().generatedPhotosCount,
       this.currentStep
     );
   }
@@ -299,9 +276,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   getStepStatusText(step: number): string {
     return this.workflowStepService.getStepStatusText(
       step,
-      this.uploadedImages,
-      this.uploadedImageThumbnails,
-      this.generatedPhotosCount,
+      this.stateService.getState().uploadedImages,
+      this.stateService.getState().uploadedImageThumbnails,
+      this.stateService.getState().generatedPhotosCount,
       this.currentStep
     );
   }
@@ -309,7 +286,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // Credit calculation methods
   private getCreditCalculation() {
     const selectedStyles = this.availableStyles.filter(s => s.selected);
-    return this.workflowService.calculateCredits(selectedStyles, this.imagesPerStyle, this.modelStatus);
+    return this.workflowService.calculateCredits(selectedStyles, this.imagesPerStyle, this.stateService.getState().modelStatus);
   }
 
   calculateTotalCredits(): number {
