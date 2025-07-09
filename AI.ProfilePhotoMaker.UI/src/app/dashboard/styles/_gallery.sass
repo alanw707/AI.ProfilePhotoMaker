@@ -5,6 +5,7 @@
 // Addresses user feedback: "images too small", "use designer talent"
 
 @use '../../shared/styles/index' as shared
+@use 'variables'
 
 // Gallery Container - 5x4 Grid for 20 Styles
 .styles-gallery
@@ -24,7 +25,7 @@
   &:hover
     transform: translateY(-4px)
     border-color: var(--accent-primary)
-    box-shadow: 0 8px 32px rgba(125, 211, 216, 0.2), 0 4px 16px rgba(0, 0, 0, 0.1)
+    box-shadow: var(--shadow-accent-glow), 0 4px 16px rgba(0, 0, 0, 0.1)
     
     .style-image
       transform: scale(1.05)
@@ -34,7 +35,7 @@
     border-color: var(--accent-primary)
     border-width: 3px
     background: var(--card-bg)
-    box-shadow: 0 0 0 2px rgba(125, 211, 216, 0.3), 0 4px 24px rgba(125, 211, 216, 0.15)
+    box-shadow: var(--shadow-accent-focus), 0 4px 24px rgba(125, 211, 216, 0.15)
     transform: translateY(-2px)
     
     .style-content
@@ -145,11 +146,11 @@
   align-items: center
   margin-bottom: 24px
   padding: 20px
-  background: linear-gradient(135deg, var(--card-bg), var(--bg-tertiary))
+  background: var(--gradient-card-subtle)
   border: 2px solid var(--border-color)
   border-radius: 16px
   gap: 16px
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05)
+  box-shadow: var(--shadow-card-subtle)
   
   // Mobile: stack vertically
   @media (max-width: 767px)
@@ -190,7 +191,7 @@
         background: var(--accent-primary)
         color: white
         transform: translateY(-1px)
-        box-shadow: 0 4px 12px rgba(125, 211, 216, 0.3)
+        box-shadow: var(--shadow-accent-base)
       
       &:active
         transform: translateY(0)
@@ -216,7 +217,7 @@
 // =============================================================================
 
 .style-selection-summary
-  background: linear-gradient(135deg, rgba(125, 211, 216, 0.05), rgba(59, 130, 246, 0.05))
+  background: var(--gradient-card-accent)
   border: 1px solid rgba(125, 211, 216, 0.2)
   border-radius: 16px
   padding: 16px
@@ -284,10 +285,10 @@
 .image-count-selection
   margin: 24px 0
   padding: 24px
-  background: linear-gradient(135deg, var(--card-bg), var(--bg-tertiary))
+  background: var(--gradient-card-subtle)
   border: 2px solid var(--border-color)
   border-radius: 16px
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05)
+  box-shadow: var(--shadow-card-subtle)
   
   h5
     font-family: 'Poppins', sans-serif
@@ -336,7 +337,7 @@
       border-color: var(--accent-primary)
       background: rgba(125, 211, 216, 0.1)
       transform: translateY(-2px)
-      box-shadow: 0 4px 12px rgba(125, 211, 216, 0.2)
+      box-shadow: var(--shadow-accent-subtle)
     
     input[type="radio"]
       margin: 0
@@ -350,7 +351,7 @@
       background: var(--accent-primary)
       color: white
       transform: translateY(-2px)
-      box-shadow: 0 6px 20px rgba(125, 211, 216, 0.3)
+      box-shadow: var(--shadow-accent-elevated)
       
       &::after
         content: "✓"

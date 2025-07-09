@@ -1,6 +1,7 @@
 // Upload Guidelines - Unified design matching all step cards
 
 @use '../../shared/styles/index' as shared
+@use 'variables'
 
 // Upload Progress Bar Styles
 .upload-progress-section
@@ -45,13 +46,13 @@
       transition: width 0.3s ease, background-color 0.3s ease
       
       &.progress-red
-        background: linear-gradient(90deg, #ff6b6b, #ff8e8e)
+        background: var(--gradient-status-error)
       
       &.progress-yellow
-        background: linear-gradient(90deg, #ffd93d, #ffed4e)
+        background: var(--gradient-status-warning)
       
       &.progress-green
-        background: linear-gradient(90deg, #51cf66, #69db7c)
+        background: var(--gradient-status-success)
 
   .milestone-marker
     position: absolute
@@ -105,7 +106,7 @@
   border-radius: 16px
   padding: 20px
   margin-bottom: 20px
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1)  // Exact same shadow as step cards
+  box-shadow: var(--shadow-card-base)
   
   // Force neutral colors in both themes
   &, & *
@@ -359,7 +360,7 @@
 
       &.indeterminate
         width: 30%
-        background: linear-gradient(90deg, transparent, var(--accent-primary), transparent)
+        background: var(--gradient-progress-shimmer)
         animation: indeterminate 2s linear infinite
 
   .progress-text
