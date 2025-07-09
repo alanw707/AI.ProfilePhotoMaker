@@ -4,6 +4,7 @@
 // Compact credit preview for top placement - clear but not overwhelming
 
 @use '../../shared/styles/index' as shared
+@use 'variables'
 
 // Static Credit Reference Information
 .credit-reference-info
@@ -54,12 +55,12 @@
 
 // Dynamic Selection Cost Preview - Prominent when selections made
 .selection-cost-preview
-  background: linear-gradient(135deg, rgba(125, 211, 216, 0.1), rgba(59, 130, 246, 0.05))
+  background: var(--gradient-card-info)
   border: 2px solid rgba(125, 211, 216, 0.3)
   border-radius: 16px
   padding: 20px
   margin-bottom: 24px
-  box-shadow: 0 4px 16px rgba(125, 211, 216, 0.15)
+  box-shadow: var(--shadow-accent-glow)
   
   // Mobile: adjust padding
   @media (max-width: 767px)
@@ -128,7 +129,7 @@
 
 // Credit Summary Bar - Inline cost display
 .credit-summary-bar
-  background: linear-gradient(135deg, rgba(125, 211, 216, 0.08), rgba(59, 130, 246, 0.05))
+  background: var(--gradient-card-warning)
   border: 1px solid rgba(125, 211, 216, 0.2)
   border-radius: 8px
   padding: 12px 16px
@@ -291,7 +292,7 @@
 .action-btn-prominent
   @include shared.btn-base
   @include shared.btn-primary
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))
+  background: var(--gradient-primary)
   border: none
   border-radius: 16px
   padding: 20px 32px
@@ -299,7 +300,7 @@
   font-weight: 600
   font-size: 16px
   min-width: 280px
-  box-shadow: 0 6px 24px rgba(125, 211, 216, 0.3)
+  box-shadow: var(--shadow-accent-elevated)
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
   position: relative
   overflow: hidden
@@ -313,8 +314,8 @@
 
   &:hover:not(:disabled)
     transform: translateY(-3px)
-    box-shadow: 0 8px 32px rgba(125, 211, 216, 0.4)
-    background: linear-gradient(135deg, #5dd3d9, var(--accent-primary))
+    box-shadow: var(--shadow-accent-glow)
+    background: var(--gradient-primary-hover)
 
   &:active:not(:disabled)
     transform: translateY(-1px)
@@ -323,7 +324,7 @@
     opacity: 0.6
     cursor: not-allowed
     transform: none
-    box-shadow: 0 4px 16px rgba(125, 211, 216, 0.2)
+    box-shadow: var(--shadow-accent-glow)
 
   .btn-content
     display: flex
