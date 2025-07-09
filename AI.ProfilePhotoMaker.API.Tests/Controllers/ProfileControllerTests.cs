@@ -246,6 +246,97 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
 
             _mockUserProfileRepository.Verify(r => r.AddAsync(It.IsAny<UserProfile>()), Times.Once);
         }
+
+        // Tests for UpdateProfile
+        [Fact]
+        public async Task UpdateProfile_ReturnsUnauthorized_WhenUserIdIsNull()
+        {
+            // Arrange
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity()) } // No user ID claim
+            };
+            var dto = _fixture.Create<UpdateUserProfileDto>();
+
+            // Act
+            var result = await _controller.UpdateProfile(dto);
+
+            // Assert
+            result.Should().BeOfType<UnauthorizedResult>();
+        }
+
+        [Fact]
+        public async Task UpdateProfile_ReturnsNotFound_WhenProfileDoesNotExist()
+        {
+            // Arrange
+            var userId = _fixture.Create<string>();
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(new Claim[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock")) }
+            };
+            // Setup _mockContext.UserProfiles to return null for FirstOrDefaultAsync
+            var userProfilesData = new List<UserProfile>();
+            _mockContext.Setup(c => c.UserProfiles).Returns(GetMockDbSet(userProfilesData).Object);
+
+            var dto = _fixture.Create<UpdateUserProfileDto>();
+
+            // Act
+            var result = await _controller.UpdateProfile(dto);
+
+            // Assert
+            result.Should().BeOfType<NotFoundObjectResult>()
+                  .Which.Value.Should().Be("Profile not found");
+        }
+
+        [Fact]
+        public async Task UpdateProfile_ReturnsOkWithUpdatedProfileDto_WhenProfileExists()
+        {
+            // Arrange
+            var userId = _fixture.Create<string>();
+            var existingProfile = _fixture.Build<UserProfile>()
+                                         .With(p => p.UserId, userId)
+                                         .With(p => p.ProcessedImages, new List<ProcessedImage>()) // Ensure ProcessedImages is not null
+                                         .Create();
+            var modelCreationRequest = _fixture.Build<ModelCreationRequest>()
+                                               .With(m => m.UserId, userId)
+                                               .With(m => m.Status, ModelCreationStatus.Ready)
+                                               .Create();
+
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(new Claim[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock")) }
+            };
+
+            // Setup _mockContext.UserProfiles to return the existing profile
+            var userProfilesData = new List<UserProfile> { existingProfile };
+            _mockContext.Setup(c => c.UserProfiles).Returns(GetMockDbSet(userProfilesData).Object);
+
+            // Setup _mockContext.ModelCreationRequests to return the mock data
+            var modelCreationRequestsData = new List<ModelCreationRequest> { modelCreationRequest };
+            _mockContext.Setup(c => c.ModelCreationRequests).Returns(GetMockDbSet(modelCreationRequestsData).Object);
+
+            _mockContext.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()))
+                        .ReturnsAsync(1); // Simulate 1 change saved
+
+            var dto = _fixture.Create<UpdateUserProfileDto>();
+
+            // Act
+            var result = await _controller.UpdateProfile(dto);
+
+            // Assert
+            result.Should().BeOfType<OkObjectResult>();
+            var profileDto = result.As<OkObjectResult>().Value.Should().BeOfType<UserProfileDto>().Subject;
+            profileDto.FirstName.Should().Be(dto.FirstName);
+            profileDto.LastName.Should().Be(dto.LastName);
+            profileDto.Gender.Should().Be(dto.Gender);
+            profileDto.Ethnicity.Should().Be(dto.Ethnicity);
+            profileDto.TrainedModelId.Should().Be(modelCreationRequest.ReplicateModelId);
+            profileDto.TrainedModelVersionId.Should().Be(modelCreationRequest.TrainedModelVersion);
+            profileDto.ModelTrainedAt.Should().Be(modelCreationRequest.CompletedAt);
+            profileDto.TotalProcessedImages.Should().Be(existingProfile.ProcessedImages.Count);
+
+            _mockContext.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        }
     // Helper method to mock DbSet for in-memory collections
         private static Mock<DbSet<T>> GetMockDbSet<T>(List<T> list) where T : class
         {
