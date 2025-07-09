@@ -7,6 +7,10 @@
 /AI.ProfilePhotoMaker.API/obj/Debug/net8.0
 /AI.ProfilePhotoMaker.API/obj/Release/net8.0
 /AI.ProfilePhotoMaker.API/obj
+/AI.ProfilePhotoMaker.API.Tests/bin/
+/AI.ProfilePhotoMaker.API.Tests/obj/
+/AI.ProfilePhotoMaker.API.Tests/obj/Release/net8.0
+/AI.ProfilePhotoMaker.API.Tests/obj/Debug/net8.0
 
 # Security & Environment files
 *.env
