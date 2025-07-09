@@ -70,3 +70,6 @@ TestResults/
 *.dll
 *.pdb
 *.exe
+
+# Cache files
+**/.cache/

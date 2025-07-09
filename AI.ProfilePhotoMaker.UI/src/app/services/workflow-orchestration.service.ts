@@ -1,12 +1,55 @@
-import { Injectable, NgZone } from '@angular/core';
+import { Injectable, Injector, NgZone } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { AuthService } from './auth.service';
-import { FileUploadService } from './file-upload.service';
-import { GenerateBatchImagesRequest, ReplicateService, TrainModelRequest } from './replicate.service';
 import { NotificationService } from './notification.service';
 import { DashboardStateService } from './dashboard-state.service';
 import { ConfigService } from './config.service';
 import { StyleOption } from '../components/dashboard/style-selector/style-selector.component';
+
+// Lazy-loaded service types
+interface FileUploadService {
+  createTrainingZip(): Observable<any>;
+  getLatestTrainingZip(): Observable<any>;
+  invalidateUserImagesCache(): void;
+}
+
+interface ReplicateService {
+  trainModel(request: TrainModelRequest): Observable<any>;
+  getTrainingStatus(trainingId: string): Observable<any>;
+  generateBatchImages(request: GenerateBatchImagesRequest): Observable<any>;
+  getPredictionStatus(predictionId: string): Observable<any>;
+}
+
+interface TrainModelRequest {
+  userId: string;
+  imageZipUrl: string;
+}
+
+interface GenerateBatchImagesRequest {
+  trainedModelVersion: string;
+  userId: string;
+  styles: string[];
+  userInfo?: UserInfo;
+  numOutputsPerStyle?: number;
+}
+
+interface UserInfo {
+  gender?: string;
+  ethnicity?: string;
+  attributes?: Record<string, string>;
+}
+
+interface PredictionResult {
+  style: string;
+  result: {
+    id: string;
+  };
+}
+
+interface GenerationFailure {
+  style: string;
+  error: string;
+}
 
 export interface WorkflowProgress {
   isTraining: boolean;
@@ -55,14 +98,17 @@ export class WorkflowOrchestrationService {
   private photoCompletionPollingInterval?: any;
   private timeBasedProgressInterval?: any;
 
+  // Lazy-loaded services
+  private fileUploadService: FileUploadService | null = null;
+  private replicateService: ReplicateService | null = null;
+
   constructor(
     private authService: AuthService,
-    private fileUploadService: FileUploadService,
-    private replicateService: ReplicateService,
     private notificationService: NotificationService,
     private stateService: DashboardStateService,
     private config: ConfigService,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private injector: Injector
   ) {}
 
   getProgress(): WorkflowProgress {
@@ -199,6 +245,23 @@ export class WorkflowOrchestrationService {
     }
   }
 
+  // Lazy loading methods
+  private async loadFileUploadService(): Promise<FileUploadService> {
+    if (!this.fileUploadService) {
+      const { FileUploadService } = await import('./file-upload.service');
+      this.fileUploadService = this.injector.get(FileUploadService);
+    }
+    return this.fileUploadService;
+  }
+
+  private async loadReplicateService(): Promise<ReplicateService> {
+    if (!this.replicateService) {
+      const { ReplicateService } = await import('./replicate.service');
+      this.replicateService = this.injector.get(ReplicateService);
+    }
+    return this.replicateService;
+  }
+
   // Model training workflow
   private async startModelTraining(selectedStyles: StyleOption[], imagesPerStyle: number): Promise<void> {
     try {
@@ -217,7 +280,8 @@ export class WorkflowOrchestrationService {
         progressMessage: 'Creating training package from your images...'
       });
 
-      const zipResult = await this.fileUploadService.createTrainingZip().toPromise();
+      const fileUploadService = await this.loadFileUploadService();
+      const zipResult = await fileUploadService.createTrainingZip().toPromise();
       
       if (!zipResult?.success || !zipResult.zipCreated) {
         throw new Error(zipResult?.error?.message || 'Failed to create training ZIP');
@@ -229,7 +293,7 @@ export class WorkflowOrchestrationService {
         progressMessage: 'Uploading training data...'
       });
 
-      const latestZipResult = await this.fileUploadService.getLatestTrainingZip().toPromise();
+      const latestZipResult = await fileUploadService.getLatestTrainingZip().toPromise();
       
       if (!latestZipResult?.success || !latestZipResult.data?.publicUrl) {
         throw new Error('Failed to get training ZIP URL');
@@ -254,7 +318,8 @@ export class WorkflowOrchestrationService {
         imageZipUrl: latestZipResult.data.publicUrl
       };
 
-      const trainResult = await this.replicateService.trainModel(trainRequest).toPromise();
+      const replicateService = await this.loadReplicateService();
+      const trainResult = await replicateService.trainModel(trainRequest).toPromise();
       
       if (!trainResult?.success) {
         throw new Error(trainResult?.error?.message || 'Failed to start model training');
@@ -299,7 +364,8 @@ export class WorkflowOrchestrationService {
             return;
           }
 
-          const statusResult = await this.replicateService.getTrainingStatus(currentProgress.trainingId).toPromise();
+          const replicateService = await this.loadReplicateService();
+          const statusResult = await replicateService.getTrainingStatus(currentProgress.trainingId).toPromise();
           
           if (!statusResult?.success) {
             console.error('Failed to get training status:', statusResult?.error);
@@ -397,7 +463,8 @@ export class WorkflowOrchestrationService {
       });
       
       // Invalidate image cache to ensure fresh data
-      this.fileUploadService.invalidateUserImagesCache();
+      const fileUploadService = await this.loadFileUploadService();
+      fileUploadService.invalidateUserImagesCache();
       
       this.notificationService.info('Generating Images', `Starting batch generation for ${selectedStyles.length} style(s)...`);
 
@@ -419,7 +486,8 @@ export class WorkflowOrchestrationService {
       const preciseGenerationStartTime = Date.now();
       console.log('📊 Generation start time captured:', new Date(preciseGenerationStartTime).toISOString());
       
-      const generateResult = await this.replicateService.generateBatchImages(generateRequest).toPromise();
+      const replicateService = await this.loadReplicateService();
+      const generateResult = await replicateService.generateBatchImages(generateRequest).toPromise();
       
       if (!generateResult?.success) {
         throw new Error(generateResult?.error?.message || 'Batch generation failed');
@@ -428,7 +496,7 @@ export class WorkflowOrchestrationService {
       const { successfulStyles, failedStyles, failures, creditsCost, predictions } = generateResult.data;
       
       // Extract prediction IDs for tracking
-      const predictionIds = predictions.map(p => p.result.id);
+      const predictionIds = (predictions as PredictionResult[]).map(p => p.result.id);
       console.log('🎯 Tracking prediction IDs:', predictionIds);
       
       // Store prediction IDs for polling
@@ -444,7 +512,7 @@ export class WorkflowOrchestrationService {
       }
       
       if (failedStyles > 0) {
-        const failedStyleNames = failures.map(f => f.style).join(', ');
+        const failedStyleNames = (failures as GenerationFailure[]).map(f => f.style).join(', ');
         this.notificationService.warning('Partial Success', 
           `Failed to start generation for ${failedStyles} style(s): ${failedStyleNames}`);
       }
@@ -521,7 +589,8 @@ export class WorkflowOrchestrationService {
           const predictionStatuses = await Promise.all(
             currentProgress.activePredictionIds.map(async (predictionId) => {
               try {
-                const result = await this.replicateService.getPredictionStatus(predictionId).toPromise();
+                const replicateService = await this.loadReplicateService();
+                const result = await replicateService.getPredictionStatus(predictionId).toPromise();
                 return {
                   id: predictionId,
                   status: result?.success ? result.data.status : 'unknown',
@@ -641,8 +710,10 @@ export class WorkflowOrchestrationService {
     }
     
     // Invalidate cache BEFORE showing celebration to ensure gallery has fresh data
-    this.fileUploadService.invalidateUserImagesCache();
-    console.log('🗑️ Invalidated image cache before celebration');
+    if (this.fileUploadService) {
+      this.fileUploadService.invalidateUserImagesCache();
+      console.log('🗑️ Invalidated image cache before celebration');
+    }
     
     // Complete the generation process
     this.setProgress({
