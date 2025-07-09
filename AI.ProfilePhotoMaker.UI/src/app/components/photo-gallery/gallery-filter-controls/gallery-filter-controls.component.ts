@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GalleryImage } from '../photo-gallery.component';
 
@@ -16,14 +16,14 @@ export interface FilterControls {
   styleUrls: ['./gallery-filter-controls.component.sass']
 })
 export class GalleryFilterControlsComponent {
-  @Input() title: string = 'Photo Gallery';
-  @Input() filterType: string = 'generated';
+  @Input() title = 'Photo Gallery';
+  @Input() filterType = 'generated';
   @Input() viewMode: 'grid' | 'list' = 'grid';
-  @Input() pageSize: number = 12;
+  @Input() pageSize = 12;
   @Input() filteredImages: GalleryImage[] = [];
   @Input() selectedImages: GalleryImage[] = [];
-  @Input() showBulkActions: boolean = true;
-  @Input() allowSelection: boolean = true;
+  @Input() showBulkActions = true;
+  @Input() allowSelection = true;
 
   @Output() filterChange = new EventEmitter<string>();
   @Output() viewModeChange = new EventEmitter<'grid' | 'list'>();

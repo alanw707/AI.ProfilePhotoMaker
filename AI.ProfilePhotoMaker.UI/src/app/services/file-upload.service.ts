@@ -1,15 +1,15 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpEventType } from '@angular/common/http';
-import { Observable, map, of, tap } from 'rxjs';
+import { map, Observable, of, tap } from 'rxjs';
 import { ConfigService } from './config.service';
 
 export interface UploadResponse {
   profileId: number;
-  uploadedFiles: Array<{
+  uploadedFiles: {
     fileName: string;
     size: number;
     url: string;
-  }>;
+  }[];
   uploadedImageIds: number[];
   zipCreated: boolean;
   zipPath: string;
@@ -59,7 +59,7 @@ export class FileUploadService {
     lastName?: string;
     gender?: string;
     ethnicity?: string;
-  }, forTraining: boolean = true): Observable<{ progress: number; response?: UploadResponse }> {
+  }, forTraining = true): Observable<{ progress: number; response?: UploadResponse }> {
     const formData = new FormData();
     
     files.forEach((file, index) => {
@@ -68,10 +68,10 @@ export class FileUploadService {
 
     // Add optional profile data
     if (profileData) {
-      if (profileData.firstName) formData.append('firstName', profileData.firstName);
-      if (profileData.lastName) formData.append('lastName', profileData.lastName);
-      if (profileData.gender) formData.append('gender', profileData.gender);
-      if (profileData.ethnicity) formData.append('ethnicity', profileData.ethnicity);
+      if (profileData.firstName) {formData.append('firstName', profileData.firstName);}
+      if (profileData.lastName) {formData.append('lastName', profileData.lastName);}
+      if (profileData.gender) {formData.append('gender', profileData.gender);}
+      if (profileData.ethnicity) {formData.append('ethnicity', profileData.ethnicity);}
     }
     
     // Add forTraining flag
@@ -95,7 +95,7 @@ export class FileUploadService {
     );
   }
 
-  getUserImages(forceRefresh: boolean = false): Observable<UserImagesResponse> {
+  getUserImages(forceRefresh = false): Observable<UserImagesResponse> {
     const now = Date.now();
     
     // Return cached data if available and not expired
@@ -162,7 +162,7 @@ export class FileUploadService {
     );
   }
 
-  setTrainedModel(modelId: string, versionId?: string, verifyExists: boolean = true): Observable<{ success: boolean; data?: any; error?: any }> {
+  setTrainedModel(modelId: string, versionId?: string, verifyExists = true): Observable<{ success: boolean; data?: any; error?: any }> {
     return this.http.post<{ success: boolean; data?: any; error?: any }>(
       this.config.getFullUrl('/profile/set-model'),
       { modelId, versionId, verifyExists }
@@ -226,7 +226,7 @@ export class FileUploadService {
             const response = event.body;
             console.log('Upload API response:', response);
             
-            if (response && response.uploadedFiles && response.uploadedFiles.length > 0) {
+            if (response?.uploadedFiles && response.uploadedFiles.length > 0) {
               const uploadedFile = response.uploadedFiles[0];
               console.log('Uploaded file details:', uploadedFile);
               return { 

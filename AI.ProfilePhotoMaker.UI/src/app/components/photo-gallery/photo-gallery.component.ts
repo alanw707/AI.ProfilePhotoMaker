@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GalleryFilterControlsComponent } from './gallery-filter-controls/gallery-filter-controls.component';
 import { GalleryPaginationComponent } from './gallery-pagination/gallery-pagination.component';
@@ -177,11 +177,11 @@ export interface GalleryImage {
   `,
   styleUrls: ['./photo-gallery.component.sass']
 })
-export class PhotoGalleryComponent implements OnInit {
+export class PhotoGalleryComponent implements OnInit, OnChanges {
   @Input() images: GalleryImage[] = [];
-  @Input() title: string = 'Photo Gallery';
-  @Input() allowSelection: boolean = true;
-  @Input() showBulkActions: boolean = true;
+  @Input() title = 'Photo Gallery';
+  @Input() allowSelection = true;
+  @Input() showBulkActions = true;
 
   // Make Math available in template
   Math = Math;
@@ -193,14 +193,14 @@ export class PhotoGalleryComponent implements OnInit {
   @Output() bulkDownload = new EventEmitter<GalleryImage[]>();
 
   viewMode: 'grid' | 'list' = 'grid';
-  filterType: string = 'generated';
+  filterType = 'generated';
   selectedImages: GalleryImage[] = [];
   filteredImages: GalleryImage[] = [];
   
   // Pagination properties
-  currentPage: number = 1;
-  pageSize: number = 12;
-  totalPages: number = 1;
+  currentPage = 1;
+  pageSize = 12;
+  totalPages = 1;
   paginatedImages: GalleryImage[] = [];
 
   ngOnInit() {
@@ -365,7 +365,7 @@ export class PhotoGalleryComponent implements OnInit {
   }
 
   formatStyleName(style: string): string {
-    if (!style) return '';
+    if (!style) {return '';}
     return style
       .replace(/[-_/]/g, ' ')  // Replace dashes, underscores, and slashes with spaces
       .split(' ')

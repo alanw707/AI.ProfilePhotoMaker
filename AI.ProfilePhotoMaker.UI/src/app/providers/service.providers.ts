@@ -1,12 +1,12 @@
-import { Provider, InjectionToken } from '@angular/core';
+import { InjectionToken, Provider, NgZone } from '@angular/core';
 import { 
-  IModelLoaderService,
-  IImageQualityService,
-  IFaceDetectionService,
   ICacheManagerService,
-  IModelStateService,
+  IDashboardStateService,
+  IFaceDetectionService,
   IFallbackOperationsService,
-  IDashboardStateService
+  IImageQualityService,
+  IModelLoaderService,
+  IModelStateService
 } from '../interfaces/service.interfaces';
 
 import { ModelLoaderService } from '../services/model-loader.service';
@@ -79,14 +79,14 @@ export const SERVICE_PROVIDERS: Provider[] = [
 ];
 
 // Factory functions for creating service instances with specific configurations
-export function createModelLoaderService(): IModelLoaderService {
+export function createModelLoaderService(ngZone: NgZone): IModelLoaderService {
   // Could add configuration here if needed
-  return new ModelLoaderService(inject('NgZone') as any);
+  return new ModelLoaderService(ngZone);
 }
 
-export function createImageQualityService(): IImageQualityService {
+export function createImageQualityService(ngZone: NgZone): IImageQualityService {
   // Could add configuration here if needed
-  return new ImageQualityService(inject('NgZone') as any);
+  return new ImageQualityService(ngZone);
 }
 
 export function createCacheManagerService(): ICacheManagerService {
@@ -113,12 +113,7 @@ export class ServiceConfiguration {
   }
 }
 
-// Helper function to inject services by interface
-export function inject(token: string): any {
-  // This would be implemented properly in a real Angular app
-  // For now, it's a placeholder
-  return null;
-}
+// Helper function to inject services by interface - removed invalid implementation
 
 // Service registry for debugging and testing
 export const SERVICE_REGISTRY = {

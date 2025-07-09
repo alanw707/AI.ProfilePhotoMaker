@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 
@@ -30,17 +30,17 @@ export interface CreditActionEvent {
 export class CreditDisplayComponent {
   @Input() creditsInfo: CreditInfo | null = null;
   @Input() userCreditStatus: UserCreditStatus | null = null;
-  @Input() isLoading: boolean = false;
-  @Input() showCard: boolean = true;
-  @Input() showSettingsHint: boolean = false;
-  @Input() showBreakdown: boolean = false;
-  @Input() showPurchasePrompt: boolean = false;
-  @Input() requiredCredits: number = 0;
-  @Input() trainingCredits: number = 0;
-  @Input() generationCredits: number = 0;
-  @Input() totalCredits: number = 0;
-  @Input() hasEnoughCredits: boolean = true;
-  @Input() remainingCredits: number = 0;
+  @Input() isLoading = false;
+  @Input() showCard = true;
+  @Input() showSettingsHint = false;
+  @Input() showBreakdown = false;
+  @Input() showPurchasePrompt = false;
+  @Input() requiredCredits = 0;
+  @Input() trainingCredits = 0;
+  @Input() generationCredits = 0;
+  @Input() totalCredits = 0;
+  @Input() hasEnoughCredits = true;
+  @Input() remainingCredits = 0;
 
   @Output() creditActionRequested = new EventEmitter<CreditActionEvent>();
 

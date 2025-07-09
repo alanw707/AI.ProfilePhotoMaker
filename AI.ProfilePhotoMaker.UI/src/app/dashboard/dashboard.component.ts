@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, NgZone } from '@angular/core';
+import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -6,13 +6,13 @@ import { Observable } from 'rxjs';
 
 import { HeaderNavigationComponent } from '../shared/header-navigation/header-navigation.component';
 import { StatsCardComponent } from '../components/dashboard/stats-card/stats-card.component';
-import { StyleSelectorComponent, StyleOption } from '../components/dashboard/style-selector/style-selector.component';
+import { StyleOption, StyleSelectorComponent } from '../components/dashboard/style-selector/style-selector.component';
 import { FileUploadSectionComponent } from '../components/dashboard/file-upload-section/file-upload-section.component';
 import { CreditDisplayComponent } from '../components/dashboard/credit-display/credit-display.component';
 
 import { AuthService } from '../services/auth.service';
 import { FileUploadService } from '../services/file-upload.service';
-import { StyleService, Style } from '../services/style.service';
+import { Style, StyleService } from '../services/style.service';
 import { NotificationService } from '../services/notification.service';
 import { CreditService } from '../services/credit.service';
 import { DashboardStateService } from '../services/dashboard-state.service';
@@ -22,12 +22,12 @@ import { WorkflowOrchestrationService, WorkflowProgress } from '../services/work
 import { GalleryImage } from '../components/photo-gallery/photo-gallery.component';
 import { 
   GeneratedPhoto, 
+  GenerationStatus, 
   QualityCheckError, 
-  SelectedFileWithQuality, 
   QualityCheckResult,
-  UploadProgress,
+  SelectedFileWithQuality,
   TrainingStatus,
-  GenerationStatus
+  UploadProgress
 } from '../models/dashboard.types';
 
 @Component({
@@ -52,11 +52,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   workflowProgress$: Observable<WorkflowProgress>;
 
   // Component-specific state
-  currentStep: number = 1;
-  isTrainingStarted: boolean = false;
-  imagesPerStyle: number = 2;
+  currentStep = 1;
+  isTrainingStarted = false;
+  imagesPerStyle = 2;
   availableStyles: StyleOption[] = [];
-  selectedStyles: number = 0;
+  selectedStyles = 0;
 
   // State-based getters for template
   get uploadedImages(): number {
@@ -75,7 +75,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.stateService.getState().userCreditStatus;
   }
 
-  get uploadedImageThumbnails(): Array<{id: number; url: string; fileName: string}> {
+  get uploadedImageThumbnails(): {id: number; url: string; fileName: string}[] {
     return this.stateService.getState().uploadedImageThumbnails;
   }
 
@@ -218,7 +218,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return;
     }
     
-    if (thumb && thumb.id) {
+    if (thumb?.id) {
       const currentThumbnails = this.stateService.getState().uploadedImageThumbnails;
       const updatedThumbnails = currentThumbnails.filter(t => t.id !== thumb.id);
       this.stateService.setState({ 
@@ -330,19 +330,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
     
     switch (step) {
       case 1:
-        if (hasUploadedImages) return 'completed';
-        if (this.currentStep === 1) return 'active';
+        if (hasUploadedImages) {return 'completed';}
+        if (this.currentStep === 1) {return 'active';}
         return 'pending';
       case 2:
-        if (hasUploadedImages && this.generatedPhotosCount === 0) return 'active';
-        if (this.generatedPhotosCount > 0) return 'completed';
+        if (hasUploadedImages && this.generatedPhotosCount === 0) {return 'active';}
+        if (this.generatedPhotosCount > 0) {return 'completed';}
         return 'pending';
       case 3:
-        if (this.generatedPhotosCount > 0) return 'completed';
+        if (this.generatedPhotosCount > 0) {return 'completed';}
         return 'pending';
       default:
-        if (step < this.currentStep) return 'completed';
-        if (step === this.currentStep) return 'active';
+        if (step < this.currentStep) {return 'completed';}
+        if (step === this.currentStep) {return 'active';}
         return 'pending';
     }
   }

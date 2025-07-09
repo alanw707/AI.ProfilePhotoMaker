@@ -1,10 +1,10 @@
-import { TestBed, ComponentFixture } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { of, throwError, BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, of, throwError } from 'rxjs';
 
 import { DashboardComponent } from '../dashboard/dashboard.component';
 import { AuthService } from '../services/auth.service';
@@ -34,7 +34,7 @@ class MockFileUploadSectionComponent { }
 class MockCreditDisplayComponent { }
 
 // Test utilities
-function createMockFile(name: string = 'test.jpg', type: string = 'image/jpeg', size: number = 1024 * 1024): File {
+function createMockFile(name = 'test.jpg', type = 'image/jpeg', size: number = 1024 * 1024): File {
   const file = new File(['mock content'], name, { type });
   Object.defineProperty(file, 'size', { value: size });
   return file;

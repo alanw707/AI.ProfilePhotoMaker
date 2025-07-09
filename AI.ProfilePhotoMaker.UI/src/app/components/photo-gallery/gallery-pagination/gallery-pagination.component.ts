@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -9,9 +9,9 @@ import { CommonModule } from '@angular/common';
   styleUrls: ['./gallery-pagination.component.sass']
 })
 export class GalleryPaginationComponent implements OnInit, OnChanges {
-  @Input() totalItems: number = 0;
-  @Input() pageSize: number = 12;
-  @Input() currentPage: number = 1;
+  @Input() totalItems = 0;
+  @Input() pageSize = 12;
+  @Input() currentPage = 1;
   
   @Output() pageChange = new EventEmitter<number>();
   @Output() pageSizeChange = new EventEmitter<number>();
@@ -19,7 +19,7 @@ export class GalleryPaginationComponent implements OnInit, OnChanges {
   // Make Math available in template
   Math = Math;
 
-  totalPages: number = 1;
+  totalPages = 1;
 
   ngOnInit() {
     this.updateTotalPages();

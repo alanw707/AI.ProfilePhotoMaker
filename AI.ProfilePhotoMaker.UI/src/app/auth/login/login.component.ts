@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService, LoginDto } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
@@ -63,7 +63,7 @@ export class LoginComponent implements OnInit {
       }
       
       // Check if token is embedded in returnUrl (OAuth callback scenario)
-      if (params['returnUrl'] && params['returnUrl'].includes('token=')) {
+      if (params['returnUrl']?.includes('token=')) {
         console.log('OAuth token found in returnUrl');
         const urlObj = new URL('http://dummy.com' + params['returnUrl']);
         const token = urlObj.searchParams.get('token');

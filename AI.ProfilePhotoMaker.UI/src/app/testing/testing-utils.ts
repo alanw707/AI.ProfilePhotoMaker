@@ -11,7 +11,7 @@ import { By } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { Component } from '@angular/core';
-import { of, BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, of } from 'rxjs';
 
 // Mock Services
 export class MockAuthService {
@@ -252,7 +252,7 @@ export class TestingHelpers {
   /**
    * Creates a mock file for testing file upload functionality
    */
-  static createMockFile(name: string = 'test.jpg', size: number = 1024, type: string = 'image/jpeg'): File {
+  static createMockFile(name = 'test.jpg', size = 1024, type = 'image/jpeg'): File {
     const blob = new Blob(['mock file content'], { type });
     return new File([blob], name, { type, lastModified: Date.now() });
   }
@@ -260,7 +260,7 @@ export class TestingHelpers {
   /**
    * Creates multiple mock files for bulk upload testing
    */
-  static createMockFiles(count: number = 3): File[] {
+  static createMockFiles(count = 3): File[] {
     return Array.from({ length: count }, (_, i) => 
       this.createMockFile(`test-${i + 1}.jpg`, 1024 + i * 100)
     );
@@ -269,7 +269,7 @@ export class TestingHelpers {
   /**
    * Triggers a file input change event for testing
    */
-  static triggerFileInputChange(fixture: ComponentFixture<any>, files: File[], inputSelector: string = 'input[type="file"]') {
+  static triggerFileInputChange(fixture: ComponentFixture<any>, files: File[], inputSelector = 'input[type="file"]') {
     const fileInput = fixture.debugElement.query(By.css(inputSelector));
     if (fileInput) {
       const event = new Event('change');

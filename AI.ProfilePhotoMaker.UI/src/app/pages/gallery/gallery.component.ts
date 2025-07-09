@@ -1,9 +1,9 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule, ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
-import { PhotoGalleryComponent, GalleryImage } from '../../components/photo-gallery/photo-gallery.component';
+import { GalleryImage, PhotoGalleryComponent } from '../../components/photo-gallery/photo-gallery.component';
 import { FileUploadService, ProcessedImage } from '../../services/file-upload.service';
 import JSZip from 'jszip';
 
@@ -47,7 +47,7 @@ export class GalleryComponent implements OnInit {
     });
   }
 
-  async loadImages(forceRefresh: boolean = false) {
+  async loadImages(forceRefresh = false) {
     this.isLoading = true;
     try {
       // Run image database repair on first load only to sync filesystem with database
@@ -183,10 +183,10 @@ export class GalleryComponent implements OnInit {
       const finalContentType = contentType || blob.type;
       
       if (finalContentType) {
-        if (finalContentType.includes('jpeg') || finalContentType.includes('jpg')) extension = 'jpg';
-        else if (finalContentType.includes('png')) extension = 'png';
-        else if (finalContentType.includes('webp')) extension = 'webp';
-        else if (finalContentType.includes('gif')) extension = 'gif';
+        if (finalContentType.includes('jpeg') || finalContentType.includes('jpg')) {extension = 'jpg';}
+        else if (finalContentType.includes('png')) {extension = 'png';}
+        else if (finalContentType.includes('webp')) {extension = 'webp';}
+        else if (finalContentType.includes('gif')) {extension = 'gif';}
       } else {
         // Fallback: get extension from URL
         const urlExtension = imageUrl.split('.').pop()?.toLowerCase();
@@ -370,10 +370,10 @@ export class GalleryComponent implements OnInit {
           const contentType = response.headers.get('content-type') || blob.type;
           
           if (contentType) {
-            if (contentType.includes('jpeg') || contentType.includes('jpg')) extension = 'jpg';
-            else if (contentType.includes('png')) extension = 'png';
-            else if (contentType.includes('webp')) extension = 'webp';
-            else if (contentType.includes('gif')) extension = 'gif';
+            if (contentType.includes('jpeg') || contentType.includes('jpg')) {extension = 'jpg';}
+            else if (contentType.includes('png')) {extension = 'png';}
+            else if (contentType.includes('webp')) {extension = 'webp';}
+            else if (contentType.includes('gif')) {extension = 'gif';}
           } else {
             const urlExtension = imageUrl.split('.').pop()?.toLowerCase();
             if (urlExtension && ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(urlExtension)) {
@@ -438,7 +438,7 @@ export class GalleryComponent implements OnInit {
   }
 
   formatStyleName(style: string): string {
-    if (!style) return '';
+    if (!style) {return '';}
     return style
       .replace(/[-_/]/g, ' ')  // Replace dashes, underscores, and slashes with spaces
       .split(' ')

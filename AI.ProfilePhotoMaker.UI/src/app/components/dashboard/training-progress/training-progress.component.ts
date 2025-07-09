@@ -1,6 +1,6 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subscription, interval } from 'rxjs';
+import { interval, Subscription } from 'rxjs';
 import { TrainingStatus } from '../../../models/dashboard.types';
 
 @Component({

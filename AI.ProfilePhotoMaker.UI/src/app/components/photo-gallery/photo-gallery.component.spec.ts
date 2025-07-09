@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { PhotoGalleryComponent, GalleryImage } from './photo-gallery.component';
+import { GalleryImage, PhotoGalleryComponent } from './photo-gallery.component';
 
 /**
  * Photo Gallery Component Test Suite

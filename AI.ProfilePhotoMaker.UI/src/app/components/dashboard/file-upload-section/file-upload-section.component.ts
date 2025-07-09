@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, OnInit, OnDestroy, NgZone, ChangeDetectorRef } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, NgZone, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -9,8 +9,8 @@ import { NotificationService } from '../../../services/notification.service';
 
 import { 
   QualityCheckError, 
-  SelectedFileWithQuality, 
-  QualityCheckResult,
+  QualityCheckResult, 
+  SelectedFileWithQuality,
   UploadProgress
 } from '../../../models/dashboard.types';
 
@@ -37,8 +37,8 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
   // Input properties
   @Input() uploadedImageThumbnails: any[] = [];
-  @Input() currentStep: number = 1;
-  @Input() maxFiles: number = 20;
+  @Input() currentStep = 1;
+  @Input() maxFiles = 20;
   @Input() maxFileSize: number = 7 * 1024 * 1024; // 7MB
   @Input() allowedTypes: string[] = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -53,11 +53,11 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   // Component state
   selectedFiles: File[] = [];
   selectedFilesWithQuality: SelectedFileWithQuality[] = [];
-  isUploading: boolean = false;
-  uploadProgressValue: number = 0;
-  isDragOver: boolean = false;
-  isCheckingQuality: boolean = false;
-  qualityCheckProgress: string = '';
+  isUploading = false;
+  uploadProgressValue = 0;
+  isDragOver = false;
+  isCheckingQuality = false;
+  qualityCheckProgress = '';
   qualityCheckErrors: QualityCheckError[] = [];
 
   // File preview cache for memory management
@@ -120,7 +120,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
   // Core File Handling
   async handleFileSelection(files: File[]) {
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0) {return;}
 
     // Check total file count limit
     const totalFiles = this.selectedFiles.length + files.length;
@@ -193,7 +193,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
         if (dimensions.width < 512 || dimensions.height < 512) {
           errors.push({
             fileName: file.name,
-            file: file,
+            file,
             errors: [`Image resolution ${dimensions.width}x${dimensions.height} is too small. Minimum 512x512 required.`],
             warnings: []
           });
@@ -206,7 +206,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
         if (qualityResult.isValid) {
           validFiles.push(file);
           this.selectedFilesWithQuality.push({
-            file: file,
+            file,
             qualityScore: qualityResult.qualityScore,
             faceValidation: qualityResult,
             errors: [],
@@ -217,7 +217,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
         } else {
           errors.push({
             fileName: file.name,
-            file: file,
+            file,
             errors: qualityResult.errors || ['Quality check failed'],
             warnings: qualityResult.warnings || [],
             faceValidation: qualityResult,
@@ -228,7 +228,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
         console.error(`Quality check failed for ${file.name}:`, error);
         errors.push({
           fileName: file.name,
-          file: file,
+          file,
           errors: ['Failed to analyze image quality'],
           warnings: []
         });
@@ -313,7 +313,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   deleteUploadedImage(thumb: any, index: number) {
     console.log('Attempting to delete image:', { thumb, index });
     
-    if (!thumb || !thumb.id) {
+    if (!thumb?.id) {
       console.error('Thumbnail missing or invalid:', thumb);
       this.notificationService.error('Error', 'Cannot delete image: missing or invalid thumbnail data');
       return;
@@ -539,7 +539,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
   // Compact error message utility
   getCompactErrorMessage(message: string): string {
-    const messageMap: { [key: string]: string } = {
+    const messageMap: Record<string, string> = {
       'No face detected in image. Please upload a clear photo with your face visible.': 'No face detected',
       'Unable to determine photo composition. Please upload a clear headshot or upper body photo.': 'Unclear composition',
       'Image quality is below recommended standards. Consider uploading a higher quality photo.': 'Low image quality',

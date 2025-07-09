@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GalleryImage } from '../photo-gallery.component';
 
@@ -12,7 +12,7 @@ import { GalleryImage } from '../photo-gallery.component';
 export class GalleryImageActionsComponent {
   @Input() image!: GalleryImage;
   @Input() viewMode: 'grid' | 'list' = 'grid';
-  @Input() showViewButton: boolean = true;
+  @Input() showViewButton = true;
 
   @Output() view = new EventEmitter<GalleryImage>();
   @Output() download = new EventEmitter<GalleryImage>();

@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
-import { Observable, BehaviorSubject, combineLatest, map, tap, catchError, of } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, map, Observable, of, tap } from 'rxjs';
 import { ProfileService, UserProfile } from './profile.service';
 import { FileUploadService, ProcessedImage } from './file-upload.service';
-import { ReplicateService, CreditsInfo } from './replicate.service';
-import { StyleService, Style } from './style.service';
+import { CreditsInfo, ReplicateService } from './replicate.service';
+import { Style, StyleService } from './style.service';
 
 export interface DashboardState {
   userProfile: UserProfile | null;

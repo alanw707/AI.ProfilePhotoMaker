@@ -1,8 +1,8 @@
 import { Injectable, NgZone } from '@angular/core';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { AuthService } from './auth.service';
 import { FileUploadService } from './file-upload.service';
-import { ReplicateService, TrainModelRequest, GenerateBatchImagesRequest } from './replicate.service';
+import { GenerateBatchImagesRequest, ReplicateService, TrainModelRequest } from './replicate.service';
 import { NotificationService } from './notification.service';
 import { DashboardStateService } from './dashboard-state.service';
 import { ConfigService } from './config.service';
@@ -250,7 +250,7 @@ export class WorkflowOrchestrationService {
       });
       
       const trainRequest: TrainModelRequest = {
-        userId: userId,
+        userId,
         imageZipUrl: latestZipResult.data.publicUrl
       };
 
@@ -404,7 +404,7 @@ export class WorkflowOrchestrationService {
       // CONSOLIDATED APPROACH: Generate images for all selected styles in a single batch request
       const generateRequest: GenerateBatchImagesRequest = {
         trainedModelVersion: modelVersion,
-        userId: userId,
+        userId,
         styles: selectedStyles.map(style => style.name),
         userInfo: {
           gender: this.stateService.getState().userProfile?.gender,

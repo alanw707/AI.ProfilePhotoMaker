@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, forkJoin } from 'rxjs';
+import { forkJoin, Observable } from 'rxjs';
 import { ProfileService } from './profile.service';
 import { FileUploadService } from './file-upload.service';
 import { IModelStateService, ModelStatusInfo } from '../interfaces/service.interfaces';

@@ -5,11 +5,11 @@ import { AuthService } from './auth.service';
 import { ConfigService } from './config.service';
 import { FileUploadService } from './file-upload.service';
 import { 
-  IFallbackOperationsService, 
-  FallbackTracker, 
-  DataDiscrepancyResult,
+  DashboardStateForFallback, 
+  DataDiscrepancyResult, 
   FallbackCheckResult,
-  DashboardStateForFallback
+  FallbackTracker,
+  IFallbackOperationsService
 } from '../interfaces/service.interfaces';
 
 @Injectable({

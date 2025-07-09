@@ -1,8 +1,8 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { ReplicateService, CreditsInfo } from '../../services/replicate.service';
+import { CreditsInfo, ReplicateService } from '../../services/replicate.service';
 import { FileUploadService } from '../../services/file-upload.service';
 import { AuthService } from '../../services/auth.service';
 import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
@@ -16,20 +16,20 @@ import { Subscription } from 'rxjs';
   templateUrl: './photo-enhancement.component.html',
   styleUrls: ['./photo-enhancement.component.sass']
 })
-export class PhotoEnhancementComponent implements OnInit {
+export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   
   selectedFile: File | null = null;
   imagePreview: string | null = null;
-  enhancementType: string = 'background';
-  isProcessing: boolean = false;
-  processingProgress: number = 0;
-  processingStatus: string = '';
+  enhancementType = 'background';
+  isProcessing = false;
+  processingProgress = 0;
+  processingStatus = '';
   enhancedImage: any = null;
   creditsInfo: CreditsInfo | null = null;
-  errorMessage: string = '';
-  isDragOver: boolean = false;
-  isLoadingCredits: boolean = true;
+  errorMessage = '';
+  isDragOver = false;
+  isLoadingCredits = true;
 
   private stateSubscription!: Subscription;
 
@@ -149,7 +149,7 @@ export class PhotoEnhancementComponent implements OnInit {
       this.processingStatus = 'Uploading image...';
       const uploadResult = await this.uploadImageForEnhancement();
       
-      if (!uploadResult || !uploadResult.url) {
+      if (!uploadResult?.url) {
         throw new Error('Failed to upload image');
       }
 
@@ -218,7 +218,7 @@ export class PhotoEnhancementComponent implements OnInit {
 
 
   private async uploadImageForEnhancement(): Promise<{ url: string; fileName: string } | null> {
-    if (!this.selectedFile) return null;
+    if (!this.selectedFile) {return null;}
 
     return new Promise((resolve, reject) => {
       console.log('Starting file upload for:', this.selectedFile!.name);

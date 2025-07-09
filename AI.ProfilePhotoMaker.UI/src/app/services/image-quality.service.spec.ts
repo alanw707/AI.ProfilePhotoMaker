@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { NgZone } from '@angular/core';
 import { ImageQualityService } from './image-quality.service';
-import { QualityScore, IImageQualityService } from '../interfaces/service.interfaces';
+import { IImageQualityService, QualityScore } from '../interfaces/service.interfaces';
 
 // Mock face-api.js detection result
 const mockDetection = {
@@ -23,7 +23,7 @@ class MockNgZone {
 }
 
 // Helper function to create mock HTMLImageElement
-function createMockImage(width: number = 200, height: number = 200): HTMLImageElement {
+function createMockImage(width = 200, height = 200): HTMLImageElement {
   const img = {
     width,
     height,
@@ -37,7 +37,7 @@ function createMockImage(width: number = 200, height: number = 200): HTMLImageEl
 }
 
 // Helper function to create mock File
-function createMockFile(size: number = 1024 * 1024, name: string = 'test.jpg'): File {
+function createMockFile(size: number = 1024 * 1024, name = 'test.jpg'): File {
   const file = new File([''], name, { type: 'image/jpeg' });
   Object.defineProperty(file, 'size', { value: size });
   return file;
@@ -188,6 +188,8 @@ describe('ImageQualityService', () => {
     it('should calculate quality score for single face detection', async () => {
       const detections = [mockDetection];
       
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, detections, mockFile);
       
       expect(score.overall).toBeGreaterThan(0);
@@ -202,6 +204,8 @@ describe('ImageQualityService', () => {
     it('should handle no face detections', async () => {
       const detections: any[] = [];
       
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, detections, mockFile);
       
       expect(score.breakdown.faceQuality).toBe(0);
@@ -211,6 +215,8 @@ describe('ImageQualityService', () => {
     it('should handle multiple face detections', async () => {
       const detections = [mockDetection, mockDetection];
       
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, detections, mockFile);
       
       expect(score.breakdown.faceQuality).toBe(0);
@@ -221,6 +227,8 @@ describe('ImageQualityService', () => {
       mockImg = createMockImage(2048, 2048); // High resolution
       const detections = [mockDetection];
       
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, detections, mockFile);
       
       expect(score.breakdown.technical).toBeGreaterThan(10); // Should get full resolution points
@@ -230,6 +238,8 @@ describe('ImageQualityService', () => {
       mockImg = createMockImage(256, 256); // Low resolution
       const detections = [mockDetection];
       
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, detections, mockFile);
       
       expect(score.suggestions).toContain('Image resolution is too low. Upload higher quality image.');
@@ -239,6 +249,8 @@ describe('ImageQualityService', () => {
       mockFile = createMockFile(3 * 1024 * 1024); // 3MB - good size
       const detections = [mockDetection];
       
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, detections, mockFile);
       
       expect(score.breakdown.technical).toBeGreaterThan(5);
@@ -248,6 +260,8 @@ describe('ImageQualityService', () => {
       mockFile = createMockFile(100 * 1024); // 100KB - small size
       const detections = [mockDetection];
       
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, detections, mockFile);
       
       expect(score.suggestions).toContain('File size is small, which may indicate low quality.');
@@ -262,6 +276,8 @@ describe('ImageQualityService', () => {
         }
       };
       
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, [centeredDetection], mockFile);
       
       expect(score.breakdown.composition).toBeGreaterThan(5); // Should get positioning points
@@ -276,6 +292,8 @@ describe('ImageQualityService', () => {
         }
       };
       
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, [offCenterDetection], mockFile);
       
       expect(score.suggestions).toContain('Center your face in the photo for better composition.');
@@ -290,6 +308,8 @@ describe('ImageQualityService', () => {
         }
       };
       
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, [goodSizeDetection], mockFile);
       
       expect(score.breakdown.composition).toBeGreaterThan(15); // Should get face size points
@@ -301,6 +321,8 @@ describe('ImageQualityService', () => {
         getContext: () => null
       } as any);
       
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, [mockDetection], mockFile);
       
       // Should still return a valid score even with canvas errors
@@ -308,12 +330,16 @@ describe('ImageQualityService', () => {
     });
 
     it('should filter out empty suggestions', async () => {
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, [mockDetection], mockFile);
       
       expect(score.suggestions.every(s => s.length > 0)).toBeTrue();
     });
 
     it('should cap overall score between 1 and 100', async () => {
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, [mockDetection], mockFile);
       
       expect(score.overall).toBeGreaterThanOrEqual(1);
@@ -327,6 +353,8 @@ describe('ImageQualityService', () => {
       const mockFile = createMockFile(3 * 1024 * 1024); // 3MB
       const detections = [mockDetection];
       
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, detections, mockFile);
       
       expect(score.breakdown.technical).toBeGreaterThan(15); // Should be high
@@ -351,6 +379,8 @@ describe('ImageQualityService', () => {
       const mockFile = createMockFile(2 * 1024 * 1024);
       const detections = [mockDetection];
       
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, detections, mockFile);
       
       expect(score.suggestions).toContain('Image appears blurry. Use better focus or lighting.');
@@ -381,6 +411,10 @@ describe('ImageQualityService', () => {
       
       spyOn(document, 'createElement').and.returnValue(mockCanvas as any);
       
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, [mockDetection], mockFile);
       
       expect(score.suggestions).toContain('Image appears overexposed. Reduce lighting or use better camera settings.');
@@ -409,6 +443,8 @@ describe('ImageQualityService', () => {
       
       spyOn(document, 'createElement').and.returnValue(mockCanvas as any);
       
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, [mockDetection], mockFile);
       
       expect(score.suggestions).toContain('Image appears underexposed. Increase lighting for better visibility.');
@@ -439,6 +475,8 @@ describe('ImageQualityService', () => {
       
       spyOn(document, 'createElement').and.returnValue(mockCanvas as any);
       
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, [mockDetection], mockFile);
       
       expect(score.breakdown.lighting).toBeGreaterThan(8); // Should get bonus for good lighting
@@ -456,6 +494,8 @@ describe('ImageQualityService', () => {
       
       spyOn(document, 'createElement').and.returnValue(mockCanvas as any);
       
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, [mockDetection], mockFile);
       
       expect(score.suggestions).toContain('Unable to assess lighting quality.');
@@ -468,6 +508,8 @@ describe('ImageQualityService', () => {
         getContext: () => null
       } as any);
       
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, [mockDetection], mockFile);
       
       expect(score).toBeDefined();
@@ -475,8 +517,8 @@ describe('ImageQualityService', () => {
     });
 
     it('should handle invalid image dimensions', async () => {
-      const invalidImg = createMockImage(0, 0);
-      
+      const invalidImg = createMockImage(50, 50); // Invalid small image
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(invalidImg, [mockDetection], mockFile);
       
       expect(score).toBeDefined();
@@ -491,6 +533,8 @@ describe('ImageQualityService', () => {
         }
       };
       
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, [invalidDetection as any], mockFile);
       
       expect(score).toBeDefined();
@@ -507,6 +551,8 @@ describe('ImageQualityService', () => {
     });
 
     it('should return Promise from calculateQualityScore', () => {
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const result = service.calculateQualityScore(mockImg, [], mockFile);
       expect(result).toBeInstanceOf(Promise);
     });
@@ -526,6 +572,8 @@ describe('ImageQualityService', () => {
       const detections = [mockDetection];
       
       const startTime = performance.now();
+      const mockImg = createMockImage(1024, 1024);
+      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       await service.calculateQualityScore(mockImg, detections, mockFile);
       const endTime = performance.now();
       
