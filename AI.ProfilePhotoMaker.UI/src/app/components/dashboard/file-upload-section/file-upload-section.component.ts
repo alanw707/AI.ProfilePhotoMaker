@@ -1,11 +1,15 @@
-import { ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, NgZone, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, EventEmitter, Injector, Input, NgZone, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import { FileUploadService } from '../../../services/file-upload.service';
-import { FaceDetectionService } from '../../../services/face-detection.service';
 import { FileUploadManagerService } from '../../../services/file-upload-manager.service';
 import { NotificationService } from '../../../services/notification.service';
+
+// Lazy-loaded service interface
+interface FaceDetectionService {
+  validateImage(file: File): Promise<any>;
+}
 
 import { 
   QualityCheckError, 
@@ -62,14 +66,17 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
   // File preview cache for memory management
   private filePreviewCache = new Map<File, string>();
+  
+  // Lazy-loaded service
+  private faceDetectionService: FaceDetectionService | null = null;
 
   constructor(
     private fileUploadService: FileUploadService,
-    private faceDetectionService: FaceDetectionService,
     private fileUploadManagerService: FileUploadManagerService,
     private notificationService: NotificationService,
     private ngZone: NgZone,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private injector: Injector
   ) {}
 
   ngOnInit() {
@@ -77,6 +84,15 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     
     // Close popups when clicking outside
     document.addEventListener('click', this.closeAllPopups.bind(this));
+  }
+  
+  // Lazy loading method for face detection service
+  private async loadFaceDetectionService(): Promise<FaceDetectionService> {
+    if (!this.faceDetectionService) {
+      const { FaceDetectionService } = await import('../../../services/face-detection.service');
+      this.faceDetectionService = this.injector.get(FaceDetectionService);
+    }
+    return this.faceDetectionService;
   }
 
   ngOnDestroy() {
@@ -201,7 +217,8 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
         }
 
         // Perform face detection and quality analysis
-        const qualityResult = await this.faceDetectionService.validateImage(file);
+        const faceDetectionService = await this.loadFaceDetectionService();
+        const qualityResult = await faceDetectionService.validateImage(file);
         
         if (qualityResult.isValid) {
           validFiles.push(file);

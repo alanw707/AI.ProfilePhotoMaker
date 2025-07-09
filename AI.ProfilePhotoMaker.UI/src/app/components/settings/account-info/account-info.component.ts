@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { UserProfile } from '../../../services/profile.service';
 
@@ -17,12 +17,12 @@ export class AccountInfoComponent {
   @Output() editProfileClicked = new EventEmitter<void>();
 
   getFullName(): string {
-    if (!this.userProfile) return '';
+    if (!this.userProfile) {return '';}
     return `${this.userProfile.firstName} ${this.userProfile.lastName}`.trim();
   }
 
   formatDate(date: any): string {
-    if (!date) return '';
+    if (!date) {return '';}
     const d = new Date(date);
     return d.toLocaleDateString('en-US', { 
       year: 'numeric', 

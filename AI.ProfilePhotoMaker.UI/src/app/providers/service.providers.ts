@@ -1,4 +1,4 @@
-import { InjectionToken, Provider, NgZone } from '@angular/core';
+import { InjectionToken, NgZone, Provider } from '@angular/core';
 import { 
   ICacheManagerService,
   IDashboardStateService,
