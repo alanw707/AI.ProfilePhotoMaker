@@ -193,7 +193,7 @@ public class ProfileController : ControllerBase
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> UploadImages([FromForm] UploadImagesDto dto)
     {
-        if (dto.Images == null || !dto.Images.Any())
+        if (dto.Images == null || dto.Images.Count == 0)
             return BadRequest("No images provided");
 
         if (dto.Images.Count > 20)
@@ -201,7 +201,7 @@ public class ProfileController : ControllerBase
 
         var userId = GetCurrentUserId();
         if (userId == null)
-            return Unauthorized();
+            return new UnauthorizedResult();
 
         var profile = await _context.UserProfiles
             .FirstOrDefaultAsync(p => p.UserId == userId);
@@ -214,7 +214,8 @@ public class ProfileController : ControllerBase
                 FirstName = dto.FirstName,
                 LastName = dto.LastName,
                 Gender = dto.Gender,
-                Ethnicity = dto.Ethnicity
+                Ethnicity = dto.Ethnicity,
+                ProcessedImages = new List<ProcessedImage>() // Ensure not null
             };
             await _userProfileRepository.AddAsync(profile);
         }
@@ -288,7 +289,14 @@ public class ProfileController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error uploading images for user {UserId}", userId);
+            // Use the non-extension method for logger so it can be verified in tests
+            _logger.Log(
+                LogLevel.Error,
+                new EventId(0, "Error"),
+                $"Error uploading images for user {userId}: {ex.Message}",
+                ex,
+                (state, exception) => state.ToString()
+            );
             return StatusCode(500, "Error processing images");
         }
     }
@@ -502,13 +510,7 @@ public class ProfileController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating training ZIP for user {UserId}", userId);
-            return StatusCode(500, new { 
-                success = false, 
-                error = new { 
-                    code = "InternalError", 
-                    message = "Error creating training ZIP" 
-                } 
-            });
+            return StatusCode(500, new { success = false, error = new { code = "InternalError", message = "Error creating training ZIP" } });
         }
     }
 
@@ -541,9 +543,10 @@ public class ProfileController : ControllerBase
         if (image.IsDeleted)
         {
             _logger.LogWarning("Image {ImageId} for user {UserId} is already marked as deleted", imageId, userId);
-            return BadRequest(new { 
-                success = false, 
-                message = "Image is already deleted" 
+            return BadRequest(new
+            {
+                success = false,
+                message = "Image is already deleted"
             });
         }
 
@@ -1361,7 +1364,7 @@ public class ProfileController : ControllerBase
                 _logger.LogWarning(ex, "Failed to delete upload directory for user {UserId}", userId);
             }
 
-            // Delete AI model if exists
+            // Delete AI model
             var modelDeleted = false;
             // Check ModelCreationRequest table for model availability
         var hasModel = await GetLatestTrainedModelAsync(userId) != null;
