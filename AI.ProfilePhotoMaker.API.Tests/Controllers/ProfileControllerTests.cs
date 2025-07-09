@@ -337,6 +337,69 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
 
             _mockContext.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
+
+        // Tests for DeleteProfile
+        [Fact]
+        public async Task DeleteProfile_ReturnsUnauthorized_WhenUserIdIsNull()
+        {
+            // Arrange
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity()) } // No user ID claim
+            };
+
+            // Act
+            var result = await _controller.DeleteProfile();
+
+            // Assert
+            result.Should().BeOfType<UnauthorizedResult>();
+        }
+
+        [Fact]
+        public async Task DeleteProfile_ReturnsNotFound_WhenProfileDoesNotExist()
+        {
+            // Arrange
+            var userId = _fixture.Create<string>();
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(new Claim[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock")) }
+            };
+            _mockUserProfileRepository.Setup(r => r.GetByUserIdAsync(userId)).ReturnsAsync((UserProfile)null);
+
+            // Act
+            var result = await _controller.DeleteProfile();
+
+            // Assert
+            result.Should().BeOfType<NotFoundObjectResult>()
+                  .Which.Value.Should().Be("Profile not found");
+        }
+
+        [Fact]
+        public async Task DeleteProfile_ReturnsOk_WhenProfileIsDeletedSuccessfully()
+        {
+            // Arrange
+            var userId = _fixture.Create<string>();
+            var userProfile = _fixture.Build<UserProfile>()
+                                      .With(p => p.UserId, userId)
+                                      .Create();
+
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(new Claim[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock")) }
+            };
+            _mockUserProfileRepository.Setup(r => r.GetByUserIdAsync(userId)).ReturnsAsync(userProfile);
+            _mockUserProfileRepository.Setup(r => r.DeleteAsync(userProfile)).Returns(Task.CompletedTask);
+
+            // Act
+            var result = await _controller.DeleteProfile();
+
+            // Assert
+            result.Should().BeOfType<OkObjectResult>();
+            var okResult = result.As<OkObjectResult>();
+            okResult.Value.Should().BeEquivalentTo(new { success = true, message = "Profile deleted" });
+
+            _mockUserProfileRepository.Verify(r => r.DeleteAsync(userProfile), Times.Once);
+        }
     // Helper method to mock DbSet for in-memory collections
         private static Mock<DbSet<T>> GetMockDbSet<T>(List<T> list) where T : class
         {
