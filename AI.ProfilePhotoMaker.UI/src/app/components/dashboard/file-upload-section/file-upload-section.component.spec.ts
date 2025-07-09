@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { NgZone } from '@angular/core';
 import { of, throwError } from 'rxjs';
 
@@ -7,7 +7,7 @@ import { FileUploadService } from '../../../services/file-upload.service';
 import { FaceDetectionService } from '../../../services/face-detection.service';
 import { FileUploadManagerService } from '../../../services/file-upload-manager.service';
 import { NotificationService } from '../../../services/notification.service';
-import { QualityCheckError, SelectedFileWithQuality, QualityCheckResult } from '../../../models/dashboard.types';
+import { QualityCheckError, QualityCheckResult, SelectedFileWithQuality } from '../../../models/dashboard.types';
 
 describe('FileUploadSectionComponent', () => {
   let component: FileUploadSectionComponent;

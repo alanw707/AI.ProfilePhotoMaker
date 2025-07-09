@@ -6,10 +6,10 @@ import { AuthService } from './auth.service';
 import { ConfigService } from './config.service';
 import { FileUploadService } from './file-upload.service';
 import { 
-  IFallbackOperationsService, 
-  FallbackTracker, 
-  DataDiscrepancyResult,
-  DashboardStateForFallback 
+  DashboardStateForFallback, 
+  DataDiscrepancyResult, 
+  FallbackTracker,
+  IFallbackOperationsService 
 } from '../interfaces/service.interfaces';
 
 // Mock services

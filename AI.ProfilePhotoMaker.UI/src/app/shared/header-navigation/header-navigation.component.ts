@@ -1,6 +1,6 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
 import { Subscription } from 'rxjs';
@@ -13,8 +13,8 @@ import { Subscription } from 'rxjs';
   styleUrls: ['./header-navigation.component.sass']
 })
 export class HeaderNavigationComponent implements OnInit, OnDestroy {
-  userName: string = '';
-  userEmail: string = '';
+  userName = '';
+  userEmail = '';
   private userSubscription?: Subscription;
 
   constructor(

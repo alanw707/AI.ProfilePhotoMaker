@@ -1,7 +1,7 @@
-import { TestBed, ComponentFixture } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
-import { Component, ViewChild, ElementRef } from '@angular/core';
+import { Component, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { of, throwError } from 'rxjs';
@@ -19,13 +19,13 @@ import { HeaderNavigationComponent } from '../shared/header-navigation/header-na
 class MockHeaderNavigationComponent { }
 
 // Test utilities
-function createMockFile(name: string = 'test.jpg', type: string = 'image/jpeg', size: number = 1024 * 1024): File {
+function createMockFile(name = 'test.jpg', type = 'image/jpeg', size: number = 1024 * 1024): File {
   const file = new File(['mock content'], name, { type });
   Object.defineProperty(file, 'size', { value: size });
   return file;
 }
 
-function createMockFileReader(result: string = 'data:image/jpeg;base64,mock-data'): FileReader {
+function createMockFileReader(result = 'data:image/jpeg;base64,mock-data'): FileReader {
   const reader = {
     readAsDataURL: jasmine.createSpy('readAsDataURL').and.callFake(function(file: File) {
       setTimeout(() => {

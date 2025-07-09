@@ -1,7 +1,7 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule, Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 
 export interface StyleOption {
   id: string;
@@ -21,23 +21,23 @@ export interface StyleOption {
 export class StyleSelectorComponent {
   constructor(private router: Router) {}
   @Input() availableStyles: StyleOption[] = [];
-  @Input() imagesPerStyle: number = 2;
-  @Input() selectedStyles: number = 0;
-  @Input() trainingCredits: number = 15;
-  @Input() generationCredits: number = 0;
-  @Input() totalCredits: number = 0;
-  @Input() hasEnoughCredits: boolean = true;
-  @Input() remainingCredits: number = 0;
-  @Input() isTrainingStarted: boolean = false;
-  @Input() modelStatus: string = '';
-  @Input() uploadedImageCount: number = 0;
-  @Input() isTraining: boolean = false;
-  @Input() isGenerating: boolean = false;
-  @Input() progressPercentage: number = 0;
-  @Input() progressMessage: string = '';
-  @Input() estimatedCompletion: string = '';
-  @Input() lastGenerationCount: number = 0;
-  @Input() showLastGenerationMessage: boolean = false;
+  @Input() imagesPerStyle = 2;
+  @Input() selectedStyles = 0;
+  @Input() trainingCredits = 15;
+  @Input() generationCredits = 0;
+  @Input() totalCredits = 0;
+  @Input() hasEnoughCredits = true;
+  @Input() remainingCredits = 0;
+  @Input() isTrainingStarted = false;
+  @Input() modelStatus = '';
+  @Input() uploadedImageCount = 0;
+  @Input() isTraining = false;
+  @Input() isGenerating = false;
+  @Input() progressPercentage = 0;
+  @Input() progressMessage = '';
+  @Input() estimatedCompletion = '';
+  @Input() lastGenerationCount = 0;
+  @Input() showLastGenerationMessage = false;
 
   @Output() styleToggled = new EventEmitter<StyleOption>();
   @Output() imagesPerStyleChanged = new EventEmitter<number>();
@@ -77,7 +77,7 @@ export class StyleSelectorComponent {
   }
 
   formatStyleName(styleName: string): string {
-    if (!styleName) return '';
+    if (!styleName) {return '';}
     return styleName
       .split('-')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))

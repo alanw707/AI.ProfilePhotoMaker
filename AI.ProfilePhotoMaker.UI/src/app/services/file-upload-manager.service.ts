@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { FaceDetectionService } from './face-detection.service';
 import { FaceValidationResult, QualityScore } from '../interfaces/service.interfaces';
-import { SelectedFileWithQuality, QualityCheckError, QualityCheckResult, UploadProgress } from '../models/dashboard.types';
+import { QualityCheckError, QualityCheckResult, SelectedFileWithQuality, UploadProgress } from '../models/dashboard.types';
 
 @Injectable({
   providedIn: 'root'
@@ -39,7 +39,7 @@ export class FileUploadManagerService {
         } else {
           errorFiles.push({
             fileName: file.name,
-            file: file,
+            file,
             errors: qualityResult.errors,
             warnings: qualityResult.warnings,
             faceValidation: qualityResult.faceValidation,
@@ -51,7 +51,7 @@ export class FileUploadManagerService {
       } catch (error) {
         errorFiles.push({
           fileName: file.name,
-          file: file,
+          file,
           errors: [`Failed to process file: ${error}`]
         });
       }

@@ -1,15 +1,15 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, forkJoin } from 'rxjs';
-import { UserProfile, ProfileService } from './profile.service';
+import { ProfileService, UserProfile } from './profile.service';
 import { CreditsInfo, ReplicateService } from './replicate.service';
-import { UserCreditStatus, CreditService } from './credit.service';
+import { CreditService, UserCreditStatus } from './credit.service';
 import { FileUploadService } from './file-upload.service';
 import { StyleService } from './style.service';
 import { NotificationService } from './notification.service';
 import { CacheManagerService } from './cache-manager.service';
 import { ModelStateService } from './model-state.service';
 import { FallbackOperationsService } from './fallback-operations.service';
-import { IDashboardStateService, DashboardState, UploadedImageThumbnail } from '../interfaces/service.interfaces';
+import { DashboardState, IDashboardStateService, UploadedImageThumbnail } from '../interfaces/service.interfaces';
 
 @Injectable({
   providedIn: 'root'
@@ -59,7 +59,7 @@ export class DashboardStateService implements IDashboardStateService {
     
     // Check cache first
     const cachedData = this.cacheManager.getCachedData<DashboardState>(CACHE_KEY);
-    if (cachedData && cachedData.creditsInfo) {
+    if (cachedData?.creditsInfo) {
       console.log('💾 Using cached dashboard data');
       this.setState(cachedData);
       return;
@@ -95,7 +95,7 @@ export class DashboardStateService implements IDashboardStateService {
           }));
         
         // Count generated photos (use API count or filter generated images)
-        let generatedPhotosCount = userImages.generatedImages || 
+        const generatedPhotosCount = userImages.generatedImages || 
           userImages.images.filter(img => img.isGenerated).length;
         
         console.log(`📊 Generated Photos Count: ${generatedPhotosCount}`);

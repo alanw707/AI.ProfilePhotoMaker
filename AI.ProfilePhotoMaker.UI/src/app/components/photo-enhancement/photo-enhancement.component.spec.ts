@@ -3,11 +3,11 @@ import { PhotoEnhancementComponent } from './photo-enhancement.component';
 import { 
   MockAuthService, 
   MockDashboardStateService, 
-  MockNotificationService,
   MockFileUploadService,
+  MockNotificationService,
   MockReplicateService,
-  TestingHelpers,
-  TestConstants
+  TestConstants,
+  TestingHelpers
 } from '../../testing/testing-utils';
 
 import { AuthService } from '../../services/auth.service';

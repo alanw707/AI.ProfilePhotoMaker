@@ -1,13 +1,13 @@
-import { TestBed, ComponentFixture } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { GalleryComponent } from '../pages/gallery/gallery.component';
-import { PhotoGalleryComponent, GalleryImage } from '../components/photo-gallery/photo-gallery.component';
+import { GalleryImage, PhotoGalleryComponent } from '../components/photo-gallery/photo-gallery.component';
 import { AuthService } from '../services/auth.service';
 import { FileUploadService, ProcessedImage } from '../services/file-upload.service';
 import { HeaderNavigationComponent } from '../shared/header-navigation/header-navigation.component';

@@ -81,7 +81,7 @@ export class IntegrationTestConfig {
    * Mock localStorage for testing
    */
   static mockLocalStorage() {
-    let storage: { [key: string]: string } = {};
+    let storage: Record<string, string> = {};
     
     return {
       getItem: (key: string) => storage[key] || null,
@@ -120,10 +120,10 @@ export class IntegrationTestConfig {
    * Mock File API for testing
    */
   static createMockFile(
-    name: string = 'test.jpg',
-    type: string = 'image/jpeg',
+    name = 'test.jpg',
+    type = 'image/jpeg',
     size: number = 1024 * 1024,
-    content: string = 'mock file content'
+    content = 'mock file content'
   ): File {
     const file = new File([content], name, { type });
     Object.defineProperty(file, 'size', { value: size });
@@ -133,7 +133,7 @@ export class IntegrationTestConfig {
   /**
    * Mock FileReader for testing
    */
-  static createMockFileReader(result: string = 'data:image/jpeg;base64,mock-data'): FileReader {
+  static createMockFileReader(result = 'data:image/jpeg;base64,mock-data'): FileReader {
     const reader = {
       readAsDataURL: jasmine.createSpy('readAsDataURL').and.callFake(function(file: File) {
         setTimeout(() => {
@@ -282,21 +282,21 @@ export class IntegrationTestUtils {
   /**
    * Wait for async operations to complete
    */
-  static async waitForAsync(ms: number = 0): Promise<void> {
+  static async waitForAsync(ms = 0): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
    * Simulate user interaction delay
    */
-  static async simulateUserDelay(ms: number = 100): Promise<void> {
+  static async simulateUserDelay(ms = 100): Promise<void> {
     return this.waitForAsync(ms);
   }
 
   /**
    * Create a mock HTTP response
    */
-  static createMockHttpResponse(data: any, status: number = 200, headers: Record<string, string> = {}) {
+  static createMockHttpResponse(data: any, status = 200, headers: Record<string, string> = {}) {
     return {
       ok: status >= 200 && status < 300,
       status,
@@ -379,7 +379,7 @@ export class IntegrationTestUtils {
   static createFileUploadEvent(files: File[]) {
     return {
       target: {
-        files: files
+        files
       }
     };
   }
@@ -391,7 +391,7 @@ export class IntegrationTestUtils {
     return {
       preventDefault: jasmine.createSpy('preventDefault'),
       dataTransfer: {
-        files: files
+        files
       }
     };
   }

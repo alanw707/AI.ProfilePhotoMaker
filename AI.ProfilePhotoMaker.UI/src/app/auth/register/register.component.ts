@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService, RegisterDto } from '../../services/auth.service';
@@ -38,7 +38,7 @@ export class RegisterComponent {
 
   get f() { return this.registerForm.controls; }
 
-  passwordMatchValidator(control: AbstractControl): { [key: string]: any } | null {
+  passwordMatchValidator(control: AbstractControl): Record<string, any> | null {
     const password = control.get('password');
     const confirmPassword = control.get('confirmPassword');
     

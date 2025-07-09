@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap, map } from 'rxjs';
+import { BehaviorSubject, map, Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { ConfigService } from './config.service';
 
@@ -117,8 +117,8 @@ export class AuthService {
     
     // Temporary user object while we fetch profile
     const tempUser = {
-      token: token,
-      email: email,
+      token,
+      email,
       firstName: '',
       lastName: ''
     };
@@ -137,8 +137,8 @@ export class AuthService {
         // Handle response that contains data directly (not wrapped in success/data structure)
         if (response && (response.firstName || response.lastName)) {
           const completeUser = {
-            token: token,
-            email: email,
+            token,
+            email,
             firstName: response.firstName || '',
             lastName: response.lastName || ''
           };
@@ -200,10 +200,10 @@ export class AuthService {
       }
       
       return {
-        token: token,
-        email: email,
-        firstName: firstName,
-        lastName: lastName
+        token,
+        email,
+        firstName,
+        lastName
       };
     } catch (error) {
       console.error('Failed to extract user from token:', error);
@@ -307,7 +307,7 @@ export class AuthService {
 
   getCurrentUserId(): string | null {
     const token = this.getToken();
-    if (!token) return null;
+    if (!token) {return null;}
     
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
@@ -333,7 +333,7 @@ export class AuthService {
 
   private hasToken(): boolean {
     const token = localStorage.getItem(this.TOKEN_KEY);
-    if (!token) return false;
+    if (!token) {return false;}
     
     const isExpired = this.isTokenExpired(token);
     

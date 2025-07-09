@@ -1,7 +1,7 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { PhotoGenerationComponent } from './photo-generation.component';
-import { GenerationStatus, GeneratedPhoto } from '../../../models/dashboard.types';
+import { GeneratedPhoto, GenerationStatus } from '../../../models/dashboard.types';
 import { CommonModule } from '@angular/common';
 
 describe('PhotoGenerationComponent', () => {

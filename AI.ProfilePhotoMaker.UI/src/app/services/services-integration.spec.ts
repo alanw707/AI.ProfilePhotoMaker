@@ -94,14 +94,14 @@ class MockConfigService {
 }
 
 // Helper function to create mock File
-function createMockFile(size: number = 1024 * 1024, name: string = 'test.jpg'): File {
+function createMockFile(size: number = 1024 * 1024, name = 'test.jpg'): File {
   const file = new File([''], name, { type: 'image/jpeg' });
   Object.defineProperty(file, 'size', { value: size });
   return file;
 }
 
 // Helper function to create mock HTMLImageElement
-function createMockImage(width: number = 200, height: number = 200): HTMLImageElement {
+function createMockImage(width = 200, height = 200): HTMLImageElement {
   const img = {
     width,
     height,
