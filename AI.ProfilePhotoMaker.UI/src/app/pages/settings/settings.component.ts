@@ -8,6 +8,8 @@ import { ProfileService, UserProfile } from '../../services/profile.service';
 import { FileUploadService } from '../../services/file-upload.service';
 import { NotificationService } from '../../services/notification.service';
 import { DashboardStateService } from '../../services/dashboard-state.service';
+import { AccountInfoComponent } from '../../components/settings/account-info/account-info.component';
+import { CreditManagementComponent } from '../../components/settings/credit-management/credit-management.component';
 
 interface DataStats {
   inputPhotos: number;
@@ -23,19 +25,19 @@ type DeletionType = 'photos' | 'model' | 'all' | 'account';
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, HeaderNavigationComponent],
+  imports: [CommonModule, RouterModule, FormsModule, HeaderNavigationComponent, AccountInfoComponent, CreditManagementComponent],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.sass']
 })
 export class SettingsComponent implements OnInit {
   // User Info
   userProfile: UserProfile | null = null;
-  userEmail: string = '';
+  userEmail = '';
 
   // Loading States
-  isLoading: boolean = true;
-  isDeleting: boolean = false;
-  isExporting: boolean = false;
+  isLoading = true;
+  isDeleting = false;
+  isExporting = false;
 
   // Data Statistics
   dataStats: DataStats = {
@@ -48,11 +50,11 @@ export class SettingsComponent implements OnInit {
   };
 
   // Confirmation Modal State
-  showConfirmationModal: boolean = false;
+  showConfirmationModal = false;
   deletionType: DeletionType = 'photos';
-  confirmationText: string = '';
-  confirmationTitle: string = '';
-  confirmationMessage: string = '';
+  confirmationText = '';
+  confirmationTitle = '';
+  confirmationMessage = '';
 
   // Credit Management State
   creditsInfo: any = null;
@@ -125,7 +127,7 @@ export class SettingsComponent implements OnInit {
     try {
       // Load data stats from API
       const statsResponse = await this.profileService.getDataStats().toPromise();
-      if (statsResponse && statsResponse.success) {
+      if (statsResponse?.success) {
         this.dataStats = {
           inputPhotos: statsResponse.data.inputPhotos || 0,
           generatedPhotos: statsResponse.data.generatedPhotos || 0,
@@ -159,23 +161,7 @@ export class SettingsComponent implements OnInit {
     }
   }
 
-  // Helper Methods
-  getFullName(): string {
-    if (!this.userProfile) return '';
-    const firstName = this.userProfile.firstName || '';
-    const lastName = this.userProfile.lastName || '';
-    return `${firstName} ${lastName}`.trim() || 'Not provided';
-  }
-
-  formatDate(date: Date | string): string {
-    if (!date) return 'Not available';
-    const d = new Date(date);
-    return d.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  }
+  // Helper Methods (getFullName and formatDate moved to account-info.component.ts)
 
   // Navigation Methods
   editProfile() {
@@ -275,7 +261,7 @@ export class SettingsComponent implements OnInit {
   private async deleteInputPhotos() {
     try {
       const response = await this.profileService.deleteInputPhotos().toPromise();
-      if (response && response.success) {
+      if (response?.success) {
         this.notificationService.success('Photos Deleted', `Successfully deleted ${response.data.deletedCount} input photos.`);
         this.dataStats.inputPhotos = 0;
         await this.loadDataStats(); // Refresh stats
@@ -291,7 +277,7 @@ export class SettingsComponent implements OnInit {
   private async deleteAIModel() {
     try {
       const response = await this.profileService.deleteAIModel().toPromise();
-      if (response && response.success) {
+      if (response?.success) {
         this.notificationService.success('AI Model Deleted', response.data.message || 'Your trained AI model has been successfully deleted.');
         this.dataStats.hasTrainedModel = false;
         if (this.userProfile) {
@@ -311,7 +297,7 @@ export class SettingsComponent implements OnInit {
   private async deleteAllData() {
     try {
       const response = await this.profileService.deleteAllUserData().toPromise();
-      if (response && response.success) {
+      if (response?.success) {
         this.notificationService.success('All Data Deleted', response.data.message || 'All your data has been successfully deleted.');
         // Reset all stats
         this.dataStats = {
@@ -335,7 +321,7 @@ export class SettingsComponent implements OnInit {
   private async deleteAccount() {
     try {
       const response = await this.profileService.deleteUserAccount().toPromise();
-      if (response && response.success) {
+      if (response?.success) {
         this.notificationService.success('Account Deleted', 'Your account has been successfully deleted. You will be logged out.');
         // Log out user immediately
         setTimeout(() => {
@@ -394,41 +380,6 @@ export class SettingsComponent implements OnInit {
     
     // Load initial credit data
     this.dashboardStateService.loadInitialDashboardData();
-  }
-
-  getTotalAvailableCredits(): number {
-    const weeklyCredits = this.getWeeklyCredits();
-    const purchasedCredits = this.getPurchasedCredits();
-    return weeklyCredits + purchasedCredits;
-  }
-
-  getPurchasedCredits(): number {
-    return this.userCreditStatus?.purchasedCredits || 0;
-  }
-
-  getWeeklyCredits(): number {
-    return this.userCreditStatus?.weeklyCredits || this.creditsInfo?.availableCredits || 0;
-  }
-
-  getMaxWeeklyCredits(): number {
-    return 3; // Fixed weekly credit limit
-  }
-
-  getCreditUsagePercentage(): number {
-    const weekly = this.getWeeklyCredits();
-    const max = this.getMaxWeeklyCredits();
-    return max > 0 ? (weekly / max) * 100 : 0;
-  }
-
-  getNextCreditReset(): string {
-    // Calculate next weekly reset (simplified)
-    const now = new Date();
-    const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    return nextWeek.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'short',
-      day: 'numeric'
-    });
   }
 
 }
