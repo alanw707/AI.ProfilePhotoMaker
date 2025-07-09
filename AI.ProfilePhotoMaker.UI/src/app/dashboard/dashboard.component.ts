@@ -17,6 +17,7 @@ import { CreditService } from '../services/credit.service';
 import { DashboardStateService } from '../services/dashboard-state.service';
 import { ConfigService } from '../services/config.service';
 import { WorkflowOrchestrationService, WorkflowProgress } from '../services/workflow-orchestration.service';
+import { WorkflowStepService } from '../services/workflow-step.service';
 
 import { 
   QualityCheckResult
@@ -109,7 +110,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     public creditService: CreditService,
     public stateService: DashboardStateService,
     private config: ConfigService,
-    private workflowService: WorkflowOrchestrationService
+    private workflowService: WorkflowOrchestrationService,
+    private workflowStepService: WorkflowStepService
   ) {
     this.state$ = this.stateService.state$;
     this.workflowProgress$ = this.workflowService.progress$;
@@ -141,12 +143,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.workflowService.dispose();
   }
   private updateCurrentStep() {
-    if ((this.uploadedImages > 0 || this.uploadedImageThumbnails.length > 0) && this.currentStep === 1) {
-      this.currentStep = 2;
-    }
-    if (this.generatedPhotosCount > 0 && this.currentStep === 2) {
-      this.currentStep = 3;
-    }
+    this.currentStep = this.workflowStepService.updateCurrentStep(
+      this.uploadedImages,
+      this.uploadedImageThumbnails,
+      this.generatedPhotosCount,
+      this.currentStep
+    );
   }
   private loadAvailableStyles() {
     this.styleService.getActiveStyles().subscribe({
@@ -311,34 +313,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getStepStatus(step: number): string {
-    const hasUploadedImages = this.uploadedImages > 0 || this.uploadedImageThumbnails.length > 0;
-    
-    switch (step) {
-      case 1:
-        if (hasUploadedImages) {return 'completed';}
-        if (this.currentStep === 1) {return 'active';}
-        return 'pending';
-      case 2:
-        if (hasUploadedImages && this.generatedPhotosCount === 0) {return 'active';}
-        if (this.generatedPhotosCount > 0) {return 'completed';}
-        return 'pending';
-      case 3:
-        if (this.generatedPhotosCount > 0) {return 'completed';}
-        return 'pending';
-      default:
-        if (step < this.currentStep) {return 'completed';}
-        if (step === this.currentStep) {return 'active';}
-        return 'pending';
-    }
+    return this.workflowStepService.getStepStatus(
+      step,
+      this.uploadedImages,
+      this.uploadedImageThumbnails,
+      this.generatedPhotosCount,
+      this.currentStep
+    );
   }
 
   getStepStatusText(step: number): string {
-    const status = this.getStepStatus(step);
-    switch (status) {
-      case 'completed': return 'Completed';
-      case 'active': return 'In Progress';
-      default: return 'Pending';
-    }
+    return this.workflowStepService.getStepStatusText(
+      step,
+      this.uploadedImages,
+      this.uploadedImageThumbnails,
+      this.generatedPhotosCount,
+      this.currentStep
+    );
   }
 
   // Credit calculation methods
