@@ -1,0 +1,1 @@
+cd AI.ProfilePhotoMaker.UI && npx lint-staged

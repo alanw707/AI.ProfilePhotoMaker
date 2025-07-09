@@ -286,6 +286,310 @@ describe('PhotoGalleryComponent', () => {
       expect(component.Math).toBe(Math);
     });
   });
+
+  describe('Page Size Changes', () => {
+    beforeEach(() => {
+      component.images = Array.from({ length: 50 }, (_, i) => ({
+        id: i + 1,
+        url: `image${i + 1}.jpg`,
+        title: `Image ${i + 1}`,
+        type: 'generated',
+        status: 'completed',
+        createdAt: new Date()
+      })) as GalleryImage[];
+    });
+
+    it('should handle page size change', () => {
+      component.pageSize = 6;
+      component.updateFilteredImages();
+      
+      expect(component.paginatedImages.length).toBe(6);
+      expect(component.totalPages).toBe(Math.ceil(50 / 6));
+    });
+
+    it('should reset to page 1 when page size increases beyond total pages', () => {
+      component.currentPage = 5;
+      component.pageSize = 100; // Larger than total items
+      component.updateFilteredImages();
+      
+      expect(component.currentPage).toBe(1);
+    });
+
+    it('should adjust current page when page size decreases', () => {
+      component.currentPage = 2;
+      component.pageSize = 5;
+      component.updateFilteredImages();
+      
+      expect(component.currentPage).toBeLessThanOrEqual(component.totalPages);
+    });
+  });
+
+  describe('Page Navigation', () => {
+    beforeEach(() => {
+      component.images = Array.from({ length: 36 }, (_, i) => ({
+        id: i + 1,
+        url: `image${i + 1}.jpg`,
+        title: `Image ${i + 1}`,
+        type: 'generated',
+        status: 'completed',
+        createdAt: new Date()
+      })) as GalleryImage[];
+      component.pageSize = 12;
+      component.updateFilteredImages();
+    });
+
+    it('should go to next page', () => {
+      component.currentPage = 1;
+      component.goToPage(2);
+      
+      expect(component.currentPage).toBe(2);
+      expect(component.paginatedImages[0].id).toBe(13);
+    });
+
+    it('should go to previous page', () => {
+      component.currentPage = 2;
+      component.goToPage(1);
+      
+      expect(component.currentPage).toBe(1);
+      expect(component.paginatedImages[0].id).toBe(1);
+    });
+
+    it('should handle invalid page number', () => {
+      component.currentPage = 1;
+      component.goToPage(0);
+      
+      expect(component.currentPage).toBe(1);
+    });
+
+    it('should handle page number beyond total pages', () => {
+      component.currentPage = 1;
+      component.goToPage(10);
+      
+      expect(component.currentPage).toBe(1);
+    });
+  });
+
+  describe('Image Selection Toggle', () => {
+    beforeEach(() => {
+      component.images = [
+        { id: 1, url: 'image1.jpg', title: 'Image 1', type: 'generated', status: 'completed', createdAt: new Date() },
+        { id: 2, url: 'image2.jpg', title: 'Image 2', type: 'generated', status: 'completed', createdAt: new Date() }
+      ] as GalleryImage[];
+      component.updateFilteredImages();
+    });
+
+    it('should select image when not selected', () => {
+      component.selectedImages = [];
+      
+      component.toggleImageSelection(component.images[0]);
+      
+      expect(component.selectedImages).toContain(component.images[0]);
+    });
+
+    it('should deselect image when already selected', () => {
+      component.selectedImages = [component.images[0]];
+      
+      component.toggleImageSelection(component.images[0]);
+      
+      expect(component.selectedImages).not.toContain(component.images[0]);
+    });
+
+    it('should check if image is selected', () => {
+      component.selectedImages = [component.images[0]];
+      
+      expect(component.isImageSelected(component.images[0])).toBeTrue();
+      expect(component.isImageSelected(component.images[1])).toBeFalse();
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle empty images array', () => {
+      component.images = [];
+      component.updateFilteredImages();
+      
+      expect(component.filteredImages).toEqual([]);
+      expect(component.paginatedImages).toEqual([]);
+      expect(component.totalPages).toBe(0);
+    });
+
+    it('should handle null filter type', () => {
+      component.images = [
+        { id: 1, type: 'generated' } as GalleryImage
+      ];
+      component.filterType = null as any;
+      component.updateFilteredImages();
+      
+      expect(component.filteredImages.length).toBe(1);
+    });
+
+    it('should handle undefined filter type', () => {
+      component.images = [
+        { id: 1, type: 'generated' } as GalleryImage
+      ];
+      component.filterType = undefined as any;
+      component.updateFilteredImages();
+      
+      expect(component.filteredImages.length).toBe(1);
+    });
+
+    it('should handle zero page size', () => {
+      component.images = [
+        { id: 1, type: 'generated' } as GalleryImage
+      ];
+      component.pageSize = 0;
+      component.updateFilteredImages();
+      
+      expect(component.paginatedImages.length).toBe(0);
+    });
+
+    it('should handle negative page size', () => {
+      component.images = [
+        { id: 1, type: 'generated' } as GalleryImage
+      ];
+      component.pageSize = -5;
+      component.updateFilteredImages();
+      
+      expect(component.paginatedImages.length).toBe(0);
+    });
+
+    it('should handle very large page size', () => {
+      component.images = [
+        { id: 1, type: 'generated' } as GalleryImage,
+        { id: 2, type: 'generated' } as GalleryImage
+      ];
+      component.pageSize = 1000;
+      component.updateFilteredImages();
+      
+      expect(component.paginatedImages.length).toBe(2);
+      expect(component.totalPages).toBe(1);
+    });
+
+    it('should handle images with missing properties', () => {
+      component.images = [
+        { id: 1 } as GalleryImage,
+        { id: 2, type: 'generated' } as GalleryImage
+      ];
+      component.filterType = 'generated';
+      component.updateFilteredImages();
+      
+      expect(component.filteredImages.length).toBe(1);
+      expect(component.filteredImages[0].id).toBe(2);
+    });
+  });
+
+  describe('Component Event Handlers', () => {
+    it('should handle view mode change', () => {
+      component.onViewModeChange('list');
+      
+      expect(component.viewMode).toBe('list');
+    });
+
+    it('should handle page size change', () => {
+      spyOn(component, 'updateFilteredImages');
+      
+      component.onPageSizeChange(24);
+      
+      expect(component.pageSize).toBe(24);
+      expect(component.currentPage).toBe(1);
+      expect(component.updateFilteredImages).toHaveBeenCalled();
+    });
+
+    it('should handle page change', () => {
+      spyOn(component, 'updateFilteredImages');
+      
+      component.onPageChange(3);
+      
+      expect(component.currentPage).toBe(3);
+      expect(component.updateFilteredImages).toHaveBeenCalled();
+    });
+  });
+
+  describe('Computed Properties', () => {
+    beforeEach(() => {
+      component.images = Array.from({ length: 10 }, (_, i) => ({
+        id: i + 1,
+        type: 'generated',
+        status: 'completed'
+      })) as GalleryImage[];
+      component.updateFilteredImages();
+    });
+
+    it('should calculate total items correctly', () => {
+      expect(component.totalItems).toBe(10);
+    });
+
+    it('should update total items when filter changes', () => {
+      component.images = [
+        { id: 1, type: 'generated' } as GalleryImage,
+        { id: 2, type: 'uploaded' } as GalleryImage
+      ];
+      component.filterType = 'generated';
+      component.updateFilteredImages();
+      
+      expect(component.totalItems).toBe(1);
+    });
+
+    it('should check if has images', () => {
+      expect(component.hasImages).toBeTrue();
+      
+      component.images = [];
+      component.updateFilteredImages();
+      
+      expect(component.hasImages).toBeFalse();
+    });
+
+    it('should check if has filtered images', () => {
+      expect(component.hasFilteredImages).toBeTrue();
+      
+      component.filterType = 'nonexistent';
+      component.updateFilteredImages();
+      
+      expect(component.hasFilteredImages).toBeFalse();
+    });
+  });
+
+  describe('Selection State Management', () => {
+    beforeEach(() => {
+      component.images = [
+        { id: 1, type: 'generated' } as GalleryImage,
+        { id: 2, type: 'generated' } as GalleryImage,
+        { id: 3, type: 'uploaded' } as GalleryImage
+      ];
+      component.updateFilteredImages();
+    });
+
+    it('should check if all visible images are selected', () => {
+      component.selectedImages = [...component.filteredImages];
+      
+      expect(component.areAllSelected).toBeTrue();
+    });
+
+    it('should check if no images are selected', () => {
+      component.selectedImages = [];
+      
+      expect(component.areAllSelected).toBeFalse();
+    });
+
+    it('should check if some images are selected', () => {
+      component.selectedImages = [component.filteredImages[0]];
+      
+      expect(component.areAllSelected).toBeFalse();
+    });
+
+    it('should get selected count', () => {
+      component.selectedImages = [component.filteredImages[0]];
+      
+      expect(component.selectedCount).toBe(1);
+    });
+
+    it('should check if has selected images', () => {
+      component.selectedImages = [];
+      expect(component.hasSelectedImages).toBeFalse();
+      
+      component.selectedImages = [component.filteredImages[0]];
+      expect(component.hasSelectedImages).toBeTrue();
+    });
+  });
 });
 
 /**

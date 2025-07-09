@@ -1,84 +1,105 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { NgZone } from '@angular/core';
+import { of, throwError } from 'rxjs';
+import { CommonModule } from '@angular/common';
+import { RouterTestingModule } from '@angular/router/testing';
 
 import { DashboardComponent } from './dashboard.component';
-import { 
-  MockAuthService, 
-  MockDashboardStateService, 
-  MockNotificationService,
-  TestingHelpers
-} from '../testing/testing-utils';
-
 import { AuthService } from '../services/auth.service';
 import { DashboardStateService } from '../services/dashboard-state.service';
 import { NotificationService } from '../services/notification.service';
 import { FileUploadService } from '../services/file-upload.service';
-import { ReplicateService } from '../services/replicate.service';
 import { CreditService } from '../services/credit.service';
 import { StyleService } from '../services/style.service';
 import { ConfigService } from '../services/config.service';
+import { WorkflowOrchestrationService } from '../services/workflow-orchestration.service';
+import { StyleOption } from '../components/dashboard/style-selector/style-selector.component';
 
-/**
- * Dashboard Component Test Suite
- * 
- * Simplified tests that verify basic component functionality.
- * This serves as a safety net before refactoring the large dashboard component.
- */
 describe('DashboardComponent', () => {
   let component: DashboardComponent;
   let fixture: ComponentFixture<DashboardComponent>;
   let mockRouter: jasmine.SpyObj<Router>;
+  let mockAuthService: jasmine.SpyObj<AuthService>;
+  let mockDashboardStateService: jasmine.SpyObj<DashboardStateService>;
+  let mockNotificationService: jasmine.SpyObj<NotificationService>;
+  let mockFileUploadService: jasmine.SpyObj<FileUploadService>;
+  let mockCreditService: jasmine.SpyObj<CreditService>;
+  let mockStyleService: jasmine.SpyObj<StyleService>;
+  let mockConfigService: jasmine.SpyObj<ConfigService>;
+  let mockWorkflowService: jasmine.SpyObj<WorkflowOrchestrationService>;
   let mockNgZone: jasmine.SpyObj<NgZone>;
 
   beforeEach(async () => {
     // Create spy objects for dependencies
     mockRouter = jasmine.createSpyObj('Router', ['navigate']);
+    mockAuthService = jasmine.createSpyObj('AuthService', ['isAuthenticated']);
+    mockDashboardStateService = jasmine.createSpyObj('DashboardStateService', [
+      'loadInitialDashboardData', 'resetState', 'getState', 'setState', 'forceRefresh', 'enableGlobalDebug'
+    ]);
+    mockNotificationService = jasmine.createSpyObj('NotificationService', ['error', 'info', 'success']);
+    mockFileUploadService = jasmine.createSpyObj('FileUploadService', ['uploadImages', 'deleteImage']);
+    mockCreditService = jasmine.createSpyObj('CreditService', ['getCredits']);
+    mockStyleService = jasmine.createSpyObj('StyleService', ['getActiveStyles']);
+    mockConfigService = jasmine.createSpyObj('ConfigService', ['getApiUrl']);
+    mockWorkflowService = jasmine.createSpyObj('WorkflowOrchestrationService', [
+      'startTrainingWithStyles', 'calculateCredits', 'dismissSuccessMessage', 'dispose'
+    ]);
     mockNgZone = jasmine.createSpyObj('NgZone', ['run']);
 
+    // Setup default mock returns
+    mockAuthService.isAuthenticated.and.returnValue(true);
+    mockDashboardStateService.getState.and.returnValue({
+      uploadedImages: 0,
+      modelStatus: 'pending',
+      creditsInfo: { availableCredits: 3 },
+      userCreditStatus: { weeklyCredits: 3, purchasedCredits: 0 },
+      uploadedImageThumbnails: [],
+      generatedPhotosCount: 0
+    });
+    mockDashboardStateService.state$ = of({
+      uploadedImages: 0,
+      modelStatus: 'pending',
+      creditsInfo: { availableCredits: 3 },
+      userCreditStatus: { weeklyCredits: 3, purchasedCredits: 0 },
+      uploadedImageThumbnails: [],
+      generatedPhotosCount: 0
+    });
+    mockStyleService.getActiveStyles.and.returnValue(of({
+      success: true,
+      data: [
+        { id: 1, name: 'business', description: 'Professional business style' },
+        { id: 2, name: 'casual', description: 'Casual headshot style' }
+      ]
+    }));
+    mockConfigService.getApiUrl.and.returnValue('http://localhost:5000');
+    mockWorkflowService.progress$ = of({ 
+      isTraining: false, 
+      isGenerating: false, 
+      progress: 0, 
+      status: '' 
+    });
+    mockWorkflowService.calculateCredits.and.returnValue({
+      totalCredits: 0,
+      trainingCredits: 0,
+      generationCredits: 0,
+      hasEnoughCredits: true,
+      remainingCredits: 3
+    });
+
     await TestBed.configureTestingModule({
-      imports: [DashboardComponent],
+      imports: [DashboardComponent, CommonModule, RouterTestingModule],
       providers: [
-        { provide: AuthService, useClass: MockAuthService },
-        { provide: DashboardStateService, useClass: MockDashboardStateService },
-        { provide: NotificationService, useClass: MockNotificationService },
+        { provide: AuthService, useValue: mockAuthService },
+        { provide: DashboardStateService, useValue: mockDashboardStateService },
+        { provide: NotificationService, useValue: mockNotificationService },
+        { provide: FileUploadService, useValue: mockFileUploadService },
+        { provide: CreditService, useValue: mockCreditService },
+        { provide: StyleService, useValue: mockStyleService },
+        { provide: ConfigService, useValue: mockConfigService },
+        { provide: WorkflowOrchestrationService, useValue: mockWorkflowService },
         { provide: Router, useValue: mockRouter },
-        { provide: NgZone, useValue: mockNgZone },
-        // Mock other services with minimal implementations
-        { 
-          provide: FileUploadService, 
-          useValue: { 
-            uploadMultipleImages: () => Promise.resolve({ success: true, data: [] }),
-            deleteImage: () => Promise.resolve({ success: true })
-          } 
-        },
-        { 
-          provide: ReplicateService, 
-          useValue: { 
-            trainModel: () => Promise.resolve({ success: true, data: { id: 'mock-id' } }),
-            generateImages: () => Promise.resolve({ success: true, data: { id: 'mock-id' } })
-          } 
-        },
-        { 
-          provide: CreditService, 
-          useValue: { 
-            getCredits: () => Promise.resolve({ success: true, data: { totalCredits: 30 } })
-          } 
-        },
-        // FaceDetectionService no longer needed in DashboardComponent
-        { 
-          provide: StyleService, 
-          useValue: { 
-            getActiveStyles: () => Promise.resolve({ success: true, data: [] })
-          } 
-        },
-        { 
-          provide: ConfigService, 
-          useValue: { 
-            getApiUrl: () => 'http://localhost:5000'
-          } 
-        },
-        // FileUploadManagerService no longer needed in DashboardComponent
+        { provide: NgZone, useValue: mockNgZone }
       ]
     }).compileComponents();
 
@@ -93,191 +114,504 @@ describe('DashboardComponent', () => {
 
     it('should initialize with default values', () => {
       expect(component.currentStep).toBe(1);
-      // File-related properties are now handled by FileUploadSectionComponent
-      expect(component.isTraining).toBeFalse();
-      expect(component.isGenerating).toBeFalse();
+      expect(component.isTrainingStarted).toBeFalse();
+      expect(component.imagesPerStyle).toBe(2);
+      expect(component.availableStyles).toEqual([]);
+      expect(component.selectedStyles).toBe(0);
     });
 
-    it('should have observable state', () => {
+    it('should initialize observables', () => {
       expect(component.state$).toBeDefined();
+      expect(component.workflowProgress$).toBeDefined();
+    });
+
+    it('should redirect to login if not authenticated', () => {
+      mockAuthService.isAuthenticated.and.returnValue(false);
+      
+      component.ngOnInit();
+      
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/login']);
+    });
+
+    it('should load initial data when authenticated', () => {
+      component.ngOnInit();
+      
+      expect(mockDashboardStateService.loadInitialDashboardData).toHaveBeenCalled();
+      expect(mockStyleService.getActiveStyles).toHaveBeenCalled();
+      expect(mockDashboardStateService.enableGlobalDebug).toHaveBeenCalled();
     });
   });
 
-  describe('File Selection', () => {
-    it('should handle files selected event from FileUploadSectionComponent', () => {
-      const mockFiles = TestingHelpers.createMockFiles(3);
+  describe('State Management', () => {
+    it('should get uploaded images from state', () => {
+      mockDashboardStateService.getState.and.returnValue({
+        uploadedImages: 5,
+        modelStatus: 'pending',
+        creditsInfo: null,
+        userCreditStatus: null,
+        uploadedImageThumbnails: [],
+        generatedPhotosCount: 0
+      });
       
-      // File selection is now handled by FileUploadSectionComponent
+      expect(component.uploadedImages).toBe(5);
+    });
+
+    it('should get model status from state', () => {
+      mockDashboardStateService.getState.and.returnValue({
+        uploadedImages: 0,
+        modelStatus: 'training',
+        creditsInfo: null,
+        userCreditStatus: null,
+        uploadedImageThumbnails: [],
+        generatedPhotosCount: 0
+      });
+      
+      expect(component.modelStatus).toBe('training');
+    });
+
+    it('should get credits info from state', () => {
+      const mockCreditsInfo = { availableCredits: 10 };
+      mockDashboardStateService.getState.and.returnValue({
+        uploadedImages: 0,
+        modelStatus: 'pending',
+        creditsInfo: mockCreditsInfo,
+        userCreditStatus: null,
+        uploadedImageThumbnails: [],
+        generatedPhotosCount: 0
+      });
+      
+      expect(component.creditsInfo).toBe(mockCreditsInfo);
+    });
+
+    it('should get user credit status from state', () => {
+      const mockUserCreditStatus = { weeklyCredits: 3, purchasedCredits: 5 };
+      mockDashboardStateService.getState.and.returnValue({
+        uploadedImages: 0,
+        modelStatus: 'pending',
+        creditsInfo: null,
+        userCreditStatus: mockUserCreditStatus,
+        uploadedImageThumbnails: [],
+        generatedPhotosCount: 0
+      });
+      
+      expect(component.userCreditStatus).toBe(mockUserCreditStatus);
+    });
+
+    it('should update current step based on state changes', () => {
+      component.ngOnInit();
+      
+      // Mock state change with uploaded images
+      mockDashboardStateService.getState.and.returnValue({
+        uploadedImages: 5,
+        modelStatus: 'pending',
+        creditsInfo: null,
+        userCreditStatus: null,
+        uploadedImageThumbnails: [{ id: 1, url: 'test.jpg', fileName: 'test.jpg' }],
+        generatedPhotosCount: 0
+      });
+      
+      component['updateCurrentStep']();
+      expect(component.currentStep).toBe(2);
+    });
+  });
+
+  describe('Credit Calculations', () => {
+    it('should calculate total available credits correctly', () => {
+      mockDashboardStateService.getState.and.returnValue({
+        uploadedImages: 0,
+        modelStatus: 'pending',
+        creditsInfo: { availableCredits: 3 },
+        userCreditStatus: { weeklyCredits: 3, purchasedCredits: 5 },
+        uploadedImageThumbnails: [],
+        generatedPhotosCount: 0
+      });
+      
+      expect(component.getTotalAvailableCredits()).toBe(8);
+    });
+
+    it('should get purchased credits correctly', () => {
+      mockDashboardStateService.getState.and.returnValue({
+        uploadedImages: 0,
+        modelStatus: 'pending',
+        creditsInfo: null,
+        userCreditStatus: { weeklyCredits: 3, purchasedCredits: 10 },
+        uploadedImageThumbnails: [],
+        generatedPhotosCount: 0
+      });
+      
+      expect(component.getPurchasedCredits()).toBe(10);
+    });
+
+    it('should get weekly credits correctly', () => {
+      mockDashboardStateService.getState.and.returnValue({
+        uploadedImages: 0,
+        modelStatus: 'pending',
+        creditsInfo: { availableCredits: 3 },
+        userCreditStatus: { weeklyCredits: 5, purchasedCredits: 0 },
+        uploadedImageThumbnails: [],
+        generatedPhotosCount: 0
+      });
+      
+      expect(component.getWeeklyCredits()).toBe(5);
+    });
+
+    it('should fallback to creditsInfo when userCreditStatus is null', () => {
+      mockDashboardStateService.getState.and.returnValue({
+        uploadedImages: 0,
+        modelStatus: 'pending',
+        creditsInfo: { availableCredits: 3 },
+        userCreditStatus: null,
+        uploadedImageThumbnails: [],
+        generatedPhotosCount: 0
+      });
+      
+      expect(component.getWeeklyCredits()).toBe(3);
+    });
+
+    it('should delegate credit calculations to workflow service', () => {
+      mockWorkflowService.calculateCredits.and.returnValue({
+        totalCredits: 20,
+        trainingCredits: 15,
+        generationCredits: 5,
+        hasEnoughCredits: true,
+        remainingCredits: 10
+      });
+      
+      expect(component.calculateTotalCredits()).toBe(20);
+      expect(component.calculateTrainingCredits()).toBe(15);
+      expect(component.calculateGenerationCredits()).toBe(5);
+      expect(component.hasEnoughCredits()).toBeTrue();
+      expect(component.getRemainingCredits()).toBe(10);
+    });
+  });
+
+  describe('Credit Actions', () => {
+    it('should navigate to packages for purchase action', () => {
+      component.onCreditAction({ action: 'purchase' });
+      
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/packages']);
+    });
+
+    it('should navigate to packages for viewPackages action', () => {
+      component.onCreditAction({ action: 'viewPackages' });
+      
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/packages']);
+    });
+
+    it('should navigate to premium for upgrade action', () => {
+      component.onCreditAction({ action: 'upgrade' });
+      
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/premium']);
+    });
+
+    it('should log warning for unknown action', () => {
+      spyOn(console, 'warn');
+      
+      component.onCreditAction({ action: 'unknown' });
+      
+      expect(console.warn).toHaveBeenCalledWith('Unknown credit action:', 'unknown');
+    });
+  });
+
+  describe('Style Management', () => {
+    it('should load available styles successfully', () => {
+      component.ngOnInit();
+      
+      expect(component.availableStyles).toEqual([
+        {
+          id: '1',
+          name: 'business',
+          description: 'Professional business style',
+          previewUrl: 'http://localhost:5000/style-previews/business.jpg?v=' + jasmine.any(Number),
+          selected: false
+        },
+        {
+          id: '2',
+          name: 'casual',
+          description: 'Casual headshot style',
+          previewUrl: 'http://localhost:5000/style-previews/casual.jpg?v=' + jasmine.any(Number),
+          selected: false
+        }
+      ]);
+    });
+
+    it('should handle style loading error', () => {
+      mockStyleService.getActiveStyles.and.returnValue(throwError('Error loading styles'));
+      
+      component.ngOnInit();
+      
+      expect(mockNotificationService.error).toHaveBeenCalledWith(
+        'Style Load Failed',
+        'Could not load available styles. Please refresh the page.'
+      );
+    });
+
+    it('should handle style service returning unsuccessful response', () => {
+      mockStyleService.getActiveStyles.and.returnValue(of({
+        success: false,
+        error: 'Database error'
+      }));
+      
+      component.ngOnInit();
+      
+      expect(mockNotificationService.error).toHaveBeenCalledWith(
+        'Style Load Failed',
+        'Could not load available styles. Please refresh the page.'
+      );
+    });
+
+    it('should select all styles', () => {
+      component.availableStyles = [
+        { id: '1', name: 'business', description: 'Business', previewUrl: 'url1', selected: false },
+        { id: '2', name: 'casual', description: 'Casual', previewUrl: 'url2', selected: false }
+      ];
+      
+      component.selectAllStyles();
+      
+      expect(component.availableStyles.every(s => s.selected)).toBeTrue();
+      expect(component.selectedStyles).toBe(2);
+    });
+
+    it('should deselect all styles', () => {
+      component.availableStyles = [
+        { id: '1', name: 'business', description: 'Business', previewUrl: 'url1', selected: true },
+        { id: '2', name: 'casual', description: 'Casual', previewUrl: 'url2', selected: true }
+      ];
+      
+      component.deselectAllStyles();
+      
+      expect(component.availableStyles.every(s => !s.selected)).toBeTrue();
+      expect(component.selectedStyles).toBe(0);
+    });
+
+    it('should toggle individual style', () => {
+      const style: StyleOption = { id: '1', name: 'business', description: 'Business', previewUrl: 'url1', selected: false };
+      
+      component.toggleStyle(style);
+      
+      expect(style.selected).toBeTrue();
+    });
+
+    it('should get selected styles count', () => {
+      component.availableStyles = [
+        { id: '1', name: 'business', description: 'Business', previewUrl: 'url1', selected: true },
+        { id: '2', name: 'casual', description: 'Casual', previewUrl: 'url2', selected: false },
+        { id: '3', name: 'professional', description: 'Professional', previewUrl: 'url3', selected: true }
+      ];
+      
+      expect(component.getSelectedStylesCount()).toBe(2);
+    });
+  });
+
+  describe('File Upload Events', () => {
+    it('should handle files selected event', () => {
+      const mockFiles = [new File(['content'], 'test.jpg', { type: 'image/jpeg' })];
+      
       component.onFilesSelected(mockFiles);
       
-      // This should not throw any errors
-      expect(true).toBeTrue();
+      // Should not throw any errors
+      expect(component).toBeTruthy();
     });
 
-    it('should handle upload progress event from FileUploadSectionComponent', () => {
-      // Upload progress is now handled by FileUploadSectionComponent
-      component.onUploadProgress(50);
+    it('should handle upload completed event', () => {
+      const mockUploadedFiles = [{ id: 1, url: 'test.jpg', fileName: 'test.jpg' }];
       
-      // This should not throw any errors
-      expect(true).toBeTrue();
+      component.onUploadCompleted(mockUploadedFiles);
+      
+      expect(mockDashboardStateService.forceRefresh).toHaveBeenCalled();
+    });
+
+    it('should handle upload progress event', () => {
+      component.onUploadProgress(75);
+      
+      // Should not throw any errors
+      expect(component).toBeTruthy();
+    });
+
+    it('should handle uploaded image deleted event', () => {
+      const mockThumb = { id: 1, url: 'test.jpg', fileName: 'test.jpg' };
+      const mockEvent = { thumb: mockThumb, index: 0 };
+      
+      mockDashboardStateService.getState.and.returnValue({
+        uploadedImages: 1,
+        modelStatus: 'pending',
+        creditsInfo: null,
+        userCreditStatus: null,
+        uploadedImageThumbnails: [mockThumb],
+        generatedPhotosCount: 0
+      });
+      
+      component.onUploadedImageDeleted(mockEvent);
+      
+      expect(mockDashboardStateService.setState).toHaveBeenCalledWith({
+        uploadedImageThumbnails: [],
+        uploadedImages: 0
+      });
+    });
+
+    it('should handle refresh required from uploaded image deleted event', () => {
+      const mockEvent = { thumb: null, index: -1, refreshRequired: true };
+      
+      component.onUploadedImageDeleted(mockEvent);
+      
+      expect(mockDashboardStateService.forceRefresh).toHaveBeenCalled();
     });
   });
 
-  describe('Workflow State Management', () => {
-    it('should track current step', () => {
-      expect(component.currentStep).toBe(1);
+  describe('Training Workflow', () => {
+    it('should start training with selected styles', async () => {
+      component.availableStyles = [
+        { id: '1', name: 'business', description: 'Business', previewUrl: 'url1', selected: true },
+        { id: '2', name: 'casual', description: 'Casual', previewUrl: 'url2', selected: false }
+      ];
+      component.imagesPerStyle = 3;
       
-      component.currentStep = 2;
+      await component.startTrainingWithStyles();
+      
+      expect(component.isTrainingStarted).toBeTrue();
+      expect(component.currentStep).toBe(3);
+      expect(mockWorkflowService.startTrainingWithStyles).toHaveBeenCalledWith(
+        [{ id: '1', name: 'business', description: 'Business', previewUrl: 'url1', selected: true }],
+        3
+      );
+    });
+
+    it('should handle training workflow error', async () => {
+      mockWorkflowService.startTrainingWithStyles.and.returnValue(Promise.reject('Training failed'));
+      
+      await component.startTrainingWithStyles();
+      
+      expect(component.isTrainingStarted).toBeFalse();
       expect(component.currentStep).toBe(2);
     });
 
-    it('should track training state', () => {
-      expect(component.isTraining).toBeFalse();
+    it('should handle style selector events', () => {
+      const mockStyle: StyleOption = { id: '1', name: 'business', description: 'Business', previewUrl: 'url1', selected: false };
       
-      component.isTraining = true;
-      expect(component.isTraining).toBeTrue();
-    });
-
-    it('should track generation state', () => {
-      expect(component.isGenerating).toBeFalse();
+      component.onStyleToggled(mockStyle);
+      component.onImagesPerStyleChanged(4);
+      component.onSelectAllStyles();
+      component.onDeselectAllStyles();
+      component.onStartTraining();
+      component.onDismissSuccessMessage();
       
-      component.isGenerating = true;
-      expect(component.isGenerating).toBeTrue();
-    });
-
-    it('should track selected styles count', () => {
-      component.selectedStyles = 3;
-      expect(component.selectedStyles).toBe(3);
-    });
-  });
-
-  describe('Progress Tracking', () => {
-    it('should track progress percentage', () => {
-      component.progressPercentage = 75;
-      expect(component.progressPercentage).toBe(75);
-    });
-
-    it('should handle quality check progress from FileUploadSectionComponent', () => {
-      // Quality check progress is now handled by FileUploadSectionComponent
-      // This test verifies the component doesn't break when events are received
-      expect(true).toBeTrue();
-    });
-
-    it('should track estimated completion', () => {
-      component.estimatedCompletion = '5 minutes remaining';
-      expect(component.estimatedCompletion).toBe('5 minutes remaining');
-    });
-  });
-
-  describe('Data Collections', () => {
-    it('should manage available styles', () => {
-      const mockStyles = [
-        { id: '1', name: 'corporate', description: 'Professional corporate style', previewUrl: 'corporate.jpg', selected: false },
-        { id: '2', name: 'casual', description: 'Casual everyday style', previewUrl: 'casual.jpg', selected: false }
-      ];
-      
-      component.availableStyles = mockStyles;
-      expect(component.availableStyles.length).toBe(2);
-    });
-
-    it('should manage gallery images', () => {
-      const mockImages = [
-        { id: 1, url: 'image1.jpg', title: 'Image 1', type: 'generated', status: 'completed', createdAt: new Date() }
-      ];
-      
-      component.galleryImages = mockImages as any;
-      expect(component.galleryImages.length).toBe(1);
-    });
-
-    it('should handle quality check errors from FileUploadSectionComponent', () => {
-      // Quality check errors are now handled by FileUploadSectionComponent
-      // This test verifies the component doesn't break
-      expect(true).toBeTrue();
-    });
-  });
-
-  describe('Configuration Properties', () => {
-    it('should have configurable images per style', () => {
-      expect(component.imagesPerStyle).toBe(2);
-      
-      component.imagesPerStyle = 4;
+      expect(mockStyle.selected).toBeTrue();
       expect(component.imagesPerStyle).toBe(4);
+      expect(mockWorkflowService.dismissSuccessMessage).toHaveBeenCalled();
+    });
+  });
+
+  describe('Workflow Step Management', () => {
+    it('should get step status correctly', () => {
+      mockDashboardStateService.getState.and.returnValue({
+        uploadedImages: 0,
+        modelStatus: 'pending',
+        creditsInfo: null,
+        userCreditStatus: null,
+        uploadedImageThumbnails: [],
+        generatedPhotosCount: 0
+      });
+      
+      expect(component.getStepStatus(1)).toBe('active');
+      expect(component.getStepStatus(2)).toBe('pending');
+      expect(component.getStepStatus(3)).toBe('pending');
     });
 
-    it('should track training ID', () => {
-      component.trainingId = 'mock-training-id';
-      expect(component.trainingId).toBe('mock-training-id');
+    it('should get step status with uploaded images', () => {
+      mockDashboardStateService.getState.and.returnValue({
+        uploadedImages: 5,
+        modelStatus: 'pending',
+        creditsInfo: null,
+        userCreditStatus: null,
+        uploadedImageThumbnails: [{ id: 1, url: 'test.jpg', fileName: 'test.jpg' }],
+        generatedPhotosCount: 0
+      });
+      
+      expect(component.getStepStatus(1)).toBe('completed');
+      expect(component.getStepStatus(2)).toBe('active');
+      expect(component.getStepStatus(3)).toBe('pending');
     });
 
-    it('should track training zip path', () => {
-      component.trainingZipPath = '/path/to/training.zip';
-      expect(component.trainingZipPath).toBe('/path/to/training.zip');
+    it('should get step status with generated photos', () => {
+      mockDashboardStateService.getState.and.returnValue({
+        uploadedImages: 5,
+        modelStatus: 'completed',
+        creditsInfo: null,
+        userCreditStatus: null,
+        uploadedImageThumbnails: [{ id: 1, url: 'test.jpg', fileName: 'test.jpg' }],
+        generatedPhotosCount: 8
+      });
+      
+      expect(component.getStepStatus(1)).toBe('completed');
+      expect(component.getStepStatus(2)).toBe('completed');
+      expect(component.getStepStatus(3)).toBe('completed');
+    });
+
+    it('should get step status text', () => {
+      expect(component.getStepStatusText(1)).toBe('In Progress');
+      
+      mockDashboardStateService.getState.and.returnValue({
+        uploadedImages: 5,
+        modelStatus: 'pending',
+        creditsInfo: null,
+        userCreditStatus: null,
+        uploadedImageThumbnails: [{ id: 1, url: 'test.jpg', fileName: 'test.jpg' }],
+        generatedPhotosCount: 0
+      });
+      
+      expect(component.getStepStatusText(1)).toBe('Completed');
+      expect(component.getStepStatusText(3)).toBe('Pending');
+    });
+  });
+
+  describe('Utility Methods', () => {
+    it('should handle image error', () => {
+      const mockEvent = {
+        target: {
+          src: 'broken-image.jpg',
+          onerror: jasmine.createSpy('onerror')
+        }
+      };
+      
+      component.onImageError(mockEvent);
+      
+      expect(mockEvent.target.src).toBe('http://localhost:5000/api/placeholder/style-preview');
+      expect(mockEvent.target.onerror).toBeNull();
+    });
+
+    it('should check if premium workflow', () => {
+      expect(component.isPremiumWorkflow()).toBeTrue();
+    });
+
+    it('should continue in background', () => {
+      component.continueInBackground();
+      
+      expect(mockNotificationService.info).toHaveBeenCalledWith(
+        'Continuing in Background',
+        jasmine.any(String)
+      );
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/gallery'], {
+        queryParams: { refresh: jasmine.any(Number) }
+      });
+    });
+
+    it('should handle download all by redirecting to gallery', async () => {
+      await component.downloadAll();
+      
+      expect(mockNotificationService.info).toHaveBeenCalledWith(
+        'Gallery Navigation',
+        jasmine.any(String)
+      );
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/gallery']);
     });
   });
 
   describe('Component Cleanup', () => {
-    it('should implement OnDestroy', () => {
-      expect(component.ngOnDestroy).toBeDefined();
-    });
-
-    it('should clear polling intervals on destroy', () => {
-      component.photoCompletionPollingInterval = setInterval(() => {}, 1000);
-      
+    it('should cleanup on destroy', () => {
       component.ngOnDestroy();
       
-      // The component should handle cleanup
-      expect(component).toBeTruthy();
+      expect(mockDashboardStateService.resetState).toHaveBeenCalled();
+      expect(mockWorkflowService.dispose).toHaveBeenCalled();
     });
-  });
-});
-
-/**
- * Integration Tests for Dashboard Component
- */
-describe('DashboardComponent Integration Tests', () => {
-  let component: DashboardComponent;
-  let fixture: ComponentFixture<DashboardComponent>;
-
-  beforeEach(async () => {
-    await TestingHelpers.setupTestModule(DashboardComponent, [
-      { provide: Router, useValue: jasmine.createSpyObj('Router', ['navigate']) },
-      { provide: NgZone, useValue: jasmine.createSpyObj('NgZone', ['run']) }
-    ]);
-    
-    fixture = TestBed.createComponent(DashboardComponent);
-    component = fixture.componentInstance;
-  });
-
-  it('should initialize and maintain consistent state', () => {
-    expect(component).toBeTruthy();
-    expect(component.currentStep).toBe(1);
-    
-    // File selection is now handled by FileUploadSectionComponent
-    
-    // Simulate workflow progression
-    component.currentStep = 2;
-    component.isTraining = true;
-    
-    expect(component.currentStep).toBe(2);
-    expect(component.isTraining).toBeTrue();
-  });
-
-  it('should handle state transitions smoothly', () => {
-    // Initial state - upload state is now handled by FileUploadSectionComponent
-    expect(component.isTraining).toBeFalse();
-    expect(component.isGenerating).toBeFalse();
-    
-    // Training state
-    component.isTraining = true;
-    expect(component.isTraining).toBeTrue();
-    
-    // Generation state
-    component.isTraining = false;
-    component.isGenerating = true;
-    expect(component.isGenerating).toBeTrue();
-    
-    // Completion state
-    component.isGenerating = false;
-    expect(component.isGenerating).toBeFalse();
   });
 });
