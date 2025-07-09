@@ -133,11 +133,7 @@
                 [maxFiles]="20"
                 [maxFileSize]="7 * 1024 * 1024"
                 [allowedTypes]="['image/jpeg', 'image/png', 'image/webp']"
-                (filesSelected)="onFilesSelected($event)"
                 (uploadCompleted)="onUploadCompleted($event)"
-                (uploadProgress)="onUploadProgress($event)"
-                (qualityCheckCompleted)="onQualityCheckCompleted($event)"
-                (fileRemoved)="onFileRemoved($event)"
                 (uploadedImageDeleted)="onUploadedImageDeleted($event)">
               </app-file-upload-section>
             </div>
@@ -181,13 +177,13 @@
                 [estimatedCompletion]="(workflowProgress$ | async)?.estimatedCompletion || ''"
                 [lastGenerationCount]="(workflowProgress$ | async)?.lastGenerationCount || 0"
                 [showLastGenerationMessage]="(workflowProgress$ | async)?.showLastGenerationMessage || false"
-                (styleToggled)="onStyleToggled($event)"
+                (styleToggled)="toggleStyle($event)"
                 (imagesPerStyleChanged)="onImagesPerStyleChanged($event)"
-                (selectAllStyles)="onSelectAllStyles()"
-                (deselectAllStyles)="onDeselectAllStyles()"
-                (startTraining)="onStartTraining()"
+                (selectAllStyles)="selectAllStyles()"
+                (deselectAllStyles)="deselectAllStyles()"
+                (startTraining)="startTrainingWithStyles()"
                 (continueInBackground)="continueInBackground()"
-                (dismissSuccessMessage)="onDismissSuccessMessage()">
+                (dismissSuccessMessage)="workflowService.dismissSuccessMessage()">
               </app-style-selector>
               
             </div>

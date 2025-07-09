@@ -110,7 +110,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     public creditService: CreditService,
     public stateService: DashboardStateService,
     private config: ConfigService,
-    private workflowService: WorkflowOrchestrationService,
+    public workflowService: WorkflowOrchestrationService,
     private workflowStepService: WorkflowStepService
   ) {
     this.state$ = this.stateService.state$;
@@ -179,8 +179,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   // UI Event Handlers
-  onFilesSelected(_files: File[]) { /* Dashboard awareness only */ }
-
   onUploadCompleted(uploadedFiles: unknown[]) {
     console.log('Upload completed, refreshing images from server:', uploadedFiles);
     this.refreshUploadedImagesFromServer();
@@ -192,10 +190,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       }
     }, 1000);
   }
-
-  onUploadProgress(_progress: number) { /* Dashboard awareness only */ }
-  onQualityCheckCompleted(_result: QualityCheckResult) { /* Dashboard awareness only */ }
-  onFileRemoved(_index: number) { /* Dashboard awareness only */ }
 
   onUploadedImageDeleted(event: { thumb: unknown, index: number, refreshRequired?: boolean }) {
     const { thumb, refreshRequired } = event;
@@ -241,28 +235,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.selectedStyles = this.getSelectedStylesCount();
   }
 
-  onStyleToggled(style: StyleOption) {
-    this.toggleStyle(style);
-  }
-
   onImagesPerStyleChanged(count: number) {
     this.imagesPerStyle = count;
-  }
-
-  onSelectAllStyles() {
-    this.selectAllStyles();
-  }
-
-  onDeselectAllStyles() {
-    this.deselectAllStyles();
-  }
-
-  onStartTraining() {
-    this.startTrainingWithStyles();
-  }
-
-  onDismissSuccessMessage() {
-    this.workflowService.dismissSuccessMessage();
   }
 
   async startTrainingWithStyles() {
