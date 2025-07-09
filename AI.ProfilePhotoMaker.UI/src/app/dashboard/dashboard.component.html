@@ -11,19 +11,19 @@
         <div class="stats-grid">
           <app-stats-card 
             icon="📸" 
-            [value]="uploadedImages" 
+            [value]="stateService.getState().uploadedImages" 
             label="Selfies Uploaded">
           </app-stats-card>
           <app-stats-card 
             icon="⚡" 
-            [value]="generatedPhotosCount" 
+            [value]="stateService.getState().generatedPhotosCount" 
             label="Photos Generated"
-            [isClickable]="generatedPhotosCount > 0"
+            [isClickable]="stateService.getState().generatedPhotosCount > 0"
             clickAction="gallery">
           </app-stats-card>
           <app-stats-card 
             icon="🤖" 
-            [value]="modelStatus" 
+            [value]="stateService.getState().modelStatus" 
             label="Model Status"
             [isModelStatus]="true">
           </app-stats-card>
@@ -34,7 +34,7 @@
             [showCard]="true"
             [isClickable]="true"
             clickAction="settings"
-            [isLoading]="!creditsInfo && !userCreditStatus">
+            [isLoading]="!stateService.getState().creditsInfo && !stateService.getState().userCreditStatus">
           </app-stats-card>
         </div>
       </section>
@@ -95,9 +95,9 @@
           
           <!-- Credit Display Component -->
           <app-credit-display
-            [creditsInfo]="creditsInfo"
-            [userCreditStatus]="userCreditStatus"
-            [isLoading]="!creditsInfo && !userCreditStatus"
+            [creditsInfo]="stateService.getState().creditsInfo"
+            [userCreditStatus]="stateService.getState().userCreditStatus"
+            [isLoading]="!stateService.getState().creditsInfo && !stateService.getState().userCreditStatus"
             [showPurchasePrompt]="true"
             (creditActionRequested)="onCreditAction($event)">
           </app-credit-display>
@@ -112,7 +112,7 @@
         <div class="workflow-steps">
           
           <!-- Step 1: Upload Selfies -->
-          <div class="step-card" [class.completed]="uploadedImages > 0 || uploadedImageThumbnails.length > 0" [class.active]="currentStep === 1">
+          <div class="step-card" [class.completed]="stateService.getState().uploadedImages > 0 || stateService.getState().uploadedImageThumbnails.length > 0" [class.active]="currentStep === 1">
             <div class="step-header">
               <div class="step-number">1</div>
               <div class="step-title">
@@ -125,10 +125,10 @@
                 </span>
               </div>
             </div>
-            <div class="step-content" *ngIf="currentStep === 1 || uploadedImages === 0 || uploadedImageThumbnails.length > 0">
+            <div class="step-content" *ngIf="currentStep === 1 || stateService.getState().uploadedImages === 0 || stateService.getState().uploadedImageThumbnails.length > 0">
               <!-- File Upload Section Component -->
               <app-file-upload-section
-                [uploadedImageThumbnails]="uploadedImageThumbnails"
+                [uploadedImageThumbnails]="stateService.getState().uploadedImageThumbnails"
                 [currentStep]="currentStep"
                 [maxFiles]="20"
                 [maxFileSize]="7 * 1024 * 1024"
@@ -140,13 +140,13 @@
           </div>
 
           <!-- Step 2: Generate Images -->
-          <div class="step-card" [class.completed]="generatedPhotosCount > 0" [class.active]="currentStep === 2">
+          <div class="step-card" [class.completed]="stateService.getState().generatedPhotosCount > 0" [class.active]="currentStep === 2">
             <div class="step-header">
               <div class="step-number">2</div>
               <div class="step-title">
                 <h3>Generate Your Professional Photos</h3>
-                <p *ngIf="modelStatus !== 'trained'">Select styles and we'll train your model then generate photos</p>
-                <p *ngIf="modelStatus === 'trained'">Select styles to generate photos with your trained model</p>
+                <p *ngIf="stateService.getState().modelStatus !== 'trained'">Select styles and we'll train your model then generate photos</p>
+                <p *ngIf="stateService.getState().modelStatus === 'trained'">Select styles to generate photos with your trained model</p>
               </div>
               <div class="step-status">
                 <span class="status-badge" [ngClass]="getStepStatus(2)">
@@ -154,7 +154,7 @@
                 </span>
               </div>
             </div>
-            <div class="step-content" *ngIf="uploadedImages > 0 || uploadedImageThumbnails.length > 0">
+            <div class="step-content" *ngIf="stateService.getState().uploadedImages > 0 || stateService.getState().uploadedImageThumbnails.length > 0">
               
               
               <!-- Style Selector Component -->
@@ -168,8 +168,8 @@
                 [hasEnoughCredits]="hasEnoughCredits()"
                 [remainingCredits]="getRemainingCredits()"
                 [isTrainingStarted]="isTrainingStarted"
-                [modelStatus]="modelStatus"
-                [uploadedImageCount]="uploadedImageThumbnails.length"
+                [modelStatus]="stateService.getState().modelStatus"
+                [uploadedImageCount]="stateService.getState().uploadedImageThumbnails.length"
                 [isTraining]="(workflowProgress$ | async)?.isTraining || false"
                 [isGenerating]="(workflowProgress$ | async)?.isGenerating || false"
                 [progressPercentage]="(workflowProgress$ | async)?.progressPercentage || 0"
@@ -190,7 +190,7 @@
           </div>
 
           <!-- Step 3: View Generated Photos -->
-          <div class="step-card" [class.completed]="generatedPhotosCount > 0" [class.active]="getStepStatus(3) === 'active'">
+          <div class="step-card" [class.completed]="stateService.getState().generatedPhotosCount > 0" [class.active]="getStepStatus(3) === 'active'">
             <div class="step-header">
               <div class="step-number">3</div>
               <div class="step-title">
@@ -203,7 +203,7 @@
                 </span>
               </div>
             </div>
-            <div class="step-content" *ngIf="generatedPhotosCount > 0">
+            <div class="step-content" *ngIf="stateService.getState().generatedPhotosCount > 0">
               <!-- Data Retention Notice -->
               <div class="retention-notice">
                 <div class="alert alert-info">
@@ -224,7 +224,7 @@
                     <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
                     <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2"/>
                   </svg>
-                  <span>View & Download All ({{generatedPhotosCount}} photos)</span>
+                  <span>View & Download All ({{stateService.getState().generatedPhotosCount}} photos)</span>
                 </button>
               </div>
             </div>
