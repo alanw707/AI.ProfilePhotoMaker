@@ -1,8 +1,8 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, Injector, OnDestroy, OnInit } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Observable } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 
 import { HeaderNavigationComponent } from '../shared/header-navigation/header-navigation.component';
 import { StatsCardComponent } from '../components/dashboard/stats-card/stats-card.component';
@@ -16,7 +16,34 @@ import { NotificationService } from '../services/notification.service';
 import { CreditService } from '../services/credit.service';
 import { DashboardStateService } from '../services/dashboard-state.service';
 import { ConfigService } from '../services/config.service';
-import { WorkflowOrchestrationService, WorkflowProgress } from '../services/workflow-orchestration.service';
+// Lazy-loaded service types
+interface WorkflowProgress {
+  isTraining: boolean;
+  isGenerating: boolean;
+  progressPercentage: number;
+  progressMessage: string;
+  estimatedCompletion: string;
+  trainingId: string;
+  generationStartTime: number;
+  expectedGenerationTime: number;
+  lastGenerationCount: number;
+  showLastGenerationMessage: boolean;
+  activePredictionIds: string[];
+}
+
+interface WorkflowOrchestrationService {
+  progress$: Observable<WorkflowProgress>;
+  startTrainingWithStyles(selectedStyles: StyleOption[], imagesPerStyle: number): Promise<void>;
+  calculateCredits(selectedStyles: StyleOption[], imagesPerStyle: number, modelStatus: string): {
+    trainingCredits: number;
+    generationCredits: number;
+    totalCredits: number;
+    hasEnoughCredits: boolean;
+    remainingCredits: number;
+  };
+  dismissSuccessMessage(): void;
+  dispose(): void;
+}
 import { WorkflowStepService } from '../services/workflow-step.service';
 
 
@@ -47,6 +74,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
   imagesPerStyle = 2;
   availableStyles: StyleOption[] = [];
   selectedStyles = 0;
+
+  // Lazy-loaded service
+  private workflowService: WorkflowOrchestrationService | null = null;
+  private workflowProgressSubject = new BehaviorSubject<WorkflowProgress>({
+    isTraining: false,
+    isGenerating: false,
+    progressPercentage: 0,
+    progressMessage: '',
+    estimatedCompletion: '',
+    trainingId: '',
+    generationStartTime: 0,
+    expectedGenerationTime: 0,
+    lastGenerationCount: 0,
+    showLastGenerationMessage: false,
+    activePredictionIds: []
+  });
 
   // State-based getters for template - removed, using stateService.getState() directly
 
@@ -84,11 +127,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     public creditService: CreditService,
     public stateService: DashboardStateService,
     private config: ConfigService,
-    public workflowService: WorkflowOrchestrationService,
-    private workflowStepService: WorkflowStepService
+    private workflowStepService: WorkflowStepService,
+    private injector: Injector
   ) {
     this.state$ = this.stateService.state$;
-    this.workflowProgress$ = this.workflowService.progress$;
+    this.workflowProgress$ = this.workflowProgressSubject.asObservable();
     
     // Enable debug methods for troubleshooting
     this.stateService.enableGlobalDebug();
@@ -114,7 +157,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
   ngOnDestroy() {
     this.stateService.resetState();
-    this.workflowService.dispose();
+    if (this.workflowService) {
+      this.workflowService.dispose();
+    }
+    this.workflowProgressSubject.complete();
   }
   private updateCurrentStep() {
     this.currentStep = this.workflowStepService.updateCurrentStep(
@@ -213,13 +259,39 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.imagesPerStyle = count;
   }
 
+  private async loadWorkflowService(): Promise<void> {
+    try {
+      // Dynamically import the WorkflowOrchestrationService
+      const { WorkflowOrchestrationService } = await import('../services/workflow-orchestration.service');
+      
+      // Get the service instance from the injector
+      this.workflowService = this.injector.get(WorkflowOrchestrationService);
+      
+      // Subscribe to progress updates and forward them to our proxy observable
+      this.workflowService.progress$.subscribe(progress => {
+        this.workflowProgressSubject.next(progress);
+      });
+      
+    } catch (error) {
+      console.error('Failed to load WorkflowOrchestrationService:', error);
+      throw error;
+    }
+  }
+
   async startTrainingWithStyles() {
     const selectedStyles = this.availableStyles.filter(s => s.selected);
     this.isTrainingStarted = true;
     this.currentStep = 3;
 
     try {
-      await this.workflowService.startTrainingWithStyles(selectedStyles, this.imagesPerStyle);
+      // Lazy load the WorkflowOrchestrationService
+      if (!this.workflowService) {
+        await this.loadWorkflowService();
+      }
+      
+      if (this.workflowService) {
+        await this.workflowService.startTrainingWithStyles(selectedStyles, this.imagesPerStyle);
+      }
     } catch (error) {
       console.error('Error in training workflow:', error);
       this.isTrainingStarted = false;
@@ -255,10 +327,59 @@ export class DashboardComponent implements OnInit, OnDestroy {
     );
   }
 
-  // Credit calculation methods
+  // Credit calculation methods - now handle lazy loading
   private getCreditCalculation() {
     const selectedStyles = this.availableStyles.filter(s => s.selected);
+    
+    // If workflow service is not loaded yet, return default values
+    if (!this.workflowService) {
+      return this.calculateCreditsLocally(selectedStyles, this.imagesPerStyle, this.stateService.getState().modelStatus);
+    }
+    
     return this.workflowService.calculateCredits(selectedStyles, this.imagesPerStyle, this.stateService.getState().modelStatus);
+  }
+
+  // Local credit calculation to avoid loading the service just for credit display
+  private calculateCreditsLocally(selectedStyles: StyleOption[], imagesPerStyle: number, modelStatus: string) {
+    const trainingCredits = this.calculateTrainingCreditsLocally(modelStatus);
+    const generationCredits = this.calculateGenerationCreditsLocally(selectedStyles, imagesPerStyle);
+    const totalCredits = trainingCredits + generationCredits;
+    
+    const availableCredits = this.getTotalAvailableCreditsLocally();
+    const hasEnoughCredits = availableCredits >= totalCredits;
+    const remainingCredits = availableCredits - totalCredits;
+
+    return {
+      trainingCredits,
+      generationCredits,
+      totalCredits,
+      hasEnoughCredits,
+      remainingCredits
+    };
+  }
+
+  private calculateTrainingCreditsLocally(modelStatus: string): number {
+    if (modelStatus === 'Model Ready') {
+      return 0; // Model already trained, no additional cost
+    }
+    return 15; // Training required - 15 credits
+  }
+
+  private calculateGenerationCreditsLocally(selectedStyles: StyleOption[], imagesPerStyle: number): number {
+    const generationCostPerImage = 5; // 5 credits per image generated
+    const selectedStyleCount = selectedStyles.length;
+    const totalImages = selectedStyleCount * imagesPerStyle;
+    return totalImages * generationCostPerImage;
+  }
+
+  private getTotalAvailableCreditsLocally(): number {
+    const userCreditStatus = this.stateService.getState().userCreditStatus;
+    const creditsInfo = this.stateService.getState().creditsInfo;
+    
+    const weeklyCredits = userCreditStatus?.weeklyCredits || creditsInfo?.availableCredits || 0;
+    const purchasedCredits = userCreditStatus?.purchasedCredits || 0;
+    
+    return weeklyCredits + purchasedCredits;
   }
 
   calculateTotalCredits(): number {
@@ -294,6 +415,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.router.navigate(['/gallery'], { 
       queryParams: { refresh: Date.now() } 
     });
+  }
+
+  // Method to handle dismissing success message
+  dismissSuccessMessage() {
+    if (this.workflowService) {
+      this.workflowService.dismissSuccessMessage();
+    } else {
+      // If service not loaded, update local state
+      this.workflowProgressSubject.next({
+        ...this.workflowProgressSubject.value,
+        showLastGenerationMessage: false,
+        lastGenerationCount: 0
+      });
+    }
   }
 
 }
