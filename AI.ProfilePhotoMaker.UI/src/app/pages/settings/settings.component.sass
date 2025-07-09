@@ -100,54 +100,7 @@
       margin: 0
       font-size: 0.95rem
 
-// Account Information
-.info-grid
-  display: grid
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr))
-  gap: 1.5rem
-  margin-bottom: 2rem
-
-.info-item
-  display: flex
-  flex-direction: column
-  gap: 4px
-  
-  label
-    font-size: 0.85rem
-    font-weight: 600
-    color: var(--text-secondary)
-    text-transform: uppercase
-    letter-spacing: 0.5px
-  
-  span
-    font-size: 1rem
-    color: var(--text-primary)
-    font-weight: 500
-
-.tier-badge
-  display: inline-block
-  padding: 4px 12px
-  border-radius: 16px
-  font-size: 0.8rem
-  font-weight: 600
-  text-transform: uppercase
-  
-  &.basic
-    background: var(--bg-tertiary)
-    color: var(--text-secondary)
-  
-  &.premium
-    background: linear-gradient(45deg, #667eea 0%, #764ba2 100%)
-    color: white
-  
-  &.pro
-    background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%)
-    color: white
-
-.section-actions
-  display: flex
-  gap: 12px
-  flex-wrap: wrap
+// Account Information styles moved to account-info.component.sass
 
 // Data Stats
 .data-stats
@@ -505,123 +458,7 @@
   padding: 1.5rem 2rem
   border-top: 1px solid var(--border-color)
 
-// Credit Management Section
-.credit-overview
-  display: grid
-  grid-template-columns: repeat(3, 1fr)
-  gap: 1.5rem
-  margin-bottom: 2rem
-
-.credit-card
-  background: var(--card-bg)
-  border: 1px solid var(--border-color)
-  border-radius: 12px
-  padding: 1.5rem
-  transition: all 0.2s ease
-  
-  &:hover
-    border-color: var(--accent-color)
-    box-shadow: var(--shadow-md)
-    
-  &.total-credits
-    background: linear-gradient(135deg, rgba(125, 211, 216, 0.1), rgba(59, 130, 246, 0.05))
-    border-color: rgba(125, 211, 216, 0.3)
-
-.credit-header
-  display: flex
-  align-items: center
-  gap: 12px
-  margin-bottom: 8px
-
-.credit-icon
-  font-size: 24px
-  width: 40px
-  height: 40px
-  display: flex
-  align-items: center
-  justify-content: center
-  background: rgba(255, 255, 255, 0.1)
-  border-radius: 8px
-
-.credit-title
-  h3
-    font-size: 1.8rem
-    font-weight: 700
-    margin: 0
-    color: var(--text-primary)
-    
-  p
-    font-size: 0.9rem
-    color: var(--text-secondary)
-    margin: 0
-    font-weight: 500
-
-.credit-details
-  margin-top: 8px
-  
-  small
-    color: var(--text-secondary)
-    font-size: 0.8rem
-
-.credit-progress
-  margin-top: 12px
-  
-  .progress-bar
-    width: 100%
-    height: 6px
-    background: rgba(255, 255, 255, 0.1)
-    border-radius: 3px
-    overflow: hidden
-    margin-bottom: 8px
-    
-    .progress-fill
-      height: 100%
-      background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))
-      border-radius: 3px
-      transition: width 0.3s ease
-  
-  small
-    color: var(--text-secondary)
-    font-size: 0.8rem
-
-.credit-usage-rules
-  background: var(--bg-tertiary)
-  border-radius: 12px
-  padding: 1.5rem
-  margin-bottom: 2rem
-  
-  h4
-    font-size: 1.1rem
-    font-weight: 600
-    margin: 0 0 1rem 0
-    color: var(--text-primary)
-
-.usage-grid
-  display: grid
-  grid-template-columns: repeat(2, 1fr)
-  gap: 1rem
-
-.usage-item
-  display: flex
-  align-items: flex-start
-  gap: 12px
-  
-  .usage-icon
-    font-size: 18px
-    margin-top: 2px
-    
-  .usage-content
-    strong
-      display: block
-      font-weight: 600
-      color: var(--text-primary)
-      margin-bottom: 4px
-      
-    p
-      margin: 0
-      font-size: 0.9rem
-      color: var(--text-secondary)
-      line-height: 1.4
+// Credit Management styles moved to credit-management.component.sass
 
 // Responsive Design
 @media (max-width: 768px)
@@ -644,12 +481,7 @@
   .data-stats
     grid-template-columns: repeat(2, 1fr)
   
-  .credit-overview
-    grid-template-columns: 1fr
-    gap: 1rem
-    
-  .usage-grid
-    grid-template-columns: 1fr
+  // Credit management responsive styles moved to credit-management.component.sass
   
   .action-item, .danger-item
     flex-direction: column
