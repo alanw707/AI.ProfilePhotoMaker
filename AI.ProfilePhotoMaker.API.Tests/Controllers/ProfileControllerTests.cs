@@ -2,6 +2,7 @@ using Xunit;
 using Moq;
 using AutoFixture;
 using FluentAssertions;
+using AI.ProfilePhotoMaker.API.Models.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -36,6 +37,9 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
         public ProfileControllerTests()
         {
             _fixture = new Fixture();
+            _fixture.Behaviors.OfType<ThrowingRecursionBehavior>().ToList()
+                .ForEach(b => _fixture.Behaviors.Remove(b));
+            _fixture.Behaviors.Add(new OmitOnRecursionBehavior());
             _mockUserProfileRepository = new Mock<IUserProfileRepository>();
             
             // Mock ApplicationDbContext
@@ -105,6 +109,142 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
 
             // Assert
             result.Should().BeOfType<UnauthorizedResult>();
+        }
+
+        [Fact]
+        public async Task GetProfile_ReturnsNotFound_WhenProfileDoesNotExist()
+        {
+            // Arrange
+            var userId = _fixture.Create<string>();
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(new Claim[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock")) }
+            };
+            _mockUserProfileRepository.Setup(r => r.GetByUserIdAsync(userId)).ReturnsAsync((UserProfile)null);
+
+            // Act
+            var result = await _controller.GetProfile();
+
+            // Assert
+            result.Should().BeOfType<NotFoundObjectResult>()
+                  .Which.Value.Should().Be("Profile not found");
+        }
+
+        [Fact]
+        public async Task GetProfile_ReturnsOkWithUserProfileDto_WhenProfileExists()
+        {
+            // Arrange
+            var userId = _fixture.Create<string>();
+            var userProfile = _fixture.Build<UserProfile>()
+                                      .With(p => p.UserId, userId)
+                                      .With(p => p.ProcessedImages, new List<ProcessedImage>()) // Ensure ProcessedImages is not null
+                                      .Create();
+            var modelCreationRequest = _fixture.Build<ModelCreationRequest>()
+                                               .With(m => m.UserId, userId)
+                                               .With(m => m.Status, ModelCreationStatus.Ready)
+                                               .Create();
+
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(new Claim[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock")) }
+            };
+            _mockUserProfileRepository.Setup(r => r.GetByUserIdAsync(userId)).ReturnsAsync(userProfile);
+
+            // Setup _mockContext.ModelCreationRequests to return the mock data
+            var modelCreationRequestsData = new List<ModelCreationRequest> { modelCreationRequest };
+            _mockContext.Setup(c => c.ModelCreationRequests).Returns(GetMockDbSet(modelCreationRequestsData).Object);
+
+
+            // Act
+            var result = await _controller.GetProfile();
+
+            // Assert
+            result.Should().BeOfType<OkObjectResult>();
+            var profileDto = result.As<OkObjectResult>().Value.Should().BeOfType<UserProfileDto>().Subject;
+            profileDto.Id.Should().Be(userProfile.Id);
+            profileDto.FirstName.Should().Be(userProfile.FirstName);
+            profileDto.LastName.Should().Be(userProfile.LastName);
+            profileDto.TrainedModelId.Should().Be(modelCreationRequest.ReplicateModelId);
+            profileDto.TrainedModelVersionId.Should().Be(modelCreationRequest.TrainedModelVersion);
+            profileDto.ModelTrainedAt.Should().Be(modelCreationRequest.CompletedAt);
+            profileDto.TotalProcessedImages.Should().Be(userProfile.ProcessedImages.Count);
+        }
+
+        // Tests for CreateProfile
+        [Fact]
+        public async Task CreateProfile_ReturnsUnauthorized_WhenUserIdIsNull()
+        {
+            // Arrange
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity()) } // No user ID claim
+            };
+            var dto = _fixture.Create<CreateUserProfileDto>();
+
+            // Act
+            var result = await _controller.CreateProfile(dto);
+
+            // Assert
+            result.Should().BeOfType<UnauthorizedResult>();
+        }
+
+        [Fact]
+        public async Task CreateProfile_ReturnsBadRequest_WhenProfileAlreadyExists()
+        {
+            // Arrange
+            var userId = _fixture.Create<string>();
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(new Claim[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock")) }
+            };
+            var existingProfile = _fixture.Create<UserProfile>();
+            _mockUserProfileRepository.Setup(r => r.GetByUserIdAsync(userId)).ReturnsAsync(existingProfile);
+            var dto = _fixture.Create<CreateUserProfileDto>();
+
+            // Act
+            var result = await _controller.CreateProfile(dto);
+
+            // Assert
+            result.Should().BeOfType<BadRequestObjectResult>()
+                  .Which.Value.Should().Be("Profile already exists");
+        }
+
+        [Fact]
+        public async Task CreateProfile_ReturnsCreatedAtAction_WhenProfileIsCreatedSuccessfully()
+        {
+            // Arrange
+            var userId = _fixture.Create<string>();
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(new Claim[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock")) }
+            };
+            _mockUserProfileRepository.Setup(r => r.GetByUserIdAsync(userId)).ReturnsAsync((UserProfile)null);
+            _mockUserProfileRepository.Setup(r => r.AddAsync(It.IsAny<UserProfile>()))
+                                      .Callback<UserProfile>(profile =>
+                                      {
+                                          // Simulate EF Core setting ID after AddAsync
+                                          profile.Id = _fixture.Create<int>();
+                                          profile.UserId = userId;
+                                      })
+                                      .Returns(Task.CompletedTask);
+            var dto = _fixture.Create<CreateUserProfileDto>();
+
+            // Act
+            var result = await _controller.CreateProfile(dto);
+
+            // Assert
+            result.Should().BeOfType<CreatedAtActionResult>();
+            var createdResult = result.As<CreatedAtActionResult>();
+            createdResult.ActionName.Should().Be(nameof(ProfileController.GetProfile));
+            var profileDto = createdResult.Value.Should().BeOfType<UserProfileDto>().Subject;
+            profileDto.FirstName.Should().Be(dto.FirstName);
+            profileDto.LastName.Should().Be(dto.LastName);
+            profileDto.Gender.Should().Be(dto.Gender);
+            profileDto.Ethnicity.Should().Be(dto.Ethnicity);
+            profileDto.TrainedModelId.Should().BeNull();
+            profileDto.TotalProcessedImages.Should().Be(0);
+
+            _mockUserProfileRepository.Verify(r => r.AddAsync(It.IsAny<UserProfile>()), Times.Once);
         }
     // Helper method to mock DbSet for in-memory collections
         private static Mock<DbSet<T>> GetMockDbSet<T>(List<T> list) where T : class

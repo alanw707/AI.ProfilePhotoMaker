@@ -19,9 +19,6 @@ import { ConfigService } from '../services/config.service';
 import { WorkflowOrchestrationService, WorkflowProgress } from '../services/workflow-orchestration.service';
 import { WorkflowStepService } from '../services/workflow-step.service';
 
-import { 
-  QualityCheckResult
-} from '../models/dashboard.types';
 
 @Component({
   selector: 'app-dashboard',
@@ -230,32 +227,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Model training is now handled by WorkflowOrchestrationService
 
-  // Training status polling is now handled by WorkflowOrchestrationService
-
-  // Photo completion polling is now handled by WorkflowOrchestrationService
-
-  // Time-based progress tracking is now handled by WorkflowOrchestrationService
-
-  // Photo generation completion is now handled by WorkflowOrchestrationService
-
-  // Image generation with styles is now handled by WorkflowOrchestrationService
-
-  // Photo download and share methods moved to gallery component
-
-  async downloadAll() {
-    // Since the dashboard doesn't have direct access to photo data,
-    // redirect users to the gallery where they can download photos
-    this.notificationService.info('Gallery Navigation', 'Redirecting to gallery to view and download your photos');
-    this.router.navigate(['/gallery']);
-  }
-
-
-  onImageError(event: any) {
-    event.target.src = `${this.config.getApiUrl()}/api/placeholder/style-preview`;
-    event.target.onerror = null;
-  }
 
 
   // Workflow methods
