@@ -177,6 +177,155 @@ describe('GalleryFilterControlsComponent', () => {
     });
   });
 
+  describe('Edge Cases', () => {
+    it('should handle null target in filter change', () => {
+      spyOn(component.filterChange, 'emit');
+      const event = { target: null };
+      
+      // Should not throw error
+      expect(() => component.onFilterChange(event)).not.toThrow();
+    });
+
+    it('should handle empty value in page size change', () => {
+      spyOn(component.pageSizeChange, 'emit');
+      const event = { target: { value: '' } } as any;
+      
+      component.onPageSizeChange(event);
+      
+      expect(component.pageSizeChange.emit).not.toHaveBeenCalled();
+    });
+
+    it('should handle zero page size selection', () => {
+      spyOn(component.pageSizeChange, 'emit');
+      const event = { target: { value: '0' } } as any;
+      
+      component.onPageSizeChange(event);
+      
+      expect(component.pageSizeChange.emit).toHaveBeenCalledWith(0);
+    });
+
+    it('should handle very large page size', () => {
+      spyOn(component.pageSizeChange, 'emit');
+      const event = { target: { value: '1000' } } as any;
+      
+      component.onPageSizeChange(event);
+      
+      expect(component.pageSizeChange.emit).toHaveBeenCalledWith(1000);
+    });
+
+    it('should handle negative page size', () => {
+      spyOn(component.pageSizeChange, 'emit');
+      const event = { target: { value: '-10' } } as any;
+      
+      component.onPageSizeChange(event);
+      
+      expect(component.pageSizeChange.emit).toHaveBeenCalledWith(-10);
+    });
+  });
+
+  describe('Input Properties', () => {
+    it('should handle title changes', () => {
+      component.title = 'My Custom Gallery';
+      expect(component.title).toBe('My Custom Gallery');
+    });
+
+    it('should handle filterType changes', () => {
+      component.filterType = 'uploaded';
+      expect(component.filterType).toBe('uploaded');
+      
+      component.filterType = 'enhanced';
+      expect(component.filterType).toBe('enhanced');
+    });
+
+    it('should handle viewMode changes', () => {
+      component.viewMode = 'list';
+      expect(component.viewMode).toBe('list');
+      
+      component.viewMode = 'grid';
+      expect(component.viewMode).toBe('grid');
+    });
+
+    it('should handle pageSize changes', () => {
+      component.pageSize = 6;
+      expect(component.pageSize).toBe(6);
+      
+      component.pageSize = 48;
+      expect(component.pageSize).toBe(48);
+    });
+
+    it('should handle allowSelection changes', () => {
+      component.allowSelection = false;
+      expect(component.allowSelection).toBeFalse();
+      
+      component.allowSelection = true;
+      expect(component.allowSelection).toBeTrue();
+    });
+  });
+
+  describe('Complex Scenarios', () => {
+    it('should handle mixed image types in filtered images', () => {
+      component.filteredImages = [
+        { id: 1, type: 'uploaded', status: 'completed' } as GalleryImage,
+        { id: 2, type: 'generated', status: 'completed' } as GalleryImage,
+        { id: 3, type: 'enhanced', status: 'processing' } as GalleryImage
+      ];
+      
+      expect(component.shouldShowBulkActions).toBeTrue();
+    });
+
+    it('should handle large number of images', () => {
+      const largeImageSet = Array.from({ length: 1000 }, (_, i) => ({
+        id: i + 1,
+        url: `image${i + 1}.jpg`,
+        title: `Image ${i + 1}`,
+        type: 'generated',
+        status: 'completed',
+        createdAt: new Date()
+      })) as GalleryImage[];
+      
+      component.filteredImages = largeImageSet;
+      component.selectedImages = largeImageSet.slice(0, 500);
+      
+      expect(component.selectAllText).toBe('Select All');
+      expect(component.shouldShowBulkActions).toBeTrue();
+    });
+
+    it('should handle all images selected in large dataset', () => {
+      const largeImageSet = Array.from({ length: 100 }, (_, i) => ({
+        id: i + 1,
+        type: 'generated',
+        status: 'completed'
+      })) as GalleryImage[];
+      
+      component.filteredImages = largeImageSet;
+      component.selectedImages = [...largeImageSet];
+      
+      expect(component.selectAllText).toBe('Deselect All');
+    });
+  });
+
+  describe('State Management', () => {
+    it('should maintain component state correctly', () => {
+      // Initial state
+      expect(component.title).toBe('Photo Gallery');
+      expect(component.filterType).toBe('generated');
+      expect(component.viewMode).toBe('grid');
+      expect(component.pageSize).toBe(12);
+      
+      // Change state
+      component.title = 'My Photos';
+      component.filterType = 'uploaded';
+      component.viewMode = 'list';
+      component.pageSize = 24;
+      
+      // Verify state persistence
+      expect(component.title).toBe('My Photos');
+      expect(component.filterType).toBe('uploaded');
+      expect(component.viewMode).toBe('list');
+      expect(component.pageSize).toBe(24);
+    });
+  });
+
   describe('Component Integration', () => {
     it('should handle complete user workflow', () => {
       // Setup spies
@@ -205,6 +354,30 @@ describe('GalleryFilterControlsComponent', () => {
       // User downloads selected
       component.onDownloadSelected();
       expect(component.downloadSelected.emit).toHaveBeenCalled();
+    });
+
+    it('should handle rapid successive changes', () => {
+      spyOn(component.filterChange, 'emit');
+      spyOn(component.viewModeChange, 'emit');
+      
+      // Rapid filter changes
+      component.onFilterChange({ target: { value: 'uploaded' } });
+      component.onFilterChange({ target: { value: 'generated' } });
+      component.onFilterChange({ target: { value: 'enhanced' } });
+      
+      expect(component.filterChange.emit).toHaveBeenCalledTimes(3);
+      expect(component.filterChange.emit).toHaveBeenCalledWith('uploaded');
+      expect(component.filterChange.emit).toHaveBeenCalledWith('generated');
+      expect(component.filterChange.emit).toHaveBeenCalledWith('enhanced');
+      
+      // Rapid view mode changes
+      component.setViewMode('list');
+      component.setViewMode('grid');
+      component.setViewMode('list');
+      
+      expect(component.viewModeChange.emit).toHaveBeenCalledTimes(3);
+      expect(component.viewModeChange.emit).toHaveBeenCalledWith('list');
+      expect(component.viewModeChange.emit).toHaveBeenCalledWith('grid');
     });
   });
 });
