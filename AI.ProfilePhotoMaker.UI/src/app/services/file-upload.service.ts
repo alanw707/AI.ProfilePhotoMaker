@@ -77,7 +77,7 @@ export class FileUploadService {
     // Add forTraining flag
     formData.append('forTraining', forTraining.toString());
 
-    return this.http.post<UploadResponse>(this.config.getFullUrl(this.config.apiConfig.endpoints.profile.uploadImages), formData, {
+    return this.http.post<UploadResponse>(this.config.getFullUrl(this.config.apiConfig.endpoints.image.upload), formData, {
       reportProgress: true,
       observe: 'events'
     }).pipe(
@@ -105,7 +105,7 @@ export class FileUploadService {
     }
     
     console.log('🌐 Fetching fresh user images data from API');
-    return this.http.get<UserImagesResponse>(this.config.getFullUrl(this.config.apiConfig.endpoints.profile.images)).pipe(
+    return this.http.get<UserImagesResponse>(this.config.getFullUrl(this.config.apiConfig.endpoints.image.images)).pipe(
       tap(response => {
         this.userImagesCache = response;
         this.userImagesCacheExpiry = now + this.USER_IMAGES_CACHE_DURATION;
@@ -115,7 +115,7 @@ export class FileUploadService {
   }
 
   deleteImage(imageId: number): Observable<{ success: boolean; message: string }> {
-    return this.http.delete<{ success: boolean; message: string }>(`${this.config.getFullUrl(this.config.apiConfig.endpoints.profile.images)}/${imageId}`).pipe(
+    return this.http.delete<{ success: boolean; message: string }>(`${this.config.getFullUrl(this.config.apiConfig.endpoints.image.images)}/${imageId}`).pipe(
       tap(() => {
         // Invalidate cache when image is deleted
         this.invalidateUserImagesCache();
@@ -140,25 +140,25 @@ export class FileUploadService {
 
   createTrainingZip(): Observable<{ success: boolean; zipCreated: boolean; zipPath: string; message: string; error?: any }> {
     return this.http.post<{ success: boolean; zipCreated: boolean; zipPath: string; message: string; error?: any }>(
-      this.config.getFullUrl('/profile/create-training-zip'), {}
+      this.config.getFullUrl('/image/create-training-zip'), {}
     );
   }
 
   listTrainingFiles(): Observable<{ success: boolean; data: string[]; error: any }> {
-    return this.http.get<{ success: boolean; data: string[]; error: any }>(this.config.getFullUrl('/profile/training-files'));
+    return this.http.get<{ success: boolean; data: string[]; error: any }>(this.config.getFullUrl('/image/training-zips'));
   }
 
   deleteTrainingFile(fileName: string): Observable<{ success: boolean; message: string }> {
-    return this.http.delete<{ success: boolean; message: string }>(this.config.getFullUrl(`/profile/training-files/${encodeURIComponent(fileName)}`));
+    return this.http.delete<{ success: boolean; message: string }>(this.config.getFullUrl(`/image/training-zips/${encodeURIComponent(fileName)}`));
   }
 
   deleteAllTrainingFiles(): Observable<{ success: boolean; message: string }> {
-    return this.http.delete<{ success: boolean; message: string }>(this.config.getFullUrl('/profile/training-files'));
+    return this.http.delete<{ success: boolean; message: string }>(this.config.getFullUrl('/image/training-zips'));
   }
 
   getLatestTrainingZip(): Observable<{ success: boolean; data: { fileName: string; publicUrl: string; createdAt: string; sizeBytes: number }; error?: any }> {
     return this.http.get<{ success: boolean; data: { fileName: string; publicUrl: string; createdAt: string; sizeBytes: number }; error?: any }>(
-      this.config.getFullUrl('/profile/latest-training-zip')
+      this.config.getFullUrl('/image/latest-training-zip')
     );
   }
 
@@ -212,7 +212,7 @@ export class FileUploadService {
     formData.append('images', file, file.name);
     formData.append('forTraining', 'false');
 
-    return this.http.post<any>(this.config.getFullUrl(this.config.apiConfig.endpoints.profile.uploadImages), formData, {
+    return this.http.post<any>(this.config.getFullUrl(this.config.apiConfig.endpoints.image.upload), formData, {
       reportProgress: true,
       observe: 'events'
     }).pipe(
