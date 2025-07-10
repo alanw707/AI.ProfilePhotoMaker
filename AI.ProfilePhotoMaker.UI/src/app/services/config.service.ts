@@ -10,16 +10,16 @@ export interface ApiConfig {
     };
     profile: {
       base: string;
-      uploadImages: string;
-      images: string;
       trainingStatus: string;
-      trainingFiles: string;
     };
     image: {
       base: string;
       upload: string;
       images: string;
       styles: string;
+      trainingZips: string;
+      createTrainingZip: string;
+      latestTrainingZip: string;
     };
     replicate: {
       train: string;
@@ -50,16 +50,16 @@ export class ConfigService {
       },
       profile: {
         base: '/profile',
-        uploadImages: '/image/upload',
-        images: '/image/images',
-        trainingStatus: '/profile/training-status',
-        trainingFiles: '/image/training-zips'
+        trainingStatus: '/profile/training-status'
       },
       image: {
         base: '/image',
         upload: '/image/upload',
         images: '/image/images',
-        styles: '/image/styles'
+        styles: '/image/styles',
+        trainingZips: '/image/training-zips',
+        createTrainingZip: '/image/create-training-zip',
+        latestTrainingZip: '/image/latest-training-zip'
       },
       replicate: {
         train: '/replicate/train',
@@ -99,10 +99,6 @@ export class ConfigService {
 
   get profileUrl(): string {
     return this.getFullUrl(this.config.endpoints.profile.base);
-  }
-
-  get uploadImagesUrl(): string {
-    return this.getFullUrl(this.config.endpoints.image.upload);
   }
 
   get imageUploadUrl(): string {
