@@ -2,10 +2,12 @@ using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services;
+using AI.ProfilePhotoMaker.API.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.IO.Compression;
+using System.Security.Claims;
 
 namespace AI.ProfilePhotoMaker.API.Controllers
 {
@@ -120,7 +122,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     {
                         OriginalImageUrl = relativeUrl,
                         ProcessedImageUrl = relativeUrl,
-                        Style = ProfileControllerConstants.OriginalStyle,
+                        Style = ImageConstants.OriginalStyle,
                         UserProfileId = profile.Id,
                         CreatedAt = DateTime.UtcNow,
                         IsOriginalUpload = true,
@@ -172,60 +174,47 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         [HttpGet("images")]
         public async Task<IActionResult> GetImages()
         {
-            var authCheck = ValidateAuthentication();
-            if (authCheck != null) return authCheck;
-            var userId = GetCurrentUserId()!;
+            var userId = GetCurrentUserId();
+            if (userId == null)
+                return Unauthorized();
 
-            // Direct query to ensure we get fresh data with FileExists
-            var processedImages = await Context.ProcessedImages
-                .Where(pi => pi.UserProfile.UserId == userId)
-                .OrderByDescending(i => i.CreatedAt)
-                .AsNoTracking()
-                .ToListAsync();
-
-            Logger.LogInformation("🔍 Direct query found {Count} images for user {UserId}", processedImages.Count, userId);
+            var profile = await _userProfileRepository.GetByUserIdAsync(userId);
+            if (profile == null)
+                return NotFound("Profile not found");
 
             var images = new List<object>();
 
-            foreach (var i in processedImages)
+            foreach (var i in profile.ProcessedImages.OrderByDescending(i => i.CreatedAt))
             {
-                // For generated images, construct local URL from generated folder
-                // For uploaded images, use the stored paths
                 string? originalUrl = null;
                 string? processedUrl = null;
-                
-                if (i.IsGenerated && !string.IsNullOrEmpty(i.Style) && i.Style != "Original")
+
+                if (!string.IsNullOrEmpty(i.OriginalImageUrl))
                 {
-                    // For generated images, use ProcessedImageUrl which now contains the full path
-                    processedUrl = !string.IsNullOrEmpty(i.ProcessedImageUrl) ? 
-                        (i.ProcessedImageUrl.StartsWith("http") ? i.ProcessedImageUrl : GetAbsoluteUrl(i.ProcessedImageUrl)) : 
-                        null;
+                    if (i.OriginalImageUrl.StartsWith("http"))
+                    {
+                        originalUrl = i.OriginalImageUrl;
+                    }
+                    else
+                    {
+                        originalUrl = GetAbsoluteUrl(i.OriginalImageUrl);
+                    }
                 }
-                else
+                if (!string.IsNullOrEmpty(i.ProcessedImageUrl))
                 {
-                    // For uploaded images or other cases, use stored URLs
-                    originalUrl = !string.IsNullOrEmpty(i.OriginalImageUrl) ? 
-                        (i.OriginalImageUrl.StartsWith("http") ? i.OriginalImageUrl : GetAbsoluteUrl(i.OriginalImageUrl)) : 
-                        null;
-                        
-                    processedUrl = !string.IsNullOrEmpty(i.ProcessedImageUrl) ? 
-                        (i.ProcessedImageUrl.StartsWith("http") ? i.ProcessedImageUrl : GetAbsoluteUrl(i.ProcessedImageUrl)) : 
-                        null;
+                    processedUrl = i.ProcessedImageUrl.StartsWith("http") ? i.ProcessedImageUrl : GetAbsoluteUrl(i.ProcessedImageUrl);
                 }
-                
-                var imageResponse = new
+
+                images.Add(new
                 {
                     i.Id,
                     OriginalImageUrl = originalUrl,
                     ProcessedImageUrl = processedUrl,
                     i.Style,
                     i.CreatedAt,
-                    IsOriginalUpload = i.Style == "Original",
-                    IsGenerated = i.IsGenerated
-                    // Removed FileExists - we now use ProcessedImageUrl presence to determine if image is ready
-                };
-
-                images.Add(imageResponse);
+                    IsOriginalUpload = i.IsOriginalUpload,
+                    i.IsGenerated
+                });
             }
 
             var imageList = images.Cast<dynamic>().ToList();
@@ -236,9 +225,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 GeneratedImages = imageList.Count(i => i.IsGenerated && !i.IsOriginalUpload),
                 Images = images
             };
-
-            Logger.LogInformation("🔍 Returning {TotalImages} images, {GeneratedImages} generated images", 
-                summary.TotalImages, summary.GeneratedImages);
 
             return SuccessResponse(summary);
         }
@@ -349,13 +335,33 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             if (!allowedExtensions.Contains(extension))
                 return false;
 
-            // Basic content type validation
-            var allowedContentTypes = new[] { 
-                "image/jpeg", "image/png", "image/webp", 
-                "image/jpg", "image/pjpeg" 
-            };
-            
-            return allowedContentTypes.Contains(file.ContentType.ToLowerInvariant());
+            // File signature validation for all types
+            using (var reader = new BinaryReader(file.OpenReadStream()))
+            {
+                var signatures = new Dictionary<string, List<byte[]>>
+                {
+                    { ".jpg", new List<byte[]> { 
+                        new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 }, // JPEG JFIF
+                        new byte[] { 0xFF, 0xD8, 0xFF, 0xE1 }, // JPEG EXIF
+                        new byte[] { 0xFF, 0xD8, 0xFF, 0xE8 }, // JPEG SPIFF
+                        new byte[] { 0xFF, 0xD8, 0xFF, 0xDB }  // JPEG raw
+                    }},
+                    { ".jpeg", new List<byte[]> { 
+                        new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 }, // JPEG JFIF
+                        new byte[] { 0xFF, 0xD8, 0xFF, 0xE1 }, // JPEG EXIF
+                        new byte[] { 0xFF, 0xD8, 0xFF, 0xE8 }, // JPEG SPIFF
+                        new byte[] { 0xFF, 0xD8, 0xFF, 0xDB }  // JPEG raw
+                    }},
+                    { ".png", new List<byte[]> { new byte[] { 0x89, 0x50, 0x4E, 0x47 } }},
+                    { ".webp", new List<byte[]> { new byte[] { 0x52, 0x49, 0x46, 0x46 } }}
+                };
+
+                var headerBytes = reader.ReadBytes(signatures.Values.SelectMany(list => list).Max(sig => sig.Length));
+
+                return signatures.Any(kvp => 
+                    kvp.Key == extension && 
+                    kvp.Value.Any(sig => headerBytes.Take(sig.Length).SequenceEqual(sig)));
+            }
         }
 
         /// <summary>
@@ -363,15 +369,32 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         /// </summary>
         private string GetAbsoluteUrl(string relativePath)
         {
-            // Use configured AppBaseUrl (ngrok) instead of localhost for external access
-            var baseUrl = _configuration["AppBaseUrl"];
-            if (!string.IsNullOrEmpty(baseUrl))
+            try
             {
-                return $"{baseUrl.TrimEnd('/')}{relativePath}";
+                // Use configured AppBaseUrl (ngrok) instead of localhost for external access
+                var baseUrl = _configuration?["AppBaseUrl"];
+                Logger.LogDebug("GetAbsoluteUrl called with: {RelativePath}, AppBaseUrl: {BaseUrl}", relativePath, baseUrl);
+                
+                if (!string.IsNullOrEmpty(baseUrl))
+                {
+                    var result = $"{baseUrl.TrimEnd('/')}{relativePath}";
+                    Logger.LogDebug("GetAbsoluteUrl result: {Result}", result);
+                    return result;
+                }
+                
+                // Fallback to request host for local development
+                var scheme = Request?.Scheme ?? "https";
+                var host = Request?.Host.ToString() ?? "localhost";
+                var fallbackResult = $"{scheme}://{host}{relativePath}";
+                Logger.LogDebug("GetAbsoluteUrl fallback result: {Result}", fallbackResult);
+                return fallbackResult;
             }
-            
-            // Fallback to request host for local development
-            return $"{Request.Scheme}://{Request.Host}{relativePath}";
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "GetAbsoluteUrl failed for path: {RelativePath}", relativePath);
+                // Return a safe fallback instead of null
+                return $"https://localhost{relativePath}";
+            }
         }
 
         /// <summary>
@@ -382,32 +405,47 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         {
             try
             {
-                var zipDir = Path.Combine(_environment.ContentRootPath, "training-zips");
-                Directory.CreateDirectory(zipDir);
+                var zipPath = Path.Combine(_environment.ContentRootPath, "training-zips", $"{userId}.zip");
+                Directory.CreateDirectory(Path.GetDirectoryName(zipPath)!);
 
-                var zipFileName = $"training_{userId}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.zip";
-                var zipPath = Path.Combine(zipDir, zipFileName);
-
-                using (var zip = new System.IO.Compression.ZipArchive(
-                    new FileStream(zipPath, FileMode.Create), 
-                    ZipArchiveMode.Create))
+                // Delete existing ZIP file if it exists to avoid conflicts
+                if (System.IO.File.Exists(zipPath))
                 {
-                    var files = Directory.GetFiles(uploadDir, "*.*")
-                        .Where(f => IsImageFile(f))
-                        .ToList();
-
-                    foreach (var file in files)
-                    {
-                        var entryName = Path.GetFileName(file);
-                        zip.CreateEntryFromFile(file, entryName);
-                    }
+                    System.IO.File.Delete(zipPath);
+                    Logger.LogInformation("Deleted existing training ZIP file before creating new one for user {UserId}", userId);
                 }
 
-                return $"/training-zips/{zipFileName}";
+                using (var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create))
+                {
+                    // Get all image files from the upload directory (only contains original uploads)
+                    var imageFiles = Directory.GetFiles(uploadDir, "*.*")
+                        .Where(f =>
+                        {
+                            var extension = Path.GetExtension(f);
+                            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+                            return allowedExtensions.Contains(extension.ToLowerInvariant());
+                        })
+                        .ToArray();
+
+                    if (imageFiles.Length < 10)
+                    {
+                        Logger.LogWarning("Insufficient images ({Count}) for training ZIP for user {UserId}", imageFiles.Length, userId);
+                        return null;
+                    }
+
+                    foreach (var file in imageFiles)
+                    {
+                        archive.CreateEntryFromFile(file, Path.GetFileName(file));
+                    }
+
+                    Logger.LogInformation("Created training ZIP for user {UserId} with {FileCount} images", userId, imageFiles.Length);
+                }
+
+                return zipPath;
             }
             catch (Exception ex)
             {
-                LogError(ex, "Failed to create training ZIP", userId);
+                LogError(ex, "Error creating training ZIP", userId);
                 return null;
             }
         }
@@ -420,6 +458,243 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
             var extension = Path.GetExtension(filePath).ToLowerInvariant();
             return allowedExtensions.Contains(extension);
+        }
+
+        /// <summary>
+        /// Create training ZIP from existing uploaded images
+        /// </summary>
+        [HttpPost("create-training-zip")]
+        public async Task<IActionResult> CreateTrainingZip()
+        {
+            var authCheck = ValidateAuthentication();
+            if (authCheck != null) return authCheck;
+            var userId = GetCurrentUserId()!;
+
+            var profile = await _userProfileRepository.GetByUserIdAsync(userId);
+            if (profile == null)
+                return ErrorResponse("ProfileNotFound", "Profile not found", 404);
+
+            try
+            {
+                // Get uploaded images count for response message
+                var uploadedImages = profile.ProcessedImages.Where(i => i.Style == ImageConstants.OriginalStyle).ToList();
+                
+                var uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
+                
+                // Create training ZIP from existing uploaded images (validation handled inside method)
+                var zipPath = CreateTrainingZip(uploadDir, userId);
+                
+                if (string.IsNullOrEmpty(zipPath))
+                {
+                    // Check specific reasons for failure
+                    if (uploadedImages.Count < 10)
+                    {
+                        return ErrorResponse("InsufficientImages", 
+                            $"Need at least 10 images for training (currently {uploadedImages.Count})");
+                    }
+                    
+                    if (!Directory.Exists(uploadDir))
+                    {
+                        return ErrorResponse("NoUploadDirectory", 
+                            "Upload directory not found. Please upload images first.");
+                    }
+                    
+                    return ErrorResponse("ZipCreationFailed", 
+                        "Failed to create training ZIP file. Check that all uploaded images are still available.", 500);
+                }
+
+                return SuccessResponse(new { 
+                    ZipCreated = true,
+                    ZipPath = zipPath,
+                    Message = $"Training ZIP created with all {uploadedImages.Count} uploaded original images"
+                });
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, "Error creating training ZIP", userId);
+                return ErrorResponse("InternalError", "Error creating training ZIP", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get list of available training ZIP files for the user with public URLs
+        /// </summary>
+        [HttpGet("training-zips")]
+        public IActionResult GetTrainingZips()
+        {
+            try
+            {
+                var authCheck = ValidateAuthentication();
+                if (authCheck != null) return authCheck;
+                var userId = GetCurrentUserId()!;
+
+                var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
+                
+                if (!Directory.Exists(trainingZipsPath))
+                {
+                    return SuccessResponse(new List<object>());
+                }
+
+                var zipFilePath = Path.Combine(trainingZipsPath, $"{userId}.zip");
+                var userZipFiles = new List<object>();
+                
+                if (System.IO.File.Exists(zipFilePath))
+                {
+                    var fileInfo = new FileInfo(zipFilePath);
+                    var fileName = Path.GetFileName(zipFilePath);
+                    var publicUrl = GetAbsoluteUrl($"/training-zips/{fileName}");
+                    
+                    userZipFiles.Add(new
+                    {
+                        fileName = fileName,
+                        filePath = zipFilePath,
+                        publicUrl = publicUrl,
+                        createdAt = fileInfo.CreationTime,
+                        sizeBytes = fileInfo.Length
+                    });
+                }
+
+                return SuccessResponse(userZipFiles);
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, "Error getting training ZIP files");
+                return ErrorResponse("FileSystemError", "Failed to get training ZIP files.", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get the most recent training ZIP public URL for the user
+        /// </summary>
+        [HttpGet("latest-training-zip")]
+        public IActionResult GetLatestTrainingZip()
+        {
+            try
+            {
+                var authCheck = ValidateAuthentication();
+                if (authCheck != null) return authCheck;
+                var userId = GetCurrentUserId()!;
+
+                var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
+                
+                if (!Directory.Exists(trainingZipsPath))
+                {
+                    return ErrorResponse("NoZipFiles", "No training ZIP files found.", 404);
+                }
+
+                var zipFilePath = Path.Combine(trainingZipsPath, $"{userId}.zip");
+
+                if (!System.IO.File.Exists(zipFilePath))
+                {
+                    return ErrorResponse("NoZipFiles", "No training ZIP files found for user.", 404);
+                }
+
+                var fileName = Path.GetFileName(zipFilePath);
+                var publicUrl = GetAbsoluteUrl($"/training-zips/{fileName}");
+                var fileInfo = new FileInfo(zipFilePath);
+
+                return SuccessResponse(new { 
+                    fileName = fileName,
+                    publicUrl = publicUrl,
+                    createdAt = fileInfo.CreationTime,
+                    sizeBytes = fileInfo.Length
+                });
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, "Error getting latest training ZIP file");
+                return ErrorResponse("FileSystemError", "Failed to get latest training ZIP file.", 500);
+            }
+        }
+
+        /// <summary>
+        /// Delete a specific training ZIP file by filename
+        /// </summary>
+        [HttpDelete("training-zips/{fileName}")]
+        public IActionResult DeleteTrainingZip(string fileName)
+        {
+            try
+            {
+                var authCheck = ValidateAuthentication();
+                if (authCheck != null) return authCheck;
+                var userId = GetCurrentUserId()!;
+
+                // Validate that the filename belongs to the current user
+                if (fileName != $"{userId}.zip")
+                {
+                    return ErrorResponse("InvalidFileName", "Invalid filename or access denied.");
+                }
+
+                var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
+                var filePath = Path.Combine(trainingZipsPath, fileName);
+
+                if (!System.IO.File.Exists(filePath))
+                {
+                    return ErrorResponse("FileNotFound", "Training ZIP file not found.", 404);
+                }
+
+                System.IO.File.Delete(filePath);
+                
+                Logger.LogInformation("Deleted training ZIP file {FileName} for user {UserId}", fileName, userId);
+
+                return SuccessResponse(new { 
+                    fileName = fileName,
+                    message = "Training ZIP file deleted successfully." 
+                });
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, "Error deleting training ZIP file {FileName}", fileName);
+                return ErrorResponse("FileSystemError", "Failed to delete training ZIP file.", 500);
+            }
+        }
+
+        /// <summary>
+        /// Delete all training ZIP files for the current user
+        /// </summary>
+        [HttpDelete("training-zips")]
+        public IActionResult DeleteAllTrainingZips()
+        {
+            try
+            {
+                var authCheck = ValidateAuthentication();
+                if (authCheck != null) return authCheck;
+                var userId = GetCurrentUserId()!;
+
+                var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
+                
+                if (!Directory.Exists(trainingZipsPath))
+                {
+                    return SuccessResponse(new { deletedCount = 0, message = "No training ZIP files found." });
+                }
+
+                var zipFilePath = Path.Combine(trainingZipsPath, $"{userId}.zip");
+                var deletedCount = 0;
+
+                if (System.IO.File.Exists(zipFilePath))
+                {
+                    try
+                    {
+                        System.IO.File.Delete(zipFilePath);
+                        deletedCount = 1;
+                        Logger.LogInformation("Deleted training ZIP file {FilePath} for user {UserId}", zipFilePath, userId);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogWarning(ex, "Failed to delete training ZIP file {FilePath} for user {UserId}", zipFilePath, userId);
+                    }
+                }
+
+                return SuccessResponse(new { 
+                    deletedCount = deletedCount,
+                    message = $"Deleted {deletedCount} training ZIP files successfully." 
+                });
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, "Error deleting all training ZIP files");
+                return ErrorResponse("FileSystemError", "Failed to delete training ZIP files.", 500);
+            }
         }
 
         #endregion

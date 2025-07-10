@@ -7,7 +7,6 @@ using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace AI.ProfilePhotoMaker.API.Controllers
 {
@@ -426,10 +425,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
     public class GoogleUserInfo
     {
-        public string? email { get; set; }
+        public string email { get; set; } = string.Empty;
         public string? given_name { get; set; }
         public string? family_name { get; set; }
-        public string? Email => email;
+        public string Email => email;
         public string? GivenName => given_name;
         public string? FamilyName => family_name;
     }
