@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve --host 0.0.0.0",
+    "start": "ng serve --host 0.0.0.0 --port 4200 --disable-host-check",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
@@ -20,6 +20,7 @@
   },
   "private": true,
   "dependencies": {
+    "@21st-extension/toolbar": "^0.5.14",
     "@abacritt/angularx-social-login": "^2.4.0",
     "@angular/common": "^19.2.0",
     "@angular/compiler": "^19.2.0",

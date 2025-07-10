@@ -65,9 +65,9 @@ export class GalleryComponent implements OnInit {
       }
 
       const response = await this.fileUploadService.getUserImages(forceRefresh).toPromise();
-      if (response) {
+      if (response?.success && response.data) {
         // Deduplicate images by ID to prevent duplicates in zip downloads
-        const uniqueImages = response.images.filter((img, index, array) => 
+        const uniqueImages = response.data.images.filter((img, index, array) => 
           array.findIndex(i => i.id === img.id) === index
         );
         
@@ -85,8 +85,8 @@ export class GalleryComponent implements OnInit {
         }));
         
         // Log if duplicates were found and removed
-        if (uniqueImages.length < response.images.length) {
-          console.warn(`🔍 Removed ${response.images.length - uniqueImages.length} duplicate images from display`);
+        if (uniqueImages.length < response.data.images.length) {
+          console.warn(`🔍 Removed ${response.data.images.length - uniqueImages.length} duplicate images from display`);
         }
       }
     } catch (error) {

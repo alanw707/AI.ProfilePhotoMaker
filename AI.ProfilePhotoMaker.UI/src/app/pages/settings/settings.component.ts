@@ -139,10 +139,10 @@ export class SettingsComponent implements OnInit {
       } else {
         // Fallback to existing method if API is not available
         const imagesResponse = await this.fileUploadService.getUserImages().toPromise();
-        if (imagesResponse) {
-          const originalImages = imagesResponse.images.filter(img => !img.isGenerated);
-          const generatedImages = imagesResponse.images.filter(img => img.isGenerated);
-          const enhancedImages = imagesResponse.images.filter(img => img.style === 'Enhanced' || img.style === 'Background Remover' || img.style === 'Social Media' || img.style === 'Cartoon');
+        if (imagesResponse?.success && imagesResponse.data) {
+          const originalImages = imagesResponse.data.images.filter(img => !img.isGenerated);
+          const generatedImages = imagesResponse.data.images.filter(img => img.isGenerated);
+          const enhancedImages = imagesResponse.data.images.filter(img => img.style === 'Enhanced' || img.style === 'Background Remover' || img.style === 'Social Media' || img.style === 'Cartoon');
           
           this.dataStats.inputPhotos = originalImages.length;
           this.dataStats.generatedPhotos = generatedImages.length;

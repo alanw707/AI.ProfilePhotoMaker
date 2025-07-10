@@ -86,17 +86,18 @@ export class DashboardStateService implements IDashboardStateService {
         const creditsInfo = credits.success ? credits.data : null;
         
         // Process uploaded images into thumbnails format
-        const uploadedImageThumbnails: UploadedImageThumbnail[] = userImages.images
-          .filter(img => img.isOriginalUpload)
-          .map(img => ({
+        const userImagesData = userImages.success ? userImages.data : null;
+        const uploadedImageThumbnails: UploadedImageThumbnail[] = userImagesData?.images
+          ?.filter(img => img.isOriginalUpload)
+          ?.map(img => ({
             id: img.id,
             url: img.originalImageUrl,
             fileName: `Image ${img.id}` // Use a default filename since it's not in ProcessedImage
-          }));
+          })) || [];
         
         // Count generated photos (use API count or filter generated images)
-        const generatedPhotosCount = userImages.generatedImages || 
-          userImages.images.filter(img => img.isGenerated).length;
+        const generatedPhotosCount = userImagesData?.generatedImages || 
+          userImagesData?.images?.filter(img => img.isGenerated)?.length || 0;
         
         console.log(`📊 Generated Photos Count: ${generatedPhotosCount}`);
         
@@ -225,14 +226,15 @@ export class DashboardStateService implements IDashboardStateService {
     console.log('🔄 Refreshing generated photos count...');
     this.fileUploadService.getUserImages().subscribe({
       next: (userImages) => {
-        const generatedPhotosCount = userImages.generatedImages || 
-          userImages.images.filter(img => img.isGenerated).length;
+        const userImagesData = userImages.success ? userImages.data : null;
+        const generatedPhotosCount = userImagesData?.generatedImages || 
+          userImagesData?.images?.filter(img => img.isGenerated)?.length || 0;
         
         console.log('📊 Refresh Photos Count Debug:', {
-          apiGeneratedImages: userImages.generatedImages,
-          filteredGeneratedImages: userImages.images.filter(img => img.isGenerated).length,
+          apiGeneratedImages: userImagesData?.generatedImages,
+          filteredGeneratedImages: userImagesData?.images?.filter(img => img.isGenerated)?.length || 0,
           finalGeneratedPhotosCount: generatedPhotosCount,
-          totalImages: userImages.images.length
+          totalImages: userImagesData?.images?.length || 0
         });
         
         this.setState({ generatedPhotosCount });

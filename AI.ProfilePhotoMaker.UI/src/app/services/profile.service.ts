@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 import { ConfigService } from './config.service';
 
 export interface UserProfile {
@@ -41,19 +42,30 @@ export class ProfileService {
   constructor(private http: HttpClient, private config: ConfigService) {}
 
   getCurrentUserProfile(): Observable<{ success: boolean; data: UserProfile; error: any }> {
-    return this.http.get<{ success: boolean; data: UserProfile; error: any }>(this.config.profileUrl);
+    return this.http.get<UserProfile>(this.config.profileUrl).pipe(
+      map(profile => ({ success: true, data: profile, error: null })),
+      catchError(error => of({ success: false, data: null as any, error }))
+    );
   }
 
   createProfile(profile: CreateProfileDto): Observable<{ success: boolean; data: UserProfile; error: any }> {
-    return this.http.post<{ success: boolean; data: UserProfile; error: any }>(this.config.profileUrl, profile);
+    return this.http.post<UserProfile>(this.config.profileUrl, profile).pipe(
+      map(profile => ({ success: true, data: profile, error: null })),
+      catchError(error => of({ success: false, data: null as any, error }))
+    );
   }
 
   updateProfile(profile: UpdateProfileDto): Observable<{ success: boolean; data: UserProfile; error: any }> {
-    return this.http.put<{ success: boolean; data: UserProfile; error: any }>(this.config.profileUrl, profile);
+    return this.http.put<UserProfile>(this.config.profileUrl, profile).pipe(
+      map(profile => ({ success: true, data: profile, error: null })),
+      catchError(error => of({ success: false, data: null as any, error }))
+    );
   }
 
   deleteProfile(): Observable<{ success: boolean; message: string }> {
-    return this.http.delete<{ success: boolean; message: string }>(this.config.profileUrl);
+    return this.http.delete<{ success: boolean; message: string }>(this.config.profileUrl).pipe(
+      catchError(error => of({ success: false, message: error.message || 'Delete failed' }))
+    );
   }
 
   checkModelStatus(): Observable<{ success: boolean; data: { modelExists: boolean; modelStatus: string; modelId?: string; message: string }; error: any }> {

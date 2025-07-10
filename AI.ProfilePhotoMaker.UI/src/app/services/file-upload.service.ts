@@ -95,21 +95,23 @@ export class FileUploadService {
     );
   }
 
-  getUserImages(forceRefresh = false): Observable<UserImagesResponse> {
+  getUserImages(forceRefresh = false): Observable<{success: boolean; data: UserImagesResponse}> {
     const now = Date.now();
     
     // Return cached data if available and not expired
     if (!forceRefresh && this.userImagesCache && now < this.userImagesCacheExpiry) {
       console.log('💾 Using cached user images data');
-      return of(this.userImagesCache);
+      return of({success: true, data: this.userImagesCache});
     }
     
     console.log('🌐 Fetching fresh user images data from API');
-    return this.http.get<UserImagesResponse>(this.config.getFullUrl(this.config.apiConfig.endpoints.image.images)).pipe(
+    return this.http.get<{success: boolean; data: UserImagesResponse}>(this.config.getFullUrl(this.config.apiConfig.endpoints.image.images)).pipe(
       tap(response => {
-        this.userImagesCache = response;
-        this.userImagesCacheExpiry = now + this.USER_IMAGES_CACHE_DURATION;
-        console.log(`📊 Cached user images: ${response.totalImages} total, ${response.generatedImages} generated`);
+        if (response.success && response.data) {
+          this.userImagesCache = response.data;
+          this.userImagesCacheExpiry = now + this.USER_IMAGES_CACHE_DURATION;
+          console.log(`📊 Cached user images: ${response.data.totalImages} total, ${response.data.generatedImages} generated`);
+        }
       })
     );
   }
@@ -130,7 +132,7 @@ export class FileUploadService {
     this.userImagesCacheExpiry = 0;
   }
 
-  refreshUserImagesCache(): Observable<UserImagesResponse> {
+  refreshUserImagesCache(): Observable<{success: boolean; data: UserImagesResponse}> {
     return this.getUserImages(true);
   }
 
