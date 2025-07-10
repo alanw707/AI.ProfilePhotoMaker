@@ -140,25 +140,25 @@ export class FileUploadService {
 
   createTrainingZip(): Observable<{ success: boolean; zipCreated: boolean; zipPath: string; message: string; error?: any }> {
     return this.http.post<{ success: boolean; zipCreated: boolean; zipPath: string; message: string; error?: any }>(
-      this.config.getFullUrl('/image/create-training-zip'), {}
+      this.config.getFullUrl(this.config.apiConfig.endpoints.image.createTrainingZip), {}
     );
   }
 
   listTrainingFiles(): Observable<{ success: boolean; data: string[]; error: any }> {
-    return this.http.get<{ success: boolean; data: string[]; error: any }>(this.config.getFullUrl('/image/training-zips'));
+    return this.http.get<{ success: boolean; data: string[]; error: any }>(this.config.getFullUrl(this.config.apiConfig.endpoints.image.trainingZips));
   }
 
   deleteTrainingFile(fileName: string): Observable<{ success: boolean; message: string }> {
-    return this.http.delete<{ success: boolean; message: string }>(this.config.getFullUrl(`/image/training-zips/${encodeURIComponent(fileName)}`));
+    return this.http.delete<{ success: boolean; message: string }>(this.config.getFullUrl(`${this.config.apiConfig.endpoints.image.trainingZips}/${encodeURIComponent(fileName)}`));
   }
 
   deleteAllTrainingFiles(): Observable<{ success: boolean; message: string }> {
-    return this.http.delete<{ success: boolean; message: string }>(this.config.getFullUrl('/image/training-zips'));
+    return this.http.delete<{ success: boolean; message: string }>(this.config.getFullUrl(this.config.apiConfig.endpoints.image.trainingZips));
   }
 
   getLatestTrainingZip(): Observable<{ success: boolean; data: { fileName: string; publicUrl: string; createdAt: string; sizeBytes: number }; error?: any }> {
     return this.http.get<{ success: boolean; data: { fileName: string; publicUrl: string; createdAt: string; sizeBytes: number }; error?: any }>(
-      this.config.getFullUrl('/image/latest-training-zip')
+      this.config.getFullUrl(this.config.apiConfig.endpoints.image.latestTrainingZip)
     );
   }
 
