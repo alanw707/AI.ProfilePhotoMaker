@@ -64,12 +64,40 @@
                   "maximumError": "3MB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ]
             },
             "development": {
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "localtunnel": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.localtunnel.ts"
+                }
+              ]
+            },
+            "test": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.test.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -82,6 +110,12 @@
             },
             "development": {
               "buildTarget": "AI.ProfilePhotoMaker.UI:build:development"
+            },
+            "localtunnel": {
+              "buildTarget": "AI.ProfilePhotoMaker.UI:build:localtunnel"
+            },
+            "test": {
+              "buildTarget": "AI.ProfilePhotoMaker.UI:build:test"
             }
           },
           "defaultConfiguration": "development"

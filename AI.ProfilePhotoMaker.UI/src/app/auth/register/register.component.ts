@@ -83,7 +83,18 @@ export class RegisterComponent {
 
   registerWithGoogle() {
     // Use configuration-based URL for Google OAuth registration
-    window.location.href = `${this.configService.appBaseUrl}/api/auth/external-login/Google?returnUrl=/dashboard`;
+    // Use configuration-based URL for Google OAuth with dynamic redirect handling
+    const oauthBaseUrl = this.configService.getOAuthRedirectUrl();
+    const fullReturnUrl = `${this.configService.frontendBaseUrl}/dashboard`;
+    
+    console.log('OAuth redirect details (register):', {
+      oauthBaseUrl,
+      fullReturnUrl,
+      isExternalAccess: this.configService.isExternalAccess(),
+      currentOrigin: window.location.origin
+    });
+    
+    window.location.href = `${oauthBaseUrl}/api/auth/external-login/Google?returnUrl=${encodeURIComponent(fullReturnUrl)}`;
   }
 
   registerWithFacebook() {

@@ -3,8 +3,12 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve --host 0.0.0.0 --port 4200 --disable-host-check",
+    "start": "ng serve --host 0.0.0.0 --port 4200",
+    "start:localtunnel": "ng serve --host 0.0.0.0 --port 4200 --disable-host-check --configuration localtunnel",
+    "start:test": "ng serve --host 0.0.0.0 --port 4200 --disable-host-check --configuration test",
     "build": "ng build",
+    "build:localtunnel": "ng build --configuration localtunnel",
+    "build:test": "ng build --configuration test",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "test:integration": "ng test --karma-config=karma.integration.conf.js",
@@ -20,7 +24,6 @@
   },
   "private": true,
   "dependencies": {
-    "@21st-extension/toolbar": "^0.5.14",
     "@abacritt/angularx-social-login": "^2.4.0",
     "@angular/common": "^19.2.0",
     "@angular/compiler": "^19.2.0",
