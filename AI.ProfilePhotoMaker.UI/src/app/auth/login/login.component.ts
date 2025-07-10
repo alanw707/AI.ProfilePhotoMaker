@@ -37,7 +37,8 @@ export class LoginComponent implements OnInit {
   }
 
   ngOnInit() {
-    console.log('LoginComponent ngOnInit');
+    console.log('=== LoginComponent ngOnInit ===');
+    console.log('Current URL:', window.location.href);
     console.log('Return URL:', this.returnUrl);
     
     // Check if user is already logged in
@@ -52,34 +53,98 @@ export class LoginComponent implements OnInit {
 
     // Check if this is an OAuth callback
     this.route.queryParams.subscribe(params => {
-      console.log('Query params:', params);
+      console.log('=== OAuth Callback Detection ===');
+      console.log('All query params:', params);
+      console.log('Current URL search params:', window.location.search);
       
       // Check if token is directly in params
       if (params['token']) {
-        console.log('Direct OAuth token detected');
-        this.authService.handleOAuthCallback(params['token'], params['expiration']);
-        this.router.navigate(['/dashboard']);
+        console.log('✅ Direct OAuth token detected in params');
+        console.log('Token preview:', params['token'].substring(0, 50) + '...');
+        console.log('Expiration:', params['expiration']);
+        
+        try {
+          this.authService.handleOAuthCallback(params['token'], params['expiration']);
+          console.log('✅ OAuth callback handled successfully');
+          console.log('Navigating to dashboard...');
+          this.router.navigate(['/dashboard']).then(success => {
+            console.log('Navigation result:', success);
+          });
+        } catch (error) {
+          console.error('❌ Error handling OAuth callback:', error);
+          this.error = 'Failed to process OAuth token';
+        }
         return;
       }
       
       // Check if token is embedded in returnUrl (OAuth callback scenario)
       if (params['returnUrl']?.includes('token=')) {
-        console.log('OAuth token found in returnUrl');
-        const urlObj = new URL('http://dummy.com' + params['returnUrl']);
-        const token = urlObj.searchParams.get('token');
-        const expiration = urlObj.searchParams.get('expiration');
+        console.log('✅ OAuth token found in returnUrl');
+        console.log('ReturnUrl with token:', params['returnUrl']);
         
-        if (token) {
-          console.log('Extracted token from returnUrl');
-          this.authService.handleOAuthCallback(token, expiration || undefined);
-          this.router.navigate(['/dashboard']);
-          return;
+        try {
+          const urlObj = new URL('http://dummy.com' + params['returnUrl']);
+          const token = urlObj.searchParams.get('token');
+          const expiration = urlObj.searchParams.get('expiration');
+          
+          if (token) {
+            console.log('✅ Extracted token from returnUrl');
+            console.log('Token preview:', token.substring(0, 50) + '...');
+            console.log('Expiration:', expiration);
+            
+            this.authService.handleOAuthCallback(token, expiration || undefined);
+            console.log('✅ OAuth callback handled successfully');
+            console.log('Navigating to dashboard...');
+            this.router.navigate(['/dashboard']).then(success => {
+              console.log('Navigation result:', success);
+            });
+          } else {
+            console.log('❌ No token found in returnUrl after parsing');
+          }
+        } catch (error) {
+          console.error('❌ Error parsing returnUrl:', error);
+          this.error = 'Failed to parse OAuth response';
         }
+        return;
+      }
+      
+      // Check URL fragment for token (some OAuth flows use fragments)
+      const fragment = window.location.hash;
+      if (fragment && fragment.includes('token=')) {
+        console.log('✅ OAuth token found in URL fragment');
+        console.log('Fragment:', fragment);
+        
+        try {
+          const urlObj = new URL('http://dummy.com/?' + fragment.substring(1));
+          const token = urlObj.searchParams.get('token');
+          const expiration = urlObj.searchParams.get('expiration');
+          
+          if (token) {
+            console.log('✅ Extracted token from URL fragment');
+            console.log('Token preview:', token.substring(0, 50) + '...');
+            console.log('Expiration:', expiration);
+            
+            this.authService.handleOAuthCallback(token, expiration || undefined);
+            console.log('✅ OAuth callback handled successfully');
+            console.log('Navigating to dashboard...');
+            this.router.navigate(['/dashboard']).then(success => {
+              console.log('Navigation result:', success);
+            });
+          }
+        } catch (error) {
+          console.error('❌ Error parsing URL fragment:', error);
+          this.error = 'Failed to parse OAuth response';
+        }
+        return;
       }
       
       if (params['error']) {
-        // OAuth failed
+        console.log('❌ OAuth error detected:', params['error']);
         this.error = 'OAuth login failed: ' + params['error'];
+      }
+      
+      if (!params['token'] && !params['returnUrl']?.includes('token=') && !fragment?.includes('token=')) {
+        console.log('ℹ️ No OAuth token detected - normal page load');
       }
     });
   }
@@ -140,8 +205,21 @@ export class LoginComponent implements OnInit {
   }
 
   loginWithGoogle() {
-    // Use configuration-based URL for Google OAuth
-    window.location.href = `${this.configService.appBaseUrl}/api/auth/external-login/Google?returnUrl=${this.returnUrl}`;
+    // Use configuration-based URL for Google OAuth with dynamic redirect handling
+    const oauthBaseUrl = this.configService.getOAuthRedirectUrl();
+    const currentFrontendUrl = window.location.origin; // Get actual current frontend URL
+    const fullReturnUrl = `${currentFrontendUrl}${this.returnUrl}`;
+    
+    console.log('OAuth redirect details:', {
+      oauthBaseUrl,
+      fullReturnUrl,
+      currentFrontendUrl,
+      isExternalAccess: this.configService.isExternalAccess(),
+      currentOrigin: window.location.origin
+    });
+    
+    // Pass the current frontend URL to the backend so it knows where to redirect
+    window.location.href = `${oauthBaseUrl}/api/auth/external-login/Google?returnUrl=${encodeURIComponent(this.returnUrl)}&frontendUrl=${encodeURIComponent(currentFrontendUrl)}`;
   }
 
   loginWithFacebook() {

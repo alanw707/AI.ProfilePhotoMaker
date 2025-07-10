@@ -48,13 +48,18 @@ export class AuthService {
   public currentUser$ = this.currentUserSubject.asObservable();
 
   constructor(private http: HttpClient, private config: ConfigService, private router: Router) {
-    console.log('AuthService constructor - checking initial auth state');
+    console.log('=== AuthService Constructor ===');
+    console.log('Checking initial auth state...');
     console.log('localStorage keys on init:', Object.keys(localStorage));
     console.log('TOKEN_KEY:', this.TOKEN_KEY);
-    console.log('Current token:', localStorage.getItem(this.TOKEN_KEY));
+    console.log('Current token (full):', localStorage.getItem(this.TOKEN_KEY));
+    console.log('Current token (auth_token):', localStorage.getItem('auth_token'));
+    console.log('Current token (authToken):', localStorage.getItem('authToken'));
+    console.log('Current user data:', localStorage.getItem('currentUser'));
     
     // Check immediately on service creation
     this.checkTokenValidity();
+    console.log('Auth state after token check:', this.isAuthenticatedSubject.value);
     
     // Check token validity periodically (every 5 minutes) - but only if we have a token
     setInterval(() => {
@@ -76,37 +81,51 @@ export class AuthService {
   }
 
   handleOAuthCallback(token: string, expiration?: string): void {
-    console.log('handleOAuthCallback called with token length:', token?.length);
+    console.log('=== OAuth Callback Handler ===');
+    console.log('Token received:', !!token);
+    console.log('Token length:', token?.length);
+    console.log('Token preview:', token?.substring(0, 100) + '...');
     console.log('Expiration:', expiration);
     
     if (token) {
-      // Store the token using consistent key
-      localStorage.setItem(this.TOKEN_KEY, token);
-      localStorage.setItem('authToken', token); // Keep both for compatibility
-      if (expiration) {
-        localStorage.setItem('tokenExpiration', expiration);
-      }
-      
-      // Extract user info from token
-      const user = this.extractUserFromToken(token);
-      console.log('Extracted user from token:', user);
-      
-      if (user && user.firstName && user.lastName) {
-        // Complete user data from JWT
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        this.currentUserSubject.next(user);
-        this.isAuthenticatedSubject.next(true);
-        console.log('OAuth callback processed with complete user data from JWT');
-      } else {
-        // Incomplete JWT data, fetch from profile API
-        console.log('Incomplete user data from JWT, fetching from profile API');
-        this.isAuthenticatedSubject.next(true);
+      try {
+        // Store the token using consistent key
+        localStorage.setItem(this.TOKEN_KEY, token);
+        localStorage.setItem('authToken', token); // Keep both for compatibility
+        console.log('✅ Token stored in localStorage');
         
-        // Fetch user profile data from API to get complete firstName/lastName
-        this.fetchUserProfileForOAuth(token);
+        if (expiration) {
+          localStorage.setItem('tokenExpiration', expiration);
+          console.log('✅ Expiration stored in localStorage');
+        }
+        
+        // Extract user info from token
+        const user = this.extractUserFromToken(token);
+        console.log('Extracted user from token:', user);
+        
+        if (user && user.firstName && user.lastName) {
+          // Complete user data from JWT
+          localStorage.setItem('currentUser', JSON.stringify(user));
+          this.currentUserSubject.next(user);
+          this.isAuthenticatedSubject.next(true);
+          console.log('✅ OAuth callback processed with complete user data from JWT');
+        } else {
+          // Incomplete JWT data, fetch from profile API
+          console.log('⚠️ Incomplete user data from JWT, fetching from profile API');
+          this.isAuthenticatedSubject.next(true);
+          console.log('✅ Authentication state set to true');
+          
+          // Fetch user profile data from API to get complete firstName/lastName
+          this.fetchUserProfileForOAuth(token);
+        }
+        
+        console.log('✅ OAuth callback processing complete');
+      } catch (error) {
+        console.error('❌ Error in OAuth callback handling:', error);
+        this.isAuthenticatedSubject.next(false);
       }
     } else {
-      console.error('No token provided to handleOAuthCallback');
+      console.error('❌ No token provided to handleOAuthCallback');
     }
   }
 
@@ -302,7 +321,14 @@ export class AuthService {
   }
 
   isAuthenticated(): boolean {
-    return this.hasToken();
+    const hasToken = this.hasToken();
+    console.log('isAuthenticated() called - has token:', hasToken);
+    if (hasToken) {
+      const token = this.getToken();
+      console.log('Token length:', token?.length);
+      console.log('Token preview:', token?.substring(0, 50) + '...');
+    }
+    return hasToken;
   }
 
   getCurrentUserId(): string | null {
@@ -333,9 +359,17 @@ export class AuthService {
 
   private hasToken(): boolean {
     const token = localStorage.getItem(this.TOKEN_KEY);
-    if (!token) {return false;}
+    console.log('hasToken() check - TOKEN_KEY:', this.TOKEN_KEY);
+    console.log('hasToken() check - token exists:', !!token);
+    console.log('hasToken() check - token length:', token?.length);
+    
+    if (!token) {
+      console.log('hasToken() - No token found in localStorage');
+      return false;
+    }
     
     const isExpired = this.isTokenExpired(token);
+    console.log('hasToken() check - token expired:', isExpired);
     
     if (isExpired) {
       console.warn('Auth token has expired');
@@ -343,6 +377,7 @@ export class AuthService {
       return false;
     }
     
+    console.log('hasToken() - Token is valid and not expired');
     return true;
   }
 
