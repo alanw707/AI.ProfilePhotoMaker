@@ -59,8 +59,9 @@ export class FallbackOperationsService implements IFallbackOperationsService {
             // Get fresh data to ensure we have the correct total count
             this.fileUploadService.getUserImages(true).subscribe({
               next: (freshData) => {
-                const actualGeneratedCount = freshData.generatedImages || 
-                  freshData.images.filter(img => img.isGenerated).length;
+                const userData = freshData.success ? freshData.data : null;
+                const actualGeneratedCount = userData?.generatedImages || 
+                  userData?.images?.filter(img => img.isGenerated)?.length || 0;
                 
                 console.log(`📊 Refreshed generated photos count: ${actualGeneratedCount} (was ${response.data.addedCount} added)`);
                 
@@ -162,13 +163,14 @@ export class FallbackOperationsService implements IFallbackOperationsService {
     
     try {
       const freshData = await this.fileUploadService.getUserImages(true).toPromise();
+      const userData = freshData?.success ? freshData.data : null;
       
       const result: DataDiscrepancyResult = {
         dashboardCount: 0, // This would be passed from dashboard state
-        apiGeneratedField: freshData?.generatedImages || 0,
-        filteredCount: freshData?.images.filter(img => img.isGenerated).length || 0,
-        totalImages: freshData?.totalImages || 0,
-        allImages: freshData?.images || []
+        apiGeneratedField: userData?.generatedImages || 0,
+        filteredCount: userData?.images?.filter(img => img.isGenerated)?.length || 0,
+        totalImages: userData?.totalImages || 0,
+        allImages: userData?.images || []
       };
       
       console.log('📊 Data Discrepancy Analysis:');
