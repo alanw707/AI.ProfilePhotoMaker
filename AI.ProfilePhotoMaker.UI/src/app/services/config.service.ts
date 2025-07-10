@@ -50,10 +50,10 @@ export class ConfigService {
       },
       profile: {
         base: '/profile',
-        uploadImages: '/profile/upload',
-        images: '/profile/images',
+        uploadImages: '/image/upload',
+        images: '/image/images',
         trainingStatus: '/profile/training-status',
-        trainingFiles: '/profile/training-files'
+        trainingFiles: '/image/training-zips'
       },
       image: {
         base: '/image',
