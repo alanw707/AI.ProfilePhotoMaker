@@ -348,84 +348,30 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         /// </summary>
         private string GetFrontendBaseUrl()
         {
-            // Priority 1: Check referer header (most reliable for OAuth flows)
+            // Check referer header first (most reliable for OAuth flows)
             var referer = Request.Headers["Referer"].FirstOrDefault();
             if (!string.IsNullOrEmpty(referer))
             {
                 try
                 {
                     var uri = new Uri(referer);
-                    var frontendUrl = $"{uri.Scheme}://{uri.Host}{(uri.Port != 80 && uri.Port != 443 ? $":{uri.Port}" : "")}";
-                    return frontendUrl;
+                    return $"{uri.Scheme}://{uri.Host}{(uri.Port != 80 && uri.Port != 443 ? $":{uri.Port}" : "")}";
                 }
-                catch (Exception)
+                catch
                 {
                     // Ignore parsing errors
                 }
             }
             
-            // Priority 2: Check Origin header
+            // Check Origin header
             var origin = Request.Headers["Origin"].FirstOrDefault();
             if (!string.IsNullOrEmpty(origin))
             {
                 return origin;
             }
             
-            // Priority 3: Check if request is coming through a proxy (ngrok, localtunnel, etc.)
-            var forwardedHost = Request.Headers["X-Forwarded-Host"].FirstOrDefault();
-            var forwardedProto = Request.Headers["X-Forwarded-Proto"].FirstOrDefault() ?? "https";
-            
-            if (!string.IsNullOrEmpty(forwardedHost))
-            {
-                // For external access, the frontend URL might be different from backend
-                // Try to detect the pattern and guess the frontend URL
-                var frontendUrl = GuessExternalFrontendUrl(forwardedHost, forwardedProto);
-                if (!string.IsNullOrEmpty(frontendUrl))
-                {
-                    return frontendUrl;
-                }
-                
-                // Fallback: assume frontend is on the same host but different port
-                var fallbackUrl = $"{forwardedProto}://{forwardedHost}".Replace(":5035", ":4200");
-                return fallbackUrl;
-            }
-            
-            // Priority 4: Default fallback to localhost
+            // Default to localhost for development
             return "http://localhost:4200";
-        }
-
-        /// <summary>
-        /// Try to guess the external frontend URL based on the backend URL pattern
-        /// </summary>
-        private string GuessExternalFrontendUrl(string backendHost, string protocol)
-        {
-            // Common patterns for tunnel services:
-            
-            // Pattern 1: Different subdomains (e.g., api-xxx.domain.com -> app-xxx.domain.com)
-            if (backendHost.StartsWith("api-"))
-            {
-                var frontendHost = backendHost.Replace("api-", "app-");
-                return $"{protocol}://{frontendHost}";
-            }
-            
-            // Pattern 2: Different prefixes for localtunnel (e.g., backend-xxx.loca.lt -> frontend-xxx.loca.lt)
-            if (backendHost.Contains("loca.lt"))
-            {
-                // For localtunnel, each tunnel gets a unique subdomain
-                // We can't reliably guess the frontend URL without configuration
-                // Return null to use fallback logic
-                return null;
-            }
-            
-            // Pattern 3: ngrok with different ports (e.g., xxx.ngrok.io:5035 -> xxx.ngrok.io:4200)
-            if (backendHost.Contains("ngrok"))
-            {
-                // For ngrok, typically same domain but different port
-                var frontendHost = backendHost.Replace(":5035", ":4200");
-                return $"{protocol}://{frontendHost}";
-            }
-            
-            return null;
         }
 
     }

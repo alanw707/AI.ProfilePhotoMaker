@@ -4,12 +4,10 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve --host 0.0.0.0 --port 4200",
-    "start:localtunnel": "ng serve --host 0.0.0.0 --port 4200 --disable-host-check --configuration localtunnel",
     "start:test": "ng serve --host 0.0.0.0 --port 4200 --disable-host-check --configuration test",
-    "start:ngrok": "ng serve --configuration ngrok",
+    "start:ngrok": "ng serve --configuration ngrok --host 0.0.0.0 --disable-host-check",
     "ngrok": "ngrok http 4200 --domain=awlocaldev.ngrok.app",
     "build": "ng build",
-    "build:localtunnel": "ng build --configuration localtunnel",
     "build:test": "ng build --configuration test",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
