@@ -48,7 +48,7 @@ public class ReplicateApiClient : IReplicateApiClient
     /// <param name="modelName">The model name</param>
     /// <param name="description">Optional model description</param>
     /// <returns>The created model's full name (owner/model-name)</returns>
-    public async Task<string> CreateModelAsync(string userId, string modelName, string description = null)
+    public async Task<string> CreateModelAsync(string userId, string modelName, string? description = null)
     {
         try
         {
