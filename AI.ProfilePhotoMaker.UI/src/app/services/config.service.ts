@@ -113,4 +113,24 @@ export class ConfigService {
   isExternalAccess(): boolean {
     return !window.location.hostname.includes('localhost');
   }
+
+  // Add getOAuthRedirectUrl for compatibility
+  getOAuthRedirectUrl(): string {
+    return this.getOAuthBaseUrl();
+  }
+
+  // Add apiConfig for compatibility with file-upload service
+  get apiConfig() {
+    return {
+      endpoints: {
+        image: {
+          upload: '/image/upload',
+          images: '/image/images',
+          createTrainingZip: '/image/create-training-zip',
+          trainingZips: '/image/training-zips',
+          latestTrainingZip: '/image/latest-training-zip'
+        }
+      }
+    };
+  }
 }
