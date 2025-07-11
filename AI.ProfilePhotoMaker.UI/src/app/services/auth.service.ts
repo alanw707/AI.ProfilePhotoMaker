@@ -48,18 +48,9 @@ export class AuthService {
   public currentUser$ = this.currentUserSubject.asObservable();
 
   constructor(private http: HttpClient, private config: ConfigService, private router: Router) {
-    console.log('=== AuthService Constructor ===');
-    console.log('Checking initial auth state...');
-    console.log('localStorage keys on init:', Object.keys(localStorage));
-    console.log('TOKEN_KEY:', this.TOKEN_KEY);
-    console.log('Current token (full):', localStorage.getItem(this.TOKEN_KEY));
-    console.log('Current token (auth_token):', localStorage.getItem('auth_token'));
-    console.log('Current token (authToken):', localStorage.getItem('authToken'));
-    console.log('Current user data:', localStorage.getItem('currentUser'));
     
     // Check immediately on service creation
     this.checkTokenValidity();
-    console.log('Auth state after token check:', this.isAuthenticatedSubject.value);
     
     // Check token validity periodically (every 5 minutes) - but only if we have a token
     setInterval(() => {
@@ -71,61 +62,42 @@ export class AuthService {
   
   private checkTokenValidity(): void {
     const token = localStorage.getItem(this.TOKEN_KEY);
-    console.log('checkTokenValidity - token exists:', !!token);
     if (token && this.isTokenExpired(token)) {
-      console.log('Token expired during check, logging out');
       this.logout();
-    } else if (token) {
-      console.log('Token is valid');
     }
   }
 
   handleOAuthCallback(token: string, expiration?: string): void {
-    console.log('=== OAuth Callback Handler ===');
-    console.log('Token received:', !!token);
-    console.log('Token length:', token?.length);
-    console.log('Token preview:', token?.substring(0, 100) + '...');
-    console.log('Expiration:', expiration);
     
     if (token) {
       try {
         // Store the token using consistent key
         localStorage.setItem(this.TOKEN_KEY, token);
         localStorage.setItem('authToken', token); // Keep both for compatibility
-        console.log('✅ Token stored in localStorage');
         
         if (expiration) {
           localStorage.setItem('tokenExpiration', expiration);
-          console.log('✅ Expiration stored in localStorage');
         }
         
         // Extract user info from token
         const user = this.extractUserFromToken(token);
-        console.log('Extracted user from token:', user);
         
         if (user && user.firstName && user.lastName) {
           // Complete user data from JWT
           localStorage.setItem('currentUser', JSON.stringify(user));
           this.currentUserSubject.next(user);
           this.isAuthenticatedSubject.next(true);
-          console.log('✅ OAuth callback processed with complete user data from JWT');
         } else {
           // Incomplete JWT data, fetch from profile API
-          console.log('⚠️ Incomplete user data from JWT, fetching from profile API');
           this.isAuthenticatedSubject.next(true);
-          console.log('✅ Authentication state set to true');
           
           // Fetch user profile data from API to get complete firstName/lastName
           this.fetchUserProfileForOAuth(token);
         }
-        
-        console.log('✅ OAuth callback processing complete');
       } catch (error) {
-        console.error('❌ Error in OAuth callback handling:', error);
+        console.error('Error in OAuth callback handling:', error);
         this.isAuthenticatedSubject.next(false);
       }
-    } else {
-      console.error('❌ No token provided to handleOAuthCallback');
     }
   }
 
@@ -146,13 +118,8 @@ export class AuthService {
     this.currentUserSubject.next(tempUser);
     
     // Fetch user profile from API to get firstName/lastName
-    console.log('Fetching user profile from API for complete user data');
     this.http.get<any>(`${this.config.baseUrl}/profile`).subscribe({
       next: (response) => {
-        console.log('Full profile API response:', response);
-        console.log('Response firstName:', response.firstName);
-        console.log('Response lastName:', response.lastName);
-        
         // Handle response that contains data directly (not wrapped in success/data structure)
         if (response && (response.firstName || response.lastName)) {
           const completeUser = {
@@ -162,12 +129,9 @@ export class AuthService {
             lastName: response.lastName || ''
           };
           
-          console.log('SUCCESS: Updated user with profile data:', completeUser);
           localStorage.setItem('currentUser', JSON.stringify(completeUser));
           this.currentUserSubject.next(completeUser);
         } else {
-          console.log('FALLBACK: Profile API response does not contain firstName/lastName');
-          console.log('Response keys:', Object.keys(response || {}));
           // Keep the temp user with email username as firstName
           const fallbackUser = {
             ...tempUser,

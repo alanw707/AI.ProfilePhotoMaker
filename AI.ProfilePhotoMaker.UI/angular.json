@@ -98,6 +98,17 @@
                   "with": "src/environments/environment.test.ts"
                 }
               ]
+            },
+            "ngrok": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.ngrok.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -116,6 +127,9 @@
             },
             "test": {
               "buildTarget": "AI.ProfilePhotoMaker.UI:build:test"
+            },
+            "ngrok": {
+              "buildTarget": "AI.ProfilePhotoMaker.UI:build:ngrok"
             }
           },
           "defaultConfiguration": "development"

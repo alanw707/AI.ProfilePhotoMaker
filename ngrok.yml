@@ -1,0 +1,8 @@
+version: "2"
+authtoken: 2TX1W9PXk4cLg8LG7NK26zDM748_37YdxpfsogTtBWiGq9do6
+tunnels:
+  frontend:
+    addr: 4200
+    proto: http
+    domain: awlocaldev.ngrok.app
+    inspect: false
