@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "@angular-eslint/prefer-inject": "warn",
+    "@typescript-eslint/naming-convention": "warn",
+    "@typescript-eslint/no-unused-vars": "warn",
+    "max-params": "warn",
+    "max-lines-per-function": "warn",
+    "complexity": "warn",
+    "max-len": "warn",
+    "no-console": "warn",
+    "@typescript-eslint/explicit-function-return-type": "warn",
+    "@angular-eslint/prefer-on-push-component-change-detection": "warn"
+  }
+}

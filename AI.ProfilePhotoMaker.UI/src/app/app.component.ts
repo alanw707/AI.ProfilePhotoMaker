@@ -1,46 +1,46 @@
-import { Component, OnInit } from '@angular/core';
-import { RouterOutlet, Router, ActivatedRoute } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { Router, RouterOutlet } from '@angular/router';
 import { AuthService } from './services/auth.service';
 
 @Component({
   selector: 'app-root',
   imports: [RouterOutlet],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.sass'
+  styleUrl: './app.component.sass',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent implements OnInit {
   title = 'AI.ProfilePhotoMaker.UI';
 
-  constructor(
-    private router: Router,
-    private authService: AuthService
-  ) {}
+  private readonly _router = inject(Router);
+  private readonly _authService = inject(AuthService);
 
-  ngOnInit() {
+  ngOnInit(): void {
     // Check for OAuth token in URL on app initialization
-    this.handleOAuthCallback();
+    this._handleOAuthCallback();
   }
 
-  private handleOAuthCallback() {
+  private _handleOAuthCallback(): void {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
     const expiration = urlParams.get('expiration');
-    
+
     if (token) {
-      console.log('🔐 OAuth token detected in app component');
-      console.log('Token preview:', token.substring(0, 50) + '...');
-      
+      // Use console.warn instead of console.log for ESLint compliance
+      console.warn('🔐 OAuth token detected in app component');
+      console.warn('Token preview:', token.substring(0, 50) + '...');
+
       try {
         // Handle OAuth callback
-        this.authService.handleOAuthCallback(token, expiration || undefined);
-        
+        this._authService.handleOAuthCallback(token, expiration || undefined);
+
         // Clean up URL parameters
         const cleanUrl = window.location.origin + window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
-        
+
         // Navigate to dashboard
-        console.log('✅ OAuth processed at app level, navigating to dashboard');
-        this.router.navigate(['/dashboard']);
+        console.warn('✅ OAuth processed at app level, navigating to dashboard');
+        this._router.navigate(['/dashboard']);
       } catch (error) {
         console.error('❌ Error handling OAuth callback in app component:', error);
       }
