@@ -81,10 +81,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 RedirectUri = redirectUrl 
             };
             
-            Console.WriteLine($"🔗 OAuth initiated - Provider: {provider}");
-            Console.WriteLine($"🔗 Return URL: {returnUrl}");
-            Console.WriteLine($"🔗 Frontend URL: {frontendUrl}");
-            Console.WriteLine($"🔗 Callback URL: {redirectUrl}");
             
             return Challenge(properties, provider);
         }
@@ -92,10 +88,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         [HttpGet("external-login/callback")]
         public async Task<IActionResult> ExternalLoginCallback(string returnUrl = "", string code = "", string state = "", string frontendUrl = "")
         {
-            // OAuth callback processing
-            Console.WriteLine($"🔗 OAuth Callback - Return URL: {returnUrl}");
-            Console.WriteLine($"🔗 OAuth Callback - Frontend URL: {frontendUrl}");
-            Console.WriteLine($"🔗 OAuth Callback - Code present: {!string.IsNullOrEmpty(code)}");
             
             // Determine the target frontend URL once at the beginning
             var targetFrontendUrl = !string.IsNullOrEmpty(frontendUrl) ? frontendUrl : GetFrontendBaseUrl();
@@ -110,13 +102,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     var userInfo = await GetGoogleUserInfoAsync(code);
                     if (userInfo != null)
                     {
-                        Console.WriteLine($"Successfully retrieved Google user info: {userInfo.Email}");
                         return await ProcessGoogleUserAsync(userInfo.Email, userInfo.GivenName, userInfo.FamilyName, returnUrl, frontendUrl);
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Direct Google OAuth failed: {ex.Message}");
                 }
             }
             
@@ -124,7 +114,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             var info = await _signInManager.GetExternalLoginInfoAsync();
             if (info == null)
             {
-                Console.WriteLine("GetExternalLoginInfoAsync returned null");
                 return Redirect($"{targetFrontendUrl}{returnUrl}?error=external_login_failed");
             }
 
@@ -155,18 +144,15 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             var existingUser = await _userManager.FindByEmailAsync(email);
             if (existingUser != null)
             {
-                Console.WriteLine($"Found existing user with email: {email}");
                 // Link external login to existing user
                 var addLoginResult = await _userManager.AddLoginAsync(existingUser, info);
                 if (addLoginResult.Succeeded)
                 {
-                    Console.WriteLine("Successfully linked Google account to existing user");
                     var token = ((AuthService)_authService).GenerateJwtToken(existingUser);
                     return Redirect($"{targetFrontendUrl}{returnUrl}?token={token.Token}&expiration={token.Expiration}");
                 }
                 else
                 {
-                    Console.WriteLine($"Failed to link Google account: {string.Join(", ", addLoginResult.Errors.Select(e => e.Description))}");
                     return Redirect($"{targetFrontendUrl}{returnUrl}?error=failed_to_link_account");
                 }
             }
@@ -208,90 +194,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             return Ok(result);
         }
 
-        [HttpGet("google-direct-callback")]
-        public async Task<IActionResult> GoogleDirectCallback(string? code = null, string returnUrl = "/dashboard", string frontendUrl = "")
-        {
-            Console.WriteLine($"Google Direct Callback - Code: {code}, ReturnUrl: {returnUrl}, FrontendUrl: {frontendUrl}");
-            Console.WriteLine($"All query parameters: {string.Join(", ", HttpContext.Request.Query.Select(q => $"{q.Key}={q.Value}"))}");
-            
-            // Determine the target frontend URL once at the beginning
-            var targetFrontendUrl = !string.IsNullOrEmpty(frontendUrl) ? frontendUrl : GetFrontendBaseUrl();
-            
-            // Try to get code from query parameters if not passed as parameter
-            if (string.IsNullOrEmpty(code))
-            {
-                code = HttpContext.Request.Query["code"].ToString();
-            }
-            
-            if (string.IsNullOrEmpty(code))
-            {
-                Console.WriteLine("No authorization code found in request");
-                return Redirect($"{targetFrontendUrl}/login?error=no_authorization_code");
-            }
 
-            try
-            {
-                var userInfo = await GetGoogleUserInfoAsync(code);
-                if (userInfo != null)
-                {
-                    Console.WriteLine($"Successfully retrieved Google user info: {userInfo.Email}");
-                    return await ProcessGoogleUserAsync(userInfo.Email, userInfo.GivenName, userInfo.FamilyName, returnUrl, frontendUrl);
-                }
-                else
-                {
-                    Console.WriteLine("Failed to retrieve user info from Google");
-                    return Redirect($"{targetFrontendUrl}{returnUrl}?error=failed_to_get_user_info");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Google Direct OAuth failed: {ex.Message}");
-                return Redirect($"{targetFrontendUrl}{returnUrl}?error=oauth_processing_failed");
-            }
-        }
-
-        [HttpGet("google-ticket-callback")]
-        public async Task<IActionResult> GoogleTicketCallback(string email, string? firstName = null, string? lastName = null, string returnUrl = "/dashboard", string frontendUrl = "")
-        {
-            Console.WriteLine($"Google Ticket Callback - Email: {email}, Name: {firstName} {lastName}, ReturnUrl: {returnUrl}, FrontendUrl: {frontendUrl}");
-            
-            // Determine the target frontend URL once at the beginning
-            var targetFrontendUrl = !string.IsNullOrEmpty(frontendUrl) ? frontendUrl : GetFrontendBaseUrl();
-            
-            if (string.IsNullOrEmpty(email))
-            {
-                Console.WriteLine("No email provided in ticket callback");
-                return Redirect($"{targetFrontendUrl}/login?error=no_email_in_ticket");
-            }
-
-            try
-            {
-                Console.WriteLine($"Processing user from OAuth ticket: {email}");
-                return await ProcessGoogleUserAsync(email, firstName, lastName, returnUrl, frontendUrl);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Google Ticket processing failed: {ex.Message}");
-                return Redirect($"{targetFrontendUrl}{returnUrl}?error=ticket_processing_failed");
-            }
-        }
-
-        [HttpGet("debug/frontend-url")]
-        public IActionResult GetDebugFrontendUrl()
-        {
-            var detectedUrl = GetFrontendBaseUrl();
-            var headers = Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString());
-            
-            return Ok(new {
-                detectedFrontendUrl = detectedUrl,
-                requestHeaders = headers,
-                host = Request.Headers["Host"].FirstOrDefault(),
-                referer = Request.Headers["Referer"].FirstOrDefault(),
-                origin = Request.Headers["Origin"].FirstOrDefault(),
-                forwardedHost = Request.Headers["X-Forwarded-Host"].FirstOrDefault(),
-                forwardedProto = Request.Headers["X-Forwarded-Proto"].FirstOrDefault()
-            });
-        }
 
         [HttpGet("profile-completion-status")]
         [Authorize]
@@ -350,14 +253,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             
             if (!tokenResponse.IsSuccessStatusCode)
             {
-                Console.WriteLine($"Token exchange failed: {tokenContent}");
                 return null;
             }
 
             var tokenData = System.Text.Json.JsonSerializer.Deserialize<GoogleTokenResponse>(tokenContent);
             if (tokenData?.AccessToken == null)
             {
-                Console.WriteLine("No access token received");
                 return null;
             }
 
@@ -368,7 +269,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             if (!userResponse.IsSuccessStatusCode)
             {
-                Console.WriteLine($"User info request failed: {userContent}");
                 return null;
             }
 
@@ -377,44 +277,32 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
         private async Task<IActionResult> ProcessGoogleUserAsync(string email, string? firstName, string? lastName, string returnUrl, string frontendUrl = "")
         {
-            Console.WriteLine($"ProcessGoogleUserAsync called with email: {email}, returnUrl: {returnUrl}");
-            
             // Determine the target frontend URL once at the beginning
             var targetFrontendUrl = !string.IsNullOrEmpty(frontendUrl) ? frontendUrl : GetFrontendBaseUrl();
             
             var existingUser = await _userManager.FindByEmailAsync(email);
             if (existingUser != null)
             {
-                Console.WriteLine($"Found existing user with email: {email}");
-                
                 // Check if profile is complete for existing OAuth users
                 var profileStatus = await _authService.CheckProfileCompletionAsync(existingUser.Id);
                 var token = ((AuthService)_authService).GenerateJwtToken(existingUser);
-                Console.WriteLine($"Generated JWT token, length: {token.Token.Length}");
                 
                 string redirectUrl;
                 if (!profileStatus.IsCompleted)
                 {
                     // Redirect to profile completion if incomplete
                     redirectUrl = $"{targetFrontendUrl}/complete-profile?token={Uri.EscapeDataString(token.Token)}&expiration={Uri.EscapeDataString(token.Expiration.ToString())}";
-                    Console.WriteLine($"Redirecting to profile completion: {redirectUrl}");
                 }
                 else
                 {
                     // Normal login flow
                     redirectUrl = $"{targetFrontendUrl}{returnUrl}?token={Uri.EscapeDataString(token.Token)}&expiration={Uri.EscapeDataString(token.Expiration.ToString())}";
-                    Console.WriteLine($"🔗 Frontend Base URL (provided): {frontendUrl}");
-                    Console.WriteLine($"🔗 Frontend Base URL (target): {targetFrontendUrl}");
-                    Console.WriteLine($"🔗 Return URL: {returnUrl}");
-                    Console.WriteLine($"🔗 Full Redirect URL: {redirectUrl}");
-                    Console.WriteLine($"🔗 Token Length: {token.Token.Length}");
                 }
                 
                 return Redirect(redirectUrl);
             }
             else
             {
-                Console.WriteLine($"Creating new user with email: {email}");
                 // Create new user
                 var userName = email.Split('@')[0];
                 var newUser = new ApplicationUser(userName, email, firstName ?? "", lastName ?? "");
@@ -441,18 +329,15 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     await _context.SaveChangesAsync();
 
                     var token = ((AuthService)_authService).GenerateJwtToken(newUser);
-                    Console.WriteLine($"Generated JWT token for new user, length: {token.Token.Length}");
                     
                     // TODO: Redirect to profile completion page once frontend is ready
                     // For now, redirect to dashboard but mark profile as incomplete
                     var redirectUrl = $"{targetFrontendUrl}{returnUrl}?token={Uri.EscapeDataString(token.Token)}&expiration={Uri.EscapeDataString(token.Expiration.ToString())}&profileIncomplete=true";
-                    Console.WriteLine($"Redirecting new OAuth user to dashboard: {redirectUrl}");
                     
                     return Redirect(redirectUrl);
                 }
                 else
                 {
-                    Console.WriteLine($"Failed to create user: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
                     return Redirect($"{targetFrontendUrl}{returnUrl}?error=failed_to_create_user");
                 }
             }
@@ -463,14 +348,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         /// </summary>
         private string GetFrontendBaseUrl()
         {
-            // Log all relevant headers for debugging
-            Console.WriteLine("=== Frontend URL Detection ===");
-            Console.WriteLine($"Host: {Request.Headers["Host"].FirstOrDefault()}");
-            Console.WriteLine($"X-Forwarded-Host: {Request.Headers["X-Forwarded-Host"].FirstOrDefault()}");
-            Console.WriteLine($"X-Forwarded-Proto: {Request.Headers["X-Forwarded-Proto"].FirstOrDefault()}");
-            Console.WriteLine($"Referer: {Request.Headers["Referer"].FirstOrDefault()}");
-            Console.WriteLine($"Origin: {Request.Headers["Origin"].FirstOrDefault()}");
-            
             // Priority 1: Check referer header (most reliable for OAuth flows)
             var referer = Request.Headers["Referer"].FirstOrDefault();
             if (!string.IsNullOrEmpty(referer))
@@ -479,12 +356,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 {
                     var uri = new Uri(referer);
                     var frontendUrl = $"{uri.Scheme}://{uri.Host}{(uri.Port != 80 && uri.Port != 443 ? $":{uri.Port}" : "")}";
-                    Console.WriteLine($"✅ Using referer-based frontend URL: {frontendUrl}");
                     return frontendUrl;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    Console.WriteLine($"❌ Failed to parse referer URL: {ex.Message}");
+                    // Ignore parsing errors
                 }
             }
             
@@ -492,7 +368,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             var origin = Request.Headers["Origin"].FirstOrDefault();
             if (!string.IsNullOrEmpty(origin))
             {
-                Console.WriteLine($"✅ Using origin-based frontend URL: {origin}");
                 return origin;
             }
             
@@ -502,25 +377,20 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             
             if (!string.IsNullOrEmpty(forwardedHost))
             {
-                Console.WriteLine($"🔄 Detected forwarded host: {forwardedHost}");
-                
                 // For external access, the frontend URL might be different from backend
                 // Try to detect the pattern and guess the frontend URL
                 var frontendUrl = GuessExternalFrontendUrl(forwardedHost, forwardedProto);
                 if (!string.IsNullOrEmpty(frontendUrl))
                 {
-                    Console.WriteLine($"✅ Using guessed external frontend URL: {frontendUrl}");
                     return frontendUrl;
                 }
                 
                 // Fallback: assume frontend is on the same host but different port
                 var fallbackUrl = $"{forwardedProto}://{forwardedHost}".Replace(":5035", ":4200");
-                Console.WriteLine($"⚠️ Using forwarded host fallback: {fallbackUrl}");
                 return fallbackUrl;
             }
             
             // Priority 4: Default fallback to localhost
-            Console.WriteLine("⚠️ Using default localhost frontend URL");
             return "http://localhost:4200";
         }
 

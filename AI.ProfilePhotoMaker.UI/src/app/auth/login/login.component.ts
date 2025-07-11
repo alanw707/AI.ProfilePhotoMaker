@@ -205,21 +205,14 @@ export class LoginComponent implements OnInit {
   }
 
   loginWithGoogle() {
-    // Use configuration-based URL for Google OAuth with dynamic redirect handling
-    const oauthBaseUrl = this.configService.getOAuthRedirectUrl();
-    const currentFrontendUrl = window.location.origin; // Get actual current frontend URL
-    const fullReturnUrl = `${currentFrontendUrl}${this.returnUrl}`;
+    // Get OAuth base URL from config service
+    const oauthBaseUrl = this.configService.getOAuthBaseUrl();
     
-    console.log('OAuth redirect details:', {
-      oauthBaseUrl,
-      fullReturnUrl,
-      currentFrontendUrl,
-      isExternalAccess: this.configService.isExternalAccess(),
-      currentOrigin: window.location.origin
-    });
+    // Construct the OAuth URL with returnUrl parameter
+    const oauthUrl = `${oauthBaseUrl}/api/auth/external-login/Google?returnUrl=${encodeURIComponent(this.returnUrl)}`;
     
-    // Pass the current frontend URL to the backend so it knows where to redirect
-    window.location.href = `${oauthBaseUrl}/api/auth/external-login/Google?returnUrl=${encodeURIComponent(this.returnUrl)}&frontendUrl=${encodeURIComponent(currentFrontendUrl)}`;
+    // Redirect to OAuth endpoint
+    window.location.href = oauthUrl;
   }
 
   loginWithFacebook() {
