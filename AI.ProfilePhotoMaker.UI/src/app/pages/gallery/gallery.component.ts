@@ -71,18 +71,25 @@ export class GalleryComponent implements OnInit {
           array.findIndex(i => i.id === img.id) === index
         );
         
-        this.galleryImages = uniqueImages.map((img: ProcessedImage) => ({
-          id: img.id,
-          url: img.processedImageUrl || img.originalImageUrl,
-          thumbnailUrl: img.originalImageUrl,
-          title: img.isGenerated ? `${this.formatStyleName(img.style)} Photo` : 'Uploaded Photo',
-          description: img.isGenerated ? `Generated ${this.formatStyleName(img.style)} style profile photo` : 'Original uploaded image',
-          style: img.style || 'original',
-          createdAt: new Date(img.createdAt),
-          status: 'completed' as const,
-          type: img.isGenerated ? 'generated' as const : 'original' as const,
-          downloadUrl: img.processedImageUrl || img.originalImageUrl
-        }));
+        this.galleryImages = uniqueImages.map((img: ProcessedImage) => {
+          // For generated images, prioritize processedImageUrl; for uploads, use originalImageUrl
+          const preferredUrl = img.isGenerated 
+            ? (img.processedImageUrl || img.originalImageUrl) 
+            : (img.originalImageUrl || img.processedImageUrl);
+          
+          return {
+            id: img.id,
+            url: preferredUrl,
+            thumbnailUrl: preferredUrl, // Use same URL for thumbnails to ensure consistency
+            title: img.isGenerated ? `${this.formatStyleName(img.style)} Photo` : 'Uploaded Photo',
+            description: img.isGenerated ? `Generated ${this.formatStyleName(img.style)} style profile photo` : 'Original uploaded image',
+            style: img.style || 'original',
+            createdAt: new Date(img.createdAt),
+            status: 'completed' as const,
+            type: img.isGenerated ? 'generated' as const : 'original' as const,
+            downloadUrl: preferredUrl
+          };
+        });
         
         // Log if duplicates were found and removed
         if (uniqueImages.length < response.data.images.length) {

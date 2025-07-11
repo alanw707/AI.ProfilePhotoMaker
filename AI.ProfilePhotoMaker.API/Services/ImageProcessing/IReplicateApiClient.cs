@@ -16,7 +16,7 @@ public interface IReplicateApiClient
     /// <param name="modelName">The model name</param>
     /// <param name="description">Optional model description</param>
     /// <returns>The created model's full name (owner/model-name)</returns>
-    Task<string> CreateModelAsync(string userId, string modelName, string description = null);
+    Task<string> CreateModelAsync(string userId, string modelName, string? description = null);
 
     /// <summary>
     /// Creates a new training for a user's custom model

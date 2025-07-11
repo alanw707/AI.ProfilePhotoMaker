@@ -251,13 +251,13 @@ public class ReplicateWebhookController : ControllerBase
                         var processedImage = new ProcessedImage
                         {
                             UserProfileId = userProfile.Id,
-                            OriginalImageUrl = replicateUrl, // Store the original Replicate URL
+                            OriginalImageUrl = publicUrl ?? replicateUrl, // Use local URL if download succeeded, fallback to Replicate URL
                             ProcessedImageUrl = publicUrl, // Only set if download was successful (null if failed)
                             Style = style ?? "Unknown",
                             IsGenerated = true,
                             IsOriginalUpload = false,
                             CreatedAt = DateTime.UtcNow
-                            // ProcessedImageUrl will only be non-null when image is actually downloaded and ready
+                            // Both URLs will use local path when download succeeds, ensuring consistent local serving
                         };
                         
                         // Set scheduled deletion date based on retention policy (7 days for generated images)

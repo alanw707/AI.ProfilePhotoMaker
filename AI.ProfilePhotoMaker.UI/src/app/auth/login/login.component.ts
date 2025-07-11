@@ -208,10 +208,10 @@ export class LoginComponent implements OnInit {
     // Get OAuth base URL from config service
     const oauthBaseUrl = this.configService.getOAuthBaseUrl();
     
-    // Construct the OAuth URL with returnUrl parameter
-    const oauthUrl = `${oauthBaseUrl}/api/auth/external-login/Google?returnUrl=${encodeURIComponent(this.returnUrl)}`;
+    // Use standard OAuth flow - redirect to the external login endpoint
+    const oauthUrl = `${oauthBaseUrl}/api/auth/external-login/google?returnUrl=${encodeURIComponent(this.returnUrl)}`;
     
-    // Redirect to OAuth endpoint
+    console.log('🚀 Redirecting to Google OAuth:', oauthUrl);
     window.location.href = oauthUrl;
   }
 
