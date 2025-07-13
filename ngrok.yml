@@ -1,8 +1,28 @@
 version: "2"
 authtoken: 2TX1W9PXk4cLg8LG7NK26zDM748_37YdxpfsogTtBWiGq9do6
+
+# AI Profile Photo Maker - Multi-Environment ngrok Configuration
 tunnels:
+  # Frontend tunnel - Angular UI (port 4200)
   frontend:
     addr: 4200
     proto: http
     domain: awlocaldev.ngrok.app
-    inspect: false
+    inspect: true
+    
+  # Backend API tunnel - .NET Core API (port 5035) 
+  backend:
+    addr: 5035
+    proto: http
+    domain: awlocaldev-api.ngrok.app
+    inspect: true
+
+# Global configuration
+console_ui: false
+log_level: info
+log_format: json
+heartbeat_interval: 1m
+heartbeat_tolerance: 5s
+
+# Regional settings (optional)
+region: us

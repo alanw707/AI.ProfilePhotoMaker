@@ -110,7 +110,25 @@ export class FileUploadService {
               const progress = event.total ? Math.round((100 * event.loaded) / event.total) : 0;
               return { progress };
             case HttpEventType.Response:
-              return { progress: 100, response: event.body as UploadResponse };
+              // API returns wrapped response: { success: true, data: {...} }
+              const apiResponse = event.body as any;
+              if (apiResponse?.success && apiResponse?.data) {
+                // Transform API response to match UploadResponse interface
+                const data = apiResponse.data;
+                const transformedResponse: UploadResponse = {
+                  profileId: data.ProfileId || data.profileId,
+                  uploadedFiles: data.UploadedFiles || data.uploadedFiles || [],
+                  uploadedImageIds: data.UploadedImageIds || data.uploadedImageIds || [],
+                  zipCreated: data.ZipCreated || data.zipCreated || false,
+                  zipPath: data.ZipPath || data.zipPath || '',
+                  message: data.Message || data.message || '',
+                };
+                return { progress: 100, response: transformedResponse };
+              } else {
+                // Fallback for unexpected response structure
+                console.error('Unexpected upload response structure:', apiResponse);
+                return { progress: 100, response: event.body as UploadResponse };
+              }
             default:
               return { progress: 0 };
           }
@@ -305,9 +323,7 @@ export class FileUploadService {
     );
   }
 
-  uploadSingleImage(
-    file: File
-  ): Observable<{
+  uploadSingleImage(file: File): Observable<{
     progress: number;
     response?: { success: boolean; data: { url: string; fileName: string } };
   }> {

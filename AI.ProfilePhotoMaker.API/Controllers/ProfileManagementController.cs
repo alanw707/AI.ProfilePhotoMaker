@@ -66,7 +66,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 // Get image counts
                 var imageData = await _userContextService.GetUserProfileWithImagesAsync(userId);
                 var totalImages = imageData?.ProcessedImages?.Count ?? 0;
-                var originalUploads = imageData?.ProcessedImages?.Count(i => i.IsOriginalUpload && !i.IsDeleted) ?? 0;
+                var originalUploads = imageData?.ProcessedImages?.Count(i => i.IsOriginalUpload) ?? 0;
 
                 var response = new
                 {

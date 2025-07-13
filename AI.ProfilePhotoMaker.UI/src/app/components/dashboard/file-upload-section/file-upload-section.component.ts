@@ -513,12 +513,14 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
           this.clearSelectedFiles();
 
           // Emit completion event to trigger dashboard refresh
-          this.uploadCompleted.emit(result.response.uploadedFiles);
+          const uploadedFiles = result.response?.uploadedFiles || [];
+          this.uploadCompleted.emit(uploadedFiles);
 
-          // Show success notification
+          // Show success notification with null safety
+          const fileCount = uploadedFiles.length;
           this.notificationService.success(
             'Upload Complete',
-            `${result.response.uploadedFiles.length} image(s) uploaded successfully!`
+            `${fileCount} image(s) uploaded successfully!`
           );
 
           // Force final change detection

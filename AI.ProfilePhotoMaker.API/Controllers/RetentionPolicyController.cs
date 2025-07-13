@@ -1,3 +1,5 @@
+// TODO: Re-enable after ProcessedImage cleanup migration
+/*
 using AI.ProfilePhotoMaker.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -80,13 +82,9 @@ public class RetentionPolicyController : ControllerBase
             img.Style,
             img.CreatedAt,
             img.ScheduledDeletionDate,
-            img.IsMarkedForDeletion,
-            img.UserRequestedDeletionDate,
             img.IsOriginalUpload,
             img.IsGenerated,
-            RetentionPeriodDays = img.IsOriginalUpload ? 7 : 30,
-            CanRestore = img.UserRequestedDeletionDate.HasValue && 
-                        DateTime.UtcNow - img.UserRequestedDeletionDate.Value <= TimeSpan.FromDays(1)
+            RetentionPeriodDays = img.IsOriginalUpload ? 7 : 30
         }).ToList();
 
         return Ok(new
@@ -212,3 +210,4 @@ public class RetentionPolicyController : ControllerBase
         return User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     }
 }
+*/

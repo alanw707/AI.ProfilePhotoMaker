@@ -183,13 +183,15 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.ICreditPackageServi
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Payment.IPaymentService, AI.ProfilePhotoMaker.API.Services.Payment.StripePaymentService>();
 
 // Register Retention Policy Services
-builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IRetentionPolicyService, AI.ProfilePhotoMaker.API.Services.RetentionPolicyService>();
+// TODO: Re-enable after cleanup migration
+// builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IRetentionPolicyService, AI.ProfilePhotoMaker.API.Services.RetentionPolicyService>();
 
 // Register background services
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelCreationPollingService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.BasicTierBackgroundService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelExpirationBackgroundService>();
-builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.RetentionPolicyBackgroundService>();
+// TODO: Re-enable after cleanup migration
+// builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.RetentionPolicyBackgroundService>();
 
 
 builder.Services.AddControllers()
@@ -235,16 +237,35 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigins",
-        builder =>
+        corsBuilder =>
         {
-            builder.WithOrigins("https://aiprofilephotomaker.com")
-                   .AllowAnyMethod()
-                   .AllowAnyHeader();
+            corsBuilder.WithOrigins(
+                    "https://aiprofilephotomaker.com",
+                    "https://test.profilephotomaker.com"
+                )
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials();
         });
 
-     options.AddPolicy("AllowAll", builder =>
+    options.AddPolicy("AllowDevelopment", corsBuilder =>
     {
-        builder.AllowAnyOrigin()
+        corsBuilder.WithOrigins(
+                "http://localhost:4200",
+                "https://localhost:4200",
+                "https://awlocaldev.ngrok.app",
+                "https://awlocaldev-api.ngrok.app"
+            )
+            .SetIsOriginAllowedToAllowWildcardSubdomains()
+            .WithOrigins("https://*.ngrok.app", "https://*.ngrok.io")
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials();
+    });
+
+    options.AddPolicy("AllowAll", corsBuilder =>
+    {
+        corsBuilder.AllowAnyOrigin()
                .AllowAnyMethod()
                .AllowAnyHeader();
     });
@@ -261,10 +282,14 @@ if (app.Environment.IsDevelopment())
     app.UseSession();
 }
 
-// In middleware pipeline
+// In middleware pipeline - use appropriate CORS policy based on environment
 if (app.Environment.IsDevelopment())
 {
-    app.UseCors("AllowAll");
+    app.UseCors("AllowDevelopment");
+}
+else if (app.Environment.EnvironmentName == "Test")
+{
+    app.UseCors("AllowSpecificOrigins");
 }
 else
 {
