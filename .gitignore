@@ -69,6 +69,8 @@ packages/
 
 # Test results
 TestResults/
+*.trx
+coverage/
 
 # Compiled binaries
 *.dll
