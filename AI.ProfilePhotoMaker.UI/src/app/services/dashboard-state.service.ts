@@ -154,25 +154,27 @@ export class DashboardStateService implements IDashboardStateService {
         const rawImageThumbnails: UploadedImageThumbnail[] =
           userImagesData?.images
             ?.filter(img => {
-              // Primary check: Use IsOriginalUpload flag if reliable
+              // Early exit: Skip generated images entirely (no logging, no processing)
+              if (img.isGenerated) {
+                return false;
+              }
+
+              // Only process uploaded images from here
               const isOriginalByFlag = img.isOriginalUpload;
               // Secondary check: Use style as fallback for corrupted flags
               const isOriginalByStyle = img.style === 'Original';
-              // Tertiary check: Generated images should NOT appear here
-              const isNotGenerated = !img.isGenerated;
               // Must have a valid URL
               const hasUrl = !!img.originalImageUrl;
 
               // Robust filtering: Image is considered uploaded if:
               // 1. Has IsOriginalUpload flag true, OR
               // 2. Has "Original" style (even if flag is corrupted), AND
-              // 3. Is NOT marked as generated, AND
-              // 4. Has a valid URL
-              const isUploadedImage =
-                (isOriginalByFlag || isOriginalByStyle) && isNotGenerated && hasUrl;
+              // 3. Has a valid URL
+              const isUploadedImage = (isOriginalByFlag || isOriginalByStyle) && hasUrl;
 
+              // Only log uploaded images (much cleaner console)
               console.log(
-                `🔍 Image ${img.id}: byFlag=${isOriginalByFlag}, byStyle=${isOriginalByStyle}, notGenerated=${isNotGenerated}, hasUrl=${hasUrl}, style=${img.style}, result=${isUploadedImage}`
+                `🔍 Uploaded Image ${img.id}: byFlag=${isOriginalByFlag}, byStyle=${isOriginalByStyle}, hasUrl=${hasUrl}, style=${img.style}, result=${isUploadedImage}`
               );
 
               if (isOriginalByFlag !== isOriginalByStyle) {

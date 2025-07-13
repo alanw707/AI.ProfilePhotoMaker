@@ -127,6 +127,13 @@
               "disableHostCheck": true,
               "allowedHosts": ["awlocaldev.ngrok.app", "awlocaldev-api.ngrok.app"],
               "proxyConfig": "proxy.conf.ngrok.json"
+            },
+            "hybrid": {
+              "buildTarget": "AI.ProfilePhotoMaker.UI:build:development",
+              "host": "0.0.0.0",
+              "disableHostCheck": true,
+              "allowedHosts": ["localhost", "127.0.0.1"],
+              "proxyConfig": "proxy.conf.hybrid.json"
             }
           },
           "defaultConfiguration": "development"
