@@ -108,7 +108,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                         return ErrorResponse("InvalidImage", $"Invalid image file: {image.FileName}");
                     }
 
-                    var fileName = $"{Guid.NewGuid()}_{image.FileName}";
+                    // Generate clean filename for uploaded selfies
+                    var extension = Path.GetExtension(image.FileName);
+                    var fileName = $"{Guid.NewGuid()}_selfie{extension}";
                     var filePath = Path.Combine(uploadDir, fileName);
                     var relativeUrl = $"/uploads/{userId}/{fileName}";
 
@@ -267,40 +269,74 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 // Delete physical file based on image type and storage location
                 if (image.IsGenerated && !string.IsNullOrEmpty(image.ProcessedImageUrl))
                 {
-                    // Generated images are stored in /generated/{userId}/ directory
-                    var fileName = Path.GetFileName(image.ProcessedImageUrl);
-                    var generatedFilePath = Path.Combine(_environment.ContentRootPath, "generated", userId, fileName);
-                    
-                    Logger.LogDebug("Attempting to delete generated image file: {FilePath}", generatedFilePath);
-                    
-                    if (System.IO.File.Exists(generatedFilePath))
+                    try
                     {
-                        System.IO.File.Delete(generatedFilePath);
-                        physicalFileDeleted = true;
-                        Logger.LogInformation("Deleted generated image file: {FilePath}", generatedFilePath);
+                        // Generated images are stored in /generated/{userId}/ directory
+                        var fileName = Path.GetFileName(image.ProcessedImageUrl);
+                        var generatedFilePath = Path.Combine(_environment.ContentRootPath, "generated", userId, fileName);
+                        
+                        Logger.LogDebug("Attempting to delete generated image file: {FilePath}", generatedFilePath);
+                        Logger.LogDebug("Processed URL: {ProcessedUrl}, Extracted filename: {FileName}, UserId: {UserId}", 
+                            image.ProcessedImageUrl, fileName, userId);
+                        
+                        // Validate path length and characters
+                        if (generatedFilePath.Length > 260)
+                        {
+                            Logger.LogWarning("Generated file path too long ({Length} chars): {FilePath}", generatedFilePath.Length, generatedFilePath);
+                        }
+                        
+                        if (System.IO.File.Exists(generatedFilePath))
+                        {
+                            System.IO.File.Delete(generatedFilePath);
+                            physicalFileDeleted = true;
+                            Logger.LogInformation("Deleted generated image file: {FilePath}", generatedFilePath);
+                        }
+                        else
+                        {
+                            Logger.LogWarning("Generated image file not found: {FilePath}", generatedFilePath);
+                        }
                     }
-                    else
+                    catch (Exception fileEx)
                     {
-                        Logger.LogWarning("Generated image file not found: {FilePath}", generatedFilePath);
+                        Logger.LogError(fileEx, "Error deleting generated image file for image {ImageId}. URL: {ProcessedUrl}, UserId: {UserId}", 
+                            imageId, image.ProcessedImageUrl, userId);
+                        // Continue with database deletion even if file deletion fails
                     }
                 }
                 else if (image.IsOriginalUpload && !string.IsNullOrEmpty(image.OriginalImageUrl))
                 {
-                    // Original uploads are stored in /uploads/{userId}/ directory
-                    var fileName = Path.GetFileName(image.OriginalImageUrl);
-                    var uploadFilePath = Path.Combine(_environment.ContentRootPath, "uploads", userId, fileName);
-                    
-                    Logger.LogDebug("Attempting to delete uploaded image file: {FilePath}", uploadFilePath);
-                    
-                    if (System.IO.File.Exists(uploadFilePath))
+                    try
                     {
-                        System.IO.File.Delete(uploadFilePath);
-                        physicalFileDeleted = true;
-                        Logger.LogInformation("Deleted uploaded image file: {FilePath}", uploadFilePath);
+                        // Original uploads are stored in /uploads/{userId}/ directory
+                        var fileName = Path.GetFileName(image.OriginalImageUrl);
+                        var uploadFilePath = Path.Combine(_environment.ContentRootPath, "uploads", userId, fileName);
+                        
+                        Logger.LogDebug("Attempting to delete uploaded image file: {FilePath}", uploadFilePath);
+                        Logger.LogDebug("Original URL: {OriginalUrl}, Extracted filename: {FileName}, UserId: {UserId}", 
+                            image.OriginalImageUrl, fileName, userId);
+                        
+                        // Validate path length and characters
+                        if (uploadFilePath.Length > 260)
+                        {
+                            Logger.LogWarning("File path too long ({Length} chars): {FilePath}", uploadFilePath.Length, uploadFilePath);
+                        }
+                        
+                        if (System.IO.File.Exists(uploadFilePath))
+                        {
+                            System.IO.File.Delete(uploadFilePath);
+                            physicalFileDeleted = true;
+                            Logger.LogInformation("Deleted uploaded image file: {FilePath}", uploadFilePath);
+                        }
+                        else
+                        {
+                            Logger.LogWarning("Uploaded image file not found: {FilePath}", uploadFilePath);
+                        }
                     }
-                    else
+                    catch (Exception fileEx)
                     {
-                        Logger.LogWarning("Uploaded image file not found: {FilePath}", uploadFilePath);
+                        Logger.LogError(fileEx, "Error deleting uploaded image file for image {ImageId}. URL: {OriginalUrl}, UserId: {UserId}", 
+                            imageId, image.OriginalImageUrl, userId);
+                        // Continue with database deletion even if file deletion fails
                     }
                 }
 
@@ -322,9 +358,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 Logger.LogInformation("Saving profile changes to database for user {UserId}", userId);
                 await _userProfileRepository.UpdateAsync(profile);
                 
-                // Verify deletion worked by reloading profile
-                var verificationProfile = await _userProfileRepository.GetByUserIdAsync(userId);
-                var imageStillExists = verificationProfile?.ProcessedImages.Any(i => i.Id == imageId) ?? false;
+                // Verify deletion worked by querying directly from database context (bypasses EF tracking)
+                var imageStillExists = await Context.ProcessedImages
+                    .AsNoTracking()
+                    .AnyAsync(i => i.Id == imageId);
                 
                 if (imageStillExists)
                 {
@@ -1681,6 +1718,215 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     }).ToList()
                 }
             };
+        }
+
+        /// <summary>
+        /// Reconcile database with filesystem - filesystem as source of truth
+        /// </summary>
+        [AllowAnonymous] // Temporary for testing
+        [HttpPost("reconcile-database")]
+        public async Task<IActionResult> ReconcileDatabase([FromQuery] bool dryRun = true)
+        {
+            try
+            {
+                var reconcileResult = await ReconcileDatabaseWithFilesystemAsync(dryRun);
+                
+                return SuccessResponse(new 
+                { 
+                    dryRun = dryRun,
+                    data = reconcileResult,
+                    message = dryRun ? "Dry run completed - no changes made to database" : "Database reconciliation completed"
+                });
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, "Error during database reconciliation");
+                return ErrorResponse("ReconciliationFailed", "Failed to reconcile database with filesystem", 500);
+            }
+        }
+
+        private async Task<object> ReconcileDatabaseWithFilesystemAsync(bool dryRun)
+        {
+            var baseDirectory = _environment.ContentRootPath;
+            var uploadsPath = Path.Combine(baseDirectory, "uploads");
+            var generatedPath = Path.Combine(baseDirectory, "generated");
+            
+            var reconciliationSummary = new ReconciliationSummary();
+            var detailedResults = new List<object>();
+
+            // Get all user profiles
+            var userProfiles = await Context.UserProfiles
+                .Include(u => u.ProcessedImages)
+                .ToListAsync();
+
+            Logger.LogInformation("Starting database reconciliation for {UserCount} users", userProfiles.Count);
+
+            foreach (var userProfile in userProfiles)
+            {
+                try 
+                {
+                    var userResult = await ReconcileUserImagesAsync(userProfile, uploadsPath, generatedPath, dryRun);
+                    detailedResults.Add(userResult);
+                    
+                    reconciliationSummary.TotalUsers++;
+                    reconciliationSummary.OrphanedRecordsRemoved += userResult.OrphanedRecordsRemoved;
+                    reconciliationSummary.MissingRecordsCreated += userResult.MissingRecordsCreated;
+                    reconciliationSummary.TotalFilesProcessed += userResult.FilesProcessed;
+                    reconciliationSummary.Errors.AddRange(userResult.Errors);
+                }
+                catch (Exception ex)
+                {
+                    var error = $"Failed to process user {userProfile.UserId}: {ex.Message}";
+                    reconciliationSummary.Errors.Add(error);
+                    Logger.LogError(ex, error);
+                }
+            }
+
+            if (!dryRun && (reconciliationSummary.OrphanedRecordsRemoved > 0 || reconciliationSummary.MissingRecordsCreated > 0))
+            {
+                await Context.SaveChangesAsync();
+                Logger.LogInformation("Database reconciliation completed. Removed {Orphaned} orphaned records, created {Missing} missing records", 
+                    reconciliationSummary.OrphanedRecordsRemoved, reconciliationSummary.MissingRecordsCreated);
+            }
+
+            return new
+            {
+                Summary = reconciliationSummary,
+                DetailedResults = detailedResults.Take(10), // Limit output for performance
+                Message = dryRun 
+                    ? $"Would remove {reconciliationSummary.OrphanedRecordsRemoved} orphaned records and create {reconciliationSummary.MissingRecordsCreated} missing records"
+                    : $"Removed {reconciliationSummary.OrphanedRecordsRemoved} orphaned records and created {reconciliationSummary.MissingRecordsCreated} missing records"
+            };
+        }
+
+        private async Task<UserReconciliationResult> ReconcileUserImagesAsync(
+            UserProfile userProfile, string uploadsPath, string generatedPath, bool dryRun)
+        {
+            var result = new UserReconciliationResult
+            {
+                UserId = userProfile.UserId,
+                UserName = $"{userProfile.FirstName} {userProfile.LastName}".Trim()
+            };
+
+            var userUploadsDir = Path.Combine(uploadsPath, userProfile.UserId);
+            var userGeneratedDir = Path.Combine(generatedPath, userProfile.UserId);
+
+            // Get current database records
+            var currentImages = userProfile.ProcessedImages.ToList();
+            var uploadedImages = currentImages.Where(img => img.IsOriginalUpload).ToList();
+            var generatedImages = currentImages.Where(img => img.IsGenerated).ToList();
+
+            // Check uploaded images
+            if (Directory.Exists(userUploadsDir))
+            {
+                await ReconcileUserDirectoryAsync(userProfile, userUploadsDir, uploadedImages, true, dryRun, result);
+            }
+            else if (uploadedImages.Any())
+            {
+                // No uploads directory but database has uploaded images - mark for removal
+                foreach (var orphanedImage in uploadedImages)
+                {
+                    if (!dryRun)
+                    {
+                        Context.ProcessedImages.Remove(orphanedImage);
+                    }
+                    result.OrphanedRecordsRemoved++;
+                    result.RemovedImages.Add($"ID {orphanedImage.Id}: {orphanedImage.OriginalImageUrl} (no uploads directory)");
+                }
+            }
+
+            // Check generated images
+            if (Directory.Exists(userGeneratedDir))
+            {
+                await ReconcileUserDirectoryAsync(userProfile, userGeneratedDir, generatedImages, false, dryRun, result);
+            }
+            else if (generatedImages.Any())
+            {
+                // No generated directory but database has generated images - mark for removal
+                foreach (var orphanedImage in generatedImages)
+                {
+                    if (!dryRun)
+                    {
+                        Context.ProcessedImages.Remove(orphanedImage);
+                    }
+                    result.OrphanedRecordsRemoved++;
+                    result.RemovedImages.Add($"ID {orphanedImage.Id}: {orphanedImage.ProcessedImageUrl} (no generated directory)");
+                }
+            }
+
+            return result;
+        }
+
+        private async Task ReconcileUserDirectoryAsync(
+            UserProfile userProfile, string directoryPath, List<ProcessedImage> databaseImages, 
+            bool isUploadDirectory, bool dryRun, UserReconciliationResult result)
+        {
+            var imageExtensions = new[] { ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp" };
+            var filesOnDisk = Directory.GetFiles(directoryPath)
+                .Where(f => imageExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                .ToList();
+
+            result.FilesProcessed += filesOnDisk.Count;
+
+            // Check for orphaned database records (file doesn't exist)
+            foreach (var dbImage in databaseImages)
+            {
+                var expectedPath = isUploadDirectory 
+                    ? Path.Combine(directoryPath, Path.GetFileName(dbImage.OriginalImageUrl ?? ""))
+                    : Path.Combine(directoryPath, Path.GetFileName(dbImage.ProcessedImageUrl ?? ""));
+
+                if (!System.IO.File.Exists(expectedPath))
+                {
+                    // Orphaned database record - file doesn't exist
+                    if (!dryRun)
+                    {
+                        Context.ProcessedImages.Remove(dbImage);
+                    }
+                    result.OrphanedRecordsRemoved++;
+                    result.RemovedImages.Add($"ID {dbImage.Id}: {dbImage.OriginalImageUrl ?? dbImage.ProcessedImageUrl} (file not found)");
+                    
+                    Logger.LogInformation("Removing orphaned database record for missing file: {FilePath}", expectedPath);
+                }
+            }
+
+            // Check for orphaned files (no database record) - optional: create missing records
+            foreach (var filePath in filesOnDisk)
+            {
+                var fileName = Path.GetFileName(filePath);
+                var hasDbRecord = databaseImages.Any(img => 
+                    (isUploadDirectory && img.OriginalImageUrl?.EndsWith(fileName) == true) ||
+                    (!isUploadDirectory && img.ProcessedImageUrl?.EndsWith(fileName) == true));
+
+                if (!hasDbRecord)
+                {
+                    // Orphaned file - could create database record, but for now just log
+                    result.OrphanedFiles.Add($"{fileName} (no database record)");
+                    Logger.LogInformation("Found orphaned file with no database record: {FilePath}", filePath);
+                    // Note: Not auto-creating records as we don't have enough metadata
+                }
+            }
+        }
+
+        private class ReconciliationSummary
+        {
+            public int TotalUsers { get; set; } = 0;
+            public int OrphanedRecordsRemoved { get; set; } = 0;
+            public int MissingRecordsCreated { get; set; } = 0;
+            public int TotalFilesProcessed { get; set; } = 0;
+            public List<string> Errors { get; set; } = new List<string>();
+        }
+
+        private class UserReconciliationResult
+        {
+            public string UserId { get; set; } = "";
+            public string UserName { get; set; } = "";
+            public int FilesProcessed { get; set; } = 0;
+            public int OrphanedRecordsRemoved { get; set; } = 0;
+            public int MissingRecordsCreated { get; set; } = 0;
+            public List<string> RemovedImages { get; set; } = new List<string>();
+            public List<string> CreatedImages { get; set; } = new List<string>();
+            public List<string> OrphanedFiles { get; set; } = new List<string>();
+            public List<string> Errors { get; set; } = new List<string>();
         }
 
         private class RepopulationSummary

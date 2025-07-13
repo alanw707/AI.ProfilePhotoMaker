@@ -382,7 +382,7 @@ export class FileUploadService {
         success: boolean;
         message: string;
         data?: any;
-      }>(this.config.getFullUrl('/test/fix-generated-images'), {})
+      }>(this.config.getFullUrl('/api/image/reconcile-database?dryRun=false'), {})
       .pipe(
         tap(response => {
           if (response.success) {
