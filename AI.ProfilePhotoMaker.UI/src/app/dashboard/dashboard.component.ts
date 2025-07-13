@@ -1,4 +1,4 @@
-import { Component, Injector, OnDestroy, OnInit } from '@angular/core';
+import { Component, Injector, OnDestroy, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -6,7 +6,10 @@ import { BehaviorSubject, Observable } from 'rxjs';
 
 import { HeaderNavigationComponent } from '../shared/header-navigation/header-navigation.component';
 import { StatsCardComponent } from '../components/dashboard/stats-card/stats-card.component';
-import { StyleOption, StyleSelectorComponent } from '../components/dashboard/style-selector/style-selector.component';
+import {
+  StyleOption,
+  StyleSelectorComponent,
+} from '../components/dashboard/style-selector/style-selector.component';
 import { FileUploadSectionComponent } from '../components/dashboard/file-upload-section/file-upload-section.component';
 import { CreditDisplayComponent } from '../components/dashboard/credit-display/credit-display.component';
 
@@ -34,7 +37,11 @@ interface WorkflowProgress {
 interface WorkflowOrchestrationService {
   progress$: Observable<WorkflowProgress>;
   startTrainingWithStyles(selectedStyles: StyleOption[], imagesPerStyle: number): Promise<void>;
-  calculateCredits(selectedStyles: StyleOption[], imagesPerStyle: number, modelStatus: string): {
+  calculateCredits(
+    selectedStyles: StyleOption[],
+    imagesPerStyle: number,
+    modelStatus: string
+  ): {
     trainingCredits: number;
     generationCredits: number;
     totalCredits: number;
@@ -46,25 +53,23 @@ interface WorkflowOrchestrationService {
 }
 import { WorkflowStepService } from '../services/workflow-step.service';
 
-
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [
-    CommonModule, 
-    RouterModule, 
-    FormsModule, 
-    HeaderNavigationComponent, 
-    StatsCardComponent, 
+    CommonModule,
+    RouterModule,
+    FormsModule,
+    HeaderNavigationComponent,
+    StatsCardComponent,
     StyleSelectorComponent,
     FileUploadSectionComponent,
-    CreditDisplayComponent
+    CreditDisplayComponent,
   ],
   templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.sass']
+  styleUrls: ['./dashboard.component.sass'],
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-
   state$: Observable<any>;
   workflowProgress$: Observable<WorkflowProgress>;
 
@@ -88,13 +93,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
     expectedGenerationTime: 0,
     lastGenerationCount: 0,
     showLastGenerationMessage: false,
-    activePredictionIds: []
+    activePredictionIds: [],
   });
 
   // State-based getters for template - removed, using stateService.getState() directly
 
   getTotalAvailableCredits(): number {
-    return this.creditService.getTotalAvailableCredits(this.stateService.getState().userCreditStatus, this.stateService.getState().creditsInfo);
+    return this.creditService.getTotalAvailableCredits(
+      this.stateService.getState().userCreditStatus,
+      this.stateService.getState().creditsInfo
+    );
   }
 
   getPurchasedCredits(): number {
@@ -102,10 +110,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getWeeklyCredits(): number {
-    return this.creditService.getWeeklyCredits(this.stateService.getState().userCreditStatus, this.stateService.getState().creditsInfo);
+    return this.creditService.getWeeklyCredits(
+      this.stateService.getState().userCreditStatus,
+      this.stateService.getState().creditsInfo
+    );
   }
 
-  onCreditAction(event: { action: string, context?: string }): void {
+  onCreditAction(event: { action: string; context?: string }): void {
     switch (event.action) {
       case 'purchase':
       case 'viewPackages':
@@ -128,28 +139,37 @@ export class DashboardComponent implements OnInit, OnDestroy {
     public stateService: DashboardStateService,
     private config: ConfigService,
     private workflowStepService: WorkflowStepService,
-    private injector: Injector
+    private injector: Injector,
+    private cdr: ChangeDetectorRef
   ) {
     this.state$ = this.stateService.state$;
     this.workflowProgress$ = this.workflowProgressSubject.asObservable();
-    
+
     // Enable debug methods for troubleshooting
     this.stateService.enableGlobalDebug();
   }
 
   ngOnInit() {
+    console.log('🔍 Dashboard ngOnInit - checking authentication...');
+
     if (!this.authService.isAuthenticated()) {
+      console.log('❌ User not authenticated, redirecting to login');
       this.router.navigate(['/login']);
       return;
     }
+
+    console.log('✅ User authenticated, loading dashboard data...');
 
     // Subscribe to state changes to update UI
     this.state$.subscribe(_state => {
       // Force change detection when state updates
       this.selectedStyles = this.getSelectedStylesCount();
-      
+
       // Update current step based on progress
       this.updateCurrentStep();
+
+      // Force change detection for async updates
+      this.cdr.detectChanges();
     });
 
     this.stateService.loadInitialDashboardData();
@@ -172,24 +192,30 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
   private loadAvailableStyles() {
     this.styleService.getActiveStyles().subscribe({
-      next: (response) => {
+      next: response => {
         if (response.success && response.data) {
           this.availableStyles = response.data.map(style => ({
             id: style.id.toString(),
             name: style.name,
             description: style.description,
             previewUrl: this.getStylePreviewUrl(style.name),
-            selected: false
+            selected: false,
           }));
         } else {
           console.error('Failed to load styles:', response.error);
-          this.notificationService.error('Style Load Failed', 'Could not load available styles. Please refresh the page.');
+          this.notificationService.error(
+            'Style Load Failed',
+            'Could not load available styles. Please refresh the page.'
+          );
         }
       },
-      error: (error) => {
+      error: error => {
         console.error('Error loading styles:', error);
-        this.notificationService.error('Style Load Failed', 'Could not load available styles. Please refresh the page.');
-      }
+        this.notificationService.error(
+          'Style Load Failed',
+          'Could not load available styles. Please refresh the page.'
+        );
+      },
     });
   }
   private getStylePreviewUrl(styleName: string): string {
@@ -202,30 +228,46 @@ export class DashboardComponent implements OnInit, OnDestroy {
   onUploadCompleted(uploadedFiles: unknown[]) {
     console.log('Upload completed, refreshing images from server:', uploadedFiles);
     this.refreshUploadedImagesFromServer();
-    
+
     setTimeout(() => {
       const thumbnails = this.stateService.getState().uploadedImageThumbnails;
       if (thumbnails.length >= 10) {
         this.currentStep = 2;
+        this.cdr.detectChanges();
       }
     }, 1000);
   }
 
-  onUploadedImageDeleted(event: { thumb: unknown, index: number, refreshRequired?: boolean }) {
-    const { thumb, refreshRequired } = event;
-    
+  onUploadedImageDeleted(event: { thumb: unknown; index: number; refreshRequired?: boolean }) {
+    const { thumb, index, refreshRequired } = event;
+
     if (refreshRequired) {
+      // For stale references, immediately remove from UI and refresh from server
+      const currentThumbnails = this.stateService.getState().uploadedImageThumbnails;
+      if (index >= 0 && index < currentThumbnails.length) {
+        const updatedThumbnails = [...currentThumbnails];
+        updatedThumbnails.splice(index, 1);
+        this.stateService.setState({
+          uploadedImageThumbnails: updatedThumbnails,
+          uploadedImages: updatedThumbnails.length,
+        });
+        this.cdr.detectChanges();
+      }
+      // Also refresh from server to sync completely
       this.refreshUploadedImagesFromServer();
       return;
     }
-    
+
     if ((thumb as { id?: number })?.id) {
       const currentThumbnails = this.stateService.getState().uploadedImageThumbnails;
-      const updatedThumbnails = currentThumbnails.filter(t => t.id !== (thumb as { id: number }).id);
-      this.stateService.setState({ 
+      const updatedThumbnails = currentThumbnails.filter(
+        t => t.id !== (thumb as { id: number }).id
+      );
+      this.stateService.setState({
         uploadedImageThumbnails: updatedThumbnails,
-        uploadedImages: updatedThumbnails.length 
+        uploadedImages: updatedThumbnails.length,
       });
+      this.cdr.detectChanges();
     }
   }
 
@@ -233,20 +275,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
     try {
       this.stateService.forceRefresh();
       console.log('Successfully refreshed uploaded images from server');
+      this.cdr.detectChanges();
     } catch (error) {
       console.error('Failed to refresh uploaded images:', error);
       this.notificationService.error('Refresh Failed', 'Failed to refresh image list from server');
     }
   }
 
-
   selectAllStyles() {
-    this.availableStyles.forEach(style => style.selected = true);
+    this.availableStyles.forEach(style => (style.selected = true));
     this.selectedStyles = this.getSelectedStylesCount();
   }
 
   deselectAllStyles() {
-    this.availableStyles.forEach(style => style.selected = false);
+    this.availableStyles.forEach(style => (style.selected = false));
     this.selectedStyles = this.getSelectedStylesCount();
   }
 
@@ -262,16 +304,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private async loadWorkflowService(): Promise<void> {
     try {
       // Dynamically import the WorkflowOrchestrationService
-      const { WorkflowOrchestrationService } = await import('../services/workflow-orchestration.service');
-      
+      const { WorkflowOrchestrationService } = await import(
+        '../services/workflow-orchestration.service'
+      );
+
       // Get the service instance from the injector
       this.workflowService = this.injector.get(WorkflowOrchestrationService);
-      
+
       // Subscribe to progress updates and forward them to our proxy observable
       this.workflowService.progress$.subscribe(progress => {
         this.workflowProgressSubject.next(progress);
       });
-      
     } catch (error) {
       console.error('Failed to load WorkflowOrchestrationService:', error);
       throw error;
@@ -288,7 +331,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       if (!this.workflowService) {
         await this.loadWorkflowService();
       }
-      
+
       if (this.workflowService) {
         await this.workflowService.startTrainingWithStyles(selectedStyles, this.imagesPerStyle);
       }
@@ -298,9 +341,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.currentStep = 2;
     }
   }
-
-
-
 
   // Workflow methods
   isPremiumWorkflow(): boolean {
@@ -330,21 +370,36 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // Credit calculation methods - now handle lazy loading
   private getCreditCalculation() {
     const selectedStyles = this.availableStyles.filter(s => s.selected);
-    
+
     // If workflow service is not loaded yet, return default values
     if (!this.workflowService) {
-      return this.calculateCreditsLocally(selectedStyles, this.imagesPerStyle, this.stateService.getState().modelStatus);
+      return this.calculateCreditsLocally(
+        selectedStyles,
+        this.imagesPerStyle,
+        this.stateService.getState().modelStatus
+      );
     }
-    
-    return this.workflowService.calculateCredits(selectedStyles, this.imagesPerStyle, this.stateService.getState().modelStatus);
+
+    return this.workflowService.calculateCredits(
+      selectedStyles,
+      this.imagesPerStyle,
+      this.stateService.getState().modelStatus
+    );
   }
 
   // Local credit calculation to avoid loading the service just for credit display
-  private calculateCreditsLocally(selectedStyles: StyleOption[], imagesPerStyle: number, modelStatus: string) {
+  private calculateCreditsLocally(
+    selectedStyles: StyleOption[],
+    imagesPerStyle: number,
+    modelStatus: string
+  ) {
     const trainingCredits = this.calculateTrainingCreditsLocally(modelStatus);
-    const generationCredits = this.calculateGenerationCreditsLocally(selectedStyles, imagesPerStyle);
+    const generationCredits = this.calculateGenerationCreditsLocally(
+      selectedStyles,
+      imagesPerStyle
+    );
     const totalCredits = trainingCredits + generationCredits;
-    
+
     const availableCredits = this.getTotalAvailableCreditsLocally();
     const hasEnoughCredits = availableCredits >= totalCredits;
     const remainingCredits = availableCredits - totalCredits;
@@ -354,7 +409,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       generationCredits,
       totalCredits,
       hasEnoughCredits,
-      remainingCredits
+      remainingCredits,
     };
   }
 
@@ -365,7 +420,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return 15; // Training required - 15 credits
   }
 
-  private calculateGenerationCreditsLocally(selectedStyles: StyleOption[], imagesPerStyle: number): number {
+  private calculateGenerationCreditsLocally(
+    selectedStyles: StyleOption[],
+    imagesPerStyle: number
+  ): number {
     const generationCostPerImage = 5; // 5 credits per image generated
     const selectedStyleCount = selectedStyles.length;
     const totalImages = selectedStyleCount * imagesPerStyle;
@@ -375,10 +433,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private getTotalAvailableCreditsLocally(): number {
     const userCreditStatus = this.stateService.getState().userCreditStatus;
     const creditsInfo = this.stateService.getState().creditsInfo;
-    
+
     const weeklyCredits = userCreditStatus?.weeklyCredits || creditsInfo?.availableCredits || 0;
     const purchasedCredits = userCreditStatus?.purchasedCredits || 0;
-    
+
     return weeklyCredits + purchasedCredits;
   }
 
@@ -398,7 +456,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.availableStyles.filter(s => s.selected).length;
   }
 
-
   calculateTrainingCredits(): number {
     return this.getCreditCalculation().trainingCredits;
   }
@@ -407,13 +464,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.getCreditCalculation().generationCredits;
   }
 
-
   continueInBackground() {
-    this.notificationService.info('Continuing in Background', 
-      'Training and generation will continue. We\'ll email you when your photos are ready.');
+    this.notificationService.info(
+      'Continuing in Background',
+      "Training and generation will continue. We'll email you when your photos are ready."
+    );
     // Navigate to gallery with refresh parameter to force reload
-    this.router.navigate(['/gallery'], { 
-      queryParams: { refresh: Date.now() } 
+    this.router.navigate(['/gallery'], {
+      queryParams: { refresh: Date.now() },
     });
   }
 
@@ -426,10 +484,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.workflowProgressSubject.next({
         ...this.workflowProgressSubject.value,
         showLastGenerationMessage: false,
-        lastGenerationCount: 0
+        lastGenerationCount: 0,
       });
     }
   }
-
 }
-
