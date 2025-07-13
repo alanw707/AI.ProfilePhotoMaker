@@ -14,12 +14,8 @@ public class ProcessedImage
     public bool IsGenerated { get; set; } = false; // True for AI-generated images, false for uploaded
     public bool IsOriginalUpload { get; set; } = false; // True for user's original uploads
     
-    // Retention policy fields
+    // Retention policy field
     public DateTime ScheduledDeletionDate { get; set; }
-    public bool IsMarkedForDeletion { get; set; } = false;
-    public DateTime? UserRequestedDeletionDate { get; set; } // For user-initiated deletions
-    public bool IsDeleted { get; set; } = false; // Soft delete flag
-    public DateTime? DeletedAt { get; set; } // When the soft delete occurred
     
     /// <summary>
     /// Calculates the scheduled deletion date based on image type:

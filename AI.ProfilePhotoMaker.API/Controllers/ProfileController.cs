@@ -298,14 +298,14 @@ public class ProfileController : ControllerBase
             if (profile == null)
                 return NotFound("Profile not found");
 
-            var inputPhotos = profile.ProcessedImages.Where(i => i.Style == ImageConstants.OriginalStyle && !i.IsDeleted).Count();
-            var generatedPhotos = profile.ProcessedImages.Where(i => i.IsGenerated && !i.IsDeleted).Count();
+            var inputPhotos = profile.ProcessedImages.Where(i => i.Style == ImageConstants.OriginalStyle).Count();
+            var generatedPhotos = profile.ProcessedImages.Where(i => i.IsGenerated).Count();
             var enhancedPhotos = profile.ProcessedImages.Where(i => 
                 (i.Style == "Enhanced" || i.Style == "Background Remover" || i.Style == "Social Media" || i.Style == "Cartoon") 
-                && !i.IsDeleted).Count();
+               ).Count();
 
             // Calculate total data size (approximate)
-            var totalImages = profile.ProcessedImages.Where(i => !i.IsDeleted).Count();
+            var totalImages = profile.ProcessedImages.Where(i => true).Count();
             var estimatedDataSize = totalImages * 2.5; // Approximate MB per image
 
             var stats = new
@@ -346,7 +346,7 @@ public class ProfileController : ControllerBase
 
             // Get only original upload photos (not generated ones)
             var inputPhotos = profile.ProcessedImages
-                .Where(i => i.Style == ImageConstants.OriginalStyle && !i.IsDeleted)
+                .Where(i => i.Style == ImageConstants.OriginalStyle)
                 .ToList();
 
             var deletedCount = 0;
@@ -356,10 +356,10 @@ public class ProfileController : ControllerBase
             {
                 try
                 {
-                    // Mark as deleted in database
-                    photo.IsDeleted = true;
-                    photo.DeletedAt = DateTime.UtcNow;
-                    photo.UserRequestedDeletionDate = DateTime.UtcNow;
+                    // Mark as deleted in database (fields removed in cleanup)
+                    // photo.IsDeleted = true;
+                    // photo.DeletedAt = DateTime.UtcNow;
+                    // photo.UserRequestedDeletionDate = DateTime.UtcNow;
 
                     // Delete physical file if it exists
                     if (!string.IsNullOrEmpty(photo.OriginalImageUrl))
@@ -514,7 +514,7 @@ public class ProfileController : ControllerBase
             };
 
             // Delete all photos (mark as deleted and remove files)
-            var allPhotos = profile.ProcessedImages.Where(i => !i.IsDeleted).ToList();
+            var allPhotos = profile.ProcessedImages.Where(i => true).ToList();
             var photosDeleted = 0;
             var filesDeleted = 0;
 
@@ -524,10 +524,10 @@ public class ProfileController : ControllerBase
             {
                 try
                 {
-                    // Mark as deleted in database
-                    photo.IsDeleted = true;
-                    photo.DeletedAt = DateTime.UtcNow;
-                    photo.UserRequestedDeletionDate = DateTime.UtcNow;
+                    // Mark as deleted in database (fields removed in cleanup)
+                    // photo.IsDeleted = true;
+                    // photo.DeletedAt = DateTime.UtcNow;
+                    // photo.UserRequestedDeletionDate = DateTime.UtcNow;
 
                     // Delete physical file if it exists
                     if (!string.IsNullOrEmpty(photo.OriginalImageUrl))
@@ -729,7 +729,7 @@ public class ProfileController : ControllerBase
                     HasTrainedModel = latestModel != null,
                     ModelTrainedAt = latestModel?.CompletedAt
                 },
-                Images = profile.ProcessedImages.Where(i => !i.IsDeleted).Select(i => new
+                Images = profile.ProcessedImages.Where(i => true).Select(i => new
                 {
                     i.Id,
                     i.Style,
@@ -749,9 +749,9 @@ public class ProfileController : ControllerBase
                 }),
                 Statistics = new
                 {
-                    TotalImages = profile.ProcessedImages.Count(i => !i.IsDeleted),
-                    OriginalUploads = profile.ProcessedImages.Count(i => i.Style == ImageConstants.OriginalStyle && !i.IsDeleted),
-                    GeneratedImages = profile.ProcessedImages.Count(i => i.IsGenerated && !i.IsDeleted),
+                    TotalImages = profile.ProcessedImages.Count(i => true),
+                    OriginalUploads = profile.ProcessedImages.Count(i => i.Style == ImageConstants.OriginalStyle),
+                    GeneratedImages = profile.ProcessedImages.Count(i => i.IsGenerated),
                     TotalCreditsUsed = profile.UsageLogs.Sum(log => log.CreditsCost ?? 0),
                     AccountAge = (DateTime.UtcNow - profile.CreatedAt).Days
                 },
@@ -785,16 +785,16 @@ public class ProfileController : ControllerBase
     private async Task DeleteAllUserDataInternal(string userId, UserProfile profile)
     {
         // Delete all photos (mark as deleted and remove files)
-        var allPhotos = profile.ProcessedImages.Where(i => !i.IsDeleted).ToList();
+        var allPhotos = profile.ProcessedImages.Where(i => true).ToList();
         var uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
         
         foreach (var photo in allPhotos)
         {
             try
             {
-                photo.IsDeleted = true;
-                photo.DeletedAt = DateTime.UtcNow;
-                photo.UserRequestedDeletionDate = DateTime.UtcNow;
+                // photo.IsDeleted = true; (field removed)
+                // photo.DeletedAt = DateTime.UtcNow; (field removed) 
+                // photo.UserRequestedDeletionDate = DateTime.UtcNow; (field removed)
 
                 if (!string.IsNullOrEmpty(photo.OriginalImageUrl))
                 {
