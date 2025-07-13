@@ -356,6 +356,10 @@ app.UseStaticFiles(new StaticFileOptions
         else if (extension == ".jpg" || extension == ".jpeg") ctx.Context.Response.ContentType = "image/jpeg";
         else if (extension == ".gif") ctx.Context.Response.ContentType = "image/gif";
         else if (extension == ".webp") ctx.Context.Response.ContentType = "image/webp";
+        
+        // Add aggressive caching for uploaded images (immutable content)
+        ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=86400, immutable");
+        ctx.Context.Response.Headers.Append("ETag", $"\"{ctx.File.LastModified:yyyy-MM-dd-HH-mm-ss}\"");
     }
 });
 
@@ -387,8 +391,9 @@ app.UseStaticFiles(new StaticFileOptions
         else if (extension == ".gif") ctx.Context.Response.ContentType = "image/gif";
         else if (extension == ".webp") ctx.Context.Response.ContentType = "image/webp";
         
-        // Add cache-control headers to prevent future cache issues
-        ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=3600");
+        // Add aggressive caching for style previews (static assets, rarely change)
+        ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=604800, immutable");
+        ctx.Context.Response.Headers.Append("ETag", $"\"{ctx.File.LastModified:yyyy-MM-dd-HH-mm-ss}\"");
     }
 });
 

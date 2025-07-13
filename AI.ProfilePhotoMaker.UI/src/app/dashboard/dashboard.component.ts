@@ -220,8 +220,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
   private getStylePreviewUrl(styleName: string): string {
     const fileName = styleName.toLowerCase().replace(/[\s\/]+/g, '-');
-    const cacheBuster = Date.now();
-    return `${this.config.getApiUrl()}/style-previews/${fileName}.jpg?v=${cacheBuster}`;
+    // Removed cache-busting for optimal browser caching performance
+    return `${this.config.getApiUrl()}/style-previews/${fileName}.jpg`;
   }
 
   // UI Event Handlers
