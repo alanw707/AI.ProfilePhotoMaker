@@ -5,40 +5,34 @@
   <!-- Main Dashboard Content -->
   <main class="dashboard-main">
     <div class="dashboard-content">
-      
       <!-- Quick Stats -->
       <section class="stats-section">
         <div class="stats-grid">
-          <app-stats-card 
-            icon="📸" 
-            [value]="stateService.getState().uploadedImages" 
-            label="Selfies Uploaded">
-          </app-stats-card>
-          <app-stats-card 
-            icon="⚡" 
-            [value]="stateService.getState().generatedPhotosCount" 
+          <app-stats-card
+            icon="📸"
+            [value]="(state$ | async)?.uploadedImages || 0"
+            label="Selfies Uploaded"></app-stats-card>
+          <app-stats-card
+            icon="⚡"
+            [value]="(state$ | async)?.generatedPhotosCount || 0"
             label="Photos Generated"
-            [isClickable]="stateService.getState().generatedPhotosCount > 0"
-            clickAction="gallery">
-          </app-stats-card>
-          <app-stats-card 
-            icon="🤖" 
-            [value]="stateService.getState().modelStatus" 
+            [isClickable]="((state$ | async)?.generatedPhotosCount || 0) > 0"
+            clickAction="gallery"></app-stats-card>
+          <app-stats-card
+            icon="🤖"
+            [value]="(state$ | async)?.modelStatus || 'Loading...'"
             label="Model Status"
-            [isModelStatus]="true">
-          </app-stats-card>
-          <app-stats-card 
-            icon="💎" 
-            [value]="getTotalAvailableCredits()" 
+            [isModelStatus]="true"></app-stats-card>
+          <app-stats-card
+            icon="💎"
+            [value]="(state$ | async)?.totalCredits || 0"
             label="Credits"
             [showCard]="true"
             [isClickable]="true"
             clickAction="settings"
-            [isLoading]="!stateService.getState().creditsInfo && !stateService.getState().userCreditStatus">
-          </app-stats-card>
+            [isLoading]="!(state$ | async)?.creditsInfo && !(state$ | async)?.userCreditStatus"></app-stats-card>
         </div>
       </section>
-
 
       <!-- No Package - Get Started Section -->
       <section class="get-started-section" *ngIf="!isPremiumWorkflow()">
@@ -47,7 +41,7 @@
             <h2>Welcome to AI Profile Photo Maker</h2>
             <p>Create stunning, professional AI-generated profile photos with our advanced technology</p>
           </div>
-          
+
           <div class="options-grid">
             <div class="option-card premium-option">
               <div class="option-header">
@@ -63,13 +57,17 @@
                 </ul>
                 <button class="btn btn-primary" routerLink="/packages">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L3.09 8.26L12 22L20.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" fill="none"/>
+                    <path
+                      d="M12 2L3.09 8.26L12 22L20.91 8.26L12 2Z"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      fill="none" />
                   </svg>
                   View Packages
                 </button>
               </div>
             </div>
-            
+
             <div class="option-card basic-option">
               <div class="option-header">
                 <div class="option-icon">⚡</div>
@@ -84,23 +82,22 @@
                 </ul>
                 <button class="btn btn-secondary" routerLink="/enhance">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                    <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+                    <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2" />
                   </svg>
                   Enhance Photos
                 </button>
               </div>
             </div>
           </div>
-          
+
           <!-- Credit Display Component -->
           <app-credit-display
-            [creditsInfo]="stateService.getState().creditsInfo"
-            [userCreditStatus]="stateService.getState().userCreditStatus"
-            [isLoading]="!stateService.getState().creditsInfo && !stateService.getState().userCreditStatus"
+            [creditsInfo]="(state$ | async)?.creditsInfo"
+            [userCreditStatus]="(state$ | async)?.userCreditStatus"
+            [isLoading]="!(state$ | async)?.creditsInfo && !(state$ | async)?.userCreditStatus"
             [showPurchasePrompt]="true"
-            (creditActionRequested)="onCreditAction($event)">
-          </app-credit-display>
+            (creditActionRequested)="onCreditAction($event)"></app-credit-display>
         </div>
       </section>
 
@@ -108,11 +105,15 @@
       <section class="workflow-section" *ngIf="isPremiumWorkflow()">
         <h2>Create Your Professional Photos</h2>
         <p class="workflow-subtitle">Follow these simple steps to generate stunning AI-powered profile photos</p>
-        
+
         <div class="workflow-steps">
-          
           <!-- Step 1: Upload Selfies -->
-          <div class="step-card" [class.completed]="stateService.getState().uploadedImages > 0 || stateService.getState().uploadedImageThumbnails.length > 0" [class.active]="currentStep === 1">
+          <div
+            class="step-card"
+            [class.completed]="
+              stateService.getState().uploadedImages > 0 || stateService.getState().uploadedImageThumbnails.length > 0
+            "
+            [class.active]="currentStep === 1">
             <div class="step-header">
               <div class="step-number">1</div>
               <div class="step-title">
@@ -121,11 +122,17 @@
               </div>
               <div class="step-status">
                 <span class="status-badge" [ngClass]="getStepStatus(1)">
-                  {{getStepStatusText(1)}}
+                  {{ getStepStatusText(1) }}
                 </span>
               </div>
             </div>
-            <div class="step-content" *ngIf="currentStep === 1 || stateService.getState().uploadedImages === 0 || stateService.getState().uploadedImageThumbnails.length > 0">
+            <div
+              class="step-content"
+              *ngIf="
+                currentStep === 1 ||
+                stateService.getState().uploadedImages === 0 ||
+                stateService.getState().uploadedImageThumbnails.length > 0
+              ">
               <!-- File Upload Section Component -->
               <app-file-upload-section
                 [uploadedImageThumbnails]="stateService.getState().uploadedImageThumbnails"
@@ -134,29 +141,37 @@
                 [maxFileSize]="7 * 1024 * 1024"
                 [allowedTypes]="['image/jpeg', 'image/png', 'image/webp']"
                 (uploadCompleted)="onUploadCompleted($event)"
-                (uploadedImageDeleted)="onUploadedImageDeleted($event)">
-              </app-file-upload-section>
+                (uploadedImageDeleted)="onUploadedImageDeleted($event)"></app-file-upload-section>
             </div>
           </div>
 
           <!-- Step 2: Generate Images -->
-          <div class="step-card" [class.completed]="stateService.getState().generatedPhotosCount > 0" [class.active]="currentStep === 2">
+          <div
+            class="step-card"
+            [class.completed]="stateService.getState().generatedPhotosCount > 0"
+            [class.active]="currentStep === 2">
             <div class="step-header">
               <div class="step-number">2</div>
               <div class="step-title">
                 <h3>Generate Your Professional Photos</h3>
-                <p *ngIf="stateService.getState().modelStatus !== 'trained'">Select styles and we'll train your model then generate photos</p>
-                <p *ngIf="stateService.getState().modelStatus === 'trained'">Select styles to generate photos with your trained model</p>
+                <p *ngIf="stateService.getState().modelStatus !== 'trained'">
+                  Select styles and we'll train your model then generate photos
+                </p>
+                <p *ngIf="stateService.getState().modelStatus === 'trained'">
+                  Select styles to generate photos with your trained model
+                </p>
               </div>
               <div class="step-status">
                 <span class="status-badge" [ngClass]="getStepStatus(2)">
-                  {{getStepStatusText(2)}}
+                  {{ getStepStatusText(2) }}
                 </span>
               </div>
             </div>
-            <div class="step-content" *ngIf="stateService.getState().uploadedImages > 0 || stateService.getState().uploadedImageThumbnails.length > 0">
-              
-              
+            <div
+              class="step-content"
+              *ngIf="
+                stateService.getState().uploadedImages > 0 || stateService.getState().uploadedImageThumbnails.length > 0
+              ">
               <!-- Style Selector Component -->
               <app-style-selector
                 [availableStyles]="availableStyles"
@@ -183,14 +198,15 @@
                 (deselectAllStyles)="deselectAllStyles()"
                 (startTraining)="startTrainingWithStyles()"
                 (continueInBackground)="continueInBackground()"
-                (dismissSuccessMessage)="dismissSuccessMessage()">
-              </app-style-selector>
-              
+                (dismissSuccessMessage)="dismissSuccessMessage()"></app-style-selector>
             </div>
           </div>
 
           <!-- Step 3: View Generated Photos -->
-          <div class="step-card" [class.completed]="stateService.getState().generatedPhotosCount > 0" [class.active]="getStepStatus(3) === 'active'">
+          <div
+            class="step-card"
+            [class.completed]="stateService.getState().generatedPhotosCount > 0"
+            [class.active]="getStepStatus(3) === 'active'">
             <div class="step-header">
               <div class="step-number">3</div>
               <div class="step-title">
@@ -199,7 +215,7 @@
               </div>
               <div class="step-status">
                 <span class="status-badge" [ngClass]="getStepStatus(3)">
-                  {{getStepStatusText(3)}}
+                  {{ getStepStatusText(3) }}
                 </span>
               </div>
             </div>
@@ -207,34 +223,32 @@
               <!-- Data Retention Notice -->
               <div class="retention-notice">
                 <div class="alert alert-info">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-right: 8px;">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                    <path d="M12 8v4l3 3" stroke="currentColor" stroke-width="2"/>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-right: 8px">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                    <path d="M12 8v4l3 3" stroke="currentColor" stroke-width="2" />
                   </svg>
-                  <strong>Data Retention:</strong> Your AI headshots will be stored for <strong>30 days</strong> for easy access and downloads. 
-                  You can delete your data anytime via account settings.
+                  <strong>Data Retention:</strong>
+                  Your AI headshots will be stored for
+                  <strong>30 days</strong>
+                  for easy access and downloads. You can delete your data anytime via account settings.
                 </div>
               </div>
-              
+
               <!-- Single Gallery Action -->
               <div class="gallery-actions">
                 <button class="gallery-action-btn" routerLink="/gallery">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-                    <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
-                    <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2"/>
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2" />
+                    <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" />
                   </svg>
-                  <span>View & Download All ({{stateService.getState().generatedPhotosCount}} photos)</span>
+                  <span>View & Download All ({{ stateService.getState().generatedPhotosCount }} photos)</span>
                 </button>
               </div>
             </div>
           </div>
-
         </div>
       </section>
-
-
-
     </div>
   </main>
 </div>

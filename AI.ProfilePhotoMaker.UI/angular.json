@@ -110,19 +110,23 @@
           },
           "configurations": {
             "production": {
-              "buildTarget": "AI.ProfilePhotoMaker.UI:build:production"
+              "buildTarget": "AI.ProfilePhotoMaker.UI:build:production",
+              "proxyConfig": "proxy.conf.prod.json"
             },
             "development": {
-              "buildTarget": "AI.ProfilePhotoMaker.UI:build:development"
+              "buildTarget": "AI.ProfilePhotoMaker.UI:build:development",
+              "proxyConfig": "proxy.conf.json"
             },
             "test": {
-              "buildTarget": "AI.ProfilePhotoMaker.UI:build:test"
+              "buildTarget": "AI.ProfilePhotoMaker.UI:build:test",
+              "proxyConfig": "proxy.conf.test.json"
             },
             "ngrok": {
               "buildTarget": "AI.ProfilePhotoMaker.UI:build:ngrok",
               "host": "0.0.0.0",
               "disableHostCheck": true,
-              "allowedHosts": ["awlocaldev.ngrok.app"]
+              "allowedHosts": ["awlocaldev.ngrok.app", "awlocaldev-api.ngrok.app"],
+              "proxyConfig": "proxy.conf.ngrok.json"
             }
           },
           "defaultConfiguration": "development"

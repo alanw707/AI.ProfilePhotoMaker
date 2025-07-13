@@ -2,12 +2,12 @@ import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ConfigService {
   // Simple configuration service for ngrok/proxy setup
   // All API calls go through the same domain via proxy
-  
+
   get baseUrl(): string {
     return environment.apiUrl || '/api';
   }
@@ -76,7 +76,12 @@ export class ConfigService {
    * Get the OAuth base URL for external login
    */
   getOAuthBaseUrl(): string {
-    // Always use current origin for OAuth
+    // For ngrok configuration, use the backend API URL
+    if (environment.apiUrl && environment.apiUrl.startsWith('https://')) {
+      // Extract base URL from full API URL (remove /api suffix)
+      return environment.apiUrl.replace('/api', '');
+    }
+    // Fallback to current origin for local development
     return window.location.origin;
   }
 
@@ -88,12 +93,12 @@ export class ConfigService {
     if (!endpoint.startsWith('/')) {
       endpoint = '/' + endpoint;
     }
-    
+
     // For API endpoints, prepend /api if not already present
     if (!endpoint.startsWith('/api/')) {
       endpoint = '/api' + endpoint;
     }
-    
+
     return endpoint;
   }
 
@@ -114,6 +119,27 @@ export class ConfigService {
     return !window.location.hostname.includes('localhost');
   }
 
+  isNgrokAccess(): boolean {
+    return (
+      window.location.hostname.includes('ngrok.app') ||
+      window.location.hostname.includes('ngrok.io')
+    );
+  }
+
+  getCurrentEnvironment(): 'localhost' | 'ngrok' | 'test' | 'production' {
+    const hostname = window.location.hostname;
+
+    if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
+      return 'localhost';
+    } else if (hostname.includes('ngrok.app') || hostname.includes('ngrok.io')) {
+      return 'ngrok';
+    } else if (hostname.includes('test.') || hostname.includes('-test.')) {
+      return 'test';
+    } else {
+      return 'production';
+    }
+  }
+
   // Add getOAuthRedirectUrl for compatibility
   getOAuthRedirectUrl(): string {
     return this.getOAuthBaseUrl();
@@ -128,9 +154,9 @@ export class ConfigService {
           images: '/image/images',
           createTrainingZip: '/image/create-training-zip',
           trainingZips: '/image/training-zips',
-          latestTrainingZip: '/image/latest-training-zip'
-        }
-      }
+          latestTrainingZip: '/image/latest-training-zip',
+        },
+      },
     };
   }
 }
