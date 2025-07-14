@@ -148,6 +148,15 @@ if (string.IsNullOrEmpty(jwtSecret) || jwtSecret.Length < 32)
 
 // Register the Services
 builder.Services.AddHttpContextAccessor(); // Required for UserContextService
+
+// Add response compression for better performance over ngrok
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+    options.MimeTypes = Microsoft.AspNetCore.ResponseCompression.ResponseCompressionDefaults.MimeTypes.Concat(
+        new[] { "application/json", "text/json", "image/svg+xml" });
+});
 builder.Services.AddHttpClient(); // Required for OAuth HTTP calls
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IBasicTierService, AI.ProfilePhotoMaker.API.Services.BasicTierService>();
@@ -171,8 +180,6 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository,
 
 // Register Storage Services
 builder.Services.AddScoped<IStorageService, LocalStorageService>();
-// Note: For production with Azure Blob Storage, replace with:
-// builder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
 
 // Premium Package Services removed - using unified credit system
 
@@ -183,15 +190,13 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.ICreditPackageServi
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Payment.IPaymentService, AI.ProfilePhotoMaker.API.Services.Payment.StripePaymentService>();
 
 // Register Retention Policy Services
-// TODO: Re-enable after cleanup migration
-// builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IRetentionPolicyService, AI.ProfilePhotoMaker.API.Services.RetentionPolicyService>();
+builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IRetentionPolicyService, AI.ProfilePhotoMaker.API.Services.RetentionPolicyService>();
 
 // Register background services
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelCreationPollingService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.BasicTierBackgroundService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelExpirationBackgroundService>();
-// TODO: Re-enable after cleanup migration
-// builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.RetentionPolicyBackgroundService>();
+builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.RetentionPolicyBackgroundService>();
 
 
 builder.Services.AddControllers()
@@ -275,6 +280,9 @@ var app = builder.Build();
 
 // Use forwarded headers for ngrok proxy
 app.UseForwardedHeaders();
+
+// Enable response compression early in the pipeline
+app.UseResponseCompression();
 
 // Use session middleware for OAuth state management
 if (app.Environment.IsDevelopment())

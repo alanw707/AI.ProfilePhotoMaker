@@ -150,15 +150,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    console.log('🔍 Dashboard ngOnInit - checking authentication...');
-
     if (!this.authService.isAuthenticated()) {
-      console.log('❌ User not authenticated, redirecting to login');
       this.router.navigate(['/login']);
       return;
     }
-
-    console.log('✅ User authenticated, loading dashboard data...');
 
     // Subscribe to state changes to update UI
     this.state$.subscribe(_state => {
@@ -219,14 +214,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
   private getStylePreviewUrl(styleName: string): string {
-    const fileName = styleName.toLowerCase().replace(/[\s\/]+/g, '-');
-    // Removed cache-busting for optimal browser caching performance
-    return `${this.config.getApiUrl()}/style-previews/${fileName}.jpg`;
+    return this.config.buildStylePreviewUrl(styleName);
   }
 
   // UI Event Handlers
   onUploadCompleted(uploadedFiles: unknown[]) {
-    console.log('Upload completed, refreshing images from server:', uploadedFiles);
     this.refreshUploadedImagesFromServer();
 
     setTimeout(() => {
@@ -274,7 +266,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private async refreshUploadedImagesFromServer() {
     try {
       this.stateService.forceRefresh();
-      console.log('Successfully refreshed uploaded images from server');
       this.cdr.detectChanges();
     } catch (error) {
       console.error('Failed to refresh uploaded images:', error);

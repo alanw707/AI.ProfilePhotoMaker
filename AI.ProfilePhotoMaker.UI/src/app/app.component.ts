@@ -26,10 +26,6 @@ export class AppComponent implements OnInit {
     const expiration = urlParams.get('expiration');
 
     if (token) {
-      // Use console.warn instead of console.log for ESLint compliance
-      console.warn('🔐 OAuth token detected in app component');
-      console.warn('Token preview:', token.substring(0, 50) + '...');
-
       try {
         // Handle OAuth callback
         this._authService.handleOAuthCallback(token, expiration || undefined);
@@ -39,10 +35,9 @@ export class AppComponent implements OnInit {
         window.history.replaceState({}, document.title, cleanUrl);
 
         // Navigate to dashboard
-        console.warn('✅ OAuth processed at app level, navigating to dashboard');
         this._router.navigate(['/dashboard']);
       } catch (error) {
-        console.error('❌ Error handling OAuth callback in app component:', error);
+        console.error('Error handling OAuth callback:', error);
       }
     }
   }
