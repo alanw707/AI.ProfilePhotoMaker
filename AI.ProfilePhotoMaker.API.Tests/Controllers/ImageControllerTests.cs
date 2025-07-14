@@ -27,6 +27,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
         private readonly Mock<ILogger<ImageController>> _mockLogger;
         private readonly Mock<IConfiguration> _mockConfiguration;
         private readonly Mock<IUserContextService> _mockUserContextService;
+        private readonly Mock<IBasicTierService> _mockBasicTierService;
         private readonly ImageController _controller;
 
         public ImageControllerTests()
@@ -38,12 +39,14 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             _mockLogger = new Mock<ILogger<ImageController>>();
             _mockConfiguration = new Mock<IConfiguration>();
             _mockUserContextService = new Mock<IUserContextService>();
+            _mockBasicTierService = new Mock<IBasicTierService>();
 
             _controller = new ImageController(
                 _mockUserProfileRepository.Object,
                 _mockEnvironment.Object,
                 _mockConfiguration.Object,
                 _mockUserContextService.Object,
+                _mockBasicTierService.Object,
                 _mockLogger.Object,
                 _mockContext.Object
             );
@@ -164,22 +167,25 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
                 var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
                 dict.Should().NotBeNull();
                 var data = dict!["data"];
-                data.GetProperty("TotalImages").GetInt32().Should().Be(0);
+                data.GetProperty("totalImages").GetInt32().Should().Be(0);
             }
         }
 
-        [Fact(Skip = "URL formatting test needs investigation - test mocking issue")]
+        [Fact]
         public async Task GetImages_FormatsUrlsCorrectly_ForRelativeAndAbsolute()
         {
             // Arrange
             var userId = _fixture.Create<string>();
             var processedImages = new List<ProcessedImage>
             {
-                new ProcessedImage { Id = 1, Style = "Original", CreatedAt = DateTime.UtcNow, IsGenerated = false, IsOriginalUpload = true, OriginalImageUrl = "/uploads/1.jpg", ProcessedImageUrl = "/uploads/1.jpg" },
+                new ProcessedImage { Id = 1, Style = "Original", CreatedAt = DateTime.UtcNow.AddMinutes(-1), IsGenerated = false, IsOriginalUpload = true, OriginalImageUrl = "/uploads/1.jpg", ProcessedImageUrl = "/uploads/1.jpg" },
                 new ProcessedImage { Id = 2, Style = "Styled", CreatedAt = DateTime.UtcNow, IsGenerated = true, IsOriginalUpload = false, ProcessedImageUrl = "https://external.com/2.jpg" }
             };
             var profile = new UserProfile { UserId = userId, ProcessedImages = processedImages };
             _mockUserProfileRepository.Setup(r => r.GetByUserIdAsync(userId)).ReturnsAsync(profile);
+            
+            // Mock configuration to provide AppBaseUrl
+            _mockConfiguration.Setup(c => c["AppBaseUrl"]).Returns("https://localhost:5000");
             
             var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock")) };
             httpContext.Request.Scheme = "https";
@@ -202,22 +208,36 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
                 var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
                 dict.Should().NotBeNull();
                 var data = dict!["data"];
-                var images = data.GetProperty("Images").EnumerateArray().ToList();
+                var images = data.GetProperty("images").EnumerateArray().ToList();
                 images.Count.Should().Be(2);
-                // Test that URLs are processed (even if format differs from expected due to test setup)
-                images[0].GetProperty("OriginalImageUrl").GetString().Should().NotBeNull();
-                images[1].GetProperty("ProcessedImageUrl").GetString().Should().Be("https://external.com/2.jpg");
+                
+                // Debug: output the actual structure
+                var image0 = images[0];
+                var image1 = images[1];
+                
+                // Check what URL properties are available
+                var originalUrl0 = image0.TryGetProperty("originalImageUrl", out var prop0) ? prop0.GetString() : null;
+                var processedUrl0 = image0.TryGetProperty("processedImageUrl", out var prop0p) ? prop0p.GetString() : null;
+                var originalUrl1 = image1.TryGetProperty("originalImageUrl", out var prop1o) ? prop1o.GetString() : null;
+                var processedUrl1 = image1.TryGetProperty("processedImageUrl", out var prop1) ? prop1.GetString() : null;
+                
+                // Test that URLs are processed correctly
+                // With our ordering: images[0] = Id=2 (newest), images[1] = Id=1 (oldest)
+                // First image (Id=2) should have the external URL unchanged
+                processedUrl0.Should().Be("https://external.com/2.jpg");
+                // Second image (Id=1) should have some URL (either original or processed)
+                (originalUrl1 ?? processedUrl1).Should().NotBeNullOrEmpty("Second image should have at least one URL");
             }
         }
 
-        [Fact(Skip = "IsOriginalUpload flag test needs investigation - test data issue")]
+        [Fact]
         public async Task GetImages_SetsIsOriginalUploadAndIsGeneratedFlags()
         {
             // Arrange
             var userId = _fixture.Create<string>();
             var processedImages = new List<ProcessedImage>
             {
-                new ProcessedImage { Id = 1, Style = "Original", CreatedAt = DateTime.UtcNow, IsGenerated = false, IsOriginalUpload = true, OriginalImageUrl = "/uploads/1.jpg", ProcessedImageUrl = "/uploads/1.jpg" },
+                new ProcessedImage { Id = 1, Style = "Original", CreatedAt = DateTime.UtcNow.AddMinutes(-1), IsGenerated = false, IsOriginalUpload = true, OriginalImageUrl = "/uploads/1.jpg", ProcessedImageUrl = "/uploads/1.jpg" },
                 new ProcessedImage { Id = 2, Style = "Styled", CreatedAt = DateTime.UtcNow, IsGenerated = true, IsOriginalUpload = false, ProcessedImageUrl = "/generated/2.jpg" }
             };
             var profile = new UserProfile { UserId = userId, ProcessedImages = processedImages };
@@ -243,12 +263,13 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
                 var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
                 dict.Should().NotBeNull();
                 var data = dict!["data"];
-                var images = data.GetProperty("Images").EnumerateArray().ToList();
+                var images = data.GetProperty("images").EnumerateArray().ToList();
                 images.Count.Should().Be(2);
-                images[0].GetProperty("IsOriginalUpload").GetBoolean().Should().BeTrue();
-                images[0].GetProperty("IsGenerated").GetBoolean().Should().BeFalse();
-                images[1].GetProperty("IsOriginalUpload").GetBoolean().Should().BeFalse();
-                images[1].GetProperty("IsGenerated").GetBoolean().Should().BeTrue();
+                // With our ordering: images[0] = Id=2 (newest, generated), images[1] = Id=1 (oldest, original)
+                images[0].GetProperty("isOriginalUpload").GetBoolean().Should().BeFalse();
+                images[0].GetProperty("isGenerated").GetBoolean().Should().BeTrue();
+                images[1].GetProperty("isOriginalUpload").GetBoolean().Should().BeTrue();
+                images[1].GetProperty("isGenerated").GetBoolean().Should().BeFalse();
             }
         }
     }

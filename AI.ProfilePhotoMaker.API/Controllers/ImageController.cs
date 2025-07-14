@@ -21,12 +21,14 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private readonly IWebHostEnvironment _environment;
         private readonly IConfiguration _configuration;
         private readonly IUserContextService _userContextService;
+        private readonly IBasicTierService _basicTierService;
 
         public ImageController(
             IUserProfileRepository userProfileRepository,
             IWebHostEnvironment environment,
             IConfiguration configuration,
             IUserContextService userContextService,
+            IBasicTierService basicTierService,
             ILogger<ImageController> logger,
             ApplicationDbContext context) 
             : base(logger, context)
@@ -35,6 +37,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             _environment = environment;
             _configuration = configuration;
             _userContextService = userContextService;
+            _basicTierService = basicTierService;
         }
 
         /// <summary>
@@ -134,24 +137,26 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                         await image.CopyToAsync(stream);
                     }
 
-                    // Create database record for uploaded image
-                    var processedImage = new ProcessedImage
+                    // Only create database records for non-enhanced images
+                    if (!dto.IsEnhanced)
                     {
-                        OriginalImageUrl = relativeUrl,
-                        ProcessedImageUrl = relativeUrl,
-                        Style = dto.IsEnhanced ? "Enhanced" : ImageConstants.OriginalStyle,
-                        UserProfileId = profile.Id,
-                        CreatedAt = DateTime.UtcNow,
-                        IsOriginalUpload = !dto.IsEnhanced, // False for enhanced images
-                        IsGenerated = false,
-                        IsEnhanced = dto.IsEnhanced
-                    };
-                    
-                    // Set scheduled deletion date based on retention policy
-                    processedImage.SetScheduledDeletionDate();
+                        var processedImage = new ProcessedImage
+                        {
+                            OriginalImageUrl = relativeUrl,
+                            ProcessedImageUrl = relativeUrl,
+                            Style = ImageConstants.OriginalStyle,
+                            UserProfileId = profile.Id,
+                            CreatedAt = DateTime.UtcNow,
+                            IsOriginalUpload = true,
+                            IsGenerated = false,
+                            };
+                        
+                        // Set scheduled deletion date based on retention policy
+                        processedImage.SetScheduledDeletionDate();
 
-                    profile.ProcessedImages.Add(processedImage);
-                    uploadedImages.Add(processedImage);
+                        profile.ProcessedImages.Add(processedImage);
+                        uploadedImages.Add(processedImage);
+                    }
 
                     uploadResults.Add(new { 
                         FileName = fileName, 
@@ -160,8 +165,35 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     });
                 }
 
-                // Save all uploaded image records to database
-                await _userProfileRepository.UpdateAsync(profile);
+                // For enhanced images, deduct credits (weekly credits first, then purchased)
+                if (dto.IsEnhanced && uploadedImages.Count > 0)
+                {
+                    int creditsNeeded = uploadedImages.Count; // 1 credit per enhanced image
+                    bool hasCredits = await _basicTierService.ConsumeCreditsAsync(userId, creditsNeeded, "enhanced_image_upload");
+                    
+                    if (!hasCredits)
+                    {
+                        // Cleanup uploaded files if credit deduction failed
+                        foreach (var uploadedImage in uploadedImages)
+                        {
+                            var filePath = Path.Combine(_environment.ContentRootPath, uploadedImage.OriginalImageUrl.TrimStart('/'));
+                            if (System.IO.File.Exists(filePath))
+                            {
+                                System.IO.File.Delete(filePath);
+                            }
+                        }
+                        
+                        return ErrorResponse("InsufficientCredits", 
+                            $"Insufficient credits for enhanced image upload. Required: {creditsNeeded} credit(s). " +
+                            "Enhanced images consume weekly credits first, then purchased credits if available.");
+                    }
+                }
+
+                // Save uploaded image records to database (only if non-enhanced images were uploaded)
+                if (uploadedImages.Any())
+                {
+                    await _userProfileRepository.UpdateAsync(profile);
+                }
 
                 string? zipPath = null;
                 if (dto.ForTraining)
@@ -231,8 +263,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     style = i.Style,
                     createdAt = i.CreatedAt,
                     isOriginalUpload = i.IsOriginalUpload,
-                    isGenerated = i.IsGenerated,
-                    isEnhanced = i.IsEnhanced
+                    isGenerated = i.IsGenerated
                 });
             }
 
@@ -240,8 +271,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             var summary = new
             {
                 totalImages = images.Count,
-                originalUploads = imageList.Count(i => i.IsOriginalUpload),
-                generatedImages = imageList.Count(i => i.IsGenerated && !i.IsOriginalUpload),
+                originalUploads = imageList.Count(i => i.isOriginalUpload),
+                generatedImages = imageList.Count(i => i.isGenerated && !i.isOriginalUpload),
                 images = images
             };
 
@@ -317,42 +348,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     {
                         Logger.LogError(fileEx, "Error deleting generated image file for image {ImageId}. URL: {ProcessedUrl}, UserId: {UserId}", 
                             imageId, image.ProcessedImageUrl, userId);
-                        // Continue with database deletion even if file deletion fails
-                    }
-                }
-                else if (image.IsEnhanced && !string.IsNullOrEmpty(image.OriginalImageUrl))
-                {
-                    try
-                    {
-                        // Enhanced images are stored in /enhanced/{userId}/ directory
-                        var fileName = Path.GetFileName(image.OriginalImageUrl);
-                        var enhancedFilePath = Path.Combine(_environment.ContentRootPath, "enhanced", userId, fileName);
-                        
-                        Logger.LogDebug("Attempting to delete enhanced image file: {FilePath}", enhancedFilePath);
-                        Logger.LogDebug("Enhanced URL: {OriginalUrl}, Extracted filename: {FileName}, UserId: {UserId}", 
-                            image.OriginalImageUrl, fileName, userId);
-                        
-                        // Validate path length and characters
-                        if (enhancedFilePath.Length > 260)
-                        {
-                            Logger.LogWarning("Enhanced file path too long ({Length} chars): {FilePath}", enhancedFilePath.Length, enhancedFilePath);
-                        }
-                        
-                        if (System.IO.File.Exists(enhancedFilePath))
-                        {
-                            System.IO.File.Delete(enhancedFilePath);
-                            physicalFileDeleted = true;
-                            Logger.LogInformation("Deleted enhanced image file: {FilePath}", enhancedFilePath);
-                        }
-                        else
-                        {
-                            Logger.LogWarning("Enhanced image file not found: {FilePath}", enhancedFilePath);
-                        }
-                    }
-                    catch (Exception fileEx)
-                    {
-                        Logger.LogError(fileEx, "Error deleting enhanced image file for image {ImageId}. URL: {OriginalUrl}, UserId: {UserId}", 
-                            imageId, image.OriginalImageUrl, userId);
                         // Continue with database deletion even if file deletion fails
                     }
                 }

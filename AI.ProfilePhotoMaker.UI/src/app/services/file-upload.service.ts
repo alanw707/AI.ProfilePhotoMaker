@@ -25,7 +25,6 @@ export interface ProcessedImage {
   createdAt: string;
   isOriginalUpload: boolean;
   isGenerated: boolean;
-  isEnhanced: boolean;
 }
 
 export interface UserImagesResponse {
@@ -95,6 +94,13 @@ export class FileUploadService {
     // Add forTraining flag
     formData.append('forTraining', forTraining.toString());
 
+    // Add authentication headers
+    const headers: any = {};
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     return this.http
       .post<UploadResponse>(
         this.config.getFullUrl(this.config.apiConfig.endpoints.image.upload),
@@ -102,6 +108,7 @@ export class FileUploadService {
         {
           reportProgress: true,
           observe: 'events',
+          headers,
         }
       )
       .pipe(
@@ -336,10 +343,18 @@ export class FileUploadService {
     formData.append('forTraining', 'false');
     formData.append('isEnhanced', isEnhanced.toString());
 
+    // Add authentication headers
+    const headers: any = {};
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     return this.http
       .post<any>(this.config.getFullUrl(this.config.apiConfig.endpoints.image.upload), formData, {
         reportProgress: true,
         observe: 'events',
+        headers,
       })
       .pipe(
         map(event => {
@@ -352,9 +367,30 @@ export class FileUploadService {
               const response = event.body;
               console.log('Upload API response:', response);
 
+              // Handle standard API response format: { success: true, data: {...} }
+              if (
+                response?.success &&
+                response?.data?.UploadedFiles &&
+                response.data.UploadedFiles.length > 0
+              ) {
+                const uploadedFile = response.data.UploadedFiles[0];
+                console.log('Uploaded file details:', uploadedFile);
+                return {
+                  progress: 100,
+                  response: {
+                    success: true,
+                    data: {
+                      url: uploadedFile.Url || uploadedFile.url,
+                      fileName: uploadedFile.FileName || uploadedFile.fileName,
+                    },
+                  },
+                };
+              }
+
+              // Fallback: try legacy format
               if (response?.uploadedFiles && response.uploadedFiles.length > 0) {
                 const uploadedFile = response.uploadedFiles[0];
-                console.log('Uploaded file details:', uploadedFile);
+                console.log('Uploaded file details (legacy):', uploadedFile);
                 return {
                   progress: 100,
                   response: {
@@ -366,6 +402,7 @@ export class FileUploadService {
                   },
                 };
               }
+
               console.log(
                 'Upload response parsing failed. Response structure:',
                 JSON.stringify(response, null, 2)
