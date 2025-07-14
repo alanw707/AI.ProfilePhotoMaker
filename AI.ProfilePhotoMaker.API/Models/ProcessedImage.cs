@@ -13,6 +13,7 @@ public class ProcessedImage
     // New fields to distinguish image types
     public bool IsGenerated { get; set; } = false; // True for AI-generated images, false for uploaded
     public bool IsOriginalUpload { get; set; } = false; // True for user's original uploads
+    public bool IsEnhanced { get; set; } = false; // True for enhanced photos from enhancement page
     
     // Retention policy field
     public DateTime ScheduledDeletionDate { get; set; }
@@ -21,6 +22,7 @@ public class ProcessedImage
     /// Calculates the scheduled deletion date based on image type:
     /// - Original uploads (input photos): 7 days from creation
     /// - AI generated headshots: 30 days from creation
+    /// - Enhanced photos: 30 days from creation
     /// </summary>
     public void SetScheduledDeletionDate()
     {
@@ -32,6 +34,11 @@ public class ProcessedImage
         else if (IsGenerated)
         {
             // AI headshots (generated photos): Delete after 30 days
+            ScheduledDeletionDate = CreatedAt.AddDays(30);
+        }
+        else if (IsEnhanced)
+        {
+            // Enhanced photos: Delete after 30 days
             ScheduledDeletionDate = CreatedAt.AddDays(30);
         }
         else

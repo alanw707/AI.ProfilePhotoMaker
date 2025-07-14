@@ -98,7 +98,20 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 var uploadResults = new List<object>();
                 var uploadedImages = new List<ProcessedImage>();
-                var uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
+                
+                // Determine upload directory and file naming based on image type
+                string uploadDir;
+                string filePrefix;
+                if (dto.IsEnhanced)
+                {
+                    uploadDir = Path.Combine(_environment.ContentRootPath, "enhanced", userId);
+                    filePrefix = "enhanced";
+                }
+                else
+                {
+                    uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
+                    filePrefix = "selfie";
+                }
                 Directory.CreateDirectory(uploadDir);
 
                 foreach (var image in dto.Images)
@@ -108,11 +121,13 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                         return ErrorResponse("InvalidImage", $"Invalid image file: {image.FileName}");
                     }
 
-                    // Generate clean filename for uploaded selfies
+                    // Generate clean filename based on image type
                     var extension = Path.GetExtension(image.FileName);
-                    var fileName = $"{Guid.NewGuid()}_selfie{extension}";
+                    var fileName = $"{Guid.NewGuid()}_{filePrefix}{extension}";
                     var filePath = Path.Combine(uploadDir, fileName);
-                    var relativeUrl = $"/uploads/{userId}/{fileName}";
+                    var relativeUrl = dto.IsEnhanced 
+                        ? $"/enhanced/{userId}/{fileName}" 
+                        : $"/uploads/{userId}/{fileName}";
 
                     using (var stream = new FileStream(filePath, FileMode.Create))
                     {
@@ -124,11 +139,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     {
                         OriginalImageUrl = relativeUrl,
                         ProcessedImageUrl = relativeUrl,
-                        Style = ImageConstants.OriginalStyle,
+                        Style = dto.IsEnhanced ? "Enhanced" : ImageConstants.OriginalStyle,
                         UserProfileId = profile.Id,
                         CreatedAt = DateTime.UtcNow,
-                        IsOriginalUpload = true,
-                        IsGenerated = false
+                        IsOriginalUpload = !dto.IsEnhanced, // False for enhanced images
+                        IsGenerated = false,
+                        IsEnhanced = dto.IsEnhanced
                     };
                     
                     // Set scheduled deletion date based on retention policy
@@ -215,7 +231,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     style = i.Style,
                     createdAt = i.CreatedAt,
                     isOriginalUpload = i.IsOriginalUpload,
-                    isGenerated = i.IsGenerated
+                    isGenerated = i.IsGenerated,
+                    isEnhanced = i.IsEnhanced
                 });
             }
 
@@ -300,6 +317,42 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     {
                         Logger.LogError(fileEx, "Error deleting generated image file for image {ImageId}. URL: {ProcessedUrl}, UserId: {UserId}", 
                             imageId, image.ProcessedImageUrl, userId);
+                        // Continue with database deletion even if file deletion fails
+                    }
+                }
+                else if (image.IsEnhanced && !string.IsNullOrEmpty(image.OriginalImageUrl))
+                {
+                    try
+                    {
+                        // Enhanced images are stored in /enhanced/{userId}/ directory
+                        var fileName = Path.GetFileName(image.OriginalImageUrl);
+                        var enhancedFilePath = Path.Combine(_environment.ContentRootPath, "enhanced", userId, fileName);
+                        
+                        Logger.LogDebug("Attempting to delete enhanced image file: {FilePath}", enhancedFilePath);
+                        Logger.LogDebug("Enhanced URL: {OriginalUrl}, Extracted filename: {FileName}, UserId: {UserId}", 
+                            image.OriginalImageUrl, fileName, userId);
+                        
+                        // Validate path length and characters
+                        if (enhancedFilePath.Length > 260)
+                        {
+                            Logger.LogWarning("Enhanced file path too long ({Length} chars): {FilePath}", enhancedFilePath.Length, enhancedFilePath);
+                        }
+                        
+                        if (System.IO.File.Exists(enhancedFilePath))
+                        {
+                            System.IO.File.Delete(enhancedFilePath);
+                            physicalFileDeleted = true;
+                            Logger.LogInformation("Deleted enhanced image file: {FilePath}", enhancedFilePath);
+                        }
+                        else
+                        {
+                            Logger.LogWarning("Enhanced image file not found: {FilePath}", enhancedFilePath);
+                        }
+                    }
+                    catch (Exception fileEx)
+                    {
+                        Logger.LogError(fileEx, "Error deleting enhanced image file for image {ImageId}. URL: {OriginalUrl}, UserId: {UserId}", 
+                            imageId, image.OriginalImageUrl, userId);
                         // Continue with database deletion even if file deletion fails
                     }
                 }

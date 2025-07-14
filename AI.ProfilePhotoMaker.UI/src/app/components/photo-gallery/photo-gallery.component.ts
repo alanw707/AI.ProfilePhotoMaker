@@ -13,14 +13,19 @@ export interface GalleryImage {
   style?: string;
   createdAt: Date;
   status: 'processing' | 'completed' | 'failed';
-  type: 'generated' | 'original';
+  type: 'generated' | 'original' | 'enhanced';
   downloadUrl?: string;
 }
 
 @Component({
   selector: 'app-photo-gallery',
   standalone: true,
-  imports: [CommonModule, GalleryFilterControlsComponent, GalleryPaginationComponent, GalleryImageActionsComponent],
+  imports: [
+    CommonModule,
+    GalleryFilterControlsComponent,
+    GalleryPaginationComponent,
+    GalleryImageActionsComponent,
+  ],
   template: `
     <div class="photo-gallery">
       <app-gallery-filter-controls
@@ -36,7 +41,8 @@ export interface GalleryImage {
         (viewModeChange)="setViewMode($event)"
         (pageSizeChange)="changePageSize($event)"
         (selectAll)="selectAll()"
-        (downloadSelected)="downloadSelected()">
+        (downloadSelected)="downloadSelected()"
+      >
       </app-gallery-filter-controls>
 
       <div class="gallery-content" [class]="viewMode">
@@ -49,46 +55,53 @@ export interface GalleryImage {
 
         <!-- Grid View -->
         <div class="gallery-grid" *ngIf="viewMode === 'grid' && filteredImages.length > 0">
-          <div 
-            class="gallery-item" 
+          <div
+            class="gallery-item"
             *ngFor="let image of paginatedImages; trackBy: trackByImageId"
             [class.processing]="image.status === 'processing'"
-            [class.failed]="image.status === 'failed'">
-            
+            [class.failed]="image.status === 'failed'"
+          >
             <div class="image-container" [class.selected]="isSelected(image)">
-              <img 
-                [src]="image.thumbnailUrl || image.url" 
+              <img
+                [src]="image.thumbnailUrl || image.url"
                 [alt]="image.title"
                 class="gallery-image"
                 (load)="onImageLoad($event)"
                 (error)="onImageError($event)"
-                (click)="onImageClick(image, $event)">
-              
+                (click)="onImageClick(image, $event)"
+              />
+
               <!-- Selection Overlay -->
               <div class="selection-overlay" (click)="toggleSelection(image)">
                 <div class="checkmark">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path
+                      d="M20 6L9 17L4 12"
+                      stroke="currentColor"
+                      stroke-width="3"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
                   </svg>
                 </div>
               </div>
-              
+
               <!-- Status Overlay -->
               <div class="status-overlay" *ngIf="image.status !== 'completed'">
                 <div class="status-content">
                   <div class="spinner" *ngIf="image.status === 'processing'"></div>
                   <div class="error-icon" *ngIf="image.status === 'failed'">⚠️</div>
                   <span class="status-text">
-                    {{image.status === 'processing' ? 'Processing...' : 'Failed'}}
+                    {{ image.status === 'processing' ? 'Processing...' : 'Failed' }}
                   </span>
                 </div>
               </div>
 
               <!-- Type Badge -->
               <div class="type-badge" [class]="image.type">
-                {{getTypeBadgeText(image.type)}}
+                {{ getTypeBadgeText(image.type) }}
               </div>
-              
+
               <!-- View Button -->
               <app-gallery-image-actions
                 [image]="image"
@@ -97,15 +110,18 @@ export interface GalleryImage {
                 (view)="openImage($event)"
                 (download)="downloadImage($event)"
                 (share)="shareImage($event)"
-                (delete)="deleteImage($event)">
+                (delete)="deleteImage($event)"
+              >
               </app-gallery-image-actions>
             </div>
 
             <div class="image-info">
-              <h4 class="image-title">{{image.title}}</h4>
+              <h4 class="image-title">{{ image.title }}</h4>
               <p class="image-meta">
-                <span class="image-style" *ngIf="image.style">{{formatStyleName(image.style)}}</span>
-                <span class="image-date">{{formatDate(image.createdAt)}}</span>
+                <span class="image-style" *ngIf="image.style">{{
+                  formatStyleName(image.style)
+                }}</span>
+                <span class="image-date">{{ formatDate(image.createdAt) }}</span>
               </p>
               <app-gallery-image-actions
                 [image]="image"
@@ -114,7 +130,8 @@ export interface GalleryImage {
                 (view)="openImage($event)"
                 (download)="downloadImage($event)"
                 (share)="shareImage($event)"
-                (delete)="deleteImage($event)">
+                (delete)="deleteImage($event)"
+              >
               </app-gallery-image-actions>
             </div>
           </div>
@@ -122,31 +139,32 @@ export interface GalleryImage {
 
         <!-- List View -->
         <div class="gallery-list" *ngIf="viewMode === 'list' && filteredImages.length > 0">
-          <div 
-            class="list-item" 
+          <div
+            class="list-item"
             *ngFor="let image of paginatedImages; trackBy: trackByImageId"
             [class.processing]="image.status === 'processing'"
             [class.failed]="image.status === 'failed'"
-            [class.selected]="isSelected(image)">
-            
+            [class.selected]="isSelected(image)"
+          >
             <div class="list-thumbnail" (click)="onImageClick(image, $event)">
-              <img [src]="image.thumbnailUrl || image.url" [alt]="image.title">
+              <img [src]="image.thumbnailUrl || image.url" [alt]="image.title" />
             </div>
-
 
             <div class="list-content">
               <div class="list-header">
-                <h4 class="list-title">{{image.title}}</h4>
+                <h4 class="list-title">{{ image.title }}</h4>
                 <div class="type-badge small" [class]="image.type">
-                  {{getTypeBadgeText(image.type)}}
+                  {{ getTypeBadgeText(image.type) }}
                 </div>
               </div>
-              <p class="list-description" *ngIf="image.description">{{image.description}}</p>
+              <p class="list-description" *ngIf="image.description">{{ image.description }}</p>
               <div class="list-meta">
-                <span class="meta-item" *ngIf="image.style">Style: {{formatStyleName(image.style)}}</span>
-                <span class="meta-item">{{formatDate(image.createdAt)}}</span>
+                <span class="meta-item" *ngIf="image.style"
+                  >Style: {{ formatStyleName(image.style) }}</span
+                >
+                <span class="meta-item">{{ formatDate(image.createdAt) }}</span>
                 <span class="meta-item status-text" [class]="image.status">
-                  {{getStatusText(image.status)}}
+                  {{ getStatusText(image.status) }}
                 </span>
               </div>
             </div>
@@ -158,7 +176,8 @@ export interface GalleryImage {
               (view)="openImage($event)"
               (download)="downloadImage($event)"
               (share)="shareImage($event)"
-              (delete)="deleteImage($event)">
+              (delete)="deleteImage($event)"
+            >
             </app-gallery-image-actions>
           </div>
         </div>
@@ -170,12 +189,12 @@ export interface GalleryImage {
         [pageSize]="pageSize"
         [currentPage]="currentPage"
         (pageChange)="goToPage($event)"
-        (pageSizeChange)="changePageSize($event)">
+        (pageSizeChange)="changePageSize($event)"
+      >
       </app-gallery-pagination>
-
     </div>
   `,
-  styleUrls: ['./photo-gallery.component.sass']
+  styleUrls: ['./photo-gallery.component.sass'],
 })
 export class PhotoGalleryComponent implements OnInit, OnChanges {
   @Input() images: GalleryImage[] = [];
@@ -196,7 +215,7 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
   filterType = 'generated';
   selectedImages: GalleryImage[] = [];
   filteredImages: GalleryImage[] = [];
-  
+
   // Pagination properties
   currentPage = 1;
   pageSize = 12;
@@ -210,7 +229,9 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
   ngOnChanges() {
     this.updateFilteredImages();
     // Deselect any images that no longer exist after deletion
-    this.selectedImages = this.selectedImages.filter(sel => this.images.some(img => img.id === sel.id));
+    this.selectedImages = this.selectedImages.filter(sel =>
+      this.images.some(img => img.id === sel.id)
+    );
   }
 
   setViewMode(mode: 'grid' | 'list') {
@@ -236,7 +257,7 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
     if (this.currentPage > this.totalPages) {
       this.currentPage = Math.max(1, this.totalPages);
     }
-    
+
     const startIndex = (this.currentPage - 1) * this.pageSize;
     const endIndex = startIndex + this.pageSize;
     this.paginatedImages = this.filteredImages.slice(startIndex, endIndex);
@@ -305,34 +326,34 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
   onImageError(event: any) {
     // Handle image load error gracefully
     console.warn('Image failed to load:', event.target.src);
-    
+
     // Create a simple gray placeholder with an icon
     const canvas = document.createElement('canvas');
     canvas.width = 300;
     canvas.height = 300;
     const ctx = canvas.getContext('2d');
-    
+
     if (ctx) {
       // Gray background
       ctx.fillStyle = '#f3f4f6';
       ctx.fillRect(0, 0, 300, 300);
-      
+
       // Darker gray border
       ctx.strokeStyle = '#e5e7eb';
       ctx.lineWidth = 2;
       ctx.strokeRect(1, 1, 298, 298);
-      
+
       // Simple image icon
       ctx.fillStyle = '#9ca3af';
       ctx.font = '48px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('📷', 150, 120);
-      
+
       // Error text
       ctx.font = '14px Arial';
       ctx.fillText('Image unavailable', 150, 180);
-      
+
       // Set the canvas as the image source
       event.target.src = canvas.toDataURL();
     }
@@ -340,18 +361,27 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
 
   getTypeBadgeText(type: string): string {
     switch (type) {
-      case 'generated': return 'AI Generated';
-      case 'original': return 'Original';
-      default: return type;
+      case 'generated':
+        return 'AI Generated';
+      case 'original':
+        return 'Original';
+      case 'enhanced':
+        return 'Enhanced';
+      default:
+        return type;
     }
   }
 
   getStatusText(status: string): string {
     switch (status) {
-      case 'processing': return 'Processing...';
-      case 'completed': return 'Ready';
-      case 'failed': return 'Failed';
-      default: return status;
+      case 'processing':
+        return 'Processing...';
+      case 'completed':
+        return 'Ready';
+      case 'failed':
+        return 'Failed';
+      default:
+        return status;
     }
   }
 
@@ -360,14 +390,16 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     }).format(new Date(date));
   }
 
   formatStyleName(style: string): string {
-    if (!style) {return '';}
+    if (!style) {
+      return '';
+    }
     return style
-      .replace(/[-_/]/g, ' ')  // Replace dashes, underscores, and slashes with spaces
+      .replace(/[-_/]/g, ' ') // Replace dashes, underscores, and slashes with spaces
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ');

@@ -25,6 +25,7 @@ export interface ProcessedImage {
   createdAt: string;
   isOriginalUpload: boolean;
   isGenerated: boolean;
+  isEnhanced: boolean;
 }
 
 export interface UserImagesResponse {
@@ -323,13 +324,17 @@ export class FileUploadService {
     );
   }
 
-  uploadSingleImage(file: File): Observable<{
+  uploadSingleImage(
+    file: File,
+    isEnhanced: boolean = true
+  ): Observable<{
     progress: number;
     response?: { success: boolean; data: { url: string; fileName: string } };
   }> {
     const formData = new FormData();
     formData.append('images', file, file.name);
     formData.append('forTraining', 'false');
+    formData.append('isEnhanced', isEnhanced.toString());
 
     return this.http
       .post<any>(this.config.getFullUrl(this.config.apiConfig.endpoints.image.upload), formData, {
