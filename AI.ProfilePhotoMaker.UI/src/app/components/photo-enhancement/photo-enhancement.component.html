@@ -8,49 +8,59 @@
       <!-- Page Header -->
       <section class="page-header">
         <h2>Photo Enhancement</h2>
-        <p>Upload your photo and enhance it with AI - background removal, lighting correction, and professional styling.</p>
+        <p>
+          Upload your photo and enhance it with AI - background removal, lighting correction, and professional styling.
+        </p>
       </section>
 
-      <!-- Basic Tier Credits Display -->
+      <!-- Internal Credits Display -->
       <section class="credits-section">
-        <div class="credits-card" *ngIf="creditsInfo">
+        <div class="credits-card" *ngIf="userCreditStatus && !isLoadingCredits">
           <div class="credits-icon">⚡</div>
           <div class="credits-content">
-            <h3>{{creditsInfo.availableCredits}} Credits</h3>
-            <p>Resets {{getNextResetText(creditsInfo.nextResetDate)}}</p>
+            <h3>{{ getTotalAvailableCredits() }} Credits</h3>
+            <p>Available for enhancement</p>
           </div>
         </div>
-        <div class="credits-card loading-card" *ngIf="isLoadingCredits && !creditsInfo">
+        <div class="credits-card loading-card" *ngIf="isLoadingCredits">
           <div class="credits-icon">⚡</div>
           <div class="credits-content">
             <h3>Loading...</h3>
             <p>Checking available credits</p>
           </div>
         </div>
+        <div class="credits-card error-card" *ngIf="!isLoadingCredits && !userCreditStatus">
+          <div class="credits-icon">⚠️</div>
+          <div class="credits-content">
+            <h3>Credits Unavailable</h3>
+            <p>Unable to load internal credits. Please try refreshing.</p>
+          </div>
+        </div>
       </section>
 
       <!-- Upload Section -->
       <section class="upload-section" *ngIf="!selectedFile && !isProcessing">
-        <div class="upload-area" 
-             (click)="triggerFileUpload()"
-             (dragover)="onDragOver($event)"
-             (dragleave)="onDragLeave($event)"
-             (drop)="onDrop($event)"
-             [class.drag-over]="isDragOver">
+        <div
+          class="upload-area"
+          (click)="triggerFileUpload()"
+          (dragover)="onDragOver($event)"
+          (dragleave)="onDragLeave($event)"
+          (drop)="onDrop($event)"
+          [class.drag-over]="isDragOver">
           <div class="upload-icon">📷</div>
           <h4>Upload a photo to enhance</h4>
           <p>Drag & drop or click to select • JPG, PNG, WebP • Max 7MB</p>
-          <input type="file" #fileInput accept="image/*" (change)="onFileSelected($event)" style="display: none;">
+          <input type="file" #fileInput accept="image/*" (change)="onFileSelected($event)" style="display: none" />
         </div>
       </section>
 
       <!-- Selected File Preview -->
       <section class="file-preview-section" *ngIf="selectedFile && !isProcessing">
         <div class="file-preview">
-          <img [src]="imagePreview" alt="Selected image" class="preview-image">
+          <img [src]="imagePreview" alt="Selected image" class="preview-image" />
           <div class="file-info">
-            <h4>{{selectedFile.name}}</h4>
-            <p>{{selectedFile.size | number}} bytes</p>
+            <h4>{{ selectedFile.name }}</h4>
+            <p>{{ selectedFile.size | number }} bytes</p>
             <button class="btn btn-secondary" (click)="removeFile()">Choose Different Photo</button>
           </div>
         </div>
@@ -60,25 +70,25 @@
           <h3>Enhancement Options</h3>
           <div class="options-grid">
             <label class="option-card" [class.selected]="enhancementType === 'background'">
-              <input type="radio" name="enhancement" value="background" [(ngModel)]="enhancementType">
+              <input type="radio" name="enhancement" value="background" [(ngModel)]="enhancementType" />
               <div class="option-content">
                 <div class="option-icon">🖼️</div>
                 <h4>Background Remover</h4>
                 <p>Remove/replace background with professional backdrop</p>
               </div>
             </label>
-            
+
             <label class="option-card" [class.selected]="enhancementType === 'social'">
-              <input type="radio" name="enhancement" value="social" [(ngModel)]="enhancementType">
+              <input type="radio" name="enhancement" value="social" [(ngModel)]="enhancementType" />
               <div class="option-content">
                 <div class="option-icon">📱</div>
                 <h4>Social Media</h4>
                 <p>Perfect for Instagram, bright and engaging, iPhone 16 Pro quality</p>
               </div>
             </label>
-            
+
             <label class="option-card" [class.selected]="enhancementType === 'cartoon'">
-              <input type="radio" name="enhancement" value="cartoon" [(ngModel)]="enhancementType">
+              <input type="radio" name="enhancement" value="cartoon" [(ngModel)]="enhancementType" />
               <div class="option-content">
                 <div class="option-icon">🎨</div>
                 <h4>Cartoon Mode</h4>
@@ -87,15 +97,9 @@
             </label>
           </div>
 
-          <button class="btn btn-primary enhance-btn" 
-                  (click)="startEnhancement()"
-                  [disabled]="!creditsInfo || creditsInfo.availableCredits <= 0">
-            <span *ngIf="creditsInfo && creditsInfo.availableCredits > 0">
-              Enhance Photo (1 credit)
-            </span>
-            <span *ngIf="!creditsInfo || creditsInfo.availableCredits <= 0">
-              No Credits Available
-            </span>
+          <button class="btn btn-primary enhance-btn" (click)="startEnhancement()" [disabled]="!hasEnoughCredits()">
+            <span *ngIf="hasEnoughCredits()">Enhance Photo (1 credit)</span>
+            <span *ngIf="!hasEnoughCredits()">No Credits Available</span>
           </button>
         </div>
       </section>
@@ -109,7 +113,7 @@
           <div class="processing-progress">
             <div class="progress-bar" [style.width.%]="processingProgress"></div>
           </div>
-          <p class="processing-status">{{processingStatus}}</p>
+          <p class="processing-status">{{ processingStatus }}</p>
         </div>
       </section>
 
@@ -124,37 +128,38 @@
         <div class="before-after">
           <div class="comparison-item">
             <h4>Before</h4>
-            <img [src]="imagePreview" alt="Original" class="comparison-image">
+            <img [src]="imagePreview" alt="Original" class="comparison-image" />
           </div>
           <div class="comparison-arrow">→</div>
           <div class="comparison-item">
             <h4>After</h4>
-            <img [src]="enhancedImage.url" alt="Enhanced" class="comparison-image">
+            <img [src]="enhancedImage.url" alt="Enhanced" class="comparison-image" />
           </div>
         </div>
-        
+
         <div class="result-actions">
           <button class="btn btn-primary" (click)="downloadEnhanced()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15" stroke="currentColor" stroke-width="2"/>
-              <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2"/>
-              <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2"/>
+              <path
+                d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15"
+                stroke="currentColor"
+                stroke-width="2" />
+              <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" />
+              <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" />
             </svg>
             Download Enhanced Photo
           </button>
           <button class="btn btn-secondary" (click)="shareEnhanced()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2"/>
-              <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-              <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2"/>
-              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2"/>
-              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2"/>
+              <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="2" />
+              <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+              <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="2" />
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="2" />
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="2" />
             </svg>
             Share
           </button>
-          <button class="btn btn-outline" (click)="enhanceAnother()">
-            Enhance Another Photo
-          </button>
+          <button class="btn btn-outline" (click)="enhanceAnother()">Enhance Another Photo</button>
         </div>
       </section>
 
@@ -163,10 +168,8 @@
         <div class="error-card">
           <div class="error-icon">⚠️</div>
           <h4>Enhancement Failed</h4>
-          <p>{{errorMessage}}</p>
-          <button class="btn btn-outline" (click)="resetComponent()">
-            Try Again
-          </button>
+          <p>{{ errorMessage }}</p>
+          <button class="btn btn-outline" (click)="resetComponent()">Try Again</button>
         </div>
       </section>
     </div>

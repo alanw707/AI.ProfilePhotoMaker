@@ -358,14 +358,46 @@ export class GalleryComponent implements OnInit {
 
   onImageDelete(image: GalleryImage) {
     if (confirm(`Are you sure you want to delete "${image.title}"?`)) {
+      console.log('🗑️ Deleting image:', { id: image.id, title: image.title });
+
       this.fileUploadService.deleteImage(image.id).subscribe({
         next: response => {
+          console.log('🗑️ Delete response:', response);
           if (response.success) {
-            this.galleryImages = this.galleryImages.filter(img => img.id !== image.id);
+            // Remove image from array - create completely new array to ensure change detection
+            const originalLength = this.galleryImages.length;
+            const newImages = this.galleryImages.filter(img => img.id !== image.id);
+
+            console.log('✅ Image removed from gallery:', {
+              originalLength,
+              newLength: newImages.length,
+              imageId: image.id,
+            });
+
+            // Assign new array reference
+            this.galleryImages = [...newImages];
+
+            // Clear any selections in the photo gallery component
+            if (this.photoGallery) {
+              this.photoGallery.clearSelections();
+            }
+
+            // Force change detection to update UI
+            this.cdr.detectChanges();
+
+            // Log final state for debugging
+            console.log('🔄 Gallery state after delete:', {
+              totalImages: this.galleryImages.length,
+              isLoading: this.isLoading,
+            });
+          } else {
+            console.error('❌ Delete failed - API returned success: false');
+            alert('Failed to delete image. Please try again.');
           }
         },
         error: error => {
-          console.error('Failed to delete image:', error);
+          console.error('❌ Delete request failed:', error);
+          alert(`Delete failed: ${error.message || 'Unknown error'}. Please try again.`);
         },
       });
     }
