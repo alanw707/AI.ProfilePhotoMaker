@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { Component } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
@@ -9,21 +10,21 @@ import { RouterTestingModule } from '@angular/router/testing';
 
 import { AuthService } from '../services/auth.service';
 import { ConfigService } from '../services/config.service';
-import { AuthGuard } from '../guards/auth.guard';
-import { GuestGuard } from '../guards/guest.guard';
+import { authGuard } from '../guards/auth.guard';
+import { guestGuard } from '../guards/guest.guard';
 import { LoginComponent } from '../auth/login/login.component';
 import { RegisterComponent } from '../auth/register/register.component';
 import { DashboardComponent } from '../dashboard/dashboard.component';
 
 // Mock components for routing tests
 @Component({ template: 'Mock Dashboard' })
-class MockDashboardComponent { }
+class MockDashboardComponent {}
 
 @Component({ template: 'Mock Login' })
-class MockLoginComponent { }
+class MockLoginComponent {}
 
 @Component({ template: 'Mock Register' })
-class MockRegisterComponent { }
+class MockRegisterComponent {}
 
 describe('Authentication Flow Integration Tests', () => {
   let authService: AuthService;
@@ -42,18 +43,13 @@ describe('Authentication Flow Integration Tests', () => {
         FormsModule,
         CommonModule,
         RouterTestingModule.withRoutes([
-          { path: 'login', component: MockLoginComponent, canActivate: [GuestGuard] },
-          { path: 'register', component: MockRegisterComponent, canActivate: [GuestGuard] },
-          { path: 'dashboard', component: MockDashboardComponent, canActivate: [AuthGuard] },
-          { path: '', redirectTo: '/dashboard', pathMatch: 'full' }
-        ])
+          { path: 'login', component: MockLoginComponent, canActivate: [guestGuard] },
+          { path: 'register', component: MockRegisterComponent, canActivate: [guestGuard] },
+          { path: 'dashboard', component: MockDashboardComponent, canActivate: [authGuard] },
+          { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
+        ]),
       ],
-      providers: [
-        AuthService,
-        ConfigService,
-        AuthGuard,
-        GuestGuard
-      ]
+      providers: [AuthService, ConfigService],
     }).compileComponents();
 
     authService = TestBed.inject(AuthService);
@@ -64,7 +60,9 @@ describe('Authentication Flow Integration Tests', () => {
 
     // Mock ConfigService URLs
     spyOn(configService, 'authLoginUrl').and.returnValue('http://localhost:5035/api/auth/login');
-    spyOn(configService, 'authRegisterUrl').and.returnValue('http://localhost:5035/api/auth/register');
+    spyOn(configService, 'authRegisterUrl').and.returnValue(
+      'http://localhost:5035/api/auth/register'
+    );
     spyOn(configService, 'baseUrl').and.returnValue('http://localhost:5035');
   });
 
@@ -86,11 +84,11 @@ describe('Authentication Flow Integration Tests', () => {
         firstName: 'John',
         lastName: 'Doe',
         gender: 'male',
-        ethnicity: 'caucasian'
+        ethnicity: 'caucasian',
       };
 
       const registerRequest = authService.register(registerData);
-      
+
       // 3. Mock successful API response
       const mockResponse = {
         isSuccess: true,
@@ -99,7 +97,7 @@ describe('Authentication Flow Integration Tests', () => {
         expiration: new Date(Date.now() + 3600000).toISOString(),
         email: 'test@example.com',
         firstName: 'John',
-        lastName: 'Doe'
+        lastName: 'Doe',
       };
 
       registerRequest.subscribe(response => {
@@ -133,16 +131,16 @@ describe('Authentication Flow Integration Tests', () => {
         firstName: 'John',
         lastName: 'Doe',
         gender: 'male',
-        ethnicity: 'caucasian'
+        ethnicity: 'caucasian',
       };
 
       const registerRequest = authService.register(registerData);
-      
+
       registerRequest.subscribe({
         next: () => fail('Should have thrown error'),
-        error: (error) => {
+        error: error => {
           expect(error.message).toBe('Registration failed');
-        }
+        },
       });
 
       const req = httpMock.expectOne('http://localhost:5035/api/auth/register');
@@ -162,11 +160,11 @@ describe('Authentication Flow Integration Tests', () => {
       // 2. Attempt login
       const loginData = {
         email: 'test@example.com',
-        password: 'Password123!'
+        password: 'Password123!',
       };
 
       const loginRequest = authService.login(loginData);
-      
+
       // 3. Mock successful API response
       const mockResponse = {
         isSuccess: true,
@@ -175,7 +173,7 @@ describe('Authentication Flow Integration Tests', () => {
         expiration: new Date(Date.now() + 3600000).toISOString(),
         email: 'test@example.com',
         firstName: 'John',
-        lastName: 'Doe'
+        lastName: 'Doe',
       };
 
       loginRequest.subscribe(response => {
@@ -196,16 +194,16 @@ describe('Authentication Flow Integration Tests', () => {
     it('should handle login errors gracefully', async () => {
       const loginData = {
         email: 'invalid@example.com',
-        password: 'wrongpassword'
+        password: 'wrongpassword',
       };
 
       const loginRequest = authService.login(loginData);
-      
+
       loginRequest.subscribe({
         next: () => fail('Should have thrown error'),
-        error: (error) => {
+        error: error => {
           expect(error.message).toBe('Invalid credentials');
-        }
+        },
       });
 
       const req = httpMock.expectOne('http://localhost:5035/api/auth/login');
@@ -218,20 +216,29 @@ describe('Authentication Flow Integration Tests', () => {
   describe('OAuth Authentication Flow', () => {
     it('should handle OAuth callback with complete user data', () => {
       // Simulate OAuth callback with JWT token containing user data
-      const mockJwt = btoa(JSON.stringify({
-        header: { alg: 'HS256', typ: 'JWT' }
-      })) + '.' + btoa(JSON.stringify({
-        'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress': 'oauth@example.com',
-        'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname': 'OAuth',
-        'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname': 'User',
-        exp: Math.floor(Date.now() / 1000) + 3600
-      })) + '.signature';
+      const mockJwt =
+        btoa(
+          JSON.stringify({
+            header: { alg: 'HS256', typ: 'JWT' },
+          })
+        ) +
+        '.' +
+        btoa(
+          JSON.stringify({
+            'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress':
+              'oauth@example.com',
+            'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname': 'OAuth',
+            'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname': 'User',
+            exp: Math.floor(Date.now() / 1000) + 3600,
+          })
+        ) +
+        '.signature';
 
       authService.handleOAuthCallback(mockJwt);
 
       expect(authService.isAuthenticated()).toBe(true);
       expect(localStorage.getItem('auth_token')).toBe(mockJwt);
-      
+
       const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
       expect(currentUser.email).toBe('oauth@example.com');
       expect(currentUser.firstName).toBe('OAuth');
@@ -240,26 +247,35 @@ describe('Authentication Flow Integration Tests', () => {
 
     it('should fetch user profile when JWT lacks complete user data', () => {
       // Simulate OAuth callback with JWT token lacking user data
-      const mockJwt = btoa(JSON.stringify({
-        header: { alg: 'HS256', typ: 'JWT' }
-      })) + '.' + btoa(JSON.stringify({
-        'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress': 'oauth@example.com',
-        exp: Math.floor(Date.now() / 1000) + 3600
-      })) + '.signature';
+      const mockJwt =
+        btoa(
+          JSON.stringify({
+            header: { alg: 'HS256', typ: 'JWT' },
+          })
+        ) +
+        '.' +
+        btoa(
+          JSON.stringify({
+            'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress':
+              'oauth@example.com',
+            exp: Math.floor(Date.now() / 1000) + 3600,
+          })
+        ) +
+        '.signature';
 
       authService.handleOAuthCallback(mockJwt);
 
       // Should make profile API call
       const req = httpMock.expectOne('http://localhost:5035/profile');
       expect(req.request.method).toBe('GET');
-      
+
       req.flush({
         firstName: 'OAuth',
-        lastName: 'User'
+        lastName: 'User',
       });
 
       expect(authService.isAuthenticated()).toBe(true);
-      
+
       const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
       expect(currentUser.email).toBe('oauth@example.com');
       expect(currentUser.firstName).toBe('OAuth');
@@ -274,53 +290,75 @@ describe('Authentication Flow Integration Tests', () => {
 
       // Try to navigate to protected route
       await router.navigate(['/dashboard']);
-      
+
       // Should redirect to login
       expect(location.path()).toBe('/login');
     });
 
     it('should allow authenticated users to access protected routes', async () => {
       // Set up authenticated state
-      const mockToken = btoa(JSON.stringify({
-        header: { alg: 'HS256', typ: 'JWT' }
-      })) + '.' + btoa(JSON.stringify({
-        exp: Math.floor(Date.now() / 1000) + 3600
-      })) + '.signature';
+      const mockToken =
+        btoa(
+          JSON.stringify({
+            header: { alg: 'HS256', typ: 'JWT' },
+          })
+        ) +
+        '.' +
+        btoa(
+          JSON.stringify({
+            exp: Math.floor(Date.now() / 1000) + 3600,
+          })
+        ) +
+        '.signature';
 
       localStorage.setItem('auth_token', mockToken);
-      localStorage.setItem('currentUser', JSON.stringify({
-        token: mockToken,
-        email: 'test@example.com',
-        firstName: 'John',
-        lastName: 'Doe'
-      }));
+      localStorage.setItem(
+        'currentUser',
+        JSON.stringify({
+          token: mockToken,
+          email: 'test@example.com',
+          firstName: 'John',
+          lastName: 'Doe',
+        })
+      );
 
       // Navigate to protected route
       await router.navigate(['/dashboard']);
-      
+
       // Should access the route
       expect(location.path()).toBe('/dashboard');
     });
 
     it('should redirect authenticated users away from guest routes', async () => {
       // Set up authenticated state
-      const mockToken = btoa(JSON.stringify({
-        header: { alg: 'HS256', typ: 'JWT' }
-      })) + '.' + btoa(JSON.stringify({
-        exp: Math.floor(Date.now() / 1000) + 3600
-      })) + '.signature';
+      const mockToken =
+        btoa(
+          JSON.stringify({
+            header: { alg: 'HS256', typ: 'JWT' },
+          })
+        ) +
+        '.' +
+        btoa(
+          JSON.stringify({
+            exp: Math.floor(Date.now() / 1000) + 3600,
+          })
+        ) +
+        '.signature';
 
       localStorage.setItem('auth_token', mockToken);
-      localStorage.setItem('currentUser', JSON.stringify({
-        token: mockToken,
-        email: 'test@example.com',
-        firstName: 'John',
-        lastName: 'Doe'
-      }));
+      localStorage.setItem(
+        'currentUser',
+        JSON.stringify({
+          token: mockToken,
+          email: 'test@example.com',
+          firstName: 'John',
+          lastName: 'Doe',
+        })
+      );
 
       // Try to navigate to guest route
       await router.navigate(['/login']);
-      
+
       // Should redirect to dashboard
       expect(location.path()).toBe('/dashboard');
     });
@@ -329,19 +367,30 @@ describe('Authentication Flow Integration Tests', () => {
   describe('Session Management', () => {
     it('should maintain authentication state across page reloads', () => {
       // Simulate authentication
-      const mockToken = btoa(JSON.stringify({
-        header: { alg: 'HS256', typ: 'JWT' }
-      })) + '.' + btoa(JSON.stringify({
-        exp: Math.floor(Date.now() / 1000) + 3600
-      })) + '.signature';
+      const mockToken =
+        btoa(
+          JSON.stringify({
+            header: { alg: 'HS256', typ: 'JWT' },
+          })
+        ) +
+        '.' +
+        btoa(
+          JSON.stringify({
+            exp: Math.floor(Date.now() / 1000) + 3600,
+          })
+        ) +
+        '.signature';
 
       localStorage.setItem('auth_token', mockToken);
-      localStorage.setItem('currentUser', JSON.stringify({
-        token: mockToken,
-        email: 'test@example.com',
-        firstName: 'John',
-        lastName: 'Doe'
-      }));
+      localStorage.setItem(
+        'currentUser',
+        JSON.stringify({
+          token: mockToken,
+          email: 'test@example.com',
+          firstName: 'John',
+          lastName: 'Doe',
+        })
+      );
 
       // Create new AuthService instance (simulating page reload)
       const newAuthService = new AuthService(
@@ -355,19 +404,30 @@ describe('Authentication Flow Integration Tests', () => {
 
     it('should handle token expiration gracefully', () => {
       // Set up expired token
-      const expiredToken = btoa(JSON.stringify({
-        header: { alg: 'HS256', typ: 'JWT' }
-      })) + '.' + btoa(JSON.stringify({
-        exp: Math.floor(Date.now() / 1000) - 3600 // Expired 1 hour ago
-      })) + '.signature';
+      const expiredToken =
+        btoa(
+          JSON.stringify({
+            header: { alg: 'HS256', typ: 'JWT' },
+          })
+        ) +
+        '.' +
+        btoa(
+          JSON.stringify({
+            exp: Math.floor(Date.now() / 1000) - 3600, // Expired 1 hour ago
+          })
+        ) +
+        '.signature';
 
       localStorage.setItem('auth_token', expiredToken);
-      localStorage.setItem('currentUser', JSON.stringify({
-        token: expiredToken,
-        email: 'test@example.com',
-        firstName: 'John',
-        lastName: 'Doe'
-      }));
+      localStorage.setItem(
+        'currentUser',
+        JSON.stringify({
+          token: expiredToken,
+          email: 'test@example.com',
+          firstName: 'John',
+          lastName: 'Doe',
+        })
+      );
 
       // Check authentication - should be false due to expired token
       expect(authService.isAuthenticated()).toBe(false);
@@ -376,19 +436,30 @@ describe('Authentication Flow Integration Tests', () => {
 
     it('should complete logout workflow', async () => {
       // Set up authenticated state
-      const mockToken = btoa(JSON.stringify({
-        header: { alg: 'HS256', typ: 'JWT' }
-      })) + '.' + btoa(JSON.stringify({
-        exp: Math.floor(Date.now() / 1000) + 3600
-      })) + '.signature';
+      const mockToken =
+        btoa(
+          JSON.stringify({
+            header: { alg: 'HS256', typ: 'JWT' },
+          })
+        ) +
+        '.' +
+        btoa(
+          JSON.stringify({
+            exp: Math.floor(Date.now() / 1000) + 3600,
+          })
+        ) +
+        '.signature';
 
       localStorage.setItem('auth_token', mockToken);
-      localStorage.setItem('currentUser', JSON.stringify({
-        token: mockToken,
-        email: 'test@example.com',
-        firstName: 'John',
-        lastName: 'Doe'
-      }));
+      localStorage.setItem(
+        'currentUser',
+        JSON.stringify({
+          token: mockToken,
+          email: 'test@example.com',
+          firstName: 'John',
+          lastName: 'Doe',
+        })
+      );
 
       expect(authService.isAuthenticated()).toBe(true);
 
@@ -407,16 +478,16 @@ describe('Authentication Flow Integration Tests', () => {
     it('should handle network errors during authentication', async () => {
       const loginData = {
         email: 'test@example.com',
-        password: 'Password123!'
+        password: 'Password123!',
       };
 
       const loginRequest = authService.login(loginData);
-      
+
       loginRequest.subscribe({
         next: () => fail('Should have thrown error'),
-        error: (error) => {
+        error: error => {
           expect(error).toBeDefined();
-        }
+        },
       });
 
       const req = httpMock.expectOne('http://localhost:5035/api/auth/login');
@@ -436,44 +507,55 @@ describe('Authentication Flow Integration Tests', () => {
   });
 
   describe('Observable State Management', () => {
-    it('should emit authentication state changes', (done) => {
+    it('should emit authentication state changes', done => {
       const states: boolean[] = [];
-      
+
       authService.isAuthenticated$.subscribe(isAuth => {
         states.push(isAuth);
-        
+
         if (states.length === 2) {
           expect(states[0]).toBe(false); // Initial state
-          expect(states[1]).toBe(true);  // After login
+          expect(states[1]).toBe(true); // After login
           done();
         }
       });
 
       // Simulate login
-      const mockToken = btoa(JSON.stringify({
-        header: { alg: 'HS256', typ: 'JWT' }
-      })) + '.' + btoa(JSON.stringify({
-        exp: Math.floor(Date.now() / 1000) + 3600
-      })) + '.signature';
+      const mockToken =
+        btoa(
+          JSON.stringify({
+            header: { alg: 'HS256', typ: 'JWT' },
+          })
+        ) +
+        '.' +
+        btoa(
+          JSON.stringify({
+            exp: Math.floor(Date.now() / 1000) + 3600,
+          })
+        ) +
+        '.signature';
 
       localStorage.setItem('auth_token', mockToken);
-      localStorage.setItem('currentUser', JSON.stringify({
-        token: mockToken,
-        email: 'test@example.com',
-        firstName: 'John',
-        lastName: 'Doe'
-      }));
+      localStorage.setItem(
+        'currentUser',
+        JSON.stringify({
+          token: mockToken,
+          email: 'test@example.com',
+          firstName: 'John',
+          lastName: 'Doe',
+        })
+      );
 
       // Manually trigger state change
       authService['isAuthenticatedSubject'].next(true);
     });
 
-    it('should emit current user changes', (done) => {
+    it('should emit current user changes', done => {
       const users: any[] = [];
-      
+
       authService.currentUser$.subscribe(user => {
         users.push(user);
-        
+
         if (users.length === 2) {
           expect(users[0]).toBe(null); // Initial state
           expect(users[1].email).toBe('test@example.com');
@@ -486,7 +568,7 @@ describe('Authentication Flow Integration Tests', () => {
         token: 'mock-token',
         email: 'test@example.com',
         firstName: 'John',
-        lastName: 'Doe'
+        lastName: 'Doe',
       };
 
       authService['currentUserSubject'].next(userData);

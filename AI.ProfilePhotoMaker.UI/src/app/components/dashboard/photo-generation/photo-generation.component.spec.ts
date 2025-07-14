@@ -10,11 +10,7 @@ describe('PhotoGenerationComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [
-        PhotoGenerationComponent,
-        RouterTestingModule,
-        CommonModule
-      ]
+      imports: [PhotoGenerationComponent, RouterTestingModule, CommonModule],
     }).compileComponents();
 
     fixture = TestBed.createComponent(PhotoGenerationComponent);
@@ -31,7 +27,7 @@ describe('PhotoGenerationComponent', () => {
       expect(component.generationStatus).toEqual({
         isGenerating: false,
         progress: 0,
-        status: ''
+        status: '',
       });
       expect(component.generatedPhotos).toEqual([]);
     });
@@ -40,7 +36,7 @@ describe('PhotoGenerationComponent', () => {
       component.generationStatus = {
         isGenerating: true,
         progress: 50,
-        status: 'Generating photos...'
+        status: 'Generating photos...',
       };
       spyOn(component, 'startProgressPolling' as any);
 
@@ -53,7 +49,7 @@ describe('PhotoGenerationComponent', () => {
       component.generationStatus = {
         isGenerating: false,
         progress: 0,
-        status: ''
+        status: '',
       };
       spyOn(component, 'startProgressPolling' as any);
 
@@ -68,7 +64,7 @@ describe('PhotoGenerationComponent', () => {
       component.generationStatus = {
         isGenerating: true,
         progress: 50,
-        status: 'Generating...'
+        status: 'Generating...',
       };
       spyOn(component, 'onRefreshStatus');
 
@@ -82,13 +78,13 @@ describe('PhotoGenerationComponent', () => {
       component.generationStatus = {
         isGenerating: true,
         progress: 50,
-        status: 'Generating...'
+        status: 'Generating...',
       };
       spyOn(component, 'onRefreshStatus');
       spyOn(component, 'stopProgressPolling' as any);
 
       component['startProgressPolling']();
-      
+
       // Simulate generation completion
       component.generationStatus.isGenerating = false;
       tick(10000);
@@ -134,10 +130,10 @@ describe('PhotoGenerationComponent', () => {
 
     it('should emit viewPhoto event with photo data', () => {
       const mockPhoto: GeneratedPhoto = {
-        id: 1,
+        id: '1',
         url: 'photo.jpg',
         style: 'business',
-        created: new Date()
+        createdAt: new Date(),
       };
       spyOn(component.viewPhoto, 'emit');
 
@@ -208,7 +204,9 @@ describe('PhotoGenerationComponent', () => {
     });
 
     it('should handle mixed delimiters', () => {
-      expect(component.formatStyleName('business-professional_headshot')).toBe('Business Professional Headshot');
+      expect(component.formatStyleName('business-professional_headshot')).toBe(
+        'Business Professional Headshot'
+      );
       expect(component.formatStyleName('casual/outdoor-portrait')).toBe('Casual Outdoor Portrait');
     });
 
@@ -231,7 +229,9 @@ describe('PhotoGenerationComponent', () => {
     });
 
     it('should handle special characters', () => {
-      expect(component.formatStyleName('business-professional-2024')).toBe('Business Professional 2024');
+      expect(component.formatStyleName('business-professional-2024')).toBe(
+        'Business Professional 2024'
+      );
       expect(component.formatStyleName('style_v2')).toBe('Style V2');
     });
   });
@@ -244,7 +244,7 @@ describe('PhotoGenerationComponent', () => {
         status: 'Generating professional headshots...',
         completedImages: 3,
         totalImages: 8,
-        estimatedTimeRemaining: 120
+        estimatedTimeRemaining: 120,
       };
 
       expect(component.generationStatus.isGenerating).toBeTrue();
@@ -258,22 +258,22 @@ describe('PhotoGenerationComponent', () => {
       component.generationStatus = {
         isGenerating: false,
         progress: 100,
-        status: 'Generation complete'
+        status: 'Generation complete',
       };
 
       component.generatedPhotos = [
         {
-          id: 1,
+          id: '1',
           url: 'photo1.jpg',
           style: 'business',
-          created: new Date()
+          createdAt: new Date(),
         },
         {
-          id: 2,
+          id: '2',
           url: 'photo2.jpg',
           style: 'casual',
-          created: new Date()
-        }
+          createdAt: new Date(),
+        },
       ];
 
       expect(component.generationStatus.isGenerating).toBeFalse();
@@ -285,10 +285,12 @@ describe('PhotoGenerationComponent', () => {
         isGenerating: false,
         progress: 0,
         status: 'Failed',
-        error: 'Generation failed due to insufficient credits'
+        error: 'Generation failed due to insufficient credits',
       };
 
-      expect(component.generationStatus.error).toBe('Generation failed due to insufficient credits');
+      expect(component.generationStatus.error).toBe(
+        'Generation failed due to insufficient credits'
+      );
     });
   });
 
@@ -296,23 +298,23 @@ describe('PhotoGenerationComponent', () => {
     it('should handle multiple generated photos', () => {
       const mockPhotos: GeneratedPhoto[] = [
         {
-          id: 1,
+          id: '1',
           url: 'photo1.jpg',
           style: 'business',
-          created: new Date()
+          createdAt: new Date(),
         },
         {
-          id: 2,
+          id: '2',
           url: 'photo2.jpg',
           style: 'casual',
-          created: new Date()
+          createdAt: new Date(),
         },
         {
-          id: 3,
+          id: '3',
           url: 'photo3.jpg',
           style: 'professional',
-          created: new Date()
-        }
+          createdAt: new Date(),
+        },
       ];
 
       component.generatedPhotos = mockPhotos;
@@ -331,22 +333,17 @@ describe('PhotoGenerationComponent', () => {
 
     it('should handle photo with various properties', () => {
       const mockPhoto: GeneratedPhoto = {
-        id: 1,
+        id: '1',
         url: 'https://example.com/photo.jpg',
         style: 'business-professional',
-        created: new Date('2024-01-01T10:00:00Z'),
-        metadata: {
-          width: 512,
-          height: 512,
-          format: 'jpg'
-        }
+        createdAt: new Date('2024-01-01T10:00:00Z'),
       };
 
       component.generatedPhotos = [mockPhoto];
 
       expect(component.generatedPhotos[0].url).toBe('https://example.com/photo.jpg');
       expect(component.generatedPhotos[0].style).toBe('business-professional');
-      expect(component.generatedPhotos[0].metadata).toBeDefined();
+      expect(component.generatedPhotos[0].createdAt).toBeDefined();
     });
   });
 
@@ -356,7 +353,7 @@ describe('PhotoGenerationComponent', () => {
       component.generationStatus = {
         isGenerating: true,
         progress: 0,
-        status: 'Starting generation...'
+        status: 'Starting generation...',
       };
       component.ngOnInit();
 
@@ -371,11 +368,11 @@ describe('PhotoGenerationComponent', () => {
       component.generationStatus.status = 'Complete';
       component.generatedPhotos = [
         {
-          id: 1,
+          id: '1',
           url: 'photo1.jpg',
           style: 'business',
-          created: new Date()
-        }
+          createdAt: new Date(),
+        },
       ];
 
       expect(component.generatedPhotos.length).toBe(1);
@@ -387,7 +384,7 @@ describe('PhotoGenerationComponent', () => {
       component.generationStatus = {
         isGenerating: true,
         progress: 0,
-        status: 'Starting generation...'
+        status: 'Starting generation...',
       };
 
       // Error occurs

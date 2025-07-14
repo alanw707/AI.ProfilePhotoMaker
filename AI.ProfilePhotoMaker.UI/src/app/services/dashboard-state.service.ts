@@ -240,11 +240,6 @@ export class DashboardStateService implements IDashboardStateService {
                 return false;
               }
 
-              // Early exit: Skip enhanced images entirely (they don't count as selfies)
-              if (img.isEnhanced) {
-                return false;
-              }
-
               // Only process uploaded images from here
               const isOriginalByFlag = img.isOriginalUpload;
               // Secondary check: Use style as fallback for corrupted flags
@@ -431,11 +426,8 @@ export class DashboardStateService implements IDashboardStateService {
               const isOriginalByFlag = img.isOriginalUpload;
               const isOriginalByStyle = img.style === 'Original';
               const isNotGenerated = !img.isGenerated;
-              const isNotEnhanced = !img.isEnhanced;
               const hasUrl = !!img.originalImageUrl;
-              return (
-                (isOriginalByFlag || isOriginalByStyle) && isNotGenerated && isNotEnhanced && hasUrl
-              );
+              return (isOriginalByFlag || isOriginalByStyle) && isNotGenerated && hasUrl;
             })
             ?.map(img => ({
               id: img.id,

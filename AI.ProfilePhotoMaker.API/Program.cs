@@ -134,6 +134,15 @@ builder.Services.AddAuthentication(options =>
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"]))
         };
     })
+    .AddGoogle(options =>
+    {
+        options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "";
+        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "";
+        options.CallbackPath = "/signin-google";
+        options.SaveTokens = true;
+        options.Scope.Add("email");
+        options.Scope.Add("profile");
+    })
 ;
 
 // Validate JWT Secret
@@ -401,6 +410,32 @@ app.UseStaticFiles(new StaticFileOptions
         
         // Add aggressive caching for style previews (static assets, rarely change)
         ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=604800, immutable");
+        ctx.Context.Response.Headers.Append("ETag", $"\"{ctx.File.LastModified:yyyy-MM-dd-HH-mm-ss}\"");
+    }
+});
+
+// Serve static files from enhanced images directory
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+        Path.Combine(builder.Environment.ContentRootPath, "enhanced")),
+    RequestPath = "/enhanced",
+    OnPrepareResponse = ctx =>
+    {
+        // Add CORS headers to allow cross-origin requests for image downloads
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type");
+        
+        // Ensure proper content type for images
+        var extension = Path.GetExtension(ctx.File.Name).ToLowerInvariant();
+        if (extension == ".png") ctx.Context.Response.ContentType = "image/png";
+        else if (extension == ".jpg" || extension == ".jpeg") ctx.Context.Response.ContentType = "image/jpeg";
+        else if (extension == ".gif") ctx.Context.Response.ContentType = "image/gif";
+        else if (extension == ".webp") ctx.Context.Response.ContentType = "image/webp";
+        
+        // Add caching for enhanced images (personal photos, moderate caching)
+        ctx.Context.Response.Headers.Append("Cache-Control", "private, max-age=3600");
         ctx.Context.Response.Headers.Append("ETag", $"\"{ctx.File.LastModified:yyyy-MM-dd-HH-mm-ss}\"");
     }
 });

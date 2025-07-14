@@ -97,25 +97,25 @@ public class BasicTierService : IBasicTierService
             return false;
         }
 
-        // Prioritize purchased credits first, then weekly credits (for basic operations only)
+        // Prioritize weekly credits first, then purchased credits as fallback
         var creditsToConsume = creditCost;
         var consumedFromPurchased = 0;
         var consumedFromWeekly = 0;
 
-        // First, use purchased credits if available
-        if (profile.PurchasedCredits > 0)
-        {
-            consumedFromPurchased = Math.Min(creditsToConsume, profile.PurchasedCredits);
-            profile.PurchasedCredits -= consumedFromPurchased;
-            creditsToConsume -= consumedFromPurchased;
-        }
-
-        // Then use weekly credits if operation allows and still need credits
-        if (creditsToConsume > 0 && canUseWeeklyCredits && profile.Credits > 0)
+        // First, use weekly credits if operation allows
+        if (canUseWeeklyCredits && profile.Credits > 0)
         {
             consumedFromWeekly = Math.Min(creditsToConsume, profile.Credits);
             profile.Credits -= consumedFromWeekly;
             creditsToConsume -= consumedFromWeekly;
+        }
+
+        // Then use purchased credits if still need credits
+        if (creditsToConsume > 0 && profile.PurchasedCredits > 0)
+        {
+            consumedFromPurchased = Math.Min(creditsToConsume, profile.PurchasedCredits);
+            profile.PurchasedCredits -= consumedFromPurchased;
+            creditsToConsume -= consumedFromPurchased;
         }
 
         if (creditsToConsume > 0)
@@ -162,25 +162,25 @@ public class BasicTierService : IBasicTierService
             return false;
         }
 
-        // Prioritize purchased credits first, then weekly credits (for basic operations only)
+        // Prioritize weekly credits first, then purchased credits as fallback
         var creditsToConsume = creditCost;
         var consumedFromPurchased = 0;
         var consumedFromWeekly = 0;
 
-        // First, use purchased credits if available
-        if (profile.PurchasedCredits > 0)
-        {
-            consumedFromPurchased = Math.Min(creditsToConsume, profile.PurchasedCredits);
-            profile.PurchasedCredits -= consumedFromPurchased;
-            creditsToConsume -= consumedFromPurchased;
-        }
-
-        // Then use weekly credits if operation allows and still need credits
-        if (creditsToConsume > 0 && canUseWeeklyCredits && profile.Credits > 0)
+        // First, use weekly credits if operation allows
+        if (canUseWeeklyCredits && profile.Credits > 0)
         {
             consumedFromWeekly = Math.Min(creditsToConsume, profile.Credits);
             profile.Credits -= consumedFromWeekly;
             creditsToConsume -= consumedFromWeekly;
+        }
+
+        // Then use purchased credits if still need credits
+        if (creditsToConsume > 0 && profile.PurchasedCredits > 0)
+        {
+            consumedFromPurchased = Math.Min(creditsToConsume, profile.PurchasedCredits);
+            profile.PurchasedCredits -= consumedFromPurchased;
+            creditsToConsume -= consumedFromPurchased;
         }
 
         if (creditsToConsume > 0)

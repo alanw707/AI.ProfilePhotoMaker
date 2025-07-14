@@ -66,10 +66,14 @@ AI.ProfilePhotoMaker.API/aiprofilemaker.db*
 # ngrok binary and logs
 AI.ProfilePhotoMaker.API/ngrok
 AI.ProfilePhotoMaker.API/ngrok.log
-# User uploads
+# User uploads and content (never commit user data)
 AI.ProfilePhotoMaker.API/uploads/
 # Generated images (user-specific content)
 AI.ProfilePhotoMaker.API/generated/
+# Enhanced images (filesystem-only storage)
+AI.ProfilePhotoMaker.API/enhanced/
+# Training zip files (contain user data)
+AI.ProfilePhotoMaker.API/training-zips/
 # Package lock (if not needed in repo)
 package-lock.json
 

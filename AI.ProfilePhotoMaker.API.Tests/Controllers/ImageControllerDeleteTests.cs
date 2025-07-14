@@ -28,6 +28,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
         private readonly Mock<ILogger<ImageController>> _mockLogger;
         private readonly Mock<IConfiguration> _mockConfiguration;
         private readonly Mock<IUserContextService> _mockUserContextService;
+        private readonly Mock<IBasicTierService> _mockBasicTierService;
         private readonly ApplicationDbContext _context;
         private readonly ImageController _controller;
         private readonly string _testContentRoot;
@@ -43,6 +44,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             _mockLogger = new Mock<ILogger<ImageController>>();
             _mockConfiguration = new Mock<IConfiguration>();
             _mockUserContextService = new Mock<IUserContextService>();
+            _mockBasicTierService = new Mock<IBasicTierService>();
 
             // Create test directories
             _testContentRoot = Path.Combine(Path.GetTempPath(), "ImageDeleteTests", Guid.NewGuid().ToString());
@@ -64,6 +66,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
                 _mockEnvironment.Object,
                 _mockConfiguration.Object,
                 _mockUserContextService.Object,
+                _mockBasicTierService.Object,
                 _mockLogger.Object,
                 _context
             );
