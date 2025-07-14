@@ -209,23 +209,23 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 images.Add(new
                 {
-                    i.Id,
-                    OriginalImageUrl = originalUrl,
-                    ProcessedImageUrl = processedUrl,
-                    i.Style,
-                    i.CreatedAt,
-                    IsOriginalUpload = i.IsOriginalUpload,
-                    i.IsGenerated
+                    id = i.Id,
+                    originalImageUrl = originalUrl,
+                    processedImageUrl = processedUrl,
+                    style = i.Style,
+                    createdAt = i.CreatedAt,
+                    isOriginalUpload = i.IsOriginalUpload,
+                    isGenerated = i.IsGenerated
                 });
             }
 
             var imageList = images.Cast<dynamic>().ToList();
             var summary = new
             {
-                TotalImages = images.Count,
-                OriginalUploads = imageList.Count(i => i.IsOriginalUpload),
-                GeneratedImages = imageList.Count(i => i.IsGenerated && !i.IsOriginalUpload),
-                Images = images
+                totalImages = images.Count,
+                originalUploads = imageList.Count(i => i.IsOriginalUpload),
+                generatedImages = imageList.Count(i => i.IsGenerated && !i.IsOriginalUpload),
+                images = images
             };
 
             return SuccessResponse(summary);

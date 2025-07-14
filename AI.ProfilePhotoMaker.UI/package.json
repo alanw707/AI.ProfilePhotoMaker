@@ -3,41 +3,34 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    
     "_comment_environments": "=== ENVIRONMENT-SPECIFIC SCRIPTS ===",
     "dev:local": "ng serve --configuration development --host 0.0.0.0 --port 4200",
     "dev:ngrok": "ng serve --configuration ngrok --host 0.0.0.0 --disable-host-check --port 4200",
     "dev:test": "ng serve --configuration test --host 0.0.0.0 --port 4200 --disable-host-check",
-    
     "_comment_tunneling": "=== NGROK TUNNELING ===",
     "tunnel:start": "ngrok start --config ../ngrok.yml --all",
     "tunnel:frontend": "ngrok http 4200 --domain=awlocaldev.ngrok.app",
     "tunnel:backend": "ngrok http 5035 --domain=awlocaldev-api.ngrok.app",
-    
     "_comment_fullstack": "=== FULL-STACK DEVELOPMENT ===",
     "dev:fullstack:local": "concurrently \"npm run dev:local\" \"cd ../AI.ProfilePhotoMaker.API && dotnet run\"",
     "dev:fullstack:ngrok": "concurrently \"npm run tunnel:start\" \"npm run dev:ngrok\" \"cd ../AI.ProfilePhotoMaker.API && dotnet run\"",
     "dev:hybrid": "ng serve --configuration development --host 0.0.0.0 --disable-host-check --port 4200 --proxy-config proxy.conf.hybrid.json",
-    
     "_comment_legacy": "=== LEGACY SCRIPTS (for compatibility) ===",
     "start": "npm run dev:local",
     "start:test": "npm run dev:test",
     "start:ngrok": "npm run dev:ngrok",
     "ngrok": "npm run tunnel:frontend",
-    
     "_comment_build": "=== BUILD SCRIPTS ===",
     "build": "ng build",
     "build:dev": "ng build --configuration development",
     "build:test": "ng build --configuration test",
     "build:ngrok": "ng build --configuration ngrok",
     "build:prod": "ng build --configuration production",
-    
     "_comment_testing": "=== TESTING SCRIPTS ===",
     "test": "ng test",
     "test:integration": "ng test --karma-config=karma.integration.conf.js",
     "test:integration:headless": "ng test --karma-config=karma.integration.conf.js --watch=false --browsers=ChromeHeadless",
     "test:integration:watch": "ng test --karma-config=karma.integration.conf.js --watch=true",
-    
     "_comment_quality": "=== CODE QUALITY ===",
     "lint": "ng lint",
     "lint:fix": "ng lint --fix",
@@ -45,7 +38,6 @@
     "format:check": "prettier --check \"src/**/*.{ts,html,scss,json}\"",
     "quality:check": "npm run lint && npm run format:check",
     "quality:fix": "npm run lint:fix && npm run format",
-    
     "_comment_utilities": "=== UTILITY SCRIPTS ===",
     "watch": "ng build --watch --configuration development",
     "prepare": "husky"
@@ -86,6 +78,7 @@
     "karma-jasmine-html-reporter": "~2.1.0",
     "lint-staged": "^16.1.2",
     "prettier": "^3.6.2",
+    "puppeteer": "^24.12.1",
     "typescript": "~5.7.2",
     "typescript-eslint": "8.34.1"
   },

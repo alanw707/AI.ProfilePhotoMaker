@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -73,7 +73,8 @@ export class SettingsComponent implements OnInit {
     private profileService: ProfileService,
     private fileUploadService: FileUploadService,
     private notificationService: NotificationService,
-    private dashboardStateService: DashboardStateService
+    private dashboardStateService: DashboardStateService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   async ngOnInit() {
@@ -105,6 +106,7 @@ export class SettingsComponent implements OnInit {
       );
     } finally {
       this.isLoading = false;
+      this.cdr.detectChanges(); // Force Angular to update UI
     }
   }
 
@@ -456,12 +458,15 @@ export class SettingsComponent implements OnInit {
         resolve();
       }, 5000);
 
-      const subscription = this.authService.currentUser$.subscribe(user => {
+      let subscription: any;
+      subscription = this.authService.currentUser$.subscribe(user => {
         clearTimeout(timeout);
         if (user) {
           this.userEmail = user.email;
         }
-        subscription.unsubscribe();
+        if (subscription) {
+          subscription.unsubscribe();
+        }
         resolve();
       });
     });
@@ -511,11 +516,14 @@ export class SettingsComponent implements OnInit {
       this.dashboardStateService.loadInitialDashboardData();
 
       // Subscribe to dashboard state for credit information - take first emission
-      const subscription = this.dashboardStateService.state$.subscribe(state => {
+      let subscription: any;
+      subscription = this.dashboardStateService.state$.subscribe(state => {
         clearTimeout(timeout);
         this.creditsInfo = state.creditsInfo;
         this.userCreditStatus = state.userCreditStatus;
-        subscription.unsubscribe();
+        if (subscription) {
+          subscription.unsubscribe();
+        }
         resolve();
       });
     });
