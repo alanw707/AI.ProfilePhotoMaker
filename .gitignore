@@ -38,14 +38,31 @@ PublishProfiles/
 *.bak
 *.backup
 
-# Logs
+# Logs - exclude all log files and directories
 logs/
 *.log
+**/logs/
+**/*.log
+ngrok.log
+ngrok*.log
+api*.log
+angular*.log
+backend*.log
+ui*.log
+*-ngrok.log
+*-tunnel.log
+*-final.log
+*-full.log
+*.log.*
 
-# SQLite DB files
-AI.ProfilePhotoMaker.API/aiprofilemaker.db
-AI.ProfilePhotoMaker.API/aiprofilemaker.db-shm
-AI.ProfilePhotoMaker.API/aiprofilemaker.db-wal
+# SQLite DB files - prevent tracking but keep for development
+*.db
+*.db-shm
+*.db-wal
+AI.ProfilePhotoMaker.API/aiprofilemaker.db*
+**/*.db
+**/*.db-shm
+**/*.db-wal
 # ngrok binary and logs
 AI.ProfilePhotoMaker.API/ngrok
 AI.ProfilePhotoMaker.API/ngrok.log

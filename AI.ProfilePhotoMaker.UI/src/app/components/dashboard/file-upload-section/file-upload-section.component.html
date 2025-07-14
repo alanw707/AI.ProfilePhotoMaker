@@ -104,7 +104,10 @@
           [src]="thumb.url"
           [alt]="thumb.filename || 'Uploaded image'"
           (error)="onImageLoadError(thumb, i)"
-          (load)="onImageLoadSuccess(thumb, i)" />
+          (load)="onImageLoadSuccess(thumb, i)"
+          loading="lazy"
+          decoding="async"
+          [attr.fetchpriority]="i < 4 ? 'high' : 'low'" />
         <div class="thumbnail-overlay">
           <button class="delete-btn" (click)="deleteUploadedImage(thumb, i)" title="Delete image">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -245,7 +248,7 @@
         [class.file-valid]="fileData.isValid"
         [class.file-invalid]="!fileData.isValid">
         <!-- File Preview Image -->
-        <img [src]="getFilePreview(fileData.file)" [alt]="fileData.file.name" />
+        <img [src]="getFilePreview(fileData.file)" [alt]="fileData.file.name" loading="lazy" decoding="async" />
 
         <!-- File Status Header -->
         <div class="file-status-header">
@@ -352,7 +355,7 @@
       <div class="error-cards-grid">
         <div *ngFor="let error of qualityCheckErrors" class="error-card selected-file-item-enhanced file-invalid">
           <!-- File Preview Image -->
-          <img [src]="getFilePreview(error.file)" [alt]="error.fileName" />
+          <img [src]="getFilePreview(error.file)" [alt]="error.fileName" loading="lazy" decoding="async" />
 
           <!-- File Status Header -->
           <div class="file-status-header">
