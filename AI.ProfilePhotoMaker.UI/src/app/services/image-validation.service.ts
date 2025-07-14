@@ -24,21 +24,45 @@ export class ImageValidationService {
   private validationCache = new Map<string, ImageValidationResult>();
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
   private readonly REQUEST_TIMEOUT = 10000; // 10 seconds
+  private readonly FIRST_LOAD_DELAY = 2000; // 2 seconds delay for first load
+  private isFirstLoad = true;
 
   constructor() {}
 
   /**
    * Validates if an image URL is accessible and returns a valid image
    * Uses HTTP HEAD request to check without downloading the full image
+   * Defers validation on first load to improve performance
    */
-  async validateImageUrl(url: string): Promise<ImageValidationResult> {
+  async validateImageUrl(url: string, skipFirstLoadDelay = false): Promise<ImageValidationResult> {
     // Fix: Convert absolute frontend URLs to relative paths for proxy routing
     const correctedUrl = this.correctImageUrl(url);
+
+    // Skip validation for relative URLs (assume they're valid to avoid network calls)
+    if (this.shouldSkipValidation(correctedUrl)) {
+      return {
+        isValid: true,
+        status: 200,
+        url: correctedUrl,
+      };
+    }
 
     // Check cache first
     const cached = this.validationCache.get(correctedUrl);
     if (cached && this.isCacheValid(correctedUrl)) {
       return cached;
+    }
+
+    // Defer validation on first load for performance
+    if (this.isFirstLoad && !skipFirstLoadDelay) {
+      setTimeout(() => this.validateImageUrl(correctedUrl, true), this.FIRST_LOAD_DELAY);
+      this.isFirstLoad = false;
+      // Return optimistic result for first load
+      return {
+        isValid: true,
+        status: 200,
+        url: correctedUrl,
+      };
     }
 
     console.log(`🔍 Validating image URL: ${correctedUrl} (original: ${url})`);
@@ -200,6 +224,78 @@ export class ImageValidationService {
       size: this.validationCache.size,
       entries: Array.from(this.validationCache.keys()),
     };
+  }
+
+  /**
+   * Validates images progressively with batching and delays
+   * Improves first-load performance by spreading validation requests
+   */
+  async validateImageUrlsProgressive(
+    urls: string[],
+    batchSize = 3,
+    delayMs = 500
+  ): Promise<ImageValidationSummary> {
+    console.log(
+      `🔍 Progressive validation of ${urls.length} URLs (batch: ${batchSize}, delay: ${delayMs}ms)`
+    );
+
+    const results: ImageValidationResult[] = [];
+
+    // Process URLs in batches with delays
+    for (let i = 0; i < urls.length; i += batchSize) {
+      const batch = urls.slice(i, i + batchSize);
+
+      // Add delay between batches (except first batch)
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+
+      const batchPromises = batch.map(url => this.validateImageUrl(url, true));
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+    }
+
+    // Compile summary
+    const validUrls = results.filter(r => r.isValid).map(r => r.url);
+    const invalidUrls = results.filter(r => !r.isValid).map(r => r.url);
+    const notFoundCount = results.filter(r => r.status === 404).length;
+    const repairSuggested = results.some(r => r.repairSuggested);
+
+    console.log(
+      `✅ Progressive validation complete: ${validUrls.length} valid, ${invalidUrls.length} invalid`
+    );
+
+    return {
+      validUrls,
+      invalidUrls,
+      results,
+      repairSuggested,
+      notFoundCount,
+    };
+  }
+
+  /**
+   * Determines if validation should be skipped for certain URL patterns
+   * Skips validation for relative URLs and known-good patterns to improve performance
+   */
+  private shouldSkipValidation(url: string): boolean {
+    if (!url) return true;
+
+    // Skip validation for relative URLs (they go through proxy)
+    if (
+      url.startsWith('/uploads/') ||
+      url.startsWith('/generated/') ||
+      url.startsWith('/style-previews/')
+    ) {
+      return true;
+    }
+
+    // Skip validation for localhost URLs (development)
+    if (url.includes('localhost:')) {
+      return true;
+    }
+
+    return false;
   }
 
   /**

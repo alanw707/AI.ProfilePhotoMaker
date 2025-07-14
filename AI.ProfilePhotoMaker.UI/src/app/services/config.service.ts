@@ -112,7 +112,7 @@ export class ConfigService {
   }
 
   getApiUrl(): string {
-    return this.appBaseUrl;
+    return this.baseUrl;
   }
 
   isExternalAccess(): boolean {
@@ -158,5 +158,76 @@ export class ConfigService {
         },
       },
     };
+  }
+
+  /**
+   * Build a complete API endpoint URL
+   * @param endpoint - The endpoint path (with or without leading slash)
+   * @returns Complete API URL
+   */
+  buildApiEndpoint(endpoint: string): string {
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+    return `${this.getApiUrl()}/${cleanEndpoint}`;
+  }
+
+  /**
+   * Build a static file URL (for uploads, generated images, etc.)
+   * @param path - The file path
+   * @param baseEndpoint - The base endpoint (uploads, generated, style-previews)
+   * @returns Complete static file URL
+   */
+  buildStaticFileUrl(path: string, baseEndpoint: string): string {
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    const cleanBase = baseEndpoint.startsWith('/') ? baseEndpoint.slice(1) : baseEndpoint;
+    return `${this.getApiUrl()}/${cleanBase}/${cleanPath}`;
+  }
+
+  /**
+   * Build URL for uploaded user images
+   * @param imagePath - The image path or filename
+   * @param thumbnail - Whether to request thumbnail size (if supported)
+   * @returns Complete upload URL
+   */
+  buildUploadUrl(imagePath: string, thumbnail: boolean = false): string {
+    const url = this.buildStaticFileUrl(imagePath, 'uploads');
+    // Future: Add thumbnail parameter when backend supports it
+    // if (thumbnail) url += '?size=thumbnail';
+    return url;
+  }
+
+  /**
+   * Build URL for generated images
+   * @param imagePath - The image path or filename
+   * @returns Complete generated image URL
+   */
+  buildGeneratedImageUrl(imagePath: string): string {
+    return this.buildStaticFileUrl(imagePath, 'generated');
+  }
+
+  /**
+   * Build URL for style preview images
+   * @param styleName - The style name
+   * @returns Complete style preview URL
+   */
+  buildStylePreviewUrl(styleName: string): string {
+    const fileName = styleName.toLowerCase().replace(/[\s\/]+/g, '-');
+    return `/style-previews/${fileName}.jpg`;
+  }
+
+  /**
+   * Clean and normalize URL paths
+   * @param url - URL to clean
+   * @returns Cleaned URL
+   */
+  cleanUrl(url: string): string {
+    return url.replace(/\/+/g, '/').replace(/\/$/, '');
+  }
+
+  /**
+   * Check if image validation is enabled in the current environment
+   * @returns true if image validation should be performed, false to skip
+   */
+  get isImageValidationEnabled(): boolean {
+    return environment.features?.enableImageValidation ?? true;
   }
 }
