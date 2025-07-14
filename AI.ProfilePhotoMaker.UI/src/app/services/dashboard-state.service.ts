@@ -11,6 +11,7 @@ import { CacheManagerService } from './cache-manager.service';
 import { ModelStateService } from './model-state.service';
 import { FallbackOperationsService } from './fallback-operations.service';
 import { ImageValidationService } from './image-validation.service';
+import { ConfigService } from './config.service';
 import {
   DashboardState,
   IDashboardStateService,
@@ -49,7 +50,8 @@ export class DashboardStateService implements IDashboardStateService {
     private cacheManager: CacheManagerService,
     private modelState: ModelStateService,
     private fallbackOps: FallbackOperationsService,
-    private imageValidation: ImageValidationService
+    private imageValidation: ImageValidationService,
+    private configService: ConfigService
   ) {}
 
   getState(): DashboardState {
@@ -564,6 +566,18 @@ export class DashboardStateService implements IDashboardStateService {
     console.log(
       `🔍 Validating ${images.length} uploaded images ${isFromCache ? '(from cache)' : '(fresh)'}...`
     );
+
+    // Check if image validation is disabled via environment configuration
+    if (!this.configService.isImageValidationEnabled) {
+      console.log(
+        '⚡ Image validation disabled via environment config - skipping validation for performance'
+      );
+      return {
+        validImages: images, // Return all images as valid
+        removedCount: 0,
+        repairTriggered: false,
+      };
+    }
 
     const validation = await this.imageValidation.filterValidImages(images);
 
