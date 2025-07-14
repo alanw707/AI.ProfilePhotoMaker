@@ -25,7 +25,8 @@ public abstract class BaseService<T> where T : class
         try
         {
             var changes = await Context.SaveChangesAsync();
-            if (changes > 0)
+            // Log only if significant changes were made
+            if (changes > 5)
             {
                 Logger.LogDebug("Successfully completed {Operation}: {Changes} changes saved", operation, changes);
             }
@@ -51,7 +52,11 @@ public abstract class BaseService<T> where T : class
         try
         {
             var changes = await Context.SaveChangesAsync();
-            Logger.LogDebug("Successfully completed {Operation}: {Changes} changes saved", operation, changes);
+            // Log only if significant changes were made
+            if (changes > 5)
+            {
+                Logger.LogDebug("Successfully completed {Operation}: {Changes} changes saved", operation, changes);
+            }
             return changes;
         }
         catch (DbUpdateException ex)
@@ -76,12 +81,12 @@ public abstract class BaseService<T> where T : class
         using var transaction = await Context.Database.BeginTransactionAsync();
         try
         {
-            Logger.LogDebug("Starting transaction for {Operation}", operationName);
+            // Transaction start logging removed for production readiness
             
             var result = await operation();
             
             await transaction.CommitAsync();
-            Logger.LogDebug("Successfully completed transaction for {Operation}", operationName);
+            // Transaction completion logging removed for production readiness
             
             return result;
         }

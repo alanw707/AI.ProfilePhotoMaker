@@ -482,8 +482,7 @@ if (Directory.Exists(angularPath))
         // Don't handle API or OAuth callback paths
         if (path?.StartsWith("/api/") == true || 
             path?.StartsWith("/signin-") == true ||
-            path?.StartsWith("/swagger") == true ||
-            path?.StartsWith("/debug/") == true)
+            path?.StartsWith("/swagger") == true)
         {
             Console.WriteLine($"🔍 FALLBACK: Skipping path: {path} (matches exclusion)");
             return Task.CompletedTask;
@@ -500,63 +499,6 @@ if (Directory.Exists(angularPath))
 // OAuth callbacks are now handled by the standard middleware
 // No custom debug routes needed
 
-// Add debug OAuth test endpoint
-app.MapGet("/debug/oauth-test", () =>
-{
-    return Results.Ok(new { 
-        message = "OAuth debug endpoint working",
-        timestamp = DateTime.UtcNow,
-        environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
-    });
-});
-
-// Add OAuth callback URL accessibility test
-app.MapGet("/debug/oauth-callback-test", () =>
-{
-    return Results.Ok(new { 
-        message = "OAuth callback URL is accessible",
-        callbackUrl = "/signin-google",
-        expectedFromGoogle = "https://awlocaldev.ngrok.app/signin-google",
-        timestamp = DateTime.UtcNow,
-        note = "This confirms the callback URL is reachable"
-    });
-});
-
-// Add manual OAuth callback processing as fallback
-app.MapPost("/debug/manual-oauth-callback", async (HttpContext context) =>
-{
-    Console.WriteLine("🔧 Manual OAuth callback processing triggered");
-    
-    try
-    {
-        // This is a fallback to manually process OAuth if middleware fails
-        var code = context.Request.Query["code"];
-        var state = context.Request.Query["state"];
-        
-        if (string.IsNullOrEmpty(code))
-        {
-            return Results.BadRequest("Missing OAuth authorization code");
-        }
-        
-        Console.WriteLine($"Processing OAuth code: {code.ToString().Substring(0, Math.Min(10, code.ToString().Length))}...");
-        Console.WriteLine($"OAuth state: {state}");
-        
-        // TODO: Implement manual OAuth token exchange with Google
-        // This would involve calling Google's token endpoint directly
-        
-        return Results.Ok(new {
-            message = "Manual OAuth processing would happen here",
-            code = code.ToString().Substring(0, Math.Min(10, code.ToString().Length)) + "...",
-            state = state.ToString(),
-            note = "This is a fallback for testing"
-        });
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Manual OAuth callback error: {ex.Message}");
-        return Results.Problem("Manual OAuth callback failed");
-    }
-});
 
 app.MapControllers();
 

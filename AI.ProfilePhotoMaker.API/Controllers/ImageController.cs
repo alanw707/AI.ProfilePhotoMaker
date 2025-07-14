@@ -838,6 +838,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         [AllowAnonymous]
         public IActionResult TestUrlGeneration()
         {
+            if (!_environment.IsDevelopment())
+            {
+                return ErrorResponse("DebugEndpointDisabled", "Debug endpoints are only available in development environment", 404);
+            }
             try
             {
                 var testPath = "/uploads/test/sample.jpg";
@@ -871,6 +875,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         [HttpGet("debug/database-flags")]
         public async Task<IActionResult> DiagnoseDatabaseFlags()
         {
+            if (!_environment.IsDevelopment())
+            {
+                return ErrorResponse("DebugEndpointDisabled", "Debug endpoints are only available in development environment", 404);
+            }
             var authCheck = ValidateAuthentication();
             if (authCheck != null) return authCheck;
             var userId = GetCurrentUserId()!;
@@ -1060,6 +1068,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         [HttpPost("debug/repair-database-flags")]
         public async Task<IActionResult> RepairDatabaseFlags()
         {
+            if (!_environment.IsDevelopment())
+            {
+                return ErrorResponse("DebugEndpointDisabled", "Debug endpoints are only available in development environment", 404);
+            }
             var authCheck = ValidateAuthentication();
             if (authCheck != null) return authCheck;
             var userId = GetCurrentUserId()!;
@@ -1178,6 +1190,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         [HttpPost("debug/repair-style-corruption")]
         public async Task<IActionResult> RepairStyleCorruption()
         {
+            if (!_environment.IsDevelopment())
+            {
+                return ErrorResponse("DebugEndpointDisabled", "Debug endpoints are only available in development environment", 404);
+            }
             var authCheck = ValidateAuthentication();
             if (authCheck != null) return authCheck;
             var userId = GetCurrentUserId()!;
@@ -1255,6 +1271,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         [HttpPost("debug/cleanup-orphaned-records")]
         public async Task<IActionResult> CleanupOrphanedRecords()
         {
+            if (!_environment.IsDevelopment())
+            {
+                return ErrorResponse("DebugEndpointDisabled", "Debug endpoints are only available in development environment", 404);
+            }
             var authCheck = ValidateAuthentication();
             if (authCheck != null) return authCheck;
             var userId = GetCurrentUserId()!;
@@ -1354,6 +1374,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         [HttpPost("debug/complete-repair")]
         public async Task<IActionResult> CompleteRepair()
         {
+            if (!_environment.IsDevelopment())
+            {
+                return ErrorResponse("DebugEndpointDisabled", "Debug endpoints are only available in development environment", 404);
+            }
             var authCheck = ValidateAuthentication();
             if (authCheck != null) return authCheck;
             var userId = GetCurrentUserId()!;
