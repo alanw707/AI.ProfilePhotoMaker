@@ -7,6 +7,7 @@ export const environment = {
     debugMode: false,
     useProxy: false,
     cors: false,
+    enableImageValidation: false,
   },
   ngrok: {
     enabled: false,

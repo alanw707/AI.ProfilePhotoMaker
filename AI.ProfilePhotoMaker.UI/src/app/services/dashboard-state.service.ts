@@ -240,6 +240,11 @@ export class DashboardStateService implements IDashboardStateService {
                 return false;
               }
 
+              // Early exit: Skip enhanced images entirely (they don't count as selfies)
+              if (img.isEnhanced) {
+                return false;
+              }
+
               // Only process uploaded images from here
               const isOriginalByFlag = img.isOriginalUpload;
               // Secondary check: Use style as fallback for corrupted flags
@@ -247,10 +252,11 @@ export class DashboardStateService implements IDashboardStateService {
               // Must have a valid URL
               const hasUrl = !!img.originalImageUrl;
 
-              // Robust filtering: Image is considered uploaded if:
+              // Robust filtering: Image is considered uploaded selfie if:
               // 1. Has IsOriginalUpload flag true, OR
               // 2. Has "Original" style (even if flag is corrupted), AND
-              // 3. Has a valid URL
+              // 3. Has a valid URL, AND
+              // 4. Is NOT an enhanced image
               const isUploadedImage = (isOriginalByFlag || isOriginalByStyle) && hasUrl;
 
               // Only log uploaded images (much cleaner console)
@@ -425,8 +431,11 @@ export class DashboardStateService implements IDashboardStateService {
               const isOriginalByFlag = img.isOriginalUpload;
               const isOriginalByStyle = img.style === 'Original';
               const isNotGenerated = !img.isGenerated;
+              const isNotEnhanced = !img.isEnhanced;
               const hasUrl = !!img.originalImageUrl;
-              return (isOriginalByFlag || isOriginalByStyle) && isNotGenerated && hasUrl;
+              return (
+                (isOriginalByFlag || isOriginalByStyle) && isNotGenerated && isNotEnhanced && hasUrl
+              );
             })
             ?.map(img => ({
               id: img.id,

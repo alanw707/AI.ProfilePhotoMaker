@@ -60,4 +60,6 @@ public class UploadImagesDto
     public string? Ethnicity { get; set; }
     // Add this flag to indicate if upload is for training
     public bool ForTraining { get; set; } = false;
+    // Add this flag to indicate if upload is from enhancement page
+    public bool IsEnhanced { get; set; } = false;
 }
