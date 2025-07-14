@@ -174,11 +174,19 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     const reader = new FileReader();
     reader.onload = e => {
       this.imagePreview = e.target?.result as string;
-      console.log('Image preview created successfully');
+      console.log('Image preview created successfully', {
+        previewLength: this.imagePreview?.length,
+        previewStart: this.imagePreview?.substring(0, 50),
+        hasSelectedFile: !!this.selectedFile,
+      });
+      // Trigger change detection to update the view
+      this.cdr.detectChanges();
     };
     reader.onerror = e => {
       console.error('FileReader error:', e);
       this.errorMessage = 'Failed to read the image file.';
+      // Trigger change detection for error state
+      this.cdr.detectChanges();
     };
     reader.readAsDataURL(file);
   }
@@ -187,6 +195,8 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     this.selectedFile = null;
     this.imagePreview = null;
     this.errorMessage = '';
+    // Trigger change detection to update the view
+    this.cdr.detectChanges();
   }
 
   async startEnhancement() {
