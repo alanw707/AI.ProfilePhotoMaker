@@ -1,4 +1,11 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+  ChangeDetectorRef,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -7,6 +14,7 @@ import { FileUploadService } from '../../services/file-upload.service';
 import { AuthService } from '../../services/auth.service';
 import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
 import { DashboardStateService } from '../../services/dashboard-state.service';
+import { CreditService, UserCreditStatus } from '../../services/credit.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -14,11 +22,11 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, HeaderNavigationComponent],
   templateUrl: './photo-enhancement.component.html',
-  styleUrls: ['./photo-enhancement.component.sass']
+  styleUrls: ['./photo-enhancement.component.sass'],
 })
 export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
-  
+
   selectedFile: File | null = null;
   imagePreview: string | null = null;
   enhancementType = 'background';
@@ -26,7 +34,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   processingProgress = 0;
   processingStatus = '';
   enhancedImage: any = null;
-  creditsInfo: CreditsInfo | null = null;
+  userCreditStatus: UserCreditStatus | null = null;
   errorMessage = '';
   isDragOver = false;
   isLoadingCredits = true;
@@ -38,22 +46,70 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     private fileUploadService: FileUploadService,
     private authService: AuthService,
     private router: Router,
-    private stateService: DashboardStateService
+    private stateService: DashboardStateService,
+    private creditService: CreditService,
+    private cdr: ChangeDetectorRef
   ) {}
 
+  // Get total available credits from internal sources only
+  getTotalAvailableCredits(): number {
+    return this.creditService.getTotalAvailableCredits(
+      this.userCreditStatus,
+      null // No Replicate credits
+    );
+  }
+
+  // Check if user has enough credits for enhancement
+  hasEnoughCredits(): boolean {
+    const totalCredits = this.getTotalAvailableCredits();
+    return totalCredits > 0;
+  }
+
   ngOnInit() {
+    console.log('🚀 Enhance component ngOnInit starting');
+
     // Immediately trigger data loading if needed
     const currentState = this.stateService.getState();
-    if (!currentState.creditsInfo) {
-      console.log('📊 Credits not available on component init, loading dashboard data...');
+    console.log('📊 Initial dashboard state:', {
+      hasUserCreditStatus: !!currentState.userCreditStatus,
+      isLoading: currentState.isLoading,
+      userProfile: !!currentState.userProfile,
+    });
+
+    if (!currentState.userCreditStatus) {
+      console.log('📊 Internal credits not available on component init, loading...');
       this.isLoadingCredits = true;
-      this.stateService.loadInitialDashboardData();
+      this.stateService.loadCreditsOnly();
+    } else {
+      console.log('📊 Internal credits already available, using cached data');
+      this.isLoadingCredits = false;
+      this.userCreditStatus = currentState.userCreditStatus;
     }
 
     this.stateSubscription = this.stateService.state$.subscribe(state => {
-      this.creditsInfo = state.creditsInfo;
-      // Show loading if state is loading OR if we don't have credits yet
-      this.isLoadingCredits = state.isLoading || !state.creditsInfo;
+      console.log('🎯 Enhance page state update:', {
+        stateIsLoading: state.isLoading,
+        hasUserCreditStatus: !!state.userCreditStatus,
+        currentComponentLoading: this.isLoadingCredits,
+        userCreditData: state.userCreditStatus,
+      });
+
+      this.userCreditStatus = state.userCreditStatus;
+      const previousLoadingState = this.isLoadingCredits;
+
+      // Show loading only if state is actively loading
+      this.isLoadingCredits = state.isLoading;
+
+      console.log('🎯 Loading state change:', {
+        previousLoading: previousLoadingState,
+        newLoading: this.isLoadingCredits,
+        reason: state.isLoading ? 'state.isLoading=true' : 'state.isLoading=false',
+        hasUserCreditStatus: !!state.userCreditStatus,
+        totalCredits: this.getTotalAvailableCredits(),
+      });
+
+      // Force change detection to update UI
+      this.cdr.detectChanges();
     });
   }
 
@@ -87,7 +143,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   onDrop(event: DragEvent) {
     event.preventDefault();
     this.isDragOver = false;
-    
+
     const files = event.dataTransfer?.files;
     if (files && files.length > 0) {
       this.processFile(files[0]);
@@ -96,7 +152,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
   processFile(file: File) {
     console.log('Processing file:', file.name, 'Type:', file.type, 'Size:', file.size);
-    
+
     // Validate file
     if (!file.type.startsWith('image/')) {
       this.errorMessage = 'Please select a valid image file.';
@@ -104,7 +160,8 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (file.size > 7 * 1024 * 1024) { // 7MB limit
+    if (file.size > 7 * 1024 * 1024) {
+      // 7MB limit
       this.errorMessage = 'File size must be less than 7MB.';
       console.error('File too large:', file.size);
       return;
@@ -115,11 +172,11 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
     // Create preview
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = e => {
       this.imagePreview = e.target?.result as string;
       console.log('Image preview created successfully');
     };
-    reader.onerror = (e) => {
+    reader.onerror = e => {
       console.error('FileReader error:', e);
       this.errorMessage = 'Failed to read the image file.';
     };
@@ -133,7 +190,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   async startEnhancement() {
-    if (!this.selectedFile || !this.creditsInfo || this.creditsInfo.availableCredits <= 0) {
+    if (!this.selectedFile || !this.hasEnoughCredits()) {
       return;
     }
 
@@ -144,11 +201,11 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
     try {
       console.log('Starting enhancement for:', this.selectedFile.name);
-      
+
       // Step 1: Upload the image file
       this.processingStatus = 'Uploading image...';
       const uploadResult = await this.uploadImageForEnhancement();
-      
+
       if (!uploadResult?.url) {
         throw new Error('Failed to upload image');
       }
@@ -156,19 +213,19 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       // Step 2: Call enhancement API
       this.processingProgress = 30;
       this.processingStatus = 'Starting AI enhancement...';
-      
+
       // Convert relative URL to absolute URL for Replicate API
-      const fullImageUrl = uploadResult.url.startsWith('http') 
-        ? uploadResult.url 
+      const fullImageUrl = uploadResult.url.startsWith('http')
+        ? uploadResult.url
         : `http://localhost:5035${uploadResult.url}`;
-      
+
       const enhanceRequest = {
         imageUrl: fullImageUrl,
-        enhancementType: this.enhancementType
+        enhancementType: this.enhancementType,
       };
 
       const enhanceResponse = await this.replicateService.enhancePhoto(enhanceRequest).toPromise();
-      
+
       if (!enhanceResponse?.success) {
         throw new Error(enhanceResponse?.error?.message || 'Enhancement failed');
       }
@@ -176,54 +233,52 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       // Step 3: Poll for completion
       this.processingProgress = 50;
       this.processingStatus = 'AI is enhancing your photo...';
-      
+
       const predictionId = enhanceResponse.data.prediction.id;
       const finalResult = await this.pollForCompletion(predictionId);
-      
+
       // Use dataUrl if present, otherwise fallback to output[0]
-      let enhancedUrl = finalResult.output && finalResult.output.length > 0 ? finalResult.output[0] : null;
+      let enhancedUrl =
+        finalResult.output && finalResult.output.length > 0 ? finalResult.output[0] : null;
       if (finalResult.dataUrl) {
         enhancedUrl = finalResult.dataUrl;
       }
       if (enhancedUrl) {
         this.enhancedImage = {
           url: enhancedUrl,
-          type: 'enhanced'
+          type: 'enhanced',
         };
-        
-        // Update credits info
-        this.stateService.setState({
-            creditsInfo: {
-                ...this.creditsInfo,
-                availableCredits: enhanceResponse.data.creditsRemaining
-            }
-        });
+
+        // Note: Credits are managed internally and updated automatically
+        // The enhancement API response may contain credits remaining info
+        // but we rely on the internal credit system for accurate counts
         this.isProcessing = false;
         this.processingProgress = 100;
         this.processingStatus = 'Enhancement complete!';
       } else {
         throw new Error('No enhanced image received');
       }
-
     } catch (error: any) {
       console.error('Full enhancement error details:', error);
       console.error('Error status:', error.status);
       console.error('Error message:', error.message);
       console.error('Error body:', error.error);
-      
-      this.errorMessage = error.error?.message || error.message || 'Enhancement failed. Please try again.';
+
+      this.errorMessage =
+        error.error?.message || error.message || 'Enhancement failed. Please try again.';
       this.isProcessing = false;
     }
   }
 
-
   private async uploadImageForEnhancement(): Promise<{ url: string; fileName: string } | null> {
-    if (!this.selectedFile) {return null;}
+    if (!this.selectedFile) {
+      return null;
+    }
 
     return new Promise((resolve, reject) => {
       console.log('Starting file upload for:', this.selectedFile!.name);
       this.fileUploadService.uploadSingleImage(this.selectedFile!).subscribe({
-        next: (result) => {
+        next: result => {
           console.log('Upload progress result:', result);
           if (result.progress < 100) {
             this.processingProgress = Math.round(result.progress * 0.2); // Upload is 20% of total progress
@@ -238,10 +293,10 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
             }
           }
         },
-        error: (error) => {
+        error: error => {
           console.error('Upload error:', error);
           reject(error);
-        }
+        },
       });
     });
   }
@@ -252,12 +307,14 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
     while (attempts < maxAttempts) {
       try {
-        const statusResponse = await this.replicateService.getPredictionStatus(predictionId).toPromise();
+        const statusResponse = await this.replicateService
+          .getPredictionStatus(predictionId)
+          .toPromise();
         if (statusResponse?.success && statusResponse.data) {
           const prediction = statusResponse.data;
           // Update progress based on status
           if (prediction.status === 'processing') {
-            this.processingProgress = Math.min(50 + (attempts * 2), 90);
+            this.processingProgress = Math.min(50 + attempts * 2, 90);
             this.processingStatus = 'AI is enhancing your photo...';
           } else if (prediction.status === 'succeeded') {
             this.processingProgress = 100;
@@ -281,7 +338,6 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     }
     throw new Error('Enhancement timed out. Please try again.');
   }
-
 
   downloadEnhanced() {
     if (this.enhancedImage) {
@@ -307,14 +363,14 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
             navigator.share({
               title: 'My Enhanced Photo',
               text: 'Check out my AI-enhanced photo!',
-              files: [file]
+              files: [file],
             });
           });
       } else {
         navigator.share({
           title: 'My Enhanced Photo',
           text: 'Check out my AI-enhanced photo!',
-          url: this.enhancedImage.url
+          url: this.enhancedImage.url,
         });
       }
     } else if (this.enhancedImage) {
@@ -335,7 +391,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
   resetComponent() {
     this.enhanceAnother();
-    this.stateService.loadInitialDashboardData();
+    this.stateService.loadCreditsOnly();
   }
 
   getNextResetText(resetDate: Date): string {
@@ -343,7 +399,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     const reset = new Date(resetDate);
     const diffTime = reset.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays <= 0) {
       return 'very soon';
     } else if (diffDays === 1) {
@@ -352,6 +408,4 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       return `in ${diffDays} days`;
     }
   }
-
-
 }

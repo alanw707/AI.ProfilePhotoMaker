@@ -65,6 +65,85 @@ export class DashboardStateService implements IDashboardStateService {
     });
   }
 
+  // Load internal credits only (no Replicate credits, no image validation)
+  loadCreditsOnly() {
+    const CACHE_KEY = 'credits_data';
+
+    // Check cache first for internal credits
+    const cachedData = this.cacheManager.getCachedData<{
+      userCreditStatus: any;
+      totalCredits: number;
+    }>(CACHE_KEY);
+    if (cachedData?.userCreditStatus) {
+      console.log('💾 Using cached internal credits data');
+      this.setState({
+        userCreditStatus: cachedData.userCreditStatus,
+        totalCredits: cachedData.totalCredits,
+        isLoading: false,
+      });
+      return;
+    }
+
+    // Debounce rapid reloads
+    if (
+      this.cacheManager.shouldDebounceRequest('credits_load', CacheManagerService.LOAD_DEBOUNCE_MS)
+    ) {
+      return;
+    }
+
+    this.setState({ isLoading: true });
+    console.log('🚀 Loading internal credits data...');
+
+    // Load ONLY internal credit status - no Replicate credits
+    this.creditService
+      .getCreditStatus()
+      .pipe(
+        catchError(error => {
+          console.warn('⚠️ Internal Credit Status API failed:', error);
+          return of({ success: false, data: null, error: error });
+        })
+      )
+      .subscribe({
+        next: creditStatus => {
+          console.log('📦 Internal credits API response:', {
+            creditStatusSuccess: creditStatus?.success ?? false,
+          });
+
+          const userCreditStatus = creditStatus?.success ? creditStatus.data : null;
+
+          // Calculate total credits from internal sources only
+          const totalCredits = this.creditService.getTotalAvailableCredits(
+            userCreditStatus,
+            null // No Replicate credits
+          );
+
+          // Set internal credits state only
+          const newState = {
+            userCreditStatus,
+            totalCredits,
+            isLoading: false,
+          };
+
+          this.setState(newState);
+
+          // Cache the internal credits data
+          if (userCreditStatus) {
+            this.cacheManager.setCachedData(
+              CACHE_KEY,
+              { userCreditStatus, totalCredits },
+              CacheManagerService.DASHBOARD_CACHE_DURATION_MS
+            );
+          }
+
+          console.log('⚡ Internal credits loaded successfully:', totalCredits);
+        },
+        error: error => {
+          console.error('❌ Internal credits load failed:', error);
+          this.setState({ isLoading: false });
+        },
+      });
+  }
+
   loadInitialDashboardData() {
     const CACHE_KEY = 'dashboard_data';
 
