@@ -53,6 +53,7 @@ public class CreditController : BaseController
     /// Gets all available credit packages for purchase
     /// </summary>
     [HttpGet("packages")]
+    [AllowAnonymous] // Allow unauthenticated access so users can see packages before login
     public async Task<IActionResult> GetCreditPackages()
     {
         try

@@ -87,7 +87,12 @@
         </svg>
         Gallery
       </a>
-      <a routerLink="/settings" routerLinkActive="active" class="nav-link" (click)="isMobileMenuOpen = false">
+      <a
+        *ngIf="userName"
+        routerLink="/settings"
+        routerLinkActive="active"
+        class="nav-link"
+        (click)="isMobileMenuOpen = false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
           <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
           <path

@@ -115,7 +115,13 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
             'Unable to connect to the server. Please check if the server is running.'
           );
         } else if (error.status === 401) {
-          this.notificationService.error('Authentication Error', 'Please log in to view packages.');
+          // This should no longer happen with [AllowAnonymous] on the API endpoint
+          console.log('Unexpected 401 error - API endpoint should allow anonymous access');
+          this.packages = [];
+          this.notificationService.error(
+            'Access Error',
+            'Unable to load packages. Please try again later.'
+          );
         } else if (error.status === 500) {
           this.notificationService.error(
             'Server Error',
