@@ -81,13 +81,13 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
                 new Claim(ClaimTypes.NameIdentifier, userId)
             }, "mock"));
 
-            var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext 
-            { 
-                User = claimsPrincipal 
+            var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext
+            {
+                User = claimsPrincipal
             };
             httpContext.Request.Scheme = "https";
             httpContext.Request.Host = new Microsoft.AspNetCore.Http.HostString("localhost:5000");
-            
+
             _controller.ControllerContext = new ControllerContext
             {
                 HttpContext = httpContext
@@ -99,10 +99,10 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
         {
             // Arrange
             var userId = "test-user-123";
-            var userProfile = new UserProfile 
-            { 
-                Id = 1, 
-                UserId = userId, 
+            var userProfile = new UserProfile
+            {
+                Id = 1,
+                UserId = userId,
                 FirstName = "Test",
                 LastName = "User"
             };
@@ -121,7 +121,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             };
 
             userProfile.ProcessedImages = new List<ProcessedImage> { orphanedImage };
-            
+
             _context.UserProfiles.Add(userProfile);
             _context.ProcessedImages.Add(orphanedImage);
             await _context.SaveChangesAsync();
@@ -142,10 +142,10 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
         {
             // Arrange
             var userId = "test-user-123";
-            var userProfile = new UserProfile 
-            { 
-                Id = 1, 
-                UserId = userId, 
+            var userProfile = new UserProfile
+            {
+                Id = 1,
+                UserId = userId,
                 FirstName = "Test",
                 LastName = "User"
             };
@@ -164,7 +164,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             };
 
             userProfile.ProcessedImages = new List<ProcessedImage> { orphanedImage };
-            
+
             _context.UserProfiles.Add(userProfile);
             _context.ProcessedImages.Add(orphanedImage);
             await _context.SaveChangesAsync();
@@ -177,7 +177,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
 
             // Assert
             result.Should().BeOfType<OkObjectResult>();
-            
+
             // Verify record was actually removed from database
             var finalCount = await _context.ProcessedImages.CountAsync();
             finalCount.Should().Be(0);
@@ -196,10 +196,10 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             var testFilePath = Path.Combine(userUploadsDir, testFileName);
             await File.WriteAllTextAsync(testFilePath, "fake image content");
 
-            var userProfile = new UserProfile 
-            { 
-                Id = 1, 
-                UserId = userId, 
+            var userProfile = new UserProfile
+            {
+                Id = 1,
+                UserId = userId,
                 FirstName = "Test",
                 LastName = "User"
             };
@@ -218,7 +218,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             };
 
             userProfile.ProcessedImages = new List<ProcessedImage> { validImage };
-            
+
             _context.UserProfiles.Add(userProfile);
             _context.ProcessedImages.Add(validImage);
             await _context.SaveChangesAsync();
@@ -228,7 +228,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
 
             // Assert
             result.Should().BeOfType<OkObjectResult>();
-            
+
             // Verify record was preserved
             var finalCount = await _context.ProcessedImages.CountAsync();
             finalCount.Should().Be(1);
@@ -263,10 +263,10 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             var validFilePath = Path.Combine(userUploadsDir, validFileName);
             await File.WriteAllTextAsync(validFilePath, "fake image content");
 
-            var userProfile = new UserProfile 
-            { 
-                Id = 1, 
-                UserId = userId, 
+            var userProfile = new UserProfile
+            {
+                Id = 1,
+                UserId = userId,
                 FirstName = "Test",
                 LastName = "User"
             };
@@ -298,7 +298,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             };
 
             userProfile.ProcessedImages = new List<ProcessedImage> { validImage, orphanedImage };
-            
+
             _context.UserProfiles.Add(userProfile);
             _context.ProcessedImages.AddRange(validImage, orphanedImage);
             await _context.SaveChangesAsync();
@@ -311,7 +311,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
 
             // Assert
             result.Should().BeOfType<OkObjectResult>();
-            
+
             // Verify only orphaned record was removed
             var finalCount = await _context.ProcessedImages.CountAsync();
             finalCount.Should().Be(1);
@@ -333,10 +333,10 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             var generatedFilePath = Path.Combine(userGeneratedDir, generatedFileName);
             await File.WriteAllTextAsync(generatedFilePath, "fake generated image content");
 
-            var userProfile = new UserProfile 
-            { 
-                Id = 1, 
-                UserId = userId, 
+            var userProfile = new UserProfile
+            {
+                Id = 1,
+                UserId = userId,
                 FirstName = "Test",
                 LastName = "User"
             };
@@ -368,7 +368,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             };
 
             userProfile.ProcessedImages = new List<ProcessedImage> { validGeneratedImage, orphanedGeneratedImage };
-            
+
             _context.UserProfiles.Add(userProfile);
             _context.ProcessedImages.AddRange(validGeneratedImage, orphanedGeneratedImage);
             await _context.SaveChangesAsync();
@@ -378,7 +378,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
 
             // Assert
             result.Should().BeOfType<OkObjectResult>();
-            
+
             // Verify only orphaned generated image was removed
             var finalCount = await _context.ProcessedImages.CountAsync();
             finalCount.Should().Be(1);
@@ -391,7 +391,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
         public void Dispose()
         {
             _context?.Dispose();
-            
+
             // Clean up test directories
             if (Directory.Exists(_testContentRoot))
             {

@@ -21,7 +21,7 @@ public class StripePaymentService : IPaymentService
         _context = context;
         _configuration = configuration;
         _logger = logger;
-        
+
         // Configure Stripe API key
         StripeConfiguration.ApiKey = _configuration["Stripe:SecretKey"];
     }
@@ -238,7 +238,7 @@ public class StripePaymentService : IPaymentService
                 {
                     CancelAtPeriodEnd = true
                 });
-                
+
                 subscription.CancelAtPeriodEnd = DateTime.UtcNow;
             }
             else
@@ -320,7 +320,7 @@ public class StripePaymentService : IPaymentService
     public async Task<SubscriptionUsageDto> GetSubscriptionUsageAsync(string userId)
     {
         var subscription = await GetUserSubscriptionAsync(userId);
-        
+
         if (subscription == null)
         {
             // Return basic tier usage
@@ -423,7 +423,7 @@ public class StripePaymentService : IPaymentService
     public async Task<bool> CanUserPerformActionAsync(string userId, string action)
     {
         var subscription = await GetUserSubscriptionAsync(userId);
-        
+
         if (subscription == null || !subscription.IsActive)
         {
             // Basic tier permissions

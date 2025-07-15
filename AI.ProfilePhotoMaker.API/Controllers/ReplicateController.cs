@@ -21,7 +21,7 @@ public class ReplicateController : ControllerBase
     private readonly ILogger<ReplicateController> _logger;
 
     public ReplicateController(
-        IReplicateApiClient replicateApiClient, 
+        IReplicateApiClient replicateApiClient,
         IBasicTierService basicTierService,
         ApplicationDbContext dbContext,
         ILogger<ReplicateController> logger)
@@ -50,16 +50,18 @@ public class ReplicateController : ControllerBase
             .Where(m => m.UserId == userId && m.Status == ModelCreationStatus.Ready)
             .OrderByDescending(m => m.CompletedAt)
             .FirstOrDefaultAsync();
-            
+
         if (existingModel != null)
         {
             _logger.LogWarning("User {UserId} attempted to train a new model but already has trained model {ModelId}", userId, existingModel.ReplicateModelId);
-            return BadRequest(new { 
-                success = false, 
-                error = new { 
-                    code = "ModelAlreadyTrained", 
-                    message = $"You already have a trained model ({existingModel.ReplicateModelId}). You can generate photos using your existing model instead of training a new one." 
-                } 
+            return BadRequest(new
+            {
+                success = false,
+                error = new
+                {
+                    code = "ModelAlreadyTrained",
+                    message = $"You already have a trained model ({existingModel.ReplicateModelId}). You can generate photos using your existing model instead of training a new one."
+                }
             });
         }
 
@@ -69,22 +71,24 @@ public class ReplicateController : ControllerBase
         // Check if user has sufficient purchased credits for training (15 credits required)
         var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
         var requiredCredits = CreditCostConfig.GetCreditCost("model_training");
-        
+
         if (purchasedCredits < requiredCredits)
         {
-            return BadRequest(new { 
-                success = false, 
-                error = new { 
-                    code = "InsufficientCredits", 
-                    message = $"Model training requires {requiredCredits} purchased credits. You have {purchasedCredits} purchased credits. Please purchase more credits to train custom models." 
-                } 
+            return BadRequest(new
+            {
+                success = false,
+                error = new
+                {
+                    code = "InsufficientCredits",
+                    message = $"Model training requires {requiredCredits} purchased credits. You have {purchasedCredits} purchased credits. Please purchase more credits to train custom models."
+                }
             });
         }
 
         try
         {
             var result = await _replicateApiClient.CreateModelTrainingAsync(dto.UserId, dto.ImageZipUrl);
-            
+
             // Only consume credits AFTER successful API call
             var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "model_training");
             if (!creditConsumed)
@@ -93,29 +97,33 @@ public class ReplicateController : ControllerBase
                 // Note: In this case, the Replicate training is already running but we couldn't charge credits
                 // This is better than charging credits for failed training requests
             }
-            
+
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
-            
-            return Ok(new { 
-                success = true, 
-                data = new {
+
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
                     prediction = result,
                     creditsRemaining = remainingCredits,
                     creditsCost = requiredCredits
-                }, 
-                error = (object?)null 
+                },
+                error = (object?)null
             });
         }
         catch (Exception)
         {
             // If training fails, we might want to refund the credit
             // For now, we'll just log the error and return failure
-            return StatusCode(500, new { 
-                success = false, 
-                error = new { 
-                    code = "TrainingFailed", 
-                    message = "Failed to start model training. Please try again later." 
-                } 
+            return StatusCode(500, new
+            {
+                success = false,
+                error = new
+                {
+                    code = "TrainingFailed",
+                    message = "Failed to start model training. Please try again later."
+                }
             });
         }
     }
@@ -136,7 +144,7 @@ public class ReplicateController : ControllerBase
     [HttpPost("generate")]
     public async Task<IActionResult> GenerateImages([FromBody] GenerateImagesRequestDto dto)
     {
-        _logger.LogInformation("Generation request received: TrainedModelVersion='{TrainedModelVersion}', UserId='{UserId}', Style='{Style}'", 
+        _logger.LogInformation("Generation request received: TrainedModelVersion='{TrainedModelVersion}', UserId='{UserId}', Style='{Style}'",
             dto.TrainedModelVersion, dto.UserId, dto.Style);
 
         if (!ModelState.IsValid)
@@ -149,15 +157,17 @@ public class ReplicateController : ControllerBase
         // Check if user has sufficient purchased credits for styled generation (5 credits per image)
         var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
         var requiredCredits = dto.NumOutputs * CreditCostConfig.GetCreditCost("styled_generation");
-        
+
         if (purchasedCredits < requiredCredits)
         {
-            return BadRequest(new { 
-                success = false, 
-                error = new { 
-                    code = "InsufficientCredits", 
-                    message = $"Styled image generation requires {requiredCredits} purchased credits. You have {purchasedCredits} purchased credits. Please purchase more credits to generate styled images." 
-                } 
+            return BadRequest(new
+            {
+                success = false,
+                error = new
+                {
+                    code = "InsufficientCredits",
+                    message = $"Styled image generation requires {requiredCredits} purchased credits. You have {purchasedCredits} purchased credits. Please purchase more credits to generate styled images."
+                }
             });
         }
 
@@ -165,37 +175,39 @@ public class ReplicateController : ControllerBase
         {
             // Get user info from database for prompt generation
             var userProfile = await _dbContext.UserProfiles.FirstOrDefaultAsync(u => u.UserId == userId);
-            
+
             // Get user's trained model from ModelCreationRequest
             var trainedModel = await _dbContext.ModelCreationRequests
                 .Where(m => m.UserId == userId && m.Status == ModelCreationStatus.Ready)
                 .OrderByDescending(m => m.CompletedAt)
                 .FirstOrDefaultAsync();
-            
+
             // Check if the model is still available on Replicate
             if (trainedModel != null && !string.IsNullOrEmpty(trainedModel.ReplicateModelId))
             {
                 var modelAvailable = await _replicateApiClient.CheckModelAvailabilityAsync(trainedModel.ReplicateModelId);
                 if (!modelAvailable)
                 {
-                    _logger.LogWarning("Model {ModelId} is no longer available on Replicate for user {UserId}", 
+                    _logger.LogWarning("Model {ModelId} is no longer available on Replicate for user {UserId}",
                         trainedModel.ReplicateModelId, userId);
-                    
+
                     // Mark the model as failed instead of deleting it
                     trainedModel.Status = ModelCreationStatus.Failed;
                     trainedModel.ErrorMessage = "Model no longer available on Replicate";
                     await _dbContext.SaveChangesAsync();
-                    
-                    return BadRequest(new { 
-                        success = false, 
-                        error = new { 
-                            code = "ModelExpired", 
-                            message = "Your trained model has expired or been deleted. Please train a new model to generate styled images." 
-                        } 
+
+                    return BadRequest(new
+                    {
+                        success = false,
+                        error = new
+                        {
+                            code = "ModelExpired",
+                            message = "Your trained model has expired or been deleted. Please train a new model to generate styled images."
+                        }
                     });
                 }
             }
-            
+
             // Ensure we have a model to use for generation
             var modelVersionToUse = dto.TrainedModelVersion;
             if (string.IsNullOrEmpty(modelVersionToUse) && trainedModel != null)
@@ -203,29 +215,31 @@ public class ReplicateController : ControllerBase
                 modelVersionToUse = trainedModel.TrainedModelVersion;
                 _logger.LogInformation("Using model version from database: {ModelVersion}", modelVersionToUse);
             }
-            
+
             if (string.IsNullOrEmpty(modelVersionToUse))
             {
-                return BadRequest(new { 
-                    success = false, 
-                    error = new { 
-                        code = "NoModelAvailable", 
-                        message = "No trained model available for generation. Please train a model first." 
-                    } 
+                return BadRequest(new
+                {
+                    success = false,
+                    error = new
+                    {
+                        code = "NoModelAvailable",
+                        message = "No trained model available for generation. Please train a model first."
+                    }
                 });
             }
-            
-            var userInfo = userProfile != null ? new UserInfo 
-            { 
-                Gender = userProfile.Gender, 
-                Ethnicity = userProfile.Ethnicity 
+
+            var userInfo = userProfile != null ? new UserInfo
+            {
+                Gender = userProfile.Gender,
+                Ethnicity = userProfile.Ethnicity
             } : null;
-            
-            _logger.LogInformation("Retrieved user info from database: Gender={Gender}, Ethnicity={Ethnicity}", 
+
+            _logger.LogInformation("Retrieved user info from database: Gender={Gender}, Ethnicity={Ethnicity}",
                 userInfo?.Gender ?? "NULL", userInfo?.Ethnicity ?? "NULL");
-            
+
             var result = await _replicateApiClient.GenerateImagesAsync(modelVersionToUse, dto.UserId, dto.Style, userInfo);
-            
+
             // Only consume credits AFTER successful API call (5 credits per image generated)
             var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, requiredCredits, "styled_generation");
             if (!creditConsumed)
@@ -234,17 +248,19 @@ public class ReplicateController : ControllerBase
                 // Note: In this case, the Replicate prediction is already running but we couldn't charge credits
                 // This is better than charging credits for failed predictions
             }
-            
+
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
-            
-            return Ok(new { 
-                success = true, 
-                data = new {
+
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
                     prediction = result,
                     creditsRemaining = remainingCredits,
                     creditsCost = requiredCredits
-                }, 
-                error = (object?)null 
+                },
+                error = (object?)null
             });
         }
         catch (Exception ex)
@@ -252,12 +268,14 @@ public class ReplicateController : ControllerBase
             _logger.LogError(ex, "Error generating images for user {UserId}", userId);
             // If generation fails, we might want to refund the credit
             // For now, we'll just return failure
-            return StatusCode(500, new { 
-                success = false, 
-                error = new { 
-                    code = "GenerationFailed", 
-                    message = $"Failed to start image generation: {ex.Message}" 
-                } 
+            return StatusCode(500, new
+            {
+                success = false,
+                error = new
+                {
+                    code = "GenerationFailed",
+                    message = $"Failed to start image generation: {ex.Message}"
+                }
             });
         }
     }
@@ -268,7 +286,7 @@ public class ReplicateController : ControllerBase
     [HttpPost("generate/batch")]
     public async Task<IActionResult> GenerateBatchImages([FromBody] GenerateBatchImagesRequestDto dto)
     {
-        _logger.LogInformation("Batch generation request received: TrainedModelVersion='{TrainedModelVersion}', UserId='{UserId}', Styles=[{Styles}], NumOutputsPerStyle={NumOutputsPerStyle}", 
+        _logger.LogInformation("Batch generation request received: TrainedModelVersion='{TrainedModelVersion}', UserId='{UserId}', Styles=[{Styles}], NumOutputsPerStyle={NumOutputsPerStyle}",
             dto.TrainedModelVersion, dto.UserId, string.Join(", ", dto.Styles), dto.NumOutputsPerStyle);
 
         if (!ModelState.IsValid)
@@ -284,18 +302,20 @@ public class ReplicateController : ControllerBase
         // Calculate total credits required (5 credits per image)
         var totalImages = dto.Styles.Count * dto.NumOutputsPerStyle;
         var requiredCredits = totalImages * CreditCostConfig.GetCreditCost("styled_generation");
-        
+
         // Check if user has sufficient purchased credits for styled generation
         var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
-        
+
         if (purchasedCredits < requiredCredits)
         {
-            return BadRequest(new { 
-                success = false, 
-                error = new { 
-                    code = "InsufficientCredits", 
-                    message = $"Batch styled image generation requires {requiredCredits} purchased credits. You have {purchasedCredits} purchased credits. Please purchase more credits to generate styled images." 
-                } 
+            return BadRequest(new
+            {
+                success = false,
+                error = new
+                {
+                    code = "InsufficientCredits",
+                    message = $"Batch styled image generation requires {requiredCredits} purchased credits. You have {purchasedCredits} purchased credits. Please purchase more credits to generate styled images."
+                }
             });
         }
 
@@ -303,37 +323,39 @@ public class ReplicateController : ControllerBase
         {
             // Get user info from database for prompt generation
             var userProfile = await _dbContext.UserProfiles.FirstOrDefaultAsync(u => u.UserId == userId);
-            
+
             // Get user's trained model from ModelCreationRequest
             var trainedModel = await _dbContext.ModelCreationRequests
                 .Where(m => m.UserId == userId && m.Status == ModelCreationStatus.Ready)
                 .OrderByDescending(m => m.CompletedAt)
                 .FirstOrDefaultAsync();
-            
+
             // Check if the model is still available on Replicate
             if (trainedModel != null && !string.IsNullOrEmpty(trainedModel.ReplicateModelId))
             {
                 var modelAvailable = await _replicateApiClient.CheckModelAvailabilityAsync(trainedModel.ReplicateModelId);
                 if (!modelAvailable)
                 {
-                    _logger.LogWarning("Model {ModelId} is no longer available on Replicate for user {UserId}", 
+                    _logger.LogWarning("Model {ModelId} is no longer available on Replicate for user {UserId}",
                         trainedModel.ReplicateModelId, userId);
-                    
+
                     // Mark the model as failed instead of deleting it
                     trainedModel.Status = ModelCreationStatus.Failed;
                     trainedModel.ErrorMessage = "Model no longer available on Replicate";
                     await _dbContext.SaveChangesAsync();
-                    
-                    return BadRequest(new { 
-                        success = false, 
-                        error = new { 
-                            code = "ModelExpired", 
-                            message = "Your trained model has expired or been deleted. Please train a new model to generate styled images." 
-                        } 
+
+                    return BadRequest(new
+                    {
+                        success = false,
+                        error = new
+                        {
+                            code = "ModelExpired",
+                            message = "Your trained model has expired or been deleted. Please train a new model to generate styled images."
+                        }
                     });
                 }
             }
-            
+
             // Ensure we have a model to use for generation
             var modelVersionToUse = dto.TrainedModelVersion;
             if (string.IsNullOrEmpty(modelVersionToUse) && trainedModel != null)
@@ -341,27 +363,29 @@ public class ReplicateController : ControllerBase
                 modelVersionToUse = trainedModel.TrainedModelVersion;
                 _logger.LogInformation("Using model version from database: {ModelVersion}", modelVersionToUse);
             }
-            
+
             if (string.IsNullOrEmpty(modelVersionToUse))
             {
-                return BadRequest(new { 
-                    success = false, 
-                    error = new { 
-                        code = "NoModelAvailable", 
-                        message = "No trained model available for generation. Please train a model first." 
-                    } 
+                return BadRequest(new
+                {
+                    success = false,
+                    error = new
+                    {
+                        code = "NoModelAvailable",
+                        message = "No trained model available for generation. Please train a model first."
+                    }
                 });
             }
-            
-            var userInfo = userProfile != null ? new UserInfo 
-            { 
-                Gender = userProfile.Gender, 
-                Ethnicity = userProfile.Ethnicity 
+
+            var userInfo = userProfile != null ? new UserInfo
+            {
+                Gender = userProfile.Gender,
+                Ethnicity = userProfile.Ethnicity
             } : null;
-            
-            _logger.LogInformation("Retrieved user info from database: Gender={Gender}, Ethnicity={Ethnicity}", 
+
+            _logger.LogInformation("Retrieved user info from database: Gender={Gender}, Ethnicity={Ethnicity}",
                 userInfo?.Gender ?? "NULL", userInfo?.Ethnicity ?? "NULL");
-            
+
             // Generate images for all styles in parallel
             var generationTasks = dto.Styles.Select<string, Task<dynamic>>(async (style) =>
             {
@@ -378,24 +402,26 @@ public class ReplicateController : ControllerBase
             });
 
             var results = await Task.WhenAll(generationTasks);
-            
+
             // Count successful generations
             var successfulGenerations = results.Where(r => r.Success).ToList();
             var failedGenerations = results.Where(r => !r.Success).ToList();
-            
+
             if (!successfulGenerations.Any())
             {
                 // All generations failed
-                return StatusCode(500, new { 
-                    success = false, 
-                    error = new { 
-                        code = "AllGenerationsFailed", 
+                return StatusCode(500, new
+                {
+                    success = false,
+                    error = new
+                    {
+                        code = "AllGenerationsFailed",
                         message = "Failed to start generation for any of the selected styles.",
                         details = failedGenerations.Select(f => new { f.Style, f.Error }).ToList()
-                    } 
+                    }
                 });
             }
-            
+
             // Only consume credits for successful generations
             var actualCreditsRequired = successfulGenerations.Count * dto.NumOutputsPerStyle * CreditCostConfig.GetCreditCost("styled_generation");
             var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, actualCreditsRequired, "styled_generation");
@@ -405,20 +431,22 @@ public class ReplicateController : ControllerBase
                 // Note: In this case, the Replicate predictions are already running but we couldn't charge credits
                 // This is better than charging credits for failed predictions
             }
-            
+
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
-            
-            return Ok(new { 
-                success = true, 
-                data = new {
+
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
                     predictions = successfulGenerations.Select(g => new { Style = g.Style, Result = g.Result }).ToList(),
                     creditsRemaining = remainingCredits,
                     creditsCost = actualCreditsRequired,
                     successfulStyles = successfulGenerations.Count,
                     failedStyles = failedGenerations.Count,
                     failures = failedGenerations.Select(f => new { Style = f.Style, Error = f.Error }).ToList()
-                }, 
-                error = (object?)null 
+                },
+                error = (object?)null
             });
         }
         catch (Exception ex)
@@ -426,12 +454,14 @@ public class ReplicateController : ControllerBase
             _logger.LogError(ex, "Error in batch image generation for user {UserId}", userId);
             // If generation fails, we might want to refund the credit
             // For now, we'll just return failure
-            return StatusCode(500, new { 
-                success = false, 
-                error = new { 
-                    code = "BatchGenerationFailed", 
-                    message = $"Failed to start batch image generation: {ex.Message}" 
-                } 
+            return StatusCode(500, new
+            {
+                success = false,
+                error = new
+                {
+                    code = "BatchGenerationFailed",
+                    message = $"Failed to start batch image generation: {ex.Message}"
+                }
             });
         }
     }
@@ -443,12 +473,12 @@ public class ReplicateController : ControllerBase
     public async Task<IActionResult> GetPredictionStatus(string predictionId)
     {
         var result = await _replicateApiClient.GetPredictionStatusAsync(predictionId);
-        
+
         // If prediction succeeded and has output, try to fetch and return dataUrl
         if (result.Status == "succeeded" && result.Output != null)
         {
             string? imageUrl = null;
-            
+
             // Handle both array and string outputs
             if (result.Output.Value.ValueKind == System.Text.Json.JsonValueKind.Array && result.Output.Value.GetArrayLength() > 0)
             {
@@ -458,7 +488,7 @@ public class ReplicateController : ControllerBase
             {
                 imageUrl = result.Output.Value.GetString();
             }
-            
+
             if (!string.IsNullOrEmpty(imageUrl))
             {
                 try
@@ -471,19 +501,25 @@ public class ReplicateController : ControllerBase
                     var base64 = System.Convert.ToBase64String(imageBytes);
                     var dataUrl = $"data:{contentType};base64,{base64}";
                     // Attach dataUrl to result by wrapping in a new object
-                    return Ok(new { success = true, data = new {
-                        result.Id,
-                        result.Version,
-                        result.Status,
-                        result.Input,
-                        result.Output,
-                        result.Error,
-                        result.Webhook,
-                        result.Urls,
-                        result.CreatedAt,
-                        result.CompletedAt,
-                        dataUrl
-                    }, error = (object?)null });
+                    return Ok(new
+                    {
+                        success = true,
+                        data = new
+                        {
+                            result.Id,
+                            result.Version,
+                            result.Status,
+                            result.Input,
+                            result.Output,
+                            result.Error,
+                            result.Webhook,
+                            result.Urls,
+                            result.CreatedAt,
+                            result.CompletedAt,
+                            dataUrl
+                        },
+                        error = (object?)null
+                    });
                 }
                 catch { /* ignore, fallback below */ }
             }
@@ -509,12 +545,14 @@ public class ReplicateController : ControllerBase
         if (!hasCredits)
         {
             var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
-            return BadRequest(new { 
-                success = false, 
-                error = new { 
-                    code = "InsufficientCredits", 
-                    message = $"No credits available. You have {availableCredits} credits remaining. Credits reset weekly." 
-                } 
+            return BadRequest(new
+            {
+                success = false,
+                error = new
+                {
+                    code = "InsufficientCredits",
+                    message = $"No credits available. You have {availableCredits} credits remaining. Credits reset weekly."
+                }
             });
         }
 
@@ -522,12 +560,14 @@ public class ReplicateController : ControllerBase
         var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "casual_headshot_generation");
         if (!creditConsumed)
         {
-            return BadRequest(new { 
-                success = false, 
-                error = new { 
-                    code = "CreditConsumptionFailed", 
-                    message = "Failed to consume credit. Please try again." 
-                } 
+            return BadRequest(new
+            {
+                success = false,
+                error = new
+                {
+                    code = "CreditConsumptionFailed",
+                    message = "Failed to consume credit. Please try again."
+                }
             });
         }
 
@@ -535,28 +575,32 @@ public class ReplicateController : ControllerBase
         {
             // Use base FLUX model for basic tier - no custom training required
             var result = await _replicateApiClient.GenerateBasicImageAsync(userId, dto.UserInfo, dto.Gender);
-            
+
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
-            
-            return Ok(new { 
-                success = true, 
-                data = new { 
+
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
                     prediction = result,
                     creditsRemaining = remainingCredits
-                }, 
-                error = (object?)null 
+                },
+                error = (object?)null
             });
         }
         catch (Exception ex)
         {
             // If generation fails, we should consider refunding the credit
             // For now, we'll log the error and return failure
-            return StatusCode(500, new { 
-                success = false, 
-                error = new { 
-                    code = "GenerationFailed", 
-                    message = "Failed to generate image. Please try again later." 
-                } 
+            return StatusCode(500, new
+            {
+                success = false,
+                error = new
+                {
+                    code = "GenerationFailed",
+                    message = "Failed to generate image. Please try again later."
+                }
             });
         }
     }
@@ -579,22 +623,25 @@ public class ReplicateController : ControllerBase
             // URL decode the model ID since it's passed as a path parameter
             var decodedModelId = Uri.UnescapeDataString(modelId);
             var isAvailable = await _replicateApiClient.CheckModelAvailabilityAsync(decodedModelId);
-            
-            return Ok(new { 
-                success = true, 
+
+            return Ok(new
+            {
+                success = true,
                 data = new { available = isAvailable },
-                error = (object?)null 
+                error = (object?)null
             });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error checking model availability for model {ModelId}", modelId);
-            return StatusCode(500, new { 
-                success = false, 
-                error = new { 
-                    code = "AvailabilityCheckFailed", 
-                    message = "Failed to check model availability. Please try again later." 
-                } 
+            return StatusCode(500, new
+            {
+                success = false,
+                error = new
+                {
+                    code = "AvailabilityCheckFailed",
+                    message = "Failed to check model availability. Please try again later."
+                }
             });
         }
     }
@@ -611,19 +658,21 @@ public class ReplicateController : ControllerBase
 
         var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
         var profile = await _basicTierService.GetUserProfileWithCreditsAsync(userId);
-        
+
         if (profile == null)
             return NotFound(new { success = false, error = new { code = "ProfileNotFound", message = "User profile not found." } });
 
-        return Ok(new { 
-            success = true, 
-            data = new {
+        return Ok(new
+        {
+            success = true,
+            data = new
+            {
                 availableCredits = availableCredits,
                 subscriptionTier = profile.SubscriptionTier.ToString(),
                 lastCreditReset = profile.LastCreditReset,
                 nextResetDate = profile.LastCreditReset.AddDays(7)
-            }, 
-            error = (object?)null 
+            },
+            error = (object?)null
         });
     }
 
@@ -647,14 +696,16 @@ public class ReplicateController : ControllerBase
         {
             var profile = await _basicTierService.GetUserProfileWithCreditsAsync(userId);
             var nextReset = profile?.LastCreditReset.AddDays(7) ?? DateTime.UtcNow.AddDays(7);
-            
-            return Ok(new { 
-                success = false, 
-                error = new { 
-                    code = "InsufficientCredits", 
+
+            return Ok(new
+            {
+                success = false,
+                error = new
+                {
+                    code = "InsufficientCredits",
                     message = "No credits remaining. Credits reset weekly.",
                     nextResetDate = nextReset
-                } 
+                }
             });
         }
 
@@ -662,7 +713,7 @@ public class ReplicateController : ControllerBase
         {
             // Enhance the uploaded photo
             var result = await _replicateApiClient.EnhancePhotoAsync(userId, dto.ImageUrl, dto.EnhancementType ?? "professional");
-            
+
             // Only consume credit AFTER successful API call
             var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "photo_enhancement");
             if (!creditConsumed)
@@ -671,29 +722,33 @@ public class ReplicateController : ControllerBase
                 // Note: In this case, the Replicate enhancement is already running but we couldn't charge credits
                 // This is better than charging credits for failed enhancement requests
             }
-            
+
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
-            
-            return Ok(new { 
-                success = true, 
-                data = new { 
+
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
                     prediction = result,
                     creditsRemaining = remainingCredits,
                     enhancementType = dto.EnhancementType ?? "professional"
-                }, 
-                error = (object?)null 
+                },
+                error = (object?)null
             });
         }
         catch (Exception ex)
         {
             // If enhancement fails, we should consider refunding the credit
             // For now, we'll log the error and return failure
-            return StatusCode(500, new { 
-                success = false, 
-                error = new { 
-                    code = "EnhancementFailed", 
-                    message = "Failed to enhance photo. Please try again later." 
-                } 
+            return StatusCode(500, new
+            {
+                success = false,
+                error = new
+                {
+                    code = "EnhancementFailed",
+                    message = "Failed to enhance photo. Please try again later."
+                }
             });
         }
     }

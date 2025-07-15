@@ -28,7 +28,7 @@ public class StylePreviewController : ControllerBase
         _env = env;
         _configuration = configuration;
         _previewsPath = Path.Combine(_env.ContentRootPath, "style-previews");
-        
+
         // Ensure directory exists
         Directory.CreateDirectory(_previewsPath);
     }
@@ -43,7 +43,7 @@ public class StylePreviewController : ControllerBase
         {
             var style = await _dbContext.Styles
                 .FirstOrDefaultAsync(s => s.Name.ToLower() == styleName.ToLower() && s.IsActive);
-                
+
             if (style == null)
             {
                 return NotFound(new { error = $"Style '{styleName}' not found" });
@@ -52,13 +52,14 @@ public class StylePreviewController : ControllerBase
             // Check if preview already exists
             var fileName = $"{style.Name.ToLower().Replace("/", "-").Replace(" ", "-")}-preview.jpg";
             var filePath = Path.Combine(_previewsPath, fileName);
-            
+
             if (System.IO.File.Exists(filePath))
             {
-                return Ok(new { 
-                    success = true, 
-                    message = "Preview already exists", 
-                    path = $"/style-previews/{fileName}" 
+                return Ok(new
+                {
+                    success = true,
+                    message = "Preview already exists",
+                    path = $"/style-previews/{fileName}"
                 });
             }
 
@@ -66,11 +67,11 @@ public class StylePreviewController : ControllerBase
             var genders = new[] { "man", "woman" };
             var ethnicities = new[] { "caucasian", "african american", "asian", "hispanic", "middle eastern", "south asian" };
             var random = new Random();
-            
+
             // Pick random demographics
             var gender = genders[random.Next(genders.Length)];
             var ethnicity = ethnicities[random.Next(ethnicities.Length)];
-            
+
             // Build the prompt
             var prompt = style.PromptTemplate
                 .Replace("{gender}", $"{ethnicity} {gender}")
@@ -79,7 +80,7 @@ public class StylePreviewController : ControllerBase
             // Use the Flux Kontext Pro model for quick generation
             var modelId = _configuration["Replicate:FluxKontextProModelId"];
             var apiToken = _configuration["Replicate:ApiToken"];
-            
+
             if (string.IsNullOrEmpty(modelId) || string.IsNullOrEmpty(apiToken))
             {
                 return StatusCode(500, new { error = "Replicate configuration missing" });
@@ -88,7 +89,7 @@ public class StylePreviewController : ControllerBase
             // Create prediction directly
             using var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Add("Authorization", $"Token {apiToken}");
-            
+
             var response = await httpClient.PostAsJsonAsync(
                 "https://api.replicate.com/v1/predictions",
                 new
@@ -114,13 +115,14 @@ public class StylePreviewController : ControllerBase
             var resultJson = await response.Content.ReadAsStringAsync();
             var result = JsonDocument.Parse(resultJson);
             var predictionId = result.RootElement.GetProperty("id").GetString();
-            
-            _logger.LogInformation("Started style preview generation for {StyleName}, prediction ID: {PredictionId}", 
+
+            _logger.LogInformation("Started style preview generation for {StyleName}, prediction ID: {PredictionId}",
                 style.Name, predictionId);
 
-            return Ok(new { 
-                success = true, 
-                message = "Preview generation started", 
+            return Ok(new
+            {
+                success = true,
+                message = "Preview generation started",
                 predictionId = predictionId,
                 estimatedTime = "30-60 seconds"
             });
@@ -147,13 +149,14 @@ public class StylePreviewController : ControllerBase
             {
                 var fileName = $"{style.Name.ToLower().Replace("/", "-").Replace(" ", "-")}-preview.jpg";
                 var filePath = Path.Combine(_previewsPath, fileName);
-                
+
                 if (System.IO.File.Exists(filePath))
                 {
-                    results.Add(new { 
-                        style = style.Name, 
-                        status = "exists", 
-                        path = $"/style-previews/{fileName}" 
+                    results.Add(new
+                    {
+                        style = style.Name,
+                        status = "exists",
+                        path = $"/style-previews/{fileName}"
                     });
                     continue;
                 }
@@ -168,7 +171,7 @@ public class StylePreviewController : ControllerBase
                 {
                     results.Add(new { style = style.Name, status = "error" });
                 }
-                
+
                 // Add delay to respect rate limits
                 await Task.Delay(2000);
             }
@@ -179,10 +182,11 @@ public class StylePreviewController : ControllerBase
             }
         }
 
-        return Ok(new { 
-            success = true, 
-            message = "Preview generation process completed", 
-            results = results 
+        return Ok(new
+        {
+            success = true,
+            message = "Preview generation process completed",
+            results = results
         });
     }
 
@@ -197,7 +201,7 @@ public class StylePreviewController : ControllerBase
             var apiToken = _configuration["Replicate:ApiToken"];
             using var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Add("Authorization", $"Token {apiToken}");
-            
+
             var response = await httpClient.GetAsync($"https://api.replicate.com/v1/predictions/{predictionId}");
             if (!response.IsSuccessStatusCode)
             {
@@ -208,17 +212,17 @@ public class StylePreviewController : ControllerBase
             var result = JsonDocument.Parse(resultJson);
             var root = result.RootElement;
             var status = root.GetProperty("status").GetString();
-            
+
             if (status == "succeeded" && root.TryGetProperty("output", out var output))
             {
                 // Get the style name from input
                 string? styleName = null;
-                if (root.TryGetProperty("input", out var input) && 
+                if (root.TryGetProperty("input", out var input) &&
                     input.TryGetProperty("style_name", out var styleNameElement))
                 {
                     styleName = styleNameElement.GetString();
                 }
-                
+
                 if (string.IsNullOrEmpty(styleName))
                 {
                     return BadRequest(new { error = "Style name not found in prediction" });
@@ -227,27 +231,29 @@ public class StylePreviewController : ControllerBase
                 // Download and save the image
                 var imageUrl = output[0].GetString();
                 var fileName = $"{styleName.ToLower().Replace("/", "-").Replace(" ", "-")}-preview.jpg";
-                
+
                 if (!string.IsNullOrEmpty(imageUrl))
                 {
                     var imageData = await httpClient.GetByteArrayAsync(imageUrl);
                     var filePath = Path.Combine(_previewsPath, fileName);
-                    
+
                     await System.IO.File.WriteAllBytesAsync(filePath, imageData);
-                    
+
                     _logger.LogInformation("Saved style preview for {StyleName} to {FilePath}", styleName, filePath);
                 }
-                
-                return Ok(new { 
-                    success = true, 
+
+                return Ok(new
+                {
+                    success = true,
                     status = "completed",
-                    style = styleName, 
-                    path = $"/style-previews/{fileName}" 
+                    style = styleName,
+                    path = $"/style-previews/{fileName}"
                 });
             }
-            
-            return Ok(new { 
-                success = true, 
+
+            return Ok(new
+            {
+                success = true,
                 status = status,
                 message = $"Prediction is {status}"
             });
@@ -267,7 +273,7 @@ public class StylePreviewController : ControllerBase
     public IActionResult ListStylePreviews()
     {
         var previews = new List<object>();
-        
+
         if (Directory.Exists(_previewsPath))
         {
             var files = Directory.GetFiles(_previewsPath, "*-preview.jpg");
@@ -284,11 +290,12 @@ public class StylePreviewController : ControllerBase
                 });
             }
         }
-        
-        return Ok(new { 
-            success = true, 
+
+        return Ok(new
+        {
+            success = true,
             count = previews.Count,
-            previews = previews 
+            previews = previews
         });
     }
 }

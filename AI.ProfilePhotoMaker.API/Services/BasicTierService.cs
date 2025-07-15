@@ -92,7 +92,7 @@ public class BasicTierService : IBasicTierService
 
         if (totalAvailableCredits < creditCost)
         {
-            _logger.LogWarning("Insufficient credits for user {UserId}. Available: {Available} (Purchased: {Purchased}, Weekly: {Weekly}), Required: {Required} for {Action}", 
+            _logger.LogWarning("Insufficient credits for user {UserId}. Available: {Available} (Purchased: {Purchased}, Weekly: {Weekly}), Required: {Required} for {Action}",
                 userId, totalAvailableCredits, profile.PurchasedCredits, canUseWeeklyCredits ? profile.Credits : 0, creditCost, action);
             return false;
         }
@@ -132,7 +132,7 @@ public class BasicTierService : IBasicTierService
         var remainingCredits = profile.PurchasedCredits + profile.Credits;
         await LogUsageAsync(userId, action, details, creditCost, remainingCredits);
 
-        _logger.LogInformation("User {UserId} consumed {Credits} credits for {Action}. Remaining: {Remaining} ({Purchased} purchased + {Weekly} weekly)", 
+        _logger.LogInformation("User {UserId} consumed {Credits} credits for {Action}. Remaining: {Remaining} ({Purchased} purchased + {Weekly} weekly)",
             userId, creditCost, action, remainingCredits, profile.PurchasedCredits, profile.Credits);
 
         return true;
@@ -149,7 +149,7 @@ public class BasicTierService : IBasicTierService
 
         // Use custom amount instead of config lookup
         var creditCost = customAmount;
-        
+
         // Check if this operation can use weekly credits (styled_generation cannot)
         var canUseWeeklyCredits = CreditCostConfig.CanUseWeeklyCredits(action);
 
@@ -157,7 +157,7 @@ public class BasicTierService : IBasicTierService
 
         if (totalAvailableCredits < creditCost)
         {
-            _logger.LogWarning("Insufficient credits for user {UserId}. Available: {Available} (Purchased: {Purchased}, Weekly: {Weekly}), Required: {Required} for {Action}", 
+            _logger.LogWarning("Insufficient credits for user {UserId}. Available: {Available} (Purchased: {Purchased}, Weekly: {Weekly}), Required: {Required} for {Action}",
                 userId, totalAvailableCredits, profile.PurchasedCredits, canUseWeeklyCredits ? profile.Credits : 0, creditCost, action);
             return false;
         }
@@ -197,7 +197,7 @@ public class BasicTierService : IBasicTierService
         var remainingCredits = profile.PurchasedCredits + profile.Credits;
         await LogUsageAsync(userId, action, details, creditCost, remainingCredits);
 
-        _logger.LogInformation("User {UserId} consumed {Credits} credits for {Action}. Remaining: {Remaining} ({Purchased} purchased + {Weekly} weekly)", 
+        _logger.LogInformation("User {UserId} consumed {Credits} credits for {Action}. Remaining: {Remaining} ({Purchased} purchased + {Weekly} weekly)",
             userId, creditCost, action, remainingCredits, profile.PurchasedCredits, profile.Credits);
 
         return true;
@@ -220,7 +220,7 @@ public class BasicTierService : IBasicTierService
         // Log the credit addition
         await LogUsageAsync(userId, source, $"Added {credits} purchased credits", -credits, profile.PurchasedCredits + profile.Credits);
 
-        _logger.LogInformation("Added {Credits} purchased credits to user {UserId}. New total: {Total} ({Purchased} purchased + {Weekly} weekly)", 
+        _logger.LogInformation("Added {Credits} purchased credits to user {UserId}. New total: {Total} ({Purchased} purchased + {Weekly} weekly)",
             credits, userId, profile.PurchasedCredits + profile.Credits, profile.PurchasedCredits, profile.Credits);
 
         return true;
@@ -250,7 +250,7 @@ public class BasicTierService : IBasicTierService
     public async Task ResetAllExpiredCreditsAsync()
     {
         var cutoffDate = DateTime.UtcNow.AddDays(-DaysInWeek);
-        
+
         var expiredProfiles = await _context.UserProfiles
             .Where(p => p.LastCreditReset < cutoffDate && p.SubscriptionTier == SubscriptionTier.Basic)
             .ToListAsync();

@@ -30,7 +30,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             IUserContextService userContextService,
             IBasicTierService basicTierService,
             ILogger<ImageController> logger,
-            ApplicationDbContext context) 
+            ApplicationDbContext context)
             : base(logger, context)
         {
             _userProfileRepository = userProfileRepository;
@@ -52,7 +52,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     .Where(s => s.IsActive)
                     .Select(s => s.Name)
                     .ToListAsync();
-                
+
                 return SuccessResponse(styles);
             }
             catch (Exception ex)
@@ -101,7 +101,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 var uploadResults = new List<object>();
                 var uploadedImages = new List<ProcessedImage>();
-                
+
                 // Determine upload directory and file naming based on image type
                 string uploadDir;
                 string filePrefix;
@@ -128,8 +128,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     var extension = Path.GetExtension(image.FileName);
                     var fileName = $"{Guid.NewGuid()}_{filePrefix}{extension}";
                     var filePath = Path.Combine(uploadDir, fileName);
-                    var relativeUrl = dto.IsEnhanced 
-                        ? $"/enhanced/{userId}/{fileName}" 
+                    var relativeUrl = dto.IsEnhanced
+                        ? $"/enhanced/{userId}/{fileName}"
                         : $"/uploads/{userId}/{fileName}";
 
                     using (var stream = new FileStream(filePath, FileMode.Create))
@@ -149,8 +149,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                             CreatedAt = DateTime.UtcNow,
                             IsOriginalUpload = true,
                             IsGenerated = false,
-                            };
-                        
+                        };
+
                         // Set scheduled deletion date based on retention policy
                         processedImage.SetScheduledDeletionDate();
 
@@ -158,8 +158,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                         uploadedImages.Add(processedImage);
                     }
 
-                    uploadResults.Add(new { 
-                        FileName = fileName, 
+                    uploadResults.Add(new
+                    {
+                        FileName = fileName,
                         Size = image.Length,
                         Url = GetAbsoluteUrl(relativeUrl)
                     });
@@ -170,7 +171,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 {
                     int creditsNeeded = uploadedImages.Count; // 1 credit per enhanced image
                     bool hasCredits = await _basicTierService.ConsumeCreditsAsync(userId, creditsNeeded, "enhanced_image_upload");
-                    
+
                     if (!hasCredits)
                     {
                         // Cleanup uploaded files if credit deduction failed
@@ -182,8 +183,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                                 System.IO.File.Delete(filePath);
                             }
                         }
-                        
-                        return ErrorResponse("InsufficientCredits", 
+
+                        return ErrorResponse("InsufficientCredits",
                             $"Insufficient credits for enhanced image upload. Required: {creditsNeeded} credit(s). " +
                             "Enhanced images consume weekly credits first, then purchased credits if available.");
                     }
@@ -296,7 +297,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 LogInfo($"Profile not found for user {userId}");
                 return ErrorResponse("ProfileNotFound", "Profile not found", 404);
             }
-            
+
             var image = profile.ProcessedImages.FirstOrDefault(i => i.Id == imageId);
             if (image == null)
             {
@@ -310,10 +311,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 var physicalFileDeleted = false;
                 var imageCountBefore = profile.ProcessedImages.Count;
-                
-                Logger.LogInformation("Starting deletion of image {ImageId} for user {UserId}. Profile has {ImageCount} images", 
+
+                Logger.LogInformation("Starting deletion of image {ImageId} for user {UserId}. Profile has {ImageCount} images",
                     imageId, userId, imageCountBefore);
-                
+
                 // Delete physical file based on image type and storage location
                 if (image.IsGenerated && !string.IsNullOrEmpty(image.ProcessedImageUrl))
                 {
@@ -322,17 +323,17 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                         // Generated images are stored in /generated/{userId}/ directory
                         var fileName = Path.GetFileName(image.ProcessedImageUrl);
                         var generatedFilePath = Path.Combine(_environment.ContentRootPath, "generated", userId, fileName);
-                        
+
                         Logger.LogDebug("Attempting to delete generated image file: {FilePath}", generatedFilePath);
-                        Logger.LogDebug("Processed URL: {ProcessedUrl}, Extracted filename: {FileName}, UserId: {UserId}", 
+                        Logger.LogDebug("Processed URL: {ProcessedUrl}, Extracted filename: {FileName}, UserId: {UserId}",
                             image.ProcessedImageUrl, fileName, userId);
-                        
+
                         // Validate path length and characters
                         if (generatedFilePath.Length > 260)
                         {
                             Logger.LogWarning("Generated file path too long ({Length} chars): {FilePath}", generatedFilePath.Length, generatedFilePath);
                         }
-                        
+
                         if (System.IO.File.Exists(generatedFilePath))
                         {
                             System.IO.File.Delete(generatedFilePath);
@@ -346,7 +347,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     }
                     catch (Exception fileEx)
                     {
-                        Logger.LogError(fileEx, "Error deleting generated image file for image {ImageId}. URL: {ProcessedUrl}, UserId: {UserId}", 
+                        Logger.LogError(fileEx, "Error deleting generated image file for image {ImageId}. URL: {ProcessedUrl}, UserId: {UserId}",
                             imageId, image.ProcessedImageUrl, userId);
                         // Continue with database deletion even if file deletion fails
                     }
@@ -358,17 +359,17 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                         // Original uploads are stored in /uploads/{userId}/ directory
                         var fileName = Path.GetFileName(image.OriginalImageUrl);
                         var uploadFilePath = Path.Combine(_environment.ContentRootPath, "uploads", userId, fileName);
-                        
+
                         Logger.LogDebug("Attempting to delete uploaded image file: {FilePath}", uploadFilePath);
-                        Logger.LogDebug("Original URL: {OriginalUrl}, Extracted filename: {FileName}, UserId: {UserId}", 
+                        Logger.LogDebug("Original URL: {OriginalUrl}, Extracted filename: {FileName}, UserId: {UserId}",
                             image.OriginalImageUrl, fileName, userId);
-                        
+
                         // Validate path length and characters
                         if (uploadFilePath.Length > 260)
                         {
                             Logger.LogWarning("File path too long ({Length} chars): {FilePath}", uploadFilePath.Length, uploadFilePath);
                         }
-                        
+
                         if (System.IO.File.Exists(uploadFilePath))
                         {
                             System.IO.File.Delete(uploadFilePath);
@@ -382,7 +383,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     }
                     catch (Exception fileEx)
                     {
-                        Logger.LogError(fileEx, "Error deleting uploaded image file for image {ImageId}. URL: {OriginalUrl}, UserId: {UserId}", 
+                        Logger.LogError(fileEx, "Error deleting uploaded image file for image {ImageId}. URL: {OriginalUrl}, UserId: {UserId}",
                             imageId, image.OriginalImageUrl, userId);
                         // Continue with database deletion even if file deletion fails
                     }
@@ -391,38 +392,39 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 // Hard delete: Remove from database immediately (no soft delete)
                 Logger.LogInformation("Removing image {ImageId} from profile collection", imageId);
                 var removeResult = profile.ProcessedImages.Remove(image);
-                
+
                 if (!removeResult)
                 {
                     Logger.LogError("Failed to remove image {ImageId} from profile collection - image not found in collection", imageId);
                     return ErrorResponse("RemoveFromCollectionFailed", "Failed to remove image from profile collection", 500);
                 }
-                
+
                 var imageCountAfterRemove = profile.ProcessedImages.Count;
-                Logger.LogInformation("Image removed from collection. Count changed from {Before} to {After}", 
+                Logger.LogInformation("Image removed from collection. Count changed from {Before} to {After}",
                     imageCountBefore, imageCountAfterRemove);
 
                 // Save changes to database with explicit transaction handling
                 Logger.LogInformation("Saving profile changes to database for user {UserId}", userId);
                 await _userProfileRepository.UpdateAsync(profile);
-                
+
                 // Verify deletion worked by querying directly from database context (bypasses EF tracking)
                 var imageStillExists = await Context.ProcessedImages
                     .AsNoTracking()
                     .AnyAsync(i => i.Id == imageId);
-                
+
                 if (imageStillExists)
                 {
                     Logger.LogError("Database deletion verification failed - image {ImageId} still exists after save", imageId);
                     return ErrorResponse("DeletionVerificationFailed", "Image deletion could not be verified in database", 500);
                 }
-                
+
                 Logger.LogInformation("Database deletion verified - image {ImageId} successfully removed", imageId);
 
                 // Invalidate user cache
                 await _userContextService.InvalidateUserCacheAsync(userId);
 
-                return SuccessResponse(new { 
+                return SuccessResponse(new
+                {
                     Message = "Image deleted successfully",
                     PhysicalFileDeleted = physicalFileDeleted,
                     DatabaseVerified = true,
@@ -452,9 +454,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 Logger.LogInformation("Attempting to delete enhanced image file {FileName} for user {UserId}", fileName, userId);
 
                 // Validate fileName to prevent path traversal attacks
-                if (string.IsNullOrEmpty(fileName) || 
-                    fileName.Contains("..") || 
-                    fileName.Contains("/") || 
+                if (string.IsNullOrEmpty(fileName) ||
+                    fileName.Contains("..") ||
+                    fileName.Contains("/") ||
                     fileName.Contains("\\") ||
                     Path.GetDirectoryName(fileName) != "")
                 {
@@ -477,10 +479,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 // Delete the file
                 System.IO.File.Delete(filePath);
-                
+
                 Logger.LogInformation("Successfully deleted enhanced image file {FileName} for user {UserId}", fileName, userId);
 
-                return SuccessResponse(new { 
+                return SuccessResponse(new
+                {
                     fileName = fileName,
                     message = "Enhanced image file deleted successfully"
                 });
@@ -504,7 +507,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
             var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-            
+
             if (!allowedExtensions.Contains(extension))
                 return false;
 
@@ -513,13 +516,13 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 var signatures = new Dictionary<string, List<byte[]>>
                 {
-                    { ".jpg", new List<byte[]> { 
+                    { ".jpg", new List<byte[]> {
                         new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 }, // JPEG JFIF
                         new byte[] { 0xFF, 0xD8, 0xFF, 0xE1 }, // JPEG EXIF
                         new byte[] { 0xFF, 0xD8, 0xFF, 0xE8 }, // JPEG SPIFF
                         new byte[] { 0xFF, 0xD8, 0xFF, 0xDB }  // JPEG raw
                     }},
-                    { ".jpeg", new List<byte[]> { 
+                    { ".jpeg", new List<byte[]> {
                         new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 }, // JPEG JFIF
                         new byte[] { 0xFF, 0xD8, 0xFF, 0xE1 }, // JPEG EXIF
                         new byte[] { 0xFF, 0xD8, 0xFF, 0xE8 }, // JPEG SPIFF
@@ -531,8 +534,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 var headerBytes = reader.ReadBytes(signatures.Values.SelectMany(list => list).Max(sig => sig.Length));
 
-                return signatures.Any(kvp => 
-                    kvp.Key == extension && 
+                return signatures.Any(kvp =>
+                    kvp.Key == extension &&
                     kvp.Value.Any(sig => headerBytes.Take(sig.Length).SequenceEqual(sig)));
             }
         }
@@ -550,7 +553,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 {
                     relativePath = "/" + relativePath;
                 }
-                
+
                 // Priority 1: Use X-Forwarded-Host header (ngrok proxy context)
                 var forwardedHost = Request?.Headers["X-Forwarded-Host"].FirstOrDefault();
                 if (!string.IsNullOrEmpty(forwardedHost))
@@ -560,7 +563,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     Logger.LogDebug("GetAbsoluteUrl using forwarded headers: {Result}", result);
                     return result;
                 }
-                
+
                 // Priority 2: Use configured AppBaseUrl (for development/production)
                 var baseUrl = _configuration?["AppBaseUrl"];
                 if (!string.IsNullOrEmpty(baseUrl))
@@ -569,7 +572,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     Logger.LogDebug("GetAbsoluteUrl using AppBaseUrl: {Result}", result);
                     return result;
                 }
-                
+
                 // Priority 3: Fallback to request host (localhost development)
                 var scheme = Request?.Scheme ?? "https";
                 var host = Request?.Host.ToString() ?? "localhost:5035";
@@ -667,32 +670,33 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 // Get uploaded images count for response message
                 var uploadedImages = profile.ProcessedImages.Where(i => i.Style == ImageConstants.OriginalStyle).ToList();
-                
+
                 var uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
-                
+
                 // Create training ZIP from existing uploaded images (validation handled inside method)
                 var zipPath = CreateTrainingZip(uploadDir, userId);
-                
+
                 if (string.IsNullOrEmpty(zipPath))
                 {
                     // Check specific reasons for failure
                     if (uploadedImages.Count < 10)
                     {
-                        return ErrorResponse("InsufficientImages", 
+                        return ErrorResponse("InsufficientImages",
                             $"Need at least 10 images for training (currently {uploadedImages.Count})");
                     }
-                    
+
                     if (!Directory.Exists(uploadDir))
                     {
-                        return ErrorResponse("NoUploadDirectory", 
+                        return ErrorResponse("NoUploadDirectory",
                             "Upload directory not found. Please upload images first.");
                     }
-                    
-                    return ErrorResponse("ZipCreationFailed", 
+
+                    return ErrorResponse("ZipCreationFailed",
                         "Failed to create training ZIP file. Check that all uploaded images are still available.", 500);
                 }
 
-                return SuccessResponse(new { 
+                return SuccessResponse(new
+                {
                     ZipCreated = true,
                     ZipPath = zipPath,
                     Message = $"Training ZIP created with all {uploadedImages.Count} uploaded original images"
@@ -718,7 +722,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 var userId = GetCurrentUserId()!;
 
                 var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
-                
+
                 if (!Directory.Exists(trainingZipsPath))
                 {
                     return SuccessResponse(new List<object>());
@@ -726,13 +730,13 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 var zipFilePath = Path.Combine(trainingZipsPath, $"{userId}.zip");
                 var userZipFiles = new List<object>();
-                
+
                 if (System.IO.File.Exists(zipFilePath))
                 {
                     var fileInfo = new FileInfo(zipFilePath);
                     var fileName = Path.GetFileName(zipFilePath);
                     var publicUrl = GetAbsoluteUrl($"/training-zips/{fileName}");
-                    
+
                     userZipFiles.Add(new
                     {
                         fileName = fileName,
@@ -765,7 +769,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 var userId = GetCurrentUserId()!;
 
                 var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
-                
+
                 if (!Directory.Exists(trainingZipsPath))
                 {
                     return ErrorResponse("NoZipFiles", "No training ZIP files found.", 404);
@@ -782,7 +786,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 var publicUrl = GetAbsoluteUrl($"/training-zips/{fileName}");
                 var fileInfo = new FileInfo(zipFilePath);
 
-                return SuccessResponse(new { 
+                return SuccessResponse(new
+                {
                     fileName = fileName,
                     publicUrl = publicUrl,
                     createdAt = fileInfo.CreationTime,
@@ -823,12 +828,13 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 }
 
                 System.IO.File.Delete(filePath);
-                
+
                 Logger.LogInformation("Deleted training ZIP file {FileName} for user {UserId}", fileName, userId);
 
-                return SuccessResponse(new { 
+                return SuccessResponse(new
+                {
                     fileName = fileName,
-                    message = "Training ZIP file deleted successfully." 
+                    message = "Training ZIP file deleted successfully."
                 });
             }
             catch (Exception ex)
@@ -851,7 +857,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 var userId = GetCurrentUserId()!;
 
                 var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
-                
+
                 if (!Directory.Exists(trainingZipsPath))
                 {
                     return SuccessResponse(new { deletedCount = 0, message = "No training ZIP files found." });
@@ -874,9 +880,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     }
                 }
 
-                return SuccessResponse(new { 
+                return SuccessResponse(new
+                {
                     deletedCount = deletedCount,
-                    message = $"Deleted {deletedCount} training ZIP files successfully." 
+                    message = $"Deleted {deletedCount} training ZIP files successfully."
                 });
             }
             catch (Exception ex)
@@ -901,7 +908,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 var testPath = "/uploads/test/sample.jpg";
                 var generatedUrl = GetAbsoluteUrl(testPath);
-                
+
                 var debugInfo = new
                 {
                     RequestScheme = Request?.Scheme,
@@ -914,7 +921,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     Environment = _environment.EnvironmentName,
                     Timestamp = DateTime.UtcNow
                 };
-                
+
                 return SuccessResponse(debugInfo);
             }
             catch (Exception ex)
@@ -945,7 +952,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     return ErrorResponse("ProfileNotFound", "Profile not found", 404);
 
                 var allImages = profile.ProcessedImages.OrderByDescending(i => i.CreatedAt).ToList();
-                
+
                 var diagnosticData = new
                 {
                     UserId = userId,
@@ -1001,22 +1008,22 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         {
             if (img.IsOriginalUpload && !img.IsGenerated && img.Style == ImageConstants.OriginalStyle)
                 return "VALID_ORIGINAL_UPLOAD";
-            
+
             if (!img.IsOriginalUpload && img.IsGenerated && img.Style != ImageConstants.OriginalStyle)
                 return "VALID_GENERATED_IMAGE";
-            
+
             if (img.IsOriginalUpload && img.IsGenerated)
                 return "CORRUPTED_BOTH_FLAGS_TRUE";
-            
+
             if (!img.IsOriginalUpload && !img.IsGenerated)
                 return "CORRUPTED_BOTH_FLAGS_FALSE";
-            
+
             if (img.IsOriginalUpload && img.Style != ImageConstants.OriginalStyle)
                 return "SUSPICIOUS_ORIGINAL_WITH_GENERATED_STYLE";
-            
+
             if (img.IsGenerated && img.Style == ImageConstants.OriginalStyle)
                 return "SUSPICIOUS_GENERATED_WITH_ORIGINAL_STYLE";
-            
+
             return "UNKNOWN_CLASSIFICATION";
         }
 
@@ -1026,28 +1033,28 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private List<string> GetImageIssues(ProcessedImage img)
         {
             var issues = new List<string>();
-            
+
             if (img.IsOriginalUpload && img.IsGenerated)
                 issues.Add("Both IsOriginalUpload and IsGenerated are true");
-            
+
             if (!img.IsOriginalUpload && !img.IsGenerated)
                 issues.Add("Both IsOriginalUpload and IsGenerated are false");
-            
+
             if (img.IsOriginalUpload && img.Style != ImageConstants.OriginalStyle)
                 issues.Add($"Original upload has non-original style: {img.Style}");
-            
+
             if (img.IsGenerated && img.Style == ImageConstants.OriginalStyle)
                 issues.Add("Generated image has original style");
-            
+
             if (string.IsNullOrEmpty(img.OriginalImageUrl) && string.IsNullOrEmpty(img.ProcessedImageUrl))
                 issues.Add("No image URLs available");
-            
+
             if (img.IsOriginalUpload && string.IsNullOrEmpty(img.OriginalImageUrl))
                 issues.Add("Original upload missing OriginalImageUrl");
-            
+
             if (img.IsGenerated && string.IsNullOrEmpty(img.ProcessedImageUrl))
                 issues.Add("Generated image missing ProcessedImageUrl");
-            
+
             return issues;
         }
 
@@ -1057,7 +1064,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private bool CheckFileExists(string? imageUrl, string userId)
         {
             if (string.IsNullOrEmpty(imageUrl)) return false;
-            
+
             try
             {
                 // Handle relative URLs
@@ -1067,13 +1074,13 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     var fullPath = Path.Combine(_environment.ContentRootPath, relativePath);
                     return System.IO.File.Exists(fullPath);
                 }
-                
+
                 // Handle full URLs - can't check filesystem for external URLs
                 if (imageUrl.StartsWith("http"))
                 {
                     return false; // Indicate we can't verify external URLs
                 }
-                
+
                 return false;
             }
             catch
@@ -1091,15 +1098,15 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 var profile = Context.UserProfiles.Include(p => p.ProcessedImages)
                     .FirstOrDefault(p => p.UserId == userId);
-                
+
                 if (profile == null) return 0;
-                
-                var images = isOriginalUploads 
+
+                var images = isOriginalUploads
                     ? profile.ProcessedImages.Where(i => i.IsOriginalUpload).ToList()
                     : profile.ProcessedImages.Where(i => i.IsGenerated).ToList();
-                
+
                 int orphanedCount = 0;
-                
+
                 foreach (var img in images)
                 {
                     var urlToCheck = isOriginalUploads ? img.OriginalImageUrl : img.ProcessedImageUrl;
@@ -1108,7 +1115,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                         orphanedCount++;
                     }
                 }
-                
+
                 return orphanedCount;
             }
             catch
@@ -1226,7 +1233,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     TotalImagesChecked = allImages.Count,
                     RepairedCount = repairedCount,
                     RepairedImages = repairedImages,
-                    Message = repairedCount > 0 
+                    Message = repairedCount > 0
                         ? $"Successfully repaired {repairedCount} corrupted image records"
                         : "No corrupted image records found",
                     Timestamp = DateTime.UtcNow
@@ -1307,7 +1314,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     TotalImagesChecked = allImages.Count,
                     CorruptedStylesFound = repairedCount,
                     RepairedStyles = repairedStyles,
-                    Message = repairedCount > 0 
+                    Message = repairedCount > 0
                         ? $"Successfully repaired {repairedCount} corrupted style entries"
                         : "No corrupted style entries found",
                     Timestamp = DateTime.UtcNow
@@ -1410,7 +1417,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     TotalImagesChecked = allImages.Count,
                     OrphanedRecordsRemoved = orphanedImages.Count,
                     RemovedImageDetails = removedDetails,
-                    Message = orphanedImages.Count > 0 
+                    Message = orphanedImages.Count > 0
                         ? $"Successfully removed {orphanedImages.Count} orphaned image records"
                         : "No orphaned image records found",
                     Timestamp = DateTime.UtcNow
@@ -1449,7 +1456,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 // Step 1: Style corruption repair
                 LogInfo("Starting complete repair process - Step 1: Style corruption");
                 var styleRepairResult = await RepairStyleCorruption();
-                
+
                 // Step 2: Orphaned records cleanup  
                 LogInfo("Complete repair process - Step 2: Orphaned records cleanup");
                 var orphanedCleanupResult = await CleanupOrphanedRecords();
@@ -1466,7 +1473,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     Steps = new[]
                     {
                         "✅ Style corruption repair completed",
-                        "✅ Orphaned records cleanup completed", 
+                        "✅ Orphaned records cleanup completed",
                         "✅ UI cache invalidated for fresh data load"
                     },
                     Instructions = new[]
@@ -1494,9 +1501,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             try
             {
                 var repopulationResult = await RepopulateImagesFromFilesystemAsync(dryRun);
-                
-                return SuccessResponse(new 
-                { 
+
+                return SuccessResponse(new
+                {
                     dryRun = dryRun,
                     data = repopulationResult,
                     message = dryRun ? "Dry run completed - no changes made to database" : "Filesystem repopulation completed"
@@ -1514,7 +1521,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             var baseDirectory = _environment.ContentRootPath;
             var uploadsPath = Path.Combine(baseDirectory, "uploads");
             var generatedPath = Path.Combine(baseDirectory, "generated");
-            
+
             var imageExtensions = new[] { ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp" };
             var processedUsers = new List<object>();
             var summary = new RepopulationSummary();
@@ -1535,7 +1542,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 {
                     var guidUserId = Path.GetFileName(userDir);
                     var userProfile = userProfiles.FirstOrDefault(u => u.UserId == guidUserId);
-                    
+
                     if (userProfile == null)
                     {
                         summary.Errors.Add($"No profile found for GUID: {guidUserId}");
@@ -1554,7 +1561,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                         userResult.ImagesProcessed,
                         userResult.Errors
                     });
-                    
+
                     summary.TotalUploads += userResult.ImagesFound;
                     summary.SuccessfulMappings++;
                 }
@@ -1568,7 +1575,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 {
                     var guidUserId = Path.GetFileName(userDir);
                     var userProfile = userProfiles.FirstOrDefault(u => u.UserId == guidUserId);
-                    
+
                     if (userProfile == null)
                     {
                         summary.Errors.Add($"No profile found for GUID: {guidUserId}");
@@ -1577,9 +1584,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     }
 
                     var userResult = await ProcessUserDirectoryAsync(userDir, userProfile.Id, false, imageExtensions, dryRun);
-                    var existingUserIndex = processedUsers.FindIndex(u => 
+                    var existingUserIndex = processedUsers.FindIndex(u =>
                         ((dynamic)u).UserId == guidUserId);
-                    
+
                     if (existingUserIndex >= 0)
                     {
                         // Update existing entry
@@ -1609,7 +1616,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                         });
                         summary.SuccessfulMappings++;
                     }
-                    
+
                     summary.TotalGenerated += userResult.ImagesFound;
                 }
             }
@@ -1660,7 +1667,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                             var fileInfo = new FileInfo(imageFile);
                             var style = ExtractStyleFromFilename(fileName, isUploadDirectory);
                             var userGuid = Path.GetFileName(Path.GetDirectoryName(imageFile));
-                            
+
                             var processedImage = new ProcessedImage
                             {
                                 UserProfileId = userProfileId,
@@ -1669,17 +1676,17 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                                 IsGenerated = !isUploadDirectory,
                                 CreatedAt = fileInfo.CreationTimeUtc,
                                 // Set correct URLs based on image type
-                                OriginalImageUrl = isUploadDirectory 
+                                OriginalImageUrl = isUploadDirectory
                                     ? $"/uploads/{userGuid}/{fileName}"  // Uploaded images: source is uploads
                                     : $"/generated/{userGuid}/{fileName}", // Generated images: source is generated (fallback for filesystem-found files)
-                                ProcessedImageUrl = isUploadDirectory 
+                                ProcessedImageUrl = isUploadDirectory
                                     ? $"/uploads/{userGuid}/{fileName}"   // Uploaded images: processed same as original
                                     : $"/generated/{userGuid}/{fileName}" // Generated images: processed path
                             };
 
                             // Set retention policy
                             processedImage.SetScheduledDeletionDate();
-                            
+
                             imagesToCreate.Add(processedImage);
                             imagesProcessed++;
                         }
@@ -1720,7 +1727,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             // Extract style from generated image filename patterns
             var fileNameLower = fileName.ToLowerInvariant();
-            
+
             if (fileNameLower.Contains("professional"))
                 return "Professional";
             if (fileNameLower.Contains("casual"))
@@ -1735,7 +1742,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return "LinkedIn";
             if (fileNameLower.Contains("corporate"))
                 return "Corporate";
-            
+
             // Default for generated images
             return "Generated";
         }
@@ -1749,9 +1756,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             try
             {
                 var repairResult = await RepairGeneratedImageUrlsAsync(dryRun);
-                
-                return SuccessResponse(new 
-                { 
+
+                return SuccessResponse(new
+                {
                     dryRun = dryRun,
                     data = repairResult,
                     message = dryRun ? "Dry run completed - no changes made to database" : "Generated image URL repair completed"
@@ -1768,12 +1775,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         {
             // Find all generated images with incorrect /uploads/ URLs in OriginalImageUrl
             var corruptedImages = await Context.ProcessedImages
-                .Where(img => img.IsGenerated && 
-                             img.OriginalImageUrl != null && 
+                .Where(img => img.IsGenerated &&
+                             img.OriginalImageUrl != null &&
                              img.OriginalImageUrl.Contains("/uploads/"))
                 .ToListAsync();
 
-            Logger.LogInformation("Found {Count} generated images with incorrect /uploads/ URLs in OriginalImageUrl", 
+            Logger.LogInformation("Found {Count} generated images with incorrect /uploads/ URLs in OriginalImageUrl",
                 corruptedImages.Count);
 
             var repairedCount = 0;
@@ -1784,11 +1791,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 try
                 {
                     var oldUrl = image.OriginalImageUrl;
-                    
+
                     // Strategy: Use ProcessedImageUrl as the source for generated images
                     // This makes sense because for generated images, the "original" and "processed" are the same file
                     var newUrl = image.ProcessedImageUrl ?? oldUrl;
-                    
+
                     // Ensure the new URL doesn't also have /uploads/ (double corruption)
                     if (newUrl?.Contains("/uploads/") == true)
                     {
@@ -1800,14 +1807,14 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     {
                         image.OriginalImageUrl = newUrl;
                         repairedCount++;
-                        
-                        Logger.LogInformation("Repaired image {ImageId}: '{OldUrl}' -> '{NewUrl}'", 
+
+                        Logger.LogInformation("Repaired image {ImageId}: '{OldUrl}' -> '{NewUrl}'",
                             image.Id, oldUrl, newUrl);
                     }
                     else
                     {
                         repairedCount++;
-                        Logger.LogInformation("Would repair image {ImageId}: '{OldUrl}' -> '{NewUrl}'", 
+                        Logger.LogInformation("Would repair image {ImageId}: '{OldUrl}' -> '{NewUrl}'",
                             image.Id, oldUrl, newUrl);
                     }
                 }
@@ -1832,10 +1839,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 Errors = errors,
                 Summary = new
                 {
-                    Message = dryRun 
+                    Message = dryRun
                         ? $"Found {corruptedImages.Count} corrupted URLs, would repair {repairedCount}"
                         : $"Repaired {repairedCount} of {corruptedImages.Count} corrupted URLs",
-                    CorruptedImages = corruptedImages.Take(10).Select(img => new 
+                    CorruptedImages = corruptedImages.Take(10).Select(img => new
                     {
                         img.Id,
                         img.Style,
@@ -1857,9 +1864,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             try
             {
                 var reconcileResult = await ReconcileDatabaseWithFilesystemAsync(dryRun);
-                
-                return SuccessResponse(new 
-                { 
+
+                return SuccessResponse(new
+                {
                     dryRun = dryRun,
                     data = reconcileResult,
                     message = dryRun ? "Dry run completed - no changes made to database" : "Database reconciliation completed"
@@ -1877,7 +1884,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             var baseDirectory = _environment.ContentRootPath;
             var uploadsPath = Path.Combine(baseDirectory, "uploads");
             var generatedPath = Path.Combine(baseDirectory, "generated");
-            
+
             var reconciliationSummary = new ReconciliationSummary();
             var detailedResults = new List<object>();
 
@@ -1890,11 +1897,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             foreach (var userProfile in userProfiles)
             {
-                try 
+                try
                 {
                     var userResult = await ReconcileUserImagesAsync(userProfile, uploadsPath, generatedPath, dryRun);
                     detailedResults.Add(userResult);
-                    
+
                     reconciliationSummary.TotalUsers++;
                     reconciliationSummary.OrphanedRecordsRemoved += userResult.OrphanedRecordsRemoved;
                     reconciliationSummary.MissingRecordsCreated += userResult.MissingRecordsCreated;
@@ -1912,7 +1919,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             if (!dryRun && (reconciliationSummary.OrphanedRecordsRemoved > 0 || reconciliationSummary.MissingRecordsCreated > 0))
             {
                 await Context.SaveChangesAsync();
-                Logger.LogInformation("Database reconciliation completed. Removed {Orphaned} orphaned records, created {Missing} missing records", 
+                Logger.LogInformation("Database reconciliation completed. Removed {Orphaned} orphaned records, created {Missing} missing records",
                     reconciliationSummary.OrphanedRecordsRemoved, reconciliationSummary.MissingRecordsCreated);
             }
 
@@ -1920,7 +1927,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 Summary = reconciliationSummary,
                 DetailedResults = detailedResults.Take(10), // Limit output for performance
-                Message = dryRun 
+                Message = dryRun
                     ? $"Would remove {reconciliationSummary.OrphanedRecordsRemoved} orphaned records and create {reconciliationSummary.MissingRecordsCreated} missing records"
                     : $"Removed {reconciliationSummary.OrphanedRecordsRemoved} orphaned records and created {reconciliationSummary.MissingRecordsCreated} missing records"
             };
@@ -1985,7 +1992,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         private async Task ReconcileUserDirectoryAsync(
-            UserProfile userProfile, string directoryPath, List<ProcessedImage> databaseImages, 
+            UserProfile userProfile, string directoryPath, List<ProcessedImage> databaseImages,
             bool isUploadDirectory, bool dryRun, UserReconciliationResult result)
         {
             var imageExtensions = new[] { ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp" };
@@ -1998,7 +2005,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             // Check for orphaned database records (file doesn't exist)
             foreach (var dbImage in databaseImages)
             {
-                var expectedPath = isUploadDirectory 
+                var expectedPath = isUploadDirectory
                     ? Path.Combine(directoryPath, Path.GetFileName(dbImage.OriginalImageUrl ?? ""))
                     : Path.Combine(directoryPath, Path.GetFileName(dbImage.ProcessedImageUrl ?? ""));
 
@@ -2011,7 +2018,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     }
                     result.OrphanedRecordsRemoved++;
                     result.RemovedImages.Add($"ID {dbImage.Id}: {dbImage.OriginalImageUrl ?? dbImage.ProcessedImageUrl} (file not found)");
-                    
+
                     Logger.LogInformation("Removing orphaned database record for missing file: {FilePath}", expectedPath);
                 }
             }
@@ -2020,7 +2027,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             foreach (var filePath in filesOnDisk)
             {
                 var fileName = Path.GetFileName(filePath);
-                var hasDbRecord = databaseImages.Any(img => 
+                var hasDbRecord = databaseImages.Any(img =>
                     (isUploadDirectory && img.OriginalImageUrl?.EndsWith(fileName) == true) ||
                     (!isUploadDirectory && img.ProcessedImageUrl?.EndsWith(fileName) == true));
 

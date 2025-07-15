@@ -107,7 +107,7 @@ namespace AI.ProfilePhotoMaker.API.Services
             }
 
             var exists = await _context.UserProfiles.AnyAsync(p => p.UserId == userId);
-            
+
             var cacheOptions = new MemoryCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
@@ -162,7 +162,7 @@ namespace AI.ProfilePhotoMaker.API.Services
 
             var hasModels = await _context.ModelCreationRequests
                 .AnyAsync(m => m.UserId == userId && m.Status == ModelCreationStatus.Ready);
-                
+
             var cacheOptions = new MemoryCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),

@@ -13,7 +13,7 @@ public class CreditController : BaseController
     private readonly IBasicTierService _basicTierService;
     private readonly IConfiguration _configuration;
 
-    public CreditController(ICreditPackageService creditPackageService, IBasicTierService basicTierService, IConfiguration configuration, ILogger<CreditController> logger) 
+    public CreditController(ICreditPackageService creditPackageService, IBasicTierService basicTierService, IConfiguration configuration, ILogger<CreditController> logger)
         : base(logger)
     {
         _creditPackageService = creditPackageService;
@@ -33,7 +33,7 @@ public class CreditController : BaseController
 
         var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
         var profile = await _basicTierService.GetUserProfileWithCreditsAsync(userId);
-        
+
         if (profile == null)
             return ErrorResponse("ProfileNotFound", "User profile not found.", 404);
 
@@ -82,7 +82,7 @@ public class CreditController : BaseController
         var userId = GetCurrentUserId()!;
 
         var purchase = await _creditPackageService.PurchaseCreditPackageAsync(userId, dto.PackageId, dto.PaymentTransactionId);
-        
+
         if (purchase == null)
         {
             return ErrorResponse("PurchaseFailed", "Credit package not found or purchase failed.");
@@ -91,14 +91,17 @@ public class CreditController : BaseController
         // Get updated credit status
         var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
 
-        return SuccessResponse(new {
-            purchase = new {
+        return SuccessResponse(new
+        {
+            purchase = new
+            {
                 purchase.Id,
                 purchase.CreditsAwarded,
                 purchase.AmountPaid,
                 purchase.PurchaseDate
             },
-            updatedCredits = new {
+            updatedCredits = new
+            {
                 totalCredits = weeklyCredits + purchasedCredits,
                 weeklyCredits = weeklyCredits,
                 purchasedCredits = purchasedCredits
@@ -117,8 +120,9 @@ public class CreditController : BaseController
         var userId = GetCurrentUserId()!;
 
         var history = await _creditPackageService.GetUserPurchaseHistoryAsync(userId);
-        
-        var historyData = history.Select(p => new {
+
+        var historyData = history.Select(p => new
+        {
             p.Id,
             p.PurchaseDate,
             p.CreditsAwarded,
@@ -146,7 +150,7 @@ public class CreditController : BaseController
         // Get the package to validate it exists
         var package = await _creditPackageService.GetActiveCreditPackagesAsync();
         var selectedPackage = package.FirstOrDefault(p => p.Id == dto.PackageId);
-        
+
         if (selectedPackage == null)
         {
             return ErrorResponse("PackageNotFound", "Credit package not found or inactive.");
@@ -154,8 +158,9 @@ public class CreditController : BaseController
 
         // Return mock payment intent for development
         var mockClientSecret = $"pi_mock_{Guid.NewGuid():N}_secret_{Guid.NewGuid():N}";
-        
-        return SuccessResponse(new {
+
+        return SuccessResponse(new
+        {
             clientSecret = mockClientSecret,
             packageId = dto.PackageId,
             amount = selectedPackage.Price,

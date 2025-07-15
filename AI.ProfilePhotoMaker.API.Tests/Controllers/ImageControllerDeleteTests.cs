@@ -82,13 +82,13 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
                 new Claim(ClaimTypes.NameIdentifier, _testUserId)
             }, "mock"));
 
-            var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext 
-            { 
-                User = claimsPrincipal 
+            var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext
+            {
+                User = claimsPrincipal
             };
             httpContext.Request.Scheme = "https";
             httpContext.Request.Host = new Microsoft.AspNetCore.Http.HostString("localhost:5000");
-            
+
             _controller.ControllerContext = new ControllerContext
             {
                 HttpContext = httpContext
@@ -97,10 +97,10 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
 
         private UserProfile SetupMockUserProfile()
         {
-            var userProfile = new UserProfile 
-            { 
-                Id = 1, 
-                UserId = _testUserId, 
+            var userProfile = new UserProfile
+            {
+                Id = 1,
+                UserId = _testUserId,
                 FirstName = "Test",
                 LastName = "User",
                 ProcessedImages = new List<ProcessedImage>()
@@ -258,13 +258,13 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
         public async Task DeleteImage_WithUnauthorizedUser_ReturnsUnauthorized()
         {
             // Arrange
-            var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext 
-            { 
+            var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext
+            {
                 User = new ClaimsPrincipal(new ClaimsIdentity()) // No claims
             };
             httpContext.Request.Scheme = "https";
             httpContext.Request.Host = new Microsoft.AspNetCore.Http.HostString("localhost:5000");
-            
+
             _controller.ControllerContext = new ControllerContext
             {
                 HttpContext = httpContext
@@ -394,7 +394,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
         public void Dispose()
         {
             _context?.Dispose();
-            
+
             // Clean up test directories
             if (Directory.Exists(_testContentRoot))
             {

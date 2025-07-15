@@ -57,7 +57,7 @@ public class ModelExpirationBackgroundService : BackgroundService
             // TODO: Implement model cleanup for unified credit system
             // Models should still expire after 7 days for privacy
             // This can be implemented directly via database context or through a dedicated service
-            
+
             _logger.LogInformation("Starting expired model cleanup check");
             _logger.LogInformation("Model cleanup temporarily disabled - needs implementation for unified credit system");
             _logger.LogInformation("Completed expired model cleanup check");

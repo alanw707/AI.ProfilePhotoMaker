@@ -17,14 +17,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<UserStyleSelection> UserStyleSelections { get; set; }
     public virtual DbSet<ModelCreationRequest> ModelCreationRequests { get; set; }
     public virtual DbSet<UsageLog> UsageLogs { get; set; }
-    
+
     // Subscription management
     public virtual DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
     public virtual DbSet<Subscription> Subscriptions { get; set; }
     public virtual DbSet<PaymentTransaction> PaymentTransactions { get; set; }
-    
+
     // Premium Package management removed - replaced by unified CreditPackage system
-    
+
     // Credit Package management (new unified system)
     public virtual DbSet<CreditPackage> CreditPackages { get; set; }
     public virtual DbSet<CreditPurchase> CreditPurchases { get; set; }

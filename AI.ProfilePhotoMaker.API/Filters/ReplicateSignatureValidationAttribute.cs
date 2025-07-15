@@ -59,7 +59,7 @@ public class ReplicateSignatureValidationAttribute : Attribute, IAsyncAuthorizat
             // 2. Parse signatures from webhook-signature header (format: "v1,base64sig1 v1,base64sig2")
             var signatures = new List<string>();
             var signatureParts = webhookSignature.Split(' ');
-            
+
             foreach (var part in signatureParts)
             {
                 if (part.StartsWith("v1,"))
@@ -110,7 +110,7 @@ public class ReplicateSignatureValidationAttribute : Attribute, IAsyncAuthorizat
             if (secret.StartsWith("whsec_"))
             {
                 var base64Secret = secret.Substring(6); // Remove "whsec_" prefix
-                
+
                 try
                 {
                     secretKeyBytes = Convert.FromBase64String(base64Secret);

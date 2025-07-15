@@ -75,19 +75,19 @@ public abstract class BaseService<T> where T : class
     /// Executes a database operation within a transaction with proper error handling
     /// </summary>
     protected async Task<TResult> ExecuteInTransactionAsync<TResult>(
-        Func<Task<TResult>> operation, 
+        Func<Task<TResult>> operation,
         string operationName = "transaction operation")
     {
         using var transaction = await Context.Database.BeginTransactionAsync();
         try
         {
             // Transaction start logging removed for production readiness
-            
+
             var result = await operation();
-            
+
             await transaction.CommitAsync();
             // Transaction completion logging removed for production readiness
-            
+
             return result;
         }
         catch (Exception ex)
@@ -135,7 +135,7 @@ public abstract class BaseService<T> where T : class
         {
             if (additionalContext != null)
             {
-                Logger.LogInformation("Starting {Operation} for user {UserId}: {@Context}", 
+                Logger.LogInformation("Starting {Operation} for user {UserId}: {@Context}",
                     operation, userId, additionalContext);
             }
             else
@@ -158,7 +158,7 @@ public abstract class BaseService<T> where T : class
         {
             if (result != null)
             {
-                Logger.LogInformation("Completed {Operation} for user {UserId}: {@Result}", 
+                Logger.LogInformation("Completed {Operation} for user {UserId}: {@Result}",
                     operation, userId, result);
             }
             else

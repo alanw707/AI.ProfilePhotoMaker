@@ -41,7 +41,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
                 .ForEach(b => _fixture.Behaviors.Remove(b));
             _fixture.Behaviors.Add(new OmitOnRecursionBehavior());
             _mockUserProfileRepository = new Mock<IUserProfileRepository>();
-            
+
             // Mock ApplicationDbContext
             // Mock ApplicationDbContext
             // Instead of trying to instantiate with options, we'll mock its DbSet properties.
@@ -448,7 +448,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             var returnedStyles = (IEnumerable<string>)okResult.Value!;
             returnedStyles.Should().BeEmpty();
         }
-    // Helper method to mock DbSet for in-memory collections
+        // Helper method to mock DbSet for in-memory collections
         private static Mock<DbSet<T>> GetMockDbSet<T>(List<T> list) where T : class
         {
             var queryable = list.AsQueryable();
