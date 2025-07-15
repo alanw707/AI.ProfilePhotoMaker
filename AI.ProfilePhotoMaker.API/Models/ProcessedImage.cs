@@ -3,11 +3,11 @@
 public class ProcessedImage
 {
     public int Id { get; set; }
-    public string OriginalImageUrl { get; set; }
-    public string ProcessedImageUrl { get; set; }
-    public string Style { get; set; }
+    public string OriginalImageUrl { get; set; } = string.Empty;
+    public string ProcessedImageUrl { get; set; } = string.Empty;
+    public string Style { get; set; } = string.Empty;
     public int UserProfileId { get; set; }
-    public UserProfile UserProfile { get; set; }
+    public UserProfile UserProfile { get; set; } = null!;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // New fields to distinguish image types

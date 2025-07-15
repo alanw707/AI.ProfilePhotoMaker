@@ -49,7 +49,7 @@ public class ModelExpirationBackgroundService : BackgroundService
         _logger.LogInformation("Model Expiration Background Service stopped");
     }
 
-    private async Task ProcessExpiredModels()
+    private Task ProcessExpiredModels()
     {
         try
         {
@@ -66,6 +66,8 @@ public class ModelExpirationBackgroundService : BackgroundService
         {
             _logger.LogError(ex, "Failed to process expired models");
         }
+        
+        return Task.CompletedTask;
     }
 
     public override Task StopAsync(CancellationToken cancellationToken)

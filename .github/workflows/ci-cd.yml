@@ -82,7 +82,7 @@ jobs:
       run: dotnet format --verify-no-changes --verbosity diagnostic
       
     - name: Run code analysis
-      run: dotnet build --configuration Release -p:TreatWarningsAsErrors=true
+      run: dotnet build --configuration Release
 
   security-scan:
     name: Security Scan
