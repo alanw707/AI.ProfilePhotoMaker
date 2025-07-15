@@ -213,7 +213,7 @@ public class ProfileController : ControllerBase
             };
 
             var processedImageUrl = await _replicateApiClient.GenerateImagesAsync(dto);
-            
+
             return Ok(new { ImageUrl = processedImageUrl, Message = "Image generation started" });
         }
         catch (Exception ex)
@@ -280,7 +280,7 @@ public class ProfileController : ControllerBase
 
 
 
-    
+
 
     /// <summary>
     /// Get user data statistics for account settings
@@ -300,8 +300,8 @@ public class ProfileController : ControllerBase
 
             var inputPhotos = profile.ProcessedImages.Where(i => i.Style == ImageConstants.OriginalStyle).Count();
             var generatedPhotos = profile.ProcessedImages.Where(i => i.IsGenerated).Count();
-            var enhancedPhotos = profile.ProcessedImages.Where(i => 
-                (i.Style == "Enhanced" || i.Style == "Background Remover" || i.Style == "Social Media" || i.Style == "Cartoon") 
+            var enhancedPhotos = profile.ProcessedImages.Where(i =>
+                (i.Style == "Enhanced" || i.Style == "Background Remover" || i.Style == "Social Media" || i.Style == "Cartoon")
                ).Count();
 
             // Calculate total data size (approximate)
@@ -384,14 +384,15 @@ public class ProfileController : ControllerBase
 
             _logger.LogInformation("Deleted {DeletedCount} input photos for user {UserId}", deletedCount, userId);
 
-            return Ok(new 
-            { 
-                success = true, 
-                data = new { 
-                    deletedCount = deletedCount, 
-                    message = $"Successfully deleted {deletedCount} input photos" 
-                }, 
-                error = (object?)null 
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
+                    deletedCount = deletedCount,
+                    message = $"Successfully deleted {deletedCount} input photos"
+                },
+                error = (object?)null
             });
         }
         catch (Exception ex)
@@ -418,8 +419,8 @@ public class ProfileController : ControllerBase
                 return NotFound("Profile not found");
 
             // Check ModelCreationRequest table for model availability
-        var hasModel = await GetLatestTrainedModelAsync(userId!) != null;
-        if (!hasModel)
+            var hasModel = await GetLatestTrainedModelAsync(userId!) != null;
+            if (!hasModel)
             {
                 return BadRequest(new { success = false, error = new { code = "NoModel", message = "No trained model found to delete." } });
             }
@@ -429,7 +430,7 @@ public class ProfileController : ControllerBase
             if (trainedModel != null && !string.IsNullOrEmpty(trainedModel.ReplicateModelId))
             {
                 var modelId = trainedModel.ReplicateModelId;
-                
+
                 // Try to delete model from Replicate (best effort)
                 try
                 {
@@ -440,7 +441,7 @@ public class ProfileController : ControllerBase
                 {
                     _logger.LogWarning(replicateEx, "Failed to delete model {ModelId} from Replicate for user {UserId}, continuing with database cleanup", modelId, userId);
                 }
-                
+
                 // Mark model as deleted in ModelCreationRequest
                 trainedModel.Status = ModelCreationStatus.Failed;
                 trainedModel.ErrorMessage = "Model deleted by user";
@@ -473,13 +474,14 @@ public class ProfileController : ControllerBase
 
             _logger.LogInformation("Successfully deleted AI model and related files for user {UserId}", userId);
 
-            return Ok(new 
-            { 
-                success = true, 
-                data = new { 
-                    message = "AI model and training files have been successfully deleted" 
-                }, 
-                error = (object?)null 
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
+                    message = "AI model and training files have been successfully deleted"
+                },
+                error = (object?)null
             });
         }
         catch (Exception ex)
@@ -519,7 +521,7 @@ public class ProfileController : ControllerBase
             var filesDeleted = 0;
 
             var uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
-            
+
             foreach (var photo in allPhotos)
             {
                 try
@@ -565,8 +567,8 @@ public class ProfileController : ControllerBase
             // Delete AI model
             var modelDeleted = false;
             // Check ModelCreationRequest table for model availability
-        var hasModel = await GetLatestTrainedModelAsync(userId!) != null;
-        if (hasModel)
+            var hasModel = await GetLatestTrainedModelAsync(userId!) != null;
+            if (hasModel)
             {
                 try
                 {
@@ -628,14 +630,15 @@ public class ProfileController : ControllerBase
 
             _logger.LogInformation("Deleted all data for user {UserId}: {@Summary}", userId, summary);
 
-            return Ok(new 
-            { 
-                success = true, 
-                data = new { 
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
                     message = "All user data has been successfully deleted",
                     summary = summary
-                }, 
-                error = (object?)null 
+                },
+                error = (object?)null
             });
         }
         catch (Exception ex)
@@ -677,13 +680,14 @@ public class ProfileController : ControllerBase
 
             _logger.LogInformation("Successfully deleted entire account for user {UserId}", userId);
 
-            return Ok(new 
-            { 
-                success = true, 
-                data = new { 
-                    message = "Account has been successfully deleted" 
-                }, 
-                error = (object?)null 
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
+                    message = "Account has been successfully deleted"
+                },
+                error = (object?)null
             });
         }
         catch (Exception ex)
@@ -763,13 +767,13 @@ public class ProfileController : ControllerBase
                 }
             };
 
-            var json = System.Text.Json.JsonSerializer.Serialize(exportData, new System.Text.Json.JsonSerializerOptions 
-            { 
-                WriteIndented = true 
+            var json = System.Text.Json.JsonSerializer.Serialize(exportData, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
             });
 
             var fileName = $"profile-data-export-{userId}-{DateTime.UtcNow:yyyyMMddHHmmss}.json";
-            
+
             return File(System.Text.Encoding.UTF8.GetBytes(json), "application/json", fileName);
         }
         catch (Exception ex)
@@ -787,7 +791,7 @@ public class ProfileController : ControllerBase
         // Delete all photos (mark as deleted and remove files)
         var allPhotos = profile.ProcessedImages.Where(i => true).ToList();
         var uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
-        
+
         foreach (var photo in allPhotos)
         {
             try

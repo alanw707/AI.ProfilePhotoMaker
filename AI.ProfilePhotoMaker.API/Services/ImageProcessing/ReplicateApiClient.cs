@@ -34,9 +34,9 @@ public class ReplicateApiClient : IReplicateApiClient
         // Configure HTTP client
         _httpClient.BaseAddress = new Uri("https://api.replicate.com/v1/");
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        
+
         // Add API token from configuration
-        string apiToken = _configuration["Replicate:ApiToken"] 
+        string apiToken = _configuration["Replicate:ApiToken"]
             ?? throw new InvalidOperationException("Replicate API token not configured");
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Token", apiToken);
     }
@@ -73,7 +73,7 @@ public class ReplicateApiClient : IReplicateApiClient
 
             var responseJson = await response.Content.ReadAsStringAsync();
             _logger.LogInformation("Model creation response: {Response}", responseJson);
-            
+
             var modelResult = JsonSerializer.Deserialize<JsonElement>(
                 responseJson,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
@@ -148,10 +148,10 @@ public class ReplicateApiClient : IReplicateApiClient
             var modelName = $"user-{userId}-{DateTime.UtcNow:yyyyMMddHHmmss}";
             _logger.LogInformation("Creating model {ModelName} for user {UserId}", modelName, userId);
             var destination = await CreateModelAsync(userId, modelName, $"Custom trained model for user {userId}");
-            
+
             _logger.LogInformation("Model created successfully: {Destination}", destination);
             _logger.LogInformation("Using destination for training: {Destination}", destination);
-            
+
             // Create a model creation request record to track the training
             var modelCreationRequest = new ModelCreationRequest
             {
@@ -167,7 +167,7 @@ public class ReplicateApiClient : IReplicateApiClient
             _context.ModelCreationRequests.Add(modelCreationRequest);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Created model creation request {RequestId} for user {UserId}", 
+            _logger.LogInformation("Created model creation request {RequestId} for user {UserId}",
                 modelCreationRequest.Id, userId);
 
             var trainingRequest = new
@@ -198,21 +198,21 @@ public class ReplicateApiClient : IReplicateApiClient
 
             var responseJson = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<ReplicateTrainingResult>(
-                responseJson, 
+                responseJson,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             if (result == null)
             {
                 throw new Exception("Failed to deserialize training response");
             }
-            
+
             // Update the model creation request with the training ID
             modelCreationRequest.PendingTrainingRequestId = result.Id;
             modelCreationRequest.Status = ModelCreationStatus.Creating;
             _context.ModelCreationRequests.Update(modelCreationRequest);
             await _context.SaveChangesAsync();
-            
-            _logger.LogInformation("Updated model creation request {RequestId} with training ID {TrainingId}", 
+
+            _logger.LogInformation("Updated model creation request {RequestId} with training ID {TrainingId}",
                 modelCreationRequest.Id, result.Id);
 
             return result;
@@ -259,7 +259,7 @@ public class ReplicateApiClient : IReplicateApiClient
 
             var responseJson = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<ReplicateTrainingResult>(
-                responseJson, 
+                responseJson,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             if (result == null)
@@ -295,8 +295,8 @@ public class ReplicateApiClient : IReplicateApiClient
     /// <param name="userInfo">Optional user info for style generation</param>
     /// <returns>The prediction ID and status</returns>
     public async Task<ReplicatePredictionResult> GenerateImagesAsync(
-        string trainedModelVersion, 
-        string userId, 
+        string trainedModelVersion,
+        string userId,
         string style,
         UserInfo? userInfo = null,
         int numOutputs = 2)
@@ -307,17 +307,17 @@ public class ReplicateApiClient : IReplicateApiClient
             var stylePrompts = await GetStylePromptsFromDatabase(style);
             string stylePrompt = CreateFluxStylePrompt(stylePrompts.PromptTemplate, userInfo, userId);
             string negativePrompt = stylePrompts.NegativePromptTemplate;
-            
+
             // Log the model version being used for generation
-            _logger.LogInformation("Generating images with model version: {ModelVersion} for user: {UserId}, style: {Style}", 
+            _logger.LogInformation("Generating images with model version: {ModelVersion} for user: {UserId}, style: {Style}",
                 trainedModelVersion, userId, style);
-            
+
             // Debug logging for prompt generation
             _logger.LogInformation("Style template from DB: {Template}", stylePrompts.PromptTemplate);
-            _logger.LogInformation("UserInfo passed: Gender={Gender}, Ethnicity={Ethnicity}", 
+            _logger.LogInformation("UserInfo passed: Gender={Gender}, Ethnicity={Ethnicity}",
                 userInfo?.Gender ?? "NULL", userInfo?.Ethnicity ?? "NULL");
             _logger.LogInformation("Generated prompt: {Prompt}", stylePrompt);
-            
+
             var predictionRequest = new
             {
                 version = trainedModelVersion,
@@ -340,10 +340,10 @@ public class ReplicateApiClient : IReplicateApiClient
             };
 
             var content = new StringContent(
-                JsonSerializer.Serialize(predictionRequest), 
-                Encoding.UTF8, 
+                JsonSerializer.Serialize(predictionRequest),
+                Encoding.UTF8,
                 "application/json");
-                
+
             var response = await _httpClient.PostAsync("predictions", content);
 
             if (!response.IsSuccessStatusCode)
@@ -355,7 +355,7 @@ public class ReplicateApiClient : IReplicateApiClient
 
             var responseJson = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<ReplicatePredictionResult>(
-                responseJson, 
+                responseJson,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             if (result == null)
@@ -407,7 +407,7 @@ public class ReplicateApiClient : IReplicateApiClient
 
             var responseJson = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<ReplicatePredictionResult>(
-                responseJson, 
+                responseJson,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             if (result == null)
@@ -481,10 +481,10 @@ public class ReplicateApiClient : IReplicateApiClient
         // Replace all placeholders in the template
         string gender = userInfo?.Gender?.ToLower() ?? "person";
         string ethnicity = userInfo?.Ethnicity?.ToLower() ?? "";
-        
+
         // Handle gender + ethnicity combination properly
         string genderEthnicityCombo = !string.IsNullOrEmpty(ethnicity) ? $"{gender} {ethnicity}" : gender;
-        
+
         string result = promptTemplate
             .Replace("{trigger}", triggerWord)
             .Replace("{subject}", subject)
@@ -511,10 +511,10 @@ public class ReplicateApiClient : IReplicateApiClient
         // Replace all placeholders in the template
         string gender = userInfo?.Gender?.ToLower() ?? "person";
         string ethnicity = userInfo?.Ethnicity?.ToLower() ?? "";
-        
+
         // Handle gender + ethnicity combination properly
         string genderEthnicityCombo = !string.IsNullOrEmpty(ethnicity) ? $"{gender} {ethnicity}" : gender;
-        
+
         string result = promptTemplate
             .Replace("{subject}", subject)
             .Replace("{gender} {ethnicity}", genderEthnicityCombo)
@@ -548,8 +548,8 @@ public class ReplicateApiClient : IReplicateApiClient
         };
 
         // Add ethnicity if provided
-        string ethnicityDesc = !string.IsNullOrEmpty(userInfo.Ethnicity) 
-            ? $"{userInfo.Ethnicity} {genderDesc}" 
+        string ethnicityDesc = !string.IsNullOrEmpty(userInfo.Ethnicity)
+            ? $"{userInfo.Ethnicity} {genderDesc}"
             : genderDesc;
 
         // Add any additional attributes
@@ -699,14 +699,14 @@ public class ReplicateApiClient : IReplicateApiClient
         {
             // Use the base FLUX model for basic tier generations
             string baseFluxModel = _configuration["Replicate:FluxGenerationModelId"] ?? "black-forest-labs/flux-dev";
-            
+
             // Create a casual style prompt for basic tier
             var casualStylePrompts = await GetStylePromptsFromDatabase("casual");
-            
+
             // If casual style not found, use a hardcoded casual prompt
             string stylePrompt;
             string negativePrompt;
-            
+
             if (casualStylePrompts.PromptTemplate != "")
             {
                 // For basic tier, no trigger word needed (no custom trained model)
@@ -742,10 +742,10 @@ public class ReplicateApiClient : IReplicateApiClient
             };
 
             var content = new StringContent(
-                JsonSerializer.Serialize(predictionRequest), 
-                Encoding.UTF8, 
+                JsonSerializer.Serialize(predictionRequest),
+                Encoding.UTF8,
                 "application/json");
-                
+
             var response = await _httpClient.PostAsync("predictions", content);
 
             if (!response.IsSuccessStatusCode)
@@ -757,7 +757,7 @@ public class ReplicateApiClient : IReplicateApiClient
 
             var responseJson = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<ReplicatePredictionResult>(
-                responseJson, 
+                responseJson,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             if (result == null)
@@ -804,10 +804,10 @@ public class ReplicateApiClient : IReplicateApiClient
         {
             // Use Flux Kontext Pro for text-based photo enhancement
             string kontextProModel = _configuration["Replicate:FluxKontextProModelId"] ?? "black-forest-labs/flux-kontext-pro";
-            
+
             // Create enhancement prompt based on type
             string enhancementPrompt = GetEnhancementPrompt(enhancementType);
-            
+
             var predictionRequest = new
             {
                 version = kontextProModel,
@@ -829,10 +829,10 @@ public class ReplicateApiClient : IReplicateApiClient
             };
 
             var content = new StringContent(
-                JsonSerializer.Serialize(predictionRequest), 
-                Encoding.UTF8, 
+                JsonSerializer.Serialize(predictionRequest),
+                Encoding.UTF8,
                 "application/json");
-                
+
             var response = await _httpClient.PostAsync("predictions", content);
 
             if (!response.IsSuccessStatusCode)
@@ -844,7 +844,7 @@ public class ReplicateApiClient : IReplicateApiClient
 
             var responseJson = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<ReplicatePredictionResult>(
-                responseJson, 
+                responseJson,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             if (result == null)
@@ -852,7 +852,7 @@ public class ReplicateApiClient : IReplicateApiClient
                 throw new Exception("Failed to deserialize Kontext Pro enhancement response");
             }
 
-            _logger.LogInformation("Kontext Pro enhancement started for user {UserId} with prediction ID {PredictionId}, type: {EnhancementType}", 
+            _logger.LogInformation("Kontext Pro enhancement started for user {UserId} with prediction ID {PredictionId}, type: {EnhancementType}",
                 userId, result.Id, enhancementType);
             return result;
         }
@@ -921,7 +921,7 @@ public class ReplicateApiClient : IReplicateApiClient
 
         var random = new Random();
         var selectedBackground = backgroundOptions[random.Next(backgroundOptions.Length)];
-        
+
         return $"Transform this photo for social media with enhanced lighting, vibrant colors, and Instagram-ready styling. Replace the original background placing the person {selectedBackground}. Keep the person optimized with perfect skin tone, sharp details, and appealing aesthetics while creating an exciting travel destination backdrop perfect for social media sharing";
     }
 
@@ -935,7 +935,7 @@ public class ReplicateApiClient : IReplicateApiClient
         try
         {
             var response = await _httpClient.GetAsync($"models/{modelId}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 _logger.LogInformation("Model {ModelId} exists and is accessible", modelId);
@@ -969,9 +969,9 @@ public class ReplicateApiClient : IReplicateApiClient
         try
         {
             _logger.LogInformation("Attempting to delete model {ModelId} from Replicate", modelId);
-            
+
             var response = await _httpClient.DeleteAsync($"models/{modelId}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 _logger.LogInformation("Successfully deleted model {ModelId} from Replicate", modelId);
@@ -990,7 +990,7 @@ public class ReplicateApiClient : IReplicateApiClient
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Failed to delete model {ModelId}: {StatusCode}, {ErrorContent}", 
+                _logger.LogError("Failed to delete model {ModelId}: {StatusCode}, {ErrorContent}",
                     modelId, response.StatusCode, errorContent);
                 return false;
             }
@@ -1026,10 +1026,10 @@ public class ReplicateApiClient : IReplicateApiClient
             };
 
             var content = new StringContent(
-                JsonSerializer.Serialize(predictionRequest), 
-                Encoding.UTF8, 
+                JsonSerializer.Serialize(predictionRequest),
+                Encoding.UTF8,
                 "application/json");
-                
+
             var response = await _httpClient.PostAsync("predictions", content);
 
             if (!response.IsSuccessStatusCode)
@@ -1041,7 +1041,7 @@ public class ReplicateApiClient : IReplicateApiClient
 
             var responseJson = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<ReplicatePredictionResult>(
-                responseJson, 
+                responseJson,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             if (result == null)
@@ -1084,30 +1084,30 @@ public class ReplicateApiClient : IReplicateApiClient
         try
         {
             _logger.LogInformation("Searching for models matching pattern 'user-{UserId}-*'", userId);
-            
+
             // Get the owner name from configuration
             string owner = _configuration["Replicate:OwnerName"] ?? "alanw707"; // Default to known owner
             _logger.LogInformation("Using owner: {Owner} for model search", owner);
-            
+
             // Call Replicate API to list models for the owner
             string requestUrl = $"models?cursor=&owner={owner}";
             _logger.LogInformation("Making Replicate API request: {RequestUrl}", requestUrl);
-            
+
             var response = await _httpClient.GetAsync(requestUrl);
-            
+
             _logger.LogInformation("Replicate API response status: {StatusCode}", response.StatusCode);
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 string errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Failed to list models from Replicate API: {StatusCode}, Content: {ErrorContent}", 
+                _logger.LogWarning("Failed to list models from Replicate API: {StatusCode}, Content: {ErrorContent}",
                                  response.StatusCode, errorContent);
                 return new List<ReplicateModelInfo>();
             }
 
             var jsonResponse = await response.Content.ReadAsStringAsync();
             _logger.LogInformation("Replicate API raw response: {JsonResponse}", jsonResponse);
-            
+
             var apiResponse = JsonSerializer.Deserialize<ReplicateModelsResponse>(jsonResponse, new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
@@ -1124,13 +1124,13 @@ public class ReplicateApiClient : IReplicateApiClient
             // Filter models matching the user pattern
             string userPattern = $"user-{userId}";
             _logger.LogInformation("Filtering models with pattern: {UserPattern}", userPattern);
-            
+
             // Log all model names for debugging
             foreach (var model in apiResponse.Results)
             {
                 _logger.LogInformation("Available model: {ModelName} (Owner: {Owner})", model.Name, model.Owner);
             }
-            
+
             var userModels = apiResponse.Results
                 .Where(model => model.Name.StartsWith(userPattern, StringComparison.OrdinalIgnoreCase))
                 .Select(model => new ReplicateModelInfo
@@ -1149,16 +1149,16 @@ public class ReplicateApiClient : IReplicateApiClient
                 .ToList();
 
             _logger.LogInformation("Found {Count} models matching pattern 'user-{UserId}-*'", userModels.Count, userId);
-            
+
             if (userModels.Count > 0)
             {
                 foreach (var userModel in userModels)
                 {
-                    _logger.LogInformation("Matched user model: {ModelName} (Updated: {UpdatedAt})", 
+                    _logger.LogInformation("Matched user model: {ModelName} (Updated: {UpdatedAt})",
                                          userModel.Name, userModel.UpdatedAt);
                 }
             }
-            
+
             return userModels;
         }
         catch (Exception ex)
@@ -1195,16 +1195,16 @@ public class ReplicateApiClient : IReplicateApiClient
 
             // Get model details from Replicate API
             var response = await _httpClient.GetAsync($"models/{owner}/{modelName}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var jsonResponse = await response.Content.ReadAsStringAsync();
                 _logger.LogInformation("Got model details for {ModelId}", modelId);
-                
+
                 // Parse the response to extract latest version ID
                 using var document = JsonDocument.Parse(jsonResponse);
                 var root = document.RootElement;
-                
+
                 if (root.TryGetProperty("latest_version", out var latestVersionElement) &&
                     latestVersionElement.TryGetProperty("id", out var versionIdElement))
                 {
@@ -1261,12 +1261,12 @@ public class ReplicateApiClient : IReplicateApiClient
 
             // Try to get the model
             var response = await _httpClient.GetAsync($"models/{owner}/{modelName}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var jsonResponse = await response.Content.ReadAsStringAsync();
                 var modelData = JsonSerializer.Deserialize<JsonElement>(jsonResponse);
-                
+
                 // Check if model has a latest version (required for predictions)
                 if (modelData.TryGetProperty("latest_version", out var latestVersion))
                 {
@@ -1274,7 +1274,7 @@ public class ReplicateApiClient : IReplicateApiClient
                     _logger.LogInformation("Model {ModelId} is available with version {VersionId}", modelId, versionId);
                     return !string.IsNullOrEmpty(versionId);
                 }
-                
+
                 _logger.LogWarning("Model {ModelId} exists but has no latest version", modelId);
                 return false;
             }

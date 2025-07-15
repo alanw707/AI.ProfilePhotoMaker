@@ -12,7 +12,7 @@ public class CreditPackageService : ICreditPackageService
     private readonly ILogger<CreditPackageService> _logger;
 
     public CreditPackageService(
-        ApplicationDbContext context, 
+        ApplicationDbContext context,
         IBasicTierService basicTierService,
         ILogger<CreditPackageService> logger)
     {
@@ -70,14 +70,14 @@ public class CreditPackageService : ICreditPackageService
 
         // Add the purchased credits to the user's account
         var creditsAdded = await _basicTierService.AddPurchasedCreditsAsync(userId, package.TotalCredits, "credit_package_purchase");
-        
+
         if (!creditsAdded)
         {
             _logger.LogError("Failed to add purchased credits to user {UserId} after successful purchase {PurchaseId}", userId, purchase.Id);
             // Consider rolling back the purchase or marking it as failed
         }
 
-        _logger.LogInformation("User {UserId} purchased credit package {PackageName} for {Amount}. Credits awarded: {Credits}", 
+        _logger.LogInformation("User {UserId} purchased credit package {PackageName} for {Amount}. Credits awarded: {Credits}",
             userId, package.Name, package.Price, package.TotalCredits);
 
         return purchase;

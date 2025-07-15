@@ -30,7 +30,7 @@ public class RetentionPolicyController : ControllerBase
         try
         {
             var expiredImages = await _retentionPolicyService.GetExpiredImagesAsync();
-            
+
             return Ok(new
             {
                 success = true,
@@ -54,9 +54,10 @@ public class RetentionPolicyController : ControllerBase
         try
         {
             var deletedCount = await _retentionPolicyService.DeleteExpiredImagesAsync();
-            
-            return Ok(new { 
-                success = true, 
+
+            return Ok(new
+            {
+                success = true,
                 message = $"Deleted {deletedCount} expired images",
                 deletedCount = deletedCount
             });
@@ -77,9 +78,10 @@ public class RetentionPolicyController : ControllerBase
         try
         {
             await _retentionPolicyService.SetRetentionDatesForExistingImagesAsync();
-            
-            return Ok(new { 
-                success = true, 
+
+            return Ok(new
+            {
+                success = true,
                 message = "Retention dates initialized for existing images"
             });
         }
@@ -108,7 +110,7 @@ public class RetentionPolicyController : ControllerBase
                 },
                 generatedImages = new
                 {
-                    retentionPeriod = "30 days", 
+                    retentionPeriod = "30 days",
                     description = "AI headshots (generated photos) are deleted after 30 days"
                 },
                 backgroundService = new

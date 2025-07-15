@@ -137,7 +137,7 @@ public class RetentionPolicyService : IRetentionPolicyService
     private static bool IsLocalFile(string url)
     {
         // Check if URL is a local file (starts with / or contains localhost)
-        return !string.IsNullOrEmpty(url) && 
+        return !string.IsNullOrEmpty(url) &&
                (url.StartsWith("/") || url.Contains("localhost"));
     }
 
@@ -165,10 +165,10 @@ public class RetentionPolicyService : IRetentionPolicyService
 
         // Mark for immediate deletion by setting scheduled deletion to now
         image.ScheduledDeletionDate = DateTime.UtcNow;
-        
+
         await _context.SaveChangesAsync();
         _logger.LogInformation("Image {ImageId} marked for immediate deletion by user {UserId}", imageId, userId);
-        
+
         return true;
     }
 
@@ -191,7 +191,7 @@ public class RetentionPolicyService : IRetentionPolicyService
 
         await _context.SaveChangesAsync();
         _logger.LogInformation("All {Count} images marked for immediate deletion by user {UserId}", count, userId);
-        
+
         return count;
     }
 
@@ -218,11 +218,11 @@ public class RetentionPolicyService : IRetentionPolicyService
 
         // Restore by recalculating the scheduled deletion date
         image.SetScheduledDeletionDate();
-        
+
         await _context.SaveChangesAsync();
-        _logger.LogInformation("Image {ImageId} restored by user {UserId}, new deletion date: {DeletionDate}", 
+        _logger.LogInformation("Image {ImageId} restored by user {UserId}, new deletion date: {DeletionDate}",
             imageId, userId, image.ScheduledDeletionDate);
-        
+
         return true;
     }
 

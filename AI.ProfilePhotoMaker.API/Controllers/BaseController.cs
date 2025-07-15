@@ -115,7 +115,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         /// <returns>Standardized not found response</returns>
         protected IActionResult NotFoundResponse(string resourceName, object? id = null)
         {
-            var message = id != null 
+            var message = id != null
                 ? $"{resourceName} with ID {id} not found"
                 : $"{resourceName} not found";
             return ErrorResponse("NotFound", message, 404);
@@ -156,7 +156,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     .Where(x => x.Value?.Errors?.Count > 0)
                     .SelectMany(x => x.Value?.Errors?.Select(e => e.ErrorMessage) ?? [])
                     .ToList();
-                
+
                 var message = string.Join("; ", errors);
                 return ValidationError(message);
             }

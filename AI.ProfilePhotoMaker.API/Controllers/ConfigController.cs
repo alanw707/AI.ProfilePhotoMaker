@@ -33,7 +33,7 @@ public class ConfigController : ControllerBase
         {
             var appBaseUrl = _configuration["AppBaseUrl"] ?? "http://localhost:5035";
             var environmentName = _environment.EnvironmentName;
-            
+
             var clientConfig = new
             {
                 appBaseUrl = appBaseUrl,
@@ -57,7 +57,7 @@ public class ConfigController : ControllerBase
                 timestamp = DateTime.UtcNow
             };
 
-            _logger.LogInformation("Client configuration requested. Environment: {Environment}, AppBaseUrl: {AppBaseUrl}", 
+            _logger.LogInformation("Client configuration requested. Environment: {Environment}, AppBaseUrl: {AppBaseUrl}",
                 environmentName, appBaseUrl);
 
             return Ok(new { success = true, data = clientConfig });
@@ -84,7 +84,7 @@ public class ConfigController : ControllerBase
         {
             var appBaseUrl = _configuration["AppBaseUrl"] ?? "http://localhost:5035";
             var currentRequestUrl = $"{Request.Scheme}://{Request.Host}";
-            
+
             var configStatus = new
             {
                 environment = _environment.EnvironmentName,
@@ -103,8 +103,8 @@ public class ConfigController : ControllerBase
                     isNgrokUrl = appBaseUrl.Contains("ngrok"),
                     isLocaltunnelUrl = appBaseUrl.Contains("loca.lt")
                 },
-                headers = Request.Headers.Where(h => 
-                    h.Key.StartsWith("X-Forwarded") || 
+                headers = Request.Headers.Where(h =>
+                    h.Key.StartsWith("X-Forwarded") ||
                     h.Key.StartsWith("Host") ||
                     h.Key.Equals("Origin", StringComparison.OrdinalIgnoreCase))
                     .ToDictionary(h => h.Key, h => h.Value.ToString()),
@@ -123,7 +123,7 @@ public class ConfigController : ControllerBase
     private string GetFrontendBaseUrl()
     {
         var appBaseUrl = _configuration["AppBaseUrl"] ?? "http://localhost:5035";
-        
+
         // If backend is using external URL, try to determine frontend URL
         if (!appBaseUrl.Contains("localhost"))
         {
@@ -131,7 +131,7 @@ public class ConfigController : ControllerBase
             // This is a best guess - in practice, frontend will override this
             return appBaseUrl.Replace("5035", "4200");
         }
-        
+
         // Default to localhost for local development
         return "http://localhost:4200";
     }
@@ -139,17 +139,17 @@ public class ConfigController : ControllerBase
     private object GetConfigurationRecommendations(string appBaseUrl, string currentRequestUrl)
     {
         var recommendations = new List<string>();
-        
+
         if (appBaseUrl.Contains("localhost") && !currentRequestUrl.Contains("localhost"))
         {
             recommendations.Add("Backend configured for localhost but accessed externally. Consider updating AppBaseUrl in appsettings.Development.json");
         }
-        
+
         if (!appBaseUrl.Contains("localhost") && currentRequestUrl.Contains("localhost"))
         {
             recommendations.Add("Backend configured for external access but accessed via localhost. This is normal for local API testing");
         }
-        
+
         if (appBaseUrl.Contains("ngrok") && !appBaseUrl.Contains("https"))
         {
             recommendations.Add("Ngrok URLs should use HTTPS for OAuth to work properly");
@@ -159,7 +159,7 @@ public class ConfigController : ControllerBase
         {
             recommendations = recommendations,
             configurationValid = recommendations.Count == 0,
-            nextSteps = recommendations.Count == 0 
+            nextSteps = recommendations.Count == 0
                 ? new[] { "Configuration looks good! Frontend should auto-detect this setup." }
                 : recommendations.ToArray()
         };

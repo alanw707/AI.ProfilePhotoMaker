@@ -49,7 +49,7 @@ public class PlaceholderImageController : ControllerBase
 
             // Convert SVG to bytes
             var svgBytes = System.Text.Encoding.UTF8.GetBytes(svg);
-            
+
             // Return as SVG image
             return File(svgBytes, "image/svg+xml");
         }

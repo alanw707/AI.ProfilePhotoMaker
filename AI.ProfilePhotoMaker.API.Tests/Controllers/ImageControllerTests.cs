@@ -57,13 +57,13 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
                 new Claim(ClaimTypes.NameIdentifier, userId)
             }, "mock"));
 
-            var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext 
-            { 
-                User = claimsPrincipal 
+            var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext
+            {
+                User = claimsPrincipal
             };
             httpContext.Request.Scheme = "https";
             httpContext.Request.Host = new Microsoft.AspNetCore.Http.HostString("localhost:5000");
-            
+
             _controller.ControllerContext = new ControllerContext
             {
                 HttpContext = httpContext
@@ -183,10 +183,10 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             };
             var profile = new UserProfile { UserId = userId, ProcessedImages = processedImages };
             _mockUserProfileRepository.Setup(r => r.GetByUserIdAsync(userId)).ReturnsAsync(profile);
-            
+
             // Mock configuration to provide AppBaseUrl
             _mockConfiguration.Setup(c => c["AppBaseUrl"]).Returns("https://localhost:5000");
-            
+
             var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock")) };
             httpContext.Request.Scheme = "https";
             httpContext.Request.Host = new Microsoft.AspNetCore.Http.HostString("localhost:5000");
@@ -210,17 +210,17 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
                 var data = dict!["data"];
                 var images = data.GetProperty("images").EnumerateArray().ToList();
                 images.Count.Should().Be(2);
-                
+
                 // Debug: output the actual structure
                 var image0 = images[0];
                 var image1 = images[1];
-                
+
                 // Check what URL properties are available
                 var originalUrl0 = image0.TryGetProperty("originalImageUrl", out var prop0) ? prop0.GetString() : null;
                 var processedUrl0 = image0.TryGetProperty("processedImageUrl", out var prop0p) ? prop0p.GetString() : null;
                 var originalUrl1 = image1.TryGetProperty("originalImageUrl", out var prop1o) ? prop1o.GetString() : null;
                 var processedUrl1 = image1.TryGetProperty("processedImageUrl", out var prop1) ? prop1.GetString() : null;
-                
+
                 // Test that URLs are processed correctly
                 // With our ordering: images[0] = Id=2 (newest), images[1] = Id=1 (oldest)
                 // First image (Id=2) should have the external URL unchanged

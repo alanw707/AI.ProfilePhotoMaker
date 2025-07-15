@@ -84,7 +84,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             var redirectUrl = Url.Action(nameof(ExternalLoginCallback), "Auth", new { returnUrl }, Request.Scheme);
             var properties = _signInManager.ConfigureExternalAuthenticationProperties("Google", redirectUrl);
-            
+
             // Manually construct the Google OAuth URL
             var authUrl = $"https://accounts.google.com/o/oauth2/v2/auth?" +
                 $"client_id={Uri.EscapeDataString(googleClientId)}&" +
@@ -191,7 +191,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 // Generate JWT token
                 var tokenInfo = _authService.GenerateJwtToken(user);
-                
+
                 Console.WriteLine($"✅ OAuth success - User: {user.Email}");
                 return Redirect($"{frontendBaseUrl}{returnUrl}?token={tokenInfo.Token}");
             }
@@ -241,9 +241,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private async Task<GoogleUserInfo?> GetGoogleUserInfoAsync(string accessToken)
         {
             _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-            
+
             var response = await _httpClient.GetAsync("https://www.googleapis.com/oauth2/v2/userinfo");
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 Console.WriteLine($"❌ User info request failed: {response.StatusCode}");
@@ -263,7 +263,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private async Task<ApplicationUser?> FindOrCreateUserAsync(GoogleUserInfo userInfo)
         {
             var user = await _userManager.FindByEmailAsync(userInfo.Email);
-            
+
             if (user == null)
             {
                 user = new ApplicationUser
@@ -334,11 +334,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         public IActionResult GetAuthSchemes()
         {
             var schemes = new List<object>();
-            
+
             // Get all registered authentication schemes
             var authSchemeProvider = HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider>();
             var allSchemes = authSchemeProvider.GetAllSchemesAsync().Result;
-            
+
             foreach (var scheme in allSchemes)
             {
                 schemes.Add(new
@@ -348,7 +348,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     HandlerType = scheme.HandlerType?.Name
                 });
             }
-            
+
             return Ok(new
             {
                 message = "Available authentication schemes",
@@ -365,18 +365,18 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 // Test if we can create an authorization URL manually
                 var authService = HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Authentication.IAuthenticationService>();
                 var schemeProvider = HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider>();
-                
+
                 var googleScheme = await schemeProvider.GetSchemeAsync("Google");
-                
+
                 if (googleScheme == null)
                 {
                     return Ok(new { error = "Google authentication scheme not found" });
                 }
-                
+
                 // Try to get the Google OAuth options
                 var optionsMonitor = HttpContext.RequestServices.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<Microsoft.AspNetCore.Authentication.Google.GoogleOptions>>();
                 var googleOptions = optionsMonitor.Get("Google");
-                
+
                 // Create a manual Google OAuth URL
                 var state = Guid.NewGuid().ToString();
                 var redirectUri = $"https://{Request.Host}/signin-google";
@@ -386,7 +386,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     $"response_type=code&" +
                     $"scope={Uri.EscapeDataString("openid profile email")}&" +
                     $"state={Uri.EscapeDataString(state)}";
-                
+
                 return Ok(new
                 {
                     message = "Google OAuth Debug Info",
@@ -435,7 +435,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 var clientId = "331984288023-lh1upthod06meoko58g7hn9d7h68l311.apps.googleusercontent.com";
                 var redirectUri = "https://awlocaldev.ngrok.app/signin-google";
                 var state = Guid.NewGuid().ToString();
-                
+
                 // Create OAuth URL with minimal parameters
                 var authUrl = $"https://accounts.google.com/o/oauth2/v2/auth?" +
                     $"client_id={Uri.EscapeDataString(clientId)}&" +
@@ -443,9 +443,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     $"response_type=code&" +
                     $"scope={Uri.EscapeDataString("email profile")}&" +
                     $"state={Uri.EscapeDataString(state)}";
-                
+
                 Console.WriteLine($"🔧 Alternative OAuth URL: {authUrl}");
-                
+
                 return Ok(new
                 {
                     authUrl = authUrl,
@@ -461,7 +461,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
         }
 
-        
+
 
         /// <summary>
         /// Get the appropriate frontend base URL based on current request context
@@ -482,14 +482,14 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     // Ignore parsing errors
                 }
             }
-            
+
             // Check Origin header
             var origin = Request.Headers["Origin"].FirstOrDefault();
             if (!string.IsNullOrEmpty(origin))
             {
                 return origin;
             }
-            
+
             // Default to localhost for development
             return "http://localhost:4200";
         }

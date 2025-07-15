@@ -20,12 +20,12 @@ var builder = WebApplication.CreateBuilder(args);
 // Configure forwarded headers for ngrok proxy
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | 
+    options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor |
                               Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto |
                               Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedHost;
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
-    
+
     // Trust ngrok proxy
     options.KnownProxies.Add(System.Net.IPAddress.Parse("127.0.0.1"));
 });
@@ -36,7 +36,7 @@ if (builder.Environment.IsDevelopment())
     builder.Services.AddDataProtection()
         .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "keys")))
         .SetApplicationName("AI.ProfilePhotoMaker.API");
-        
+
     // Add session services for OAuth state management
     builder.Services.AddMemoryCache();
     builder.Services.AddDistributedMemoryCache();
@@ -175,7 +175,7 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IUserContextService
 builder.Services.AddSingleton<Replicate.ReplicateApi>(provider =>
 {
     var configuration = provider.GetRequiredService<IConfiguration>();
-    var apiToken = configuration["Replicate:ApiToken"] 
+    var apiToken = configuration["Replicate:ApiToken"]
         ?? throw new InvalidOperationException("Replicate API token not configured");
     return new Replicate.ReplicateApi(apiToken);
 });
@@ -329,9 +329,9 @@ app.Use(async (context, next) =>
 {
     var path = context.Request.Path.Value?.ToLower();
     var method = context.Request.Method;
-    
+
     Console.WriteLine($"🔍 Request: {method} {path}");
-    
+
     // Special logging for OAuth-related paths
     if (path?.Contains("signin") == true || path?.Contains("oauth") == true || path?.Contains("auth") == true)
     {
@@ -340,9 +340,9 @@ app.Use(async (context, next) =>
         Console.WriteLine($"   User-Agent: {context.Request.Headers.UserAgent}");
         Console.WriteLine($"   Referer: {context.Request.Headers.Referer}");
     }
-    
+
     await next();
-    
+
     // Log response for OAuth paths
     if (path?.Contains("signin") == true || path?.Contains("oauth") == true || path?.Contains("auth") == true)
     {
@@ -366,14 +366,14 @@ app.UseStaticFiles(new StaticFileOptions
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type");
-        
+
         // Ensure proper content type for images
         var extension = Path.GetExtension(ctx.File.Name).ToLowerInvariant();
         if (extension == ".png") ctx.Context.Response.ContentType = "image/png";
         else if (extension == ".jpg" || extension == ".jpeg") ctx.Context.Response.ContentType = "image/jpeg";
         else if (extension == ".gif") ctx.Context.Response.ContentType = "image/gif";
         else if (extension == ".webp") ctx.Context.Response.ContentType = "image/webp";
-        
+
         // Add aggressive caching for uploaded images (immutable content)
         ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=86400, immutable");
         ctx.Context.Response.Headers.Append("ETag", $"\"{ctx.File.LastModified:yyyy-MM-dd-HH-mm-ss}\"");
@@ -400,14 +400,14 @@ app.UseStaticFiles(new StaticFileOptions
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type");
-        
+
         // Ensure proper content type for images
         var extension = Path.GetExtension(ctx.File.Name).ToLowerInvariant();
         if (extension == ".png") ctx.Context.Response.ContentType = "image/png";
         else if (extension == ".jpg" || extension == ".jpeg") ctx.Context.Response.ContentType = "image/jpeg";
         else if (extension == ".gif") ctx.Context.Response.ContentType = "image/gif";
         else if (extension == ".webp") ctx.Context.Response.ContentType = "image/webp";
-        
+
         // Add aggressive caching for style previews (static assets, rarely change)
         ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=604800, immutable");
         ctx.Context.Response.Headers.Append("ETag", $"\"{ctx.File.LastModified:yyyy-MM-dd-HH-mm-ss}\"");
@@ -426,14 +426,14 @@ app.UseStaticFiles(new StaticFileOptions
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type");
-        
+
         // Ensure proper content type for images
         var extension = Path.GetExtension(ctx.File.Name).ToLowerInvariant();
         if (extension == ".png") ctx.Context.Response.ContentType = "image/png";
         else if (extension == ".jpg" || extension == ".jpeg") ctx.Context.Response.ContentType = "image/jpeg";
         else if (extension == ".gif") ctx.Context.Response.ContentType = "image/gif";
         else if (extension == ".webp") ctx.Context.Response.ContentType = "image/webp";
-        
+
         // Add caching for enhanced images (personal photos, moderate caching)
         ctx.Context.Response.Headers.Append("Cache-Control", "private, max-age=3600");
         ctx.Context.Response.Headers.Append("ETag", $"\"{ctx.File.LastModified:yyyy-MM-dd-HH-mm-ss}\"");
@@ -452,7 +452,7 @@ app.UseStaticFiles(new StaticFileOptions
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type");
-        
+
         // Ensure proper content type for images
         var extension = Path.GetExtension(ctx.File.Name).ToLowerInvariant();
         if (extension == ".png") ctx.Context.Response.ContentType = "image/png";
@@ -471,25 +471,25 @@ if (Directory.Exists(angularPath))
         FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(angularPath),
         RequestPath = ""
     });
-    
+
     // Fallback to index.html for Angular routing (exclude API and OAuth paths)
     app.MapFallback(context =>
     {
         var path = context.Request.Path.Value?.ToLower();
-        
+
         Console.WriteLine($"🔍 FALLBACK: Checking path: {path}");
-        
+
         // Don't handle API or OAuth callback paths
-        if (path?.StartsWith("/api/") == true || 
+        if (path?.StartsWith("/api/") == true ||
             path?.StartsWith("/signin-") == true ||
             path?.StartsWith("/swagger") == true)
         {
             Console.WriteLine($"🔍 FALLBACK: Skipping path: {path} (matches exclusion)");
             return Task.CompletedTask;
         }
-        
+
         Console.WriteLine($"🔍 FALLBACK: Serving Angular for path: {path}");
-        
+
         // Serve index.html for Angular routing
         context.Response.ContentType = "text/html";
         return context.Response.SendFileAsync(Path.Combine(angularPath, "index.html"));
