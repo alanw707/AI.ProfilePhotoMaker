@@ -66,7 +66,7 @@ public class ModelExpirationBackgroundService : BackgroundService
         {
             _logger.LogError(ex, "Failed to process expired models");
         }
-        
+
         return Task.CompletedTask;
     }
 
