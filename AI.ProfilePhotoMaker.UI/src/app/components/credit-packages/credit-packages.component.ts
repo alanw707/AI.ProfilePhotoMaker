@@ -83,7 +83,6 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
 
   loadPackages() {
     this.isLoadingPackages = true;
-    console.log('Starting to load packages...');
 
     this.creditService.getCreditPackages().subscribe({
       next: response => {
@@ -134,15 +133,6 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
       },
       complete: () => {
         this.isLoadingPackages = false;
-        console.log('Package loading completed. Final packages:', this.packages);
-        console.log('isLoadingPackages:', this.isLoadingPackages);
-        console.log('packages.length:', this.packages.length);
-        console.log('selectedPackage:', this.selectedPackage);
-        console.log(
-          'Should show packages grid:',
-          !this.isLoadingPackages && this.packages.length > 0 && !this.selectedPackage
-        );
-
         // Force change detection to ensure UI updates
         this.cdr.detectChanges();
       },
