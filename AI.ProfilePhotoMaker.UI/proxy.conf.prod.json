@@ -1,0 +1,9 @@
+{
+  "_comment": "Production proxy configuration - should be minimal as frontend and backend will be on same domain",
+  "/api": {
+    "target": "https://api.yourcompany.com",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "error"
+  }
+}

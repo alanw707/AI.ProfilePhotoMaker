@@ -28,139 +28,20 @@
         
         <!-- Account Information -->
         <section class="settings-section">
-          <div class="section-header">
-            <h2>Account Information</h2>
-            <p>View and manage your account details</p>
-          </div>
-          <div class="section-content">
-            <div class="info-grid">
-              <div class="info-item">
-                <label>Email Address</label>
-                <span>{{userEmail}}</span>
-              </div>
-              <div class="info-item" *ngIf="userProfile">
-                <label>Full Name</label>
-                <span>{{getFullName()}}</span>
-              </div>
-              <div class="info-item" *ngIf="userProfile?.gender">
-                <label>Gender</label>
-                <span>{{userProfile?.gender}}</span>
-              </div>
-              <div class="info-item" *ngIf="userProfile?.ethnicity">
-                <label>Ethnicity</label>
-                <span>{{userProfile?.ethnicity}}</span>
-              </div>
-              <div class="info-item" *ngIf="userProfile">
-                <label>Account Created</label>
-                <span>{{formatDate(userProfile.createdAt)}}</span>
-              </div>
-              <div class="info-item" *ngIf="userProfile?.subscriptionTier">
-                <label>Subscription Tier</label>
-                <span class="tier-badge" [ngClass]="userProfile?.subscriptionTier?.toLowerCase()">
-                  {{userProfile?.subscriptionTier}}
-                </span>
-              </div>
-            </div>
-            <div class="section-actions">
-              <button class="btn btn-secondary" (click)="editProfile()">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Edit Profile
-              </button>
-            </div>
-          </div>
+          <app-account-info 
+            [userEmail]="userEmail"
+            [userProfile]="userProfile"
+            [accountAge]="dataStats.accountAge"
+            (editProfileClicked)="editProfile()">
+          </app-account-info>
         </section>
 
         <!-- Credit Management -->
         <section class="settings-section" *ngIf="creditsInfo || userCreditStatus">
-          <div class="section-header">
-            <h2>Credit Management</h2>
-            <p>Monitor your credit usage and purchase additional credits</p>
-          </div>
-          <div class="section-content">
-            
-            <!-- Credit Overview Cards -->
-            <div class="credit-overview">
-              <div class="credit-card total-credits">
-                <div class="credit-header">
-                  <div class="credit-icon">💎</div>
-                  <div class="credit-title">
-                    <h3>{{getTotalAvailableCredits()}}</h3>
-                    <p>Total Credits Available</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="credit-card purchased-credits">
-                <div class="credit-header">
-                  <div class="credit-icon">🛒</div>
-                  <div class="credit-title">
-                    <h3>{{getPurchasedCredits()}}</h3>
-                    <p>Purchased Credits</p>
-                  </div>
-                </div>
-                <div class="credit-details">
-                  <small>Never expire • All features</small>
-                </div>
-              </div>
-              
-              <div class="credit-card weekly-credits">
-                <div class="credit-header">
-                  <div class="credit-icon">⚡</div>
-                  <div class="credit-title">
-                    <h3>{{getWeeklyCredits()}}/{{getMaxWeeklyCredits()}}</h3>
-                    <p>Free Credits</p>
-                  </div>
-                </div>
-                <div class="credit-progress">
-                  <div class="progress-bar">
-                    <div class="progress-fill" [style.width.%]="getCreditUsagePercentage()"></div>
-                  </div>
-                  <small>Resets {{getNextCreditReset()}}</small>
-                </div>
-              </div>
-            </div>
-
-            <!-- Credit Usage Rules -->
-            <div class="credit-usage-rules">
-              <h4>Credit Usage Guidelines</h4>
-              <div class="usage-grid">
-                <div class="usage-item">
-                  <div class="usage-icon">⚡</div>
-                  <div class="usage-content">
-                    <strong>Free Credits ({{getWeeklyCredits()}})</strong>
-                    <p>Photo enhancement only • Resets weekly</p>
-                  </div>
-                </div>
-                <div class="usage-item">
-                  <div class="usage-icon">💎</div>
-                  <div class="usage-content">
-                    <strong>Purchased Credits ({{getPurchasedCredits()}})</strong>
-                    <p>All features • Never expire</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="section-actions">
-              <button class="btn btn-primary" routerLink="/packages">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2L3.09 8.26L12 22L20.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" fill="none"/>
-                </svg>
-                Purchase Credits
-              </button>
-              <button class="btn btn-secondary" routerLink="/enhance">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                  <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2"/>
-                </svg>
-                Use Free Credits
-              </button>
-            </div>
-          </div>
+          <app-credit-management 
+            [creditsInfo]="creditsInfo"
+            [userCreditStatus]="userCreditStatus">
+          </app-credit-management>
         </section>
 
         <!-- Data Overview -->

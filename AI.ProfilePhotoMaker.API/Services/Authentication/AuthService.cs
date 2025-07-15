@@ -20,7 +20,7 @@ public class AuthService : IAuthService
     private readonly ApplicationDbContext _context;
 
     public AuthService(
-        UserManager<ApplicationUser> userManager, 
+        UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         IConfiguration configuration,
         ApplicationDbContext context)
@@ -148,7 +148,7 @@ public class AuthService : IAuthService
 
         // Try to sign the user in with this external login provider
         var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false);
-        
+
         if (result.Succeeded)
         {
             // User already has an account, return JWT token
@@ -189,7 +189,7 @@ public class AuthService : IAuthService
         // Create new user
         var userName = email.Split('@')[0];
         var newUser = new ApplicationUser(userName, email, firstName, lastName);
-        
+
         var createResult = await _userManager.CreateAsync(newUser);
         if (createResult.Succeeded)
         {
@@ -207,7 +207,7 @@ public class AuthService : IAuthService
     public async Task<ProfileCompletionCheckDto> CheckProfileCompletionAsync(string userId)
     {
         var userProfile = await _context.UserProfiles.FirstOrDefaultAsync(up => up.UserId == userId);
-        
+
         if (userProfile == null)
         {
             return new ProfileCompletionCheckDto(false, false, false, false, false);
@@ -217,16 +217,16 @@ public class AuthService : IAuthService
         var hasLastName = !string.IsNullOrWhiteSpace(userProfile.LastName);
         var hasGender = !string.IsNullOrWhiteSpace(userProfile.Gender);
         var hasEthnicity = !string.IsNullOrWhiteSpace(userProfile.Ethnicity);
-        
+
         var isCompleted = hasFirstName && hasLastName && hasGender && hasEthnicity;
-        
+
         return new ProfileCompletionCheckDto(isCompleted, hasFirstName, hasLastName, hasGender, hasEthnicity);
     }
 
     public async Task<bool> CompleteProfileAsync(string userId, ProfileCompletionDto model)
     {
         var userProfile = await _context.UserProfiles.FirstOrDefaultAsync(up => up.UserId == userId);
-        
+
         if (userProfile == null)
         {
             // Create new profile if it doesn't exist (for OAuth users)
@@ -243,7 +243,7 @@ public class AuthService : IAuthService
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
-            
+
             _context.UserProfiles.Add(userProfile);
         }
         else

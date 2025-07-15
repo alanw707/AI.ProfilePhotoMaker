@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
 
-import { AuthService, LoginDto, RegisterDto, AuthResponseDto } from './auth.service';
+import { AuthResponseDto, AuthService, LoginDto, RegisterDto } from './auth.service';
 import { ConfigService } from './config.service';
 
 /**

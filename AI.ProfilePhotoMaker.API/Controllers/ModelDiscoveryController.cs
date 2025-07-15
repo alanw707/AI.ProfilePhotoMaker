@@ -49,30 +49,33 @@ public class ModelDiscoveryController : ControllerBase
 
             if (result.Success)
             {
-                _logger.LogInformation("Model discovery completed successfully for user {UserId}. Found: {Found}, Added: {Added}, Removed: {Removed}", 
+                _logger.LogInformation("Model discovery completed successfully for user {UserId}. Found: {Found}, Added: {Added}, Removed: {Removed}",
                     userId, result.ModelsFound, result.ModelsAdded, result.ModelsRemoved);
-                
-                return Ok(new { 
-                    success = true, 
+
+                return Ok(new
+                {
+                    success = true,
                     data = result,
-                    message = result.Message 
+                    message = result.Message
                 });
             }
             else
             {
                 _logger.LogWarning("Model discovery failed for user {UserId}: {Message}", userId, result.Message);
-                return BadRequest(new { 
-                    success = false, 
-                    error = result.Message 
+                return BadRequest(new
+                {
+                    success = false,
+                    error = result.Message
                 });
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during model discovery and sync");
-            return StatusCode(500, new { 
-                success = false, 
-                error = "Internal server error during model discovery" 
+            return StatusCode(500, new
+            {
+                success = false,
+                error = "Internal server error during model discovery"
             });
         }
     }
@@ -93,17 +96,19 @@ public class ModelDiscoveryController : ControllerBase
 
             var result = await _modelDiscoveryService.QuickDatabaseCheckAsync(userId);
 
-            return Ok(new { 
-                success = true, 
-                data = result 
+            return Ok(new
+            {
+                success = true,
+                data = result
             });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during quick model check");
-            return StatusCode(500, new { 
-                success = false, 
-                error = "Internal server error during quick model check" 
+            return StatusCode(500, new
+            {
+                success = false,
+                error = "Internal server error during quick model check"
             });
         }
     }
@@ -124,17 +129,19 @@ public class ModelDiscoveryController : ControllerBase
 
             var status = await _modelDiscoveryService.GetModelSyncStatusAsync(userId);
 
-            return Ok(new { 
-                success = true, 
-                data = status 
+            return Ok(new
+            {
+                success = true,
+                data = status
             });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting model sync status");
-            return StatusCode(500, new { 
-                success = false, 
-                error = "Internal server error getting model sync status" 
+            return StatusCode(500, new
+            {
+                success = false,
+                error = "Internal server error getting model sync status"
             });
         }
     }
@@ -163,32 +170,35 @@ public class ModelDiscoveryController : ControllerBase
                 return BadRequest(new { success = false, error = "VersionId is required" });
             }
 
-            _logger.LogInformation("Manually syncing model {ModelId} version {VersionId} for user {UserId}", 
+            _logger.LogInformation("Manually syncing model {ModelId} version {VersionId} for user {UserId}",
                 request.ModelId, request.VersionId, userId);
 
             var success = await _modelDiscoveryService.SyncSpecificModelAsync(userId, request.ModelId, request.VersionId);
 
             if (success)
             {
-                return Ok(new { 
-                    success = true, 
-                    message = $"Successfully synced model {request.ModelId}" 
+                return Ok(new
+                {
+                    success = true,
+                    message = $"Successfully synced model {request.ModelId}"
                 });
             }
             else
             {
-                return BadRequest(new { 
-                    success = false, 
-                    error = $"Failed to sync model {request.ModelId}" 
+                return BadRequest(new
+                {
+                    success = false,
+                    error = $"Failed to sync model {request.ModelId}"
                 });
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error syncing specific model {ModelId}", request.ModelId);
-            return StatusCode(500, new { 
-                success = false, 
-                error = "Internal server error syncing specific model" 
+            return StatusCode(500, new
+            {
+                success = false,
+                error = "Internal server error syncing specific model"
             });
         }
     }

@@ -2,15 +2,44 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.12.
 
-## Development server
+## Development Environment
 
-To start a local development server, run:
+### Quick Start (Recommended)
+For full development environment with ngrok tunneling:
+
+```bash
+# From project root
+./start-dev.sh
+```
+
+Or manually:
+```bash
+# 1. Start ngrok tunnels
+npm run tunnel:start
+
+# 2. Start frontend
+npm run dev:ngrok
+
+# 3. Start backend (separate terminal)  
+cd ../AI.ProfilePhotoMaker.API && dotnet run
+```
+
+**Access Points:**
+- Frontend: https://awlocaldev.ngrok.app
+- Backend: https://awlocaldev-api.ngrok.app
+
+### Local Development Only
+To start a local-only development server:
 
 ```bash
 ng serve
 ```
 
 Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+
+### Documentation
+- **[Quick Start Guide](../QUICK-START.md)** - Fast setup reference
+- **[Development Environment Guide](../DEV-ENVIRONMENT.md)** - Comprehensive setup and troubleshooting
 
 ## Code scaffolding
 

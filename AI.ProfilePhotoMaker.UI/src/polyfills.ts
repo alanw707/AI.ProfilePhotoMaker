@@ -16,5 +16,26 @@
 // Disable zone.js patching for custom elements (additional safety)
 (window as any).__Zone_disable_customElements = true;
 
+// Web Locks API polyfill/wrapper to prevent NavigatorLockAcquireTimeoutError
+if (typeof navigator !== 'undefined' && navigator.locks) {
+  const originalRequest = navigator.locks.request;
+  navigator.locks.request = function(name: string, optionsOrCallback: any, callback?: any) {
+    // Extract the actual callback and options
+    const hasOptions = typeof optionsOrCallback === 'object' && optionsOrCallback !== null;
+    const actualCallback = hasOptions ? callback : optionsOrCallback;
+    const actualOptions = hasOptions ? optionsOrCallback : {};
+    
+    // Add a timeout to prevent infinite waiting
+    const timeoutOptions = {
+      ...actualOptions,
+      ifAvailable: actualOptions.ifAvailable ?? true,
+      steal: actualOptions.steal ?? false
+    };
+    
+    // Call the original request with timeout options
+    return originalRequest.call(this, name, timeoutOptions, actualCallback);
+  };
+}
+
 // Import zone.js after configuration
 import 'zone.js';

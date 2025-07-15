@@ -65,13 +65,16 @@ export interface ApiResponse<T> {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class CreditService {
   private apiUrl: string;
   private creditCosts: CreditCosts | null = null;
 
-  constructor(private http: HttpClient, private configService: ConfigService) {
+  constructor(
+    private http: HttpClient,
+    private configService: ConfigService
+  ) {
     this.apiUrl = this.configService.getApiUrl();
   }
 
@@ -79,49 +82,65 @@ export class CreditService {
    * Get current user's credit status
    */
   getCreditStatus(): Observable<ApiResponse<UserCreditStatus>> {
-    return this.http.get<ApiResponse<UserCreditStatus>>(`${this.apiUrl}/api/credit/status`);
+    return this.http.get<ApiResponse<UserCreditStatus>>(
+      this.configService.buildApiEndpoint('credit/status')
+    );
   }
 
   /**
    * Get all available credit packages
    */
   getCreditPackages(): Observable<ApiResponse<CreditPackage[]>> {
-    return this.http.get<ApiResponse<CreditPackage[]>>(`${this.apiUrl}/api/credit/packages`);
+    return this.http.get<ApiResponse<CreditPackage[]>>(
+      this.configService.buildApiEndpoint('credit/packages')
+    );
   }
 
   /**
    * Get payment configuration including simulation settings
    */
   getPaymentConfig(): Observable<ApiResponse<PaymentConfig>> {
-    return this.http.get<ApiResponse<PaymentConfig>>(`${this.apiUrl}/api/credit/payment-config`);
+    return this.http.get<ApiResponse<PaymentConfig>>(
+      this.configService.buildApiEndpoint('credit/payment-config')
+    );
   }
 
   /**
    * Create a payment intent for Stripe
    */
   createPaymentIntent(request: { packageId: number }): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/api/credit/create-payment-intent`, request);
+    return this.http.post<any>(
+      this.configService.buildApiEndpoint('credit/create-payment-intent'),
+      request
+    );
   }
 
   /**
    * Purchase a credit package
    */
   purchaseCreditPackage(request: PurchaseCreditPackageRequest): Observable<ApiResponse<any>> {
-    return this.http.post<ApiResponse<any>>(`${this.apiUrl}/api/credit/purchase`, request);
+    return this.http.post<ApiResponse<any>>(
+      this.configService.buildApiEndpoint('credit/purchase'),
+      request
+    );
   }
 
   /**
    * Get user's credit purchase history
    */
   getPurchaseHistory(): Observable<ApiResponse<CreditPurchase[]>> {
-    return this.http.get<ApiResponse<CreditPurchase[]>>(`${this.apiUrl}/api/credit/history`);
+    return this.http.get<ApiResponse<CreditPurchase[]>>(
+      this.configService.buildApiEndpoint('credit/history')
+    );
   }
 
   /**
    * Get credit costs configuration from API
    */
   getCreditCosts(): Observable<ApiResponse<CreditCosts>> {
-    return this.http.get<ApiResponse<CreditCosts>>(`${this.apiUrl}/api/credit/costs`);
+    return this.http.get<ApiResponse<CreditCosts>>(
+      this.configService.buildApiEndpoint('credit/costs')
+    );
   }
 
   /**
@@ -270,5 +289,38 @@ export class CreditService {
       default:
         return false;
     }
+  }
+
+  /**
+   * Calculate total available credits (weekly + purchased)
+   */
+  getTotalAvailableCredits(
+    userCreditStatus: UserCreditStatus | null,
+    creditsInfo: unknown
+  ): number {
+    const weeklyCredits = this.getWeeklyCredits(userCreditStatus, creditsInfo);
+    const purchasedCredits = this.getPurchasedCredits(userCreditStatus);
+
+    // Always calculate total from individual components to ensure accuracy
+    return weeklyCredits + purchasedCredits;
+  }
+
+  /**
+   * Get purchased credits from user credit status
+   */
+  getPurchasedCredits(userCreditStatus: UserCreditStatus | null): number {
+    return userCreditStatus?.purchasedCredits || 0;
+  }
+
+  /**
+   * Get weekly credits from user credit status with fallback to creditsInfo
+   */
+  getWeeklyCredits(userCreditStatus: UserCreditStatus | null, creditsInfo: unknown): number {
+    // Use weeklyCredits from userCreditStatus first, fallback to creditsInfo.availableCredits
+    return (
+      userCreditStatus?.weeklyCredits ||
+      (creditsInfo as { availableCredits?: number })?.availableCredits ||
+      0
+    );
   }
 }

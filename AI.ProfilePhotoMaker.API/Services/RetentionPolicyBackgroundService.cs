@@ -1,6 +1,5 @@
-using AI.ProfilePhotoMaker.API.Data;
-using AI.ProfilePhotoMaker.API.Models;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace AI.ProfilePhotoMaker.API.Services;
 
@@ -22,106 +21,90 @@ public class RetentionPolicyBackgroundService : BackgroundService
     {
         _logger.LogInformation("Retention Policy Background Service started");
 
-        try
-        {
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                try
-                {
-                    await ProcessExpiredImages();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error occurred while processing expired images");
-                }
+        // Wait a bit before starting the first check to let the application start up
+        await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
 
-                // Wait for the next interval
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                await PerformRetentionPolicyCheck();
                 await Task.Delay(_checkInterval, stoppingToken);
             }
-        }
-        catch (TaskCanceledException)
-        {
-            _logger.LogInformation("Retention Policy Background Service cancellation requested.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unhandled exception in Retention Policy Background Service");
+            catch (OperationCanceledException)
+            {
+                // Expected when cancellation token is triggered
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred during retention policy check");
+                // Wait a shorter time before retrying if there was an error
+                await Task.Delay(TimeSpan.FromMinutes(30), stoppingToken);
+            }
         }
 
         _logger.LogInformation("Retention Policy Background Service stopped");
     }
 
-    private async Task ProcessExpiredImages()
+    private async Task PerformRetentionPolicyCheck()
     {
+        using var scope = _serviceProvider.CreateScope();
+        var retentionService = scope.ServiceProvider.GetRequiredService<IRetentionPolicyService>();
+
         try
         {
-            using var scope = _serviceProvider.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            _logger.LogDebug("Starting retention policy check...");
 
-            _logger.LogInformation("Starting retention policy cleanup check");
+            // First, set retention dates for any existing images that don't have them
+            await retentionService.SetRetentionDatesForExistingImagesAsync();
 
-            var now = DateTime.UtcNow;
-            
-            // Find images that are past their scheduled deletion date and not already marked for deletion
-            var expiredImages = await dbContext.ProcessedImages
-                .Where(img => !img.IsDeleted && 
-                             !img.IsMarkedForDeletion && 
-                             img.ScheduledDeletionDate <= now)
-                .ToListAsync();
-
+            // Get expired images for logging purposes
+            var expiredImages = await retentionService.GetExpiredImagesAsync();
             if (expiredImages.Any())
             {
-                _logger.LogInformation("Found {Count} expired images to mark for deletion", expiredImages.Count);
+                _logger.LogInformation(
+                    "Found {ExpiredCount} expired images to delete",
+                    expiredImages.Count);
 
-                foreach (var image in expiredImages)
+                // Log details about what will be deleted
+                foreach (var image in expiredImages.Take(10)) // Log first 10 for debugging
                 {
-                    // Mark for deletion but don't immediately delete
-                    // This allows for a grace period and user recovery
-                    image.IsMarkedForDeletion = true;
-                    
-                    _logger.LogDebug("Marked image {ImageId} for deletion (Created: {CreatedAt}, Scheduled: {ScheduledDate})", 
-                        image.Id, image.CreatedAt, image.ScheduledDeletionDate);
+                    _logger.LogDebug(
+                        "Expired image {ImageId} ({ImageType}): scheduled for deletion on {ScheduledDeletion}",
+                        image.ImageId, image.ImageType, image.ScheduledDeletion);
                 }
 
-                await dbContext.SaveChangesAsync();
-                _logger.LogInformation("Successfully marked {Count} images for deletion", expiredImages.Count);
+                if (expiredImages.Count > 10)
+                {
+                    _logger.LogDebug("... and {RemainingCount} more", expiredImages.Count - 10);
+                }
             }
 
-            // Find images marked for deletion for more than 24 hours and perform soft delete
-            var imagesToSoftDelete = await dbContext.ProcessedImages
-                .Where(img => !img.IsDeleted && 
-                             img.IsMarkedForDeletion && 
-                             img.ScheduledDeletionDate <= now.AddDays(-1)) // Grace period of 1 day
-                .ToListAsync();
+            // Delete expired images
+            var deletedCount = await retentionService.DeleteExpiredImagesAsync();
 
-            if (imagesToSoftDelete.Any())
+            if (deletedCount > 0)
             {
-                _logger.LogInformation("Found {Count} images to soft delete", imagesToSoftDelete.Count);
-
-                foreach (var image in imagesToSoftDelete)
-                {
-                    // Perform soft delete
-                    image.IsDeleted = true;
-                    image.DeletedAt = DateTime.UtcNow;
-                    
-                    _logger.LogDebug("Soft deleted image {ImageId}", image.Id);
-                }
-
-                await dbContext.SaveChangesAsync();
-                _logger.LogInformation("Successfully soft deleted {Count} images", imagesToSoftDelete.Count);
+                _logger.LogInformation(
+                    "Retention policy check completed: deleted {DeletedCount} expired images",
+                    deletedCount);
             }
-
-            _logger.LogInformation("Completed retention policy cleanup check");
+            else
+            {
+                _logger.LogDebug("Retention policy check completed: no expired images found");
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to process expired images");
+            _logger.LogError(ex, "Failed to perform retention policy check");
+            throw; // Re-throw to trigger the retry logic in ExecuteAsync
         }
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Retention Policy Background Service is stopping");
-        return base.StopAsync(cancellationToken);
+        _logger.LogInformation("Retention Policy Background Service is stopping...");
+        await base.StopAsync(cancellationToken);
     }
 }

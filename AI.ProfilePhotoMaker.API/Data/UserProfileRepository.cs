@@ -16,7 +16,6 @@ public class UserProfileRepository : IUserProfileRepository
     {
         return await _context.UserProfiles
             .Include(p => p.ProcessedImages)
-            .AsNoTracking() // Add this to ensure fresh data from database
             .FirstOrDefaultAsync(p => p.UserId == userId);
     }
 
@@ -28,7 +27,17 @@ public class UserProfileRepository : IUserProfileRepository
 
     public async Task UpdateAsync(UserProfile profile)
     {
-        _context.UserProfiles.Update(profile);
+        // Check if entity is already being tracked
+        var existingEntry = _context.Entry(profile);
+        if (existingEntry.State == EntityState.Detached)
+        {
+            _context.UserProfiles.Update(profile);
+        }
+        else
+        {
+            // Entity is already tracked, just save changes
+            existingEntry.State = EntityState.Modified;
+        }
         await _context.SaveChangesAsync();
     }
 

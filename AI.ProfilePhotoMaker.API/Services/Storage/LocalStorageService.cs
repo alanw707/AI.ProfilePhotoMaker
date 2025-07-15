@@ -34,14 +34,14 @@ public class LocalStorageService : IStorageService
             }
 
             var filePath = Path.Combine(userDirectory, fileName);
-            
+
             // Save the image to the local filesystem
             using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write);
             await imageStream.CopyToAsync(fileStream);
 
             // Return the relative path that can be served by the web server
             var storagePath = $"/generated/{userId}/{fileName}";
-            
+
             _logger.LogInformation("Saved image to local storage: {StoragePath}", storagePath);
             return storagePath;
         }
@@ -113,7 +113,7 @@ public class LocalStorageService : IStorageService
     {
         // For local storage, convert relative path to absolute URL
         var baseUrl = _configuration["AppBaseUrl"] ?? "https://localhost:5001";
-        
+
         // Ensure storagePath starts with /
         if (!storagePath.StartsWith('/'))
         {
@@ -168,7 +168,7 @@ public class LocalStorageService : IStorageService
 
             var fileInfo = new FileInfo(fullPath);
             var fileName = Path.GetFileName(storagePath);
-            
+
             // Determine content type based on file extension
             var contentType = GetContentType(Path.GetExtension(fileName));
 

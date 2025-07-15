@@ -36,8 +36,17 @@ This document outlines the testing infrastructure set up for the Angular UI refa
 1. `testing-utils.ts` - Mock services and testing utilities
 2. `dashboard.component.spec.ts` - Comprehensive dashboard tests
 
+### **Integration Test Files**
+1. `integration-tests/auth-flow.integration.spec.ts` - Authentication workflow tests
+2. `integration-tests/photo-enhancement-flow.integration.spec.ts` - Photo enhancement flow tests
+3. `integration-tests/photo-generation-flow.integration.spec.ts` - Photo generation workflow tests
+4. `integration-tests/gallery-management-flow.integration.spec.ts` - Gallery management flow tests
+5. `integration-tests/integration-test-runner.spec.ts` - Test utilities and configuration
+6. `integration-tests/README.md` - Comprehensive integration test documentation
+
 ### **Existing Test Files**
 1. `app.component.spec.ts` - Basic app component tests
+2. `services/services-integration.spec.ts` - Service integration tests
 
 ## Mock Services Available
 
@@ -117,14 +126,23 @@ TestConstants.TIMEOUTS       // Test timeout values
 # Navigate to UI project
 cd AI.ProfilePhotoMaker.UI
 
-# Run tests (requires Chrome installation)
+# Run unit tests (requires Chrome installation)
 npm test
 
-# Run tests in headless mode
+# Run unit tests in headless mode
 npm test -- --watch=false --browsers=ChromeHeadless
 
 # Run specific test files
 npm test -- --include="**/dashboard.component.spec.ts"
+
+# Run integration tests
+npm run test:integration
+
+# Run integration tests in headless mode
+npm run test:integration:headless
+
+# Run integration tests with watch mode
+npm run test:integration:watch
 ```
 
 ### **Test Environment Setup**

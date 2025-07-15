@@ -2,7 +2,7 @@ import { Injectable, NgZone } from '@angular/core';
 import * as faceapi from 'face-api.js';
 import { ModelLoaderService } from './model-loader.service';
 import { ImageQualityService } from './image-quality.service';
-import { IFaceDetectionService, FaceValidationResult, QualityScore } from '../interfaces/service.interfaces';
+import { FaceValidationResult, IFaceDetectionService, QualityScore } from '../interfaces/service.interfaces';
 
 @Injectable({
   providedIn: 'root'

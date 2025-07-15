@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
@@ -7,7 +9,6 @@ using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace AI.ProfilePhotoMaker.API.Controllers
 {
@@ -20,19 +21,22 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IConfiguration _configuration;
         private readonly ApplicationDbContext _context;
+        private readonly HttpClient _httpClient;
 
         public AuthController(
             IAuthService authService,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             IConfiguration configuration,
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            HttpClient httpClient)
         {
             _authService = authService;
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
             _context = context;
+            _httpClient = httpClient;
         }
 
         [HttpPost("register")]
@@ -69,194 +73,223 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             return Ok(result);
         }
 
-        [HttpGet("external-login/{provider}")]
-        public IActionResult ExternalLogin(string provider, string returnUrl = "")
+        [HttpGet("google-oauth-url")]
+        public IActionResult GetGoogleOAuthUrl(string returnUrl = "/dashboard")
         {
-            // Use AppBaseUrl from configuration
-            var baseUrl = _configuration["AppBaseUrl"] ?? "http://localhost:5035";
-            
-            var redirectUrl = $"{baseUrl}/api/auth/external-login/callback?returnUrl={returnUrl}";
-            var properties = new Microsoft.AspNetCore.Authentication.AuthenticationProperties 
-            { 
-                RedirectUri = redirectUrl 
-            };
-            
-            return Challenge(properties, provider);
+            var googleClientId = _configuration["Authentication:Google:ClientId"];
+            if (string.IsNullOrEmpty(googleClientId))
+            {
+                return BadRequest(new { error = "Google OAuth is not configured" });
+            }
+
+            var redirectUrl = Url.Action(nameof(ExternalLoginCallback), "Auth", new { returnUrl }, Request.Scheme);
+            var properties = _signInManager.ConfigureExternalAuthenticationProperties("Google", redirectUrl);
+
+            // Manually construct the Google OAuth URL
+            var authUrl = $"https://accounts.google.com/o/oauth2/v2/auth?" +
+                $"client_id={Uri.EscapeDataString(googleClientId)}&" +
+                $"redirect_uri={Uri.EscapeDataString(properties.RedirectUri ?? string.Empty)}&" +
+                $"response_type=code&" +
+                $"scope=openid%20profile%20email&" +
+                $"state={Uri.EscapeDataString(properties.Items[".xsrf"] ?? string.Empty)}";
+
+            return Ok(new { authUrl });
         }
 
-        [HttpGet("external-login/callback")]
-        public async Task<IActionResult> ExternalLoginCallback(string returnUrl = "", string code = "", string state = "")
+        [HttpGet("external-login/{provider}")]
+        public IActionResult ExternalLogin(string provider, string returnUrl = "/dashboard")
         {
-            // OAuth callback processing
-            
-            // If we have a code but GetExternalLoginInfoAsync fails due to state validation,
-            // try to manually process the Google OAuth code
-            if (!string.IsNullOrEmpty(code))
+            if (provider.ToLower() != "google")
             {
-                try
-                {
-                    // Try to get user info directly from Google using the code
-                    var userInfo = await GetGoogleUserInfoAsync(code);
-                    if (userInfo != null)
-                    {
-                        Console.WriteLine($"Successfully retrieved Google user info: {userInfo.Email}");
-                        return await ProcessGoogleUserAsync(userInfo.Email, userInfo.GivenName, userInfo.FamilyName, returnUrl);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Direct Google OAuth failed: {ex.Message}");
-                }
-            }
-            
-            // Fallback to standard ASP.NET Core OAuth flow
-            var info = await _signInManager.GetExternalLoginInfoAsync();
-            if (info == null)
-            {
-                Console.WriteLine("GetExternalLoginInfoAsync returned null");
-                return Redirect($"http://localhost:4200{returnUrl}?error=external_login_failed");
+                return BadRequest(new { error = $"{provider} OAuth not implemented yet" });
             }
 
-            // Try to sign in the user with this external login provider
-            var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false);
-            
-            if (result.Succeeded)
+            var clientId = _configuration["Authentication:Google:ClientId"];
+            if (string.IsNullOrEmpty(clientId))
             {
-                // User already has an account, generate JWT and redirect
-                var user = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
-                if (user != null)
-                {
-                    var token = ((AuthService)_authService).GenerateJwtToken(user);
-                    return Redirect($"http://localhost:4200{returnUrl}?token={token.Token}&expiration={token.Expiration}");
-                }
+                return BadRequest(new { error = "Google OAuth is not configured" });
             }
 
-            // Create new user or link account
-            var email = info.Principal.FindFirstValue(ClaimTypes.Email);
-            var firstName = info.Principal.FindFirstValue(ClaimTypes.GivenName) ?? "";
-            var lastName = info.Principal.FindFirstValue(ClaimTypes.Surname) ?? "";
+            // Generate state parameter for security
+            var state = Guid.NewGuid().ToString();
+            HttpContext.Session.SetString("oauth_state", state);
+            HttpContext.Session.SetString("oauth_return_url", returnUrl);
 
-            if (string.IsNullOrEmpty(email))
+            // Get base URL (ngrok in development)
+            var baseUrl = _configuration["AppBaseUrl"] ?? Request.Scheme + "://" + Request.Host;
+            var redirectUri = $"{baseUrl}/api/auth/external-login-callback";
+
+            // Construct Google OAuth URL manually
+            var authUrl = $"https://accounts.google.com/o/oauth2/v2/auth?" +
+                $"client_id={Uri.EscapeDataString(clientId ?? string.Empty)}&" +
+                $"redirect_uri={Uri.EscapeDataString(redirectUri ?? string.Empty)}&" +
+                $"response_type=code&" +
+                $"scope={Uri.EscapeDataString("openid profile email")}&" +
+                $"state={Uri.EscapeDataString(state ?? string.Empty)}";
+
+            Console.WriteLine($"🚀 Manual OAuth URL: {authUrl}");
+            Console.WriteLine($"   State: {state}");
+            Console.WriteLine($"   Redirect URI: {redirectUri}");
+
+            return Redirect(authUrl);
+        }
+
+        [HttpGet("external-login-callback")]
+        public async Task<IActionResult> ExternalLoginCallback(string? code = null, string? state = null, string? error = null)
+        {
+            var frontendBaseUrl = _configuration["AppBaseUrl"] ?? "http://localhost:4200";
+            var returnUrl = HttpContext.Session.GetString("oauth_return_url") ?? "/dashboard";
+
+            Console.WriteLine($"🔄 OAuth Callback - Code: {code?.Substring(0, Math.Min(10, code?.Length ?? 0))}...");
+            Console.WriteLine($"   State: {state}");
+            Console.WriteLine($"   Error: {error}");
+
+            // Handle OAuth errors
+            if (!string.IsNullOrEmpty(error))
             {
-                return Redirect($"http://localhost:4200{returnUrl}?error=no_email_from_provider");
+                Console.WriteLine($"❌ OAuth error: {error}");
+                return Redirect($"{frontendBaseUrl}/login?error=oauth_{error}");
             }
 
-            var existingUser = await _userManager.FindByEmailAsync(email);
-            if (existingUser != null)
+            // Validate state parameter
+            var sessionState = HttpContext.Session.GetString("oauth_state");
+            if (string.IsNullOrEmpty(state) || state != sessionState)
             {
-                Console.WriteLine($"Found existing user with email: {email}");
-                // Link external login to existing user
-                var addLoginResult = await _userManager.AddLoginAsync(existingUser, info);
-                if (addLoginResult.Succeeded)
+                Console.WriteLine($"❌ Invalid state - Session: {sessionState}, Received: {state}");
+                return Redirect($"{frontendBaseUrl}/login?error=invalid_state");
+            }
+
+            // Validate authorization code
+            if (string.IsNullOrEmpty(code))
+            {
+                Console.WriteLine("❌ Missing authorization code");
+                return Redirect($"{frontendBaseUrl}/login?error=missing_code");
+            }
+
+            try
+            {
+                // Exchange authorization code for access token
+                var tokenResponse = await ExchangeCodeForTokenAsync(code);
+                if (tokenResponse == null)
                 {
-                    Console.WriteLine("Successfully linked Google account to existing user");
-                    var token = ((AuthService)_authService).GenerateJwtToken(existingUser);
-                    return Redirect($"http://localhost:4200{returnUrl}?token={token.Token}&expiration={token.Expiration}");
+                    return Redirect($"{frontendBaseUrl}/login?error=token_exchange_failed");
                 }
-                else
+
+                // Get user info from Google
+                var userInfo = await GetGoogleUserInfoAsync(tokenResponse.AccessToken);
+                if (userInfo == null)
                 {
-                    Console.WriteLine($"Failed to link Google account: {string.Join(", ", addLoginResult.Errors.Select(e => e.Description))}");
-                    return Redirect($"http://localhost:4200{returnUrl}?error=failed_to_link_account");
+                    return Redirect($"{frontendBaseUrl}/login?error=user_info_failed");
                 }
+
+                // Find or create user
+                var user = await FindOrCreateUserAsync(userInfo);
+                if (user == null)
+                {
+                    return Redirect($"{frontendBaseUrl}/login?error=user_creation_failed");
+                }
+
+                // Generate JWT token
+                var tokenInfo = _authService.GenerateJwtToken(user);
+
+                Console.WriteLine($"✅ OAuth success - User: {user.Email}");
+                return Redirect($"{frontendBaseUrl}{returnUrl}?token={tokenInfo.Token}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ OAuth callback error: {ex.Message}");
+                return Redirect($"{frontendBaseUrl}/login?error=oauth_processing_failed");
+            }
+        }
+
+        private async Task<GoogleTokenResponse?> ExchangeCodeForTokenAsync(string code)
+        {
+            var clientId = _configuration["Authentication:Google:ClientId"];
+            var clientSecret = _configuration["Authentication:Google:ClientSecret"];
+            var baseUrl = _configuration["AppBaseUrl"] ?? Request.Scheme + "://" + Request.Host;
+            var redirectUri = $"{baseUrl}/api/auth/external-login-callback";
+
+            var tokenRequest = new List<KeyValuePair<string, string>>
+            {
+                new("client_id", clientId),
+                new("client_secret", clientSecret),
+                new("code", code),
+                new("grant_type", "authorization_code"),
+                new("redirect_uri", redirectUri)
+            };
+
+            var content = new FormUrlEncodedContent(tokenRequest);
+            var response = await _httpClient.PostAsync("https://oauth2.googleapis.com/token", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"❌ Token exchange failed: {response.StatusCode} - {errorContent}");
+                return null;
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
+            var tokenResponse = JsonSerializer.Deserialize<GoogleTokenResponse>(json, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+            });
+
+            Console.WriteLine($"✅ Token exchange successful");
+            return tokenResponse;
+        }
+
+        private async Task<GoogleUserInfo?> GetGoogleUserInfoAsync(string accessToken)
+        {
+            _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+
+            var response = await _httpClient.GetAsync("https://www.googleapis.com/oauth2/v2/userinfo");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"❌ User info request failed: {response.StatusCode}");
+                return null;
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
+            var userInfo = JsonSerializer.Deserialize<GoogleUserInfo>(json, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+            });
+
+            Console.WriteLine($"✅ User info retrieved: {userInfo?.Email}");
+            return userInfo;
+        }
+
+        private async Task<ApplicationUser?> FindOrCreateUserAsync(GoogleUserInfo userInfo)
+        {
+            var user = await _userManager.FindByEmailAsync(userInfo.Email);
+
+            if (user == null)
+            {
+                user = new ApplicationUser
+                {
+                    UserName = userInfo.Email,
+                    Email = userInfo.Email,
+                    FirstName = userInfo.GivenName ?? "",
+                    LastName = userInfo.FamilyName ?? "",
+                    EmailConfirmed = true
+                };
+
+                var createResult = await _userManager.CreateAsync(user);
+                if (!createResult.Succeeded)
+                {
+                    Console.WriteLine($"❌ User creation failed: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
+                    return null;
+                }
+
+                Console.WriteLine($"✅ New user created: {user.Email}");
             }
             else
             {
-                // Create new user
-                var userName = email.Split('@')[0];
-                var newUser = new ApplicationUser(userName, email, firstName, lastName);
-                
-                var createResult = await _userManager.CreateAsync(newUser);
-                if (createResult.Succeeded)
-                {
-                    var addLoginResult = await _userManager.AddLoginAsync(newUser, info);
-                    if (addLoginResult.Succeeded)
-                    {
-                        var token = ((AuthService)_authService).GenerateJwtToken(newUser);
-                        return Redirect($"http://localhost:4200{returnUrl}?token={token.Token}&expiration={token.Expiration}");
-                    }
-                }
+                Console.WriteLine($"✅ Existing user found: {user.Email}");
             }
 
-            return Redirect($"http://localhost:4200{returnUrl}?error=external_login_failed");
-        }
-
-        [HttpPost("external-login/callback")]
-        public async Task<IActionResult> ExternalLoginCallback([FromBody] ExternalLoginCallbackDto model)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            var result = await _authService.ProcessExternalLoginAsync(model.Provider, model.Code, model.State);
-            if (!result.IsSuccess)
-            {
-                return BadRequest(result);
-            }
-
-            return Ok(result);
-        }
-
-        [HttpGet("google-direct-callback")]
-        public async Task<IActionResult> GoogleDirectCallback(string? code = null, string returnUrl = "/dashboard")
-        {
-            Console.WriteLine($"Google Direct Callback - Code: {code}, ReturnUrl: {returnUrl}");
-            Console.WriteLine($"All query parameters: {string.Join(", ", HttpContext.Request.Query.Select(q => $"{q.Key}={q.Value}"))}");
-            
-            // Try to get code from query parameters if not passed as parameter
-            if (string.IsNullOrEmpty(code))
-            {
-                code = HttpContext.Request.Query["code"].ToString();
-            }
-            
-            if (string.IsNullOrEmpty(code))
-            {
-                Console.WriteLine("No authorization code found in request");
-                return Redirect($"http://localhost:4200/login?error=no_authorization_code");
-            }
-
-            try
-            {
-                var userInfo = await GetGoogleUserInfoAsync(code);
-                if (userInfo != null)
-                {
-                    Console.WriteLine($"Successfully retrieved Google user info: {userInfo.Email}");
-                    return await ProcessGoogleUserAsync(userInfo.Email, userInfo.GivenName, userInfo.FamilyName, returnUrl);
-                }
-                else
-                {
-                    Console.WriteLine("Failed to retrieve user info from Google");
-                    return Redirect($"http://localhost:4200{returnUrl}?error=failed_to_get_user_info");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Google Direct OAuth failed: {ex.Message}");
-                return Redirect($"http://localhost:4200{returnUrl}?error=oauth_processing_failed");
-            }
-        }
-
-        [HttpGet("google-ticket-callback")]
-        public async Task<IActionResult> GoogleTicketCallback(string email, string? firstName = null, string? lastName = null, string returnUrl = "/dashboard")
-        {
-            Console.WriteLine($"Google Ticket Callback - Email: {email}, Name: {firstName} {lastName}, ReturnUrl: {returnUrl}");
-            
-            if (string.IsNullOrEmpty(email))
-            {
-                Console.WriteLine("No email provided in ticket callback");
-                return Redirect($"http://localhost:4200/login?error=no_email_in_ticket");
-            }
-
-            try
-            {
-                Console.WriteLine($"Processing user from OAuth ticket: {email}");
-                return await ProcessGoogleUserAsync(email, firstName, lastName, returnUrl);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Google Ticket processing failed: {ex.Message}");
-                return Redirect($"http://localhost:4200{returnUrl}?error=ticket_processing_failed");
-            }
+            return user;
         }
 
         [HttpGet("profile-completion-status")]
@@ -266,11 +299,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userId))
             {
-                return Unauthorized(new { success = false, error = "User not authenticated" });
+                return Unauthorized();
             }
 
             var status = await _authService.CheckProfileCompletionAsync(userId);
-            return Ok(new { success = true, data = status });
+            return Ok(status);
         }
 
         [HttpPost("complete-profile")]
@@ -285,11 +318,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userId))
             {
-                return Unauthorized(new { success = false, error = "User not authenticated" });
+                return Unauthorized();
             }
 
-            var result = await _authService.CompleteProfileAsync(userId, model);
-            if (result)
+            var success = await _authService.CompleteProfileAsync(userId, model);
+            if (success)
             {
                 return Ok(new { success = true, message = "Profile completed successfully" });
             }
@@ -297,140 +330,190 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             return BadRequest(new { success = false, error = "Failed to complete profile" });
         }
 
-        private async Task<GoogleUserInfo?> GetGoogleUserInfoAsync(string code)
+        [HttpGet("debug/auth-schemes")]
+        public IActionResult GetAuthSchemes()
         {
-            var httpClient = new HttpClient();
-            
-            // Exchange code for access token
-            var tokenRequest = new FormUrlEncodedContent(new[]
+            var schemes = new List<object>();
+
+            // Get all registered authentication schemes
+            var authSchemeProvider = HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider>();
+            var allSchemes = authSchemeProvider.GetAllSchemesAsync().Result;
+
+            foreach (var scheme in allSchemes)
             {
-                new KeyValuePair<string, string>("client_id", _configuration["Authentication:Google:ClientId"] ?? ""),
-                new KeyValuePair<string, string>("client_secret", _configuration["Authentication:Google:ClientSecret"] ?? ""),
-                new KeyValuePair<string, string>("code", code),
-                new KeyValuePair<string, string>("grant_type", "authorization_code"),
-                new KeyValuePair<string, string>("redirect_uri", $"{_configuration["AppBaseUrl"] ?? "http://localhost:5035"}/api/auth/external-login/callback")
+                schemes.Add(new
+                {
+                    Name = scheme.Name,
+                    DisplayName = scheme.DisplayName,
+                    HandlerType = scheme.HandlerType?.Name
+                });
+            }
+
+            return Ok(new
+            {
+                message = "Available authentication schemes",
+                schemes = schemes,
+                timestamp = DateTime.UtcNow
             });
-
-            var tokenResponse = await httpClient.PostAsync("https://oauth2.googleapis.com/token", tokenRequest);
-            var tokenContent = await tokenResponse.Content.ReadAsStringAsync();
-            
-            if (!tokenResponse.IsSuccessStatusCode)
-            {
-                Console.WriteLine($"Token exchange failed: {tokenContent}");
-                return null;
-            }
-
-            var tokenData = System.Text.Json.JsonSerializer.Deserialize<GoogleTokenResponse>(tokenContent);
-            if (tokenData?.AccessToken == null)
-            {
-                Console.WriteLine("No access token received");
-                return null;
-            }
-
-            // Get user info using access token
-            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenData.AccessToken);
-            var userResponse = await httpClient.GetAsync("https://www.googleapis.com/oauth2/v2/userinfo");
-            var userContent = await userResponse.Content.ReadAsStringAsync();
-
-            if (!userResponse.IsSuccessStatusCode)
-            {
-                Console.WriteLine($"User info request failed: {userContent}");
-                return null;
-            }
-
-            return System.Text.Json.JsonSerializer.Deserialize<GoogleUserInfo>(userContent);
         }
 
-        private async Task<IActionResult> ProcessGoogleUserAsync(string email, string? firstName, string? lastName, string returnUrl)
+        [HttpGet("debug/google-oauth")]
+        public async Task<IActionResult> DebugGoogleOAuth()
         {
-            Console.WriteLine($"ProcessGoogleUserAsync called with email: {email}, returnUrl: {returnUrl}");
-            
-            var existingUser = await _userManager.FindByEmailAsync(email);
-            if (existingUser != null)
+            try
             {
-                Console.WriteLine($"Found existing user with email: {email}");
-                
-                // Check if profile is complete for existing OAuth users
-                var profileStatus = await _authService.CheckProfileCompletionAsync(existingUser.Id);
-                var token = ((AuthService)_authService).GenerateJwtToken(existingUser);
-                Console.WriteLine($"Generated JWT token, length: {token.Token.Length}");
-                
-                string redirectUrl;
-                if (!profileStatus.IsCompleted)
-                {
-                    // Redirect to profile completion if incomplete
-                    redirectUrl = $"http://localhost:4200/complete-profile?token={Uri.EscapeDataString(token.Token)}&expiration={Uri.EscapeDataString(token.Expiration.ToString())}";
-                    Console.WriteLine($"Redirecting to profile completion: {redirectUrl}");
-                }
-                else
-                {
-                    // Normal login flow
-                    redirectUrl = $"http://localhost:4200{returnUrl}?token={Uri.EscapeDataString(token.Token)}&expiration={Uri.EscapeDataString(token.Expiration.ToString())}";
-                    Console.WriteLine($"Redirecting to: {redirectUrl}");
-                }
-                
-                return Redirect(redirectUrl);
-            }
-            else
-            {
-                Console.WriteLine($"Creating new user with email: {email}");
-                // Create new user
-                var userName = email.Split('@')[0];
-                var newUser = new ApplicationUser(userName, email, firstName ?? "", lastName ?? "");
-                
-                var createResult = await _userManager.CreateAsync(newUser);
-                if (createResult.Succeeded)
-                {
-                    // Create basic UserProfile for OAuth user (incomplete, needs profile completion)
-                    var userProfile = new UserProfile
-                    {
-                        UserId = newUser.Id,
-                        FirstName = firstName,
-                        LastName = lastName,
-                        Gender = null, // Will be completed later
-                        Ethnicity = null, // Will be completed later
-                        SubscriptionTier = SubscriptionTier.Basic,
-                        Credits = 3,
-                        LastCreditReset = DateTime.UtcNow,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    };
-                    
-                    _context.UserProfiles.Add(userProfile);
-                    await _context.SaveChangesAsync();
+                // Test if we can create an authorization URL manually
+                var authService = HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Authentication.IAuthenticationService>();
+                var schemeProvider = HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider>();
 
-                    var token = ((AuthService)_authService).GenerateJwtToken(newUser);
-                    Console.WriteLine($"Generated JWT token for new user, length: {token.Token.Length}");
-                    
-                    // TODO: Redirect to profile completion page once frontend is ready
-                    // For now, redirect to dashboard but mark profile as incomplete
-                    var redirectUrl = $"http://localhost:4200{returnUrl}?token={Uri.EscapeDataString(token.Token)}&expiration={Uri.EscapeDataString(token.Expiration.ToString())}&profileIncomplete=true";
-                    Console.WriteLine($"Redirecting new OAuth user to dashboard: {redirectUrl}");
-                    
-                    return Redirect(redirectUrl);
-                }
-                else
+                var googleScheme = await schemeProvider.GetSchemeAsync("Google");
+
+                if (googleScheme == null)
                 {
-                    Console.WriteLine($"Failed to create user: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
-                    return Redirect($"http://localhost:4200{returnUrl}?error=failed_to_create_user");
+                    return Ok(new { error = "Google authentication scheme not found" });
+                }
+
+                // Try to get the Google OAuth options
+                var optionsMonitor = HttpContext.RequestServices.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<Microsoft.AspNetCore.Authentication.Google.GoogleOptions>>();
+                var googleOptions = optionsMonitor.Get("Google");
+
+                // Create a manual Google OAuth URL
+                var state = Guid.NewGuid().ToString();
+                var redirectUri = $"https://{Request.Host}/signin-google";
+                var authUrl = $"{googleOptions.AuthorizationEndpoint}?" +
+                    $"client_id={Uri.EscapeDataString(googleOptions.ClientId ?? string.Empty)}&" +
+                    $"redirect_uri={Uri.EscapeDataString(redirectUri ?? string.Empty)}&" +
+                    $"response_type=code&" +
+                    $"scope={Uri.EscapeDataString("openid profile email")}&" +
+                    $"state={Uri.EscapeDataString(state ?? string.Empty)}";
+
+                return Ok(new
+                {
+                    message = "Google OAuth Debug Info",
+                    scheme = new
+                    {
+                        name = googleScheme.Name,
+                        displayName = googleScheme.DisplayName,
+                        handlerType = googleScheme.HandlerType?.Name
+                    },
+                    options = new
+                    {
+                        clientId = !string.IsNullOrEmpty(googleOptions.ClientId) ? googleOptions.ClientId.Substring(0, 20) + "..." : "NOT SET",
+                        clientSecret = !string.IsNullOrEmpty(googleOptions.ClientSecret) ? "SET" : "NOT SET",
+                        callbackPath = googleOptions.CallbackPath.ToString(),
+                        authorizationEndpoint = googleOptions.AuthorizationEndpoint,
+                        tokenEndpoint = googleOptions.TokenEndpoint
+                    },
+                    manualAuthUrl = authUrl,
+                    timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new
+                {
+                    error = "Exception in Google OAuth debug",
+                    message = ex.Message,
+                    stackTrace = ex.StackTrace
+                });
+            }
+        }
+
+        [HttpGet("test-redirect")]
+        public IActionResult TestRedirect()
+        {
+            // Simple test to see if redirects work at all
+            return Redirect("https://www.google.com");
+        }
+
+        [HttpGet("google-oauth-url-alt")]
+        public async Task<IActionResult> GetGoogleOAuthUrlAlternative(string returnUrl = "/dashboard")
+        {
+            try
+            {
+                // Try with explicit localhost redirect for testing
+                var clientId = "331984288023-lh1upthod06meoko58g7hn9d7h68l311.apps.googleusercontent.com";
+                var redirectUri = "https://awlocaldev.ngrok.app/signin-google";
+                var state = Guid.NewGuid().ToString();
+
+                // Create OAuth URL with minimal parameters
+                var authUrl = $"https://accounts.google.com/o/oauth2/v2/auth?" +
+                    $"client_id={Uri.EscapeDataString(clientId ?? string.Empty)}&" +
+                    $"redirect_uri={Uri.EscapeDataString(redirectUri ?? string.Empty)}&" +
+                    $"response_type=code&" +
+                    $"scope={Uri.EscapeDataString("email profile")}&" +
+                    $"state={Uri.EscapeDataString(state ?? string.Empty)}";
+
+                Console.WriteLine($"🔧 Alternative OAuth URL: {authUrl}");
+
+                return Ok(new
+                {
+                    authUrl = authUrl,
+                    state = state,
+                    returnUrl = returnUrl,
+                    note = "Alternative OAuth URL with minimal parameters"
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Alternative OAuth URL error: {ex.Message}");
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+
+
+        /// <summary>
+        /// Get the appropriate frontend base URL based on current request context
+        /// </summary>
+        private string GetFrontendBaseUrl()
+        {
+            // Check referer header first (most reliable for OAuth flows)
+            var referer = Request.Headers["Referer"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(referer))
+            {
+                try
+                {
+                    var uri = new Uri(referer);
+                    return $"{uri.Scheme}://{uri.Host}{(uri.Port != 80 && uri.Port != 443 ? $":{uri.Port}" : "")}";
+                }
+                catch
+                {
+                    // Ignore parsing errors
                 }
             }
+
+            // Check Origin header
+            var origin = Request.Headers["Origin"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(origin))
+            {
+                return origin;
+            }
+
+            // Default to localhost for development
+            return "http://localhost:4200";
         }
     }
 
+    // DTOs for Google OAuth
     public class GoogleTokenResponse
     {
-        public string? access_token { get; set; }
-        public string? AccessToken => access_token;
+        public string AccessToken { get; set; } = "";
+        public string TokenType { get; set; } = "";
+        public int ExpiresIn { get; set; }
+        public string? RefreshToken { get; set; }
+        public string? IdToken { get; set; }
     }
 
     public class GoogleUserInfo
     {
-        public string? email { get; set; }
-        public string? given_name { get; set; }
-        public string? family_name { get; set; }
-        public string? Email => email;
-        public string? GivenName => given_name;
-        public string? FamilyName => family_name;
+        public string Id { get; set; } = "";
+        public string Email { get; set; } = "";
+        public bool VerifiedEmail { get; set; }
+        public string Name { get; set; } = "";
+        public string GivenName { get; set; } = "";
+        public string FamilyName { get; set; } = "";
+        public string Picture { get; set; } = "";
+        public string Locale { get; set; } = "";
     }
 }

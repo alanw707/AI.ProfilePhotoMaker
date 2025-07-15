@@ -7,9 +7,9 @@ public class EnhancePhotoRequestDto
     [Required(ErrorMessage = "Image URL is required for photo enhancement")]
     [Url(ErrorMessage = "Image URL must be a valid URL")]
     public string ImageUrl { get; set; } = string.Empty;
-    
+
     public string? EnhancementType { get; set; } = "professional";
-    
+
     public bool IsDeblurRequest { get; set; } = false;
     public double DeblurStrength { get; set; } = 0.5; // Default deblur strength
     public string? PhotoId { get; set; } // To link to a specific photo if needed

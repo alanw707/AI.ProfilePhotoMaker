@@ -1,0 +1,113 @@
+// =============================================================================
+// DASHBOARD VARIABLES
+// =============================================================================
+// Centralized variables for common values to reduce duplication
+
+// =============================================================================
+// BOX SHADOW VARIABLES
+// =============================================================================
+
+// Standard card shadows
+:root
+  --shadow-card-subtle: 0 2px 8px rgba(0, 0, 0, 0.05)
+  --shadow-card-base: 0 4px 12px rgba(0, 0, 0, 0.1)
+  --shadow-card-elevated: 0 6px 20px rgba(0, 0, 0, 0.15)
+  --shadow-card-modal: 0 8px 32px rgba(0, 0, 0, 0.4)
+
+// Accent shadows (cyan/teal theme)
+:root
+  --shadow-accent-subtle: 0 2px 8px rgba(125, 211, 216, 0.2)
+  --shadow-accent-base: 0 4px 12px rgba(125, 211, 216, 0.3)
+  --shadow-accent-button: 0 4px 14px rgba(125, 211, 216, 0.25)
+  --shadow-accent-elevated: 0 6px 20px rgba(125, 211, 216, 0.35)
+  --shadow-accent-glow: 0 8px 32px rgba(125, 211, 216, 0.2)
+  --shadow-accent-focus: 0 0 0 2px rgba(125, 211, 216, 0.3)
+
+// Success shadows (green theme)
+:root
+  --shadow-success-subtle: 0 2px 8px rgba(34, 197, 94, 0.1)
+  --shadow-success-base: 0 4px 12px rgba(34, 197, 94, 0.3)
+  --shadow-success-elevated: 0 6px 20px rgba(34, 197, 94, 0.4)
+
+// File upload shadows
+:root
+  --shadow-file-valid: 0 2px 12px rgba(40, 167, 69, 0.15)
+  --shadow-file-invalid: 0 2px 12px rgba(220, 53, 69, 0.15)
+  --shadow-file-progress: 0 1px 3px rgba(40, 167, 69, 0.3)
+  --shadow-file-error: 0 1px 3px rgba(220, 53, 69, 0.3)
+
+// =============================================================================
+// GRADIENT VARIABLES
+// =============================================================================
+
+// Primary gradients
+:root
+  --gradient-primary: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))
+  --gradient-primary-hover: linear-gradient(135deg, #85dbe0, #a8e6a1)
+  --gradient-success: linear-gradient(135deg, var(--success), #10b981)
+  --gradient-dashboard-bg: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-tertiary) 100%)
+
+// Card gradients
+:root
+  --gradient-card-subtle: linear-gradient(135deg, var(--card-bg), var(--bg-tertiary))
+  --gradient-card-accent: linear-gradient(135deg, rgba(125, 211, 216, 0.05), rgba(59, 130, 246, 0.05))
+  --gradient-card-success: linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(125, 211, 216, 0.05))
+  --gradient-card-info: linear-gradient(135deg, rgba(125, 211, 216, 0.1), rgba(59, 130, 246, 0.05))
+  --gradient-card-warning: linear-gradient(135deg, rgba(125, 211, 216, 0.08), rgba(59, 130, 246, 0.05))
+
+// Progress bar gradients
+:root
+  --gradient-progress-upload: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))
+  --gradient-progress-shimmer: linear-gradient(90deg, transparent, var(--accent-primary), transparent)
+
+// Status gradients
+:root
+  --gradient-status-error: linear-gradient(90deg, #ff6b6b, #ff8e8e)
+  --gradient-status-warning: linear-gradient(90deg, #ffd93d, #ffed4e)
+  --gradient-status-success: linear-gradient(90deg, #51cf66, #69db7c)
+
+// =============================================================================
+// SPACING VARIABLES
+// =============================================================================
+
+:root
+  --spacing-xs: 4px
+  --spacing-sm: 8px
+  --spacing-md: 12px
+  --spacing-lg: 16px
+  --spacing-xl: 20px
+  --spacing-2xl: 24px
+  --spacing-3xl: 32px
+  --spacing-4xl: 40px
+  --spacing-5xl: 48px
+
+// =============================================================================
+// BORDER RADIUS VARIABLES
+// =============================================================================
+
+:root
+  --border-radius-sm: 8px
+  --border-radius-md: 12px
+  --border-radius-lg: 16px
+  --border-radius-xl: 20px
+  --border-radius-full: 50%
+
+// =============================================================================
+// TRANSITION VARIABLES
+// =============================================================================
+
+:root
+  --transition-base: all 0.3s ease
+  --transition-fast: all 0.2s ease
+  --transition-slow: all 0.4s ease
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+
+// =============================================================================
+// LAYOUT VARIABLES
+// =============================================================================
+
+:root
+  --grid-gap-sm: 12px
+  --grid-gap-md: 16px
+  --grid-gap-lg: 20px
+  --grid-gap-xl: 24px

@@ -36,7 +36,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
         try
         {
             _logger.LogInformation("Quick database check for user {UserId}", userId);
-            
+
             // Get user profile from database
             var userProfile = await _context.UserProfiles
                 .FirstOrDefaultAsync(u => u.UserId == userId);
@@ -46,7 +46,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
                 .Where(m => m.UserId == userId && m.Status == ModelCreationStatus.Ready)
                 .OrderByDescending(m => m.CompletedAt)
                 .FirstOrDefaultAsync();
-            
+
             var result = new QuickModelCheckResult
             {
                 HasModel = latestModel != null,
@@ -56,23 +56,23 @@ public class ModelDiscoveryService : IModelDiscoveryService
                 LastSyncCheck = userProfile?.LastModelSyncCheck,
                 ShouldRunDiscovery = false
             };
-            
+
             // Determine if we should run discovery
             if (!result.HasModel)
             {
                 // No model in DB, might need discovery
                 result.ShouldRunDiscovery = true;
             }
-            else if (result.LastSyncCheck == null || 
+            else if (result.LastSyncCheck == null ||
                      (DateTime.UtcNow - result.LastSyncCheck.Value).TotalHours > 24)
             {
                 // Haven't synced in 24 hours, might want to check
                 result.ShouldRunDiscovery = true;
             }
-            
-            _logger.LogInformation("Quick check result: HasModel={HasModel}, ShouldRunDiscovery={ShouldRunDiscovery}", 
+
+            _logger.LogInformation("Quick check result: HasModel={HasModel}, ShouldRunDiscovery={ShouldRunDiscovery}",
                 result.HasModel, result.ShouldRunDiscovery);
-            
+
             return result;
         }
         catch (Exception ex)
@@ -88,11 +88,11 @@ public class ModelDiscoveryService : IModelDiscoveryService
     public async Task<ModelSyncResult> DiscoverAndSyncUserModelsAsync(string userId)
     {
         var result = new ModelSyncResult { Success = false };
-        
+
         try
         {
             _logger.LogInformation("Starting model discovery for user {UserId}", userId);
-            
+
             // First, do a quick database check
             var quickCheck = await QuickDatabaseCheckAsync(userId);
             if (quickCheck.HasModel && !quickCheck.ShouldRunDiscovery)
@@ -112,22 +112,22 @@ public class ModelDiscoveryService : IModelDiscoveryService
             {
                 var discoveredModels = new List<UserModelInfo>();
                 var owner = "alanw707"; // Your Replicate username
-                
+
                 _logger.LogInformation("Using simplified pattern prefix matching for user {UserId}", userId);
-                
+
                 // Method 1: Use efficient ReplicateApiClient pattern discovery FIRST
                 try
                 {
                     _logger.LogInformation("Using ReplicateApiClient to find models for user {UserId}", userId);
-                    
+
                     var apiClientModels = await _replicateApiClient.FindUserModelsByPatternAsync(userId);
-                    
+
                     foreach (var apiModel in apiClientModels)
                     {
                         var modelId = $"{apiModel.Owner}/{apiModel.Name}";
-                        _logger.LogInformation("✅ Found model via ReplicateApiClient: {ModelId} with version: {VersionId}", 
+                        _logger.LogInformation("✅ Found model via ReplicateApiClient: {ModelId} with version: {VersionId}",
                             modelId, apiModel.LatestVersion);
-                        
+
                         discoveredModels.Add(new UserModelInfo
                         {
                             ModelId = modelId,
@@ -143,7 +143,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
                 {
                     _logger.LogWarning(ex, "ReplicateApiClient pattern discovery failed for user {UserId}", userId);
                 }
-                
+
                 // Method 2: Check for the specific known model (only if not found above)
                 var knownModel = await CheckKnownModel(userId, owner);
                 if (knownModel != null)
@@ -153,31 +153,31 @@ public class ModelDiscoveryService : IModelDiscoveryService
                     if (existingModel == null)
                     {
                         discoveredModels.Add(knownModel);
-                        _logger.LogInformation("✅ Found known model (fallback): {ModelId} with version: {VersionId}", 
+                        _logger.LogInformation("✅ Found known model (fallback): {ModelId} with version: {VersionId}",
                             knownModel.ModelId, knownModel.VersionId);
                     }
                     else
                     {
-                        _logger.LogInformation("ℹ️ Known model already found via ReplicateApiClient with version: {VersionId}", 
+                        _logger.LogInformation("ℹ️ Known model already found via ReplicateApiClient with version: {VersionId}",
                             existingModel.VersionId);
                     }
                 }
-                
+
                 result.ModelsFound = discoveredModels.Count;
-                
+
                 if (discoveredModels.Count > 0)
                 {
                     // Sync discovered models to database
                     var syncResult = await SyncModelsToDatabase(userId, discoveredModels);
-                    
+
                     result.ModelsAdded = syncResult.ModelsAdded;
                     result.ModelsRemoved = syncResult.ModelsRemoved;
                     result.AddedModelIds = syncResult.AddedModelIds;
                     result.RemovedModelIds = syncResult.RemovedModelIds;
                     result.Success = true;
                     result.Message = $"Found {result.ModelsFound} models using direct checking. Added: {result.ModelsAdded}, Removed: {result.ModelsRemoved}";
-                    
-                    _logger.LogInformation("Model discovery completed successfully for user {UserId}. Found: {Found}, Added: {Added}", 
+
+                    _logger.LogInformation("Model discovery completed successfully for user {UserId}. Found: {Found}, Added: {Added}",
                         userId, result.ModelsFound, result.ModelsAdded);
                 }
                 else
@@ -186,7 +186,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
                     result.Message = $"No models found using direct checking for pattern user-{userId}";
                     _logger.LogInformation("No models found for user {UserId} using direct checking", userId);
                 }
-                
+
                 return result;
             }
             catch (Exception ex)
@@ -219,7 +219,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
             // Count models on Replicate - for now return 0 until we understand SDK structure
             var userPattern = $"user-{userId}";
             var userModelsCount = 0;
-            
+
             try
             {
                 await _replicateApi.ModelsListAsync();
@@ -268,37 +268,37 @@ public class ModelDiscoveryService : IModelDiscoveryService
     public async Task<ModelVersionRepairResult> RepairModelVersionsAsync(string userId)
     {
         var result = new ModelVersionRepairResult();
-        
+
         try
         {
             _logger.LogInformation("Starting model version repair for user {UserId}", userId);
-            
+
             // Find models where TrainedModelVersion might be incorrect (looks like model ID instead of version hash)
             var modelsToRepair = await _context.ModelCreationRequests
-                .Where(m => m.UserId == userId && 
+                .Where(m => m.UserId == userId &&
                            m.Status == ModelCreationStatus.Ready &&
                            !string.IsNullOrEmpty(m.TrainedModelVersion) &&
                            !string.IsNullOrEmpty(m.ReplicateModelId) &&
                            m.TrainedModelVersion == m.ReplicateModelId) // Version same as model ID - likely incorrect
                 .ToListAsync();
-            
+
             result.ModelsFound = modelsToRepair.Count;
             _logger.LogInformation("Found {Count} models that may need version repair", modelsToRepair.Count);
-            
+
             foreach (var model in modelsToRepair)
             {
                 try
                 {
                     _logger.LogInformation("Repairing version for model {ModelId}", model.ReplicateModelId);
-                    
+
                     // Get the actual version ID from Replicate API
                     var actualVersionId = await _replicateApiClient.GetModelVersionAsync(model.ReplicateModelId);
-                    
+
                     if (!string.IsNullOrEmpty(actualVersionId) && actualVersionId != model.TrainedModelVersion)
                     {
-                        _logger.LogInformation("Updating model {ModelId} version from {OldVersion} to {NewVersion}", 
+                        _logger.LogInformation("Updating model {ModelId} version from {OldVersion} to {NewVersion}",
                             model.ReplicateModelId, model.TrainedModelVersion, actualVersionId);
-                        
+
                         model.TrainedModelVersion = actualVersionId;
                         result.ModelsRepaired++;
                         result.RepairedModels.Add(new RepairedModelInfo
@@ -324,13 +324,13 @@ public class ModelDiscoveryService : IModelDiscoveryService
                     result.ModelsWithErrors++;
                 }
             }
-            
+
             if (result.ModelsRepaired > 0)
             {
                 await _context.SaveChangesAsync();
                 _logger.LogInformation("Successfully repaired {Count} model versions", result.ModelsRepaired);
             }
-            
+
             result.Success = true;
             return result;
         }
@@ -434,11 +434,11 @@ public class ModelDiscoveryService : IModelDiscoveryService
         {
             var knownModelName = "user-b99678bd-cb87-40c1-a7bf-b889f1e00c08-20250630040811";
             var knownModelId = $"{owner}/{knownModelName}";
-            
+
             try
             {
                 _logger.LogInformation("Checking for known model: {ModelId}", knownModelId);
-                
+
                 var modelExists = await CheckModelExistsDirectly(owner, knownModelName);
                 if (modelExists)
                 {
@@ -454,7 +454,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
                     {
                         _logger.LogWarning(versionEx, "Could not get version for known model {ModelId}", knownModelId);
                     }
-                    
+
                     return new UserModelInfo
                     {
                         ModelId = knownModelId,
@@ -471,7 +471,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
                 _logger.LogError(ex, "Error checking known model {ModelId}", knownModelId);
             }
         }
-        
+
         return null;
     }
 
@@ -555,10 +555,10 @@ public class ModelDiscoveryService : IModelDiscoveryService
                     if (string.IsNullOrEmpty(versionId) || versionId == mostRecentModel.ModelId)
                     {
                         versionId = await _replicateApiClient.GetModelVersionAsync(mostRecentModel.ModelId);
-                        _logger.LogInformation("Retrieved actual version ID {VersionId} for model {ModelId}", 
+                        _logger.LogInformation("Retrieved actual version ID {VersionId} for model {ModelId}",
                             versionId, mostRecentModel.ModelId);
                     }
-                    
+
                     existingModel.TrainedModelVersion = versionId;
                     existingModel.Status = ModelCreationStatus.Ready;
                     existingModel.CompletedAt = mostRecentModel.CreatedAt;
@@ -570,10 +570,10 @@ public class ModelDiscoveryService : IModelDiscoveryService
                     if (string.IsNullOrEmpty(versionId) || versionId == mostRecentModel.ModelId)
                     {
                         versionId = await _replicateApiClient.GetModelVersionAsync(mostRecentModel.ModelId);
-                        _logger.LogInformation("Retrieved actual version ID {VersionId} for new model {ModelId}", 
+                        _logger.LogInformation("Retrieved actual version ID {VersionId} for new model {ModelId}",
                             versionId, mostRecentModel.ModelId);
                     }
-                    
+
                     var newModel = new ModelCreationRequest
                     {
                         UserId = userId,
@@ -588,8 +588,8 @@ public class ModelDiscoveryService : IModelDiscoveryService
 
                 result.ModelsAdded++;
                 result.AddedModelIds.Add(mostRecentModel.ModelId);
-                
-                _logger.LogInformation("Updated user profile with model {ModelId} version {VersionId}", 
+
+                _logger.LogInformation("Updated user profile with model {ModelId} version {VersionId}",
                     mostRecentModel.ModelId, mostRecentModel.VersionId);
             }
 
@@ -600,7 +600,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
                 if (!modelExistsOnReplicate)
                 {
                     _logger.LogWarning("Model {ModelId} found in database but not on Replicate, marking as failed", currentModelId);
-                    
+
                     // Mark the model as failed instead of deleting it (preserve history)
                     if (latestModelInDb != null)
                     {
@@ -615,7 +615,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
 
             // Update last sync check timestamp
             userProfile.LastModelSyncCheck = DateTime.UtcNow;
-            
+
             await _context.SaveChangesAsync();
             return result;
         }

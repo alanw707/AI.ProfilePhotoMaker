@@ -1,6 +1,6 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-stats-card',
@@ -10,14 +10,14 @@ import { RouterModule, Router } from '@angular/router';
   styleUrls: ['./stats-card.component.sass']
 })
 export class StatsCardComponent {
-  @Input() icon: string = '';
+  @Input() icon = '';
   @Input() value: string | number = 0;
-  @Input() label: string = '';
-  @Input() showCard: boolean = true;
-  @Input() isModelStatus: boolean = false;
-  @Input() isLoading: boolean = false;
-  @Input() isClickable: boolean = false;
-  @Input() clickAction: string = ''; // 'gallery', 'settings', etc.
+  @Input() label = '';
+  @Input() showCard = true;
+  @Input() isModelStatus = false;
+  @Input() isLoading = false;
+  @Input() isClickable = false;
+  @Input() clickAction = ''; // 'gallery', 'settings', etc.
   
   @Output() cardClicked = new EventEmitter<string>();
   

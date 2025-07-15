@@ -1,0 +1,65 @@
+{
+  "/api": {
+    "target": "https://awlocaldev-api.ngrok.app",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug",
+    "headers": {
+      "Host": "awlocaldev-api.ngrok.app"
+    }
+  },
+  "/debug": {
+    "target": "https://awlocaldev-api.ngrok.app",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug",
+    "headers": {
+      "Host": "awlocaldev-api.ngrok.app"
+    }
+  },
+  "/uploads": {
+    "target": "https://awlocaldev-api.ngrok.app",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug",
+    "headers": {
+      "Host": "awlocaldev-api.ngrok.app"
+    }
+  },
+  "/training-zips": {
+    "target": "https://awlocaldev-api.ngrok.app",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug",
+    "headers": {
+      "Host": "awlocaldev-api.ngrok.app"
+    }
+  },
+  "/style-previews": {
+    "target": "https://awlocaldev-api.ngrok.app",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug",
+    "headers": {
+      "Host": "awlocaldev-api.ngrok.app"
+    }
+  },
+  "/generated": {
+    "target": "https://awlocaldev-api.ngrok.app",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug",
+    "headers": {
+      "Host": "awlocaldev-api.ngrok.app"
+    }
+  },
+  "/enhanced": {
+    "target": "https://awlocaldev-api.ngrok.app",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug",
+    "headers": {
+      "Host": "awlocaldev-api.ngrok.app"
+    }
+  }
+}

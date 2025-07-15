@@ -148,7 +148,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 1,
                             BonusCredits = 0,
-                            CreatedAt = new DateTime(2025, 7, 7, 20, 59, 27, 39, DateTimeKind.Utc).AddTicks(3420),
+                            CreatedAt = new DateTime(2025, 7, 14, 12, 41, 23, 771, DateTimeKind.Utc).AddTicks(2240),
                             Credits = 50,
                             Description = "Perfect for trying out custom training and styled generations",
                             DisplayOrder = 1,
@@ -160,7 +160,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 2,
                             BonusCredits = 30,
-                            CreatedAt = new DateTime(2025, 7, 7, 20, 59, 27, 39, DateTimeKind.Utc).AddTicks(3423),
+                            CreatedAt = new DateTime(2025, 7, 14, 12, 41, 23, 771, DateTimeKind.Utc).AddTicks(2243),
                             Credits = 120,
                             Description = "Most popular - great for professionals",
                             DisplayOrder = 2,
@@ -172,7 +172,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 3,
                             BonusCredits = 100,
-                            CreatedAt = new DateTime(2025, 7, 7, 20, 59, 27, 39, DateTimeKind.Utc).AddTicks(3429),
+                            CreatedAt = new DateTime(2025, 7, 14, 12, 41, 23, 771, DateTimeKind.Utc).AddTicks(2245),
                             Credits = 300,
                             Description = "Best value for content creators and businesses",
                             DisplayOrder = 3,
@@ -184,7 +184,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 4,
                             BonusCredits = 250,
-                            CreatedAt = new DateTime(2025, 7, 7, 20, 59, 27, 39, DateTimeKind.Utc).AddTicks(3431),
+                            CreatedAt = new DateTime(2025, 7, 14, 12, 41, 23, 771, DateTimeKind.Utc).AddTicks(2248),
                             Credits = 750,
                             Description = "Maximum credits for agencies and enterprises",
                             DisplayOrder = 4,
@@ -356,16 +356,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("INTEGER");
-
                     b.Property<bool>("IsGenerated")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsMarkedForDeletion")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsOriginalUpload")
@@ -388,9 +379,6 @@ namespace AI.ProfilePhotoMaker.API.Migrations
 
                     b.Property<int>("UserProfileId")
                         .HasColumnType("INTEGER");
-
-                    b.Property<DateTime?>("UserRequestedDeletionDate")
-                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 

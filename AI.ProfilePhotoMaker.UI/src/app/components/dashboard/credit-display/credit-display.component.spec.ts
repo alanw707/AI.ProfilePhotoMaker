@@ -259,5 +259,80 @@ describe('CreditDisplayComponent', () => {
         context: undefined
       });
     });
+
+    it('should emit creditActionRequested event on upgrade action', () => {
+      spyOn(component.creditActionRequested, 'emit');
+      
+      component.onCreditAction('upgrade', 'premium-context');
+      
+      expect(component.creditActionRequested.emit).toHaveBeenCalledWith({
+        action: 'upgrade',
+        context: 'premium-context'
+      });
+    });
+  });
+
+  describe('Input Properties', () => {
+    it('should have correct default values for all input properties', () => {
+      expect(component.creditsInfo).toBeNull();
+      expect(component.userCreditStatus).toBeNull();
+      expect(component.isLoading).toBeFalse();
+      expect(component.showCard).toBeTrue();
+      expect(component.showSettingsHint).toBeFalse();
+      expect(component.showBreakdown).toBeFalse();
+      expect(component.showPurchasePrompt).toBeFalse();
+      expect(component.requiredCredits).toBe(0);
+      expect(component.trainingCredits).toBe(0);
+      expect(component.generationCredits).toBe(0);
+      expect(component.totalCredits).toBe(0);
+      expect(component.hasEnoughCredits).toBeTrue();
+      expect(component.remainingCredits).toBe(0);
+    });
+
+    it('should handle undefined userCreditStatus properties', () => {
+      component.userCreditStatus = {} as UserCreditStatus;
+      
+      expect(component.getWeeklyCredits()).toBe(0);
+      expect(component.getPurchasedCredits()).toBe(0);
+      expect(component.getTotalAvailableCredits()).toBe(0);
+    });
+
+    it('should handle undefined creditsInfo properties', () => {
+      component.creditsInfo = {} as CreditInfo;
+      component.userCreditStatus = null;
+      
+      expect(component.getWeeklyCredits()).toBe(0);
+      expect(component.getTotalAvailableCredits()).toBe(0);
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle negative credit values gracefully', () => {
+      component.userCreditStatus = {
+        weeklyCredits: -5,
+        purchasedCredits: 10
+      };
+      
+      expect(component.getTotalAvailableCredits()).toBe(5);
+      expect(component.getCreditDisplayText()).toBe('5 Credits (-5 Weekly + 10 Purchased)');
+    });
+
+    it('should handle very large credit values', () => {
+      component.userCreditStatus = {
+        weeklyCredits: 1000000,
+        purchasedCredits: 2000000
+      };
+      
+      expect(component.getTotalAvailableCredits()).toBe(3000000);
+      expect(component.getCreditDisplayText()).toBe('3000000 Credits (1000000 Weekly + 2000000 Purchased)');
+    });
+
+    it('should handle required credits when no data is available', () => {
+      component.userCreditStatus = null;
+      component.creditsInfo = null;
+      component.requiredCredits = 10;
+      
+      expect(component.shouldShowPurchasePrompt()).toBe(true);
+    });
   });
 });

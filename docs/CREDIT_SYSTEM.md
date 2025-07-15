@@ -1,0 +1,417 @@
+# Credit System & Payment Integration
+
+## Overview
+
+The AI Profile Photo Maker implements a flexible credit-based system that supports both free tier users with weekly allowances and premium users who can purchase credit packages. The system integrates with Stripe for payment processing while maintaining a simulation mode for development.
+
+## Credit System Architecture
+
+### Credit Types
+
+1. **Free Credits**
+   - 3 credits per week for basic users
+   - Auto-refreshes every Monday at midnight UTC
+   - Non-accumulative (use it or lose it)
+   - Tracked via `WeeklyFreeCreditsUsed` field
+
+2. **Purchased Credits**
+   - Permanent credits that don't expire
+   - Available through credit packages
+   - Accumulative across purchases
+   - Tracked via `PurchasedCredits` field
+
+### Credit Costs
+
+```csharp
+public static class CreditCosts
+{
+    public const int PhotoGeneration = 10;  // Per style (2 images)
+    public const int PhotoEnhancement = 1;  // Per image
+    public const int ModelTraining = 0;     // Free
+}
+```
+
+### Database Schema
+
+#### UserProfile Credits
+```sql
+CREATE TABLE AspNetUsers (
+    -- Other fields...
+    PurchasedCredits INTEGER DEFAULT 0,
+    WeeklyFreeCreditsUsed INTEGER DEFAULT 0,
+    LastFreeCreditsReset DATETIME,
+    -- Computed: TotalCredits = PurchasedCredits + (3 - WeeklyFreeCreditsUsed)
+);
+```
+
+#### Credit Packages
+```sql
+CREATE TABLE CreditPackages (
+    Id INTEGER PRIMARY KEY,
+    Name TEXT NOT NULL,
+    Credits INTEGER NOT NULL,
+    Price DECIMAL(10,2) NOT NULL,
+    IsActive BOOLEAN DEFAULT 1,
+    CreatedAt DATETIME NOT NULL
+);
+```
+
+## Credit Management
+
+### Credit Calculation
+
+```csharp
+public class CreditService
+{
+    public int GetAvailableCredits(UserProfile user)
+    {
+        var freeCreditsRemaining = Math.Max(0, 3 - user.WeeklyFreeCreditsUsed);
+        return user.PurchasedCredits + freeCreditsRemaining;
+    }
+    
+    public async Task<bool> DeductCredits(string userId, int amount)
+    {
+        var user = await GetUser(userId);
+        var totalCredits = GetAvailableCredits(user);
+        
+        if (totalCredits < amount) return false;
+        
+        // Deduct from free credits first
+        var freeCreditsToUse = Math.Min(amount, 3 - user.WeeklyFreeCreditsUsed);
+        user.WeeklyFreeCreditsUsed += freeCreditsToUse;
+        
+        // Then deduct from purchased credits
+        var remainingToDeduct = amount - freeCreditsToUse;
+        user.PurchasedCredits -= remainingToDeduct;
+        
+        await SaveChanges();
+        return true;
+    }
+}
+```
+
+### Weekly Reset System
+
+```csharp
+public class BasicTierBackgroundService : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            var now = DateTime.UtcNow;
+            var nextMonday = GetNextMonday(now);
+            var delay = nextMonday - now;
+            
+            await Task.Delay(delay, stoppingToken);
+            await ResetWeeklyCredits();
+        }
+    }
+    
+    private async Task ResetWeeklyCredits()
+    {
+        await _dbContext.Database.ExecuteSqlRawAsync(@"
+            UPDATE AspNetUsers 
+            SET WeeklyFreeCreditsUsed = 0, 
+                LastFreeCreditsReset = @p0
+            WHERE WeeklyFreeCreditsUsed > 0",
+            DateTime.UtcNow);
+    }
+}
+```
+
+## Payment Integration
+
+### Stripe Configuration
+
+#### Development Mode
+```json
+{
+  "PaymentSimulation": {
+    "Enabled": true,
+    "SkipStripeIntegration": true
+  },
+  "Stripe": {
+    "PublishableKey": "pk_test_...",
+    "SecretKey": "sk_test_...",
+    "WebhookSecret": "whsec_..."
+  }
+}
+```
+
+### Credit Package Purchase Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant API
+    participant Stripe
+    participant Database
+
+    User->>Frontend: Select package
+    Frontend->>API: POST /api/credit/purchase
+    API->>Stripe: Create payment intent
+    Stripe-->>API: Client secret
+    API-->>Frontend: Payment details
+    Frontend->>Stripe: Process payment
+    Stripe->>API: Webhook confirmation
+    API->>Database: Add credits
+    API-->>Frontend: Success
+```
+
+### Frontend Implementation
+
+#### Credit Display Component
+```typescript
+@Component({
+  selector: 'app-credit-status',
+  template: `
+    <div class="credit-display">
+      <div class="credit-circle">
+        <span class="credit-number">{{totalCredits}}</span>
+        <span class="credit-label">Credits</span>
+      </div>
+      <div class="credit-breakdown">
+        <p>Free: {{freeCredits}}/3 this week</p>
+        <p>Purchased: {{purchasedCredits}}</p>
+      </div>
+      <button mat-button (click)="openPurchaseDialog()">
+        Buy Credits
+      </button>
+    </div>
+  `
+})
+```
+
+#### Purchase Dialog
+```typescript
+interface CreditPackageOption {
+  id: number;
+  name: string;
+  credits: number;
+  price: number;
+  popular?: boolean;
+}
+
+@Component({
+  selector: 'app-credit-purchase',
+  template: `
+    <mat-dialog-content>
+      <h2>Select Credit Package</h2>
+      <div class="package-grid">
+        <mat-card *ngFor="let package of packages" 
+                  [class.popular]="package.popular"
+                  (click)="selectPackage(package)">
+          <mat-card-header>
+            <mat-card-title>{{package.name}}</mat-card-title>
+            <div class="popular-badge" *ngIf="package.popular">
+              Most Popular
+            </div>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="credits">{{package.credits}} Credits</div>
+            <div class="price">${{package.price}}</div>
+            <div class="per-credit">
+              ${{(package.price / package.credits).toFixed(2)}} per credit
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-dialog-content>
+  `
+})
+```
+
+### Stripe Integration
+
+#### Payment Service
+```typescript
+export class StripeService {
+  private stripe: Stripe;
+  
+  async initializePayment(packageId: number): Promise<PaymentIntent> {
+    const response = await this.http.post('/api/credit/purchase', {
+      packageId: packageId
+    }).toPromise();
+    
+    const { clientSecret, amount } = response;
+    
+    const result = await this.stripe.confirmCardPayment(clientSecret, {
+      payment_method: {
+        card: this.cardElement,
+        billing_details: {
+          email: this.currentUser.email
+        }
+      }
+    });
+    
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+    
+    return result.paymentIntent;
+  }
+}
+```
+
+#### Webhook Handler
+```csharp
+[HttpPost("stripe-webhook")]
+public async Task<IActionResult> HandleStripeWebhook()
+{
+    var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
+    var stripeEvent = EventUtility.ConstructEvent(
+        json,
+        Request.Headers["Stripe-Signature"],
+        _webhookSecret
+    );
+    
+    switch (stripeEvent.Type)
+    {
+        case Events.PaymentIntentSucceeded:
+            var paymentIntent = stripeEvent.Data.Object as PaymentIntent;
+            await ProcessSuccessfulPayment(paymentIntent);
+            break;
+            
+        case Events.PaymentIntentPaymentFailed:
+            await HandleFailedPayment(stripeEvent.Data.Object);
+            break;
+    }
+    
+    return Ok();
+}
+```
+
+## Usage Tracking
+
+### Usage Logs
+```csharp
+public class UsageLog
+{
+    public int Id { get; set; }
+    public string UserId { get; set; }
+    public string Action { get; set; }  // "Generate", "Enhance"
+    public int CreditsUsed { get; set; }
+    public DateTime Timestamp { get; set; }
+    public string? Details { get; set; }  // JSON metadata
+}
+```
+
+### Analytics Dashboard
+```typescript
+interface UsageStats {
+  totalCreditsUsed: number;
+  creditsByAction: {
+    generation: number;
+    enhancement: number;
+  };
+  weeklyTrend: Array<{
+    week: Date;
+    credits: number;
+  }>;
+  averagePerUser: number;
+}
+```
+
+## Credit Package Management
+
+### Default Packages
+```sql
+INSERT INTO CreditPackages (Name, Credits, Price, IsActive) VALUES
+('Starter Pack', 50, 4.99, 1),
+('Popular Pack', 200, 14.99, 1),  -- Best value
+('Pro Pack', 500, 29.99, 1),
+('Enterprise', 2000, 99.99, 1);
+```
+
+### Admin Interface
+```csharp
+[Authorize(Roles = "Admin")]
+[HttpPost("packages")]
+public async Task<IActionResult> CreatePackage(CreditPackageDto package)
+{
+    var newPackage = new CreditPackage
+    {
+        Name = package.Name,
+        Credits = package.Credits,
+        Price = package.Price,
+        IsActive = true,
+        CreatedAt = DateTime.UtcNow
+    };
+    
+    await _context.CreditPackages.AddAsync(newPackage);
+    await _context.SaveChangesAsync();
+    
+    return Ok(newPackage);
+}
+```
+
+## Simulation Mode
+
+### Development Testing
+```typescript
+// In development/simulation mode
+if (environment.features.paymentSimulation) {
+  // Skip Stripe, directly add credits
+  this.http.post('/api/credit/simulate-purchase', {
+    packageId: selectedPackage.id
+  }).subscribe(result => {
+    this.notificationService.success('Credits added!');
+    this.refreshCredits();
+  });
+}
+```
+
+### Test Scenarios
+1. **Insufficient Credits**
+   - Try to generate with 0 credits
+   - Verify error handling
+
+2. **Weekly Reset**
+   - Advance time to Monday
+   - Verify free credits reset
+
+3. **Purchase Flow**
+   - Complete purchase
+   - Verify credits added immediately
+
+## Best Practices
+
+1. **Transaction Safety**
+   - Use database transactions for credit operations
+   - Log all credit changes for audit
+   - Implement idempotency for webhooks
+
+2. **User Experience**
+   - Show credit cost before actions
+   - Provide clear purchase options
+   - Display credit history
+
+3. **Security**
+   - Validate all credit operations server-side
+   - Use Stripe webhook signatures
+   - Implement rate limiting
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Credits Not Updating**
+   - Check webhook configuration
+   - Verify payment completion
+   - Review transaction logs
+
+2. **Weekly Reset Fails**
+   - Check background service status
+   - Verify timezone handling
+   - Review database constraints
+
+3. **Payment Failures**
+   - Check Stripe configuration
+   - Verify API keys
+   - Test webhook endpoint
+
+## API Reference
+
+See [API Reference](./API_REFERENCE.md#credits) for detailed endpoint documentation.

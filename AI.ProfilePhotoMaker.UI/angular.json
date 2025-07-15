@@ -64,24 +64,76 @@
                   "maximumError": "3MB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ]
             },
             "development": {
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "test": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.test.ts"
+                }
+              ]
+            },
+            "ngrok": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.ngrok.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
+          "options": {
+            "allowedHosts": ["awlocaldev.ngrok.app", "localhost", "127.0.0.1"],
+            "proxyConfig": "proxy.conf.json"
+          },
           "configurations": {
             "production": {
-              "buildTarget": "AI.ProfilePhotoMaker.UI:build:production"
+              "buildTarget": "AI.ProfilePhotoMaker.UI:build:production",
+              "proxyConfig": "proxy.conf.prod.json"
             },
             "development": {
-              "buildTarget": "AI.ProfilePhotoMaker.UI:build:development"
+              "buildTarget": "AI.ProfilePhotoMaker.UI:build:development",
+              "proxyConfig": "proxy.conf.json"
+            },
+            "test": {
+              "buildTarget": "AI.ProfilePhotoMaker.UI:build:test",
+              "proxyConfig": "proxy.conf.test.json"
+            },
+            "ngrok": {
+              "buildTarget": "AI.ProfilePhotoMaker.UI:build:ngrok",
+              "host": "0.0.0.0",
+              "disableHostCheck": true,
+              "allowedHosts": ["awlocaldev.ngrok.app", "awlocaldev-api.ngrok.app"],
+              "proxyConfig": "proxy.conf.ngrok.json"
+            },
+            "hybrid": {
+              "buildTarget": "AI.ProfilePhotoMaker.UI:build:development",
+              "host": "0.0.0.0",
+              "disableHostCheck": true,
+              "allowedHosts": ["localhost", "127.0.0.1"],
+              "proxyConfig": "proxy.conf.hybrid.json"
             }
           },
           "defaultConfiguration": "development"
@@ -114,11 +166,23 @@
             ],
             "scripts": []
           }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "src/**/*.ts",
+              "src/**/*.html"
+            ]
+          }
         }
       }
     }
   },
   "cli": {
-    "analytics": "32aebe5d-2838-4d7c-b78e-dfc673c0a735"
+    "analytics": "32aebe5d-2838-4d7c-b78e-dfc673c0a735",
+    "schematicCollections": [
+      "angular-eslint"
+    ]
   }
 }

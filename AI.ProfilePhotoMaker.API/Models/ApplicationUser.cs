@@ -5,8 +5,8 @@ namespace AI.ProfilePhotoMaker.API.Models;
 public class ApplicationUser : IdentityUser
 {
     // Properties
-    public string FirstName { get; set; }
-    public string LastName { get; set; }
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Default parameterless constructor - required by EF Core

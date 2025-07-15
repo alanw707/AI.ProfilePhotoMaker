@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CreditService, UserCreditStatus } from '../../services/credit.service';
 
@@ -9,7 +9,7 @@ import { CreditService, UserCreditStatus } from '../../services/credit.service';
   styleUrl: './credit-status.component.sass'
 })
 export class CreditStatusComponent implements OnInit {
-  @Input() showDetailed: boolean = false;
+  @Input() showDetailed = false;
   
   creditStatus: UserCreditStatus | null = null;
   isLoading = false;
@@ -42,7 +42,7 @@ export class CreditStatusComponent implements OnInit {
   }
 
   getDaysUntilReset(): number {
-    if (!this.creditStatus) return 0;
+    if (!this.creditStatus) {return 0;}
     
     const nextReset = new Date(this.creditStatus.nextResetDate);
     const now = new Date();
@@ -53,14 +53,14 @@ export class CreditStatusComponent implements OnInit {
   }
 
   getOperationCost(operation: string): number {
-    return this.creditService.getCreditCost(operation);
+    return this.creditService.getCreditCostSync(operation);
   }
 
   canAffordOperation(operation: string): boolean {
-    if (!this.creditStatus) return false;
+    if (!this.creditStatus) {return false;}
     
     const cost = this.getOperationCost(operation);
-    const canUseWeekly = this.creditService.canUseWeeklyCredits(operation);
+    const canUseWeekly = this.creditService.canUseWeeklyCreditSync(operation);
     
     const availableCredits = this.creditStatus.purchasedCredits + 
                            (canUseWeekly ? this.creditStatus.weeklyCredits : 0);

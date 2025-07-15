@@ -34,7 +34,7 @@ export interface GenerateBasicImageRequest {
 export interface UserInfo {
   gender?: string;
   ethnicity?: string;
-  attributes?: { [key: string]: string };
+  attributes?: Record<string, string>;
 }
 
 export interface ReplicateTrainingResult {

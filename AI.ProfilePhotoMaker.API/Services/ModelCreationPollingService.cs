@@ -70,9 +70,9 @@ public class ModelCreationPollingService : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error checking model {ModelId} for user {UserId}", 
+                _logger.LogError(ex, "Error checking model {ModelId} for user {UserId}",
                     modelRequest.ReplicateModelId, modelRequest.UserId);
-                
+
                 // Mark as failed after multiple attempts could be added here
                 continue;
             }
@@ -82,8 +82,8 @@ public class ModelCreationPollingService : BackgroundService
     }
 
     private async Task CheckModelStatus(
-        ModelCreationRequest modelRequest, 
-        IReplicateApiClient replicateClient, 
+        ModelCreationRequest modelRequest,
+        IReplicateApiClient replicateClient,
         ApplicationDbContext context,
         CancellationToken cancellationToken)
     {
@@ -97,10 +97,10 @@ public class ModelCreationPollingService : BackgroundService
         {
             // Check if model is ready by trying to get its information
             var modelInfo = await CheckModelReadiness(modelRequest.ReplicateModelId, replicateClient);
-            
+
             if (modelInfo.IsReady)
             {
-                _logger.LogInformation("Model {ModelId} is ready! Triggering training for user {UserId}", 
+                _logger.LogInformation("Model {ModelId} is ready! Triggering training for user {UserId}",
                     modelRequest.ReplicateModelId, modelRequest.UserId);
 
                 // Update status to Ready
@@ -117,23 +117,23 @@ public class ModelCreationPollingService : BackgroundService
                             modelRequest.TrainingImageZipUrl,
                             modelRequest.ReplicateModelId);
 
-                        _logger.LogInformation("Training triggered successfully for model {ModelId}", 
+                        _logger.LogInformation("Training triggered successfully for model {ModelId}",
                             modelRequest.ReplicateModelId);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Failed to trigger training for model {ModelId}", 
+                        _logger.LogError(ex, "Failed to trigger training for model {ModelId}",
                             modelRequest.ReplicateModelId);
-                        
+
                         modelRequest.ErrorMessage = $"Training trigger failed: {ex.Message}";
                     }
                 }
             }
             else if (modelInfo.HasError)
             {
-                _logger.LogError("Model creation failed for {ModelId}: {Error}", 
+                _logger.LogError("Model creation failed for {ModelId}: {Error}",
                     modelRequest.ReplicateModelId, modelInfo.ErrorMessage);
-                
+
                 modelRequest.Status = ModelCreationStatus.Failed;
                 modelRequest.CompletedAt = DateTime.UtcNow;
                 modelRequest.ErrorMessage = modelInfo.ErrorMessage;
@@ -146,7 +146,7 @@ public class ModelCreationPollingService : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error checking model status for {ModelId}", modelRequest.ReplicateModelId);
-            
+
             // Don't mark as failed immediately - could be a temporary network issue
             // Add retry logic or failure count if needed
         }
@@ -158,21 +158,21 @@ public class ModelCreationPollingService : BackgroundService
         {
             // Try to access the model - if successful, it's ready
             var httpClient = new HttpClient();
-            httpClient.DefaultRequestHeaders.Authorization = 
+            httpClient.DefaultRequestHeaders.Authorization =
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Token", GetReplicateToken());
 
             // If modelId already contains owner, use it as-is, otherwise add alanw707/
             var modelUrl = modelId.Contains("/")
                 ? $"https://api.replicate.com/v1/models/{modelId}"
                 : $"https://api.replicate.com/v1/models/alanw707/{modelId}";
-                
+
             var response = await httpClient.GetAsync(modelUrl);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();
                 _logger.LogDebug("Model {ModelId} check response: {Response}", modelId, content);
-                
+
                 // If we can successfully get the model, it's ready
                 return new ModelReadinessResult { IsReady = true };
             }
@@ -185,19 +185,19 @@ public class ModelCreationPollingService : BackgroundService
             {
                 // Some other error
                 var errorContent = await response.Content.ReadAsStringAsync();
-                return new ModelReadinessResult 
-                { 
-                    HasError = true, 
-                    ErrorMessage = $"HTTP {response.StatusCode}: {errorContent}" 
+                return new ModelReadinessResult
+                {
+                    HasError = true,
+                    ErrorMessage = $"HTTP {response.StatusCode}: {errorContent}"
                 };
             }
         }
         catch (Exception ex)
         {
-            return new ModelReadinessResult 
-            { 
-                HasError = true, 
-                ErrorMessage = ex.Message 
+            return new ModelReadinessResult
+            {
+                HasError = true,
+                ErrorMessage = ex.Message
             };
         }
     }

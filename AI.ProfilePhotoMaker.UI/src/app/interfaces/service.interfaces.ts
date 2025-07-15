@@ -31,7 +31,11 @@ export interface IModelLoaderService {
 
 // Image Quality Service Interface
 export interface IImageQualityService {
-  calculateQualityScore(img: HTMLImageElement, detections: faceapi.WithFaceLandmarks<any>[], file: File): Promise<QualityScore>;
+  calculateQualityScore(
+    img: HTMLImageElement,
+    detections: faceapi.WithFaceLandmarks<any>[],
+    file: File
+  ): Promise<QualityScore>;
   getDefaultQualityScore(): QualityScore;
   loadImageElement(file: File): Promise<HTMLImageElement>;
 }
@@ -79,7 +83,11 @@ export interface IModelStateService {
   updateModelStatus(): void;
   debugModelStatus(): Promise<any>;
   triggerModelDiscovery(): Promise<any>;
-  isModelDiscoveryNeeded(hasTrainedModel: boolean, modelStatus: string, uploadedImages: number): boolean;
+  isModelDiscoveryNeeded(
+    hasTrainedModel: boolean,
+    modelStatus: string,
+    uploadedImages: number
+  ): boolean;
   getModelStatusFromData(modelRequestsData: any, trainingStatus: any): ModelStatusInfo;
   enableGlobalDebug(): void;
 }
@@ -115,8 +123,16 @@ export interface DashboardStateForFallback {
 
 export interface IFallbackOperationsService {
   checkGeneratedImagesFromFilesystem(): Observable<any>;
-  isFilesystemCheckNeeded(generatedPhotosCount: number, hasTrainedModel: boolean, userProfile: any): boolean;
-  isModelDiscoveryNeeded(modelStatus: string, uploadedImages: number, hasTrainedModel: boolean): boolean;
+  isFilesystemCheckNeeded(
+    generatedPhotosCount: number,
+    hasTrainedModel: boolean,
+    userProfile: any
+  ): boolean;
+  isModelDiscoveryNeeded(
+    modelStatus: string,
+    uploadedImages: number,
+    hasTrainedModel: boolean
+  ): boolean;
   checkIfFallbackNeeded(state: DashboardStateForFallback): FallbackCheckResult;
   debugDataDiscrepancy(): Promise<DataDiscrepancyResult>;
   resetFallbackTracking(): void;
@@ -144,6 +160,9 @@ export interface DashboardState {
   isPremiumWorkflow: boolean;
   isLoading: boolean;
   latestTrainedModel?: any;
+  totalCredits?: number;
+  imagesValidated?: boolean; // Track if images have been validated
+  lastValidationTime?: number; // Timestamp of last validation
 }
 
 export interface IDashboardStateService {
@@ -196,7 +215,7 @@ export interface IServiceWithConfiguration {
 }
 
 // Union types for service identification
-export type RefactoredServices = 
+export type RefactoredServices =
   | IModelLoaderService
   | IImageQualityService
   | IFaceDetectionService
@@ -205,7 +224,7 @@ export type RefactoredServices =
   | IFallbackOperationsService
   | IDashboardStateService;
 
-export type ServiceIdentifier = 
+export type ServiceIdentifier =
   | 'ModelLoaderService'
   | 'ImageQualityService'
   | 'FaceDetectionService'

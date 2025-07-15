@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap, map } from 'rxjs';
+import { BehaviorSubject, map, Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { ConfigService } from './config.service';
 
@@ -48,10 +48,6 @@ export class AuthService {
   public currentUser$ = this.currentUserSubject.asObservable();
 
   constructor(private http: HttpClient, private config: ConfigService, private router: Router) {
-    console.log('AuthService constructor - checking initial auth state');
-    console.log('localStorage keys on init:', Object.keys(localStorage));
-    console.log('TOKEN_KEY:', this.TOKEN_KEY);
-    console.log('Current token:', localStorage.getItem(this.TOKEN_KEY));
     
     // Check immediately on service creation
     this.checkTokenValidity();
@@ -66,47 +62,42 @@ export class AuthService {
   
   private checkTokenValidity(): void {
     const token = localStorage.getItem(this.TOKEN_KEY);
-    console.log('checkTokenValidity - token exists:', !!token);
     if (token && this.isTokenExpired(token)) {
-      console.log('Token expired during check, logging out');
       this.logout();
-    } else if (token) {
-      console.log('Token is valid');
     }
   }
 
   handleOAuthCallback(token: string, expiration?: string): void {
-    console.log('handleOAuthCallback called with token length:', token?.length);
-    console.log('Expiration:', expiration);
     
     if (token) {
-      // Store the token using consistent key
-      localStorage.setItem(this.TOKEN_KEY, token);
-      localStorage.setItem('authToken', token); // Keep both for compatibility
-      if (expiration) {
-        localStorage.setItem('tokenExpiration', expiration);
-      }
-      
-      // Extract user info from token
-      const user = this.extractUserFromToken(token);
-      console.log('Extracted user from token:', user);
-      
-      if (user && user.firstName && user.lastName) {
-        // Complete user data from JWT
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        this.currentUserSubject.next(user);
-        this.isAuthenticatedSubject.next(true);
-        console.log('OAuth callback processed with complete user data from JWT');
-      } else {
-        // Incomplete JWT data, fetch from profile API
-        console.log('Incomplete user data from JWT, fetching from profile API');
-        this.isAuthenticatedSubject.next(true);
+      try {
+        // Store the token using consistent key
+        localStorage.setItem(this.TOKEN_KEY, token);
+        localStorage.setItem('authToken', token); // Keep both for compatibility
         
-        // Fetch user profile data from API to get complete firstName/lastName
-        this.fetchUserProfileForOAuth(token);
+        if (expiration) {
+          localStorage.setItem('tokenExpiration', expiration);
+        }
+        
+        // Extract user info from token
+        const user = this.extractUserFromToken(token);
+        
+        if (user && user.firstName && user.lastName) {
+          // Complete user data from JWT
+          localStorage.setItem('currentUser', JSON.stringify(user));
+          this.currentUserSubject.next(user);
+          this.isAuthenticatedSubject.next(true);
+        } else {
+          // Incomplete JWT data, fetch from profile API
+          this.isAuthenticatedSubject.next(true);
+          
+          // Fetch user profile data from API to get complete firstName/lastName
+          this.fetchUserProfileForOAuth(token);
+        }
+      } catch (error) {
+        console.error('Error in OAuth callback handling:', error);
+        this.isAuthenticatedSubject.next(false);
       }
-    } else {
-      console.error('No token provided to handleOAuthCallback');
     }
   }
 
@@ -117,8 +108,8 @@ export class AuthService {
     
     // Temporary user object while we fetch profile
     const tempUser = {
-      token: token,
-      email: email,
+      token,
+      email,
       firstName: '',
       lastName: ''
     };
@@ -127,28 +118,20 @@ export class AuthService {
     this.currentUserSubject.next(tempUser);
     
     // Fetch user profile from API to get firstName/lastName
-    console.log('Fetching user profile from API for complete user data');
     this.http.get<any>(`${this.config.baseUrl}/profile`).subscribe({
       next: (response) => {
-        console.log('Full profile API response:', response);
-        console.log('Response firstName:', response.firstName);
-        console.log('Response lastName:', response.lastName);
-        
         // Handle response that contains data directly (not wrapped in success/data structure)
         if (response && (response.firstName || response.lastName)) {
           const completeUser = {
-            token: token,
-            email: email,
+            token,
+            email,
             firstName: response.firstName || '',
             lastName: response.lastName || ''
           };
           
-          console.log('SUCCESS: Updated user with profile data:', completeUser);
           localStorage.setItem('currentUser', JSON.stringify(completeUser));
           this.currentUserSubject.next(completeUser);
         } else {
-          console.log('FALLBACK: Profile API response does not contain firstName/lastName');
-          console.log('Response keys:', Object.keys(response || {}));
           // Keep the temp user with email username as firstName
           const fallbackUser = {
             ...tempUser,
@@ -200,10 +183,10 @@ export class AuthService {
       }
       
       return {
-        token: token,
-        email: email,
-        firstName: firstName,
-        lastName: lastName
+        token,
+        email,
+        firstName,
+        lastName
       };
     } catch (error) {
       console.error('Failed to extract user from token:', error);
@@ -302,12 +285,19 @@ export class AuthService {
   }
 
   isAuthenticated(): boolean {
-    return this.hasToken();
+    const hasToken = this.hasToken();
+    console.log('isAuthenticated() called - has token:', hasToken);
+    if (hasToken) {
+      const token = this.getToken();
+      console.log('Token length:', token?.length);
+      console.log('Token preview:', token?.substring(0, 50) + '...');
+    }
+    return hasToken;
   }
 
   getCurrentUserId(): string | null {
     const token = this.getToken();
-    if (!token) return null;
+    if (!token) {return null;}
     
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
@@ -333,9 +323,17 @@ export class AuthService {
 
   private hasToken(): boolean {
     const token = localStorage.getItem(this.TOKEN_KEY);
-    if (!token) return false;
+    console.log('hasToken() check - TOKEN_KEY:', this.TOKEN_KEY);
+    console.log('hasToken() check - token exists:', !!token);
+    console.log('hasToken() check - token length:', token?.length);
+    
+    if (!token) {
+      console.log('hasToken() - No token found in localStorage');
+      return false;
+    }
     
     const isExpired = this.isTokenExpired(token);
+    console.log('hasToken() check - token expired:', isExpired);
     
     if (isExpired) {
       console.warn('Auth token has expired');
@@ -343,6 +341,7 @@ export class AuthService {
       return false;
     }
     
+    console.log('hasToken() - Token is valid and not expired');
     return true;
   }
 
