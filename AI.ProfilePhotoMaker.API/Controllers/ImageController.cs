@@ -437,6 +437,61 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Delete enhanced image file from temporary storage
+        /// </summary>
+        [HttpDelete("enhanced/{fileName}")]
+        public IActionResult DeleteEnhancedImage(string fileName)
+        {
+            var authCheck = ValidateAuthentication();
+            if (authCheck != null) return authCheck;
+            var userId = GetCurrentUserId()!;
+
+            try
+            {
+                Logger.LogInformation("Attempting to delete enhanced image file {FileName} for user {UserId}", fileName, userId);
+
+                // Validate fileName to prevent path traversal attacks
+                if (string.IsNullOrEmpty(fileName) || 
+                    fileName.Contains("..") || 
+                    fileName.Contains("/") || 
+                    fileName.Contains("\\") ||
+                    Path.GetDirectoryName(fileName) != "")
+                {
+                    Logger.LogWarning("Invalid file name provided for enhanced image deletion: {FileName}", fileName);
+                    return ErrorResponse("InvalidFileName", "Invalid file name", 400);
+                }
+
+                // Construct the full path to the enhanced image
+                var enhancedDir = Path.Combine(_environment.ContentRootPath, "enhanced", userId);
+                var filePath = Path.Combine(enhancedDir, fileName);
+
+                Logger.LogDebug("Checking for enhanced image file at path: {FilePath}", filePath);
+
+                // Check if file exists
+                if (!System.IO.File.Exists(filePath))
+                {
+                    Logger.LogWarning("Enhanced image file not found: {FilePath}", filePath);
+                    return ErrorResponse("FileNotFound", "Enhanced image file not found", 404);
+                }
+
+                // Delete the file
+                System.IO.File.Delete(filePath);
+                
+                Logger.LogInformation("Successfully deleted enhanced image file {FileName} for user {UserId}", fileName, userId);
+
+                return SuccessResponse(new { 
+                    fileName = fileName,
+                    message = "Enhanced image file deleted successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, $"Error deleting enhanced image file {fileName} for user {userId}");
+                return ErrorResponse("DeletionFailed", "Failed to delete enhanced image file", 500);
+            }
+        }
+
         #region Helper Methods
 
         /// <summary>
