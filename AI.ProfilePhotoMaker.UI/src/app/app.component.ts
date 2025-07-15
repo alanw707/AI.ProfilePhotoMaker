@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
 import { AuthService } from './services/auth.service';
+import { ThemeService } from './services/theme.service';
 
 @Component({
   selector: 'app-root',
@@ -14,8 +15,12 @@ export class AppComponent implements OnInit {
 
   private readonly _router = inject(Router);
   private readonly _authService = inject(AuthService);
+  private readonly _themeService = inject(ThemeService);
 
   ngOnInit(): void {
+    // Initialize theme service to ensure proper theme application
+    this._themeService.setTheme(this._themeService.getCurrentTheme());
+
     // Check for OAuth token in URL on app initialization
     this._handleOAuthCallback();
   }

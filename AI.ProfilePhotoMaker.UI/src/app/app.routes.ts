@@ -6,40 +6,43 @@ import { guestGuard } from './guards/guest.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
-  { 
-    path: 'login', 
+  {
+    path: 'login',
     component: LoginComponent,
-    canActivate: [guestGuard]
+    canActivate: [guestGuard],
   },
-  { 
-    path: 'register', 
+  {
+    path: 'register',
     component: RegisterComponent,
-    canActivate: [guestGuard]
+    canActivate: [guestGuard],
   },
-  { 
-    path: 'dashboard', 
+  {
+    path: 'dashboard',
     loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent),
-    canActivate: [authGuard]
+    canActivate: [authGuard],
   },
   {
     path: 'enhance',
-    loadComponent: () => import('./components/photo-enhancement/photo-enhancement.component').then(m => m.PhotoEnhancementComponent),
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/photo-enhancement/photo-enhancement.component').then(
+        m => m.PhotoEnhancementComponent
+      ),
+    canActivate: [authGuard],
   },
   {
     path: 'gallery',
     loadComponent: () => import('./pages/gallery/gallery.component').then(m => m.GalleryComponent),
-    canActivate: [authGuard]
+    canActivate: [authGuard],
   },
   {
     path: 'packages',
     loadComponent: () => import('./pages/premium/premium.component').then(m => m.PremiumComponent),
-    canActivate: [authGuard]
   },
   {
     path: 'settings',
-    loadComponent: () => import('./pages/settings/settings.component').then(m => m.SettingsComponent),
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./pages/settings/settings.component').then(m => m.SettingsComponent),
+    canActivate: [authGuard],
   },
-  { path: '**', redirectTo: '/dashboard' }
+  { path: '**', redirectTo: '/dashboard' },
 ];

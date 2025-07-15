@@ -18,42 +18,55 @@
     color: var(--text-secondary)
     margin: 0
 
-.current-status
-  margin-bottom: 3rem
-  
-  .status-card
-    background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)
-    color: white
-    padding: 2rem
-    border-radius: 15px
-    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3)
+  .simulation-notice
+    margin-top: 1rem
+    padding: 0.75rem 1rem
+    background: rgba(245, 200, 90, 0.1)
+    border: 1px solid rgba(245, 200, 90, 0.3)
+    border-radius: 8px
+    text-align: center
     
-    h3
-      margin: 0 0 1.5rem 0
-      font-size: 1.5rem
+    small
+      color: var(--warning-color)
+      font-weight: 500
+
+.payment-container
+  background: var(--card-bg)
+  border: 1px solid var(--border-color)
+  border-radius: 15px
+  padding: 2rem
+  margin-bottom: 3rem
+  box-shadow: var(--shadow-sm)
+  
+  h3
+    margin: 0 0 1.5rem 0
+    color: var(--text-primary)
+    text-align: center
+    
+  .simulation-payment
+    text-align: center
+    margin-bottom: 1.5rem
+    padding: 1rem
+    background: rgba(245, 200, 90, 0.1)
+    border-radius: 8px
+    
+    p
+      color: var(--warning-color)
+      margin: 0.5rem 0
       
-    .credit-breakdown
-      display: grid
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))
-      gap: 1rem
+  .payment-actions
+    display: flex
+    gap: 1rem
+    justify-content: center
+    margin-top: 1.5rem
+    
+    button
+      @include shared.btn-primary
+      min-width: 120px
       
-      .credit-item
-        display: flex
-        flex-direction: column
-        
-        .label
-          font-size: 0.9rem
-          opacity: 0.9
-          margin-bottom: 0.25rem
-          
-        .value
-          font-size: 1.8rem
-          font-weight: bold
-          margin-bottom: 0.25rem
-          
-        .note
-          font-size: 0.8rem
-          opacity: 0.8
+      &:last-child
+        @include shared.btn-secondary
+
 
 .packages-grid
   display: grid
@@ -100,14 +113,14 @@
       font-weight: bold
       
 
-// Dark theme styles using Angular's host-context
-:host-context([data-theme="dark"])
+// Dark theme styles using Angular's host-context - increased specificity
+:host-context([data-theme="dark"]) .credit-packages-container
   .header
     h2
-      color: #e1e5e9
+      color: #e1e5e9 !important
       
     .subtitle
-      color: #a8b3bd
+      color: #a8b3bd !important
       
   .package-card
     background: rgba(255, 255, 255, 0.08) !important
@@ -163,6 +176,35 @@
     background: #1a4a2e !important
     color: #4ade80 !important
 
+  .empty-state
+    p
+      color: #a8b3bd !important
+      
+    .retry-btn
+      background: rgba(255, 255, 255, 0.08) !important
+      color: #e1e5e9 !important
+      border-color: rgba(255, 255, 255, 0.15) !important
+
+  .payment-container
+    background: rgba(255, 255, 255, 0.08) !important
+    border-color: rgba(255, 255, 255, 0.15) !important
+    
+    h3
+      color: #e1e5e9 !important
+      
+    .simulation-payment
+      background: rgba(245, 200, 90, 0.15) !important
+      
+      p
+        color: #F5C85A !important
+
+  .simulation-notice
+    background: rgba(245, 200, 90, 0.15) !important
+    border-color: rgba(245, 200, 90, 0.4) !important
+    
+    small
+      color: #F5C85A !important
+
 .package-highlights
   margin-bottom: 2rem
   
@@ -206,8 +248,8 @@
       &:last-child
         margin-bottom: 0
 
-// Dark theme styles for package highlights
-:host-context([data-theme="dark"])
+// Dark theme styles for package highlights - increased specificity
+:host-context([data-theme="dark"]) .credit-packages-container
   .package-highlights
     .usage-examples 
       .usage-item
@@ -364,6 +406,20 @@
   text-align: center
   padding: 3rem
   color: #7f8c8d
+
+.empty-state
+  text-align: center
+  padding: 3rem
+  color: #7f8c8d
+  
+  p
+    margin-bottom: 1.5rem
+    font-size: 1.1rem
+    
+  .retry-btn
+    @include shared.btn-secondary
+    padding: 0.75rem 1.5rem
+    font-size: 1rem
 
 @media (max-width: 768px)
   .credit-packages-container
