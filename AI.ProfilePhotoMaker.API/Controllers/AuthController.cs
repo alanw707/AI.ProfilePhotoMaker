@@ -88,10 +88,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             // Manually construct the Google OAuth URL
             var authUrl = $"https://accounts.google.com/o/oauth2/v2/auth?" +
                 $"client_id={Uri.EscapeDataString(googleClientId)}&" +
-                $"redirect_uri={Uri.EscapeDataString(properties.RedirectUri)}&" +
+                $"redirect_uri={Uri.EscapeDataString(properties.RedirectUri ?? string.Empty)}&" +
                 $"response_type=code&" +
                 $"scope=openid%20profile%20email&" +
-                $"state={Uri.EscapeDataString(properties.Items[".xsrf"])}";
+                $"state={Uri.EscapeDataString(properties.Items[".xsrf"] ?? string.Empty)}";
 
             return Ok(new { authUrl });
         }
@@ -121,11 +121,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             // Construct Google OAuth URL manually
             var authUrl = $"https://accounts.google.com/o/oauth2/v2/auth?" +
-                $"client_id={Uri.EscapeDataString(clientId)}&" +
-                $"redirect_uri={Uri.EscapeDataString(redirectUri)}&" +
+                $"client_id={Uri.EscapeDataString(clientId ?? string.Empty)}&" +
+                $"redirect_uri={Uri.EscapeDataString(redirectUri ?? string.Empty)}&" +
                 $"response_type=code&" +
                 $"scope={Uri.EscapeDataString("openid profile email")}&" +
-                $"state={Uri.EscapeDataString(state)}";
+                $"state={Uri.EscapeDataString(state ?? string.Empty)}";
 
             Console.WriteLine($"🚀 Manual OAuth URL: {authUrl}");
             Console.WriteLine($"   State: {state}");
@@ -381,11 +381,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 var state = Guid.NewGuid().ToString();
                 var redirectUri = $"https://{Request.Host}/signin-google";
                 var authUrl = $"{googleOptions.AuthorizationEndpoint}?" +
-                    $"client_id={Uri.EscapeDataString(googleOptions.ClientId)}&" +
-                    $"redirect_uri={Uri.EscapeDataString(redirectUri)}&" +
+                    $"client_id={Uri.EscapeDataString(googleOptions.ClientId ?? string.Empty)}&" +
+                    $"redirect_uri={Uri.EscapeDataString(redirectUri ?? string.Empty)}&" +
                     $"response_type=code&" +
                     $"scope={Uri.EscapeDataString("openid profile email")}&" +
-                    $"state={Uri.EscapeDataString(state)}";
+                    $"state={Uri.EscapeDataString(state ?? string.Empty)}";
 
                 return Ok(new
                 {
@@ -438,11 +438,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 // Create OAuth URL with minimal parameters
                 var authUrl = $"https://accounts.google.com/o/oauth2/v2/auth?" +
-                    $"client_id={Uri.EscapeDataString(clientId)}&" +
-                    $"redirect_uri={Uri.EscapeDataString(redirectUri)}&" +
+                    $"client_id={Uri.EscapeDataString(clientId ?? string.Empty)}&" +
+                    $"redirect_uri={Uri.EscapeDataString(redirectUri ?? string.Empty)}&" +
                     $"response_type=code&" +
                     $"scope={Uri.EscapeDataString("email profile")}&" +
-                    $"state={Uri.EscapeDataString(state)}";
+                    $"state={Uri.EscapeDataString(state ?? string.Empty)}";
 
                 Console.WriteLine($"🔧 Alternative OAuth URL: {authUrl}");
 
