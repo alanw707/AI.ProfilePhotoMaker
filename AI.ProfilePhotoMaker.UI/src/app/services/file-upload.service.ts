@@ -338,6 +338,13 @@ export class FileUploadService {
     progress: number;
     response?: { success: boolean; data: { url: string; fileName: string } };
   }> {
+    console.log('uploadSingleImage called with:', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      isEnhanced: isEnhanced,
+    });
+
     const formData = new FormData();
     formData.append('images', file, file.name);
     formData.append('forTraining', 'false');
@@ -346,8 +353,15 @@ export class FileUploadService {
     // Add authentication headers
     const headers: any = {};
     const token = localStorage.getItem('auth_token');
+    console.log('Authentication check:', {
+      tokenExists: !!token,
+      tokenPrefix: token?.substring(0, 20) + '...',
+      tokenLength: token?.length,
+    });
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+    } else {
+      console.warn('No authentication token found - upload may fail');
     }
 
     return this.http
@@ -366,15 +380,26 @@ export class FileUploadService {
               // Extract the first uploaded file URL from the response
               const response = event.body;
               console.log('Upload API response:', response);
+              console.log('Response structure validation:', {
+                hasSuccess: !!response?.success,
+                hasData: !!response?.data,
+                hasUploadedFiles: !!response?.data?.UploadedFiles,
+                uploadedFilesLength: response?.data?.UploadedFiles?.length || 0,
+                responseKeys: Object.keys(response || {}),
+                dataKeys: Object.keys(response?.data || {}),
+              });
 
               // Handle standard API response format: { success: true, data: {...} }
-              if (
-                response?.success &&
-                response?.data?.UploadedFiles &&
-                response.data.UploadedFiles.length > 0
-              ) {
-                const uploadedFile = response.data.UploadedFiles[0];
+              // Check both uppercase and lowercase variations
+              const uploadedFiles = response?.data?.UploadedFiles || response?.data?.uploadedFiles;
+              if (response?.success && uploadedFiles && uploadedFiles.length > 0) {
+                const uploadedFile = uploadedFiles[0];
                 console.log('Uploaded file details:', uploadedFile);
+                console.log('File URL extraction:', {
+                  originalUrl: uploadedFile.Url,
+                  fallbackUrl: uploadedFile.url,
+                  finalUrl: uploadedFile.Url || uploadedFile.url,
+                });
                 return {
                   progress: 100,
                   response: {
@@ -387,26 +412,44 @@ export class FileUploadService {
                 };
               }
 
-              // Fallback: try legacy format
-              if (response?.uploadedFiles && response.uploadedFiles.length > 0) {
-                const uploadedFile = response.uploadedFiles[0];
+              // Fallback: try legacy format (direct response structure)
+              const legacyUploadedFiles = response?.uploadedFiles || response?.UploadedFiles;
+              if (legacyUploadedFiles && legacyUploadedFiles.length > 0) {
+                const uploadedFile = legacyUploadedFiles[0];
                 console.log('Uploaded file details (legacy):', uploadedFile);
                 return {
                   progress: 100,
                   response: {
                     success: true,
                     data: {
-                      url: uploadedFile.url,
-                      fileName: uploadedFile.fileName,
+                      url: uploadedFile.url || uploadedFile.Url,
+                      fileName: uploadedFile.fileName || uploadedFile.FileName,
                     },
                   },
                 };
               }
 
-              console.log(
-                'Upload response parsing failed. Response structure:',
-                JSON.stringify(response, null, 2)
-              );
+              console.error('Upload response parsing failed. Response structure:', {
+                fullResponse: JSON.stringify(response, null, 2),
+                responseType: typeof response,
+                hasSuccess: 'success' in (response || {}),
+                successValue: response?.success,
+                hasData: 'data' in (response || {}),
+                dataType: typeof response?.data,
+                possibleUploadedFiles:
+                  response?.data?.uploadedFiles ||
+                  response?.uploadedFiles ||
+                  response?.UploadedFiles,
+              });
+
+              // Enhanced fallback - check if response has success=false with error details
+              if (response?.success === false) {
+                console.error(
+                  'API returned success=false:',
+                  response?.error || response?.message || 'No error details'
+                );
+              }
+
               return {
                 progress: 100,
                 response: { success: false, data: { url: '', fileName: '' } },
@@ -432,6 +475,39 @@ export class FileUploadService {
             this.invalidateUserImagesCache();
             console.log('🔧 Image database repair completed:', response.message);
           }
+        })
+      );
+  }
+
+  /**
+   * Delete temporary enhanced image file after successful enhancement
+   * @param fileName - The file name to delete
+   */
+  deleteTemporaryEnhancedImage(
+    fileName: string
+  ): Observable<{ success: boolean; message: string }> {
+    console.log('🗑️ Attempting to delete enhanced image file:', fileName);
+
+    return this.http
+      .delete<{
+        success: boolean;
+        message: string;
+      }>(this.config.getFullUrl(`/api/image/enhanced/${encodeURIComponent(fileName)}`))
+      .pipe(
+        tap(response => {
+          if (response.success) {
+            console.log('✅ Enhanced image file deleted successfully:', fileName);
+          } else {
+            console.warn('⚠️ Enhanced image deletion failed:', response.message);
+          }
+        }),
+        catchError(error => {
+          console.error('❌ Error deleting enhanced image:', error);
+          // Return a graceful fallback - cleanup failure shouldn't break the user experience
+          return of({
+            success: false,
+            message: `Failed to delete enhanced image: ${error.message || 'Unknown error'}`,
+          });
         })
       );
   }

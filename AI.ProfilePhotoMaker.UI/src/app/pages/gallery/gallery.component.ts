@@ -111,22 +111,14 @@ export class GalleryComponent implements OnInit {
               thumbnailUrl: preferredUrl, // Use same URL for thumbnails to ensure consistency
               title: img.isGenerated
                 ? `${this.formatStyleName(img.style)} Photo`
-                : img.isEnhanced
-                  ? `Enhanced ${this.formatStyleName(img.style)} Photo`
-                  : 'Uploaded Photo',
+                : 'Uploaded Photo',
               description: img.isGenerated
                 ? `Generated ${this.formatStyleName(img.style)} style profile photo`
-                : img.isEnhanced
-                  ? `Enhanced ${this.formatStyleName(img.style)} photo`
-                  : 'Original uploaded image',
+                : 'Original uploaded image',
               style: img.style || 'original',
               createdAt: new Date(img.createdAt),
               status: 'completed' as const,
-              type: img.isGenerated
-                ? ('generated' as const)
-                : img.isEnhanced
-                  ? ('enhanced' as const)
-                  : ('original' as const),
+              type: img.isGenerated ? ('generated' as const) : ('original' as const),
               downloadUrl: preferredUrl,
             };
           })

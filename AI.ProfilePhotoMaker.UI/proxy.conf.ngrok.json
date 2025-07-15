@@ -52,5 +52,14 @@
     "headers": {
       "Host": "awlocaldev-api.ngrok.app"
     }
+  },
+  "/enhanced": {
+    "target": "https://awlocaldev-api.ngrok.app",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug",
+    "headers": {
+      "Host": "awlocaldev-api.ngrok.app"
+    }
   }
 }
