@@ -17,6 +17,7 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
   userName = '';
   userEmail = '';
   userCreditStatus: UserCreditStatus | null = null;
+  isMobileMenuOpen = false;
   private userSubscription?: Subscription;
   private creditSubscription?: Subscription;
 
@@ -72,5 +73,9 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
   logout() {
     this.authService.logout();
     this.router.navigate(['/login']);
+  }
+
+  toggleMobileMenu() {
+    this.isMobileMenuOpen = !this.isMobileMenuOpen;
   }
 }

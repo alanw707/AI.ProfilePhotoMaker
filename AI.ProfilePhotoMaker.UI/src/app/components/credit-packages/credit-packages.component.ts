@@ -86,12 +86,9 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
 
     this.creditService.getCreditPackages().subscribe({
       next: response => {
-        console.log('Credit packages response:', response);
         if (response && response.success) {
           this.packages = response.data || [];
-          console.log('Loaded packages:', this.packages);
           if (this.packages.length === 0) {
-            console.warn('No packages returned from API');
             this.notificationService.warning(
               'No Packages Available',
               'No credit packages are currently available.'
