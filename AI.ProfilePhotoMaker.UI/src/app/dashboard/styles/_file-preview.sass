@@ -4,6 +4,7 @@
 // Addresses user feedback about oversized file previews and unclear quality scores
 
 @use '../../shared/styles/index' as shared
+@use 'variables'
 
 // Selected Files Preview Container
 .selected-files-preview
@@ -52,19 +53,19 @@
   border-radius: 16px
   position: relative
   transition: all 0.3s ease
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05)
+  box-shadow: var(--shadow-card-subtle)
   
 
   // File states with strong color-coded borders
   &.file-valid
     border: 3px solid #28a745 // Strong green border
     background: rgba(40, 167, 69, 0.02)
-    box-shadow: 0 2px 12px rgba(40, 167, 69, 0.15)
+    box-shadow: var(--shadow-file-valid)
 
   &.file-invalid
     border: 3px solid #dc3545 // Strong red border
     background: rgba(220, 53, 69, 0.02)
-    box-shadow: 0 2px 12px rgba(220, 53, 69, 0.15)
+    box-shadow: var(--shadow-file-invalid)
 
   // File Preview Image - Clean styling
   img
@@ -74,7 +75,7 @@
     object-fit: cover
     flex-shrink: 0
     border: 2px solid var(--border-color)
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1)
+    box-shadow: var(--shadow-card-subtle)
 
 // Redesigned Status Header - Move Status to Top
 .file-status-header
@@ -106,25 +107,25 @@
   &.status-valid
     background: #28a745
     color: white
-    box-shadow: 0 1px 3px rgba(40, 167, 69, 0.3)
+    box-shadow: var(--shadow-file-progress)
     
     // Dark theme styling
     [data-theme="dark"] &
       background: #28a745
       color: white
-      box-shadow: 0 1px 3px rgba(40, 167, 69, 0.4)
+      box-shadow: var(--shadow-file-progress)
   
   // Invalid files - red styling
   &.status-invalid
     background: #dc3545
     color: white
-    box-shadow: 0 1px 3px rgba(220, 53, 69, 0.3)
+    box-shadow: var(--shadow-file-error)
     
     // Dark theme styling
     [data-theme="dark"] &
       background: #dc3545
       color: white
-      box-shadow: 0 1px 3px rgba(220, 53, 69, 0.4)
+      box-shadow: var(--shadow-file-error)
 
 // Quality Score Badge - Secondary position
 .quality-badge
@@ -138,7 +139,7 @@
     font-size: 11px
     font-weight: 700
     padding: 0 6px
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1)
+    box-shadow: var(--shadow-card-subtle)
     border: 1px solid
     
     &.score-red
@@ -213,12 +214,12 @@
   justify-content: center
   transition: all 0.3s ease
   z-index: 3
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15)
+  box-shadow: var(--shadow-card-subtle)
 
   &:hover
     background: #dc2626
     transform: scale(1.05)
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3)
+    box-shadow: var(--shadow-file-invalid)
 
   svg
     width: 14px
@@ -322,7 +323,7 @@
     background: #dc3545
     color: white
     transform: scale(1.05)
-    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3)
+    box-shadow: var(--shadow-file-error)
   
   svg
     width: 16px
@@ -338,7 +339,7 @@
   background: rgba(44, 62, 80, 0.98)
   border: 1px solid rgba(255, 255, 255, 0.1)
   border-radius: 12px
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4)
+  box-shadow: var(--shadow-card-modal)
   z-index: 1000
   animation: popupIn 0.2s ease-out
   backdrop-filter: blur(10px)
@@ -347,7 +348,7 @@
   [data-theme="light"] &
     background: white
     border: 1px solid rgba(0, 0, 0, 0.1)
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15)
+    box-shadow: var(--shadow-card-elevated)
     backdrop-filter: none
 
 // Popup Arrow - Dark theme optimized

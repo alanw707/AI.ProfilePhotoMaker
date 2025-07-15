@@ -198,10 +198,11 @@ public class StyleController : ControllerBase
 
             await _context.SaveChangesAsync();
 
-            return Ok(new { 
-                success = true, 
+            return Ok(new
+            {
+                success = true,
                 message = $"Successfully selected {dto.StyleIds.Count} styles.",
-                error = (object?)null 
+                error = (object?)null
             });
         }
         catch (Exception ex)
@@ -247,10 +248,11 @@ public class StyleController : ControllerBase
                 })
                 .ToListAsync();
 
-            return Ok(new { 
-                success = true, 
-                data = selectedStyles, 
-                error = (object?)null 
+            return Ok(new
+            {
+                success = true,
+                data = selectedStyles,
+                error = (object?)null
             });
         }
         catch (Exception ex)
@@ -295,7 +297,7 @@ public class StyleController : ControllerBase
             _context.Styles.Add(style);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetStyle), new { id = style.Id }, 
+            return CreatedAtAction(nameof(GetStyle), new { id = style.Id },
                 new { success = true, data = new { style.Id, style.Name, style.Description, style.IsActive }, error = (object?)null });
         }
         catch (Exception ex)

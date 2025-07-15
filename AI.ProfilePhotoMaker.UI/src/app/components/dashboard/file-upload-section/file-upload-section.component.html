@@ -1,34 +1,27 @@
 <!-- File Upload Section -->
 <div class="file-upload-section">
-  
   <!-- Hidden File Input -->
-  <input 
-    #fileInput 
-    type="file" 
-    accept="image/*" 
-    multiple 
-    style="display: none;"
-    (change)="onFileSelected($event)">
+  <input #fileInput type="file" accept="image/*" multiple style="display: none" (change)="onFileSelected($event)" />
 
   <!-- Upload Guidelines (Step 1, no files selected) -->
   <div *ngIf="showUploadGuidelines" class="upload-guidelines">
     <div class="guidelines-content">
       <div class="upload-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-          <circle cx="8.5" cy="8.5" r="1.5"/>
-          <polyline points="21,15 16,10 5,21"/>
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <polyline points="21,15 16,10 5,21" />
         </svg>
       </div>
-      
+
       <h3>Upload Your Photos</h3>
       <p class="subtitle">Select high-quality photos of yourself to get started</p>
-      
+
       <div class="guidelines-grid">
         <div class="guideline-item">
           <div class="guideline-icon good">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="20,6 9,17 4,12"/>
+              <polyline points="20,6 9,17 4,12" />
             </svg>
           </div>
           <div class="guideline-text">
@@ -40,7 +33,7 @@
         <div class="guideline-item">
           <div class="guideline-icon good">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="20,6 9,17 4,12"/>
+              <polyline points="20,6 9,17 4,12" />
             </svg>
           </div>
           <div class="guideline-text">
@@ -52,7 +45,7 @@
         <div class="guideline-item">
           <div class="guideline-icon good">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="20,6 9,17 4,12"/>
+              <polyline points="20,6 9,17 4,12" />
             </svg>
           </div>
           <div class="guideline-text">
@@ -64,7 +57,7 @@
         <div class="guideline-item">
           <div class="guideline-icon good">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="20,6 9,17 4,12"/>
+              <polyline points="20,6 9,17 4,12" />
             </svg>
           </div>
           <div class="guideline-text">
@@ -76,8 +69,8 @@
         <div class="guideline-item">
           <div class="guideline-icon avoid">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </div>
           <div class="guideline-text">
@@ -89,8 +82,8 @@
         <div class="guideline-item">
           <div class="guideline-icon avoid">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </div>
           <div class="guideline-text">
@@ -106,44 +99,46 @@
   <div *ngIf="showUploadedImages" class="uploaded-images-section">
     <h4>Uploaded Images ({{ uploadedImageThumbnails.length }})</h4>
     <div class="uploaded-thumbnails">
-      <div 
-        *ngFor="let thumb of uploadedImageThumbnails; let i = index" 
-        class="uploaded-thumbnail">
-        <img [src]="thumb.url" [alt]="thumb.filename || 'Uploaded image'">
+      <div *ngFor="let thumb of uploadedImageThumbnails; let i = index" class="uploaded-thumbnail">
+        <img
+          [src]="thumb.url"
+          [alt]="thumb.filename || 'Uploaded image'"
+          (error)="onImageLoadError(thumb, i)"
+          (load)="onImageLoadSuccess(thumb, i)"
+          loading="lazy"
+          decoding="async"
+          [attr.fetchpriority]="i < 4 ? 'high' : 'low'" />
         <div class="thumbnail-overlay">
-          <button 
-            class="delete-btn"
-            (click)="deleteUploadedImage(thumb, i)"
-            title="Delete image">
+          <button class="delete-btn" (click)="deleteUploadedImage(thumb, i)" title="Delete image">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3,6 5,6 21,6"/>
-              <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"/>
-              <line x1="10" y1="11" x2="10" y2="17"/>
-              <line x1="14" y1="11" x2="14" y2="17"/>
+              <polyline points="3,6 5,6 21,6" />
+              <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2" />
+              <line x1="10" y1="11" x2="10" y2="17" />
+              <line x1="14" y1="11" x2="14" y2="17" />
             </svg>
           </button>
         </div>
       </div>
     </div>
-    
+
     <!-- Upload Progress Bar -->
     <div class="upload-progress-section">
       <div class="progress-header">
         <h5>📈 Upload Progress</h5>
         <span class="progress-count">{{ uploadedImageThumbnails.length }} / 20 images</span>
       </div>
-      
+
       <div class="progress-bar-container">
         <div class="progress-bar">
-          <div class="progress-fill" 
-               [style.width.%]="(uploadedImageThumbnails.length / 20) * 100"
-               [ngClass]="{
-                 'progress-red': uploadedImageThumbnails.length < 10,
-                 'progress-yellow': uploadedImageThumbnails.length >= 10 && uploadedImageThumbnails.length < 15,
-                 'progress-green': uploadedImageThumbnails.length >= 15
-               }">
-          </div>
-          
+          <div
+            class="progress-fill"
+            [style.width.%]="(uploadedImageThumbnails.length / 20) * 100"
+            [ngClass]="{
+              'progress-red': uploadedImageThumbnails.length < 10,
+              'progress-yellow': uploadedImageThumbnails.length >= 10 && uploadedImageThumbnails.length < 15,
+              'progress-green': uploadedImageThumbnails.length >= 15,
+            }"></div>
+
           <!-- Milestone markers -->
           <div class="milestone-marker" style="left: 50%" title="10 images - Minimum required">
             <div class="marker-line"></div>
@@ -155,31 +150,36 @@
           </div>
         </div>
       </div>
-      
+
       <div class="progress-status">
         <div class="status-indicators">
-          <span class="status-indicator" 
-                [ngClass]="{
-                  'status-complete': uploadedImageThumbnails.length >= 10,
-                  'status-incomplete': uploadedImageThumbnails.length < 10
-                }">
-            {{ uploadedImageThumbnails.length >= 10 ? '✅' : '⭕' }} 
-            <strong>10 minimum</strong> (required)
+          <span
+            class="status-indicator"
+            [ngClass]="{
+              'status-complete': uploadedImageThumbnails.length >= 10,
+              'status-incomplete': uploadedImageThumbnails.length < 10,
+            }">
+            {{ uploadedImageThumbnails.length >= 10 ? '✅' : '⭕' }}
+            <strong>10 minimum</strong>
+            (required)
           </span>
-          <span class="status-indicator"
-                [ngClass]="{
-                  'status-complete': uploadedImageThumbnails.length >= 15,
-                  'status-incomplete': uploadedImageThumbnails.length < 15
-                }">
-            {{ uploadedImageThumbnails.length >= 15 ? '✅' : '⭕' }} 
-            <strong>15 recommended</strong> (good)
+          <span
+            class="status-indicator"
+            [ngClass]="{
+              'status-complete': uploadedImageThumbnails.length >= 15,
+              'status-incomplete': uploadedImageThumbnails.length < 15,
+            }">
+            {{ uploadedImageThumbnails.length >= 15 ? '✅' : '⭕' }}
+            <strong>15 recommended</strong>
+            (good)
           </span>
-          <span class="status-indicator"
-                [ngClass]="{
-                  'status-complete': uploadedImageThumbnails.length >= 20,
-                  'status-incomplete': uploadedImageThumbnails.length < 20
-                }">
-            {{ uploadedImageThumbnails.length >= 20 ? '✅' : '⭕' }} 
+          <span
+            class="status-indicator"
+            [ngClass]="{
+              'status-complete': uploadedImageThumbnails.length >= 20,
+              'status-incomplete': uploadedImageThumbnails.length < 20,
+            }">
+            {{ uploadedImageThumbnails.length >= 20 ? '✅' : '⭕' }}
             <strong>20 for best results</strong>
           </span>
         </div>
@@ -188,26 +188,26 @@
   </div>
 
   <!-- File Upload Area -->
-  <div class="upload-area" 
-       [class.drag-over]="isDragOver"
-       [class.has-files]="hasSelectedFiles()"
-       (dragover)="onDragOver($event)"
-       (dragleave)="onDragLeave($event)"
-       (drop)="onDrop($event)"
-       (click)="triggerFileUpload()">
-    
+  <div
+    class="upload-area"
+    [class.drag-over]="isDragOver"
+    [class.has-files]="hasSelectedFiles()"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+    (drop)="onDrop($event)"
+    (click)="triggerFileUpload()">
     <div class="upload-content">
       <div class="upload-icon">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="17,8 12,3 7,8"/>
-          <line x1="12" y1="3" x2="12" y2="15"/>
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17,8 12,3 7,8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
         </svg>
       </div>
-      
+
       <div class="upload-text">
         <strong>Choose photos or drag them here</strong>
-        <span>Up to {{ maxFiles }} photos, max {{ (maxFileSize / (1024 * 1024)) | number:'1.0-1' }}MB each</span>
+        <span>Up to {{ maxFiles }} photos, max {{ maxFileSize / (1024 * 1024) | number: '1.0-1' }}MB each</span>
       </div>
     </div>
   </div>
@@ -216,8 +216,15 @@
   <div *ngIf="isCheckingQuality" class="quality-check-progress">
     <div class="progress-content">
       <div class="progress-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin">
-          <path d="m21,12a9,9 0 1,1 -6.219,-8.56"/>
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          class="animate-spin">
+          <path d="m21,12a9,9 0 1,1 -6.219,-8.56" />
         </svg>
       </div>
       <div class="progress-text">
@@ -235,32 +242,32 @@
     </div>
 
     <div class="selected-files-grid-enhanced">
-      <div 
-        *ngFor="let fileData of selectedFilesWithQuality; let i = index" 
+      <div
+        *ngFor="let fileData of selectedFilesWithQuality; let i = index"
         class="selected-file-item-enhanced"
         [class.file-valid]="fileData.isValid"
         [class.file-invalid]="!fileData.isValid">
-        
         <!-- File Preview Image -->
-        <img [src]="getFilePreview(fileData.file)" [alt]="fileData.file.name">
-        
+        <img [src]="getFilePreview(fileData.file)" [alt]="fileData.file.name" loading="lazy" decoding="async" />
+
         <!-- File Status Header -->
         <div class="file-status-header">
           <!-- Quality Score Badge -->
           <div *ngIf="fileData.qualityScore" class="quality-badge">
-            <span class="quality-score-compact" 
-                  [class.score-red]="fileData.qualityScore.overall < 50"
-                  [class.score-yellow]="fileData.qualityScore.overall >= 50 && fileData.qualityScore.overall < 75"
-                  [class.score-green]="fileData.qualityScore.overall >= 75">
+            <span
+              class="quality-score-compact"
+              [class.score-red]="fileData.qualityScore.overall < 50"
+              [class.score-yellow]="fileData.qualityScore.overall >= 50 && fileData.qualityScore.overall < 75"
+              [class.score-green]="fileData.qualityScore.overall >= 75">
               {{ fileData.qualityScore.overall }}
             </span>
           </div>
         </div>
-        
+
         <!-- File Information -->
         <div class="file-info-enhanced">
           <span class="file-name">{{ fileData.file.name }}</span>
-          
+
           <!-- Clean quality summary -->
           <div class="file-quality-summary" *ngIf="fileData.qualityScore || fileData.faceValidation">
             <div class="summary-item" *ngIf="fileData.faceValidation">
@@ -275,23 +282,27 @@
             </div>
           </div>
         </div>
-        
+
         <!-- Info Button for Invalid Files -->
         <div class="file-info-popup" *ngIf="!fileData.isValid">
-          <button class="info-btn" 
-                  (click)="fileData.showDetails = !fileData.showDetails"
-                  [class.active]="fileData.showDetails"
-                  type="button">
+          <button
+            class="info-btn"
+            (click)="fileData.showDetails = !fileData.showDetails"
+            [class.active]="fileData.showDetails"
+            type="button">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-              <path d="M12 16V12M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+              <path
+                d="M12 16V12M12 8h.01"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round" />
             </svg>
           </button>
-          
+
           <!-- Popup Notification -->
-          <div class="popup-details" 
-               *ngIf="fileData.showDetails"
-               (click)="$event.stopPropagation()">
+          <div class="popup-details" *ngIf="fileData.showDetails" (click)="$event.stopPropagation()">
             <div class="popup-arrow"></div>
             <div class="popup-content">
               <!-- Errors Section -->
@@ -301,7 +312,7 @@
                   <li *ngFor="let error of fileData.errors">{{ error }}</li>
                 </ul>
               </div>
-              
+
               <!-- Warnings Section -->
               <div class="popup-section" *ngIf="fileData.warnings && fileData.warnings.length > 0">
                 <h6 class="popup-title">⚠️ Warnings</h6>
@@ -309,20 +320,26 @@
                   <li *ngFor="let warning of fileData.warnings">{{ warning }}</li>
                 </ul>
               </div>
-              
+
               <!-- Quick Fix -->
-              <div class="popup-fix" *ngIf="fileData.qualityScore && fileData.qualityScore.suggestions && fileData.qualityScore.suggestions.length > 0">
+              <div
+                class="popup-fix"
+                *ngIf="
+                  fileData.qualityScore &&
+                  fileData.qualityScore.suggestions &&
+                  fileData.qualityScore.suggestions.length > 0
+                ">
                 💡 {{ fileData.qualityScore.suggestions[0] }}
               </div>
             </div>
           </div>
         </div>
-        
+
         <!-- Remove File Button -->
         <button class="remove-file-btn" (click)="removeFile(i)" title="Remove file">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
       </div>
@@ -334,12 +351,12 @@
         <h5>Images with Issues</h5>
         <p class="section-subtitle">Review and fix these images before uploading</p>
       </div>
-      
+
       <div class="error-cards-grid">
         <div *ngFor="let error of qualityCheckErrors" class="error-card selected-file-item-enhanced file-invalid">
           <!-- File Preview Image -->
-          <img [src]="getFilePreview(error.file)" [alt]="error.fileName">
-          
+          <img [src]="getFilePreview(error.file)" [alt]="error.fileName" loading="lazy" decoding="async" />
+
           <!-- File Status Header -->
           <div class="file-status-header">
             <!-- Quality Score Badge if available -->
@@ -349,11 +366,11 @@
               </span>
             </div>
           </div>
-          
+
           <!-- File Information -->
           <div class="file-info-enhanced">
             <span class="file-name">{{ error.fileName }}</span>
-            
+
             <!-- Error and Warning Summary with Tooltip -->
             <div class="file-quality-summary">
               <div class="summary-item" *ngIf="error.errors && error.errors.length > 0">
@@ -362,24 +379,30 @@
               <div class="summary-item" *ngIf="error.warnings && error.warnings.length > 0">
                 <span class="warning-count">{{ error.warnings.length }} warning(s)</span>
               </div>
-              
+
               <!-- Info Button for Error Details -->
-              <div class="error-info-popup" *ngIf="(error.errors && error.errors.length > 0) || (error.warnings && error.warnings.length > 0)">
-                <button class="info-btn error-info-btn" 
-                        (click)="toggleErrorDetails(error, $event)"
-                        [class.active]="error.showErrorDetails"
-                        type="button"
-                        title="View error details">
+              <div
+                class="error-info-popup"
+                *ngIf="(error.errors && error.errors.length > 0) || (error.warnings && error.warnings.length > 0)">
+                <button
+                  class="info-btn error-info-btn"
+                  (click)="toggleErrorDetails(error, $event)"
+                  [class.active]="error.showErrorDetails"
+                  type="button"
+                  title="View error details">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                    <path d="M12 16V12M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                    <path
+                      d="M12 16V12M12 8h.01"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round" />
                   </svg>
                 </button>
-                
+
                 <!-- Error Details Popup -->
-                <div class="error-details-popup" 
-                     *ngIf="error.showErrorDetails"
-                     (click)="$event.stopPropagation()">
+                <div class="error-details-popup" *ngIf="error.showErrorDetails" (click)="$event.stopPropagation()">
                   <div class="popup-arrow"></div>
                   <div class="popup-content">
                     <!-- Errors Section -->
@@ -389,12 +412,14 @@
                         <li *ngFor="let errorMsg of error.errors">{{ getCompactErrorMessage(errorMsg) }}</li>
                       </ul>
                     </div>
-                    
+
                     <!-- Warnings Section -->
                     <div class="popup-section" *ngIf="error.warnings && error.warnings.length > 0">
                       <h6 class="popup-title warning-title">⚠️ Warnings</h6>
                       <ul class="popup-list">
-                        <li *ngFor="let warning of error.warnings" class="warning-item">{{ getCompactErrorMessage(warning) }}</li>
+                        <li *ngFor="let warning of error.warnings" class="warning-item">
+                          {{ getCompactErrorMessage(warning) }}
+                        </li>
                       </ul>
                     </div>
                   </div>
@@ -402,18 +427,18 @@
               </div>
             </div>
           </div>
-          
+
           <!-- Remove File Button -->
           <button class="remove-file-btn" (click)="removeFileFromErrors(error)" title="Remove file">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
       </div>
     </div>
-    
+
     <!-- Upload Summary with Add More Button -->
     <div class="upload-summary-enhanced" *ngIf="selectedFilesWithQuality.length > 0">
       <div class="summary-stats">
@@ -424,11 +449,17 @@
           ✗ {{ getInvalidFilesCount() }} need attention
         </span>
         <!-- Add More Button in Summary -->
-        <button class="btn btn-secondary add-more-inline-btn" 
-                *ngIf="selectedFilesWithQuality.length > 0 && !isUploading && !isCheckingQuality"
-                (click)="triggerFileUpload()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-right: 6px;">
-            <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <button
+          class="btn btn-secondary add-more-inline-btn"
+          *ngIf="selectedFilesWithQuality.length > 0 && !isUploading && !isCheckingQuality"
+          (click)="triggerFileUpload()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-right: 6px">
+            <path
+              d="M12 5V19M5 12H19"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round" />
           </svg>
           Add More
         </button>
@@ -439,14 +470,11 @@
   <!-- Upload Actions -->
   <div *ngIf="showSelectedFiles" class="upload-actions">
     <div class="actions-left">
-      <button 
-        class="btn btn-secondary"
-        (click)="triggerFileUpload()"
-        [disabled]="isUploading || isCheckingQuality">
+      <button class="btn btn-secondary" (click)="triggerFileUpload()" [disabled]="isUploading || isCheckingQuality">
         Add More Photos
       </button>
     </div>
-    
+
     <div class="actions-right">
       <div *ngIf="isUploading" class="upload-progress">
         <div class="progress-bar">
@@ -454,11 +482,8 @@
         </div>
         <span class="progress-text">Uploading... {{ uploadProgressValue }}%</span>
       </div>
-      
-      <button 
-        class="btn btn-primary"
-        (click)="uploadImages()"
-        [disabled]="!canUpload()">
+
+      <button class="btn btn-primary" (click)="uploadImages()" [disabled]="!canUpload()">
         <span *ngIf="!isUploading">Upload {{ getValidFilesCount() }} Photo(s)</span>
         <span *ngIf="isUploading">Uploading...</span>
       </button>

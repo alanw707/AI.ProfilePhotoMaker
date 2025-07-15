@@ -1,15 +1,16 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpEventType } from '@angular/common/http';
-import { Observable, map, of, tap } from 'rxjs';
+import { map, Observable, of, tap, catchError, mergeMap } from 'rxjs';
 import { ConfigService } from './config.service';
+import { ImageUrlService } from './image-url.service';
 
 export interface UploadResponse {
   profileId: number;
-  uploadedFiles: Array<{
+  uploadedFiles: {
     fileName: string;
     size: number;
     url: string;
-  }>;
+  }[];
   uploadedImageIds: number[];
   zipCreated: boolean;
   zipPath: string;
@@ -45,82 +46,159 @@ export interface TrainingStatusResponse {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class FileUploadService {
   private userImagesCache: UserImagesResponse | null = null;
   private userImagesCacheExpiry = 0;
   private readonly USER_IMAGES_CACHE_DURATION = 60000; // 60 seconds
 
-  constructor(private http: HttpClient, private config: ConfigService) {}
+  constructor(
+    private http: HttpClient,
+    private config: ConfigService,
+    private imageUrlService: ImageUrlService
+  ) {}
 
-  uploadImages(files: File[], profileData?: {
-    firstName?: string;
-    lastName?: string;
-    gender?: string;
-    ethnicity?: string;
-  }, forTraining: boolean = true): Observable<{ progress: number; response?: UploadResponse }> {
+  uploadImages(
+    files: File[],
+    profileData?: {
+      firstName?: string;
+      lastName?: string;
+      gender?: string;
+      ethnicity?: string;
+    },
+    forTraining = true
+  ): Observable<{ progress: number; response?: UploadResponse }> {
     const formData = new FormData();
-    
+
     files.forEach((file, index) => {
       formData.append('images', file, file.name);
     });
 
     // Add optional profile data
     if (profileData) {
-      if (profileData.firstName) formData.append('firstName', profileData.firstName);
-      if (profileData.lastName) formData.append('lastName', profileData.lastName);
-      if (profileData.gender) formData.append('gender', profileData.gender);
-      if (profileData.ethnicity) formData.append('ethnicity', profileData.ethnicity);
+      if (profileData.firstName) {
+        formData.append('firstName', profileData.firstName);
+      }
+      if (profileData.lastName) {
+        formData.append('lastName', profileData.lastName);
+      }
+      if (profileData.gender) {
+        formData.append('gender', profileData.gender);
+      }
+      if (profileData.ethnicity) {
+        formData.append('ethnicity', profileData.ethnicity);
+      }
     }
-    
+
     // Add forTraining flag
     formData.append('forTraining', forTraining.toString());
 
-    return this.http.post<UploadResponse>(this.config.getFullUrl(this.config.apiConfig.endpoints.profile.uploadImages), formData, {
-      reportProgress: true,
-      observe: 'events'
-    }).pipe(
-      map(event => {
-        switch (event.type) {
-          case HttpEventType.UploadProgress:
-            const progress = event.total ? Math.round(100 * event.loaded / event.total) : 0;
-            return { progress };
-          case HttpEventType.Response:
-            return { progress: 100, response: event.body as UploadResponse };
-          default:
-            return { progress: 0 };
+    // Add authentication headers
+    const headers: any = {};
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    return this.http
+      .post<UploadResponse>(
+        this.config.getFullUrl(this.config.apiConfig.endpoints.image.upload),
+        formData,
+        {
+          reportProgress: true,
+          observe: 'events',
+          headers,
         }
-      })
-    );
+      )
+      .pipe(
+        map(event => {
+          switch (event.type) {
+            case HttpEventType.UploadProgress:
+              const progress = event.total ? Math.round((100 * event.loaded) / event.total) : 0;
+              return { progress };
+            case HttpEventType.Response:
+              // API returns wrapped response: { success: true, data: {...} }
+              const apiResponse = event.body as any;
+              if (apiResponse?.success && apiResponse?.data) {
+                // Transform API response to match UploadResponse interface
+                const data = apiResponse.data;
+                const transformedResponse: UploadResponse = {
+                  profileId: data.ProfileId || data.profileId,
+                  uploadedFiles: data.UploadedFiles || data.uploadedFiles || [],
+                  uploadedImageIds: data.UploadedImageIds || data.uploadedImageIds || [],
+                  zipCreated: data.ZipCreated || data.zipCreated || false,
+                  zipPath: data.ZipPath || data.zipPath || '',
+                  message: data.Message || data.message || '',
+                };
+                return { progress: 100, response: transformedResponse };
+              } else {
+                // Fallback for unexpected response structure
+                console.error('Unexpected upload response structure:', apiResponse);
+                return { progress: 100, response: event.body as UploadResponse };
+              }
+            default:
+              return { progress: 0 };
+          }
+        })
+      );
   }
 
-  getUserImages(forceRefresh: boolean = false): Observable<UserImagesResponse> {
+  getUserImages(forceRefresh = false): Observable<{ success: boolean; data: UserImagesResponse }> {
     const now = Date.now();
-    
+
     // Return cached data if available and not expired
     if (!forceRefresh && this.userImagesCache && now < this.userImagesCacheExpiry) {
       console.log('💾 Using cached user images data');
-      return of(this.userImagesCache);
+      return of({ success: true, data: this.userImagesCache });
     }
-    
+
     console.log('🌐 Fetching fresh user images data from API');
-    return this.http.get<UserImagesResponse>(this.config.getFullUrl(this.config.apiConfig.endpoints.profile.images)).pipe(
-      tap(response => {
-        this.userImagesCache = response;
-        this.userImagesCacheExpiry = now + this.USER_IMAGES_CACHE_DURATION;
-        console.log(`📊 Cached user images: ${response.totalImages} total, ${response.generatedImages} generated`);
-      })
-    );
+    return this.http
+      .get<{
+        success: boolean;
+        data: UserImagesResponse;
+      }>(this.config.getFullUrl(this.config.apiConfig.endpoints.image.images))
+      .pipe(
+        map(response => {
+          if (response.success && response.data) {
+            // Normalize image URLs to use proxy
+            response.data.images = response.data.images.map(image => ({
+              ...image,
+              originalImageUrl: this.imageUrlService.normalizeImageUrl(image.originalImageUrl),
+              processedImageUrl: this.imageUrlService.normalizeImageUrl(image.processedImageUrl),
+            }));
+          }
+          return response;
+        }),
+        tap(response => {
+          if (response.success && response.data) {
+            this.userImagesCache = response.data;
+            this.userImagesCacheExpiry = now + this.USER_IMAGES_CACHE_DURATION;
+            console.log(
+              `📊 Cached user images: ${response.data.totalImages} total, ${response.data.generatedImages} generated`
+            );
+          }
+        })
+      );
   }
 
-  deleteImage(imageId: number): Observable<{ success: boolean; message: string }> {
-    return this.http.delete<{ success: boolean; message: string }>(`${this.config.getFullUrl(this.config.apiConfig.endpoints.profile.images)}/${imageId}`).pipe(
-      tap(() => {
-        // Invalidate cache when image is deleted
-        this.invalidateUserImagesCache();
-      })
-    );
+  deleteImage(
+    imageId: number
+  ): Observable<{ success: boolean; message: string; repairTriggered?: boolean }> {
+    return this.http
+      .delete<{
+        success: boolean;
+        message: string;
+      }>(`${this.config.getFullUrl(this.config.apiConfig.endpoints.image.images)}/${imageId}`)
+      .pipe(
+        tap(() => {
+          // Invalidate cache when image is deleted
+          this.invalidateUserImagesCache();
+        })
+        // Removed auto-repair on delete errors - let the UI handle delete errors normally
+        // Repair should only be triggered by validation, not by user delete actions
+      );
   }
 
   // Cache management methods
@@ -130,39 +208,69 @@ export class FileUploadService {
     this.userImagesCacheExpiry = 0;
   }
 
-  refreshUserImagesCache(): Observable<UserImagesResponse> {
+  refreshUserImagesCache(): Observable<{ success: boolean; data: UserImagesResponse }> {
     return this.getUserImages(true);
   }
 
   getTrainingStatus(): Observable<TrainingStatusResponse> {
-    return this.http.get<TrainingStatusResponse>(this.config.getFullUrl('/profile/training-status'));
+    return this.http.get<TrainingStatusResponse>(
+      this.config.getFullUrl('/profile/training-status')
+    );
   }
 
-  createTrainingZip(): Observable<{ success: boolean; zipCreated: boolean; zipPath: string; message: string; error?: any }> {
-    return this.http.post<{ success: boolean; zipCreated: boolean; zipPath: string; message: string; error?: any }>(
-      this.config.getFullUrl('/profile/create-training-zip'), {}
-    );
+  createTrainingZip(): Observable<{
+    success: boolean;
+    zipCreated: boolean;
+    zipPath: string;
+    message: string;
+    error?: any;
+  }> {
+    return this.http.post<{
+      success: boolean;
+      zipCreated: boolean;
+      zipPath: string;
+      message: string;
+      error?: any;
+    }>(this.config.getFullUrl(this.config.apiConfig.endpoints.image.createTrainingZip), {});
   }
 
   listTrainingFiles(): Observable<{ success: boolean; data: string[]; error: any }> {
-    return this.http.get<{ success: boolean; data: string[]; error: any }>(this.config.getFullUrl('/profile/training-files'));
-  }
-
-  deleteTrainingFile(fileName: string): Observable<{ success: boolean; message: string }> {
-    return this.http.delete<{ success: boolean; message: string }>(this.config.getFullUrl(`/profile/training-files/${encodeURIComponent(fileName)}`));
-  }
-
-  deleteAllTrainingFiles(): Observable<{ success: boolean; message: string }> {
-    return this.http.delete<{ success: boolean; message: string }>(this.config.getFullUrl('/profile/training-files'));
-  }
-
-  getLatestTrainingZip(): Observable<{ success: boolean; data: { fileName: string; publicUrl: string; createdAt: string; sizeBytes: number }; error?: any }> {
-    return this.http.get<{ success: boolean; data: { fileName: string; publicUrl: string; createdAt: string; sizeBytes: number }; error?: any }>(
-      this.config.getFullUrl('/profile/latest-training-zip')
+    return this.http.get<{ success: boolean; data: string[]; error: any }>(
+      this.config.getFullUrl(this.config.apiConfig.endpoints.image.trainingZips)
     );
   }
 
-  setTrainedModel(modelId: string, versionId?: string, verifyExists: boolean = true): Observable<{ success: boolean; data?: any; error?: any }> {
+  deleteTrainingFile(fileName: string): Observable<{ success: boolean; message: string }> {
+    return this.http.delete<{ success: boolean; message: string }>(
+      this.config.getFullUrl(
+        `${this.config.apiConfig.endpoints.image.trainingZips}/${encodeURIComponent(fileName)}`
+      )
+    );
+  }
+
+  deleteAllTrainingFiles(): Observable<{ success: boolean; message: string }> {
+    return this.http.delete<{ success: boolean; message: string }>(
+      this.config.getFullUrl(this.config.apiConfig.endpoints.image.trainingZips)
+    );
+  }
+
+  getLatestTrainingZip(): Observable<{
+    success: boolean;
+    data: { fileName: string; publicUrl: string; createdAt: string; sizeBytes: number };
+    error?: any;
+  }> {
+    return this.http.get<{
+      success: boolean;
+      data: { fileName: string; publicUrl: string; createdAt: string; sizeBytes: number };
+      error?: any;
+    }>(this.config.getFullUrl(this.config.apiConfig.endpoints.image.latestTrainingZip));
+  }
+
+  setTrainedModel(
+    modelId: string,
+    versionId?: string,
+    verifyExists = true
+  ): Observable<{ success: boolean; data?: any; error?: any }> {
     return this.http.post<{ success: boolean; data?: any; error?: any }>(
       this.config.getFullUrl('/profile/set-model'),
       { modelId, versionId, verifyExists }
@@ -176,10 +284,26 @@ export class FileUploadService {
     );
   }
 
-  getUserModelRequests(): Observable<{ success: boolean; data?: { totalRequests: number; hasTrainedModel: boolean; latestTrainedModel: any; allRequests: any[] }; error?: any }> {
-    return this.http.get<{ success: boolean; data?: { totalRequests: number; hasTrainedModel: boolean; latestTrainedModel: any; allRequests: any[] }; error?: any }>(
-      this.config.getFullUrl('/model-creation/user/current')
-    );
+  getUserModelRequests(): Observable<{
+    success: boolean;
+    data?: {
+      totalRequests: number;
+      hasTrainedModel: boolean;
+      latestTrainedModel: any;
+      allRequests: any[];
+    };
+    error?: any;
+  }> {
+    return this.http.get<{
+      success: boolean;
+      data?: {
+        totalRequests: number;
+        hasTrainedModel: boolean;
+        latestTrainedModel: any;
+        allRequests: any[];
+      };
+      error?: any;
+    }>(this.config.getFullUrl('/model-creation/user/current'));
   }
 
   // Debug methods
@@ -207,60 +331,184 @@ export class FileUploadService {
     );
   }
 
-  uploadSingleImage(file: File): Observable<{ progress: number; response?: { success: boolean; data: { url: string; fileName: string } } }> {
+  uploadSingleImage(
+    file: File,
+    isEnhanced: boolean = true
+  ): Observable<{
+    progress: number;
+    response?: { success: boolean; data: { url: string; fileName: string } };
+  }> {
+    console.log('uploadSingleImage called with:', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      isEnhanced: isEnhanced,
+    });
+
     const formData = new FormData();
     formData.append('images', file, file.name);
     formData.append('forTraining', 'false');
+    formData.append('isEnhanced', isEnhanced.toString());
 
-    return this.http.post<any>(this.config.getFullUrl(this.config.apiConfig.endpoints.profile.uploadImages), formData, {
-      reportProgress: true,
-      observe: 'events'
-    }).pipe(
-      map(event => {
-        switch (event.type) {
-          case HttpEventType.UploadProgress:
-            const progress = event.total ? Math.round(100 * event.loaded / event.total) : 0;
-            return { progress };
-          case HttpEventType.Response:
-            // Extract the first uploaded file URL from the response
-            const response = event.body;
-            console.log('Upload API response:', response);
-            
-            if (response && response.uploadedFiles && response.uploadedFiles.length > 0) {
-              const uploadedFile = response.uploadedFiles[0];
-              console.log('Uploaded file details:', uploadedFile);
-              return { 
-                progress: 100, 
-                response: { 
-                  success: true, 
-                  data: { 
-                    url: uploadedFile.url, 
-                    fileName: uploadedFile.fileName 
-                  } 
-                } 
-              };
-            }
-            console.log('Upload response parsing failed. Response structure:', JSON.stringify(response, null, 2));
-            return { progress: 100, response: { success: false, data: { url: '', fileName: '' } } };
-          default:
-            return { progress: 0 };
-        }
+    // Add authentication headers
+    const headers: any = {};
+    const token = localStorage.getItem('auth_token');
+    console.log('Authentication check:', {
+      tokenExists: !!token,
+      tokenPrefix: token?.substring(0, 20) + '...',
+      tokenLength: token?.length,
+    });
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    } else {
+      console.warn('No authentication token found - upload may fail');
+    }
+
+    return this.http
+      .post<any>(this.config.getFullUrl(this.config.apiConfig.endpoints.image.upload), formData, {
+        reportProgress: true,
+        observe: 'events',
+        headers,
       })
-    );
+      .pipe(
+        map(event => {
+          switch (event.type) {
+            case HttpEventType.UploadProgress:
+              const progress = event.total ? Math.round((100 * event.loaded) / event.total) : 0;
+              return { progress };
+            case HttpEventType.Response:
+              // Extract the first uploaded file URL from the response
+              const response = event.body;
+              console.log('Upload API response:', response);
+              console.log('Response structure validation:', {
+                hasSuccess: !!response?.success,
+                hasData: !!response?.data,
+                hasUploadedFiles: !!response?.data?.UploadedFiles,
+                uploadedFilesLength: response?.data?.UploadedFiles?.length || 0,
+                responseKeys: Object.keys(response || {}),
+                dataKeys: Object.keys(response?.data || {}),
+              });
+
+              // Handle standard API response format: { success: true, data: {...} }
+              // Check both uppercase and lowercase variations
+              const uploadedFiles = response?.data?.UploadedFiles || response?.data?.uploadedFiles;
+              if (response?.success && uploadedFiles && uploadedFiles.length > 0) {
+                const uploadedFile = uploadedFiles[0];
+                console.log('Uploaded file details:', uploadedFile);
+                console.log('File URL extraction:', {
+                  originalUrl: uploadedFile.Url,
+                  fallbackUrl: uploadedFile.url,
+                  finalUrl: uploadedFile.Url || uploadedFile.url,
+                });
+                return {
+                  progress: 100,
+                  response: {
+                    success: true,
+                    data: {
+                      url: uploadedFile.Url || uploadedFile.url,
+                      fileName: uploadedFile.FileName || uploadedFile.fileName,
+                    },
+                  },
+                };
+              }
+
+              // Fallback: try legacy format (direct response structure)
+              const legacyUploadedFiles = response?.uploadedFiles || response?.UploadedFiles;
+              if (legacyUploadedFiles && legacyUploadedFiles.length > 0) {
+                const uploadedFile = legacyUploadedFiles[0];
+                console.log('Uploaded file details (legacy):', uploadedFile);
+                return {
+                  progress: 100,
+                  response: {
+                    success: true,
+                    data: {
+                      url: uploadedFile.url || uploadedFile.Url,
+                      fileName: uploadedFile.fileName || uploadedFile.FileName,
+                    },
+                  },
+                };
+              }
+
+              console.error('Upload response parsing failed. Response structure:', {
+                fullResponse: JSON.stringify(response, null, 2),
+                responseType: typeof response,
+                hasSuccess: 'success' in (response || {}),
+                successValue: response?.success,
+                hasData: 'data' in (response || {}),
+                dataType: typeof response?.data,
+                possibleUploadedFiles:
+                  response?.data?.uploadedFiles ||
+                  response?.uploadedFiles ||
+                  response?.UploadedFiles,
+              });
+
+              // Enhanced fallback - check if response has success=false with error details
+              if (response?.success === false) {
+                console.error(
+                  'API returned success=false:',
+                  response?.error || response?.message || 'No error details'
+                );
+              }
+
+              return {
+                progress: 100,
+                response: { success: false, data: { url: '', fileName: '' } },
+              };
+            default:
+              return { progress: 0 };
+          }
+        })
+      );
   }
 
   repairImageDatabase(): Observable<{ success: boolean; message: string; data?: any }> {
-    return this.http.post<{ success: boolean; message: string; data?: any }>(
-      this.config.getFullUrl('/test/fix-generated-images'),
-      {}
-    ).pipe(
-      tap(response => {
-        if (response.success) {
-          // Invalidate cache after repair to reload fresh data
-          this.invalidateUserImagesCache();
-          console.log('🔧 Image database repair completed:', response.message);
-        }
-      })
-    );
+    return this.http
+      .post<{
+        success: boolean;
+        message: string;
+        data?: any;
+      }>(this.config.getFullUrl('/api/image/reconcile-database?dryRun=false'), {})
+      .pipe(
+        tap(response => {
+          if (response.success) {
+            // Invalidate cache after repair to reload fresh data
+            this.invalidateUserImagesCache();
+            console.log('🔧 Image database repair completed:', response.message);
+          }
+        })
+      );
+  }
+
+  /**
+   * Delete temporary enhanced image file after successful enhancement
+   * @param fileName - The file name to delete
+   */
+  deleteTemporaryEnhancedImage(
+    fileName: string
+  ): Observable<{ success: boolean; message: string }> {
+    console.log('🗑️ Attempting to delete enhanced image file:', fileName);
+
+    return this.http
+      .delete<{
+        success: boolean;
+        message: string;
+      }>(this.config.getFullUrl(`/api/image/enhanced/${encodeURIComponent(fileName)}`))
+      .pipe(
+        tap(response => {
+          if (response.success) {
+            console.log('✅ Enhanced image file deleted successfully:', fileName);
+          } else {
+            console.warn('⚠️ Enhanced image deletion failed:', response.message);
+          }
+        }),
+        catchError(error => {
+          console.error('❌ Error deleting enhanced image:', error);
+          // Return a graceful fallback - cleanup failure shouldn't break the user experience
+          return of({
+            success: false,
+            message: `Failed to delete enhanced image: ${error.message || 'Unknown error'}`,
+          });
+        })
+      );
   }
 }

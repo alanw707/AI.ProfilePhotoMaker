@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { CacheManagerService } from './cache-manager.service';
-import { ICacheManagerService, CacheStats } from '../interfaces/service.interfaces';
+import { CacheStats, ICacheManagerService } from '../interfaces/service.interfaces';
 
 describe('CacheManagerService', () => {
   let service: CacheManagerService;

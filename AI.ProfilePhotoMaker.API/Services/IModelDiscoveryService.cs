@@ -27,7 +27,7 @@ public interface IModelDiscoveryService
     /// <param name="userId">The user ID</param>
     /// <returns>The repair result with details about models repaired</returns>
     Task<ModelVersionRepairResult> RepairModelVersionsAsync(string userId);
-    
+
     /// <summary>
     /// Manually syncs a specific model to the database
     /// </summary>

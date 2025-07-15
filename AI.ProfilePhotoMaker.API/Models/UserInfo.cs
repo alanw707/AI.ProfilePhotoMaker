@@ -9,12 +9,12 @@ public class UserInfo
     /// The user's gender (optional)
     /// </summary>
     public string? Gender { get; set; }
-    
+
     /// <summary>
     /// The user's ethnicity (optional)
     /// </summary>
     public string? Ethnicity { get; set; }
-    
+
     /// <summary>
     /// Additional attributes for AI processing
     /// </summary>

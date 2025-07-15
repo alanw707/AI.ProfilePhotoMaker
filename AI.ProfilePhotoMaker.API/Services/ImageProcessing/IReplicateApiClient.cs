@@ -16,7 +16,7 @@ public interface IReplicateApiClient
     /// <param name="modelName">The model name</param>
     /// <param name="description">Optional model description</param>
     /// <returns>The created model's full name (owner/model-name)</returns>
-    Task<string> CreateModelAsync(string userId, string modelName, string description = null);
+    Task<string> CreateModelAsync(string userId, string modelName, string? description = null);
 
     /// <summary>
     /// Creates a new training for a user's custom model
@@ -60,8 +60,8 @@ public interface IReplicateApiClient
     /// <param name="numOutputs">Number of images to generate (1-4)</param>
     /// <returns>The prediction ID and status</returns>
     Task<ReplicatePredictionResult> GenerateImagesAsync(
-        string trainedModelVersion, 
-        string userId, 
+        string trainedModelVersion,
+        string userId,
         string style,
         UserInfo? userInfo = null,
         int numOutputs = 2);
@@ -127,14 +127,14 @@ public interface IReplicateApiClient
     /// <param name="userId">The user ID to search for</param>
     /// <returns>List of discovered user models</returns>
     Task<List<ReplicateModelInfo>> FindUserModelsByPatternAsync(string userId);
-    
+
     /// <summary>
     /// Gets the latest version ID for a specific model from Replicate API
     /// </summary>
     /// <param name="modelId">The model ID in format owner/model-name</param>
     /// <returns>The latest version ID hash or null if not found</returns>
     Task<string?> GetModelVersionAsync(string modelId);
-    
+
     /// <summary>
     /// Checks if a model exists and is available on Replicate
     /// </summary>

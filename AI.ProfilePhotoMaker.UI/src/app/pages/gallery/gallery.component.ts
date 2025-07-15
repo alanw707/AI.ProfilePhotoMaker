@@ -1,9 +1,12 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule, ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
-import { PhotoGalleryComponent, GalleryImage } from '../../components/photo-gallery/photo-gallery.component';
+import {
+  GalleryImage,
+  PhotoGalleryComponent,
+} from '../../components/photo-gallery/photo-gallery.component';
 import { FileUploadService, ProcessedImage } from '../../services/file-upload.service';
 import JSZip from 'jszip';
 
@@ -12,11 +15,11 @@ import JSZip from 'jszip';
   standalone: true,
   imports: [CommonModule, RouterModule, PhotoGalleryComponent, HeaderNavigationComponent],
   templateUrl: './gallery.component.html',
-  styleUrls: ['./gallery.component.sass']
+  styleUrls: ['./gallery.component.sass'],
 })
 export class GalleryComponent implements OnInit {
   @ViewChild('photoGallery') photoGallery!: PhotoGalleryComponent;
-  
+
   galleryImages: GalleryImage[] = [];
   isLoading = false;
   isDownloading = false;
@@ -27,7 +30,8 @@ export class GalleryComponent implements OnInit {
     private authService: AuthService,
     private router: Router,
     private route: ActivatedRoute,
-    private fileUploadService: FileUploadService
+    private fileUploadService: FileUploadService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -35,7 +39,7 @@ export class GalleryComponent implements OnInit {
       this.router.navigate(['/login']);
       return;
     }
-    
+
     // Check for refresh parameter
     this.route.queryParams.subscribe(params => {
       if (params['refresh']) {
@@ -47,7 +51,13 @@ export class GalleryComponent implements OnInit {
     });
   }
 
-  async loadImages(forceRefresh: boolean = false) {
+  async loadImages(forceRefresh = false) {
+    console.log('🔄 Gallery loadImages START:', {
+      isLoading: this.isLoading,
+      forceRefresh,
+      galleryImagesCount: this.galleryImages.length,
+    });
+
     this.isLoading = true;
     try {
       // Run image database repair on first load only to sync filesystem with database
@@ -65,34 +75,87 @@ export class GalleryComponent implements OnInit {
       }
 
       const response = await this.fileUploadService.getUserImages(forceRefresh).toPromise();
-      if (response) {
+      console.log('📡 API Response received:', {
+        success: response?.success,
+        hasData: !!response?.data,
+        totalImages: response?.data?.totalImages,
+        imagesCount: response?.data?.images?.length,
+      });
+
+      if (response?.success && response.data) {
         // Deduplicate images by ID to prevent duplicates in zip downloads
-        const uniqueImages = response.images.filter((img, index, array) => 
-          array.findIndex(i => i.id === img.id) === index
+        const uniqueImages = response.data.images.filter(
+          (img, index, array) => array.findIndex(i => i.id === img.id) === index
         );
-        
-        this.galleryImages = uniqueImages.map((img: ProcessedImage) => ({
-          id: img.id,
-          url: img.processedImageUrl || img.originalImageUrl,
-          thumbnailUrl: img.originalImageUrl,
-          title: img.isGenerated ? `${this.formatStyleName(img.style)} Photo` : 'Uploaded Photo',
-          description: img.isGenerated ? `Generated ${this.formatStyleName(img.style)} style profile photo` : 'Original uploaded image',
-          style: img.style || 'original',
-          createdAt: new Date(img.createdAt),
-          status: 'completed' as const,
-          type: img.isGenerated ? 'generated' as const : 'original' as const,
-          downloadUrl: img.processedImageUrl || img.originalImageUrl
-        }));
-        
+
+        this.galleryImages = uniqueImages
+          .map((img: ProcessedImage) => {
+            // For generated images, prioritize processedImageUrl; for uploads, use originalImageUrl
+            const preferredUrl = img.isGenerated
+              ? img.processedImageUrl || img.originalImageUrl
+              : img.originalImageUrl || img.processedImageUrl;
+
+            // Skip images without valid URLs
+            if (!preferredUrl) {
+              console.warn('⚠️ Skipping image with no valid URL:', {
+                id: img.id,
+                isGenerated: img.isGenerated,
+                style: img.style,
+              });
+              return null;
+            }
+
+            return {
+              id: img.id,
+              url: preferredUrl,
+              thumbnailUrl: preferredUrl, // Use same URL for thumbnails to ensure consistency
+              title: img.isGenerated
+                ? `${this.formatStyleName(img.style)} Photo`
+                : 'Uploaded Photo',
+              description: img.isGenerated
+                ? `Generated ${this.formatStyleName(img.style)} style profile photo`
+                : 'Original uploaded image',
+              style: img.style || 'original',
+              createdAt: new Date(img.createdAt),
+              status: 'completed' as const,
+              type: img.isGenerated ? ('generated' as const) : ('original' as const),
+              downloadUrl: preferredUrl,
+            };
+          })
+          .filter(img => img !== null) as any[];
+
+        console.log('🖼️ Gallery images processed:', {
+          uniqueImages: uniqueImages.length,
+          galleryImages: this.galleryImages.length,
+          firstImage: this.galleryImages[0],
+        });
+
         // Log if duplicates were found and removed
-        if (uniqueImages.length < response.images.length) {
-          console.warn(`🔍 Removed ${response.images.length - uniqueImages.length} duplicate images from display`);
+        if (uniqueImages.length < response.data.images.length) {
+          console.warn(
+            `🔍 Removed ${response.data.images.length - uniqueImages.length} duplicate images from display`
+          );
         }
+
+        // Log if images were filtered out due to missing URLs
+        if (this.galleryImages.length < uniqueImages.length) {
+          console.warn(
+            `⚠️ Filtered out ${uniqueImages.length - this.galleryImages.length} images with missing URLs`
+          );
+        }
+
+        // Force change detection after processing images
+        this.cdr.detectChanges();
       }
     } catch (error) {
-      console.error('Failed to load images:', error);
+      console.error('❌ Failed to load images:', error);
     } finally {
       this.isLoading = false;
+      this.cdr.detectChanges(); // Force Angular to update UI
+      console.log('✅ Gallery loadImages COMPLETE:', {
+        isLoading: this.isLoading,
+        galleryImagesCount: this.galleryImages.length,
+      });
     }
   }
 
@@ -104,22 +167,20 @@ export class GalleryComponent implements OnInit {
     window.open(image.url, '_blank');
   }
 
-
-
   async testImageAccess(image: GalleryImage) {
     const imageUrl = image.downloadUrl || image.url;
-    
+
     try {
       const response = await fetch(imageUrl, {
         method: 'HEAD',
         mode: 'cors',
-        cache: 'no-cache'
+        cache: 'no-cache',
       });
-      
+
       return response.ok;
     } catch (error) {
       // Try with img element to test basic accessibility
-      return new Promise((resolve) => {
+      return new Promise(resolve => {
         const img = new Image();
         img.onload = () => resolve(true);
         img.onerror = () => resolve(false);
@@ -130,9 +191,14 @@ export class GalleryComponent implements OnInit {
 
   async onImageDownload(image: GalleryImage) {
     // Skip enhanced images for now - focus on generated images
-    const isEnhancedImage = image.style === 'Background Remover' || image.style === 'Social Media' || image.style === 'Cartoon';
+    const isEnhancedImage =
+      image.style === 'Background Remover' ||
+      image.style === 'Social Media' ||
+      image.style === 'Cartoon';
     if (isEnhancedImage) {
-      alert(`Enhanced image downloads are not yet implemented. Focusing on regular generated images first.\n\nImage: ${image.title} (${image.style})`);
+      alert(
+        `Enhanced image downloads are not yet implemented. Focusing on regular generated images first.\n\nImage: ${image.title} (${image.style})`
+      );
       return;
     }
 
@@ -145,48 +211,57 @@ export class GalleryComponent implements OnInit {
 
     try {
       const imageUrl = image.downloadUrl || image.url;
-      
+
       // Try fetch with CORS mode (required for blob downloads)
       const response = await fetch(imageUrl, {
         mode: 'cors',
         cache: 'no-cache',
         credentials: 'omit',
         headers: {
-          'ngrok-skip-browser-warning': 'true'
-        }
+          'ngrok-skip-browser-warning': 'true',
+        },
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
       const contentType = response.headers.get('content-type') || '';
       const blob = await response.blob();
-      
+
       // Verify blob is valid before creating download
       if (blob.size === 0) {
         throw new Error('Downloaded file is empty (0 bytes)');
       }
-      
+
       // Check if we received HTML instead of an image
       if (contentType.includes('text/html')) {
-        throw new Error('Server returned HTML page instead of image. The image URL may be expired, moved, or require authentication.');
+        throw new Error(
+          'Server returned HTML page instead of image. The image URL may be expired, moved, or require authentication.'
+        );
       }
-      
+
       // Additional validation for small files that might be error pages
       if (blob.size < 1000 && contentType.includes('text/')) {
-        throw new Error('Server returned text content instead of image - possible error page or expired URL');
+        throw new Error(
+          'Server returned text content instead of image - possible error page or expired URL'
+        );
       }
-      
+
       // Determine file extension - default to PNG for AI-generated images
       let extension = 'png';
       const finalContentType = contentType || blob.type;
-      
+
       if (finalContentType) {
-        if (finalContentType.includes('jpeg') || finalContentType.includes('jpg')) extension = 'jpg';
-        else if (finalContentType.includes('png')) extension = 'png';
-        else if (finalContentType.includes('webp')) extension = 'webp';
-        else if (finalContentType.includes('gif')) extension = 'gif';
+        if (finalContentType.includes('jpeg') || finalContentType.includes('jpg')) {
+          extension = 'jpg';
+        } else if (finalContentType.includes('png')) {
+          extension = 'png';
+        } else if (finalContentType.includes('webp')) {
+          extension = 'webp';
+        } else if (finalContentType.includes('gif')) {
+          extension = 'gif';
+        }
       } else {
         // Fallback: get extension from URL
         const urlExtension = imageUrl.split('.').pop()?.toLowerCase();
@@ -194,22 +269,22 @@ export class GalleryComponent implements OnInit {
           extension = urlExtension === 'jpeg' ? 'jpg' : urlExtension;
         }
       }
-      
+
       const filename = `${image.title.toLowerCase().replace(/\s+/g, '-')}-${image.id}.${extension}`;
-      
+
       // Create object URL for the blob
       const blobUrl = window.URL.createObjectURL(blob);
-      
+
       // Create download link
       const link = document.createElement('a');
       link.href = blobUrl;
       link.download = filename;
       link.style.display = 'none';
-      
+
       // Trigger download
       document.body.appendChild(link);
       link.click();
-      
+
       // Clean up after download
       setTimeout(() => {
         if (document.body.contains(link)) {
@@ -217,13 +292,13 @@ export class GalleryComponent implements OnInit {
         }
         window.URL.revokeObjectURL(blobUrl);
       }, 100);
-      
-      
     } catch (error) {
       console.error('❌ Download failed:', error);
-      
+
       const errorMessage = error instanceof Error ? error.message : String(error);
-      alert(`Download failed: ${errorMessage}\n\nPlease try the fallback method or right-click the image to save manually.`);
+      alert(
+        `Download failed: ${errorMessage}\n\nPlease try the fallback method or right-click the image to save manually.`
+      );
       this.fallbackDownload(image);
     }
   }
@@ -231,38 +306,41 @@ export class GalleryComponent implements OnInit {
   private fallbackDownload(image: GalleryImage) {
     try {
       const imageUrl = image.downloadUrl || image.url;
-      
+
       // Try to determine extension from URL for fallback
       let extension = 'png'; // Default to PNG
       const urlExtension = imageUrl.split('.').pop()?.toLowerCase();
       if (urlExtension && ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(urlExtension)) {
         extension = urlExtension === 'jpeg' ? 'jpg' : urlExtension;
       }
-      
+
       const filename = `${image.title.toLowerCase().replace(/\s+/g, '-')}-${image.id}.${extension}`;
-      
+
       // Create a more robust fallback download
       const link = document.createElement('a');
       link.href = imageUrl;
       link.download = filename;
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
-      
+
       // Try to force download with Content-Disposition
       link.style.display = 'none';
       link.setAttribute('download', filename);
-      
+
       document.body.appendChild(link);
       link.click();
-      
+
       setTimeout(() => {
         document.body.removeChild(link);
       }, 100);
-      
-      alert(`Download initiated via fallback method. If the image opens in a new tab instead of downloading, please right-click and select "Save image as..." to save as ${filename}`);
-      
+
+      alert(
+        `Download initiated via fallback method. If the image opens in a new tab instead of downloading, please right-click and select "Save image as..." to save as ${filename}`
+      );
     } catch (fallbackError) {
-      alert('Download failed completely. Please right-click the image and select "Save image as..." or check if the image URL is accessible.');
+      alert(
+        'Download failed completely. Please right-click the image and select "Save image as..." or check if the image URL is accessible.'
+      );
     }
   }
 
@@ -271,7 +349,7 @@ export class GalleryComponent implements OnInit {
       navigator.share({
         title: image.title,
         text: image.description || 'Check out my AI-generated profile photo!',
-        url: image.url
+        url: image.url,
       });
     } else {
       navigator.clipboard.writeText(image.url);
@@ -280,15 +358,47 @@ export class GalleryComponent implements OnInit {
 
   onImageDelete(image: GalleryImage) {
     if (confirm(`Are you sure you want to delete "${image.title}"?`)) {
+      console.log('🗑️ Deleting image:', { id: image.id, title: image.title });
+
       this.fileUploadService.deleteImage(image.id).subscribe({
-        next: (response) => {
+        next: response => {
+          console.log('🗑️ Delete response:', response);
           if (response.success) {
-            this.galleryImages = this.galleryImages.filter(img => img.id !== image.id);
+            // Remove image from array - create completely new array to ensure change detection
+            const originalLength = this.galleryImages.length;
+            const newImages = this.galleryImages.filter(img => img.id !== image.id);
+
+            console.log('✅ Image removed from gallery:', {
+              originalLength,
+              newLength: newImages.length,
+              imageId: image.id,
+            });
+
+            // Assign new array reference
+            this.galleryImages = [...newImages];
+
+            // Clear any selections in the photo gallery component
+            if (this.photoGallery) {
+              this.photoGallery.clearSelections();
+            }
+
+            // Force change detection to update UI
+            this.cdr.detectChanges();
+
+            // Log final state for debugging
+            console.log('🔄 Gallery state after delete:', {
+              totalImages: this.galleryImages.length,
+              isLoading: this.isLoading,
+            });
+          } else {
+            console.error('❌ Delete failed - API returned success: false');
+            alert('Failed to delete image. Please try again.');
           }
         },
-        error: (error) => {
-          console.error('Failed to delete image:', error);
-        }
+        error: error => {
+          console.error('❌ Delete request failed:', error);
+          alert(`Delete failed: ${error.message || 'Unknown error'}. Please try again.`);
+        },
       });
     }
   }
@@ -301,18 +411,25 @@ export class GalleryComponent implements OnInit {
 
     // Filter out enhanced images for now
     const generatedImages = images.filter(img => {
-      const isEnhanced = img.style === 'Background Remover' || img.style === 'Social Media' || img.style === 'Cartoon';
+      const isEnhanced =
+        img.style === 'Background Remover' ||
+        img.style === 'Social Media' ||
+        img.style === 'Cartoon';
       return !isEnhanced;
     });
 
     const enhancedCount = images.length - generatedImages.length;
-    
+
     if (enhancedCount > 0) {
-      alert(`Skipping ${enhancedCount} enhanced images for now. Enhanced image downloads will be implemented later.\n\nDownloading ${generatedImages.length} generated images.`);
+      alert(
+        `Skipping ${enhancedCount} enhanced images for now. Enhanced image downloads will be implemented later.\n\nDownloading ${generatedImages.length} generated images.`
+      );
     }
 
     if (generatedImages.length === 0) {
-      alert('No regular generated images selected. Enhanced image downloads are not yet implemented.');
+      alert(
+        'No regular generated images selected. Enhanced image downloads are not yet implemented.'
+      );
       return;
     }
 
@@ -343,15 +460,15 @@ export class GalleryComponent implements OnInit {
 
         try {
           const imageUrl = image.downloadUrl || image.url;
-          
+
           // Fetch image with improved error handling
           const response = await fetch(imageUrl, {
             mode: 'cors',
             cache: 'no-cache',
             credentials: 'omit',
             headers: {
-              'ngrok-skip-browser-warning': 'true'
-            }
+              'ngrok-skip-browser-warning': 'true',
+            },
           });
 
           if (!response.ok) {
@@ -359,21 +476,26 @@ export class GalleryComponent implements OnInit {
           }
 
           const blob = await response.blob();
-          
+
           // Verify blob is valid
           if (blob.size === 0) {
             throw new Error('Downloaded blob is empty');
           }
-          
+
           // Determine file extension - default to PNG for AI-generated images
           let extension = 'png'; // Default to PNG instead of JPG
           const contentType = response.headers.get('content-type') || blob.type;
-          
+
           if (contentType) {
-            if (contentType.includes('jpeg') || contentType.includes('jpg')) extension = 'jpg';
-            else if (contentType.includes('png')) extension = 'png';
-            else if (contentType.includes('webp')) extension = 'webp';
-            else if (contentType.includes('gif')) extension = 'gif';
+            if (contentType.includes('jpeg') || contentType.includes('jpg')) {
+              extension = 'jpg';
+            } else if (contentType.includes('png')) {
+              extension = 'png';
+            } else if (contentType.includes('webp')) {
+              extension = 'webp';
+            } else if (contentType.includes('gif')) {
+              extension = 'gif';
+            }
           } else {
             const urlExtension = imageUrl.split('.').pop()?.toLowerCase();
             if (urlExtension && ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(urlExtension)) {
@@ -382,14 +504,13 @@ export class GalleryComponent implements OnInit {
           }
 
           const filename = `${image.title.toLowerCase().replace(/\s+/g, '-')}-${image.id}.${extension}`;
-          
+
           // Add image to zip
           if (imageFolder) {
             imageFolder.file(filename, blob);
           } else {
             zip.file(filename, blob);
           }
-
         } catch (error) {
           // Continue with other images instead of failing completely
         }
@@ -402,8 +523,8 @@ export class GalleryComponent implements OnInit {
         type: 'blob',
         compression: 'DEFLATE',
         compressionOptions: {
-          level: 6
-        }
+          level: 6,
+        },
       });
 
       this.downloadProgress = 100;
@@ -422,14 +543,12 @@ export class GalleryComponent implements OnInit {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(zipUrl);
       }, 100);
-
-
     } catch (error) {
       alert('Failed to create zip file. Please try downloading images individually.');
     } finally {
       this.isDownloading = false;
       this.downloadProgress = 0;
-      
+
       // Clear selections after download completes (success or failure)
       if (this.photoGallery) {
         this.photoGallery.clearSelections();
@@ -438,9 +557,11 @@ export class GalleryComponent implements OnInit {
   }
 
   formatStyleName(style: string): string {
-    if (!style) return '';
+    if (!style) {
+      return '';
+    }
     return style
-      .replace(/[-_/]/g, ' ')  // Replace dashes, underscores, and slashes with spaces
+      .replace(/[-_/]/g, ' ') // Replace dashes, underscores, and slashes with spaces
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ');

@@ -75,7 +75,7 @@ namespace AI.ProfilePhotoMaker.API.Services
 
             // Don't cache this as images change frequently
             return await _context.UserProfiles
-                .Include(up => up.ProcessedImages.Where(pi => !pi.IsDeleted))
+                .Include(up => up.ProcessedImages)
                 .FirstOrDefaultAsync(up => up.UserId == userId);
         }
 
@@ -107,7 +107,7 @@ namespace AI.ProfilePhotoMaker.API.Services
             }
 
             var exists = await _context.UserProfiles.AnyAsync(p => p.UserId == userId);
-            
+
             var cacheOptions = new MemoryCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
@@ -162,7 +162,7 @@ namespace AI.ProfilePhotoMaker.API.Services
 
             var hasModels = await _context.ModelCreationRequests
                 .AnyAsync(m => m.UserId == userId && m.Status == ModelCreationStatus.Ready);
-                
+
             var cacheOptions = new MemoryCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
@@ -185,8 +185,7 @@ namespace AI.ProfilePhotoMaker.API.Services
                 .Include(pi => pi.UserProfile)
                 .Where(pi => pi.UserProfile.UserId == userId);
 
-            if (!includeDeleted)
-                query = query.Where(pi => !pi.IsDeleted);
+            // Note: IsDeleted field removed - all images are now considered active
 
             return await query
                 .OrderByDescending(pi => pi.CreatedAt)
@@ -203,7 +202,7 @@ namespace AI.ProfilePhotoMaker.API.Services
 
             return await _context.ProcessedImages
                 .Include(pi => pi.UserProfile)
-                .Where(pi => pi.UserProfile.UserId == userId && !pi.IsDeleted)
+                .Where(pi => pi.UserProfile.UserId == userId)
                 .Where(pi => !string.IsNullOrEmpty(pi.Style)) // Only styled/generated images
                 .OrderByDescending(pi => pi.CreatedAt)
                 .ToListAsync();

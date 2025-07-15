@@ -6,7 +6,7 @@ public class ExternalLoginDto
 {
     [Required]
     public string Provider { get; set; } = string.Empty;
-    
+
     public string? ReturnUrl { get; set; }
 }
 
@@ -14,12 +14,12 @@ public class ExternalLoginCallbackDto
 {
     [Required]
     public string Provider { get; set; } = string.Empty;
-    
+
     [Required]
     public string Code { get; set; } = string.Empty;
-    
+
     public string? State { get; set; }
-    
+
     public string? ReturnUrl { get; set; }
 }
 

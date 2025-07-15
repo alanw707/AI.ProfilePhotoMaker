@@ -96,5 +96,103 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             userId ??= GetCurrentUserId();
             Logger.LogInformation("{Message} for user {UserId}", message, userId);
         }
+
+        /// <summary>
+        /// Returns a standardized validation error response
+        /// </summary>
+        /// <param name="message">Validation error message</param>
+        /// <returns>Standardized validation error response</returns>
+        protected IActionResult ValidationError(string message)
+        {
+            return ErrorResponse("ValidationError", message, 400);
+        }
+
+        /// <summary>
+        /// Returns a standardized not found response
+        /// </summary>
+        /// <param name="resourceName">Name of the resource not found</param>
+        /// <param name="id">Optional ID of the resource</param>
+        /// <returns>Standardized not found response</returns>
+        protected IActionResult NotFoundResponse(string resourceName, object? id = null)
+        {
+            var message = id != null
+                ? $"{resourceName} with ID {id} not found"
+                : $"{resourceName} not found";
+            return ErrorResponse("NotFound", message, 404);
+        }
+
+        /// <summary>
+        /// Returns a standardized internal server error response
+        /// </summary>
+        /// <param name="exception">Exception that caused the error</param>
+        /// <param name="userMessage">User-friendly error message</param>
+        /// <returns>Standardized internal server error response</returns>
+        protected IActionResult InternalServerErrorResponse(Exception exception, string userMessage = "An internal error occurred")
+        {
+            LogError(exception, userMessage);
+            return ErrorResponse("InternalError", userMessage, 500);
+        }
+
+        /// <summary>
+        /// Returns a standardized invalid input response
+        /// </summary>
+        /// <param name="inputName">Name of the invalid input</param>
+        /// <param name="reason">Reason why the input is invalid</param>
+        /// <returns>Standardized invalid input response</returns>
+        protected IActionResult InvalidInputResponse(string inputName, string reason)
+        {
+            return ErrorResponse("InvalidInput", $"Invalid {inputName}: {reason}", 400);
+        }
+
+        /// <summary>
+        /// Validates model state and returns error response if invalid
+        /// </summary>
+        /// <returns>BadRequest response if model state is invalid, otherwise null</returns>
+        protected IActionResult? ValidateModelState()
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(x => x.Value?.Errors?.Count > 0)
+                    .SelectMany(x => x.Value?.Errors?.Select(e => e.ErrorMessage) ?? [])
+                    .ToList();
+
+                var message = string.Join("; ", errors);
+                return ValidationError(message);
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Executes an async operation with standardized error handling
+        /// </summary>
+        /// <typeparam name="T">Return type</typeparam>
+        /// <param name="operation">Operation to execute</param>
+        /// <param name="operationName">Name of the operation for logging</param>
+        /// <returns>Operation result or error response</returns>
+        protected async Task<IActionResult> ExecuteAsync<T>(Func<Task<T>> operation, string operationName)
+        {
+            try
+            {
+                var result = await operation();
+                return SuccessResponse(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return ValidationError(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return ErrorResponse("InvalidOperation", ex.Message, 400);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return ErrorResponse("Unauthorized", ex.Message, 401);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerErrorResponse(ex, $"Error executing {operationName}");
+            }
+        }
     }
 }

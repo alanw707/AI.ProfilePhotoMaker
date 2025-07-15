@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService, RegisterDto } from '../../services/auth.service';
@@ -38,7 +38,7 @@ export class RegisterComponent {
 
   get f() { return this.registerForm.controls; }
 
-  passwordMatchValidator(control: AbstractControl): { [key: string]: any } | null {
+  passwordMatchValidator(control: AbstractControl): Record<string, any> | null {
     const password = control.get('password');
     const confirmPassword = control.get('confirmPassword');
     
@@ -83,7 +83,18 @@ export class RegisterComponent {
 
   registerWithGoogle() {
     // Use configuration-based URL for Google OAuth registration
-    window.location.href = `${this.configService.appBaseUrl}/api/auth/external-login/Google?returnUrl=/dashboard`;
+    // Use configuration-based URL for Google OAuth with dynamic redirect handling
+    const oauthBaseUrl = this.configService.getOAuthRedirectUrl();
+    const fullReturnUrl = `${this.configService.frontendBaseUrl}/dashboard`;
+    
+    console.log('OAuth redirect details (register):', {
+      oauthBaseUrl,
+      fullReturnUrl,
+      isExternalAccess: this.configService.isExternalAccess(),
+      currentOrigin: window.location.origin
+    });
+    
+    window.location.href = `${oauthBaseUrl}/api/auth/external-login/Google?returnUrl=${encodeURIComponent(fullReturnUrl)}`;
   }
 
   registerWithFacebook() {

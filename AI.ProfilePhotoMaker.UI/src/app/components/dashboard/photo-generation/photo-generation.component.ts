@@ -1,8 +1,8 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { Subscription, interval } from 'rxjs';
-import { GenerationStatus, GeneratedPhoto } from '../../../models/dashboard.types';
+import { interval, Subscription } from 'rxjs';
+import { GeneratedPhoto, GenerationStatus } from '../../../models/dashboard.types';
 
 @Component({
   selector: 'app-photo-generation',
@@ -199,7 +199,7 @@ export class PhotoGenerationComponent implements OnInit, OnDestroy {
   }
 
   formatStyleName(style: string): string {
-    if (!style) return '';
+    if (!style) {return '';}
     return style
       .replace(/[-_/]/g, ' ')
       .split(' ')

@@ -1,0 +1,43 @@
+<div class="section-header">
+  <h2>Account Information</h2>
+  <p>View and manage your account details</p>
+</div>
+<div class="section-content">
+  <div class="info-grid">
+    <div class="info-item">
+      <label>Email Address</label>
+      <span>{{userEmail}}</span>
+    </div>
+    <div class="info-item" *ngIf="userProfile">
+      <label>Full Name</label>
+      <span>{{getFullName()}}</span>
+    </div>
+    <div class="info-item" *ngIf="userProfile?.gender">
+      <label>Gender</label>
+      <span>{{userProfile?.gender}}</span>
+    </div>
+    <div class="info-item" *ngIf="userProfile?.ethnicity">
+      <label>Ethnicity</label>
+      <span>{{userProfile?.ethnicity}}</span>
+    </div>
+    <div class="info-item" *ngIf="userProfile">
+      <label>Account Created</label>
+      <span>{{formatDate(userProfile.createdAt)}}</span>
+    </div>
+    <div class="info-item" *ngIf="userProfile?.subscriptionTier">
+      <label>Subscription Tier</label>
+      <span class="tier-badge" [ngClass]="userProfile?.subscriptionTier?.toLowerCase()">
+        {{userProfile?.subscriptionTier}}
+      </span>
+    </div>
+  </div>
+  <div class="section-actions">
+    <button class="btn btn-secondary" (click)="editProfile()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Edit Profile
+    </button>
+  </div>
+</div>

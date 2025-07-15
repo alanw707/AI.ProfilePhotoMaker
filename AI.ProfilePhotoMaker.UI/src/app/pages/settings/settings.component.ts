@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -8,6 +8,8 @@ import { ProfileService, UserProfile } from '../../services/profile.service';
 import { FileUploadService } from '../../services/file-upload.service';
 import { NotificationService } from '../../services/notification.service';
 import { DashboardStateService } from '../../services/dashboard-state.service';
+import { AccountInfoComponent } from '../../components/settings/account-info/account-info.component';
+import { CreditManagementComponent } from '../../components/settings/credit-management/credit-management.component';
 
 interface DataStats {
   inputPhotos: number;
@@ -23,19 +25,26 @@ type DeletionType = 'photos' | 'model' | 'all' | 'account';
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, HeaderNavigationComponent],
+  imports: [
+    CommonModule,
+    RouterModule,
+    FormsModule,
+    HeaderNavigationComponent,
+    AccountInfoComponent,
+    CreditManagementComponent,
+  ],
   templateUrl: './settings.component.html',
-  styleUrls: ['./settings.component.sass']
+  styleUrls: ['./settings.component.sass'],
 })
 export class SettingsComponent implements OnInit {
   // User Info
   userProfile: UserProfile | null = null;
-  userEmail: string = '';
+  userEmail = '';
 
   // Loading States
-  isLoading: boolean = true;
-  isDeleting: boolean = false;
-  isExporting: boolean = false;
+  isLoading = true;
+  isDeleting = false;
+  isExporting = false;
 
   // Data Statistics
   dataStats: DataStats = {
@@ -44,15 +53,15 @@ export class SettingsComponent implements OnInit {
     enhancedPhotos: 0,
     hasTrainedModel: false,
     totalDataSize: 0,
-    accountAge: 0
+    accountAge: 0,
   };
 
   // Confirmation Modal State
-  showConfirmationModal: boolean = false;
+  showConfirmationModal = false;
   deletionType: DeletionType = 'photos';
-  confirmationText: string = '';
-  confirmationTitle: string = '';
-  confirmationMessage: string = '';
+  confirmationText = '';
+  confirmationTitle = '';
+  confirmationMessage = '';
 
   // Credit Management State
   creditsInfo: any = null;
@@ -64,25 +73,41 @@ export class SettingsComponent implements OnInit {
     private profileService: ProfileService,
     private fileUploadService: FileUploadService,
     private notificationService: NotificationService,
-    private dashboardStateService: DashboardStateService
+    private dashboardStateService: DashboardStateService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   async ngOnInit() {
     console.log('Settings ngOnInit');
-    
+
     // Check authentication first
     if (!this.authService.isAuthenticated()) {
       console.log('Not authenticated, redirecting to login');
       this.router.navigate(['/login']);
       return;
     }
-    
+
     console.log('User is authenticated, loading settings data');
-    this.loadUserInfo();
-    await this.loadDataStats();
-    this.loadUserProfile();
-    this.loadCreditInfo();
-    this.isLoading = false;
+
+    try {
+      // Load all data in parallel and wait for completion
+      // Add timeout and individual error handling to prevent infinite loading
+      await Promise.allSettled([
+        this.loadUserInfoAsync(),
+        this.loadDataStats(),
+        this.loadUserProfileAsync(),
+        this.loadCreditInfoAsync(),
+      ]);
+    } catch (error) {
+      console.error('Error loading settings data:', error);
+      this.notificationService.warning(
+        'Loading Warning',
+        'Some settings data may not be available.'
+      );
+    } finally {
+      this.isLoading = false;
+      this.cdr.detectChanges(); // Force Angular to update UI
+    }
   }
 
   loadUserInfo() {
@@ -97,7 +122,7 @@ export class SettingsComponent implements OnInit {
   loadUserProfile() {
     // Load user profile from API
     this.profileService.getCurrentUserProfile().subscribe({
-      next: (response) => {
+      next: response => {
         if (response.success) {
           this.userProfile = response.data;
 
@@ -105,19 +130,27 @@ export class SettingsComponent implements OnInit {
           if (this.userProfile.createdAt) {
             const createdDate = new Date(this.userProfile.createdAt);
             const now = new Date();
-            this.dataStats.accountAge = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+            this.dataStats.accountAge = Math.floor(
+              (now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24)
+            );
           }
         } else {
-          this.notificationService.error('Profile Load Failed', 'Failed to load user profile information.');
+          this.notificationService.error(
+            'Profile Load Failed',
+            'Failed to load user profile information.'
+          );
         }
       },
-      error: (error) => {
+      error: error => {
         console.error('Failed to load user profile:', error);
-        
+
         // Email is already loaded from auth service
-        
-        this.notificationService.error('Profile Load Failed', 'Unable to connect to the server. Please check your connection and try again.');
-      }
+
+        this.notificationService.error(
+          'Profile Load Failed',
+          'Unable to connect to the server. Please check your connection and try again.'
+        );
+      },
     });
   }
 
@@ -125,23 +158,29 @@ export class SettingsComponent implements OnInit {
     try {
       // Load data stats from API
       const statsResponse = await this.profileService.getDataStats().toPromise();
-      if (statsResponse && statsResponse.success) {
+      if (statsResponse?.success) {
         this.dataStats = {
           inputPhotos: statsResponse.data.inputPhotos || 0,
           generatedPhotos: statsResponse.data.generatedPhotos || 0,
           enhancedPhotos: statsResponse.data.enhancedPhotos || 0,
           hasTrainedModel: statsResponse.data.hasTrainedModel || false,
           totalDataSize: statsResponse.data.totalDataSize || 0,
-          accountAge: statsResponse.data.accountAge || 0
+          accountAge: statsResponse.data.accountAge || 0,
         };
       } else {
         // Fallback to existing method if API is not available
         const imagesResponse = await this.fileUploadService.getUserImages().toPromise();
-        if (imagesResponse) {
-          const originalImages = imagesResponse.images.filter(img => !img.isGenerated);
-          const generatedImages = imagesResponse.images.filter(img => img.isGenerated);
-          const enhancedImages = imagesResponse.images.filter(img => img.style === 'Enhanced' || img.style === 'Background Remover' || img.style === 'Social Media' || img.style === 'Cartoon');
-          
+        if (imagesResponse?.success && imagesResponse.data) {
+          const originalImages = imagesResponse.data.images.filter(img => !img.isGenerated);
+          const generatedImages = imagesResponse.data.images.filter(img => img.isGenerated);
+          const enhancedImages = imagesResponse.data.images.filter(
+            img =>
+              img.style === 'Enhanced' ||
+              img.style === 'Background Remover' ||
+              img.style === 'Social Media' ||
+              img.style === 'Cartoon'
+          );
+
           this.dataStats.inputPhotos = originalImages.length;
           this.dataStats.generatedPhotos = generatedImages.length;
           this.dataStats.enhancedPhotos = enhancedImages.length;
@@ -155,39 +194,29 @@ export class SettingsComponent implements OnInit {
       }
     } catch (error) {
       console.error('Error loading data stats:', error);
-      this.notificationService.warning('Data Load Warning', 'Some data statistics may not be available.');
+      this.notificationService.warning(
+        'Data Load Warning',
+        'Some data statistics may not be available.'
+      );
     }
   }
 
-  // Helper Methods
-  getFullName(): string {
-    if (!this.userProfile) return '';
-    const firstName = this.userProfile.firstName || '';
-    const lastName = this.userProfile.lastName || '';
-    return `${firstName} ${lastName}`.trim() || 'Not provided';
-  }
-
-  formatDate(date: Date | string): string {
-    if (!date) return 'Not available';
-    const d = new Date(date);
-    return d.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  }
+  // Helper Methods (getFullName and formatDate moved to account-info.component.ts)
 
   // Navigation Methods
   editProfile() {
     // For now, just show a notification. In a full implementation, this would open an edit modal
-    this.notificationService.info('Feature Coming Soon', 'Profile editing will be available in a future update.');
+    this.notificationService.info(
+      'Feature Coming Soon',
+      'Profile editing will be available in a future update.'
+    );
   }
 
   // Data Management Methods
   confirmDeleteData(type: DeletionType) {
     this.deletionType = type;
     this.confirmationText = '';
-    
+
     switch (type) {
       case 'photos':
         this.confirmationTitle = 'Delete Input Photos';
@@ -195,18 +224,21 @@ export class SettingsComponent implements OnInit {
         break;
       case 'model':
         this.confirmationTitle = 'Delete AI Model';
-        this.confirmationMessage = 'Are you sure you want to delete your trained AI model? You will need to re-upload photos and retrain to generate new styled photos.';
+        this.confirmationMessage =
+          'Are you sure you want to delete your trained AI model? You will need to re-upload photos and retrain to generate new styled photos.';
         break;
       case 'all':
         this.confirmationTitle = 'Delete All Data';
-        this.confirmationMessage = 'Are you sure you want to permanently delete ALL your data? This includes all photos, AI models, and usage history. This action cannot be undone.';
+        this.confirmationMessage =
+          'Are you sure you want to permanently delete ALL your data? This includes all photos, AI models, and usage history. This action cannot be undone.';
         break;
       case 'account':
         this.confirmationTitle = 'Delete Account';
-        this.confirmationMessage = 'Are you sure you want to permanently delete your entire account? This will close your account, delete all data, and log you out immediately. This action cannot be undone.';
+        this.confirmationMessage =
+          'Are you sure you want to permanently delete your entire account? This will close your account, delete all data, and log you out immediately. This action cannot be undone.';
         break;
     }
-    
+
     this.showConfirmationModal = true;
   }
 
@@ -265,7 +297,10 @@ export class SettingsComponent implements OnInit {
       }
     } catch (error) {
       console.error('Delete operation failed:', error);
-      this.notificationService.error('Delete Failed', 'The delete operation failed. Please try again.');
+      this.notificationService.error(
+        'Delete Failed',
+        'The delete operation failed. Please try again.'
+      );
     } finally {
       this.isDeleting = false;
       this.showConfirmationModal = false;
@@ -275,8 +310,11 @@ export class SettingsComponent implements OnInit {
   private async deleteInputPhotos() {
     try {
       const response = await this.profileService.deleteInputPhotos().toPromise();
-      if (response && response.success) {
-        this.notificationService.success('Photos Deleted', `Successfully deleted ${response.data.deletedCount} input photos.`);
+      if (response?.success) {
+        this.notificationService.success(
+          'Photos Deleted',
+          `Successfully deleted ${response.data.deletedCount} input photos.`
+        );
         this.dataStats.inputPhotos = 0;
         await this.loadDataStats(); // Refresh stats
       } else {
@@ -291,8 +329,11 @@ export class SettingsComponent implements OnInit {
   private async deleteAIModel() {
     try {
       const response = await this.profileService.deleteAIModel().toPromise();
-      if (response && response.success) {
-        this.notificationService.success('AI Model Deleted', response.data.message || 'Your trained AI model has been successfully deleted.');
+      if (response?.success) {
+        this.notificationService.success(
+          'AI Model Deleted',
+          response.data.message || 'Your trained AI model has been successfully deleted.'
+        );
         this.dataStats.hasTrainedModel = false;
         if (this.userProfile) {
           this.userProfile.trainedModelId = undefined;
@@ -311,8 +352,11 @@ export class SettingsComponent implements OnInit {
   private async deleteAllData() {
     try {
       const response = await this.profileService.deleteAllUserData().toPromise();
-      if (response && response.success) {
-        this.notificationService.success('All Data Deleted', response.data.message || 'All your data has been successfully deleted.');
+      if (response?.success) {
+        this.notificationService.success(
+          'All Data Deleted',
+          response.data.message || 'All your data has been successfully deleted.'
+        );
         // Reset all stats
         this.dataStats = {
           inputPhotos: 0,
@@ -320,7 +364,7 @@ export class SettingsComponent implements OnInit {
           enhancedPhotos: 0,
           hasTrainedModel: false,
           totalDataSize: 0,
-          accountAge: this.dataStats.accountAge
+          accountAge: this.dataStats.accountAge,
         };
         await this.loadDataStats(); // Refresh stats
       } else {
@@ -335,8 +379,11 @@ export class SettingsComponent implements OnInit {
   private async deleteAccount() {
     try {
       const response = await this.profileService.deleteUserAccount().toPromise();
-      if (response && response.success) {
-        this.notificationService.success('Account Deleted', 'Your account has been successfully deleted. You will be logged out.');
+      if (response?.success) {
+        this.notificationService.success(
+          'Account Deleted',
+          'Your account has been successfully deleted. You will be logged out.'
+        );
         // Log out user immediately
         setTimeout(() => {
           this.authService.logout();
@@ -353,7 +400,7 @@ export class SettingsComponent implements OnInit {
 
   async exportData() {
     this.isExporting = true;
-    
+
     try {
       const blob = await this.profileService.exportUserData().toPromise();
       if (blob) {
@@ -361,24 +408,30 @@ export class SettingsComponent implements OnInit {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        
+
         // Generate filename with current date
         const now = new Date();
         const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
         link.download = `profile-data-export-${dateStr}.json`;
-        
+
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
-        
-        this.notificationService.success('Export Complete', 'Your data export has been generated and downloaded.');
+
+        this.notificationService.success(
+          'Export Complete',
+          'Your data export has been generated and downloaded.'
+        );
       } else {
         throw new Error('No data received from export');
       }
     } catch (error) {
       console.error('Export failed:', error);
-      this.notificationService.error('Export Failed', 'Failed to export your data. Please try again.');
+      this.notificationService.error(
+        'Export Failed',
+        'Failed to export your data. Please try again.'
+      );
     } finally {
       this.isExporting = false;
     }
@@ -391,44 +444,88 @@ export class SettingsComponent implements OnInit {
       this.creditsInfo = state.creditsInfo;
       this.userCreditStatus = state.userCreditStatus;
     });
-    
+
     // Load initial credit data
     this.dashboardStateService.loadInitialDashboardData();
   }
 
-  getTotalAvailableCredits(): number {
-    const weeklyCredits = this.getWeeklyCredits();
-    const purchasedCredits = this.getPurchasedCredits();
-    return weeklyCredits + purchasedCredits;
-  }
+  // Async versions for proper loading state management
+  async loadUserInfoAsync(): Promise<void> {
+    return new Promise(resolve => {
+      // Get user email from auth service - take first emission and unsubscribe
+      const timeout = setTimeout(() => {
+        console.warn('loadUserInfoAsync timed out');
+        resolve();
+      }, 5000);
 
-  getPurchasedCredits(): number {
-    return this.userCreditStatus?.purchasedCredits || 0;
-  }
-
-  getWeeklyCredits(): number {
-    return this.userCreditStatus?.weeklyCredits || this.creditsInfo?.availableCredits || 0;
-  }
-
-  getMaxWeeklyCredits(): number {
-    return 3; // Fixed weekly credit limit
-  }
-
-  getCreditUsagePercentage(): number {
-    const weekly = this.getWeeklyCredits();
-    const max = this.getMaxWeeklyCredits();
-    return max > 0 ? (weekly / max) * 100 : 0;
-  }
-
-  getNextCreditReset(): string {
-    // Calculate next weekly reset (simplified)
-    const now = new Date();
-    const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    return nextWeek.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'short',
-      day: 'numeric'
+      let subscription: any;
+      subscription = this.authService.currentUser$.subscribe(user => {
+        clearTimeout(timeout);
+        if (user) {
+          this.userEmail = user.email;
+        }
+        if (subscription) {
+          subscription.unsubscribe();
+        }
+        resolve();
+      });
     });
   }
 
+  async loadUserProfileAsync(): Promise<void> {
+    try {
+      // Add 10 second timeout
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Profile load timeout')), 10000)
+      );
+
+      const response = (await Promise.race([
+        this.profileService.getCurrentUserProfile().toPromise(),
+        timeoutPromise,
+      ])) as any;
+
+      if (response?.success) {
+        this.userProfile = response.data;
+
+        // Calculate account age
+        if (this.userProfile?.createdAt) {
+          const createdDate = new Date(this.userProfile.createdAt);
+          const now = new Date();
+          this.dataStats.accountAge = Math.floor(
+            (now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24)
+          );
+        }
+      } else {
+        console.warn('Profile load failed - response:', response);
+      }
+    } catch (error) {
+      console.error('Failed to load user profile:', error);
+      // Don't show error notification here - let parent handle it
+    }
+  }
+
+  async loadCreditInfoAsync(): Promise<void> {
+    return new Promise(resolve => {
+      // Add timeout for credit loading
+      const timeout = setTimeout(() => {
+        console.warn('loadCreditInfoAsync timed out');
+        resolve();
+      }, 8000);
+
+      // Load initial credit data
+      this.dashboardStateService.loadInitialDashboardData();
+
+      // Subscribe to dashboard state for credit information - take first emission
+      let subscription: any;
+      subscription = this.dashboardStateService.state$.subscribe(state => {
+        clearTimeout(timeout);
+        this.creditsInfo = state.creditsInfo;
+        this.userCreditStatus = state.userCreditStatus;
+        if (subscription) {
+          subscription.unsubscribe();
+        }
+        resolve();
+      });
+    });
+  }
 }

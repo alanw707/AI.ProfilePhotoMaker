@@ -33,7 +33,7 @@ public class ImageDownloadService : IImageDownloadService
             return downloadResults;
         }
 
-        _logger.LogInformation("Starting download of {Count} images for user {UserId}, style {Style}", 
+        _logger.LogInformation("Starting download of {Count} images for user {UserId}, style {Style}",
             imageUrls.Count, userId, style);
 
         for (int i = 0; i < imageUrls.Count; i++)
@@ -55,7 +55,7 @@ public class ImageDownloadService : IImageDownloadService
                         FileName = actualFileName,
                         Success = true
                     });
-                    _logger.LogInformation("Successfully downloaded image {Index} for user {UserId}: {LocalPath} as {FileName}", 
+                    _logger.LogInformation("Successfully downloaded image {Index} for user {UserId}: {LocalPath} as {FileName}",
                         i + 1, userId, localPath, actualFileName);
                 }
                 else
@@ -70,7 +70,7 @@ public class ImageDownloadService : IImageDownloadService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to download image {Index} from {Url} for user {UserId}", 
+                _logger.LogError(ex, "Failed to download image {Index} from {Url} for user {UserId}",
                     i + 1, imageUrl, userId);
                 downloadResults.Add(new ImageDownloadResult
                 {
@@ -82,7 +82,7 @@ public class ImageDownloadService : IImageDownloadService
         }
 
         var successCount = downloadResults.Count(r => r.Success);
-        _logger.LogInformation("Downloaded {SuccessCount}/{TotalCount} images for user {UserId}, style {Style}", 
+        _logger.LogInformation("Downloaded {SuccessCount}/{TotalCount} images for user {UserId}, style {Style}",
             successCount, imageUrls.Count, userId, style);
 
         return downloadResults;
@@ -121,7 +121,7 @@ public class ImageDownloadService : IImageDownloadService
             // Determine file extension from content type or URL
             var contentType = response.Content.Headers.ContentType?.MediaType ?? "image/png";
             var extension = GetExtensionFromContentType(contentType);
-            
+
             if (string.IsNullOrEmpty(extension))
             {
                 // Fallback to getting extension from URL
@@ -140,14 +140,14 @@ public class ImageDownloadService : IImageDownloadService
             using var fileStream = new FileStream(localPath, FileMode.Create, FileAccess.Write);
             await response.Content.CopyToAsync(fileStream);
 
-            _logger.LogInformation("Successfully downloaded image from {Url} to {LocalPath} for user {UserId}", 
+            _logger.LogInformation("Successfully downloaded image from {Url} to {LocalPath} for user {UserId}",
                 imageUrl, localPath, userId);
 
             return localPath;
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "HTTP error downloading image from {Url} for user {UserId}: {Message}", 
+            _logger.LogError(ex, "HTTP error downloading image from {Url} for user {UserId}: {Message}",
                 imageUrl, userId, ex.Message);
             return null;
         }
@@ -158,7 +158,7 @@ public class ImageDownloadService : IImageDownloadService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error downloading image from {Url} for user {UserId}: {Message}", 
+            _logger.LogError(ex, "Unexpected error downloading image from {Url} for user {UserId}: {Message}",
                 imageUrl, userId, ex.Message);
             return null;
         }
@@ -167,7 +167,7 @@ public class ImageDownloadService : IImageDownloadService
     public string EnsureGeneratedImagesDirectory(string userId)
     {
         var generatedDir = Path.Combine(_environment.ContentRootPath, "generated", userId);
-        
+
         if (!Directory.Exists(generatedDir))
         {
             Directory.CreateDirectory(generatedDir);
@@ -185,7 +185,7 @@ public class ImageDownloadService : IImageDownloadService
                 return false;
 
             using var response = await _httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, imageUrl));
-            
+
             if (!response.IsSuccessStatusCode)
                 return false;
 

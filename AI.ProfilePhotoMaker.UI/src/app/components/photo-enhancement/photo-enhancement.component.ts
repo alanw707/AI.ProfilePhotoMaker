@@ -1,12 +1,20 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+  ChangeDetectorRef,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { ReplicateService, CreditsInfo } from '../../services/replicate.service';
+import { CreditsInfo, ReplicateService } from '../../services/replicate.service';
 import { FileUploadService } from '../../services/file-upload.service';
 import { AuthService } from '../../services/auth.service';
 import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
 import { DashboardStateService } from '../../services/dashboard-state.service';
+import { CreditService, UserCreditStatus } from '../../services/credit.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -14,22 +22,22 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, HeaderNavigationComponent],
   templateUrl: './photo-enhancement.component.html',
-  styleUrls: ['./photo-enhancement.component.sass']
+  styleUrls: ['./photo-enhancement.component.sass'],
 })
-export class PhotoEnhancementComponent implements OnInit {
+export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
-  
+
   selectedFile: File | null = null;
   imagePreview: string | null = null;
-  enhancementType: string = 'background';
-  isProcessing: boolean = false;
-  processingProgress: number = 0;
-  processingStatus: string = '';
+  enhancementType = 'background';
+  isProcessing = false;
+  processingProgress = 0;
+  processingStatus = '';
   enhancedImage: any = null;
-  creditsInfo: CreditsInfo | null = null;
-  errorMessage: string = '';
-  isDragOver: boolean = false;
-  isLoadingCredits: boolean = true;
+  userCreditStatus: UserCreditStatus | null = null;
+  errorMessage = '';
+  isDragOver = false;
+  isLoadingCredits = true;
 
   private stateSubscription!: Subscription;
 
@@ -38,22 +46,41 @@ export class PhotoEnhancementComponent implements OnInit {
     private fileUploadService: FileUploadService,
     private authService: AuthService,
     private router: Router,
-    private stateService: DashboardStateService
+    private stateService: DashboardStateService,
+    private creditService: CreditService,
+    private cdr: ChangeDetectorRef
   ) {}
 
+  // Get total available credits from internal sources only
+  getTotalAvailableCredits(): number {
+    return this.creditService.getTotalAvailableCredits(
+      this.userCreditStatus,
+      null // No Replicate credits
+    );
+  }
+
+  // Check if user has enough credits for enhancement
+  hasEnoughCredits(): boolean {
+    const totalCredits = this.getTotalAvailableCredits();
+    return totalCredits > 0;
+  }
+
   ngOnInit() {
-    // Immediately trigger data loading if needed
+    // Load user credit status
     const currentState = this.stateService.getState();
-    if (!currentState.creditsInfo) {
-      console.log('📊 Credits not available on component init, loading dashboard data...');
+
+    if (!currentState.userCreditStatus) {
       this.isLoadingCredits = true;
-      this.stateService.loadInitialDashboardData();
+      this.stateService.loadCreditsOnly();
+    } else {
+      this.isLoadingCredits = false;
+      this.userCreditStatus = currentState.userCreditStatus;
     }
 
     this.stateSubscription = this.stateService.state$.subscribe(state => {
-      this.creditsInfo = state.creditsInfo;
-      // Show loading if state is loading OR if we don't have credits yet
-      this.isLoadingCredits = state.isLoading || !state.creditsInfo;
+      this.userCreditStatus = state.userCreditStatus;
+      this.isLoadingCredits = state.isLoading;
+      this.cdr.detectChanges();
     });
   }
 
@@ -87,7 +114,7 @@ export class PhotoEnhancementComponent implements OnInit {
   onDrop(event: DragEvent) {
     event.preventDefault();
     this.isDragOver = false;
-    
+
     const files = event.dataTransfer?.files;
     if (files && files.length > 0) {
       this.processFile(files[0]);
@@ -95,8 +122,6 @@ export class PhotoEnhancementComponent implements OnInit {
   }
 
   processFile(file: File) {
-    console.log('Processing file:', file.name, 'Type:', file.type, 'Size:', file.size);
-    
     // Validate file
     if (!file.type.startsWith('image/')) {
       this.errorMessage = 'Please select a valid image file.';
@@ -104,7 +129,7 @@ export class PhotoEnhancementComponent implements OnInit {
       return;
     }
 
-    if (file.size > 7 * 1024 * 1024) { // 7MB limit
+    if (file.size > 7 * 1024 * 1024) {
       this.errorMessage = 'File size must be less than 7MB.';
       console.error('File too large:', file.size);
       return;
@@ -115,13 +140,14 @@ export class PhotoEnhancementComponent implements OnInit {
 
     // Create preview
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = e => {
       this.imagePreview = e.target?.result as string;
-      console.log('Image preview created successfully');
+      this.cdr.detectChanges();
     };
-    reader.onerror = (e) => {
+    reader.onerror = e => {
       console.error('FileReader error:', e);
       this.errorMessage = 'Failed to read the image file.';
+      this.cdr.detectChanges();
     };
     reader.readAsDataURL(file);
   }
@@ -130,10 +156,12 @@ export class PhotoEnhancementComponent implements OnInit {
     this.selectedFile = null;
     this.imagePreview = null;
     this.errorMessage = '';
+    // Trigger change detection to update the view
+    this.cdr.detectChanges();
   }
 
   async startEnhancement() {
-    if (!this.selectedFile || !this.creditsInfo || this.creditsInfo.availableCredits <= 0) {
+    if (!this.selectedFile || !this.hasEnoughCredits()) {
       return;
     }
 
@@ -143,105 +171,155 @@ export class PhotoEnhancementComponent implements OnInit {
     this.errorMessage = '';
 
     try {
-      console.log('Starting enhancement for:', this.selectedFile.name);
-      
       // Step 1: Upload the image file
       this.processingStatus = 'Uploading image...';
       const uploadResult = await this.uploadImageForEnhancement();
-      
-      if (!uploadResult || !uploadResult.url) {
+
+      if (!uploadResult?.url) {
         throw new Error('Failed to upload image');
       }
 
       // Step 2: Call enhancement API
       this.processingProgress = 30;
       this.processingStatus = 'Starting AI enhancement...';
-      
+
       // Convert relative URL to absolute URL for Replicate API
-      const fullImageUrl = uploadResult.url.startsWith('http') 
-        ? uploadResult.url 
-        : `http://localhost:5035${uploadResult.url}`;
-      
+      const fullImageUrl = uploadResult.url.startsWith('http')
+        ? uploadResult.url
+        : `https://awlocaldev-api.ngrok.app${uploadResult.url}`;
+
       const enhanceRequest = {
         imageUrl: fullImageUrl,
-        enhancementType: this.enhancementType
+        enhancementType: this.enhancementType,
       };
 
       const enhanceResponse = await this.replicateService.enhancePhoto(enhanceRequest).toPromise();
-      
+
       if (!enhanceResponse?.success) {
-        throw new Error(enhanceResponse?.error?.message || 'Enhancement failed');
+        const errorMsg = enhanceResponse?.error?.message || 'Enhancement failed';
+        console.error('Enhancement API failed:', errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      if (!enhanceResponse?.data?.prediction?.id) {
+        console.error('No prediction ID in response:', enhanceResponse);
+        throw new Error('Enhancement failed - no prediction ID returned');
       }
 
       // Step 3: Poll for completion
       this.processingProgress = 50;
       this.processingStatus = 'AI is enhancing your photo...';
-      
+      this.cdr.detectChanges();
+
       const predictionId = enhanceResponse.data.prediction.id;
+
       const finalResult = await this.pollForCompletion(predictionId);
-      
-      // Use dataUrl if present, otherwise fallback to output[0]
-      let enhancedUrl = finalResult.output && finalResult.output.length > 0 ? finalResult.output[0] : null;
-      if (finalResult.dataUrl) {
+
+      let enhancedUrl = null;
+
+      // Handle output as string (new Replicate format) or array (legacy format)
+      if (finalResult.output) {
+        if (typeof finalResult.output === 'string') {
+          enhancedUrl = finalResult.output;
+        } else if (Array.isArray(finalResult.output) && finalResult.output.length > 0) {
+          enhancedUrl = finalResult.output[0];
+        }
+      }
+
+      // Fallback to dataUrl if no valid output
+      if (!enhancedUrl && finalResult.dataUrl) {
         enhancedUrl = finalResult.dataUrl;
       }
+
       if (enhancedUrl) {
+        const isBase64 = enhancedUrl.startsWith('data:image/');
+
         this.enhancedImage = {
           url: enhancedUrl,
-          type: 'enhanced'
+          type: 'enhanced',
         };
-        
-        // Update credits info
-        this.stateService.setState({
-            creditsInfo: {
-                ...this.creditsInfo,
-                availableCredits: enhanceResponse.data.creditsRemaining
-            }
-        });
+
+        // Update processing state
         this.isProcessing = false;
         this.processingProgress = 100;
         this.processingStatus = 'Enhancement complete!';
+
+        if (isBase64) {
+          // Multi-stage change detection for large base64 data
+          this.cdr.detectChanges();
+          setTimeout(() => {
+            this.cdr.detectChanges();
+          }, 50);
+        } else {
+          this.cdr.detectChanges();
+        }
+
+        // Clean up the temporary uploaded image since we now have the enhanced version
+        this.cleanupTemporaryImage(uploadResult.fileName);
       } else {
+        console.error('No enhanced image received from API response');
         throw new Error('No enhanced image received');
       }
-
     } catch (error: any) {
-      console.error('Full enhancement error details:', error);
-      console.error('Error status:', error.status);
-      console.error('Error message:', error.message);
-      console.error('Error body:', error.error);
-      
-      this.errorMessage = error.error?.message || error.message || 'Enhancement failed. Please try again.';
+      console.error('Full enhancement error details:', {
+        error: error,
+        status: error.status,
+        message: error.message,
+        body: error.error,
+        stack: error.stack,
+        name: error.name,
+      });
+
+      // Provide more specific error messages
+      let errorMessage = 'Enhancement failed. Please try again.';
+
+      if (error.message?.includes('Upload failed')) {
+        errorMessage = 'Failed to upload image. Please check your connection and try again.';
+      } else if (error.message?.includes('Enhancement failed')) {
+        errorMessage = 'AI enhancement failed. Please try again or contact support.';
+      } else if (error.message?.includes('Enhancement timed out')) {
+        errorMessage = 'Enhancement is taking longer than expected. Please try again.';
+      } else if (error.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (error.status === 403) {
+        errorMessage = 'Insufficient permissions or credits. Please check your account.';
+      } else if (error.error?.message) {
+        errorMessage = error.error.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      this.errorMessage = errorMessage;
       this.isProcessing = false;
     }
   }
 
-
   private async uploadImageForEnhancement(): Promise<{ url: string; fileName: string } | null> {
-    if (!this.selectedFile) return null;
+    if (!this.selectedFile) {
+      return null;
+    }
 
     return new Promise((resolve, reject) => {
-      console.log('Starting file upload for:', this.selectedFile!.name);
       this.fileUploadService.uploadSingleImage(this.selectedFile!).subscribe({
-        next: (result) => {
-          console.log('Upload progress result:', result);
+        next: result => {
           if (result.progress < 100) {
-            this.processingProgress = Math.round(result.progress * 0.2); // Upload is 20% of total progress
+            this.processingProgress = Math.round(result.progress * 0.2);
+            this.cdr.detectChanges();
           } else if (result.response) {
-            console.log('Upload response:', result.response);
             if (result.response.success) {
-              console.log('Upload successful, URL:', result.response.data.url);
+              this.processingProgress = 20;
+              this.cdr.detectChanges();
               resolve(result.response.data);
             } else {
-              console.error('Upload failed - response not successful');
-              reject(new Error('Upload failed'));
+              console.error('Upload failed - server returned success=false');
+              reject(new Error('Upload failed - server returned success=false'));
             }
           }
         },
-        error: (error) => {
-          console.error('Upload error:', error);
+        error: error => {
+          console.error('Upload error:', error.message || error);
           reject(error);
-        }
+        },
       });
     });
   }
@@ -252,25 +330,33 @@ export class PhotoEnhancementComponent implements OnInit {
 
     while (attempts < maxAttempts) {
       try {
-        const statusResponse = await this.replicateService.getPredictionStatus(predictionId).toPromise();
+        const statusResponse = await this.replicateService
+          .getPredictionStatus(predictionId)
+          .toPromise();
+
         if (statusResponse?.success && statusResponse.data) {
           const prediction = statusResponse.data;
+
           // Update progress based on status
           if (prediction.status === 'processing') {
-            this.processingProgress = Math.min(50 + (attempts * 2), 90);
+            this.processingProgress = Math.min(50 + attempts * 2, 90);
             this.processingStatus = 'AI is enhancing your photo...';
           } else if (prediction.status === 'succeeded') {
             this.processingProgress = 100;
             this.processingStatus = 'Enhancement complete!';
+
             // Support new backend: prefer dataUrl if present
             if (prediction.dataUrl) {
               return { ...prediction, output: [prediction.dataUrl] };
             }
+
             return prediction;
           } else if (prediction.status === 'failed') {
+            console.error('Enhancement failed:', prediction.error);
             throw new Error(prediction.error || 'Enhancement failed');
           }
         }
+
         // Wait 5 seconds before next poll
         await new Promise(resolve => setTimeout(resolve, 5000));
         attempts++;
@@ -279,9 +365,9 @@ export class PhotoEnhancementComponent implements OnInit {
         throw error;
       }
     }
+
     throw new Error('Enhancement timed out. Please try again.');
   }
-
 
   downloadEnhanced() {
     if (this.enhancedImage) {
@@ -307,14 +393,14 @@ export class PhotoEnhancementComponent implements OnInit {
             navigator.share({
               title: 'My Enhanced Photo',
               text: 'Check out my AI-enhanced photo!',
-              files: [file]
+              files: [file],
             });
           });
       } else {
         navigator.share({
           title: 'My Enhanced Photo',
           text: 'Check out my AI-enhanced photo!',
-          url: this.enhancedImage.url
+          url: this.enhancedImage.url,
         });
       }
     } else if (this.enhancedImage) {
@@ -333,9 +419,49 @@ export class PhotoEnhancementComponent implements OnInit {
     this.processingProgress = 0;
   }
 
+  /**
+   * Verify UI state after enhancement completion
+   */
+  private verifyUIState(): void {
+    console.log('🔍 Final UI state verification:', {
+      isProcessing: this.isProcessing,
+      hasEnhancedImage: !!this.enhancedImage,
+      enhancedImageUrlLength: this.enhancedImage?.url?.length,
+      enhancedImageType: this.enhancedImage?.type,
+      domElementExists: !!document.querySelector('.results-section'),
+      processingElementExists: !!document.querySelector('.processing-section'),
+      enhancedImageElement: !!document.querySelector('.results-section img[alt="Enhanced"]'),
+    });
+  }
+
+  /**
+   * Clean up temporary uploaded image after successful enhancement
+   * This removes the temporary image file since we now have the enhanced version from Replicate
+   */
+  private cleanupTemporaryImage(fileName: string): void {
+    if (!fileName) return;
+
+    console.log('Cleaning up temporary enhanced image:', fileName);
+
+    // Call backend API to delete the temporary file
+    this.fileUploadService.deleteTemporaryEnhancedImage(fileName).subscribe({
+      next: response => {
+        if (response.success) {
+          console.log('✅ Temporary enhanced image cleaned up successfully');
+        } else {
+          console.warn('⚠️ Failed to cleanup temporary image:', response.message);
+        }
+      },
+      error: error => {
+        console.warn('⚠️ Error during temporary image cleanup:', error);
+        // Don't throw error - cleanup failure shouldn't affect user experience
+      },
+    });
+  }
+
   resetComponent() {
     this.enhanceAnother();
-    this.stateService.loadInitialDashboardData();
+    this.stateService.loadCreditsOnly();
   }
 
   getNextResetText(resetDate: Date): string {
@@ -343,7 +469,7 @@ export class PhotoEnhancementComponent implements OnInit {
     const reset = new Date(resetDate);
     const diffTime = reset.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays <= 0) {
       return 'very soon';
     } else if (diffDays === 1) {
@@ -352,6 +478,4 @@ export class PhotoEnhancementComponent implements OnInit {
       return `in ${diffDays} days`;
     }
   }
-
-
 }

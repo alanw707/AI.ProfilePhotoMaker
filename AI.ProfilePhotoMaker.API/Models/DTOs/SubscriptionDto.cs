@@ -9,7 +9,7 @@ public class SubscriptionPlanDto
     public string Description { get; set; } = string.Empty;
     public decimal Price { get; set; }
     public string BillingPeriod { get; set; } = string.Empty;
-    
+
     // Features
     public int ImagesPerMonth { get; set; }
     public bool CanTrainCustomModels { get; set; }
@@ -17,7 +17,7 @@ public class SubscriptionPlanDto
     public bool HighResolutionOutput { get; set; }
     public int MaxTrainingImages { get; set; }
     public int MaxStylesAccess { get; set; }
-    
+
     public bool IsActive { get; set; }
     public bool IsRecommended { get; set; } = false;
 }
@@ -40,10 +40,10 @@ public class CreateSubscriptionRequestDto
 {
     [Required]
     public string PlanId { get; set; } = string.Empty;
-    
+
     [Required]
     public string PaymentMethodId { get; set; } = string.Empty; // Stripe Payment Method ID
-    
+
     public string? CouponCode { get; set; }
 }
 
@@ -51,7 +51,7 @@ public class UpdateSubscriptionRequestDto
 {
     [Required]
     public string NewPlanId { get; set; } = string.Empty;
-    
+
     public bool ProrationBehavior { get; set; } = true;
 }
 

@@ -1,0 +1,94 @@
+@use '../../../../styles.sass' as *
+
+// Grid View Actions
+.image-actions
+  display: flex
+  gap: 0.5rem
+
+// View button styles (positioned in image overlay)
+.view-btn
+  position: absolute
+  bottom: 12px
+  right: 12px
+  width: 36px
+  height: 36px
+  background: rgba(0, 0, 0, 0.8)
+  border: none
+  border-radius: 50%
+  color: white
+  display: flex
+  align-items: center
+  justify-content: center
+  opacity: 0
+  transition: all 0.3s ease
+  cursor: pointer
+  z-index: 10
+  
+  &:hover
+    background: var(--primary-color)
+    transform: scale(1.1)
+  
+  &:disabled
+    opacity: 0.5
+    cursor: not-allowed
+    
+    &:hover
+      background: rgba(0, 0, 0, 0.8)
+      transform: none
+  
+  svg
+    width: 16px
+    height: 16px
+
+// List View Actions
+.list-actions
+  display: flex
+  gap: 0.5rem
+  flex-shrink: 0
+
+  .action-btn
+    padding: 0.5rem 1rem
+    font-size: 0.875rem
+    white-space: nowrap
+
+// Common Action Button Styles
+.action-btn
+  background: none
+  border: 1px solid var(--border-color)
+  border-radius: 6px
+  padding: 0.5rem
+  cursor: pointer
+  color: var(--text-secondary)
+  transition: all 0.2s ease
+
+  &:hover:not(:disabled)
+    background: var(--background-hover)
+    color: var(--text-primary)
+
+  &:disabled
+    opacity: 0.5
+    cursor: not-allowed
+
+  &.download-btn:hover:not(:disabled)
+    background: var(--primary-color)
+    color: white
+    border-color: var(--primary-color)
+
+  &.share-btn:hover:not(:disabled)
+    background: var(--success-color)
+    color: white
+    border-color: var(--success-color)
+
+  &.delete-btn:hover:not(:disabled)
+    background: var(--error-color)
+    color: white
+    border-color: var(--error-color)
+
+// Host component styles for grid view
+:host(.grid-view) .view-btn
+  // Make view button visible on parent hover
+  opacity: 1
+
+// Parent hover effect for grid view
+:host-context(.image-container:hover) .view-btn
+  opacity: 1

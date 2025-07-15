@@ -50,17 +50,17 @@ public class ReplicateWebhookController : ControllerBase
             // Find the ModelCreationRequest by looking for the model that was trained
             ModelCreationRequest? modelRequest = null;
             UserProfile? userProfile = null;
-            
+
             if (!string.IsNullOrEmpty(payload.Version))
             {
                 // Extract base model name from version (before the colon)
                 var baseModelName = payload.Version.Contains(':')
                     ? payload.Version.Split(':')[0]
                     : payload.Version;
-                
+
                 modelRequest = await _dbContext.ModelCreationRequests
                     .FirstOrDefaultAsync(r => r.ReplicateModelId == baseModelName);
-                
+
                 // If no ModelCreationRequest found, try to extract user ID from model name
                 if (modelRequest == null && baseModelName.StartsWith("user-"))
                 {
@@ -82,14 +82,14 @@ public class ReplicateWebhookController : ControllerBase
             if (payload.IsCompleted && !payload.HasFailed && !string.IsNullOrEmpty(payload.Version))
             {
                 bool updatedSuccessfully = false;
-                
+
                 // Update ModelCreationRequest with training completion data
                 if (modelRequest != null)
                 {
                     // Extract model name and version ID from payload.Version
                     string modelName;
                     string versionId;
-                    
+
                     if (payload.Version.Contains(':'))
                     {
                         var parts = payload.Version.Split(':', 2);
@@ -102,13 +102,13 @@ public class ReplicateWebhookController : ControllerBase
                         modelName = payload.Version;
                         versionId = payload.Version;
                     }
-                    
+
                     // Update ModelCreationRequest as single source of truth
                     modelRequest.TrainedModelVersion = versionId;
                     modelRequest.ReplicateModelId = modelName; // Ensure model ID is set correctly
                     modelRequest.Status = ModelCreationStatus.Ready;
                     modelRequest.CompletedAt = DateTime.UtcNow;
-                    
+
                     _logger.LogInformation("Training completed for model {ModelId}, version: {Version}",
                         modelName, versionId);
 
@@ -119,22 +119,22 @@ public class ReplicateWebhookController : ControllerBase
                             .Include(uss => uss.Style)
                             .Where(uss => uss.UserProfileId == userProfile.Id && uss.Style.IsActive)
                             .ToListAsync();
-                        
+
                         if (selectedStyles.Any())
                         {
                             _logger.LogInformation("Starting automatic image generation for user {UserId} with {StyleCount} selected styles",
                                 userProfile.UserId, selectedStyles.Count);
-                            
+
                             foreach (var selectedStyle in selectedStyles)
                             {
                                 await _replicateApiClient.GenerateImagesAsync(versionId, userProfile.UserId, selectedStyle.Style.Name, null);
                             }
                         }
-                        
+
                         // Update UserProfile timestamp to track activity
                         userProfile.UpdatedAt = DateTime.UtcNow;
                     }
-                    
+
                     updatedSuccessfully = true;
                 }
 
@@ -192,10 +192,10 @@ public class ReplicateWebhookController : ControllerBase
                     userId = userIdObj?.ToString();
                 if (payload.Input.TryGetValue("style", out var styleObj))
                     style = styleObj?.ToString();
-                    
+
                 // Debug logging for webhook payload
                 _logger.LogInformation("Webhook Input contains user_id: {UserId}, style: {Style}", userId ?? "NULL", style ?? "NULL");
-                _logger.LogInformation("Webhook Status: {Status}, IsCompleted: {IsCompleted}, HasFailed: {HasFailed}, HasOutput: {HasOutput}", 
+                _logger.LogInformation("Webhook Status: {Status}, IsCompleted: {IsCompleted}, HasFailed: {HasFailed}, HasOutput: {HasOutput}",
                     payload.Status, payload.IsCompleted, payload.HasFailed, payload.GeneratedImageUrls.Any());
             }
             else
@@ -215,15 +215,15 @@ public class ReplicateWebhookController : ControllerBase
                 }
 
                 var imageUrls = payload.GeneratedImageUrls.ToList();
-                _logger.LogInformation("Downloading {Count} generated images for user {UserId}, style {Style}", 
+                _logger.LogInformation("Downloading {Count} generated images for user {UserId}, style {Style}",
                     imageUrls.Count, userId, style);
 
                 try
                 {
                     // Download all generated images to local storage with filename tracking
                     var downloadResults = await _imageDownloadService.DownloadImagesWithDetailsAsync(
-                        imageUrls, 
-                        userId, 
+                        imageUrls,
+                        userId,
                         style ?? "Unknown");
 
                     var savedImageIds = new List<int>();
@@ -235,7 +235,7 @@ public class ReplicateWebhookController : ControllerBase
                         var downloadResult = i < downloadResults.Count ? downloadResults[i] : null;
                         var localPath = downloadResult?.Success == true ? downloadResult.LocalPath : null;
                         var actualFileName = downloadResult?.Success == true ? downloadResult.FileName : null;
-                        
+
                         // Convert local path to public URL path
                         string? publicUrl = null;
                         if (!string.IsNullOrEmpty(localPath))
@@ -245,21 +245,21 @@ public class ReplicateWebhookController : ControllerBase
                             publicUrl = $"/generated/{relativePath.Replace('\\', '/')}";
                         }
 
-                        _logger.LogInformation("Downloaded image {Index}, success: {DownloadSuccess}, local path: {LocalPath}", 
+                        _logger.LogInformation("Downloaded image {Index}, success: {DownloadSuccess}, local path: {LocalPath}",
                             i + 1, downloadResult?.Success, localPath);
 
                         var processedImage = new ProcessedImage
                         {
                             UserProfileId = userProfile.Id,
-                            OriginalImageUrl = replicateUrl, // Store the original Replicate URL
+                            OriginalImageUrl = publicUrl ?? replicateUrl, // Use local URL if download succeeded, fallback to Replicate URL
                             ProcessedImageUrl = publicUrl, // Only set if download was successful (null if failed)
                             Style = style ?? "Unknown",
                             IsGenerated = true,
                             IsOriginalUpload = false,
                             CreatedAt = DateTime.UtcNow
-                            // ProcessedImageUrl will only be non-null when image is actually downloaded and ready
+                            // Both URLs will use local path when download succeeds, ensuring consistent local serving
                         };
-                        
+
                         // Set scheduled deletion date based on retention policy (7 days for generated images)
                         processedImage.SetScheduledDeletionDate();
 
@@ -267,16 +267,17 @@ public class ReplicateWebhookController : ControllerBase
                         await _dbContext.SaveChangesAsync();
 
                         savedImageIds.Add(processedImage.Id);
-                        
-                        _logger.LogInformation("Saved generated image {Index} for user {UserId}: ID={ImageId}, LocalPath={LocalPath}, PublicUrl={PublicUrl}", 
+
+                        _logger.LogInformation("Saved generated image {Index} for user {UserId}: ID={ImageId}, LocalPath={LocalPath}, PublicUrl={PublicUrl}",
                             i + 1, userId, processedImage.Id, localPath ?? "None", publicUrl ?? replicateUrl);
                     }
 
-                    _logger.LogInformation("Successfully processed {Count} generated images for user {UserId}, style {Style}. Image IDs: {ImageIds}", 
+                    _logger.LogInformation("Successfully processed {Count} generated images for user {UserId}, style {Style}. Image IDs: {ImageIds}",
                         imageUrls.Count, userId, style, string.Join(", ", savedImageIds));
 
-                    return Ok(new { 
-                        success = true, 
+                    return Ok(new
+                    {
+                        success = true,
                         message = $"Processed {imageUrls.Count} images",
                         imageIds = savedImageIds,
                         downloadedCount = downloadResults.Count(r => r.Success)

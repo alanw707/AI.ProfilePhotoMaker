@@ -11,23 +11,23 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
     }
 
-    public DbSet<UserProfile> UserProfiles { get; set; }
-    public DbSet<ProcessedImage> ProcessedImages { get; set; }
-    public DbSet<Style> Styles { get; set; }
-    public DbSet<UserStyleSelection> UserStyleSelections { get; set; }
-    public DbSet<ModelCreationRequest> ModelCreationRequests { get; set; }
-    public DbSet<UsageLog> UsageLogs { get; set; }
-    
+    public virtual DbSet<UserProfile> UserProfiles { get; set; }
+    public virtual DbSet<ProcessedImage> ProcessedImages { get; set; }
+    public virtual DbSet<Style> Styles { get; set; }
+    public virtual DbSet<UserStyleSelection> UserStyleSelections { get; set; }
+    public virtual DbSet<ModelCreationRequest> ModelCreationRequests { get; set; }
+    public virtual DbSet<UsageLog> UsageLogs { get; set; }
+
     // Subscription management
-    public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
-    public DbSet<Subscription> Subscriptions { get; set; }
-    public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
-    
+    public virtual DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
+    public virtual DbSet<Subscription> Subscriptions { get; set; }
+    public virtual DbSet<PaymentTransaction> PaymentTransactions { get; set; }
+
     // Premium Package management removed - replaced by unified CreditPackage system
-    
+
     // Credit Package management (new unified system)
-    public DbSet<CreditPackage> CreditPackages { get; set; }
-    public DbSet<CreditPurchase> CreditPurchases { get; set; }
+    public virtual DbSet<CreditPackage> CreditPackages { get; set; }
+    public virtual DbSet<CreditPurchase> CreditPurchases { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

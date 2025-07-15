@@ -1,4 +1,4 @@
-﻿################################################################################
+################################################################################
 # This .gitignore file was automatically created by Microsoft(R) Visual Studio.
 ################################################################################
 
@@ -7,6 +7,10 @@
 /AI.ProfilePhotoMaker.API/obj/Debug/net8.0
 /AI.ProfilePhotoMaker.API/obj/Release/net8.0
 /AI.ProfilePhotoMaker.API/obj
+/AI.ProfilePhotoMaker.API.Tests/bin/
+/AI.ProfilePhotoMaker.API.Tests/obj/
+/AI.ProfilePhotoMaker.API.Tests/obj/Release/net8.0
+/AI.ProfilePhotoMaker.API.Tests/obj/Debug/net8.0
 
 # Security & Environment files
 *.env
@@ -34,20 +38,65 @@ PublishProfiles/
 *.bak
 *.backup
 
-# Logs
+# Logs - exclude all log files and directories
 logs/
 *.log
+**/logs/
+**/*.log
+ngrok.log
+ngrok*.log
+api*.log
+angular*.log
+backend*.log
+ui*.log
+*-ngrok.log
+*-tunnel.log
+*-final.log
+*-full.log
+*.log.*
 
-# SQLite DB files
-AI.ProfilePhotoMaker.API/aiprofilemaker.db
-AI.ProfilePhotoMaker.API/aiprofilemaker.db-shm
-AI.ProfilePhotoMaker.API/aiprofilemaker.db-wal
+# SQLite DB files - prevent tracking but keep for development
+*.db
+*.db-shm
+*.db-wal
+AI.ProfilePhotoMaker.API/aiprofilemaker.db*
+**/*.db
+**/*.db-shm
+**/*.db-wal
 # ngrok binary and logs
 AI.ProfilePhotoMaker.API/ngrok
 AI.ProfilePhotoMaker.API/ngrok.log
-# User uploads
+# User uploads and content (never commit user data)
 AI.ProfilePhotoMaker.API/uploads/
 # Generated images (user-specific content)
 AI.ProfilePhotoMaker.API/generated/
+# Enhanced images (filesystem-only storage)
+AI.ProfilePhotoMaker.API/enhanced/
+# Training zip files (contain user data)
+AI.ProfilePhotoMaker.API/training-zips/
 # Package lock (if not needed in repo)
 package-lock.json
+
+# Claude Code workspace files
+.claude/
+
+# General build results
+**/[Bb]in/
+**/[Oo]bj/
+
+# NuGet packages
+packages/
+*.nupkg
+
+# Test results
+TestResults/
+*.trx
+coverage/
+
+# Compiled binaries
+*.dll
+*.pdb
+*.exe
+
+# Cache files
+**/.cache/

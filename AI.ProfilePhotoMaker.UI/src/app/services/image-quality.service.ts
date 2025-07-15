@@ -1,6 +1,6 @@
 import { Injectable, NgZone } from '@angular/core';
 import * as faceapi from 'face-api.js';
-import { QualityScore, IImageQualityService } from '../interfaces/service.interfaces';
+import { IImageQualityService, QualityScore } from '../interfaces/service.interfaces';
 
 @Injectable({
   providedIn: 'root'
@@ -186,8 +186,8 @@ export class ImageQualityService implements IImageQualityService {
       
       for (let i = 0; i < data.length; i += 4) {
         const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-        if (avg > 240) brightPixels++;
-        if (avg < 15) darkPixels++;
+        if (avg > 240) {brightPixels++;}
+        if (avg < 15) {darkPixels++;}
       }
       
       const totalPixels = data.length / 4;

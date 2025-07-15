@@ -20,12 +20,12 @@ var builder = WebApplication.CreateBuilder(args);
 // Configure forwarded headers for ngrok proxy
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | 
+    options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor |
                               Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto |
                               Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedHost;
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
-    
+
     // Trust ngrok proxy
     options.KnownProxies.Add(System.Net.IPAddress.Parse("127.0.0.1"));
 });
@@ -36,7 +36,7 @@ if (builder.Environment.IsDevelopment())
     builder.Services.AddDataProtection()
         .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "keys")))
         .SetApplicationName("AI.ProfilePhotoMaker.API");
-        
+
     // Add session services for OAuth state management
     builder.Services.AddMemoryCache();
     builder.Services.AddDistributedMemoryCache();
@@ -45,8 +45,10 @@ if (builder.Environment.IsDevelopment())
         options.IdleTimeout = TimeSpan.FromMinutes(30);
         options.Cookie.HttpOnly = true;
         options.Cookie.IsEssential = true;
-        options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest;
+        options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None; // Allow cross-site for OAuth
+        options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
+        // Don't specify domain - let browser handle same-origin cookies
+        options.Cookie.Domain = null;
     });
 }
 
@@ -100,12 +102,24 @@ builder.Services.Configure<IdentityOptions>(options =>
     options.User.RequireUniqueEmail = true;
 });
 
-// Add JWT Authentication
+// Add JWT Authentication with Cookie support for OAuth
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+        // IMPORTANT: Do not set DefaultChallengeScheme or DefaultScheme - this allows 
+        // OAuth providers (Google, Facebook, etc.) to handle their own challenges with proper redirects
+        // options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme; // REMOVED to fix OAuth
+        // options.DefaultScheme = Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme; // REMOVED to fix OAuth
+        options.DefaultSignInScheme = Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme;
+    })
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/login";
+        options.LogoutPath = "/logout";
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+        options.SlidingExpiration = true;
+        options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
     })
     .AddJwtBearer(options =>
     {
@@ -124,179 +138,12 @@ builder.Services.AddAuthentication(options =>
     {
         options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "";
         options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "";
-        options.CallbackPath = "/api/auth/external-login/callback";
-        
-        // Disable PKCE for development to allow direct code exchange
-        if (builder.Environment.IsDevelopment())
-        {
-            options.UsePkce = false;
-        }
-        
-        if (builder.Environment.IsDevelopment())
-        {
-            // Set the correct redirect URI for development with ngrok
-            var appBaseUrl = builder.Configuration["AppBaseUrl"] ?? "http://localhost:5035";
-            Console.WriteLine($"Configuring OAuth with base URL: {appBaseUrl}");
-            
-            // Override the redirect URI to use the correct base URL
-            var correctRedirectUri = $"{appBaseUrl}/api/auth/external-login/callback";
-            Console.WriteLine($"Setting redirect URI to: {correctRedirectUri}");
-            
-            // Configure cookies for ngrok proxy - more permissive settings
-            options.CorrelationCookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
-            options.CorrelationCookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest;
-            options.CorrelationCookie.IsEssential = true;
-            options.CorrelationCookie.HttpOnly = true;
-            options.CorrelationCookie.Domain = null;
-            
-            // Force the OAuth system to use the correct base URL
-            options.Events.OnRedirectToAuthorizationEndpoint = context =>
-            {
-                var originalUri = context.RedirectUri;
-                
-                // Parse the original URI to extract query parameters and rebuild with correct base
-                var uri = new Uri(originalUri);
-                var query = uri.Query;
-                
-                // Rebuild the OAuth URL with the correct redirect_uri parameter
-                var newRedirectUri = originalUri.Replace("redirect_uri=" + Uri.EscapeDataString("http://localhost:5035/api/auth/external-login/callback"), 
-                                                        "redirect_uri=" + Uri.EscapeDataString(correctRedirectUri));
-                newRedirectUri = newRedirectUri.Replace("redirect_uri=" + Uri.EscapeDataString("https://localhost:5035/api/auth/external-login/callback"), 
-                                                       "redirect_uri=" + Uri.EscapeDataString(correctRedirectUri));
-                
-                Console.WriteLine($"Original OAuth URI: {originalUri}");
-                Console.WriteLine($"Modified OAuth URI: {newRedirectUri}");
-                context.Response.Redirect(newRedirectUri);
-                return Task.CompletedTask;
-            };
-            
-            // Enhanced error handling - bypass correlation failures entirely
-            options.Events.OnRemoteFailure = context =>
-            {
-                var errorMessage = context.Failure?.Message ?? "OAuth authentication failed";
-                Console.WriteLine($"OAuth Remote Failure: {errorMessage}");
-                Console.WriteLine($"Request URL: {context.Request.Path}{context.Request.QueryString}");
-                
-                // For any OAuth failure (including correlation), try to extract the code and handle it directly
-                var code = context.Request.Query["code"].ToString();
-                Console.WriteLine($"Found authorization code: {code}");
-                
-                if (!string.IsNullOrEmpty(code))
-                {
-                    Console.WriteLine($"OAuth failure detected, redirecting to direct OAuth handler with code: {code}");
-                    var appBaseUrl = builder.Configuration["AppBaseUrl"] ?? "http://localhost:5035";
-                    var redirectUrl = $"{appBaseUrl}/api/auth/google-direct-callback?code={Uri.EscapeDataString(code)}&returnUrl=/dashboard";
-                    Console.WriteLine($"Redirecting to: {redirectUrl}");
-                    context.Response.Redirect(redirectUrl);
-                    context.HandleResponse();
-                }
-                else
-                {
-                    Console.WriteLine($"OAuth failed with error: {errorMessage}");
-                    context.Response.Redirect($"http://localhost:4200/login?error=oauth_failed&message={Uri.EscapeDataString(errorMessage)}");
-                    context.HandleResponse();
-                }
-                return Task.CompletedTask;
-            };
-            
-            // Handle successful authentication - bypass state validation issues
-            options.Events.OnTicketReceived = context =>
-            {
-                Console.WriteLine("OAuth Ticket Received - Authentication successful");
-                
-                // Get user claims from the ticket
-                var email = context.Principal?.FindFirst(ClaimTypes.Email)?.Value;
-                var firstName = context.Principal?.FindFirst(ClaimTypes.GivenName)?.Value ?? "";
-                var lastName = context.Principal?.FindFirst(ClaimTypes.Surname)?.Value ?? "";
-                
-                Console.WriteLine($"User info from ticket: {email}, {firstName}, {lastName}");
-                
-                // If we have user info, redirect to our custom processor instead of continuing with standard flow
-                if (!string.IsNullOrEmpty(email))
-                {
-                    Console.WriteLine("Redirecting to custom OAuth processor with user info");
-                    var appBaseUrl = builder.Configuration["AppBaseUrl"] ?? "http://localhost:5035";
-                    var redirectUrl = $"{appBaseUrl}/api/auth/google-ticket-callback?email={Uri.EscapeDataString(email)}&firstName={Uri.EscapeDataString(firstName)}&lastName={Uri.EscapeDataString(lastName)}&returnUrl=/dashboard";
-                    context.Response.Redirect(redirectUrl);
-                    context.HandleResponse();
-                }
-                
-                return Task.CompletedTask;
-            };
-        }
+        options.CallbackPath = "/signin-google";
+        options.SaveTokens = true;
+        options.Scope.Add("email");
+        options.Scope.Add("profile");
     })
-    .AddFacebook(options =>
-    {
-        var appId = builder.Configuration["Authentication:Facebook:AppId"];
-        var appSecret = builder.Configuration["Authentication:Facebook:AppSecret"];
-        
-        // Only configure Facebook if we have real credentials
-        if (!string.IsNullOrEmpty(appId) && appId != "placeholder" &&
-            !string.IsNullOrEmpty(appSecret) && appSecret != "placeholder")
-        {
-            options.AppId = appId;
-            options.AppSecret = appSecret;
-            options.CallbackPath = "/signin-facebook";
-            
-            if (builder.Environment.IsDevelopment())
-            {
-                var baseUrl = builder.Configuration["AppBaseUrl"];
-                if (!string.IsNullOrEmpty(baseUrl))
-                {
-                    options.Events.OnRedirectToAuthorizationEndpoint = context =>
-                    {
-                        context.Response.Redirect(context.RedirectUri.Replace("https://localhost:5035", baseUrl));
-                        return Task.CompletedTask;
-                    };
-                }
-            }
-        }
-        else
-        {
-            // Use placeholder values if no real credentials
-            options.AppId = "placeholder-facebook-app-id";
-            options.AppSecret = "placeholder-facebook-app-secret";
-        }
-    })
-    .AddApple(options =>
-    {
-        var clientId = builder.Configuration["Authentication:Apple:ClientId"];
-        var teamId = builder.Configuration["Authentication:Apple:TeamId"];
-        var keyId = builder.Configuration["Authentication:Apple:KeyId"];
-        var privateKey = builder.Configuration["Authentication:Apple:PrivateKey"];
-        
-        // Only configure Apple if we have real credentials
-        if (!string.IsNullOrEmpty(clientId) && clientId != "placeholder" &&
-            !string.IsNullOrEmpty(teamId) && teamId != "placeholder" &&
-            !string.IsNullOrEmpty(keyId) && keyId != "placeholder" &&
-            !string.IsNullOrEmpty(privateKey) && privateKey != "placeholder")
-        {
-            options.ClientId = clientId;
-            options.TeamId = teamId;
-            options.KeyId = keyId;
-            options.CallbackPath = "/signin-apple";
-            options.PrivateKey = (keyId, cancellationToken) => Task.FromResult<ReadOnlyMemory<char>>(privateKey.AsMemory());
-            
-            if (builder.Environment.IsDevelopment())
-            {
-                var baseUrl = builder.Configuration["AppBaseUrl"];
-                if (!string.IsNullOrEmpty(baseUrl))
-                {
-                    options.Events.OnRedirectToAuthorizationEndpoint = context =>
-                    {
-                        context.Response.Redirect(context.RedirectUri.Replace("https://localhost:5035", baseUrl));
-                        return Task.CompletedTask;
-                    };
-                }
-            }
-        }
-        else
-        {
-            // Skip Apple configuration if credentials are placeholders
-            options.ClientId = "skip-apple-oauth";
-            options.ClientSecret = "skip-apple-oauth"; // Required field
-        }
-    });
+;
 
 // Validate JWT Secret
 var jwtSecret = builder.Configuration["JWT:Secret"];
@@ -310,6 +157,16 @@ if (string.IsNullOrEmpty(jwtSecret) || jwtSecret.Length < 32)
 
 // Register the Services
 builder.Services.AddHttpContextAccessor(); // Required for UserContextService
+
+// Add response compression for better performance over ngrok
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+    options.MimeTypes = Microsoft.AspNetCore.ResponseCompression.ResponseCompressionDefaults.MimeTypes.Concat(
+        new[] { "application/json", "text/json", "image/svg+xml" });
+});
+builder.Services.AddHttpClient(); // Required for OAuth HTTP calls
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IBasicTierService, AI.ProfilePhotoMaker.API.Services.BasicTierService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IUserContextService, AI.ProfilePhotoMaker.API.Services.UserContextService>();
@@ -318,7 +175,7 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IUserContextService
 builder.Services.AddSingleton<Replicate.ReplicateApi>(provider =>
 {
     var configuration = provider.GetRequiredService<IConfiguration>();
-    var apiToken = configuration["Replicate:ApiToken"] 
+    var apiToken = configuration["Replicate:ApiToken"]
         ?? throw new InvalidOperationException("Replicate API token not configured");
     return new Replicate.ReplicateApi(apiToken);
 });
@@ -332,8 +189,6 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository,
 
 // Register Storage Services
 builder.Services.AddScoped<IStorageService, LocalStorageService>();
-// Note: For production with Azure Blob Storage, replace with:
-// builder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
 
 // Premium Package Services removed - using unified credit system
 
@@ -396,16 +251,35 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigins",
-        builder =>
+        corsBuilder =>
         {
-            builder.WithOrigins("https://aiprofilephotomaker.com")
-                   .AllowAnyMethod()
-                   .AllowAnyHeader();
+            corsBuilder.WithOrigins(
+                    "https://aiprofilephotomaker.com",
+                    "https://test.profilephotomaker.com"
+                )
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials();
         });
 
-     options.AddPolicy("AllowAll", builder =>
+    options.AddPolicy("AllowDevelopment", corsBuilder =>
     {
-        builder.AllowAnyOrigin()
+        corsBuilder.WithOrigins(
+                "http://localhost:4200",
+                "https://localhost:4200",
+                "https://awlocaldev.ngrok.app",
+                "https://awlocaldev-api.ngrok.app"
+            )
+            .SetIsOriginAllowedToAllowWildcardSubdomains()
+            .WithOrigins("https://*.ngrok.app", "https://*.ngrok.io")
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials();
+    });
+
+    options.AddPolicy("AllowAll", corsBuilder =>
+    {
+        corsBuilder.AllowAnyOrigin()
                .AllowAnyMethod()
                .AllowAnyHeader();
     });
@@ -416,16 +290,23 @@ var app = builder.Build();
 // Use forwarded headers for ngrok proxy
 app.UseForwardedHeaders();
 
+// Enable response compression early in the pipeline
+app.UseResponseCompression();
+
 // Use session middleware for OAuth state management
 if (app.Environment.IsDevelopment())
 {
     app.UseSession();
 }
 
-// In middleware pipeline
+// In middleware pipeline - use appropriate CORS policy based on environment
 if (app.Environment.IsDevelopment())
 {
-    app.UseCors("AllowAll");
+    app.UseCors("AllowDevelopment");
+}
+else if (app.Environment.EnvironmentName == "Test")
+{
+    app.UseCors("AllowSpecificOrigins");
 }
 else
 {
@@ -443,6 +324,36 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
+// Add debug middleware to log all requests
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path.Value?.ToLower();
+    var method = context.Request.Method;
+
+    Console.WriteLine($"🔍 Request: {method} {path}");
+
+    // Special logging for OAuth-related paths
+    if (path?.Contains("signin") == true || path?.Contains("oauth") == true || path?.Contains("auth") == true)
+    {
+        Console.WriteLine($"🔐 OAuth-related request detected: {method} {context.Request.Path}");
+        Console.WriteLine($"   Query string: {context.Request.QueryString}");
+        Console.WriteLine($"   User-Agent: {context.Request.Headers.UserAgent}");
+        Console.WriteLine($"   Referer: {context.Request.Headers.Referer}");
+    }
+
+    await next();
+
+    // Log response for OAuth paths
+    if (path?.Contains("signin") == true || path?.Contains("oauth") == true || path?.Contains("auth") == true)
+    {
+        Console.WriteLine($"🔐 OAuth response: {context.Response.StatusCode}");
+    }
+});
+
+// CRITICAL: Authentication middleware must come before static files to handle OAuth callbacks
+app.UseAuthentication();
+app.UseAuthorization();
+
 // Serve static files from uploads directory
 app.UseStaticFiles(new StaticFileOptions
 {
@@ -455,13 +366,17 @@ app.UseStaticFiles(new StaticFileOptions
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type");
-        
+
         // Ensure proper content type for images
         var extension = Path.GetExtension(ctx.File.Name).ToLowerInvariant();
         if (extension == ".png") ctx.Context.Response.ContentType = "image/png";
         else if (extension == ".jpg" || extension == ".jpeg") ctx.Context.Response.ContentType = "image/jpeg";
         else if (extension == ".gif") ctx.Context.Response.ContentType = "image/gif";
         else if (extension == ".webp") ctx.Context.Response.ContentType = "image/webp";
+
+        // Add aggressive caching for uploaded images (immutable content)
+        ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=86400, immutable");
+        ctx.Context.Response.Headers.Append("ETag", $"\"{ctx.File.LastModified:yyyy-MM-dd-HH-mm-ss}\"");
     }
 });
 
@@ -478,7 +393,51 @@ app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
         Path.Combine(builder.Environment.ContentRootPath, "style-previews")),
-    RequestPath = "/style-previews"
+    RequestPath = "/style-previews",
+    OnPrepareResponse = ctx =>
+    {
+        // Add CORS headers to allow cross-origin requests for image downloads
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type");
+
+        // Ensure proper content type for images
+        var extension = Path.GetExtension(ctx.File.Name).ToLowerInvariant();
+        if (extension == ".png") ctx.Context.Response.ContentType = "image/png";
+        else if (extension == ".jpg" || extension == ".jpeg") ctx.Context.Response.ContentType = "image/jpeg";
+        else if (extension == ".gif") ctx.Context.Response.ContentType = "image/gif";
+        else if (extension == ".webp") ctx.Context.Response.ContentType = "image/webp";
+
+        // Add aggressive caching for style previews (static assets, rarely change)
+        ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=604800, immutable");
+        ctx.Context.Response.Headers.Append("ETag", $"\"{ctx.File.LastModified:yyyy-MM-dd-HH-mm-ss}\"");
+    }
+});
+
+// Serve static files from enhanced images directory
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+        Path.Combine(builder.Environment.ContentRootPath, "enhanced")),
+    RequestPath = "/enhanced",
+    OnPrepareResponse = ctx =>
+    {
+        // Add CORS headers to allow cross-origin requests for image downloads
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type");
+
+        // Ensure proper content type for images
+        var extension = Path.GetExtension(ctx.File.Name).ToLowerInvariant();
+        if (extension == ".png") ctx.Context.Response.ContentType = "image/png";
+        else if (extension == ".jpg" || extension == ".jpeg") ctx.Context.Response.ContentType = "image/jpeg";
+        else if (extension == ".gif") ctx.Context.Response.ContentType = "image/gif";
+        else if (extension == ".webp") ctx.Context.Response.ContentType = "image/webp";
+
+        // Add caching for enhanced images (personal photos, moderate caching)
+        ctx.Context.Response.Headers.Append("Cache-Control", "private, max-age=3600");
+        ctx.Context.Response.Headers.Append("ETag", $"\"{ctx.File.LastModified:yyyy-MM-dd-HH-mm-ss}\"");
+    }
 });
 
 // Serve static files from generated images directory
@@ -493,7 +452,7 @@ app.UseStaticFiles(new StaticFileOptions
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type");
-        
+
         // Ensure proper content type for images
         var extension = Path.GetExtension(ctx.File.Name).ToLowerInvariant();
         if (extension == ".png") ctx.Context.Response.ContentType = "image/png";
@@ -512,16 +471,34 @@ if (Directory.Exists(angularPath))
         FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(angularPath),
         RequestPath = ""
     });
-    
-    // Fallback to index.html for Angular routing
-    app.MapFallbackToFile("index.html", new StaticFileOptions
+
+    // Fallback to index.html for Angular routing (exclude API and OAuth paths)
+    app.MapFallback(context =>
     {
-        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(angularPath)
+        var path = context.Request.Path.Value?.ToLower();
+
+        Console.WriteLine($"🔍 FALLBACK: Checking path: {path}");
+
+        // Don't handle API or OAuth callback paths
+        if (path?.StartsWith("/api/") == true ||
+            path?.StartsWith("/signin-") == true ||
+            path?.StartsWith("/swagger") == true)
+        {
+            Console.WriteLine($"🔍 FALLBACK: Skipping path: {path} (matches exclusion)");
+            return Task.CompletedTask;
+        }
+
+        Console.WriteLine($"🔍 FALLBACK: Serving Angular for path: {path}");
+
+        // Serve index.html for Angular routing
+        context.Response.ContentType = "text/html";
+        return context.Response.SendFileAsync(Path.Combine(angularPath, "index.html"));
     });
 }
 
-app.UseAuthentication();
-app.UseAuthorization();
+// OAuth callbacks are now handled by the standard middleware
+// No custom debug routes needed
+
 
 app.MapControllers();
 
