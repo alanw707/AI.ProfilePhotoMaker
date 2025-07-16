@@ -15,6 +15,7 @@ START_NGROK=true
 START_FRONTEND=true
 START_BACKEND=true
 RESTART_BACKEND=false
+RESTART_FRONTEND=false
 
 # Function to show usage
 show_usage() {
@@ -27,9 +28,10 @@ OPTIONS:
     -h, --help           Show this help message
     -f, --frontend-only  Start only the frontend (Angular)
     -b, --backend-only   Start only the backend (.NET API)
-    -n, --no-ngrok      Skip ngrok tunnel setup
+    -n, --no-ngrok        Skip ngrok tunnel setup
     -r, --restart-backend Restart the backend server
-    --restart-backend   Restart only the backend server (keeps frontend running)
+    --restart-backend     Restart only the backend server (keeps frontend running)
+    --restart-frontend    Restart only the frontend server (keeps backend running)
 
 EXAMPLES:
     $0                   Start all services (default)
@@ -37,7 +39,8 @@ EXAMPLES:
     $0 -b               Start only backend
     $0 -r               Restart backend server
     $0 -f -n            Start frontend without ngrok
-    $0 --restart-backend Restart backend only
+    $0 --restart-backend  Restart backend only
+    $0 --restart-frontend Restart frontend only
 
 SERVICES:
     Frontend: Angular dev server (port 4200)
@@ -70,6 +73,11 @@ while [[ $# -gt 0 ]]; do
             START_FRONTEND=false
             START_BACKEND=true
             ;;
+        --restart-frontend)
+            RESTART_FRONTEND=true
+            START_FRONTEND=true
+            START_BACKEND=false
+            ;;
         *)
             echo "❌ Unknown option: $1"
             show_usage
@@ -96,7 +104,7 @@ command_exists() {
 
 # Function to check if a port is in use
 port_in_use() {
-    netstat -tlnp 2>/dev/null | grep -q ":$1 "
+    ss -tlnp 2>/dev/null | grep -q ":$1 "
 }
 
 # Function to wait for service to be ready
@@ -174,6 +182,42 @@ restart_backend() {
     return 0
 }
 
+# Function to restart frontend server
+restart_frontend() {
+    echo "🔄 Restarting frontend server..."
+    
+    # Stop existing frontend
+    stop_service "Frontend" "ng serve"
+    
+    # Start new frontend
+    echo "⚛️  Starting Angular frontend..."
+    cd "$UI_DIR"
+    
+    # Check if ngrok is running to determine which command to use
+    if curl -s http://127.0.0.1:4040/api/tunnels >/dev/null 2>&1; then
+        echo "   Using ngrok configuration..."
+        npm run dev:ngrok >/dev/null 2>&1 &
+        ANGULAR_PID=$!
+        sleep 8
+        if ! wait_for_service "https://awlocaldev.ngrok.app"; then
+            echo "❌ Frontend failed to restart with ngrok"
+            return 1
+        fi
+    else
+        echo "   Using local configuration..."
+        npm run dev:local >/dev/null 2>&1 &
+        ANGULAR_PID=$!
+        sleep 8
+        if ! wait_for_service "http://localhost:4200"; then
+            echo "❌ Frontend failed to restart locally"
+            return 1
+        fi
+    fi
+    
+    echo "✅ Frontend restarted successfully (PID: $ANGULAR_PID)"
+    return 0
+}
+
 # Function to get service status
 get_service_status() {
     local service_name=$1
@@ -246,6 +290,41 @@ if [ "$RESTART_BACKEND" = true ]; then
         done
     else
         echo "❌ Failed to restart backend"
+        exit 1
+    fi
+fi
+
+# Handle restart frontend option
+if [ "$RESTART_FRONTEND" = true ]; then
+    echo "🔄 Restart frontend mode activated"
+    
+    # Check current service status
+    echo "🔍 Current service status:"
+    get_service_status "Frontend" "ng serve" "4200"
+    get_service_status "Backend" "dotnet run.*AI.ProfilePhotoMaker.API" "5035"
+    get_service_status "Ngrok" "ngrok" "4040"
+    echo ""
+    
+    # Restart frontend
+    if restart_frontend; then
+        echo ""
+        echo "🎉 Frontend restarted successfully!"
+        echo "=============================================="
+        if curl -s http://127.0.0.1:4040/api/tunnels >/dev/null 2>&1; then
+            echo "Frontend: https://awlocaldev.ngrok.app"
+        else
+            echo "Frontend: http://localhost:4200"
+        fi
+        echo ""
+        echo "Press Ctrl+C to stop, or run this script again to restart"
+        
+        # Keep script running
+        trap "echo 'Goodbye!'; exit 0" INT TERM
+        while true; do
+            sleep 60
+        done
+    else
+        echo "❌ Failed to restart frontend"
         exit 1
     fi
 fi
