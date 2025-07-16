@@ -60,7 +60,9 @@
     gap: 12px
 
   .stats-grid
-    grid-template-columns: 1fr
+    grid-template-columns: 1fr 1fr  // 2 cards per row on tablets
+    gap: 20px  // Optimized spacing for mobile
+    grid-template-rows: auto auto
 
   .training-progress
     flex-direction: column
@@ -83,5 +85,15 @@
   .results-grid
     grid-template-columns: 1fr
 
+  .stats-grid
+    grid-template-columns: 1fr 1fr  // Keep 2 cards per row even on small screens
+    gap: 16px  // Tighter spacing for small screens
+
   .upload-area
     padding: 32px 16px
+
+// Extra small screens - single column only if really necessary
+@media (max-width: 360px)
+  .stats-grid
+    grid-template-columns: 1fr  // Single column for very small screens
+    gap: 12px

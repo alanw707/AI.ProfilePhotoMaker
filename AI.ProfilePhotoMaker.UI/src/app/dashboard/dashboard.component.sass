@@ -29,14 +29,30 @@
 .dashboard-main
   @include shared.content-container
   @include shared.main-content
-  // Override excessive spacing from main-content mixin
-  margin-top: var(--spacing-xl)  // Reduced from 80px for tighter layout
-  padding: var(--spacing-xl) 0   // Reduced from 40px 0 for better balance
+  // Decreased spacing from header navigation
+  margin-top: 24px  // Reduced spacing from header
+  padding: 20px 0   // Tighter vertical padding
+  
+  // Responsive padding adjustments
+  @media (max-width: 1024px)
+    margin-top: 20px
+    padding: 16px 0
+    
+  @media (max-width: 768px)
+    margin-top: 16px
+    padding: 12px 0
 
 .dashboard-content
   display: flex
   flex-direction: column
-  gap: var(--spacing-lg)
+  gap: 32px  // Better spacing between sections
+  
+  // Responsive gap adjustments
+  @media (max-width: 1024px)
+    gap: 28px
+    
+  @media (max-width: 768px)
+    gap: 24px
 
 // =============================================================================
 // STATS SECTION - Grid Layout Only
@@ -45,8 +61,29 @@
 .stats-section
   .stats-grid
     display: grid
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr))
-    gap: var(--spacing-xl)
+    gap: 18px
+    width: 100%
+    
+    // Desktop: 4 cards in one row
+    grid-template-columns: repeat(4, 1fr)
+    
+    // Tablet: 2 cards per row
+    @media (max-width: 1024px)
+      grid-template-columns: repeat(2, 1fr)
+      gap: 14px
+    
+    // Mobile: 1 card per row - no minimum width
+    @media (max-width: 768px)
+      grid-template-columns: 1fr
+      gap: 10px
+      
+    // Very small mobile
+    @media (max-width: 480px)
+      gap: 8px
+    
+    // Ensure consistent sizing across all cards
+    > *
+      min-width: 0  // Prevent grid items from overflowing
 
 // =============================================================================
 // WORKFLOW SECTION - Styles moved to _workflow.sass

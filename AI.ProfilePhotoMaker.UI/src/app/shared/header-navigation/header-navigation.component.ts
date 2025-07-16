@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
@@ -25,7 +25,8 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private router: Router,
     public themeService: ThemeService,
-    private creditService: CreditService
+    private creditService: CreditService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -35,8 +36,10 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
         this.userName =
           `${user.firstName || ''} ${user.lastName || ''}`.trim() || this.userEmail.split('@')[0];
 
-        // Only load credit status when authenticated
-        this.loadCreditStatus();
+        // Only load credit status when authenticated - add small delay for auth token
+        setTimeout(() => {
+          this.loadCreditStatus();
+        }, 100);
       } else {
         // Clear credit status when not authenticated
         this.userCreditStatus = null;
@@ -58,10 +61,17 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
       next: response => {
         if (response.success) {
           this.userCreditStatus = response.data;
+          // Force change detection to update the view
+          this.cdr.detectChanges();
+        } else {
+          this.userCreditStatus = null;
+          this.cdr.detectChanges();
         }
       },
       error: error => {
         console.error('Failed to load credit status:', error);
+        this.userCreditStatus = null;
+        this.cdr.detectChanges();
       },
     });
   }
@@ -72,7 +82,7 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
 
   logout() {
     this.authService.logout();
-    this.router.navigate(['/login']);
+    // Navigation handled by auth service
   }
 
   toggleMobileMenu() {

@@ -26,7 +26,7 @@
 <header class="app-header">
   <div class="header-content">
     <div class="logo-section">
-      <img src="Logo.PNG" alt="AI Profile Photo Maker" class="header-logo" />
+      <img src="assets/Logo.PNG" alt="AI Profile Photo Maker" class="header-logo" />
       <h1>AI Profile Photo Maker</h1>
     </div>
 
@@ -110,9 +110,9 @@
           class="credit-display"
           *ngIf="userCreditStatus"
           routerLink="/settings"
-          [attr.title]="'Total Credits: ' + userCreditStatus.totalCredits">
+          [attr.title]="'Total Credits: ' + (userCreditStatus.totalCredits || 0)">
           <div class="credit-icon">💎</div>
-          <div class="credit-amount">{{ userCreditStatus.totalCredits }}</div>
+          <div class="credit-amount">{{ userCreditStatus.totalCredits || 0 }}</div>
         </div>
 
         <div class="user-info">

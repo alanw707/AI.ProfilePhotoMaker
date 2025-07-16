@@ -512,8 +512,8 @@ export class SettingsComponent implements OnInit {
         resolve();
       }, 8000);
 
-      // Load initial credit data
-      this.dashboardStateService.loadInitialDashboardData();
+      // Load basic data for settings (no validation, just counts)
+      this.dashboardStateService.loadBasicDataForSettings();
 
       // Subscribe to dashboard state for credit information - take first emission
       let subscription: any;
@@ -521,6 +521,13 @@ export class SettingsComponent implements OnInit {
         clearTimeout(timeout);
         this.creditsInfo = state.creditsInfo;
         this.userCreditStatus = state.userCreditStatus;
+        // Also update data stats with the lighter counts
+        if (state.uploadedImages !== undefined) {
+          this.dataStats.inputPhotos = state.uploadedImages;
+        }
+        if (state.generatedPhotosCount !== undefined) {
+          this.dataStats.generatedPhotos = state.generatedPhotosCount;
+        }
         if (subscription) {
           subscription.unsubscribe();
         }

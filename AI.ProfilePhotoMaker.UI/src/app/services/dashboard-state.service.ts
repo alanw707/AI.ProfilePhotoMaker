@@ -65,6 +65,107 @@ export class DashboardStateService implements IDashboardStateService {
     });
   }
 
+  // Load basic dashboard data for settings page (counts only, no validation)
+  loadBasicDataForSettings() {
+    const CACHE_KEY = 'settings_data';
+
+    // Check cache first
+    const cachedData = this.cacheManager.getCachedData<{
+      userProfile: any;
+      userCreditStatus: any;
+      uploadedImages: number;
+      generatedPhotosCount: number;
+    }>(CACHE_KEY);
+    if (cachedData) {
+      console.log('💾 Using cached settings data');
+      this.setState({
+        userProfile: cachedData.userProfile,
+        userCreditStatus: cachedData.userCreditStatus,
+        uploadedImages: cachedData.uploadedImages,
+        generatedPhotosCount: cachedData.generatedPhotosCount,
+        isLoading: false,
+      });
+      return;
+    }
+
+    // Debounce rapid reloads
+    if (
+      this.cacheManager.shouldDebounceRequest('settings_load', CacheManagerService.LOAD_DEBOUNCE_MS)
+    ) {
+      return;
+    }
+
+    this.setState({ isLoading: true });
+    console.log('🚀 Loading basic settings data (counts only)...');
+
+    // Load only essential data for settings page
+    forkJoin({
+      profile: this.profileService.getCurrentUserProfile().pipe(
+        catchError(error => {
+          console.warn('⚠️ Profile API failed:', error);
+          return of({ success: false, data: null, error: error });
+        })
+      ),
+      creditStatus: this.creditService.getCreditStatus().pipe(
+        catchError(error => {
+          console.warn('⚠️ Credit Status API failed:', error);
+          return of({ success: false, data: null, error: error });
+        })
+      ),
+      userImages: this.fileUploadService.getUserImages().pipe(
+        catchError(error => {
+          console.warn('⚠️ User Images API failed:', error);
+          return of({ success: false, data: null, error: error });
+        })
+      ),
+    }).subscribe({
+      next: ({ profile, creditStatus, userImages }) => {
+        const userProfile = profile?.success ? profile.data : null;
+        const userCreditStatus = creditStatus?.success ? creditStatus.data : null;
+        const userImagesData = userImages?.success ? userImages.data : null;
+
+        // Count uploaded images without validation (just filter server data)
+        const uploadedImagesCount =
+          userImagesData?.images?.filter(
+            (img: any) => !img.isGenerated && (img.isOriginalUpload || img.style === 'Original')
+          )?.length || 0;
+
+        // Count generated photos
+        const generatedPhotosCount =
+          userImagesData?.generatedImages ||
+          userImagesData?.images?.filter((img: any) => img.isGenerated)?.length ||
+          0;
+
+        console.log('📊 Settings data loaded:', {
+          uploadedImages: uploadedImagesCount,
+          generatedPhotos: generatedPhotosCount,
+          hasCredits: !!userCreditStatus,
+        });
+
+        const newState = {
+          userProfile,
+          userCreditStatus,
+          uploadedImages: uploadedImagesCount,
+          generatedPhotosCount,
+          isLoading: false,
+        };
+
+        this.setState(newState);
+
+        // Cache the settings data
+        this.cacheManager.setCachedData(
+          CACHE_KEY,
+          newState,
+          CacheManagerService.DASHBOARD_CACHE_DURATION_MS
+        );
+      },
+      error: error => {
+        console.error('❌ Settings data load failed:', error);
+        this.setState({ isLoading: false });
+      },
+    });
+  }
+
   // Load internal credits only (no Replicate credits, no image validation)
   loadCreditsOnly() {
     const CACHE_KEY = 'credits_data';
@@ -176,7 +277,8 @@ export class DashboardStateService implements IDashboardStateService {
     console.log('🚀 Starting dashboard data load...');
 
     // Load critical data, handling all API failures gracefully
-    forkJoin({
+    // Conditionally include Replicate credits API based on feature flag
+    const apiCalls: any = {
       profile: this.profileService.getCurrentUserProfile().pipe(
         catchError(error => {
           console.warn('⚠️ Profile API failed:', error);
@@ -195,14 +297,24 @@ export class DashboardStateService implements IDashboardStateService {
           return of({ success: false, data: null, error: error });
         })
       ),
-      credits: this.replicateService.getCredits().pipe(
+    };
+
+    // Only call Replicate credits API if enabled in environment
+    if (this.configService.isReplicateCreditsEnabled) {
+      apiCalls.credits = this.replicateService.getCredits().pipe(
         catchError(error => {
           console.warn('⚠️ Credits API failed (TestController disabled):', error);
           return of({ success: false, data: null, error: error });
         })
-      ),
-    }).subscribe({
-      next: ({ profile, creditStatus, userImages, credits }) => {
+      );
+    } else {
+      console.log('⚡ Replicate credits API disabled via environment config');
+      apiCalls.credits = of({ success: false, data: null, error: 'disabled' });
+    }
+
+    forkJoin(apiCalls).subscribe({
+      next: (result: any) => {
+        const { profile, creditStatus, userImages, credits } = result;
         console.log('📦 Dashboard API responses:', {
           profileSuccess: profile?.success ?? false,
           creditStatusSuccess: creditStatus?.success ?? false,
@@ -224,17 +336,19 @@ export class DashboardStateService implements IDashboardStateService {
           success: userImages?.success ?? false,
           hasData: !!userImagesData,
           imagesCount: userImagesData?.images?.length || 0,
-          originalUploads: userImagesData?.images?.filter(img => img.isOriginalUpload)?.length || 0,
+          originalUploads:
+            userImagesData?.images?.filter((img: any) => img.isOriginalUpload)?.length || 0,
           withUrls:
-            userImagesData?.images?.filter(img => img.isOriginalUpload && img.originalImageUrl)
-              ?.length || 0,
+            userImagesData?.images?.filter(
+              (img: any) => img.isOriginalUpload && img.originalImageUrl
+            )?.length || 0,
           sampleImages: userImagesData?.images?.slice(0, 2),
         });
 
         // Process and validate uploaded images with robust filtering
         const rawImageThumbnails: UploadedImageThumbnail[] =
           userImagesData?.images
-            ?.filter(img => {
+            ?.filter((img: any) => {
               // Early exit: Skip generated images entirely (no logging, no processing)
               if (img.isGenerated) {
                 return false;
@@ -267,7 +381,7 @@ export class DashboardStateService implements IDashboardStateService {
 
               return isUploadedImage;
             })
-            ?.map(img => ({
+            ?.map((img: any) => ({
               id: img.id,
               url: img.originalImageUrl,
               fileName: `Image ${img.id}`, // Use a default filename since it's not in ProcessedImage
@@ -298,7 +412,7 @@ export class DashboardStateService implements IDashboardStateService {
         // Count generated photos (use API count or filter generated images)
         const generatedPhotosCount =
           userImagesData?.generatedImages ||
-          userImagesData?.images?.filter(img => img.isGenerated)?.length ||
+          userImagesData?.images?.filter((img: any) => img.isGenerated)?.length ||
           0;
 
         console.log(`📊 Generated Photos Count: ${generatedPhotosCount}`);
@@ -317,8 +431,10 @@ export class DashboardStateService implements IDashboardStateService {
         );
 
         // Show info notification if credits API failed but other data loaded successfully
+        // Only log this if Replicate credits were actually attempted
         if (
           !credits?.success &&
+          this.configService.isReplicateCreditsEnabled &&
           (profile?.success || creditStatus?.success || userImages?.success)
         ) {
           console.log('ℹ️ Dashboard loaded without credits API (TestController disabled)');
