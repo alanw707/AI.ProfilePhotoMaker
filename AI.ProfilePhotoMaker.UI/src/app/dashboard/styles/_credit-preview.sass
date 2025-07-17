@@ -429,41 +429,12 @@
 // =============================================================================
 
 .top-controls
-  margin: 20px 0
+  margin: 24px 0
   
-  .image-count-selection.compact
-    background: rgba(125, 211, 216, 0.05)
-    border: 1px solid rgba(125, 211, 216, 0.2)
-    border-radius: 12px
-    padding: 16px
-    margin: 0
-    
-    h5
-      font-size: 16px
-      margin: 0 0 12px 0
-      text-align: center
-    
-    .count-options
-      gap: 8px
-      margin-bottom: 10px
-      justify-content: center
-      
-    .count-option
-      padding: 8px 12px
-      min-width: 60px
-      font-size: 13px
-      
-      span
-        font-weight: 600
-    
-    .count-note
-      font-size: 13px
-      text-align: center
-      margin: 0
-      color: var(--text-secondary)
-      
-      strong
-        color: var(--accent-primary)
+  // Top controls now use the same responsive design as bottom controls
+  .image-count-selection
+    // Inherits all styling from _gallery.sass
+    // No compact overrides - fully responsive design
 
 .bottom-controls
   margin: 32px 0

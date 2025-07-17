@@ -6,6 +6,7 @@
 @use '../../../dashboard/styles/credit-preview'
 @use '../../../dashboard/styles/workflow'
 
+
 // Style selector specific styles
 .style-controls
   display: flex
@@ -33,6 +34,28 @@
         @include shared.btn-secondary
         font-size: 14px
         padding: 8px 16px
+        border: 1px solid var(--border-color)
+        color: var(--text-secondary)
+        background: transparent
+        border-radius: 8px
+        cursor: pointer
+        transition: all 0.2s ease
+        font-family: 'Inter', sans-serif
+        font-weight: 500
+        
+        &:hover
+          background: var(--hover-bg)
+          color: var(--text-primary)
+          border-color: #475569
+          transform: translateY(-1px)
+          
+        &:active
+          transform: translateY(0)
+          
+        &:disabled
+          opacity: 0.5
+          cursor: not-allowed
+          transform: none
 
   .selection-count
     font-size: 14px
@@ -41,3 +64,75 @@
 
     @media (max-width: 767px)
       margin-top: 8px
+
+// Enhanced button styling
+.action-button-container
+  margin-top: 32px
+  display: flex
+  justify-content: center
+  
+  .btn-primary.action-btn-prominent
+    background: linear-gradient(135deg, #7DD3D8 0%, #5EEAD4 100%) !important
+    color: #0F172A !important
+    border: none !important
+    padding: 16px 32px !important
+    font-size: 16px !important
+    font-weight: 600 !important
+    border-radius: 12px !important
+    cursor: pointer !important
+    transition: all 0.3s ease !important
+    display: flex !important
+    align-items: center !important
+    gap: 12px !important
+    box-shadow: 0 4px 12px rgba(125, 211, 216, 0.3) !important
+    font-family: 'Poppins', sans-serif !important
+    min-width: 200px !important
+    justify-content: center !important
+    
+    &:hover:not(:disabled)
+      transform: translateY(-2px) !important
+      box-shadow: 0 6px 20px rgba(125, 211, 216, 0.4) !important
+      
+    &:active
+      transform: translateY(-1px) !important
+      box-shadow: 0 2px 8px rgba(125, 211, 216, 0.3) !important
+      
+    &:disabled
+      opacity: 0.5 !important
+      cursor: not-allowed !important
+      transform: none !important
+      box-shadow: none !important
+      
+    .btn-content
+      display: flex !important
+      flex-direction: column !important
+      align-items: center !important
+      gap: 4px !important
+      
+    .btn-icon
+      font-size: 20px !important
+      
+      &.spinning
+        animation: spin 1s linear infinite !important
+        
+    .btn-text
+      display: flex !important
+      flex-direction: column !important
+      align-items: center !important
+      gap: 2px !important
+      
+    .btn-title
+      font-size: 16px !important
+      font-weight: 600 !important
+      line-height: 1.2 !important
+      
+    .btn-subtitle
+      font-size: 13px !important
+      opacity: 0.8 !important
+      font-weight: 400 !important
+
+@keyframes spin
+  from
+    transform: rotate(0deg)
+  to
+    transform: rotate(360deg)

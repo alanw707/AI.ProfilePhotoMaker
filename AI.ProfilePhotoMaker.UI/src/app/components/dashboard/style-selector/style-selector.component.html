@@ -21,7 +21,7 @@
 
 <!-- Top Image Count Selection (when styles selected) -->
 <div class="top-controls" *ngIf="selectedStyles > 0">
-  <div class="image-count-selection compact">
+  <div class="image-count-selection">
     <h5>📸 Images to Generate per Style</h5>
     <div class="count-options">
       <label class="count-option" *ngFor="let count of [1, 2, 3, 4]">
@@ -32,12 +32,13 @@
           [ngModel]="imagesPerStyle"
           (ngModelChange)="onImagesPerStyleChange($event)"
           [checked]="imagesPerStyle === count" />
-        <span>{{ count }}</span>
+        <span>{{ count }} image{{ count > 1 ? 's' : '' }}</span>
       </label>
     </div>
     <p class="count-note">
-      {{ selectedStyles }} styles × {{ imagesPerStyle }} images =
-      <strong>{{ selectedStyles * imagesPerStyle }} total images</strong>
+      Total:
+      <strong>{{ selectedStyles * imagesPerStyle }} images</strong>
+      will be generated
     </p>
   </div>
 </div>

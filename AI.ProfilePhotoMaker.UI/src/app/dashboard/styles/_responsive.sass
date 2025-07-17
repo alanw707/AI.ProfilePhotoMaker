@@ -1,99 +1,157 @@
-// Responsive Design
-@media (max-width: 1200px)
-  .dashboard-header
-    .header-content
-      max-width: 100%
-      padding: 0 16px
+// =============================================================================
+// RESPONSIVE DESIGN ENHANCEMENTS
+// =============================================================================
 
-  .dashboard-main
-    max-width: 100%
-    padding: 24px 16px
+// Breakpoints
+$mobile-sm: 320px
+$mobile: 480px
+$tablet: 768px
+$desktop: 1024px
+$desktop-lg: 1440px
 
-// Improved responsive breakpoints
-@media (max-width: 768px)
-  .dashboard-header
-    .header-content
-      flex-direction: column
-      gap: 16px
+// Container widths
+$container-mobile: 100%
+$container-tablet: 720px
+$container-desktop: 960px
+$container-desktop-lg: 1200px
 
-    .nav-menu
-      order: 1
-      justify-content: center
-      flex-wrap: wrap
-
-    .logo-section
-      order: 0
-
-    .user-section
-      order: 2
-
-  .workflow-section
-    h2
-      font-size: 24px
-
-  .step-card
-    .step-header
-      flex-direction: column
-      text-align: center
-      gap: 16px
-
-  .styles-grid,
-  .styles-grid-compact
-    grid-template-columns: 1fr !important
-    gap: 8px !important
+// Responsive spacing
+@mixin responsive-padding
+  padding: 16px
+  
+  @media (min-width: $tablet)
+    padding: 24px
     
-    .style-option
-      padding: 8px !important
-      
-    .style-preview
-      width: 40px !important
-      height: 40px !important
-      
-      img
-        width: 40px !important
-        height: 40px !important
-        max-width: 40px !important
-        max-height: 40px !important
+  @media (min-width: $desktop)
+    padding: 32px
 
-  .results-grid
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr))
-    gap: 12px
+// Responsive typography
+@mixin responsive-text($mobile-size, $desktop-size)
+  font-size: clamp(#{$mobile-size}, #{$mobile-size + (($desktop-size - $mobile-size) * 0.5)}, #{$desktop-size})
 
+// =============================================================================
+// DASHBOARD RESPONSIVE STYLES
+// =============================================================================
+
+.dashboard-container
+  @media (max-width: $tablet)
+    .dashboard-content
+      gap: 20px
+
+// Stats grid responsive
+.stats-section
   .stats-grid
-    grid-template-columns: 1fr 1fr  // 2 cards per row on tablets
-    gap: 20px  // Optimized spacing for mobile
-    grid-template-rows: auto auto
+    // Mobile first approach
+    display: grid
+    gap: 12px
+    
+    // Default mobile: 2 columns
+    grid-template-columns: repeat(2, 1fr)
+    
+    @media (min-width: $mobile)
+      gap: 14px
+      
+    @media (min-width: $tablet)
+      // Tablet: 2 columns with more space
+      gap: 16px
+      
+    @media (min-width: $desktop)
+      // Desktop: 4 columns
+      grid-template-columns: repeat(4, 1fr)
+      gap: 18px
 
-  .training-progress
-    flex-direction: column
-    text-align: center
+// Workflow section responsive
+.workflow-section
+  @include responsive-padding
+  
+  h2
+    @include responsive-text(24px, 36px)
+    
+  .workflow-subtitle
+    @include responsive-text(14px, 18px)
 
-@media (max-width: 480px)
-  .dashboard-header
-    .nav-menu
-      .nav-link
-        padding: 8px 12px
-        font-size: 12px
-
-  .step-card
-    .step-header
+// Step cards responsive
+.step-card
+  .step-header
+    @media (max-width: $tablet)
+      flex-wrap: wrap
+      gap: 12px
       padding: 16px
+      
+      .step-number
+        width: 44px
+        height: 44px
+        font-size: 18px
+        
+      .step-title
+        flex: 1 1 100%
+        order: 2
+        
+        h3
+          @include responsive-text(16px, 20px)
+          
+        p
+          @include responsive-text(13px, 15px)
+          
+      .step-status
+        order: 3
+        margin-left: 56px // Align with title
+        
+  .step-content
+    @media (max-width: $tablet)
+      padding: 20px 16px
 
+// Touch-friendly adjustments
+@media (hover: none) and (pointer: coarse)
+  // Increase tap targets for touch devices
+  button, .btn, .style-card, .photo-item, .add-more-item
+    min-height: 44px
+    
+  // Remove hover effects on touch devices
+  .style-card:hover,
+  .photo-item:hover,
+  .upload-zone:hover
+    transform: none
+    box-shadow: none
+    
+  // Show remove buttons by default on touch
+  .photo-item .remove-btn,
+  .review-item .remove-btn
+    opacity: 1
+
+// Print styles
+@media print
+  .upload-zone,
+  .action-section,
+  .progress-modal,
+  .success-notification,
+  .btn,
+  button
+    display: none
+    
+  .step-card
+    break-inside: avoid
+    page-break-inside: avoid
+    
   .styles-grid
-    grid-template-columns: 1fr
+    grid-template-columns: repeat(3, 1fr)
 
-  .results-grid
-    grid-template-columns: 1fr
+// High DPI displays
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi)
+  // Use higher resolution images for retina displays
+  .style-card .card-media img
+    image-rendering: -webkit-optimize-contrast
+    image-rendering: crisp-edges
+    
+  // Sharper borders
+  .step-card,
+  .style-card,
+  .upload-zone
+    border-width: 0.5px
 
-  .stats-grid
-    grid-template-columns: 1fr 1fr  // Keep 2 cards per row even on small screens
-    gap: 16px  // Tighter spacing for small screens
-
-  .upload-area
-    padding: 32px 16px
-
-// Extra small screens - single column only if really necessary
-@media (max-width: 360px)
-  .stats-grid
-    grid-template-columns: 1fr  // Single column for very small screens
-    gap: 12px
+// Reduced motion preferences
+@media (prefers-reduced-motion: reduce)
+  *
+    animation-duration: 0.01ms !important
+    animation-iteration-count: 1 !important
+    transition-duration: 0.01ms !important

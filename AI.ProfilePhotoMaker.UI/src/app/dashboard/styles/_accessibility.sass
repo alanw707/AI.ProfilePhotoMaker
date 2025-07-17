@@ -1,0 +1,321 @@
+// =============================================================================
+// ACCESSIBILITY ENHANCEMENTS
+// =============================================================================
+
+// Focus styles
+@mixin focus-outline
+  &:focus
+    outline: 2px solid #7DD3D8
+    outline-offset: 2px
+    
+  &:focus:not(:focus-visible)
+    outline: none
+    
+  &:focus-visible
+    outline: 2px solid #7DD3D8
+    outline-offset: 2px
+
+// Skip links
+.skip-link
+  position: absolute
+  top: -40px
+  left: 0
+  background: #1E293B
+  color: #F8FAFC
+  padding: 8px 16px
+  text-decoration: none
+  border-radius: 0 0 8px 0
+  z-index: 1000
+  
+  &:focus
+    top: 0
+
+// Screen reader only text
+.sr-only
+  position: absolute
+  width: 1px
+  height: 1px
+  padding: 0
+  margin: -1px
+  overflow: hidden
+  clip: rect(0, 0, 0, 0)
+  white-space: nowrap
+  border: 0
+
+// Visible on focus (for keyboard navigation)
+.sr-only-focusable
+  &:active,
+  &:focus
+    position: static
+    width: auto
+    height: auto
+    overflow: visible
+    clip: auto
+    white-space: normal
+
+// =============================================================================
+// COMPONENT ACCESSIBILITY
+// =============================================================================
+
+// Buttons and interactive elements
+button,
+.btn,
+[role="button"]
+  @include focus-outline
+  
+  // Minimum touch target size
+  min-width: 44px
+  min-height: 44px
+  
+  // Clear interaction states
+  &:hover:not(:disabled)
+    cursor: pointer
+    
+  &:disabled
+    cursor: not-allowed
+    opacity: 0.6
+    
+  // Keyboard navigation indicators
+  &:focus-visible
+    box-shadow: 0 0 0 3px rgba(125, 211, 216, 0.5)
+
+// Form controls
+input,
+select,
+textarea
+  @include focus-outline
+  
+  // Clear labels
+  & + label,
+  label + &
+    cursor: pointer
+    
+  // Error states
+  &[aria-invalid="true"]
+    border-color: #EF4444
+    
+    &:focus
+      outline-color: #EF4444
+
+// Step cards accessibility
+.step-card
+  // Semantic heading hierarchy
+  .step-title h3
+    font-size: 1.25rem // Use rem for scalability
+    
+  // Status announcements
+  .status-badge
+    &[aria-live="polite"]
+      position: relative
+      
+  // Keyboard navigation
+  &[tabindex="0"]
+    @include focus-outline
+    
+    &:focus
+      border-color: #7DD3D8
+
+// File upload accessibility
+.upload-zone
+  // Clear drop zone indication
+  &[aria-dropeffect="copy"]
+    border-style: solid
+    
+  // File input label
+  [for="fileInput"]
+    cursor: pointer
+    
+  // Progress announcements
+  .progress-indicator
+    [role="progressbar"]
+      &[aria-valuemin],
+      &[aria-valuemax],
+      &[aria-valuenow]
+        position: relative
+
+// Photo grid accessibility
+.photos-grid
+  .photo-item
+    // Image alt text
+    img[alt]
+      position: relative
+      
+    // Remove button labeling
+    .remove-btn
+      &[aria-label]
+        position: relative
+        
+      // Visible on keyboard focus
+      &:focus
+        opacity: 1
+
+// Style selector accessibility
+.style-card
+  // Selection state
+  &[aria-selected="true"]
+    border-color: #7DD3D8
+    
+  // Keyboard navigation
+  &[tabindex="0"]
+    @include focus-outline
+    
+  // Clear labeling
+  .style-name
+    font-weight: 600
+    
+  // Description for screen readers
+  .style-description
+    line-height: 1.5
+
+// Progress indicators
+.progress-bar
+  // ARIA progressbar
+  &[role="progressbar"]
+    position: relative
+    
+    // Value text for screen readers
+    .progress-text
+      &[aria-live="polite"]
+        position: relative
+
+// Modal accessibility
+.progress-modal,
+[role="dialog"]
+  // Focus trap
+  &[aria-modal="true"]
+    position: fixed
+    
+  // Close button
+  .modal-close
+    &[aria-label="Close dialog"]
+      position: relative
+      
+  // Heading association
+  &[aria-labelledby]
+    position: relative
+
+// =============================================================================
+// HIGH CONTRAST MODE
+// =============================================================================
+
+@media (prefers-contrast: high)
+  // Increase border contrast
+  .step-card,
+  .style-card,
+  .upload-zone
+    border-width: 2px
+    border-color: #F8FAFC
+    
+  // Button contrast
+  .btn
+    border: 2px solid currentColor
+    
+    &.btn-primary
+      background: #F8FAFC
+      color: #0F172A
+      
+  // Text contrast
+  .text-secondary
+    color: #CBD5E1
+    
+  // Focus indicators
+  *:focus
+    outline-width: 3px
+    outline-color: #F8FAFC
+
+// =============================================================================
+// REDUCED MOTION
+// =============================================================================
+
+@media (prefers-reduced-motion: reduce)
+  // Disable animations
+  *,
+  *::before,
+  *::after
+    animation-duration: 0.01ms !important
+    animation-iteration-count: 1 !important
+    transition-duration: 0.01ms !important
+    
+  // Smooth scroll alternative
+  html
+    scroll-behavior: auto
+    
+  // Remove parallax effects
+  .parallax
+    transform: none !important
+
+// =============================================================================
+// ARIA LIVE REGIONS
+// =============================================================================
+
+// Status messages
+[aria-live="polite"]
+  position: relative
+  
+  &:empty
+    display: none
+
+// Error messages
+[aria-live="assertive"]
+  position: relative
+  color: #EF4444
+  font-weight: 500
+
+// =============================================================================
+// FORM VALIDATION
+// =============================================================================
+
+// Error messages
+.error-message
+  color: #EF4444
+  font-size: 0.875rem
+  margin-top: 0.25rem
+  
+  &[id]
+    // Associated with form field
+    position: relative
+
+// Success messages
+.success-message
+  color: #10B981
+  font-size: 0.875rem
+  margin-top: 0.25rem
+
+// Field groups
+.field-group
+  &[role="group"]
+    position: relative
+    
+    // Legend styling
+    legend
+      font-weight: 600
+      margin-bottom: 0.5rem
+
+// =============================================================================
+// LOADING STATES
+// =============================================================================
+
+// Loading spinner with announcement
+.loading-spinner
+  &[aria-busy="true"]
+    position: relative
+    
+    // Screen reader announcement
+    .loading-text
+      @extend .sr-only
+      
+// Skeleton screens
+.skeleton
+  background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%)
+  background-size: 200% 100%
+  animation: skeleton-loading 1.5s ease-in-out infinite
+  
+  @media (prefers-reduced-motion: reduce)
+    animation: none
+    background: #334155
+
+@keyframes skeleton-loading
+  0%
+    background-position: 200% 0
+  100%
+    background-position: -200% 0
