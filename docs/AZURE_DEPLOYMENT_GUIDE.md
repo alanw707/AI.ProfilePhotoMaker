@@ -101,10 +101,28 @@ az account set --subscription "Your-Subscription-ID"
 az group create --name ai-profile-photo-maker --location "East US"
 ```
 
-### Step 3: Deploy Infrastructure
+### Step 3: Configure Parameters and Deploy Infrastructure
+
+**Important**: Before deploying, you must update the parameter files with actual values. The initial deployment cannot use Key Vault references since the Key Vault doesn't exist yet.
+
 ```bash
 # Navigate to infrastructure directory
 cd infrastructure
+
+# Edit parameter files to replace placeholders with actual values
+# For staging:
+vi parameters.staging.json
+# Replace:
+#   - REPLACE_WITH_STRONG_PASSWORD_STAGING_123! with your SQL admin password
+#   - REPLACE_WITH_YOUR_REPLICATE_TOKEN with your Replicate API token
+#   - REPLACE_WITH_YOUR_JWT_SECRET_KEY_STAGING_MIN_32_CHARS with a 32+ char secret
+
+# For production:
+vi parameters.prod.json
+# Replace:
+#   - REPLACE_WITH_STRONG_PASSWORD_123! with your SQL admin password
+#   - REPLACE_WITH_YOUR_REPLICATE_TOKEN with your Replicate API token
+#   - REPLACE_WITH_YOUR_JWT_SECRET_KEY_MIN_32_CHARS with a 32+ char secret
 
 # Deploy to staging
 ./deploy.sh --environment staging
@@ -113,21 +131,48 @@ cd infrastructure
 ./deploy.sh --environment prod
 ```
 
-### Step 4: Configure Secrets
+### Step 4: Update Key Vault Secrets (Post-Deployment)
+
+**Note**: The Key Vault is created during infrastructure deployment. After deployment, you can optionally update the secrets in Key Vault for better security management.
+
 ```bash
-# Set required secrets in Azure Key Vault
-az keyvault secret set --vault-name "your-keyvault-name" --name "SqlAdminPassword" --value "YourStrongPassword123!"
-az keyvault secret set --vault-name "your-keyvault-name" --name "ReplicateApiToken" --value "your-replicate-token"
-az keyvault secret set --vault-name "your-keyvault-name" --name "JwtSecret" --value "your-jwt-secret-key"
+# Get the Key Vault name from deployment output
+KEYVAULT_NAME=$(az deployment group show \
+  --resource-group ai-profile-photo-maker \
+  --name main \
+  --query properties.outputs.keyVaultName.value -o tsv)
+
+# Update secrets in Key Vault (optional - they're already set from parameters)
+az keyvault secret set --vault-name "$KEYVAULT_NAME" --name "SqlAdminPassword" --value "YourStrongPassword123!"
+az keyvault secret set --vault-name "$KEYVAULT_NAME" --name "ReplicateApiToken" --value "your-replicate-token"
+az keyvault secret set --vault-name "$KEYVAULT_NAME" --name "JwtSecret" --value "your-jwt-secret-key"
 ```
 
 ### Step 5: Setup GitHub Actions
-1. Go to your GitHub repository settings
+
+**Important**: The Static Web App deployment token is only available AFTER the infrastructure is deployed.
+
+```bash
+# Get the Static Web App deployment token
+STATIC_WEB_APP_NAME=$(az deployment group show \
+  --resource-group ai-profile-photo-maker \
+  --name main \
+  --query properties.outputs.staticWebAppName.value -o tsv)
+
+DEPLOYMENT_TOKEN=$(az staticwebapp secrets list \
+  --name $STATIC_WEB_APP_NAME \
+  --resource-group ai-profile-photo-maker \
+  --query properties.apiKey -o tsv)
+
+echo "Static Web App Deployment Token: $DEPLOYMENT_TOKEN"
+```
+
+1. Go to your GitHub repository settings → Secrets and variables → Actions
 2. Add the following secrets:
-   - `AZURE_STATIC_WEB_APPS_API_TOKEN`
-   - `AZUREAPPSERVICE_CLIENTID_*`
-   - `AZUREAPPSERVICE_TENANTID_*`
-   - `AZUREAPPSERVICE_SUBSCRIPTIONID_*`
+   - `AZURE_STATIC_WEB_APPS_API_TOKEN` - Use the deployment token from above
+   - `AZUREAPPSERVICE_CLIENTID_*` - From your service principal
+   - `AZUREAPPSERVICE_TENANTID_*` - From your Azure tenant
+   - `AZUREAPPSERVICE_SUBSCRIPTIONID_*` - Your Azure subscription ID
 
 ### Step 6: Deploy Application
 ```bash
@@ -191,6 +236,24 @@ git push origin main
 - **Staging Environment**: $50-100/month
 - **Production Environment**: $200-500/month
 - **Additional Costs**: Replicate API usage, data transfer
+
+## Deployment Sequence and Dependencies
+
+### First-Time Deployment Order
+
+1. **Update Parameter Files**: Replace all placeholder values with actual secrets
+2. **Deploy Infrastructure**: Creates all Azure resources including Key Vault
+3. **Get Deployment Tokens**: Retrieve Static Web App token after creation
+4. **Configure GitHub Secrets**: Add deployment token to GitHub Actions
+5. **Deploy Applications**: Push to main branch to trigger deployments
+
+### Key Vault Chicken-and-Egg Solution
+
+The parameter files initially use direct values instead of Key Vault references because:
+- Key Vault doesn't exist before the first deployment
+- Bicep needs the secrets to create resources (SQL Server, etc.)
+- After deployment, secrets are automatically stored in the created Key Vault
+- Future deployments can optionally use Key Vault references
 
 ## Troubleshooting
 

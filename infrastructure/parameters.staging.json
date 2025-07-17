@@ -15,28 +15,13 @@
       "value": "aiprofileadmin"
     },
     "sqlAdminPassword": {
-      "reference": {
-        "keyVault": {
-          "id": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.KeyVault/vaults/{key-vault-name}"
-        },
-        "secretName": "SqlAdminPasswordStaging"
-      }
+      "value": "REPLACE_WITH_STRONG_PASSWORD_STAGING_123!"
     },
     "replicateApiToken": {
-      "reference": {
-        "keyVault": {
-          "id": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.KeyVault/vaults/{key-vault-name}"
-        },
-        "secretName": "ReplicateApiTokenStaging"
-      }
+      "value": "REPLACE_WITH_YOUR_REPLICATE_TOKEN"
     },
     "jwtSecret": {
-      "reference": {
-        "keyVault": {
-          "id": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.KeyVault/vaults/{key-vault-name}"
-        },
-        "secretName": "JwtSecretStaging"
-      }
+      "value": "REPLACE_WITH_YOUR_JWT_SECRET_KEY_STAGING_MIN_32_CHARS"
     }
   }
 }
