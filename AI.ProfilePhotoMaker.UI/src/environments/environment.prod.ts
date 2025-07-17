@@ -1,18 +1,19 @@
 export const environment = {
   production: true,
-  apiUrl: '/api',
-  baseUrl: '',
+  apiUrl: 'https://aiprofilephotomakerapi.azurewebsites.net/api',
+  baseUrl: 'https://aiprofilephotomakerapi.azurewebsites.net',
   name: 'production',
   features: {
     debugMode: false,
     useProxy: false,
-    cors: false,
-    enableImageValidation: false,
-    enableReplicateCredits: true,
+    cors: true, // Enable CORS for cross-origin requests to Azure API
+    enableImageValidation: true, // Enable validation in production
+    enableReplicateCredits: true, // Enable Replicate API in production
   },
-  ngrok: {
-    enabled: false,
-    frontendUrl: 'https://app.yourcompany.com',
-    backendUrl: 'https://api.yourcompany.com',
+  azure: {
+    enabled: true,
+    frontendUrl: 'https://aiprofilephotomaker.azurestaticapps.net',
+    backendUrl: 'https://aiprofilephotomakerapi.azurewebsites.net',
+    storageUrl: 'https://aiprofilephotomaker.blob.core.windows.net',
   },
 };
