@@ -266,19 +266,26 @@
 
         <!-- File Information -->
         <div class="file-info-enhanced">
-          <span class="file-name">{{ fileData.file.name }}</span>
+          <span class="file-name" [title]="fileData.file.name">{{ truncateFilename(fileData.file.name) }}</span>
 
-          <!-- Clean quality summary -->
-          <div class="file-quality-summary" *ngIf="fileData.qualityScore || fileData.faceValidation">
+          <!-- Compact quality summary for consistent height -->
+          <div class="file-quality-summary">
             <div class="summary-item" *ngIf="fileData.faceValidation">
-              <span class="summary-label">{{ fileData.faceValidation.faceCount }} face(s) detected</span>
+              <span class="summary-label">{{ fileData.faceValidation.faceCount }} face(s)</span>
               <span class="summary-value">{{ fileData.faceValidation.bodyType | titlecase }}</span>
             </div>
-            <div class="summary-item" *ngIf="fileData.warnings && fileData.warnings.length > 0">
-              <span class="warning-count">{{ fileData.warnings.length }} warning(s)</span>
-            </div>
-            <div class="summary-item" *ngIf="fileData.errors && fileData.errors.length > 0">
-              <span class="error-count">{{ fileData.errors.length }} error(s)</span>
+            <!-- Only show warnings/errors if they exist to keep height minimal -->
+            <div
+              class="summary-item"
+              *ngIf="
+                (fileData.warnings && fileData.warnings.length > 0) || (fileData.errors && fileData.errors.length > 0)
+              ">
+              <span class="warning-count" *ngIf="fileData.warnings && fileData.warnings.length > 0">
+                {{ fileData.warnings.length }} warning(s)
+              </span>
+              <span class="error-count" *ngIf="fileData.errors && fileData.errors.length > 0">
+                {{ fileData.errors.length }} error(s)
+              </span>
             </div>
           </div>
         </div>
@@ -353,7 +360,7 @@
       </div>
 
       <div class="error-cards-grid">
-        <div *ngFor="let error of qualityCheckErrors" class="error-card selected-file-item-enhanced file-invalid">
+        <div *ngFor="let error of qualityCheckErrors" class="selected-file-item-enhanced file-invalid">
           <!-- File Preview Image -->
           <img [src]="getFilePreview(error.file)" [alt]="error.fileName" loading="lazy" decoding="async" />
 
@@ -369,28 +376,30 @@
 
           <!-- File Information -->
           <div class="file-info-enhanced">
-            <span class="file-name">{{ error.fileName }}</span>
+            <span class="file-name" [title]="error.fileName">{{ truncateFilename(error.fileName) }}</span>
 
             <!-- Error and Warning Summary with Tooltip -->
             <div class="file-quality-summary">
-              <div class="summary-item" *ngIf="error.errors && error.errors.length > 0">
-                <span class="error-count">{{ error.errors.length }} error(s)</span>
-              </div>
-              <div class="summary-item" *ngIf="error.warnings && error.warnings.length > 0">
-                <span class="warning-count">{{ error.warnings.length }} warning(s)</span>
+              <div class="summary-item">
+                <span class="error-count" *ngIf="error.errors && error.errors.length > 0">
+                  {{ error.errors.length }} error(s)
+                </span>
+                <span class="warning-count" *ngIf="error.warnings && error.warnings.length > 0">
+                  {{ error.warnings.length }} warning(s)
+                </span>
               </div>
 
               <!-- Info Button for Error Details -->
               <div
-                class="error-info-popup"
+                class="file-info-popup"
                 *ngIf="(error.errors && error.errors.length > 0) || (error.warnings && error.warnings.length > 0)">
                 <button
-                  class="info-btn error-info-btn"
+                  class="info-btn"
                   (click)="toggleErrorDetails(error, $event)"
                   [class.active]="error.showErrorDetails"
                   type="button"
                   title="View error details">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
                     <path
                       d="M12 16V12M12 8h.01"
@@ -401,25 +410,45 @@
                   </svg>
                 </button>
 
-                <!-- Error Details Popup -->
-                <div class="error-details-popup" *ngIf="error.showErrorDetails" (click)="$event.stopPropagation()">
+                <!-- Error Details Popup - Scrollable Hybrid Design -->
+                <div class="popup-details" *ngIf="error.showErrorDetails" (click)="$event.stopPropagation()">
                   <div class="popup-arrow"></div>
                   <div class="popup-content">
-                    <!-- Errors Section -->
+                    <!-- Compact Header Summaries -->
+                    <div class="error-summary" *ngIf="error.errors && error.errors.length > 0">
+                      {{ error.errors.length }} issue{{ error.errors.length > 1 ? 's' : '' }}
+                    </div>
+
+                    <div class="warning-summary" *ngIf="error.warnings && error.warnings.length > 0">
+                      {{ error.warnings.length }} warning{{ error.warnings.length > 1 ? 's' : '' }}
+                    </div>
+
+                    <!-- Scrollable Detailed Lists -->
                     <div class="popup-section" *ngIf="error.errors && error.errors.length > 0">
-                      <h6 class="popup-title error-title">❌ Issues</h6>
+                      <h6 class="popup-title">❌ Issues</h6>
                       <ul class="popup-list">
-                        <li *ngFor="let errorMsg of error.errors">{{ getCompactErrorMessage(errorMsg) }}</li>
+                        <li *ngFor="let errorMsg of error.errors">{{ errorMsg }}</li>
                       </ul>
                     </div>
 
-                    <!-- Warnings Section -->
                     <div class="popup-section" *ngIf="error.warnings && error.warnings.length > 0">
-                      <h6 class="popup-title warning-title">⚠️ Warnings</h6>
+                      <h6 class="popup-title">⚠️ Warnings</h6>
                       <ul class="popup-list">
-                        <li *ngFor="let warning of error.warnings" class="warning-item">
-                          {{ getCompactErrorMessage(warning) }}
-                        </li>
+                        <li *ngFor="let warning of error.warnings">{{ warning }}</li>
+                      </ul>
+                    </div>
+
+                    <!-- Quick fix suggestion if available -->
+                    <div
+                      class="popup-section"
+                      *ngIf="
+                        error.qualityScore &&
+                        error.qualityScore.suggestions &&
+                        error.qualityScore.suggestions.length > 0
+                      ">
+                      <h6 class="popup-title">💡 Suggestions</h6>
+                      <ul class="popup-list">
+                        <li *ngFor="let suggestion of error.qualityScore.suggestions">{{ suggestion }}</li>
                       </ul>
                     </div>
                   </div>

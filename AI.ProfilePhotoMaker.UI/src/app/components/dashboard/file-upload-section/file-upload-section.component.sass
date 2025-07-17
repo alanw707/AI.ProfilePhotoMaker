@@ -348,7 +348,7 @@
   position: relative
   background: var(--background-color)
   border-radius: 12px
-  overflow: hidden
+  overflow: visible // Allow popups to show outside container
   border: 2px solid var(--border-color)
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
   
@@ -357,8 +357,13 @@
     transform: translateY(-1px)
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1)
     
+  // Remove teal focus outline for error cards
   &:focus-within
-    outline: 2px solid var(--accent-primary)
+    outline: none
+    
+  // Add focus outline only for valid (green) cards
+  &.file-valid:focus-within
+    outline: 2px solid var(--success-color)
     outline-offset: 2px
   
   // Mobile: Horizontal layout with proper borders
@@ -924,36 +929,16 @@
 .error-cards-grid
   display: grid
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))
-  gap: 1rem
+  gap: 1rem // Better spacing for error cards UX
+  margin-bottom: 1.5rem // More breathing room for error section
   
-  // Mobile: use same layout as valid images
+  // Mobile: use flexbox for better error card layout
   @media (max-width: 768px)
     display: flex
     flex-direction: column
-    gap: 0.75rem
+    gap: 0.75rem // Tighter gap on mobile for error cards
 
-  .error-card
-    // Use same styling as file-preview to ensure consistency
-    @extend .file-preview
-    
-    // Add red border to indicate errors
-    border: 2px solid var(--error-color) !important
-    
-    // Mobile: use same horizontal layout as valid images but keep red border
-    @media (max-width: 768px)
-      display: flex
-      flex-direction: row
-      align-items: center
-      padding: 0.75rem
-      gap: 0.75rem
-      border: 2px solid var(--error-color) !important
-      border-radius: 12px
-      
-    // Very small mobile: same as valid images but with red border
-    @media (max-width: 480px)
-      padding: 0.5rem
-      gap: 0.5rem
-      border: 2px solid var(--error-color) !important
+  // Error cards now inherit the same improved base styling as valid cards
     
     .error-summary
       margin-top: 0.5rem
@@ -1039,155 +1024,7 @@
           flex-shrink: 0
           margin-top: 0.1rem
 
-// Error Info Popup for Error Cards
-.error-info-popup
-  position: relative
-  display: inline-block
-  margin-left: 0.5rem
-
-  .error-info-btn
-    width: 28px
-    height: 28px
-    border-radius: 14px
-    border: 2px solid rgba(239, 68, 68, 0.3)
-    background: rgba(239, 68, 68, 0.05)
-    color: #ef4444
-    cursor: pointer
-    display: flex
-    align-items: center
-    justify-content: center
-    transition: all 0.3s ease
-    font-weight: 600
-    font-size: 0.8rem
-    
-    // Better mobile touch target
-    @media (max-width: 768px)
-      width: 32px
-      height: 32px
-      border-radius: 16px
-      font-size: 0.85rem
-    
-    &::before
-      content: 'i'
-      font-style: italic
-      font-weight: 700
-    
-    &:hover
-      background: rgba(239, 68, 68, 0.15)
-      border-color: #ef4444
-      transform: scale(1.05)
-      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2)
-      
-    &:focus
-      outline: 2px solid var(--accent-primary)
-      outline-offset: 2px
-      
-    &.active
-      background: #ef4444
-      color: white
-      border-color: #ef4444
-      transform: scale(1.05)
-      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3)
-
-// Modern Error Details Popup
-.error-details-popup
-  position: absolute
-  top: calc(100% + 8px)
-  right: 0
-  z-index: 999
-  background: #ffffff
-  border: 1px solid #e5e7eb
-  border-radius: 8px
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15)
-  padding: 0
-  width: 240px
-  max-height: 200px
-  overflow: hidden
-  opacity: 0
-  animation: popupFadeIn 0.2s ease-out forwards
-  
-  // Fallback positioning to prevent clipping
-  &.popup-left-align
-    left: 0
-    right: auto
-    
-  // Mobile responsive
-  @media (max-width: 768px)
-    width: 220px
-    max-height: 180px
-
-  .popup-content
-    padding: 12px
-    
-  .popup-section
-    &:not(:last-child)
-      margin-bottom: 10px
-      padding-bottom: 8px
-      border-bottom: 1px solid #f3f4f6
-
-  .popup-title
-    font-size: 12px
-    font-weight: 600
-    margin: 0 0 6px 0
-    display: flex
-    align-items: center
-    gap: 4px
-    
-    &.error-title
-      color: #dc2626
-      
-    &.warning-title
-      color: #d97706
-
-  .popup-list
-    margin: 0
-    padding: 0
-    list-style: none
-
-    li
-      margin-bottom: 4px
-      line-height: 1.3
-      font-size: 11px
-      color: #374151
-      display: flex
-      align-items: flex-start
-      gap: 4px
-      
-      &:last-child
-        margin-bottom: 0
-      
-      &:before
-        content: "•"
-        color: #ef4444
-        font-weight: bold
-        margin-top: 1px
-        flex-shrink: 0
-        font-size: 10px
-        
-      // Different bullet colors for warnings
-      .warning-item:before
-        color: #f59e0b
-
-// Popup fade-in animation
-@keyframes popupFadeIn
-  from
-    opacity: 0
-    transform: translateY(-4px)
-  to
-    opacity: 1
-    transform: translateY(0)
-
-// Dark theme support
-@media (prefers-color-scheme: dark)
-  .error-details-popup
-    background: #1f2937
-    border-color: #374151
-    
-    .popup-section
-      border-color: #374151
-    
-    .popup-list li
-      color: #d1d5db
+// Using global popup styles from dashboard/styles/_file-preview.sass
 
 // Responsive Design
 @media (max-width: 768px)
@@ -1270,6 +1107,7 @@
 
   .error-cards-grid
     grid-template-columns: 1fr
+    gap: 0.75rem // Better tablet spacing for errors
 
 // Very small mobile (≤480px)
 @media (max-width: 480px)
@@ -1337,4 +1175,4 @@
         font-size: 0.8rem
         
   .error-cards-grid
-    gap: 0.5rem
+    gap: 0.5rem // Compact but readable on small mobile

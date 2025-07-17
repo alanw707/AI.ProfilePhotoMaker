@@ -599,6 +599,47 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     });
 
     error.showErrorDetails = !error.showErrorDetails;
+
+    // Force change detection and adjust popup positioning
+    this.cdr.detectChanges();
+
+    // Add smart positioning after popup is rendered
+    if (error.showErrorDetails) {
+      setTimeout(() => this.adjustPopupPosition(event.target as HTMLElement), 0);
+    }
+  }
+
+  // Smart popup positioning to prevent clipping
+  private adjustPopupPosition(buttonElement: HTMLElement) {
+    const popup = buttonElement
+      .closest('.file-info-popup')
+      ?.querySelector('.popup-details') as HTMLElement;
+    if (!popup) return;
+
+    // Get button and popup dimensions - updated for wider scrollable tooltip
+    const buttonRect = buttonElement.getBoundingClientRect();
+    const popupWidth = window.innerWidth <= 768 ? 240 : 280; // Wider for scrollable content
+    const viewportWidth = window.innerWidth;
+    const margin = 15; // Reduced margin for compact design
+
+    // Calculate if popup would extend beyond right edge (default right alignment)
+    const wouldClipRight = buttonRect.right > viewportWidth - popupWidth - margin;
+
+    // Calculate if popup would extend beyond left edge (left alignment)
+    const wouldClipLeft = buttonRect.left - popupWidth < margin;
+
+    // Remove all positioning classes first
+    popup.classList.remove('popup-left-align', 'popup-center-align');
+
+    // Smart positioning logic
+    if (wouldClipRight && !wouldClipLeft) {
+      // Switch to left alignment if right would clip but left won't
+      popup.classList.add('popup-left-align');
+    } else if (wouldClipRight && wouldClipLeft) {
+      // If both sides would clip, center the popup
+      popup.classList.add('popup-center-align');
+    }
+    // Default case: use right alignment (no class needed)
   }
 
   // Close all error detail popups
@@ -671,6 +712,49 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     }
 
     return message;
+  }
+
+  // Compact suggestion utility for UX-optimized tooltips
+  getCompactSuggestion(suggestion: string): string {
+    const suggestionMap: Record<string, string> = {
+      'Try uploading a clearer photo with better lighting.': 'Use better lighting',
+      'Upload a closer headshot photo.': 'Take closer photo',
+      'Ensure only one person is in the photo.': 'Remove other people',
+      'Use a higher resolution image.': 'Higher resolution',
+      'Take photo with better focus.': 'Better focus needed',
+      'Improve lighting conditions.': 'Better lighting',
+      'Remove sunglasses or accessories covering face.': 'Remove accessories',
+    };
+
+    // Return mapped suggestion if found, otherwise truncate
+    if (suggestionMap[suggestion]) {
+      return suggestionMap[suggestion];
+    }
+
+    // Truncate suggestions longer than 25 characters for tooltip
+    if (suggestion.length > 25) {
+      return suggestion.substring(0, 22) + '...';
+    }
+
+    return suggestion;
+  }
+
+  // Truncate filename for better card layout consistency
+  truncateFilename(filename: string): string {
+    if (!filename) return '';
+
+    // Extract name and extension
+    const lastDotIndex = filename.lastIndexOf('.');
+    const name = lastDotIndex > -1 ? filename.substring(0, lastDotIndex) : filename;
+    const extension = lastDotIndex > -1 ? filename.substring(lastDotIndex) : '';
+
+    // Truncate to max 12 characters for the name part
+    const maxNameLength = 12;
+    if (name.length > maxNameLength) {
+      return name.substring(0, maxNameLength) + '...' + extension;
+    }
+
+    return filename;
   }
 
   // UI State Getters

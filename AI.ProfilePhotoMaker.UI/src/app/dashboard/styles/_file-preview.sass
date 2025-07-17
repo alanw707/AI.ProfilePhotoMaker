@@ -32,31 +32,35 @@
 // Enhanced File Grid - Properly Sized Previews
 .selected-files-grid-enhanced
   display: grid
-  gap: 16px
-  margin-bottom: 20px
+  gap: 1rem // Better spacing matching error cards
+  margin-bottom: 1.5rem // More breathing room matching error section
   
-  // Responsive grid for file previews
+  // Conservative responsive approach matching red cards
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))
   
-  // Mobile: single column
-  @media (max-width: 767px)
-    grid-template-columns: 1fr
+  // Switch to flexbox at 768px to prevent overflow (same as red cards)
+  @media (max-width: 768px)
+    display: flex
+    flex-direction: column
+    gap: 0.75rem
 
 // Individual File Item - Redesigned Card Layout
 .selected-file-item-enhanced
   display: flex
   align-items: flex-start
-  gap: 16px
-  padding: 20px
+  gap: 1rem // Better internal spacing for all cards
+  padding: 1rem 1.25rem // More generous padding for better readability
   background: var(--card-bg)
   border: 2px solid var(--border-color)
-  border-radius: 16px
+  border-radius: 12px // More compact, consistent border radius
   position: relative
   transition: all 0.3s ease
   box-shadow: var(--shadow-card-subtle)
+  width: 100% // Ensure cards don't exceed container width
+  box-sizing: border-box // Include padding in width calculation
   
 
-  // File states with strong color-coded borders
+  // File states with CONSISTENT styling - same generous spacing for both
   &.file-valid
     border: 3px solid #28a745 // Strong green border
     background: rgba(40, 167, 69, 0.02)
@@ -161,6 +165,10 @@
 .file-info-enhanced
   flex: 1
   min-width: 0
+  max-width: calc(100% - 120px) // Reserve space for image (80px) + gap (1rem) + padding
+  overflow: hidden // Prevent content from expanding card width
+  word-wrap: break-word // Better text wrapping
+  line-height: 1.4 // Improved line spacing
 
   .file-name
     display: block
@@ -169,8 +177,11 @@
     font-weight: 600
     color: var(--text-primary)
     margin-bottom: 8px
-    word-break: break-word
+    white-space: nowrap // Prevent line wrapping for truncated names
+    overflow: hidden // Hide overflow text
+    text-overflow: ellipsis // Show ellipsis for overflow
     line-height: 1.3
+    max-width: 120px // More conservative max width to prevent overflow
 
 // Quality Summary - Clean Information Display
 .file-quality-summary
@@ -180,9 +191,11 @@
 
   .summary-item
     display: flex
-    justify-content: space-between
     align-items: center
+    gap: 6px // Better spacing between elements
     font-size: 12px
+    flex-wrap: nowrap // Prevent wrapping
+    white-space: nowrap // Keep text on same line
 
     .summary-label,
     .summary-value
@@ -192,10 +205,13 @@
     .warning-count
       color: #f59e0b
       font-weight: 600
+      display: inline-block
+      margin-right: 8px
 
     .error-count
       color: #ef4444
       font-weight: 600
+      display: inline-block
 
 // Remove File Button - Clean Design
 .remove-file-btn
@@ -329,20 +345,61 @@
     width: 16px
     height: 16px
 
-// Popup Notification - Dark theme optimized
+// Popup Notification - Scrollable hybrid design
 .popup-details
   position: absolute
   bottom: 40px
   right: 0
-  min-width: 280px
-  max-width: 350px
-  background: rgba(44, 62, 80, 0.98)
+  min-width: 260px
+  max-width: 300px
+  max-height: 200px // Fixed height for scrolling
+  background: rgba(44, 62, 80, 0.95)
   border: 1px solid rgba(255, 255, 255, 0.1)
-  border-radius: 12px
-  box-shadow: var(--shadow-card-modal)
+  border-radius: 8px
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3)
   z-index: 1000
-  animation: popupIn 0.2s ease-out
-  backdrop-filter: blur(10px)
+  animation: popupIn 0.15s ease-out
+  backdrop-filter: blur(8px)
+  overflow: hidden // Hide overflow for custom scrollbar
+  display: flex
+  flex-direction: column
+  
+  // Mobile: wider for better readability with scrolling
+  @media (max-width: 768px)
+    min-width: 240px
+    max-width: 280px
+    max-height: 180px
+    bottom: 35px
+    
+  // Small screens: still readable but compact
+  @media (max-width: 480px)
+    min-width: 220px
+    max-width: 260px
+    max-height: 160px
+    bottom: 30px
+    
+  // Smart positioning variants  
+  &.popup-left-align
+    right: auto
+    left: -240px // Adjusted for wider popup
+    
+    @media (max-width: 768px)
+      left: -220px
+      
+    @media (max-width: 480px)
+      left: -200px
+      
+  &.popup-center-align
+    right: auto
+    left: 50%
+    transform: translateX(-50%)
+    
+    @media (max-width: 768px)
+      left: -120px
+      transform: none
+      
+    @media (max-width: 480px)
+      left: -110px
   
   // Light theme styling
   [data-theme="light"] &
@@ -363,75 +420,177 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.1)
   transform: rotate(45deg)
   
+  // Adjust arrow position for left-aligned popups
+  @media (max-width: 768px)
+    right: auto
+    left: 12px
+    
+  // Center arrow for full-width popups
+  @media (max-width: 480px)
+    left: 50%
+    transform: translateX(-50%) rotate(45deg)
+    
+  // Position arrow for left-aligned popups
+  .popup-details.popup-left-align &
+    right: auto
+    left: calc(100% - 28px) // Position near the right edge of left-aligned popup
+    
+    // Override mobile positioning for left-aligned
+    @media (max-width: 768px)
+      left: 12px
+      
+    @media (max-width: 480px)
+      left: 50%
+      transform: translateX(-50%) rotate(45deg)
+      
+  // Position arrow for center-aligned popups
+  .popup-details.popup-center-align &
+    right: auto
+    left: 50%
+    transform: translateX(-50%) rotate(45deg)
+    
+    // Override mobile positioning for center-aligned
+    @media (max-width: 768px)
+      left: 12px
+      transform: rotate(45deg)
+      
+    @media (max-width: 480px)
+      left: 50%
+      transform: translateX(-50%) rotate(45deg)
+  
   [data-theme="light"] &
     background: white
     border-right: 1px solid rgba(0, 0, 0, 0.1)
     border-bottom: 1px solid rgba(0, 0, 0, 0.1)
 
-// Popup Content - No additional background needed
+// Popup Content - Scrollable hybrid design
 .popup-content
   position: relative
-  padding: 16px
-  border-radius: 12px
+  padding: 12px 14px
+  border-radius: 8px
+  overflow-y: auto
+  overflow-x: hidden
+  flex: 1
+  
+  // Force scrollbar to always be visible for UX clarity
+  &::-webkit-scrollbar
+    width: 8px
+    -webkit-appearance: none
+    
+  &::-webkit-scrollbar-track
+    background: rgba(255, 255, 255, 0.2)
+    border-radius: 4px
+    border: 1px solid rgba(255, 255, 255, 0.1)
+    
+  &::-webkit-scrollbar-thumb
+    background: rgba(255, 255, 255, 0.7)
+    border-radius: 4px
+    border: 1px solid rgba(255, 255, 255, 0.2)
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2)
+    
+    &:hover
+      background: rgba(255, 255, 255, 0.9)
+      
+  // Firefox scrollbar - always visible
+  scrollbar-width: auto
+  scrollbar-color: rgba(255, 255, 255, 0.7) rgba(255, 255, 255, 0.2)
+  
+  // Light theme scrollbar adjustments
+  [data-theme="light"] &
+    &::-webkit-scrollbar-track
+      background: rgba(0, 0, 0, 0.15)
+      border: 1px solid rgba(0, 0, 0, 0.1)
+      
+    &::-webkit-scrollbar-thumb
+      background: rgba(0, 0, 0, 0.4)
+      border: 1px solid rgba(0, 0, 0, 0.2)
+      box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.3)
+      
+      &:hover
+        background: rgba(0, 0, 0, 0.6)
+        
+    // Firefox scrollbar for light theme
+    scrollbar-color: rgba(0, 0, 0, 0.4) rgba(0, 0, 0, 0.15)
 
-// Popup Sections - Enhanced contrast
+// Popup Sections - Compact spacing
 .popup-section
-  margin-bottom: 14px
+  margin-bottom: 8px
   
   &:last-child
     margin-bottom: 0
 
+// Redesigned compact titles
 .popup-title
-  font-size: 13px
+  font-size: 11px
   font-weight: 600
   color: white
-  margin: 0 0 8px 0
+  margin: 0 0 4px 0
   display: flex
   align-items: center
-  gap: 6px
-  opacity: 0.95
+  gap: 4px
+  opacity: 0.9
+  text-transform: uppercase
+  letter-spacing: 0.5px
   
   [data-theme="light"] &
     color: var(--text-primary)
     opacity: 1
 
+// Scrollable list design - no truncation needed
 .popup-list
   list-style: none
   padding: 0
   margin: 0
   
   li
-    font-size: 12px
-    line-height: 1.5
-    color: rgba(255, 255, 255, 0.8)
-    padding: 4px 0
-    padding-left: 20px
-    position: relative
+    font-size: 11px
+    line-height: 1.4
+    color: rgba(255, 255, 255, 0.85)
+    padding: 3px 0
+    display: block
+    word-wrap: break-word // Allow text wrapping in scrollable area
     
     [data-theme="light"] &
       color: var(--text-secondary)
     
+    // Add subtle bullets back for better readability
     &::before
       content: "•"
-      position: absolute
-      left: 8px
-      color: #ff6b6b
+      color: rgba(255, 255, 255, 0.5)
       font-weight: bold
+      display: inline-block
+      width: 8px
+      margin-right: 4px
+      
+    [data-theme="light"] &::before
+      color: var(--text-tertiary)
 
-// Quick Fix Section - Better visibility
-.popup-fix
-  margin-top: 12px
-  padding-top: 12px
-  border-top: 1px solid rgba(255, 255, 255, 0.1)
-  font-size: 12px
-  color: #7DD3D8
-  line-height: 1.5
+// Compact summary design (instead of full details)
+.error-summary
+  font-size: 10px
+  color: rgba(255, 255, 255, 0.9)
+  background: rgba(239, 68, 68, 0.2)
+  padding: 4px 6px
+  border-radius: 4px
+  margin-bottom: 6px
   font-weight: 500
   
   [data-theme="light"] &
-    border-top: 1px solid var(--border-color)
-    color: #3b82f6
-    font-weight: 400
+    color: #dc2626
+    background: rgba(239, 68, 68, 0.1)
+
+.warning-summary
+  font-size: 10px
+  color: rgba(255, 255, 255, 0.9)
+  background: rgba(245, 158, 11, 0.2)
+  padding: 4px 6px
+  border-radius: 4px
+  margin-bottom: 4px
+  font-weight: 500
+  
+  [data-theme="light"] &
+    color: #d97706
+    background: rgba(245, 158, 11, 0.1)
 
 // Popup Animation
 @keyframes popupIn
