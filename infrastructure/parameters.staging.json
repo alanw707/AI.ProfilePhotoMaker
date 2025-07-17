@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "value": "staging"
+    },
+    "namePrefix": {
+      "value": "aiprofilephotomaker"
+    },
+    "appServicePlanSku": {
+      "value": "F1"
+    },
+    "sqlAdminUsername": {
+      "value": "aiprofileadmin"
+    },
+    "sqlAdminPassword": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.KeyVault/vaults/{key-vault-name}"
+        },
+        "secretName": "SqlAdminPasswordStaging"
+      }
+    },
+    "replicateApiToken": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.KeyVault/vaults/{key-vault-name}"
+        },
+        "secretName": "ReplicateApiTokenStaging"
+      }
+    },
+    "jwtSecret": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.KeyVault/vaults/{key-vault-name}"
+        },
+        "secretName": "JwtSecretStaging"
+      }
+    }
+  }
+}
