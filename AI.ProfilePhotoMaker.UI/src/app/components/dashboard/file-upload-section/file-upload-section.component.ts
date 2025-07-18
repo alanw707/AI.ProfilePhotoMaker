@@ -15,7 +15,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import { FileUploadService } from '../../../services/file-upload.service';
-import { FileUploadManagerService } from '../../../services/file-upload-manager.service';
 import { NotificationService } from '../../../services/notification.service';
 
 // Lazy-loaded service interface
@@ -27,19 +26,7 @@ import {
   QualityCheckError,
   QualityCheckResult,
   SelectedFileWithQuality,
-  UploadProgress,
 } from '../../../models/dashboard.types';
-
-export interface FileUploadState {
-  selectedFiles: File[];
-  selectedFilesWithQuality: SelectedFileWithQuality[];
-  isUploading: boolean;
-  uploadProgress: number;
-  isDragOver: boolean;
-  isCheckingQuality: boolean;
-  qualityCheckProgress: string;
-  qualityCheckErrors: QualityCheckError[];
-}
 
 @Component({
   selector: 'app-file-upload-section',
@@ -80,6 +67,10 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   qualityCheckProgress = '';
   qualityCheckErrors: QualityCheckError[] = [];
 
+  // Global tooltip state
+  activeTooltipError: QualityCheckError | null = null;
+  tooltipPosition: { x: number; y: number } = { x: 0, y: 0 };
+
   // File preview cache for memory management
   private filePreviewCache = new Map<File, string>();
 
@@ -88,7 +79,6 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
   constructor(
     private fileUploadService: FileUploadService,
-    private fileUploadManagerService: FileUploadManagerService,
     private notificationService: NotificationService,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
@@ -234,6 +224,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
               `Image resolution ${dimensions.width}x${dimensions.height} is too small. Minimum 512x512 required.`,
             ],
             warnings: [],
+            showErrorDetails: false,
           });
           continue;
         }
@@ -261,6 +252,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
             warnings: qualityResult.warnings || [],
             faceValidation: qualityResult,
             qualityScore: qualityResult.qualityScore,
+            showErrorDetails: false,
           });
         }
       } catch (error) {
@@ -270,6 +262,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
           file,
           errors: ['Failed to analyze image quality'],
           warnings: [],
+          showErrorDetails: false,
         });
       }
 
@@ -457,7 +450,6 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   // Handle successful image loads (for debugging)
   onImageLoadSuccess(thumb: any, index: number) {
     // Optional: Log successful loads for debugging
-    // console.log(`✅ Image loaded successfully: ${thumb.url}`);
   }
 
   // Upload Process
@@ -587,75 +579,181 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     this.filesSelected.emit(this.selectedFiles);
   }
 
-  // Toggle popup visibility (positioning handled by CSS)
-  toggleErrorDetails(error: QualityCheckError, event: Event) {
+  // Show global tooltip with smart viewport positioning
+  showGlobalTooltip(error: QualityCheckError, event: Event) {
     event.stopPropagation();
 
-    // Close other open popups
-    this.qualityCheckErrors.forEach(e => {
-      if (e !== error) {
-        e.showErrorDetails = false;
-      }
-    });
+    // Set active tooltip error
+    this.activeTooltipError = error;
 
-    error.showErrorDetails = !error.showErrorDetails;
+    // Calculate optimal position
+    this.calculateTooltipPosition(event.target as HTMLElement);
 
-    // Force change detection and adjust popup positioning
+    // Force change detection
     this.cdr.detectChanges();
 
-    // Add smart positioning after popup is rendered
-    if (error.showErrorDetails) {
-      setTimeout(() => this.adjustPopupPosition(event.target as HTMLElement), 0);
-    }
+    // Enhanced safety check: Validate positioning after DOM updates
+    setTimeout(() => this.validateTooltipPositioning(), 50);
   }
 
-  // Smart popup positioning to prevent clipping
-  private adjustPopupPosition(buttonElement: HTMLElement) {
-    const popup = buttonElement
-      .closest('.file-info-popup')
-      ?.querySelector('.popup-details') as HTMLElement;
-    if (!popup) return;
+  // Close global tooltip
+  closeGlobalTooltip() {
+    this.activeTooltipError = null;
+    this.cdr.detectChanges();
+  }
 
-    // Get button and popup dimensions - updated for wider scrollable tooltip
+  // Calculate optimal tooltip position for global tooltip with robust boundary checking
+  private calculateTooltipPosition(buttonElement: HTMLElement) {
+    // Get viewport dimensions with safety margin
+    const viewport = {
+      width: window.innerWidth,
+      height: window.innerHeight,
+    };
+
+    // Get button position relative to viewport
     const buttonRect = buttonElement.getBoundingClientRect();
-    const popupWidth = window.innerWidth <= 768 ? 240 : 280; // Wider for scrollable content
-    const viewportWidth = window.innerWidth;
-    const margin = 15; // Reduced margin for compact design
 
-    // Calculate if popup would extend beyond right edge (default right alignment)
-    const wouldClipRight = buttonRect.right > viewportWidth - popupWidth - margin;
+    // Tooltip dimensions matching CSS constraints exactly
+    const tooltipWidth = Math.min(340, viewport.width - 32); // Match CSS: min(340px, calc(100vw - 32px))
+    const tooltipHeight = Math.min(360, viewport.height - 32); // Match CSS: calc(100vh - 32px)
+    const safetyPadding = 16; // Safety margin
+    const offset = 8; // Distance from button
 
-    // Calculate if popup would extend beyond left edge (left alignment)
-    const wouldClipLeft = buttonRect.left - popupWidth < margin;
+    // Calculate available space in each direction
+    const spaceRight = viewport.width - buttonRect.right - safetyPadding;
+    const spaceLeft = buttonRect.left - safetyPadding;
+    const spaceBelow = viewport.height - buttonRect.bottom - safetyPadding;
+    const spaceAbove = buttonRect.top - safetyPadding;
 
-    // Remove all positioning classes first
-    popup.classList.remove('popup-left-align', 'popup-center-align');
+    let x = 0;
+    let y = 0;
 
-    // Smart positioning logic
-    if (wouldClipRight && !wouldClipLeft) {
-      // Switch to left alignment if right would clip but left won't
-      popup.classList.add('popup-left-align');
-    } else if (wouldClipRight && wouldClipLeft) {
-      // If both sides would clip, center the popup
-      popup.classList.add('popup-center-align');
+    // Enhanced horizontal positioning with priority-based fallbacks
+    if (spaceRight >= tooltipWidth) {
+      // Position to the right of button
+      x = buttonRect.right + offset;
+    } else if (spaceLeft >= tooltipWidth) {
+      // Position to the left of button
+      x = buttonRect.left - tooltipWidth - offset;
+    } else {
+      // Force center positioning with viewport constraints
+      x = safetyPadding;
     }
-    // Default case: use right alignment (no class needed)
+
+    // Enhanced vertical positioning with priority-based fallbacks
+    if (spaceBelow >= tooltipHeight) {
+      // Position below button, aligned to button top
+      y = buttonRect.top;
+    } else if (spaceAbove >= tooltipHeight) {
+      // Position above button, aligned to button bottom
+      y = buttonRect.bottom - tooltipHeight;
+    } else {
+      // Force center positioning with viewport constraints
+      y = safetyPadding;
+    }
+
+    // ENHANCED: Multiple layers of boundary protection
+    const safetyMargin = 8; // Additional margin for extra safety
+    const minX = safetyMargin;
+    const maxX = viewport.width - tooltipWidth - safetyMargin;
+    const minY = safetyMargin;
+    const maxY = viewport.height - tooltipHeight - safetyMargin;
+
+    // Apply stricter constraints
+    x = Math.max(minX, Math.min(x, maxX));
+    y = Math.max(minY, Math.min(y, maxY));
+
+    // Store position
+    this.tooltipPosition = { x, y };
+
+    // Enhanced error handling: If still clipping, force safe positioning
+    const withinBounds = {
+      left: x >= 0,
+      right: x + tooltipWidth <= viewport.width,
+      top: y >= 0,
+      bottom: y + tooltipHeight <= viewport.height,
+    };
+
+    if (!withinBounds.right || !withinBounds.bottom || !withinBounds.left || !withinBounds.top) {
+      console.warn('Tooltip positioning: applying emergency viewport constraints');
+
+      // Emergency fallback: Force tooltip to safe area
+      x = Math.max(safetyMargin, Math.min(x, viewport.width - tooltipWidth - safetyMargin));
+      y = Math.max(safetyMargin, Math.min(y, viewport.height - tooltipHeight - safetyMargin));
+
+      this.tooltipPosition = { x, y };
+    }
   }
 
-  // Close all error detail popups
+  // Enhanced validation method to check actual DOM positioning after render
+  private validateTooltipPositioning() {
+    if (!this.activeTooltipError) return;
+
+    const tooltipElement = document.querySelector('.global-error-tooltip') as HTMLElement;
+    if (!tooltipElement) return;
+
+    // Get actual rendered dimensions and position
+    const tooltipRect = tooltipElement.getBoundingClientRect();
+    const viewport = {
+      width: window.innerWidth,
+      height: window.innerHeight,
+    };
+
+    const isClipping =
+      tooltipRect.right > viewport.width ||
+      tooltipRect.bottom > viewport.height ||
+      tooltipRect.left < 0 ||
+      tooltipRect.top < 0;
+
+    // If tooltip is still clipping, apply emergency repositioning
+    if (isClipping) {
+      const safetyMargin = 8;
+      let correctedX = this.tooltipPosition.x;
+      let correctedY = this.tooltipPosition.y;
+
+      const clipping = {
+        rightClip: Math.max(0, tooltipRect.right - viewport.width),
+        bottomClip: Math.max(0, tooltipRect.bottom - viewport.height),
+        leftClip: Math.max(0, -tooltipRect.left),
+        topClip: Math.max(0, -tooltipRect.top),
+      };
+
+      // Correct horizontal clipping
+      if (clipping.rightClip > 0) {
+        correctedX = viewport.width - tooltipRect.width - safetyMargin;
+      }
+      if (clipping.leftClip > 0) {
+        correctedX = safetyMargin;
+      }
+
+      // Correct vertical clipping
+      if (clipping.bottomClip > 0) {
+        correctedY = viewport.height - tooltipRect.height - safetyMargin;
+      }
+      if (clipping.topClip > 0) {
+        correctedY = safetyMargin;
+      }
+
+      // Apply corrected position
+      this.tooltipPosition = { x: correctedX, y: correctedY };
+      this.cdr.detectChanges();
+    }
+  }
+
+  // Close global tooltip when clicking outside
   private closeAllPopups(event?: Event) {
     if (event) {
-      // Don't close if clicking on popup or its children
+      // Don't close if clicking on global tooltip or info icon buttons
       const target = event.target as HTMLElement;
-      if (target.closest('.error-details-popup') || target.closest('.error-info-btn')) {
+      if (target.closest('.global-error-tooltip') || target.closest('.info-icon-btn')) {
         return;
       }
     }
 
-    this.qualityCheckErrors.forEach(error => {
-      error.showErrorDetails = false;
-    });
+    // Close global tooltip
+    this.closeGlobalTooltip();
 
+    // Legacy: Close any remaining old-style popups (for compatibility)
     this.selectedFilesWithQuality.forEach(file => {
       file.showDetails = false;
     });
@@ -739,7 +837,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     return suggestion;
   }
 
-  // Truncate filename for better card layout consistency
+  // Truncate filename for better card layout consistency (kept for compatibility)
   truncateFilename(filename: string): string {
     if (!filename) return '';
 
