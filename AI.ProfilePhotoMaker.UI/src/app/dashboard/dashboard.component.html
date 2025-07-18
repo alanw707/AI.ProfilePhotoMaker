@@ -115,7 +115,10 @@
             "
             [class.active]="currentStep === 1">
             <div class="step-header">
-              <div class="step-number">1</div>
+              <div class="step-number">
+                <span class="step-icon">📸</span>
+                <span class="step-num">1</span>
+              </div>
               <div class="step-title">
                 <h3>Upload Your Selfies</h3>
                 <p>Upload 10+ selfies (15 recommended, 20 for best results)</p>
@@ -151,7 +154,10 @@
             [class.completed]="stateService.getState().generatedPhotosCount > 0"
             [class.active]="currentStep === 2">
             <div class="step-header">
-              <div class="step-number">2</div>
+              <div class="step-number">
+                <span class="step-icon">⚡</span>
+                <span class="step-num">2</span>
+              </div>
               <div class="step-title">
                 <h3>Generate Your Professional Photos</h3>
                 <p *ngIf="stateService.getState().modelStatus !== 'trained'">
@@ -208,7 +214,10 @@
             [class.completed]="stateService.getState().generatedPhotosCount > 0"
             [class.active]="getStepStatus(3) === 'active'">
             <div class="step-header">
-              <div class="step-number">3</div>
+              <div class="step-number">
+                <span class="step-icon">🎯</span>
+                <span class="step-num">3</span>
+              </div>
               <div class="step-title">
                 <h3>View Your Professional Photos</h3>
                 <p>Download and share your AI-generated professional photos</p>

@@ -150,29 +150,35 @@
       opacity: 1
       
   .delete-btn
-    background: rgba(255, 255, 255, 0.9)
-    border: none
-    color: #dc2626
+    background: rgba(255, 255, 255, 0.75)
+    border: 1px solid rgba(239, 68, 68, 0.3)
+    color: #f87171
     padding: 0.5rem
     border-radius: 50%
     cursor: pointer
-    transition: all 0.2s ease
-    min-width: 36px
-    min-height: 36px
+    transition: all 0.3s ease
+    min-width: 32px
+    min-height: 32px
     display: flex
     align-items: center
     justify-content: center
+    opacity: 0.7
     
-    // Mobile: larger touch target
+    // Mobile: larger touch target but still subtle
     @media (max-width: 768px)
-      min-width: 44px
-      min-height: 44px
+      min-width: 40px
+      min-height: 40px
       padding: 0.75rem
-      background: rgba(255, 255, 255, 0.95)
+      background: rgba(255, 255, 255, 0.8)
+      opacity: 0.8
     
     &:hover
-      background: rgba(255, 255, 255, 1)
+      background: rgba(255, 255, 255, 0.95)
+      color: #dc2626
+      border-color: rgba(239, 68, 68, 0.5)
+      opacity: 1
       transform: scale(1.05)
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2)
 
 // Upload Area
 .upload-area
@@ -866,6 +872,16 @@
       color: var(--success-color)
       border: 1px solid rgba(34, 197, 94, 0.2)
 
+    &.status-working
+      background: rgba(245, 158, 11, 0.1)
+      color: #f59e0b
+      border: 1px solid rgba(245, 158, 11, 0.2)
+
+    &.status-future
+      background: rgba(107, 114, 128, 0.05)
+      color: var(--text-tertiary)
+      border: 1px solid rgba(107, 114, 128, 0.1)
+
     &.status-incomplete
       background: rgba(107, 114, 128, 0.1)
       color: var(--text-secondary)
@@ -873,6 +889,30 @@
 
     strong
       font-weight: 600
+
+// Progress encouragement message
+.progress-encouragement
+  margin-bottom: 0.75rem
+  text-align: center
+  
+  .encouragement-text
+    display: inline-block
+    background: rgba(34, 197, 94, 0.1)
+    color: var(--success-color)
+    padding: 0.5rem 1rem
+    border-radius: 8px
+    font-weight: 500
+    font-size: 0.875rem
+    border: 1px solid rgba(34, 197, 94, 0.2)
+    animation: encouragementPulse 0.6s ease-out
+    
+@keyframes encouragementPulse
+  0%
+    opacity: 0
+    transform: translateY(10px) scale(0.95)
+  100%
+    opacity: 1
+    transform: translateY(0) scale(1)
 
 // Enhanced Quality Errors Section - Clean design to match valid images
 .quality-errors-enhanced

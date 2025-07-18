@@ -152,6 +152,11 @@
       </div>
 
       <div class="progress-status">
+        <!-- Encouraging message when minimum met -->
+        <div class="progress-encouragement" *ngIf="uploadedImageThumbnails.length >= 10">
+          <span class="encouragement-text">🎉 Great start! You've met the minimum requirement</span>
+        </div>
+
         <div class="status-indicators">
           <span
             class="status-indicator"
@@ -161,26 +166,41 @@
             }">
             {{ uploadedImageThumbnails.length >= 10 ? '✅' : '⭕' }}
             <strong>10 minimum</strong>
-            (required)
+            {{ uploadedImageThumbnails.length >= 10 ? '(achieved!)' : '(required)' }}
           </span>
           <span
             class="status-indicator"
             [ngClass]="{
               'status-complete': uploadedImageThumbnails.length >= 15,
-              'status-incomplete': uploadedImageThumbnails.length < 15,
+              'status-working': uploadedImageThumbnails.length >= 10 && uploadedImageThumbnails.length < 15,
+              'status-future': uploadedImageThumbnails.length < 10,
             }">
-            {{ uploadedImageThumbnails.length >= 15 ? '✅' : '⭕' }}
+            {{ uploadedImageThumbnails.length >= 15 ? '✅' : uploadedImageThumbnails.length >= 10 ? '🟡' : '⚪' }}
             <strong>15 recommended</strong>
-            (good)
+            {{
+              uploadedImageThumbnails.length >= 15
+                ? '(achieved!)'
+                : uploadedImageThumbnails.length >= 10
+                  ? '(working toward)'
+                  : '(future goal)'
+            }}
           </span>
           <span
             class="status-indicator"
             [ngClass]="{
               'status-complete': uploadedImageThumbnails.length >= 20,
-              'status-incomplete': uploadedImageThumbnails.length < 20,
+              'status-working': uploadedImageThumbnails.length >= 15 && uploadedImageThumbnails.length < 20,
+              'status-future': uploadedImageThumbnails.length < 15,
             }">
-            {{ uploadedImageThumbnails.length >= 20 ? '✅' : '⭕' }}
+            {{ uploadedImageThumbnails.length >= 20 ? '✅' : uploadedImageThumbnails.length >= 15 ? '🟡' : '⚪' }}
             <strong>20 for best results</strong>
+            {{
+              uploadedImageThumbnails.length >= 20
+                ? '(achieved!)'
+                : uploadedImageThumbnails.length >= 15
+                  ? '(almost there!)'
+                  : '(future goal)'
+            }}
           </span>
         </div>
       </div>
@@ -477,21 +497,6 @@
         <span class="stat-item invalid" *ngIf="getInvalidFilesCount() > 0">
           ✗ {{ getInvalidFilesCount() }} need attention
         </span>
-        <!-- Add More Button in Summary -->
-        <button
-          class="btn btn-secondary add-more-inline-btn"
-          *ngIf="selectedFilesWithQuality.length > 0 && !isUploading && !isCheckingQuality"
-          (click)="triggerFileUpload()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="margin-right: 6px">
-            <path
-              d="M12 5V19M5 12H19"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round" />
-          </svg>
-          Add More
-        </button>
       </div>
     </div>
   </div>

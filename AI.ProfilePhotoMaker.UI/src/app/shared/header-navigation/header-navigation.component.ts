@@ -87,5 +87,13 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
 
   toggleMobileMenu() {
     this.isMobileMenuOpen = !this.isMobileMenuOpen;
+    // Control body scrolling when mobile menu is open
+    document.body.style.overflow = this.isMobileMenuOpen ? 'hidden' : 'auto';
+  }
+
+  closeMobileMenu() {
+    this.isMobileMenuOpen = false;
+    // Always restore body scrolling when menu closes
+    document.body.style.overflow = 'auto';
   }
 }

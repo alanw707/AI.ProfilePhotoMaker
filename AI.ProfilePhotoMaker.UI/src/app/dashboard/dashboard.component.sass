@@ -25,22 +25,24 @@
   @include shared.page-container
   // Add gradient background for dark theme consistency
   background: var(--gradient-dashboard-bg)
+  // CSS Grid layout - header auto-sized, content fills remaining space
+  display: grid
+  grid-template-rows: auto 1fr
   min-height: 100vh
+  // No padding needed - natural document flow!
 
 .dashboard-main
   @include shared.content-container
   @include shared.main-content
-  // Decreased spacing from header navigation
-  margin-top: 24px  // Reduced spacing from header
-  padding: 20px 0   // Tighter vertical padding
+  // Content spacing - no header compensation needed with CSS Grid!
+  margin-top: 0
+  padding: 20px 0   // Content vertical padding
   
   // Responsive padding adjustments
   @media (max-width: 1024px)
-    margin-top: 20px
     padding: 16px 0
     
   @media (max-width: 768px)
-    margin-top: 16px
     padding: 12px 0
 
 .dashboard-content
@@ -73,14 +75,15 @@
       grid-template-columns: repeat(2, 1fr)
       gap: 14px
     
-    // Mobile: 1 card per row - no minimum width
+    // Mobile: 2x2 grid for better space efficiency
     @media (max-width: 768px)
-      grid-template-columns: 1fr
-      gap: 10px
-      
-    // Very small mobile
-    @media (max-width: 480px)
+      grid-template-columns: repeat(2, 1fr)
       gap: 8px
+      
+    // Very small mobile: maintain 2x2 with tighter spacing
+    @media (max-width: 480px)
+      grid-template-columns: repeat(2, 1fr)
+      gap: 6px
     
     // Ensure consistent sizing across all cards
     > *

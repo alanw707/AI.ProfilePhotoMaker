@@ -20,10 +20,10 @@
 </button>
 
 <!-- Mobile Menu Overlay -->
-<div class="mobile-menu-overlay" [class.active]="isMobileMenuOpen" (click)="isMobileMenuOpen = false"></div>
+<div class="mobile-menu-overlay" [class.active]="isMobileMenuOpen" (click)="closeMobileMenu()"></div>
 
 <!-- Navigation Header -->
-<header class="app-header">
+<header class="app-header" [class.menu-open]="isMobileMenuOpen">
   <div class="header-content">
     <div class="logo-section">
       <img src="assets/Logo.PNG" alt="AI Profile Photo Maker" class="header-logo" />
@@ -52,7 +52,7 @@
 
     <!-- Navigation Menu -->
     <nav class="nav-menu" [class.mobile-open]="isMobileMenuOpen">
-      <a routerLink="/packages" routerLinkActive="active" class="nav-link" (click)="isMobileMenuOpen = false">
+      <a routerLink="/packages" routerLinkActive="active" class="nav-link" (click)="closeMobileMenu()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
           <path d="M12 2L3.09 8.26L12 22L20.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" fill="none" />
         </svg>
@@ -63,7 +63,7 @@
         routerLinkActive="active"
         [routerLinkActiveOptions]="{ exact: true }"
         class="nav-link"
-        (click)="isMobileMenuOpen = false">
+        (click)="closeMobileMenu()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
           <rect x="3" y="3" width="7" height="9" stroke="currentColor" stroke-width="2" />
           <rect x="13" y="3" width="8" height="5" stroke="currentColor" stroke-width="2" />
@@ -72,14 +72,14 @@
         </svg>
         Studio
       </a>
-      <a routerLink="/enhance" routerLinkActive="active" class="nav-link" (click)="isMobileMenuOpen = false">
+      <a routerLink="/enhance" routerLinkActive="active" class="nav-link" (click)="closeMobileMenu()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
           <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
           <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2" />
         </svg>
         Enhance
       </a>
-      <a routerLink="/gallery" routerLinkActive="active" class="nav-link" (click)="isMobileMenuOpen = false">
+      <a routerLink="/gallery" routerLinkActive="active" class="nav-link" (click)="closeMobileMenu()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" />
           <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2" />
@@ -87,12 +87,7 @@
         </svg>
         Gallery
       </a>
-      <a
-        *ngIf="userName"
-        routerLink="/settings"
-        routerLinkActive="active"
-        class="nav-link"
-        (click)="isMobileMenuOpen = false">
+      <a *ngIf="userName" routerLink="/settings" routerLinkActive="active" class="nav-link" (click)="closeMobileMenu()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
           <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
           <path

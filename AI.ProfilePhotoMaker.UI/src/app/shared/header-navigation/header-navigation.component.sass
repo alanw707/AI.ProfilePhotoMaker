@@ -5,15 +5,21 @@
 
 // Theme toggle uses global styles from styles.sass - no duplication needed
 
-// App Header
+// App Header - Natural document flow with enhanced styling  
 .app-header
   background: var(--header-bg)
-  box-shadow: var(--shadow-sm)
+  backdrop-filter: blur(20px) saturate(180%)
+  -webkit-backdrop-filter: blur(20px) saturate(180%)
+  box-shadow: var(--shadow-md)
   border-bottom: 1px solid var(--border-color)
   padding: 16px 0
-  position: sticky
-  top: 0
+  position: relative  // Changed from fixed to relative for natural flow
   z-index: 100
+  // Removed transform/transition - no longer needed for scroll behavior
+  
+  &.menu-open
+    backdrop-filter: blur(24px) saturate(200%)
+    -webkit-backdrop-filter: blur(24px) saturate(200%)
 
   .header-content
     max-width: 1400px
@@ -176,27 +182,29 @@
             background: var(--primary-hover)
             border-color: var(--primary-hover)
 
-// Mobile menu overlay
+// Mobile menu overlay with modern animations
 .mobile-menu-overlay
-  display: none
   position: fixed
   top: 0
   left: 0
   right: 0
   bottom: 0
-  background: rgba(0, 0, 0, 0.5)
+  background: rgba(0, 0, 0, 0.6)
+  backdrop-filter: blur(8px)
+  -webkit-backdrop-filter: blur(8px)
   z-index: 99
   opacity: 0
-  transition: opacity 0.3s ease
+  visibility: hidden
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
   
   &.active
-    display: block
     opacity: 1
+    visibility: visible
     
   @media (min-width: 769px)
     display: none !important
 
-// Mobile menu toggle button
+// Mobile menu toggle button with morph animation
 .mobile-menu-toggle
   display: none
   background: transparent
@@ -205,13 +213,22 @@
   cursor: pointer
   color: var(--text-primary)
   z-index: 101
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
   
   svg
     width: 24px
     height: 24px
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
     
   &.active
     color: var(--primary)
+    transform: rotate(90deg)
+    
+  &:hover
+    transform: scale(1.1)
+    
+  &:active
+    transform: scale(0.95)
     
   @media (max-width: 768px)
     display: flex
@@ -227,31 +244,81 @@
       flex-wrap: wrap
     
     .nav-menu
-      display: none
-      position: fixed
-      top: 80px
+      position: absolute  // Changed from fixed to absolute for natural positioning
+      top: 100%  // Position below header instead of fixed 80px
       left: 0
       right: 0
-      background: var(--card-bg)
+      background: var(--surface-primary)
+      backdrop-filter: blur(16px) saturate(120%)
+      -webkit-backdrop-filter: blur(16px) saturate(120%)
       flex-direction: column
-      padding: 1rem
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1)
+      padding: 1.5rem 1rem
+      box-shadow: var(--shadow-lg)
       border-top: 1px solid var(--border-color)
-      z-index: 100
+      z-index: 101
+      transform: translateY(-100%)
+      opacity: 0
+      visibility: hidden
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1)
+        
       
       &.mobile-open
-        display: flex
+        transform: translateY(0)
+        opacity: 1
+        visibility: visible
         
-      .nav-link
-        padding: 12px 16px
-        margin: 4px 0
-        border-radius: 8px
-        font-size: 16px
-        font-family: 'Inter', sans-serif !important
-        
-        svg
-          width: 20px
-          height: 20px
+  // Mobile menu nav-links - clean CSS variable approach
+  .app-header .nav-menu.mobile-open .nav-link
+    // Layout and appearance
+    padding: 16px 20px
+    margin: 6px 0
+    border-radius: 12px
+    font-size: 16px
+    font-family: 'Inter', sans-serif
+    font-weight: 500
+    border: 1px solid transparent
+    text-decoration: none
+    color: var(--text-primary)
+    background: transparent
+    
+    // Animations and transitions
+    animation: slideInStagger 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards
+    opacity: 0
+    transform: translateX(-20px)
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+    
+    // Staggered animation delays
+    &:nth-child(1)
+      animation-delay: 0.1s
+    &:nth-child(2)
+      animation-delay: 0.15s
+    &:nth-child(3)
+      animation-delay: 0.2s
+    &:nth-child(4)
+      animation-delay: 0.25s
+    &:nth-child(5)
+      animation-delay: 0.3s
+    
+    // Hover state
+    &:hover
+      background: var(--surface-secondary)
+      color: var(--text-primary)
+      transform: translateX(8px)
+      border-color: var(--primary-bg-light)
+      
+    // Active state
+    &.active
+      background: var(--primary)
+      color: white
+      transform: translateX(12px)
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3)
+    
+    // SVG icons
+    svg
+      width: 20px
+      height: 20px
+      color: var(--text-primary)
+      transition: transform 0.3s ease
     
     .logo-section
       flex: 1
@@ -290,3 +357,13 @@
         padding: 6px 12px
         font-size: 12px
         font-family: 'Inter', sans-serif
+
+// Animation keyframes for staggered menu items
+@keyframes slideInStagger
+  0%
+    opacity: 0
+    transform: translateX(-20px)
+  100%
+    opacity: 1
+    transform: translateX(0)
+
