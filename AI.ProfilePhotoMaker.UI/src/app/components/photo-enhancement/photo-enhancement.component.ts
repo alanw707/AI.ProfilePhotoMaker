@@ -38,6 +38,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   errorMessage = '';
   isDragOver = false;
   isLoadingCredits = true;
+  allowedTypes: string[] = ['image/jpeg', 'image/png', 'image/webp'];
 
   private stateSubscription!: Subscription;
 
@@ -122,9 +123,9 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   processFile(file: File) {
-    // Validate file
-    if (!file.type.startsWith('image/')) {
-      this.errorMessage = 'Please select a valid image file.';
+    // Validate file type
+    if (!this.allowedTypes.includes(file.type)) {
+      this.errorMessage = 'Different format needed. Use JPEG, PNG, or WebP.';
       console.error('Invalid file type:', file.type);
       return;
     }
