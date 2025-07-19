@@ -5,7 +5,6 @@
   <!-- Main Settings Content -->
   <main class="settings-main">
     <div class="settings-content">
-      
       <!-- Page Header -->
       <section class="page-header">
         <div class="breadcrumb">
@@ -25,23 +24,20 @@
 
       <!-- Settings Sections -->
       <div class="settings-sections" *ngIf="!isLoading">
-        
         <!-- Account Information -->
         <section class="settings-section">
-          <app-account-info 
+          <app-account-info
             [userEmail]="userEmail"
             [userProfile]="userProfile"
             [accountAge]="dataStats.accountAge"
-            (editProfileClicked)="editProfile()">
-          </app-account-info>
+            (editProfileClicked)="editProfile()"></app-account-info>
         </section>
 
         <!-- Credit Management -->
         <section class="settings-section" *ngIf="creditsInfo || userCreditStatus">
-          <app-credit-management 
+          <app-credit-management
             [creditsInfo]="creditsInfo"
-            [userCreditStatus]="userCreditStatus">
-          </app-credit-management>
+            [userCreditStatus]="userCreditStatus"></app-credit-management>
         </section>
 
         <!-- Data Overview -->
@@ -55,7 +51,7 @@
               <div class="stat-card">
                 <div class="stat-icon">📸</div>
                 <div class="stat-content">
-                  <h3>{{dataStats.inputPhotos}}</h3>
+                  <h3>{{ dataStats.inputPhotos }}</h3>
                   <p>Input Photos</p>
                   <small>Original selfies uploaded for training</small>
                 </div>
@@ -63,29 +59,29 @@
               <div class="stat-card">
                 <div class="stat-icon">✨</div>
                 <div class="stat-content">
-                  <h3>{{dataStats.generatedPhotos}}</h3>
+                  <h3>{{ dataStats.generatedPhotos }}</h3>
                   <p>AI Headshots</p>
                   <small>Professional photos generated</small>
                 </div>
               </div>
               <div class="stat-card">
-                <div class="stat-icon">🎯</div>
+                <div class="stat-icon">📸</div>
                 <div class="stat-content">
-                  <h3>{{dataStats.enhancedPhotos}}</h3>
-                  <p>Enhanced Photos</p>
-                  <small>Photos processed with enhancement</small>
+                  <h3>{{ getTotalPhotos() }} / {{ MAX_PHOTOS_LIMIT }}</h3>
+                  <p>Total Photos</p>
+                  <small>Photos stored on our server (uploaded + generated)</small>
                 </div>
               </div>
               <div class="stat-card">
                 <div class="stat-icon">🤖</div>
                 <div class="stat-content">
-                  <h3>{{dataStats.hasTrainedModel ? 'Yes' : 'No'}}</h3>
+                  <h3>{{ dataStats.hasTrainedModel ? 'Yes' : 'No' }}</h3>
                   <p>Trained AI Model</p>
-                  <small>Custom model for your photos</small>
+                  <small>AI model trained on your photos for personalized headshots</small>
                 </div>
               </div>
             </div>
-            
+
             <!-- Data Retention Policy -->
             <div class="retention-policy">
               <div class="policy-header">
@@ -95,25 +91,36 @@
                 <div class="policy-item">
                   <div class="policy-icon">📁</div>
                   <div class="policy-text">
-                    <strong>Input Photos:</strong> Stored permanently until you delete them or your account
+                    <strong>Input Photos:</strong>
+                    Stored permanently until you delete them or your account
                   </div>
                 </div>
                 <div class="policy-item">
                   <div class="policy-icon">⏰</div>
                   <div class="policy-text">
-                    <strong>Generated Photos:</strong> Available for download for 1 hour after creation
+                    <strong>Generated Photos:</strong>
+                    Available for download for 1 hour after creation
                   </div>
                 </div>
                 <div class="policy-item">
                   <div class="policy-icon">🧠</div>
                   <div class="policy-text">
-                    <strong>AI Models:</strong> Stored permanently for premium users, automatically expire for basic users
+                    <strong>AI Models:</strong>
+                    Stored permanently for premium users, automatically expire for basic users
                   </div>
                 </div>
                 <div class="policy-item">
                   <div class="policy-icon">📊</div>
                   <div class="policy-text">
-                    <strong>Usage Logs:</strong> Kept for billing and analytics purposes, automatically cleaned after 1 year
+                    <strong>Usage Logs:</strong>
+                    Kept for billing and analytics purposes, automatically cleaned after 1 year
+                  </div>
+                </div>
+                <div class="policy-item">
+                  <div class="policy-icon">📸</div>
+                  <div class="policy-text">
+                    <strong>Photo Limit:</strong>
+                    Maximum 200 photos per account (includes both uploaded and generated photos)
                   </div>
                 </div>
               </div>
@@ -128,36 +135,63 @@
             <p>Control your data and privacy settings</p>
           </div>
           <div class="section-content">
-            
             <!-- Individual Data Actions -->
             <div class="data-actions">
               <div class="action-item">
                 <div class="action-info">
                   <h4>Delete Input Photos</h4>
-                  <p>Remove all original selfies you've uploaded. This will not affect already generated photos but will prevent future model training.</p>
+                  <p>
+                    Remove all original photos you've uploaded for training. This will free up storage space but prevent
+                    future AI model training or retraining.
+                  </p>
                 </div>
-                <button class="btn btn-outline-danger" 
-                        (click)="confirmDeleteData('photos')"
-                        [disabled]="isDeleting || dataStats.inputPhotos === 0">
+                <button
+                  class="btn btn-outline-danger"
+                  (click)="confirmDeleteData('photos')"
+                  [disabled]="isDeleting || dataStats.inputPhotos === 0">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline
+                      points="3,6 5,6 21,6"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round" />
+                    <path
+                      d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round" />
                   </svg>
-                  Delete Photos ({{dataStats.inputPhotos}})
+                  Delete Photos ({{ dataStats.inputPhotos }})
                 </button>
               </div>
 
               <div class="action-item">
                 <div class="action-info">
                   <h4>Delete AI Model</h4>
-                  <p>Remove your trained AI model. You'll need to re-upload photos and retrain to generate new styled photos.</p>
+                  <p>
+                    Remove your personalized AI model. You'll need to retrain using your existing photos or upload new
+                    ones to generate headshots again.
+                  </p>
                 </div>
-                <button class="btn btn-outline-danger" 
-                        (click)="confirmDeleteData('model')"
-                        [disabled]="isDeleting || !dataStats.hasTrainedModel">
+                <button
+                  class="btn btn-outline-danger"
+                  (click)="confirmDeleteData('model')"
+                  [disabled]="isDeleting || !dataStats.hasTrainedModel">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline
+                      points="3,6 5,6 21,6"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round" />
+                    <path
+                      d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round" />
                   </svg>
                   Delete AI Model
                 </button>
@@ -166,15 +200,34 @@
               <div class="action-item">
                 <div class="action-info">
                   <h4>Export Your Data</h4>
-                  <p>Download a copy of your account data including photos, usage history, and account information.</p>
+                  <p>
+                    Download a complete backup of your account data including uploaded photos, generated images, usage
+                    history, and profile information in JSON format.
+                  </p>
                 </div>
-                <button class="btn btn-secondary" 
-                        (click)="exportData()"
-                        [disabled]="isExporting">
+                <button class="btn btn-secondary" (click)="exportData()" [disabled]="isExporting">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" *ngIf="!isExporting">
-                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path
+                      d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round" />
+                    <polyline
+                      points="7,10 12,15 17,10"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round" />
+                    <line
+                      x1="12"
+                      y1="15"
+                      x2="12"
+                      y2="3"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round" />
                   </svg>
                   <div class="spinner" *ngIf="isExporting"></div>
                   <span *ngIf="!isExporting">Export Data</span>
@@ -189,25 +242,51 @@
                 <h3>Danger Zone</h3>
                 <p>Irreversible actions that will permanently delete your data</p>
               </div>
-              
+
               <div class="danger-actions">
                 <div class="danger-item">
                   <div class="danger-info">
                     <h4>Delete All Data</h4>
-                    <p>Permanently delete all your photos, AI models, and account data. This action cannot be undone.</p>
+                    <p>
+                      Permanently delete all your photos, AI models, and account data. This action cannot be undone.
+                    </p>
                     <div class="warning-badges">
                       <span class="warning-badge">⚠️ Irreversible</span>
                       <span class="warning-badge">🗑️ All Data Lost</span>
                     </div>
                   </div>
-                  <button class="btn btn-danger" 
-                          (click)="confirmDeleteData('all')"
-                          [disabled]="isDeleting">
+                  <button class="btn btn-danger" (click)="confirmDeleteData('all')" [disabled]="isDeleting">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <line x1="10" y1="11" x2="10" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <line x1="14" y1="11" x2="14" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <polyline
+                        points="3,6 5,6 21,6"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round" />
+                      <path
+                        d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round" />
+                      <line
+                        x1="10"
+                        y1="11"
+                        x2="10"
+                        y2="17"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round" />
+                      <line
+                        x1="14"
+                        y1="11"
+                        x2="14"
+                        y2="17"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round" />
                     </svg>
                     Delete All Data
                   </button>
@@ -216,20 +295,51 @@
                 <div class="danger-item">
                   <div class="danger-info">
                     <h4>Delete Account</h4>
-                    <p>Permanently delete your entire account including all data and close your subscription. You will be logged out immediately.</p>
+                    <p>
+                      Permanently delete your entire account including all data and close your subscription. You will be
+                      logged out immediately.
+                    </p>
                     <div class="warning-badges">
                       <span class="warning-badge">⚠️ Account Closed</span>
                       <span class="warning-badge">🚪 Immediate Logout</span>
                     </div>
                   </div>
-                  <button class="btn btn-danger" 
-                          (click)="confirmDeleteData('account')"
-                          [disabled]="isDeleting">
+                  <button class="btn btn-danger" (click)="confirmDeleteData('account')" [disabled]="isDeleting">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M16 4v12l-4-2-4 2V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <rect x="6" y="2" width="12" height="20" rx="2" ry="2" stroke="currentColor" stroke-width="2" fill="none"/>
-                      <line x1="10" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <line x1="10" y1="12" x2="14" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path
+                        d="M16 4v12l-4-2-4 2V4"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round" />
+                      <rect
+                        x="6"
+                        y="2"
+                        width="12"
+                        height="20"
+                        rx="2"
+                        ry="2"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        fill="none" />
+                      <line
+                        x1="10"
+                        y1="8"
+                        x2="14"
+                        y2="8"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round" />
+                      <line
+                        x1="10"
+                        y1="12"
+                        x2="14"
+                        y2="12"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round" />
                     </svg>
                     Delete Account
                   </button>
@@ -238,7 +348,6 @@
             </div>
           </div>
         </section>
-
       </div>
     </div>
   </main>
@@ -248,69 +357,89 @@
 <div class="modal-overlay" *ngIf="showConfirmationModal" (click)="cancelDelete()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h3>{{confirmationTitle}}</h3>
+      <h3>{{ confirmationTitle }}</h3>
       <button class="modal-close" (click)="cancelDelete()">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <line
+            x1="18"
+            y1="6"
+            x2="6"
+            y2="18"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round" />
+          <line
+            x1="6"
+            y1="6"
+            x2="18"
+            y2="18"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round" />
         </svg>
       </button>
     </div>
-    
+
     <div class="modal-body">
       <div class="confirmation-icon" [ngClass]="deletionType">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" *ngIf="deletionType === 'photos'">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-          <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2"/>
-          <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2"/>
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="2" />
+          <polyline points="21,15 16,10 5,21" stroke="currentColor" stroke-width="2" />
         </svg>
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" *ngIf="deletionType === 'model'">
-          <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-          <path d="M20.2 20.2c2.04-2.03.02-7.36-4.5-11.9-4.54-4.52-9.87-6.54-11.9-4.5-2.04 2.03-.02 7.36 4.5 11.9 4.54 4.52 9.87 6.54 11.9 4.5z" stroke="currentColor" stroke-width="2"/>
+          <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+          <path
+            d="M20.2 20.2c2.04-2.03.02-7.36-4.5-11.9-4.54-4.52-9.87-6.54-11.9-4.5-2.04 2.03-.02 7.36 4.5 11.9 4.54 4.52 9.87 6.54 11.9 4.5z"
+            stroke="currentColor"
+            stroke-width="2" />
         </svg>
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" *ngIf="deletionType === 'all' || deletionType === 'account'">
-          <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2"/>
-          <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke="currentColor" stroke-width="2"/>
+        <svg
+          width="48"
+          height="48"
+          viewBox="0 0 24 24"
+          fill="none"
+          *ngIf="deletionType === 'all' || deletionType === 'account'">
+          <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" />
+          <path
+            d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+            stroke="currentColor"
+            stroke-width="2" />
         </svg>
       </div>
-      
-      <p>{{confirmationMessage}}</p>
-      
+
+      <p>{{ confirmationMessage }}</p>
+
       <div class="confirmation-details" *ngIf="deletionType === 'all' || deletionType === 'account'">
         <h4>This will permanently delete:</h4>
         <ul>
-          <li *ngIf="dataStats.inputPhotos > 0">{{dataStats.inputPhotos}} input photos</li>
-          <li *ngIf="dataStats.generatedPhotos > 0">{{dataStats.generatedPhotos}} generated photos</li>
-          <li *ngIf="dataStats.enhancedPhotos > 0">{{dataStats.enhancedPhotos}} enhanced photos</li>
+          <li *ngIf="dataStats.inputPhotos > 0">{{ dataStats.inputPhotos }} input photos</li>
+          <li *ngIf="dataStats.generatedPhotos > 0">{{ dataStats.generatedPhotos }} generated photos</li>
           <li *ngIf="dataStats.hasTrainedModel">Your trained AI model</li>
           <li>All usage history and logs</li>
           <li *ngIf="deletionType === 'account'">Your entire account</li>
         </ul>
       </div>
-      
+
       <div class="confirmation-input" *ngIf="deletionType === 'all' || deletionType === 'account'">
         <label for="confirmationText">Type "DELETE" to confirm:</label>
-        <input 
-          type="text" 
+        <input
+          type="text"
           id="confirmationText"
-          [(ngModel)]="confirmationText" 
+          [(ngModel)]="confirmationText"
           placeholder="DELETE"
           class="form-control"
-          (input)="onConfirmationTextChange()"
-        />
+          (input)="onConfirmationTextChange()" />
       </div>
     </div>
-    
+
     <div class="modal-footer">
-      <button class="btn btn-secondary" (click)="cancelDelete()" [disabled]="isDeleting">
-        Cancel
-      </button>
-      <button 
-        class="btn btn-danger" 
-        (click)="executeDelete()" 
-        [disabled]="isDeleting || !canConfirmDelete()">
+      <button class="btn btn-secondary" (click)="cancelDelete()" [disabled]="isDeleting">Cancel</button>
+      <button class="btn btn-danger" (click)="executeDelete()" [disabled]="isDeleting || !canConfirmDelete()">
         <div class="spinner" *ngIf="isDeleting"></div>
-        <span *ngIf="!isDeleting">{{getDeleteButtonText()}}</span>
+        <span *ngIf="!isDeleting">{{ getDeleteButtonText() }}</span>
         <span *ngIf="isDeleting">Deleting...</span>
       </button>
     </div>
