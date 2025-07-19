@@ -1,6 +1,78 @@
 @use '../../../shared/styles/mixins'
 @use '../../../dashboard/styles/file-preview'
 
+.invalid-files-feedback
+  background: var(--error-bg-light, #fef2f2)
+  border: 1px solid var(--border-color)
+  border-radius: 8px
+  padding: 16px
+  margin-top: 12px
+  
+  .feedback-header
+    display: flex
+    align-items: center
+    justify-content: space-between
+    gap: 8px
+    color: var(--error-color)
+    font-weight: 600
+    margin-bottom: 12px
+    
+    svg
+      color: var(--error-color)
+      flex-shrink: 0
+    
+    .feedback-close
+      background: none
+      border: none
+      padding: 4px
+      cursor: pointer
+      color: var(--text-tertiary)
+      transition: all 0.2s ease
+      border-radius: 4px
+      margin-left: auto
+      flex-shrink: 0
+      
+      &:hover
+        color: var(--text-secondary)
+        background: rgba(0, 0, 0, 0.1)
+        transform: scale(1.1)
+      
+      &:active
+        transform: scale(0.95)
+      
+      svg
+        display: block
+        color: inherit
+  
+  .feedback-list
+    margin: 0
+    padding: 0
+    list-style: none
+    
+    .feedback-item
+      display: flex
+      justify-content: space-between
+      align-items: center
+      padding: 8px 12px
+      background: var(--surface-primary)
+      border-radius: 4px
+      margin-bottom: 6px
+      
+      &:last-child
+        margin-bottom: 0
+      
+      .file-name
+        font-weight: 500
+        color: var(--text-primary)
+        overflow: hidden
+        text-overflow: ellipsis
+        white-space: nowrap
+        max-width: 50%
+      
+      .format-help
+        font-size: 0.875rem
+        color: var(--text-secondary)
+        text-align: right
 
 .file-upload-section
   padding: 1.5rem

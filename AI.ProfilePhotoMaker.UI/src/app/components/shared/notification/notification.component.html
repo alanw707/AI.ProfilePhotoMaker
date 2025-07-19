@@ -1,0 +1,26 @@
+<div class="notification-container">
+  <div
+    *ngFor="let notification of notifications; trackBy: trackByNotificationId"
+    class="notification"
+    [ngClass]="'notification-' + notification.type">
+    <div class="notification-icon">
+      <span>{{ getIcon(notification.type) }}</span>
+    </div>
+
+    <div class="notification-content">
+      <h4 class="notification-title">{{ notification.title }}</h4>
+      <p class="notification-message">{{ notification.message }}</p>
+    </div>
+
+    <button
+      class="notification-close"
+      (click)="removeNotification(notification.id); $event.stopPropagation()"
+      aria-label="Close notification"
+      type="button">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+</div>

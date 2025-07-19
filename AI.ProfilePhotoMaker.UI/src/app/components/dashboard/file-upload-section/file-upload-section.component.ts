@@ -66,6 +66,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   isCheckingQuality = false;
   qualityCheckProgress = '';
   qualityCheckErrors: QualityCheckError[] = [];
+  invalidFilesFeedback: { fileName: string; reason: string }[] = [];
 
   // Global tooltip state
   activeTooltipError: QualityCheckError | null = null;
@@ -156,45 +157,109 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Filter valid files
-    const validFiles = files.filter(file => this.isValidFile(file));
-    if (validFiles.length === 0) {
-      this.notificationService.error(
-        'Invalid Files',
-        'No valid image files were selected. Please select JPEG, PNG, or WebP files under 7MB.'
-      );
+    // Track validation results
+    const validationResults = {
+      validFiles: [] as File[],
+      invalidFiles: [] as File[],
+      errors: {
+        unsupportedType: [] as string[],
+        tooLarge: [] as string[],
+      },
+    };
+
+    // Validate each file
+    files.forEach(file => {
+      const validation = this.validateFile(file);
+      if (validation.isValid) {
+        validationResults.validFiles.push(file);
+      } else {
+        validationResults.invalidFiles.push(file);
+        if (validation.error === 'type') {
+          validationResults.errors.unsupportedType.push(file.name);
+        } else if (validation.error === 'size') {
+          validationResults.errors.tooLarge.push(file.name);
+        }
+      }
+    });
+
+    // Update inline feedback for invalid files
+    this.invalidFilesFeedback = [];
+    validationResults.errors.unsupportedType.forEach(fileName => {
+      this.invalidFilesFeedback.push({
+        fileName,
+        reason: 'Different format needed. Use JPEG, PNG, or WebP',
+      });
+    });
+    validationResults.errors.tooLarge.forEach(fileName => {
+      const sizeInMB = (this.maxFileSize / (1024 * 1024)).toFixed(1);
+      this.invalidFilesFeedback.push({
+        fileName,
+        reason: `Size too large. Max: ${sizeInMB}MB`,
+      });
+    });
+
+    // Show consolidated error notification if any files were invalid
+    if (validationResults.invalidFiles.length > 0) {
+      this.showConsolidatedErrors(validationResults);
+    }
+
+    // If no valid files, return early
+    if (validationResults.validFiles.length === 0) {
       return;
     }
 
     // Add valid files to selection
-    this.selectedFiles.push(...validFiles);
+    this.selectedFiles.push(...validationResults.validFiles);
     this.filesSelected.emit(this.selectedFiles);
 
     // Start quality validation
-    await this.validateImageQuality(validFiles);
+    await this.validateImageQuality(validationResults.validFiles);
   }
 
-  private isValidFile(file: File): boolean {
+  private validateFile(file: File): { isValid: boolean; error?: 'type' | 'size' } {
     // Check file type
     if (!this.allowedTypes.includes(file.type)) {
-      this.notificationService.error(
-        'Invalid File Type',
-        `${file.name} is not a supported image format. Please use JPEG, PNG, or WebP files.`
-      );
-      return false;
+      return { isValid: false, error: 'type' };
     }
 
     // Check file size
     if (file.size > this.maxFileSize) {
-      const sizeInMB = (this.maxFileSize / (1024 * 1024)).toFixed(1);
-      this.notificationService.error(
-        'File Too Large',
-        `${file.name} is too large. Please use files smaller than ${sizeInMB}MB.`
-      );
-      return false;
+      return { isValid: false, error: 'size' };
     }
 
-    return true;
+    return { isValid: true };
+  }
+
+  private showConsolidatedErrors(results: any): void {
+    const errors = [];
+
+    if (results.errors.unsupportedType.length > 0) {
+      const count = results.errors.unsupportedType.length;
+      const fileList = results.errors.unsupportedType.slice(0, 3).join(', ');
+      const more = count > 3 ? ` and ${count - 3} more` : '';
+      errors.push(
+        `${count} file${count > 1 ? 's need' : ' needs'} a different format: ${fileList}${more}`
+      );
+    }
+
+    if (results.errors.tooLarge.length > 0) {
+      const count = results.errors.tooLarge.length;
+      const sizeInMB = (this.maxFileSize / (1024 * 1024)).toFixed(1);
+      const fileList = results.errors.tooLarge.slice(0, 3).join(', ');
+      const more = count > 3 ? ` and ${count - 3} more` : '';
+      errors.push(
+        `${count} file${count > 1 ? 's are' : ' is'} too large (max ${sizeInMB}MB): ${fileList}${more}`
+      );
+    }
+
+    const totalInvalid = results.invalidFiles.length;
+    const totalFiles = results.validFiles.length + totalInvalid;
+
+    this.notificationService.error(
+      'Please Check File Format',
+      errors.join('. ') + '. Supported formats: JPEG, PNG, WebP (max 7MB).',
+      5000 // Auto-close after 5 seconds
+    );
   }
 
   // Quality Validation
@@ -534,6 +599,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     this.selectedFiles = [];
     this.selectedFilesWithQuality = [];
     this.qualityCheckErrors = [];
+    this.invalidFilesFeedback = [];
     this.filesSelected.emit(this.selectedFiles);
   }
 
@@ -757,6 +823,12 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     this.selectedFilesWithQuality.forEach(file => {
       file.showDetails = false;
     });
+  }
+
+  // Inline Feedback Management
+  dismissInlineFeedback(): void {
+    this.invalidFilesFeedback = [];
+    this.cdr.detectChanges();
   }
 
   // Helper Methods

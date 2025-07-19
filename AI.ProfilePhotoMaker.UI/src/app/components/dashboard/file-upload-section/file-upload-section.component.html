@@ -1,7 +1,13 @@
 <!-- File Upload Section -->
 <div class="file-upload-section">
   <!-- Hidden File Input -->
-  <input #fileInput type="file" accept="image/*" multiple style="display: none" (change)="onFileSelected($event)" />
+  <input
+    #fileInput
+    type="file"
+    accept="image/jpeg,image/png,image/webp"
+    multiple
+    style="display: none"
+    (change)="onFileSelected($event)" />
 
   <!-- Upload Guidelines (Step 1, no files selected) -->
   <div *ngIf="showUploadGuidelines" class="upload-guidelines">
@@ -230,6 +236,35 @@
         <span>Up to {{ maxFiles }} photos, max {{ maxFileSize / (1024 * 1024) | number: '1.0-1' }}MB each</span>
       </div>
     </div>
+  </div>
+
+  <!-- Inline Validation Feedback -->
+  <div *ngIf="invalidFilesFeedback.length > 0" class="invalid-files-feedback">
+    <div class="feedback-header">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="15" y1="9" x2="9" y2="15"></line>
+        <line x1="9" y1="9" x2="15" y2="15"></line>
+      </svg>
+      <span>Please check these file formats:</span>
+      <button
+        class="feedback-close"
+        (click)="dismissInlineFeedback(); $event.stopPropagation()"
+        aria-label="Close feedback"
+        type="button"
+        title="Close feedback">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <ul class="feedback-list">
+      <li *ngFor="let feedback of invalidFilesFeedback" class="feedback-item">
+        <span class="file-name">{{ feedback.fileName }}</span>
+        <span class="format-help">{{ feedback.reason }}</span>
+      </li>
+    </ul>
   </div>
 
   <!-- Quality Check Progress -->
