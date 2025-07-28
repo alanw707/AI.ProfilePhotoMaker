@@ -5,7 +5,11 @@ import { authGuard } from './guards/auth.guard';
 import { guestGuard } from './guards/guest.guard';
 
 export const routes: Routes = [
-  { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
+  {
+    path: '',
+    loadComponent: () => import('./pages/landing/landing.component').then(m => m.LandingComponent),
+    pathMatch: 'full',
+  },
   {
     path: 'login',
     component: LoginComponent,
@@ -44,5 +48,13 @@ export const routes: Routes = [
       import('./pages/settings/settings.component').then(m => m.SettingsComponent),
     canActivate: [authGuard],
   },
-  { path: '**', redirectTo: '/dashboard' },
+  {
+    path: 'privacy',
+    loadComponent: () => import('./pages/privacy/privacy.component').then(m => m.PrivacyComponent),
+  },
+  {
+    path: 'terms',
+    loadComponent: () => import('./pages/terms/terms.component').then(m => m.TermsComponent),
+  },
+  { path: '**', redirectTo: '/' },
 ];
