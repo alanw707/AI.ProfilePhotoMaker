@@ -1,8 +1,9 @@
 import { Component, OnInit, HostListener, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
 import { trigger, state, style, transition, animate } from '@angular/animations';
+import { NavigationService } from '../../services/navigation.service';
 
 interface Plan {
   name: string;
@@ -57,6 +58,7 @@ export class LandingComponent implements OnInit {
   comparisonPosition = 50;
   newsletterEmail = '';
   showThankYou = false;
+  showNotFound = false;
 
   @ViewChild('comparisonSlider') comparisonSlider!: ElementRef;
 
@@ -222,7 +224,9 @@ export class LandingComponent implements OnInit {
   constructor(
     private meta: Meta,
     private title: Title,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute,
+    public navigation: NavigationService
   ) {}
 
   ngOnInit(): void {
@@ -230,6 +234,7 @@ export class LandingComponent implements OnInit {
     this.startBeforeAfterRotation();
     this.startTestimonialRotation();
     this.observeElements();
+    this.handleRouteData();
   }
 
   setupSEO(): void {
@@ -376,15 +381,12 @@ export class LandingComponent implements OnInit {
   }
 
   scrollToSection(sectionId: string): void {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    this.navigation.scrollToSection(sectionId);
     this.mobileMenuOpen = false;
   }
 
   getStarted(): void {
-    this.router.navigate(['/register']);
+    this.navigation.goToRegister();
   }
 
   startBeforeAfterRotation(): void {
@@ -453,5 +455,42 @@ export class LandingComponent implements OnInit {
         this.showThankYou = false;
       }, 5000);
     }
+  }
+
+  handleRouteData(): void {
+    // Handle route data for scrolling and special views
+    this.route.data.subscribe(data => {
+      if (data['scrollTo']) {
+        setTimeout(() => {
+          this.scrollToSection(data['scrollTo']);
+        }, 500);
+      }
+
+      if (data['showNotFound']) {
+        this.showNotFound = true;
+      }
+
+      // Update meta tags if provided
+      if (data['meta']) {
+        if (data['meta']['description']) {
+          this.meta.updateTag({ name: 'description', content: data['meta']['description'] });
+        }
+        if (data['meta']['keywords']) {
+          this.meta.updateTag({ name: 'keywords', content: data['meta']['keywords'] });
+        }
+      }
+    });
+  }
+
+  navigateToLogin(): void {
+    this.navigation.goToLogin();
+  }
+
+  navigateToDashboard(): void {
+    this.navigation.goToDashboard();
+  }
+
+  navigateToPricing(): void {
+    this.navigation.goToPricing();
   }
 }

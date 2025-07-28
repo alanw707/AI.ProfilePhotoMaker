@@ -36,7 +36,9 @@
           class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
           Reviews
         </a>
-        <a routerLink="/login" class="text-gray-700 hover:text-primary-600 transition-colors">Login</a>
+        <a (click)="navigateToLogin()" class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
+          Login
+        </a>
         <button
           (click)="getStarted()"
           class="bg-primary-600 text-white px-6 py-2 rounded-full hover:bg-primary-700 transition-colors">
@@ -80,7 +82,11 @@
           class="block text-gray-700 hover:text-primary-600 transition-colors">
           Reviews
         </a>
-        <a routerLink="/login" class="block text-gray-700 hover:text-primary-600 transition-colors">Login</a>
+        <a
+          (click)="navigateToLogin()"
+          class="block cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
+          Login
+        </a>
         <button
           (click)="getStarted()"
           class="w-full bg-primary-600 text-white px-6 py-3 rounded-full hover:bg-primary-700 transition-colors">
@@ -91,8 +97,34 @@
   </nav>
 </header>
 
+<!-- 404 Not Found Section -->
+<section
+  *ngIf="showNotFound"
+  class="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-orange-50">
+  <div class="text-center max-w-2xl mx-auto px-4">
+    <div class="text-9xl font-bold text-gray-300 mb-4">404</div>
+    <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-6">Page Not Found</h1>
+    <p class="text-xl text-gray-600 mb-8">
+      The page you're looking for doesn't exist. Let's get you back to creating amazing profile photos!
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      <button
+        (click)="router.navigate(['/'])"
+        class="bg-primary-600 text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-primary-700 transition-colors">
+        Go Home
+      </button>
+      <button
+        (click)="getStarted()"
+        class="bg-white text-primary-600 px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-50 transition-colors border border-primary-600">
+        Get Started
+      </button>
+    </div>
+  </div>
+</section>
+
 <!-- Hero Section -->
 <section
+  *ngIf="!showNotFound"
   class="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-secondary-50 overflow-hidden">
   <!-- Background decoration -->
   <div class="absolute inset-0 overflow-hidden">
@@ -182,7 +214,7 @@
 </section>
 
 <!-- Features Section -->
-<section id="features" class="py-16 md:py-24 bg-white">
+<section *ngIf="!showNotFound" id="features" class="py-16 md:py-24 bg-white">
   <div class="container mx-auto px-4 sm:px-6 lg:px-8">
     <div class="text-center mb-12 md:mb-16">
       <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Why Choose AI Profile Photo Maker?</h2>
@@ -204,7 +236,7 @@
 </section>
 
 <!-- Before/After Examples Section -->
-<section id="examples" class="py-16 md:py-24 bg-gradient-to-br from-gray-50 to-white">
+<section *ngIf="!showNotFound" id="examples" class="py-16 md:py-24 bg-gradient-to-br from-gray-50 to-white">
   <div class="container mx-auto px-4 sm:px-6 lg:px-8">
     <div class="text-center mb-12 md:mb-16">
       <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">See the AI Magic in Action</h2>
@@ -238,7 +270,7 @@
 </section>
 
 <!-- Pricing Section -->
-<section id="pricing" class="py-16 md:py-24 bg-white">
+<section *ngIf="!showNotFound" id="pricing" class="py-16 md:py-24 bg-white">
   <div class="container mx-auto px-4 sm:px-6 lg:px-8">
     <div class="text-center mb-12 md:mb-16">
       <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
@@ -300,7 +332,7 @@
 </section>
 
 <!-- Testimonials Section -->
-<section id="testimonials" class="py-16 md:py-24 bg-gradient-to-br from-gray-50 to-white">
+<section *ngIf="!showNotFound" id="testimonials" class="py-16 md:py-24 bg-gradient-to-br from-gray-50 to-white">
   <div class="container mx-auto px-4 sm:px-6 lg:px-8">
     <div class="text-center mb-12 md:mb-16">
       <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Loved by Thousands of Professionals</h2>
@@ -340,7 +372,7 @@
 </section>
 
 <!-- FAQ Section -->
-<section id="faq" class="py-16 md:py-24 bg-white">
+<section *ngIf="!showNotFound" id="faq" class="py-16 md:py-24 bg-white">
   <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
     <div class="text-center mb-12 md:mb-16">
       <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
@@ -371,7 +403,7 @@
 </section>
 
 <!-- CTA Section -->
-<section class="py-16 md:py-24 bg-gradient-to-r from-primary-600 to-secondary-600 text-white">
+<section *ngIf="!showNotFound" class="py-16 md:py-24 bg-gradient-to-r from-primary-600 to-secondary-600 text-white">
   <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
     <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">Ready to Transform Your Profile Photo?</h2>
     <p class="text-xl mb-8 max-w-2xl mx-auto opacity-90">
@@ -406,7 +438,11 @@
         <h3 class="font-semibold text-lg mb-4">Product</h3>
         <ul class="space-y-2">
           <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Features</a></li>
-          <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Pricing</a></li>
+          <li>
+            <a (click)="navigateToPricing()" class="cursor-pointer text-gray-400 hover:text-white transition-colors">
+              Pricing
+            </a>
+          </li>
           <li><a href="#" class="text-gray-400 hover:text-white transition-colors">API</a></li>
           <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Integrations</a></li>
         </ul>
@@ -427,8 +463,12 @@
       <div>
         <h3 class="font-semibold text-lg mb-4">Legal</h3>
         <ul class="space-y-2">
-          <li><a routerLink="/privacy" class="text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
-          <li><a routerLink="/terms" class="text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
+          <li>
+            <a routerLink="/legal/privacy" class="text-gray-400 hover:text-white transition-colors">Privacy Policy</a>
+          </li>
+          <li>
+            <a routerLink="/legal/terms" class="text-gray-400 hover:text-white transition-colors">Terms of Service</a>
+          </li>
           <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Cookie Policy</a></li>
           <li><a href="#" class="text-gray-400 hover:text-white transition-colors">GDPR</a></li>
         </ul>
