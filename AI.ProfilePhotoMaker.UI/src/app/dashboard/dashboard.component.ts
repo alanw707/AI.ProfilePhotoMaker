@@ -1,4 +1,4 @@
-import { Component, Injector, OnDestroy, OnInit, ChangeDetectorRef } from '@angular/core';
+import { ChangeDetectorRef, Component, Injector, OnDestroy, OnInit } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -120,7 +120,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     switch (event.action) {
       case 'purchase':
       case 'viewPackages':
-        this.router.navigate(['/packages']);
+        this.router.navigate(['/app/packages']);
         break;
       case 'upgrade':
         this.router.navigate(['/premium']);
@@ -151,7 +151,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     if (!this.authService.isAuthenticated()) {
-      this.router.navigate(['/login']);
+      this.router.navigate(['/auth/login']);
       return;
     }
 
@@ -461,7 +461,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       "Training and generation will continue. We'll email you when your photos are ready."
     );
     // Navigate to gallery with refresh parameter to force reload
-    this.router.navigate(['/gallery'], {
+    this.router.navigate(['/app/gallery'], {
       queryParams: { refresh: Date.now() },
     });
   }

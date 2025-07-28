@@ -1,9 +1,11 @@
-import { Component, OnInit, HostListener, ViewChild, ElementRef } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router, ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
-import { trigger, state, style, transition, animate } from '@angular/animations';
+import { animate, state, style, transition, trigger } from '@angular/animations';
+import { Observable, Subscription } from 'rxjs';
 import { NavigationService } from '../../services/navigation.service';
+import { ThemeService } from '../../services/theme.service';
 
 interface Plan {
   name: string;
@@ -49,7 +51,7 @@ interface FAQ {
     ]),
   ],
 })
-export class LandingComponent implements OnInit {
+export class LandingComponent implements OnInit, OnDestroy {
   isScrolled = false;
   mobileMenuOpen = false;
   currentBeforeAfterIndex = 0;
@@ -59,6 +61,10 @@ export class LandingComponent implements OnInit {
   newsletterEmail = '';
   showThankYou = false;
   showNotFound = false;
+
+  // Theme-related properties
+  currentTheme$!: Observable<string>;
+  private themeSubscription: Subscription = new Subscription();
 
   @ViewChild('comparisonSlider') comparisonSlider!: ElementRef;
 
@@ -224,10 +230,13 @@ export class LandingComponent implements OnInit {
   constructor(
     private meta: Meta,
     private title: Title,
-    private router: Router,
+    public router: Router,
     private route: ActivatedRoute,
-    public navigation: NavigationService
-  ) {}
+    public navigation: NavigationService,
+    public themeService: ThemeService
+  ) {
+    this.currentTheme$ = this.themeService.theme$;
+  }
 
   ngOnInit(): void {
     this.setupSEO();
@@ -235,6 +244,14 @@ export class LandingComponent implements OnInit {
     this.startTestimonialRotation();
     this.observeElements();
     this.handleRouteData();
+  }
+
+  ngOnDestroy(): void {
+    this.themeSubscription.unsubscribe();
+  }
+
+  toggleTheme(): void {
+    this.themeService.toggleTheme();
   }
 
   setupSEO(): void {
@@ -427,7 +444,9 @@ export class LandingComponent implements OnInit {
   }
 
   moveComparison(event: MouseEvent | TouchEvent): void {
-    if (!this.isComparisonDragging) return;
+    if (!this.isComparisonDragging) {
+      return;
+    }
     this.updateComparisonPosition(event);
   }
 
@@ -436,7 +455,9 @@ export class LandingComponent implements OnInit {
   }
 
   updateComparisonPosition(event: MouseEvent | TouchEvent): void {
-    if (!this.comparisonSlider) return;
+    if (!this.comparisonSlider) {
+      return;
+    }
 
     const rect = this.comparisonSlider.nativeElement.getBoundingClientRect();
     const x = event instanceof MouseEvent ? event.clientX : event.touches[0].clientX;

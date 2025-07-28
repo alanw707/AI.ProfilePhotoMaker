@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -84,7 +84,7 @@ export class SettingsComponent implements OnInit {
     // Check authentication first
     if (!this.authService.isAuthenticated()) {
       console.log('Not authenticated, redirecting to login');
-      this.router.navigate(['/login']);
+      this.router.navigate(['/auth/login']);
       return;
     }
 
@@ -387,7 +387,7 @@ export class SettingsComponent implements OnInit {
         // Log out user immediately
         setTimeout(() => {
           this.authService.logout();
-          this.router.navigate(['/login']);
+          this.router.navigate(['/auth/login']);
         }, 2000);
       } else {
         throw new Error(response?.error?.message || 'Failed to delete account');
@@ -538,7 +538,9 @@ export class SettingsComponent implements OnInit {
 
   // Helper method to format data size in human-readable format
   formatDataSize(bytes: number): string {
-    if (bytes === 0) return '0 MB';
+    if (bytes === 0) {
+      return '0 MB';
+    }
 
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -570,7 +572,7 @@ export class SettingsComponent implements OnInit {
       // Method 1: Check training status endpoint
       try {
         const trainingStatus = await this.fileUploadService.getTrainingStatus().toPromise();
-        if (trainingStatus && trainingStatus.hasTrainedModel) {
+        if (trainingStatus?.hasTrainedModel) {
           hasTrainedModel = true;
           statusSources.push('training-status');
           console.log('✅ Model found via training-status endpoint:', trainingStatus);

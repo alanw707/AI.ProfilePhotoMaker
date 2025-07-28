@@ -188,7 +188,7 @@ export class ConfigService {
    * @param thumbnail - Whether to request thumbnail size (if supported)
    * @returns Complete upload URL
    */
-  buildUploadUrl(imagePath: string, thumbnail: boolean = false): string {
+  buildUploadUrl(imagePath: string, thumbnail = false): string {
     const url = this.buildStaticFileUrl(imagePath, 'uploads');
     // Future: Add thumbnail parameter when backend supports it
     // if (thumbnail) url += '?size=thumbnail';

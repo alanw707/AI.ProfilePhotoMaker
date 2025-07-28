@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpEventType } from '@angular/common/http';
-import { map, Observable, of, tap, catchError, mergeMap } from 'rxjs';
+import { catchError, map, mergeMap, Observable, of, tap } from 'rxjs';
 import { ConfigService } from './config.service';
 import { ImageUrlService } from './image-url.service';
 
@@ -333,7 +333,7 @@ export class FileUploadService {
 
   uploadSingleImage(
     file: File,
-    isEnhanced: boolean = true
+    isEnhanced = true
   ): Observable<{
     progress: number;
     response?: { success: boolean; data: { url: string; fileName: string } };
@@ -342,7 +342,7 @@ export class FileUploadService {
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type,
-      isEnhanced: isEnhanced,
+      isEnhanced,
     });
 
     const formData = new FormData();

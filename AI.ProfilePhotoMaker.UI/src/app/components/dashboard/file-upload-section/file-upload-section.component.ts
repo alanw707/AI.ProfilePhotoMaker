@@ -786,7 +786,9 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
   // Apply comprehensive theme-aware inline styles to modal content elements
   private applyModalContentStyles(): void {
-    if (!this.modalElement) return;
+    if (!this.modalElement) {
+      return;
+    }
 
     // Detect theme (default to dark if not found)
     const isDarkTheme =
@@ -1250,7 +1252,9 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
   // Truncate filename for better card layout consistency (kept for compatibility)
   truncateFilename(filename: string): string {
-    if (!filename) return '';
+    if (!filename) {
+      return '';
+    }
 
     // Extract name and extension
     const lastDotIndex = filename.lastIndexOf('.');

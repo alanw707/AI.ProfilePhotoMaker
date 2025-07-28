@@ -203,7 +203,9 @@ export class ImageValidationService {
 
   private isCacheValid(url: string): boolean {
     const cached = this.validationCache.get(url) as any;
-    if (!cached) return false;
+    if (!cached) {
+      return false;
+    }
 
     const age = Date.now() - (cached.timestamp || 0);
     return age < this.CACHE_TTL;
@@ -279,7 +281,9 @@ export class ImageValidationService {
    * Skips validation for relative URLs and known-good patterns to improve performance
    */
   private shouldSkipValidation(url: string): boolean {
-    if (!url) return true;
+    if (!url) {
+      return true;
+    }
 
     // Skip validation for relative URLs (they go through proxy)
     if (
@@ -303,7 +307,9 @@ export class ImageValidationService {
    * Fixes the architectural issue where frontend URLs don't route through the backend
    */
   private correctImageUrl(url: string): string {
-    if (!url) return url;
+    if (!url) {
+      return url;
+    }
 
     // If it's already a relative path, keep it as is
     if (url.startsWith('/')) {

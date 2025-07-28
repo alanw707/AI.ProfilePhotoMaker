@@ -131,7 +131,7 @@ import { NotificationService } from '../../services/notification.service';
                   >
                 </div>
               </div>
-              <button class="btn btn-primary" routerLink="/dashboard">
+              <button class="btn btn-primary" routerLink="/app/dashboard">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <rect x="3" y="3" width="7" height="9" stroke="currentColor" stroke-width="2" />
                   <rect x="13" y="3" width="8" height="5" stroke="currentColor" stroke-width="2" />
@@ -191,6 +191,6 @@ export class PremiumComponent implements OnInit {
     );
 
     // Redirect to dashboard to start the workflow
-    this.router.navigate(['/dashboard']);
+    this.router.navigate(['/app/dashboard']);
   }
 }

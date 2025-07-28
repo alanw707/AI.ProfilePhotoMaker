@@ -1,6 +1,5 @@
 <!-- Credit Display Component -->
 <div class="credit-display-container">
-  
   <!-- Loading State -->
   <div class="credits-loading" *ngIf="isLoading">
     <div class="credits-info-card">
@@ -23,7 +22,7 @@
       <div class="credits-actions" *ngIf="showSettingsHint">
         <button class="btn btn-sm btn-outline" (click)="onCreditAction('viewPackages', 'settings-hint')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2L3.09 8.26L12 22L20.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M12 2L3.09 8.26L12 22L20.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" fill="none" />
           </svg>
           Get More
         </button>
@@ -71,7 +70,8 @@
         </div>
       </div>
       <p class="cost-note" *ngIf="hasEnoughCredits">
-        <strong>{{ remainingCredits }}</strong> credits will remain after this operation
+        <strong>{{ remainingCredits }}</strong>
+        credits will remain after this operation
       </p>
     </div>
   </div>
@@ -84,8 +84,11 @@
         <h5>Insufficient Credits</h5>
       </div>
       <p>
-        You need <strong>{{ requiredCredits }}</strong> credits but only have <strong>{{ getTotalAvailableCredits() }}</strong>. 
-        Please purchase more credits to continue.
+        You need
+        <strong>{{ requiredCredits }}</strong>
+        credits but only have
+        <strong>{{ getTotalAvailableCredits() }}</strong>
+        . Please purchase more credits to continue.
       </p>
       <button class="btn btn-primary" (click)="onCreditAction('purchase', 'insufficient-credits')">
         Purchase Credits
@@ -104,9 +107,7 @@
           <button class="btn btn-primary" (click)="onCreditAction('purchase', 'get-started')">
             View Credit Packages
           </button>
-          <button class="btn btn-outline" routerLink="/enhance">
-            Try Basic Enhancement
-          </button>
+          <button class="btn btn-outline" routerLink="/app/enhance">Try Basic Enhancement</button>
         </div>
       </div>
     </div>
@@ -122,5 +123,4 @@
       </div>
     </div>
   </div>
-
 </div>

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Router, NavigationEnd } from '@angular/router';
+import { NavigationEnd, Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { filter } from 'rxjs/operators';
 
@@ -65,7 +65,7 @@ export class NavigationService {
   /**
    * Navigate back to the previous page or fallback route
    */
-  goBack(fallbackRoute: string = '/'): void {
+  goBack(fallbackRoute = '/'): void {
     if (this.navigationHistory.length > 1) {
       // Go to the previous page in our history
       const previousUrl = this.navigationHistory[1];
@@ -163,7 +163,7 @@ export class NavigationService {
   /**
    * Scroll to section with smooth animation
    */
-  scrollToSection(sectionId: string, offset: number = 80): void {
+  scrollToSection(sectionId: string, offset = 80): void {
     setTimeout(() => {
       const element = document.getElementById(sectionId);
       if (element) {

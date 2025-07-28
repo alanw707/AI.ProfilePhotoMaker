@@ -103,19 +103,19 @@ export class DashboardStateService implements IDashboardStateService {
       profile: this.profileService.getCurrentUserProfile().pipe(
         catchError(error => {
           console.warn('⚠️ Profile API failed:', error);
-          return of({ success: false, data: null, error: error });
+          return of({ success: false, data: null, error });
         })
       ),
       creditStatus: this.creditService.getCreditStatus().pipe(
         catchError(error => {
           console.warn('⚠️ Credit Status API failed:', error);
-          return of({ success: false, data: null, error: error });
+          return of({ success: false, data: null, error });
         })
       ),
       userImages: this.fileUploadService.getUserImages().pipe(
         catchError(error => {
           console.warn('⚠️ User Images API failed:', error);
-          return of({ success: false, data: null, error: error });
+          return of({ success: false, data: null, error });
         })
       ),
     }).subscribe({
@@ -201,7 +201,7 @@ export class DashboardStateService implements IDashboardStateService {
       .pipe(
         catchError(error => {
           console.warn('⚠️ Internal Credit Status API failed:', error);
-          return of({ success: false, data: null, error: error });
+          return of({ success: false, data: null, error });
         })
       )
       .subscribe({
@@ -282,19 +282,19 @@ export class DashboardStateService implements IDashboardStateService {
       profile: this.profileService.getCurrentUserProfile().pipe(
         catchError(error => {
           console.warn('⚠️ Profile API failed:', error);
-          return of({ success: false, data: null, error: error });
+          return of({ success: false, data: null, error });
         })
       ),
       creditStatus: this.creditService.getCreditStatus().pipe(
         catchError(error => {
           console.warn('⚠️ Credit Status API failed:', error);
-          return of({ success: false, data: null, error: error });
+          return of({ success: false, data: null, error });
         })
       ),
       userImages: this.fileUploadService.getUserImages().pipe(
         catchError(error => {
           console.warn('⚠️ User Images API failed:', error);
-          return of({ success: false, data: null, error: error });
+          return of({ success: false, data: null, error });
         })
       ),
     };
@@ -304,7 +304,7 @@ export class DashboardStateService implements IDashboardStateService {
       apiCalls.credits = this.replicateService.getCredits().pipe(
         catchError(error => {
           console.warn('⚠️ Credits API failed (TestController disabled):', error);
-          return of({ success: false, data: null, error: error });
+          return of({ success: false, data: null, error });
         })
       );
     } else {
@@ -590,7 +590,7 @@ export class DashboardStateService implements IDashboardStateService {
       modelRequests: this.fileUploadService.getUserModelRequests().pipe(
         catchError(error => {
           console.warn('⚠️ Model Requests API failed:', error);
-          return of({ success: false, data: null, error: error });
+          return of({ success: false, data: null, error });
         })
       ),
     }).subscribe({
@@ -669,7 +669,7 @@ export class DashboardStateService implements IDashboardStateService {
       .pipe(
         catchError(error => {
           console.warn('⚠️ User Images refresh failed:', error);
-          return of({ success: false, data: null, error: error });
+          return of({ success: false, data: null, error });
         })
       )
       .subscribe({

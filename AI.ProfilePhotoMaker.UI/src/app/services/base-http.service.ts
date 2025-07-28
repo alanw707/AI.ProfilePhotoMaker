@@ -21,7 +21,7 @@ export interface ApiResponse<T = any> {
  * Configuration options for HTTP requests
  */
 export interface RequestOptions {
-  headers?: HttpHeaders | { [header: string]: string | string[] };
+  headers?: HttpHeaders | Record<string, string | string[]>;
   withCredentials?: boolean;
   observe?: 'body';
   responseType?: 'json';

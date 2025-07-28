@@ -1,10 +1,10 @@
 import {
+  ChangeDetectorRef,
   Component,
   ElementRef,
   OnDestroy,
   OnInit,
   ViewChild,
-  ChangeDetectorRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -263,7 +263,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       }
     } catch (error: any) {
       console.error('Full enhancement error details:', {
-        error: error,
+        error,
         status: error.status,
         message: error.message,
         body: error.error,
@@ -440,7 +440,9 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
    * This removes the temporary image file since we now have the enhanced version from Replicate
    */
   private cleanupTemporaryImage(fileName: string): void {
-    if (!fileName) return;
+    if (!fileName) {
+      return;
+    }
 
     console.log('Cleaning up temporary enhanced image:', fileName);
 

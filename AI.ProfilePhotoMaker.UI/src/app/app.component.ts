@@ -41,7 +41,7 @@ export class AppComponent implements OnInit {
         window.history.replaceState({}, document.title, cleanUrl);
 
         // Navigate to dashboard
-        this._router.navigate(['/dashboard']);
+        this._router.navigate(['/app/dashboard']);
       } catch (error) {
         console.error('Error handling OAuth callback:', error);
       }
