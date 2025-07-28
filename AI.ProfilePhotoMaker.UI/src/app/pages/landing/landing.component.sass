@@ -1,9 +1,10 @@
 // Landing page specific styles
-// Most styling is handled by Tailwind CSS utility classes
+// Uses shared styles system for consistency with other pages
 
-// Import Tailwind base
-@tailwind base
-@tailwind components
+// Import shared styles first
+@use '../../shared/styles/index' as shared
+
+// Import Tailwind utilities (keeping for custom animations and utilities)
 @tailwind utilities
 
 // Custom animations not covered by Tailwind
@@ -139,10 +140,11 @@ html
   &.open
     max-height: 500px
 
-// Enhanced button hover effects
+// Enhanced button hover effects - softer ripple
 .cta-button
   position: relative
   overflow: hidden
+  border-radius: 8px
   
   &::before
     content: ''
@@ -152,32 +154,33 @@ html
     width: 0
     height: 0
     border-radius: 50%
-    background: rgba(255, 255, 255, 0.2)
+    background: rgba(255, 255, 255, 0.15)
     transform: translate(-50%, -50%)
-    transition: width 0.6s, height 0.6s
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), height 0.5s cubic-bezier(0.4, 0, 0.2, 1)
   
   &:hover::before
-    width: 300px
-    height: 300px
+    width: 280px
+    height: 280px
 
-// Glow button effect
+// Glow button effect - softer modern glow
 .glow-button
   position: relative
   z-index: 1
+  border-radius: 8px
   
   &::after
     content: ''
     position: absolute
-    inset: -3px
-    background: linear-gradient(45deg, #4F46E5, #7C3AED)
-    border-radius: 9999px
+    inset: -2px
+    background: linear-gradient(45deg, var(--accent-primary), var(--primary-hover))
+    border-radius: 10px
     opacity: 0
-    filter: blur(20px)
-    transition: opacity 0.3s ease
+    filter: blur(15px)
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)
     z-index: -1
   
   &:hover::after
-    opacity: 0.7
+    opacity: 0.6
 
 // Testimonial card hover effect
 .testimonial-card
@@ -194,7 +197,7 @@ html
     transform: translateY(-5px)
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1)
 
-// Pricing card recommended glow
+// Pricing card recommended glow - balanced brand colors
 .recommended-card
   position: relative
   
@@ -202,11 +205,11 @@ html
     content: ''
     position: absolute
     inset: -2px
-    background: linear-gradient(45deg, #4F46E5, #7C3AED)
-    border-radius: 1rem
+    background: linear-gradient(45deg, var(--accent-primary), var(--primary-hover))
+    border-radius: 14px
     z-index: -1
-    opacity: 0.7
-    filter: blur(10px)
+    opacity: 0.6
+    filter: blur(12px)
     animation: pulse-glow 3s ease-in-out infinite
 
 // Newsletter form styles
@@ -245,3 +248,578 @@ html
   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)
   background-size: 1000px 100%
   animation: shimmer 2s infinite
+
+// =============================================================================
+// LANDING PAGE THEMING & MODERN STYLING
+// =============================================================================
+
+// Landing page container with proper theming
+.landing-page
+  @include shared.page-container
+  min-height: 100vh
+  background: var(--bg-primary)
+  color: var(--text-primary)
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  
+  // Professional light theme container
+  :root:not([data-theme="dark"]) &
+    background: #ffffff
+  
+  // Dark theme container with enhanced readability
+  [data-theme="dark"] &
+    background: var(--bg-primary)
+    color: var(--text-primary)
+    
+    // Ensure all sections have proper dark theme backgrounds
+    section
+      background: var(--bg-primary)
+      color: var(--text-primary)
+    
+    // Global text color mapping for dark theme
+    .text-gray-900,
+    .text-gray-800,
+    h1, h2, h3, h4, h5, h6
+      color: var(--text-primary)
+      
+    .text-gray-700,
+    .text-gray-600,
+    p, span, div:not(.bg-gradient-to-r)
+      color: var(--text-secondary)
+      
+    .text-gray-500,
+    .text-gray-400
+      color: var(--text-tertiary)
+
+// Theme toggle button using shared mixin
+.theme-toggle
+  @include shared.theme-toggle-button
+
+// =============================================================================
+// HEADER THEMING
+// =============================================================================
+
+header
+  backdrop-filter: blur(20px) saturate(180%)
+  -webkit-backdrop-filter: blur(20px) saturate(180%)
+  
+  // Theme-aware header background
+  &.bg-white
+    background: var(--header-bg)
+    box-shadow: var(--shadow-soft)
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06)
+    
+    // Professional light theme header
+    :root:not([data-theme="dark"]) &
+      background: rgba(255, 255, 255, 0.98)
+      backdrop-filter: blur(20px) saturate(120%)
+      -webkit-backdrop-filter: blur(20px) saturate(120%)
+  
+  &.bg-transparent
+    // Add subtle visual distinction even when transparent
+    background: rgba(255, 255, 255, 0.75)
+    backdrop-filter: blur(12px) saturate(150%)
+    -webkit-backdrop-filter: blur(12px) saturate(150%)
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04)
+    
+    // Dark theme transparent header
+    [data-theme="dark"] &
+      background: rgba(30, 41, 59, 0.85)
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08)
+
+  // Navigation link hover color
+  .text-gray-700:hover
+    color: var(--accent-primary)
+
+// =============================================================================
+// HERO SECTION THEMING
+// =============================================================================
+
+// Modern hero badge with theme support and proper contrast
+.hero-badge
+  background: var(--primary-bg-light)
+  color: var(--accent-primary)
+  border: 1px solid rgba(var(--primary-rgb), 0.2)
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  font-weight: 500
+  
+  // Dark theme with enhanced visibility and glass morphism
+  [data-theme="dark"] &
+    background: rgba(var(--primary-rgb), 0.15)
+    color: var(--accent-primary)
+    border: 1px solid rgba(var(--primary-rgb), 0.3)
+    backdrop-filter: blur(8px)
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1)
+  
+  // Light theme subtle enhancement
+  :root:not([data-theme="dark"]) &
+    background: var(--primary-bg-light)
+    border: 1px solid rgba(var(--primary-rgb), 0.15)
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02)
+
+.hero-section
+  background: var(--hero-bg)
+  position: relative
+  
+  // Dark theme sophisticated gradient
+  [data-theme="dark"] &
+    background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%)
+    
+    // Enhanced text shadows for better contrast on gradient backgrounds
+    h1, h2, h3, h4, h5, h6
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3)
+  
+  // Light theme enhanced sophisticated gradient
+  :root:not([data-theme="dark"]) &
+    background: var(--hero-bg)
+
+  // Background decoration theming
+  .bg-primary-200
+    background: rgba(var(--primary-rgb), 0.2)
+  
+  .bg-secondary-200  
+    background: rgba(var(--primary-rgb), 0.15)
+
+// =============================================================================
+// CARD THEMING & ENHANCEMENTS
+// =============================================================================
+
+// Feature cards with modern styling
+.feature-card
+  @include shared.card-base
+  @include shared.card-hover
+  padding: 32px 24px
+  text-align: center
+  background: var(--card-bg)
+  border: 1px solid var(--border-color)
+  transition: all 0.3s ease
+  box-shadow: var(--shadow-subtle)
+  
+  // Professional light theme styling
+  :root:not([data-theme="dark"]) &
+    background: #ffffff
+    border: 1px solid rgba(0, 0, 0, 0.08)
+    box-shadow: var(--shadow-soft)
+    
+    &:hover
+      box-shadow: var(--shadow-elegant)
+      transform: translateY(-2px)
+  
+  // Glass morphism effect for dark theme
+  [data-theme="dark"] &
+    background: rgba(var(--primary-rgb), 0.05)
+    backdrop-filter: blur(10px)
+    border: 1px solid rgba(255, 255, 255, 0.1)
+  
+  h3
+    color: var(--text-primary)
+    font-family: 'Poppins', sans-serif
+    font-weight: 600
+    margin-bottom: 12px
+  
+  p
+    color: var(--text-secondary)
+    line-height: 1.6
+
+// Pricing cards with enhanced styling
+.pricing-card
+  @include shared.card-base
+  background: var(--card-bg)
+  border: 1px solid var(--border-color)
+  padding: 32px 24px
+  text-align: center
+  transition: all 0.3s ease
+  
+  // Professional light theme styling
+  :root:not([data-theme="dark"]) &
+    background: #ffffff
+    border: 1px solid rgba(0, 0, 0, 0.08)
+    box-shadow: var(--shadow-soft)
+  
+  &.recommended
+    border: 2px solid var(--accent-primary)
+    box-shadow: var(--shadow-lg)
+    transform: translateY(-8px)
+    
+    // Subtle glow effect
+    &::before
+      content: ''
+      position: absolute
+      inset: -2px
+      background: linear-gradient(45deg, var(--accent-primary), var(--accent-secondary))
+      border-radius: inherit
+      z-index: -1
+      opacity: 0.1
+      filter: blur(20px)
+
+// =============================================================================
+// BUTTON THEMING
+// =============================================================================
+
+// Primary buttons using shared mixin
+.btn-primary, .bg-primary-600
+  @include shared.btn-primary
+  border-radius: 8px
+
+// Secondary buttons
+.btn-secondary, .bg-white.text-gray-700
+  @include shared.btn-secondary
+  border-radius: 8px
+  
+  // Professional light theme secondary buttons
+  :root:not([data-theme="dark"]) &
+    background: #ffffff
+    border: 1px solid rgba(0, 0, 0, 0.12)
+    box-shadow: var(--shadow-subtle)
+    
+    &:hover
+      box-shadow: var(--shadow-soft)
+      transform: translateY(-1px)
+      border-color: rgba(0, 0, 0, 0.16)
+
+// Modern consistent button styling - no more sharp ovals
+.landing-page
+  button,
+  .btn-primary,
+  .btn-secondary,
+  .hero-section button,
+  .pricing-card button
+    border-radius: 8px
+
+// =============================================================================
+// SECTION THEMING
+// =============================================================================
+
+// Features section with subtle blue-tinted background
+.features-section
+  background: var(--features-bg)
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  
+  // Light theme gets subtle blue-tinted background for distinction
+  :root:not([data-theme="dark"]) &
+    background: var(--features-bg)
+  
+  // Dark theme features section
+  [data-theme="dark"] &
+    background: var(--bg-secondary)
+
+// Examples section with neutral medium gray background
+.examples-section
+  background: var(--examples-bg)
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  
+  // Light theme neutral gray for content focus
+  :root:not([data-theme="dark"]) &
+    background: var(--examples-bg)
+  
+  // Dark theme examples section - explicit override
+  [data-theme="dark"] &
+    background: var(--bg-primary) !important
+  
+  // Fix heading and text colors in examples section for all themes
+  h2, .text-gray-900
+    color: var(--text-primary) !important
+    font-weight: 700 !important
+    text-shadow: none !important
+    
+  p, .text-gray-600
+    color: var(--text-secondary) !important
+  
+  // Enhanced specificity for dark theme text
+  [data-theme="dark"] &
+    h2, .text-gray-900
+      color: var(--text-primary) !important
+      font-weight: 700 !important
+      text-shadow: none !important
+      
+    p, .text-gray-600
+      color: var(--text-secondary) !important
+
+// Examples demo card with proper dark theme support
+.examples-demo-card
+  background: var(--card-bg)
+  border: 1px solid var(--border-color)
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  
+  // Light theme professional styling
+  :root:not([data-theme="dark"]) &
+    background: #ffffff
+    border: 1px solid rgba(0, 0, 0, 0.08)
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06)
+  
+  // Dark theme glass morphism styling
+  [data-theme="dark"] &
+    background: rgba(var(--primary-rgb), 0.05)
+    backdrop-filter: blur(10px)
+    border: 1px solid rgba(255, 255, 255, 0.1)
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3)
+  
+  h3
+    color: var(--text-primary)
+    transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+
+// Before photo placeholder with theme-aware styling
+.before-photo-placeholder
+  background: var(--surface-tertiary)
+  border: 1px solid var(--border-color)
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  
+  // Light theme subtle background
+  :root:not([data-theme="dark"]) &
+    background: #f3f4f6
+    border: 1px solid rgba(0, 0, 0, 0.06)
+  
+  // Dark theme enhanced contrast
+  [data-theme="dark"] &
+    background: rgba(255, 255, 255, 0.05)
+    border: 1px solid rgba(255, 255, 255, 0.1)
+  
+  span
+    color: var(--text-tertiary)
+    font-weight: 500
+    transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+
+// After photo placeholder with enhanced theming
+.after-photo-placeholder
+  background: linear-gradient(135deg, var(--primary-bg-light), var(--accent-primary))
+  background-size: 200% 200%
+  border: 1px solid rgba(var(--primary-rgb), 0.2)
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  position: relative
+  
+  // Light theme gradient
+  :root:not([data-theme="dark"]) &
+    background: linear-gradient(135deg, rgba(79, 209, 199, 0.1), rgba(59, 130, 246, 0.1))
+    border: 1px solid rgba(79, 209, 199, 0.2)
+  
+  // Dark theme enhanced gradient with glow
+  [data-theme="dark"] &
+    background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.2), rgba(59, 130, 246, 0.15))
+    border: 1px solid rgba(var(--primary-rgb), 0.3)
+    box-shadow: 0 0 20px rgba(var(--primary-rgb), 0.1)
+  
+  span
+    color: var(--accent-primary)
+    font-weight: 600
+    transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+    position: relative
+    z-index: 1
+
+// Style text with proper theming
+.examples-style-text
+  color: var(--text-secondary)
+  transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+
+// =============================================================================
+// FAQ SECTION THEMING - Softer than harsh white
+// =============================================================================
+
+.faq-section
+  background: var(--faq-bg)
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  
+  // Light theme - consistent neutral gray with examples section
+  :root:not([data-theme="dark"]) &
+    background: var(--faq-bg)
+  
+  // Dark theme - consistent with other sections
+  [data-theme="dark"] &
+    background: var(--bg-primary)
+
+// =============================================================================
+// CUSTOM FAQ STYLING - Clean Implementation
+// =============================================================================
+
+// FAQ Item Container
+.faq-item
+  background: var(--surface-secondary)
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  
+  // Light theme
+  :root:not([data-theme="dark"]) &
+    background: #f9fafb
+  
+  // Dark theme
+  [data-theme="dark"] &
+    background: rgba(var(--primary-rgb), 0.08)
+    border: 1px solid rgba(255, 255, 255, 0.1)
+
+// FAQ Button
+.faq-button
+  color: var(--text-primary)
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  
+  // Light theme hover
+  :root:not([data-theme="dark"]) &:hover
+    background: #f3f4f6
+  
+  // Dark theme hover
+  [data-theme="dark"] &:hover
+    background: rgba(var(--primary-rgb), 0.15)
+
+// FAQ Question Text
+.faq-question
+  color: var(--text-primary)
+  font-weight: 600
+
+// FAQ Icon
+.faq-icon
+  color: var(--text-secondary)
+
+// FAQ Answer Container - NO BACKGROUND INHERITANCE ISSUES
+.faq-answer
+  background: transparent
+  color: var(--text-secondary)
+  
+  // Ensure always transparent in both themes
+  :root:not([data-theme="dark"]) &
+    background: transparent
+  
+  [data-theme="dark"] &
+    background: transparent
+
+// FAQ Answer Text
+.faq-answer-text
+  color: var(--text-secondary)
+
+// Pricing section with warm primary background
+.pricing-section
+  background: var(--pricing-bg)
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  
+  // Light theme warm primary background to highlight pricing
+  :root:not([data-theme="dark"]) &
+    background: var(--pricing-bg)
+  
+  // Dark theme pricing section
+  [data-theme="dark"] &
+    background: var(--bg-primary)
+
+// Testimonials section with gradient background for premium feel
+.testimonials-section
+  background: var(--testimonials-bg)
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  
+  // Light theme gradient for premium testimonials feel
+  :root:not([data-theme="dark"]) &
+    background: var(--testimonials-bg)
+  
+  // Dark theme testimonials section  
+  [data-theme="dark"] &
+    background: var(--bg-gradient)
+
+// Footer with professional dark gray background
+.landing-footer
+  background: var(--footer-bg)
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  
+  // Light theme professional dark gray instead of harsh black
+  :root:not([data-theme="dark"]) &
+    background: var(--footer-bg)
+  
+  // Dark theme footer (can be same or darker)
+  [data-theme="dark"] &
+    background: #1a1d23
+
+// =============================================================================
+// MOBILE MENU THEMING - Glass morphism instead of harsh white
+// =============================================================================
+
+.mobile-menu
+  background: var(--card-bg)
+  border: 1px solid var(--border-color)
+  backdrop-filter: blur(20px) saturate(180%)
+  -webkit-backdrop-filter: blur(20px) saturate(180%)
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  
+  // Light theme - soft glass effect instead of harsh white
+  :root:not([data-theme="dark"]) &
+    background: rgba(255, 255, 255, 0.98)
+    border: 1px solid rgba(0, 0, 0, 0.08)
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08)
+  
+  // Dark theme - sophisticated glass morphism
+  [data-theme="dark"] &
+    background: rgba(30, 41, 59, 0.95)
+    border: 1px solid rgba(255, 255, 255, 0.1)
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4)
+
+// Before/after section with warm neutral tones
+.bg-gray-50
+  background: var(--surface-secondary)
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  
+  // Dark theme gray-50 equivalent
+  [data-theme="dark"] &
+    background: var(--bg-secondary)
+
+.bg-gray-200
+  background: var(--surface-tertiary)
+  color: var(--text-secondary)
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  
+  // Dark theme gray-200 equivalent
+  [data-theme="dark"] &
+    background: var(--bg-tertiary)
+    color: var(--text-secondary)
+
+// Testimonials section
+.testimonial-card
+  @include shared.card-base
+  @include shared.card-hover
+  background: var(--card-bg)
+  border: 1px solid var(--border-color)
+  
+  // Professional light theme styling
+  :root:not([data-theme="dark"]) &
+    background: #ffffff
+    border: 1px solid rgba(0, 0, 0, 0.08)
+    box-shadow: var(--shadow-soft)
+    
+    &:hover
+      box-shadow: var(--shadow-elegant)
+      transform: translateY(-2px)
+
+// =============================================================================
+// GLOBAL COLOR OVERRIDES
+// =============================================================================
+
+// Global text color theming with smooth transitions
+.text-gray-900
+  color: var(--text-primary)
+  transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+
+.text-gray-700
+  color: var(--text-secondary)
+  transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+
+.text-gray-600
+  color: var(--text-secondary)
+  transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+
+.text-gray-500
+  color: var(--text-tertiary)
+  transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+
+// Background color theming with smooth transitions
+.bg-white
+  background: var(--surface-primary)
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+
+.bg-gray-50
+  background: var(--surface-secondary)
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+
+// =============================================================================
+// RESPONSIVE THEMING
+// =============================================================================
+
+@media (max-width: 768px)
+  .theme-toggle
+    bottom: 16px
+    left: 16px
+    width: 44px
+    height: 44px
+    
+    svg
+      width: 18px
+      height: 18px

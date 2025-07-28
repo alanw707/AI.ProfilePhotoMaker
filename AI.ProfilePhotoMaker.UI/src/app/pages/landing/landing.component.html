@@ -1,482 +1,514 @@
-<!-- Header -->
-<header
-  class="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
-  [class.bg-white]="isScrolled"
-  [class.bg-transparent]="!isScrolled"
-  [class.shadow-lg]="isScrolled">
-  <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex justify-between items-center py-4 md:py-6">
-      <!-- Logo -->
-      <div class="flex items-center">
-        <a routerLink="/" class="flex items-center space-x-2">
-          <img src="/assets/Logo.PNG" alt="AI Profile Photo Maker" class="h-8 w-8 md:h-10 md:w-10" />
-          <span class="text-xl md:text-2xl font-bold text-gray-900">AI Profile Photo</span>
-        </a>
-      </div>
+<div class="landing-page">
+  <!-- Theme Toggle Button -->
+  <button (click)="toggleTheme()" class="theme-toggle" aria-label="Toggle theme">
+    <svg
+      *ngIf="(currentTheme$ | async) === 'light'"
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+    <svg
+      *ngIf="(currentTheme$ | async) === 'dark'"
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
+    </svg>
+  </button>
 
-      <!-- Desktop Navigation -->
-      <div class="hidden md:flex items-center space-x-8">
-        <a
-          (click)="scrollToSection('features')"
-          class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
-          Features
-        </a>
-        <a
-          (click)="scrollToSection('examples')"
-          class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
-          Examples
-        </a>
-        <a
-          (click)="scrollToSection('pricing')"
-          class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
-          Pricing
-        </a>
-        <a
-          (click)="scrollToSection('testimonials')"
-          class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
-          Reviews
-        </a>
-        <a (click)="navigateToLogin()" class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
-          Login
-        </a>
-        <button
-          (click)="getStarted()"
-          class="bg-primary-600 text-white px-6 py-2 rounded-full hover:bg-primary-700 transition-colors">
-          Get Started
-        </button>
-      </div>
-
-      <!-- Mobile Menu Button -->
-      <button (click)="toggleMobileMenu()" class="md:hidden p-2">
-        <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            *ngIf="!mobileMenuOpen"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M4 6h16M4 12h16M4 18h16"></path>
-          <path
-            *ngIf="mobileMenuOpen"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M6 18L18 6M6 6l12 12"></path>
-        </svg>
-      </button>
-    </div>
-
-    <!-- Mobile Menu -->
-    <div *ngIf="mobileMenuOpen" class="md:hidden absolute top-full left-0 right-0 bg-white shadow-lg">
-      <div class="px-4 py-6 space-y-4">
-        <a (click)="scrollToSection('features')" class="block text-gray-700 hover:text-primary-600 transition-colors">
-          Features
-        </a>
-        <a (click)="scrollToSection('examples')" class="block text-gray-700 hover:text-primary-600 transition-colors">
-          Examples
-        </a>
-        <a (click)="scrollToSection('pricing')" class="block text-gray-700 hover:text-primary-600 transition-colors">
-          Pricing
-        </a>
-        <a
-          (click)="scrollToSection('testimonials')"
-          class="block text-gray-700 hover:text-primary-600 transition-colors">
-          Reviews
-        </a>
-        <a
-          (click)="navigateToLogin()"
-          class="block cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
-          Login
-        </a>
-        <button
-          (click)="getStarted()"
-          class="w-full bg-primary-600 text-white px-6 py-3 rounded-full hover:bg-primary-700 transition-colors">
-          Get Started
-        </button>
-      </div>
-    </div>
-  </nav>
-</header>
-
-<!-- 404 Not Found Section -->
-<section
-  *ngIf="showNotFound"
-  class="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-orange-50">
-  <div class="text-center max-w-2xl mx-auto px-4">
-    <div class="text-9xl font-bold text-gray-300 mb-4">404</div>
-    <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-6">Page Not Found</h1>
-    <p class="text-xl text-gray-600 mb-8">
-      The page you're looking for doesn't exist. Let's get you back to creating amazing profile photos!
-    </p>
-    <div class="flex flex-col sm:flex-row gap-4 justify-center">
-      <button
-        (click)="router.navigate(['/'])"
-        class="bg-primary-600 text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-primary-700 transition-colors">
-        Go Home
-      </button>
-      <button
-        (click)="getStarted()"
-        class="bg-white text-primary-600 px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-50 transition-colors border border-primary-600">
-        Get Started
-      </button>
-    </div>
-  </div>
-</section>
-
-<!-- Hero Section -->
-<section
-  *ngIf="!showNotFound"
-  class="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-secondary-50 overflow-hidden">
-  <!-- Background decoration -->
-  <div class="absolute inset-0 overflow-hidden">
-    <div class="absolute -top-40 -right-40 w-80 h-80 bg-primary-200 rounded-full opacity-30 animate-float"></div>
-    <div
-      class="absolute -bottom-40 -left-40 w-96 h-96 bg-secondary-200 rounded-full opacity-30 animate-float"
-      style="animation-delay: 3s"></div>
-  </div>
-
-  <div class="container mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 relative z-10">
-    <div class="text-center max-w-5xl mx-auto">
-      <!-- Badge -->
-      <div
-        class="inline-flex items-center bg-primary-100 text-primary-700 px-4 py-2 rounded-full text-sm font-medium mb-6 animate-fade-in-up">
-        <span class="animate-pulse mr-2">🎉</span>
-        <span>Transform your photos with AI in seconds</span>
-      </div>
-
-      <!-- Main headline -->
-      <h1
-        class="text-4xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 animate-fade-in-up"
-        style="animation-delay: 0.2s">
-        Professional Profile Photos
-        <span class="bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent block mt-2">
-          Powered by AI
-        </span>
-      </h1>
-
-      <!-- Subheadline -->
-      <p
-        class="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto animate-fade-in-up"
-        style="animation-delay: 0.4s">
-        Transform your casual selfies into stunning professional headshots. Perfect for LinkedIn, resumes, dating apps,
-        and social media.
-      </p>
-
-      <!-- CTA Buttons -->
-      <div
-        class="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-fade-in-up"
-        style="animation-delay: 0.6s">
-        <button
-          (click)="getStarted()"
-          class="bg-primary-600 text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-primary-700 transform hover:scale-105 transition-all duration-200 shadow-lg">
-          Start Free Trial →
-        </button>
-        <button
-          (click)="scrollToSection('examples')"
-          class="bg-white text-gray-700 px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-50 transform hover:scale-105 transition-all duration-200 shadow-lg border border-gray-200">
-          View Examples
-        </button>
-      </div>
-
-      <!-- Trust indicators -->
-      <div
-        class="flex flex-wrap justify-center gap-6 text-sm text-gray-600 animate-fade-in-up"
-        style="animation-delay: 0.8s">
+  <!-- Header -->
+  <header
+    class="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+    [class.bg-white]="isScrolled"
+    [class.bg-transparent]="!isScrolled"
+    [class.shadow-lg]="isScrolled">
+    <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center py-4 md:py-6">
+        <!-- Logo -->
         <div class="flex items-center">
-          <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <a routerLink="/" class="flex items-center space-x-2">
+            <img src="/assets/Logo.PNG" alt="AI Profile Photo Maker" class="h-8 w-8 md:h-10 md:w-10" />
+            <span class="text-xl md:text-2xl font-bold text-gray-900">AI Profile Photo</span>
+          </a>
+        </div>
+
+        <!-- Desktop Navigation -->
+        <div class="hidden md:flex items-center space-x-8">
+          <a
+            (click)="scrollToSection('features')"
+            class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
+            Features
+          </a>
+          <a
+            (click)="scrollToSection('examples')"
+            class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
+            Examples
+          </a>
+          <a
+            (click)="scrollToSection('pricing')"
+            class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
+            Pricing
+          </a>
+          <a
+            (click)="scrollToSection('testimonials')"
+            class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
+            Reviews
+          </a>
+          <a (click)="navigateToLogin()" class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
+            Login
+          </a>
+          <button (click)="getStarted()" class="btn-primary px-6 py-2" style="border-radius: 8px !important">
+            Get Started
+          </button>
+        </div>
+
+        <!-- Mobile Menu Button -->
+        <button (click)="toggleMobileMenu()" class="md:hidden p-2">
+          <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
-              fill-rule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-              clip-rule="evenodd"></path>
-          </svg>
-          <span>No credit card required</span>
-        </div>
-        <div class="flex items-center">
-          <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              *ngIf="!mobileMenuOpen"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 6h16M4 12h16M4 18h16"></path>
             <path
-              fill-rule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-              clip-rule="evenodd"></path>
+              *ngIf="mobileMenuOpen"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"></path>
           </svg>
-          <span>2,847+ happy customers</span>
-        </div>
-        <div class="flex items-center">
-          <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fill-rule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-              clip-rule="evenodd"></path>
-          </svg>
-          <span>100% privacy guaranteed</span>
-        </div>
+        </button>
       </div>
-    </div>
-  </div>
-</section>
 
-<!-- Features Section -->
-<section *ngIf="!showNotFound" id="features" class="py-16 md:py-24 bg-white">
-  <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="text-center mb-12 md:mb-16">
-      <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Why Choose AI Profile Photo Maker?</h2>
-      <p class="text-xl text-gray-600 max-w-3xl mx-auto">
-        Our advanced AI technology ensures you get professional-quality photos every time
-      </p>
-    </div>
-
-    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-      <div
-        *ngFor="let feature of features"
-        class="bg-gray-50 rounded-2xl p-8 hover:shadow-lg transition-shadow duration-300">
-        <div class="text-4xl mb-4">{{ feature.icon }}</div>
-        <h3 class="text-xl font-semibold text-gray-900 mb-3">{{ feature.title }}</h3>
-        <p class="text-gray-600">{{ feature.description }}</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Before/After Examples Section -->
-<section *ngIf="!showNotFound" id="examples" class="py-16 md:py-24 bg-gradient-to-br from-gray-50 to-white">
-  <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="text-center mb-12 md:mb-16">
-      <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">See the AI Magic in Action</h2>
-      <p class="text-xl text-gray-600 max-w-3xl mx-auto">Real transformations from our satisfied customers</p>
-    </div>
-
-    <!-- Placeholder for before/after slider -->
-    <div class="max-w-4xl mx-auto">
-      <div class="bg-white rounded-2xl shadow-xl p-8">
-        <div class="grid md:grid-cols-2 gap-8">
-          <div class="text-center">
-            <h3 class="text-lg font-semibold text-gray-700 mb-4">Before</h3>
-            <div class="bg-gray-200 rounded-lg aspect-square flex items-center justify-center">
-              <span class="text-gray-500">Casual Photo</span>
-            </div>
-          </div>
-          <div class="text-center">
-            <h3 class="text-lg font-semibold text-gray-700 mb-4">After</h3>
-            <div
-              class="bg-gradient-to-br from-primary-100 to-secondary-100 rounded-lg aspect-square flex items-center justify-center">
-              <span class="text-gray-700">Professional Result</span>
-            </div>
-          </div>
-        </div>
-        <div class="text-center mt-6">
-          <p class="text-gray-600 font-medium">{{ beforeAfterExamples[currentBeforeAfterIndex].style }}</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Pricing Section -->
-<section *ngIf="!showNotFound" id="pricing" class="py-16 md:py-24 bg-white">
-  <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="text-center mb-12 md:mb-16">
-      <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
-      <p class="text-xl text-gray-600 max-w-3xl mx-auto">
-        Choose the perfect plan for your needs. No hidden fees, cancel anytime.
-      </p>
-    </div>
-
-    <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-      <div
-        *ngFor="let plan of plans"
-        class="relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300"
-        [class.ring-2]="plan.recommended"
-        [class.ring-primary-500]="plan.recommended">
-        <!-- Recommended badge -->
-        <div *ngIf="plan.recommended" class="absolute -top-5 left-1/2 transform -translate-x-1/2">
-          <span class="bg-primary-500 text-white px-4 py-1 rounded-full text-sm font-semibold">Most Popular</span>
-        </div>
-
-        <div class="p-8">
-          <h3 class="text-2xl font-bold text-gray-900 mb-2">{{ plan.name }}</h3>
-          <p class="text-gray-600 mb-6">{{ plan.creditCount }}</p>
-
-          <div class="mb-6">
-            <span class="text-4xl font-bold text-gray-900">{{ plan.price }}</span>
-            <span *ngIf="plan.originalPrice" class="text-lg text-gray-500 line-through ml-2">
-              {{ plan.originalPrice }}
-            </span>
-            <span class="text-gray-600">/one-time</span>
-          </div>
-
-          <ul class="space-y-3 mb-8">
-            <li *ngFor="let feature of plan.features" class="flex items-start">
-              <svg class="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fill-rule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clip-rule="evenodd"></path>
-              </svg>
-              <span class="text-gray-700">{{ feature }}</span>
-            </li>
-          </ul>
-
-          <button
-            (click)="getStarted()"
-            class="w-full py-3 rounded-full font-semibold transition-all duration-200"
-            [class.bg-primary-600]="plan.recommended"
-            [class.text-white]="plan.recommended"
-            [class.hover:bg-primary-700]="plan.recommended"
-            [class.bg-gray-100]="!plan.recommended"
-            [class.text-gray-700]="!plan.recommended"
-            [class.hover:bg-gray-200]="!plan.recommended">
+      <!-- Mobile Menu -->
+      <div *ngIf="mobileMenuOpen" class="mobile-menu md:hidden absolute top-full left-0 right-0 shadow-lg">
+        <div class="px-4 py-6 space-y-4">
+          <a (click)="scrollToSection('features')" class="block text-gray-700 hover:text-primary-600 transition-colors">
+            Features
+          </a>
+          <a (click)="scrollToSection('examples')" class="block text-gray-700 hover:text-primary-600 transition-colors">
+            Examples
+          </a>
+          <a (click)="scrollToSection('pricing')" class="block text-gray-700 hover:text-primary-600 transition-colors">
+            Pricing
+          </a>
+          <a
+            (click)="scrollToSection('testimonials')"
+            class="block text-gray-700 hover:text-primary-600 transition-colors">
+            Reviews
+          </a>
+          <a
+            (click)="navigateToLogin()"
+            class="block cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
+            Login
+          </a>
+          <button (click)="getStarted()" class="btn-primary w-full px-6 py-3" style="border-radius: 8px !important">
             Get Started
           </button>
         </div>
       </div>
-    </div>
-  </div>
-</section>
+    </nav>
+  </header>
 
-<!-- Testimonials Section -->
-<section *ngIf="!showNotFound" id="testimonials" class="py-16 md:py-24 bg-gradient-to-br from-gray-50 to-white">
-  <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="text-center mb-12 md:mb-16">
-      <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Loved by Thousands of Professionals</h2>
-      <p class="text-xl text-gray-600 max-w-3xl mx-auto">
-        Join 2,847+ satisfied customers who've transformed their profile photos
+  <!-- 404 Not Found Section -->
+  <section
+    *ngIf="showNotFound"
+    class="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-orange-50">
+    <div class="text-center max-w-2xl mx-auto px-4">
+      <div class="text-9xl font-bold text-gray-300 mb-4">404</div>
+      <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-6">Page Not Found</h1>
+      <p class="text-xl text-gray-600 mb-8">
+        The page you're looking for doesn't exist. Let's get you back to creating amazing profile photos!
       </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <button
+          (click)="router.navigate(['/'])"
+          class="btn-primary px-8 py-4 text-lg font-semibold"
+          style="border-radius: 8px !important">
+          Go Home
+        </button>
+        <button
+          (click)="getStarted()"
+          class="btn-secondary px-8 py-4 text-lg font-semibold"
+          style="border-radius: 8px !important">
+          Get Started
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Hero Section -->
+  <section
+    *ngIf="!showNotFound"
+    class="hero-section relative min-h-screen flex items-center justify-center overflow-hidden">
+    <!-- Background decoration -->
+    <div class="absolute inset-0 overflow-hidden">
+      <div
+        class="hero-decoration-1 absolute -top-40 -right-40 w-80 h-80 bg-primary-200 rounded-3xl opacity-30 animate-float"></div>
+      <div
+        class="hero-decoration-2 absolute -bottom-40 -left-40 w-96 h-96 bg-secondary-200 rounded-3xl opacity-30 animate-float"
+        style="animation-delay: 3s"></div>
     </div>
 
-    <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-      <div
-        *ngFor="let testimonial of testimonials"
-        class="bg-white rounded-2xl shadow-lg p-8 hover:shadow-xl transition-shadow duration-300">
-        <div class="flex items-center mb-4">
-          <div class="text-4xl mr-4">{{ testimonial.avatar }}</div>
-          <div>
-            <h4 class="font-semibold text-gray-900">{{ testimonial.name }}</h4>
-            <p class="text-sm text-gray-600">{{ testimonial.role }}</p>
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 relative z-10">
+      <div class="text-center max-w-5xl mx-auto">
+        <!-- Badge -->
+        <div
+          class="hero-badge inline-flex items-center px-6 py-3 rounded-xl text-sm font-medium mb-6 animate-fade-in-up">
+          <span class="animate-pulse mr-2">🎉</span>
+          <span>Transform your photos with AI in seconds</span>
+        </div>
+
+        <!-- Main headline -->
+        <h1 class="text-4xl md:text-6xl lg:text-7xl font-bold animate-fade-in-up" style="animation-delay: 0.2s">
+          <span class="bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent block mb-6">
+            The Most Realistic AI Generated Profile Photos
+          </span>
+        </h1>
+
+        <!-- Subheadline -->
+        <p
+          class="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto animate-fade-in-up"
+          style="animation-delay: 0.4s">
+          Transform your casual selfies into stunning professional headshots. Perfect for LinkedIn, resumes, dating
+          apps, and social media.
+        </p>
+
+        <!-- CTA Buttons -->
+        <div
+          class="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-fade-in-up"
+          style="animation-delay: 0.6s">
+          <button
+            (click)="getStarted()"
+            class="btn-primary px-8 py-4 text-lg font-semibold transform hover:scale-105 transition-all duration-200 shadow-lg"
+            style="border-radius: 8px !important">
+            Start Free Trial →
+          </button>
+          <button
+            (click)="scrollToSection('examples')"
+            class="btn-secondary px-8 py-4 text-lg font-semibold transform hover:scale-105 transition-all duration-200 shadow-lg"
+            style="border-radius: 8px !important">
+            View Examples
+          </button>
+        </div>
+
+        <!-- Trust indicators -->
+        <div
+          class="flex flex-wrap justify-center gap-6 text-sm text-gray-600 animate-fade-in-up"
+          style="animation-delay: 0.8s">
+          <div class="flex items-center">
+            <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <span>No credit card required</span>
+          </div>
+          <div class="flex items-center">
+            <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <span>2,847+ happy customers</span>
+          </div>
+          <div class="flex items-center">
+            <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <span>100% privacy guaranteed</span>
           </div>
         </div>
-
-        <!-- Star rating -->
-        <div class="flex mb-4">
-          <svg
-            *ngFor="let star of [1, 2, 3, 4, 5]"
-            class="w-5 h-5 text-yellow-400"
-            fill="currentColor"
-            viewBox="0 0 20 20">
-            <path
-              d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-          </svg>
-        </div>
-
-        <p class="text-gray-700 italic">"{{ testimonial.content }}"</p>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- FAQ Section -->
-<section *ngIf="!showNotFound" id="faq" class="py-16 md:py-24 bg-white">
-  <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
-    <div class="text-center mb-12 md:mb-16">
-      <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
-      <p class="text-xl text-gray-600">Everything you need to know about AI Profile Photo Maker</p>
-    </div>
+  <!-- Features Section -->
+  <section *ngIf="!showNotFound" id="features" class="features-section py-16 md:py-24">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-12 md:mb-16">
+        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+          Why Choose AI Profile Photo Maker?
+        </h2>
+        <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+          Our advanced AI technology ensures you get professional-quality photos every time
+        </p>
+      </div>
 
-    <div class="space-y-4">
-      <div *ngFor="let faq of faqs; let i = index" class="bg-gray-50 rounded-lg overflow-hidden">
-        <button
-          (click)="toggleFAQ(i)"
-          class="w-full px-6 py-4 text-left flex justify-between items-center hover:bg-gray-100 transition-colors">
-          <span class="font-semibold text-gray-900">{{ faq.question }}</span>
-          <svg
-            class="w-5 h-5 text-gray-500 transform transition-transform duration-200"
-            [class.rotate-180]="faq.open"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-          </svg>
-        </button>
-        <div *ngIf="faq.open" class="px-6 pb-4">
-          <p class="text-gray-700">{{ faq.answer }}</p>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div *ngFor="let feature of features" class="feature-card">
+          <div class="text-4xl mb-4">{{ feature.icon }}</div>
+          <h3 class="text-xl font-semibold mb-3">{{ feature.title }}</h3>
+          <p>{{ feature.description }}</p>
         </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- CTA Section -->
-<section *ngIf="!showNotFound" class="py-16 md:py-24 bg-gradient-to-r from-primary-600 to-secondary-600 text-white">
-  <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-    <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">Ready to Transform Your Profile Photo?</h2>
-    <p class="text-xl mb-8 max-w-2xl mx-auto opacity-90">
-      Join thousands of professionals who've upgraded their online presence with AI-enhanced photos
-    </p>
-    <button
-      (click)="getStarted()"
-      class="bg-white text-primary-600 px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg">
-      Start Your Free Trial Now →
-    </button>
-    <p class="mt-4 opacity-75">No credit card required • 3 free photos</p>
-  </div>
-</section>
-
-<!-- Footer -->
-<footer class="bg-gray-900 text-white py-12">
-  <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="grid md:grid-cols-4 gap-8 mb-8">
-      <!-- Company -->
-      <div>
-        <h3 class="font-semibold text-lg mb-4">Company</h3>
-        <ul class="space-y-2">
-          <li><a href="#" class="text-gray-400 hover:text-white transition-colors">About Us</a></li>
-          <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Careers</a></li>
-          <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Press</a></li>
-          <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Contact</a></li>
-        </ul>
+  <!-- Before/After Examples Section -->
+  <section *ngIf="!showNotFound" id="examples" class="examples-section py-16 md:py-24">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-12 md:mb-16">
+        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">See the AI Magic in Action</h2>
+        <p class="text-xl text-gray-600 max-w-3xl mx-auto">Real transformations from our satisfied customers</p>
       </div>
 
-      <!-- Product -->
-      <div>
-        <h3 class="font-semibold text-lg mb-4">Product</h3>
-        <ul class="space-y-2">
-          <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Features</a></li>
-          <li>
-            <a (click)="navigateToPricing()" class="cursor-pointer text-gray-400 hover:text-white transition-colors">
-              Pricing
-            </a>
-          </li>
-          <li><a href="#" class="text-gray-400 hover:text-white transition-colors">API</a></li>
-          <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Integrations</a></li>
-        </ul>
-      </div>
-
-      <!-- Resources -->
-      <div>
-        <h3 class="font-semibold text-lg mb-4">Resources</h3>
-        <ul class="space-y-2">
-          <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Blog</a></li>
-          <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Help Center</a></li>
-          <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Tutorials</a></li>
-          <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Status</a></li>
-        </ul>
-      </div>
-
-      <!-- Legal -->
-      <div>
-        <h3 class="font-semibold text-lg mb-4">Legal</h3>
-        <ul class="space-y-2">
-          <li>
-            <a routerLink="/legal/privacy" class="text-gray-400 hover:text-white transition-colors">Privacy Policy</a>
-          </li>
-          <li>
-            <a routerLink="/legal/terms" class="text-gray-400 hover:text-white transition-colors">Terms of Service</a>
-          </li>
-          <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Cookie Policy</a></li>
-          <li><a href="#" class="text-gray-400 hover:text-white transition-colors">GDPR</a></li>
-        </ul>
+      <!-- Placeholder for before/after slider -->
+      <div class="max-w-4xl mx-auto">
+        <div class="examples-demo-card rounded-2xl shadow-xl p-8">
+          <div class="grid md:grid-cols-2 gap-8">
+            <div class="text-center">
+              <h3 class="text-lg font-semibold mb-4">Before</h3>
+              <div class="before-photo-placeholder rounded-lg aspect-square flex items-center justify-center">
+                <span>Casual Photo</span>
+              </div>
+            </div>
+            <div class="text-center">
+              <h3 class="text-lg font-semibold mb-4">After</h3>
+              <div class="after-photo-placeholder rounded-lg aspect-square flex items-center justify-center">
+                <span>Professional Result</span>
+              </div>
+            </div>
+          </div>
+          <div class="text-center mt-6">
+            <p class="examples-style-text font-medium">{{ beforeAfterExamples[currentBeforeAfterIndex].style }}</p>
+          </div>
+        </div>
       </div>
     </div>
+  </section>
 
-    <div class="border-t border-gray-800 pt-8 text-center">
-      <p class="text-gray-400">© 2024 AI Profile Photo Maker. All rights reserved.</p>
+  <!-- Pricing Section -->
+  <section *ngIf="!showNotFound" id="pricing" class="pricing-section py-16 md:py-24">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-12 md:mb-16">
+        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
+        <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+          Choose the perfect plan for your needs. No hidden fees, cancel anytime.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div *ngFor="let plan of plans" class="pricing-card relative" [class.recommended]="plan.recommended">
+          <!-- Recommended badge -->
+          <div *ngIf="plan.recommended" class="absolute -top-5 left-1/2 transform -translate-x-1/2">
+            <span
+              class="px-4 py-1 rounded-xl text-sm font-semibold text-white"
+              style="background: var(--accent-primary)">
+              Most Popular
+            </span>
+          </div>
+
+          <div class="p-8">
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">{{ plan.name }}</h3>
+            <p class="text-gray-600 mb-6">{{ plan.creditCount }}</p>
+
+            <div class="mb-6">
+              <span class="text-4xl font-bold text-gray-900">{{ plan.price }}</span>
+              <span *ngIf="plan.originalPrice" class="text-lg text-gray-500 line-through ml-2">
+                {{ plan.originalPrice }}
+              </span>
+              <span class="text-gray-600">/one-time</span>
+            </div>
+
+            <ul class="space-y-3 mb-8">
+              <li *ngFor="let feature of plan.features" class="flex items-start">
+                <svg class="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path
+                    fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clip-rule="evenodd"></path>
+                </svg>
+                <span class="text-gray-700">{{ feature }}</span>
+              </li>
+            </ul>
+
+            <button
+              (click)="getStarted()"
+              class="w-full py-3 font-semibold transition-all duration-200"
+              [class]="plan.recommended ? 'btn-primary' : 'btn-secondary'"
+              style="border-radius: 8px !important">
+              Get Started
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-</footer>
+  </section>
+
+  <!-- Testimonials Section -->
+  <section *ngIf="!showNotFound" id="testimonials" class="testimonials-section py-16 md:py-24">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-12 md:mb-16">
+        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+          Loved by Thousands of Professionals
+        </h2>
+        <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+          Join 2,847+ satisfied customers who've transformed their profile photos
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div *ngFor="let testimonial of testimonials" class="testimonial-card p-8">
+          <div class="flex items-center mb-4">
+            <div class="text-4xl mr-4">{{ testimonial.avatar }}</div>
+            <div>
+              <h4 class="font-semibold text-gray-900">{{ testimonial.name }}</h4>
+              <p class="text-sm text-gray-600">{{ testimonial.role }}</p>
+            </div>
+          </div>
+
+          <!-- Star rating -->
+          <div class="flex mb-4">
+            <svg
+              *ngFor="let star of [1, 2, 3, 4, 5]"
+              class="w-5 h-5 text-yellow-400"
+              fill="currentColor"
+              viewBox="0 0 20 20">
+              <path
+                d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+            </svg>
+          </div>
+
+          <p class="text-gray-700 italic">"{{ testimonial.content }}"</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section *ngIf="!showNotFound" id="faq" class="faq-section py-16 md:py-24">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
+      <div class="text-center mb-12 md:mb-16">
+        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
+        <p class="text-xl text-gray-600">Everything you need to know about AI Profile Photo Maker</p>
+      </div>
+
+      <div class="space-y-4">
+        <div *ngFor="let faq of faqs; let i = index" class="faq-item rounded-lg overflow-hidden">
+          <button
+            (click)="toggleFAQ(i)"
+            class="faq-button w-full px-6 py-4 text-left flex justify-between items-center transition-colors">
+            <span class="faq-question font-semibold">{{ faq.question }}</span>
+            <svg
+              class="faq-icon w-5 h-5 transform transition-transform duration-200"
+              [class.rotate-180]="faq.open"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </button>
+          <div *ngIf="faq.open" class="faq-answer px-6 pb-4">
+            <p class="faq-answer-text">{{ faq.answer }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section *ngIf="!showNotFound" class="py-16 md:py-24 bg-gradient-to-r from-primary-600 to-secondary-600 text-white">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">Ready to Transform Your Profile Photo?</h2>
+      <p class="text-xl mb-8 max-w-2xl mx-auto opacity-90">
+        Join thousands of professionals who've upgraded their online presence with AI-enhanced photos
+      </p>
+      <button
+        (click)="getStarted()"
+        class="bg-white text-primary-600 px-8 py-4 text-lg font-semibold hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg"
+        style="border-radius: 8px !important">
+        Start Your Free Trial Now →
+      </button>
+      <p class="mt-4 opacity-75">No credit card required • 3 free photos</p>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="landing-footer text-white py-12">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid md:grid-cols-4 gap-8 mb-8">
+        <!-- Company -->
+        <div>
+          <h3 class="font-semibold text-lg mb-4">Company</h3>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">About Us</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Careers</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Press</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Contact</a></li>
+          </ul>
+        </div>
+
+        <!-- Product -->
+        <div>
+          <h3 class="font-semibold text-lg mb-4">Product</h3>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Features</a></li>
+            <li>
+              <a (click)="navigateToPricing()" class="cursor-pointer text-gray-400 hover:text-white transition-colors">
+                Pricing
+              </a>
+            </li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">API</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Integrations</a></li>
+          </ul>
+        </div>
+
+        <!-- Resources -->
+        <div>
+          <h3 class="font-semibold text-lg mb-4">Resources</h3>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Blog</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Help Center</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Tutorials</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Status</a></li>
+          </ul>
+        </div>
+
+        <!-- Legal -->
+        <div>
+          <h3 class="font-semibold text-lg mb-4">Legal</h3>
+          <ul class="space-y-2">
+            <li>
+              <a routerLink="/legal/privacy" class="text-gray-400 hover:text-white transition-colors">Privacy Policy</a>
+            </li>
+            <li>
+              <a routerLink="/legal/terms" class="text-gray-400 hover:text-white transition-colors">Terms of Service</a>
+            </li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Cookie Policy</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">GDPR</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="border-t border-gray-800 pt-8 text-center">
+        <p class="text-gray-400">© 2024 AI Profile Photo Maker. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+</div>
