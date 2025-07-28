@@ -372,7 +372,8 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     if (errors.length > 0) {
       this.notificationService.error(
         'Quality Issues Found',
-        `${errors.length} image(s) failed quality validation. Please review and try again.`
+        `${errors.length} image(s) failed quality validation. Please review and try again.`,
+        8000 // 8 seconds - longer than success to account for user reading time
       );
     }
   }
