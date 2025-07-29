@@ -25,10 +25,10 @@
 <!-- Navigation Header -->
 <header class="app-header" [class.menu-open]="isMobileMenuOpen">
   <div class="header-content">
-    <div class="logo-section">
+    <a routerLink="/" class="logo-section" [attr.title]="'Go to home page'" (click)="closeMobileMenu()">
       <img src="assets/Logo.PNG" alt="AI Profile Photo Maker" class="header-logo" />
       <h1>AI Profile Photo Maker</h1>
-    </div>
+    </a>
 
     <!-- Mobile Menu Toggle -->
     <button class="mobile-menu-toggle" (click)="toggleMobileMenu()" [class.active]="isMobileMenuOpen">
@@ -52,7 +52,7 @@
 
     <!-- Navigation Menu -->
     <nav class="nav-menu" [class.mobile-open]="isMobileMenuOpen">
-      <a routerLink="/app/packages" routerLinkActive="active" class="nav-link" (click)="closeMobileMenu()">
+      <a routerLink="/pricing" routerLinkActive="active" class="nav-link" (click)="closeMobileMenu()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
           <path d="M12 2L3.09 8.26L12 22L20.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" fill="none" />
         </svg>

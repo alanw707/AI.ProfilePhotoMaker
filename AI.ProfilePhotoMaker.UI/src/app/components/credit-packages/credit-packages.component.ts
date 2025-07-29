@@ -318,9 +318,6 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     if (pkg.name === 'Studio Pack') {
       return 'Best value for content creators and businesses';
     }
-    if (pkg.name === 'Enterprise Pack') {
-      return 'Maximum credits for agencies and enterprises';
-    }
     return '';
   }
 

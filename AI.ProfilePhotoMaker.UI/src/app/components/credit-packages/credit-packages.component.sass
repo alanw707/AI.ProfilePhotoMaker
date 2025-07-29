@@ -2,7 +2,15 @@
 
 .credit-packages-container
   @include shared.content-container
-  padding: 2rem 1rem
+  padding: 2rem 1.5rem
+  
+  // Wider desktop padding for better centering
+  @media (min-width: 1400px)
+    padding: 2.5rem 2rem
+    
+  // Mobile padding optimization
+  @media (max-width: 640px)
+    padding: 1.5rem 1rem
 
 .header
   text-align: center
@@ -70,38 +78,53 @@
 
 .packages-grid
   display: grid
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr))
-  gap: 1.5rem
+  grid-template-columns: repeat(3, 1fr)
+  gap: 2rem
   margin-bottom: 4rem
+  max-width: 1200px
+  margin-left: auto
+  margin-right: auto
   
+  // Large desktop - maintain 3 columns with wider cards
   @media (min-width: 1400px)
-    grid-template-columns: repeat(4, 1fr)
-    gap: 2rem
+    max-width: 1400px
+    gap: 2.5rem
   
+  // Medium desktop - maintain 3 columns
   @media (max-width: 1200px)
+    max-width: 1000px
+    gap: 1.5rem
+  
+  // Tablet - 2 columns (third card wraps below)
+  @media (max-width: 900px)
     grid-template-columns: repeat(2, 1fr)
     gap: 1.5rem
     
-  @media (max-width: 768px)
+  // Mobile - single column
+  @media (max-width: 640px)
     grid-template-columns: 1fr
     gap: 1.25rem
 
 .package-card
   position: relative
   background: white
-  border: 2px solid #e9ecef
+  border: 2px solid #e9ecef  
   border-radius: 16px
-  padding: 2.5rem
+  padding: 2rem
   transition: all 0.3s ease
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08)
   display: flex
   flex-direction: column
   height: 100%
-  min-height: 650px
+  min-height: 600px
   
-  @media (max-width: 768px)
-    padding: 2rem
-    min-height: 550px
+  // Better proportions for wider 3-column layout
+  @media (max-width: 900px)
+    min-height: 580px
+    
+  @media (max-width: 640px)
+    padding: 1.5rem
+    min-height: 520px
   
   &:hover
     transform: translateY(-5px)
@@ -450,22 +473,16 @@
     padding: 0.75rem 1.5rem
     font-size: 1rem
 
-@media (max-width: 768px)
-  .credit-packages-container
-    padding: 1rem
-    
+// Mobile header typography adjustments
+@media (max-width: 640px)
   .header
+    margin-bottom: 2rem
+    
     h2
       font-size: 1.75rem
       
     .subtitle
-      font-size: 0.9rem
-      
-  .packages-grid
-    margin-bottom: 3rem
-    
-  .package-card
-    padding: 1.5rem
+      font-size: 0.95rem
     
   .credit-info .credit-highlight 
     padding: 1.25rem

@@ -6,6 +6,7 @@ import { animate, state, style, transition, trigger } from '@angular/animations'
 import { Observable, Subscription } from 'rxjs';
 import { NavigationService } from '../../services/navigation.service';
 import { ThemeService } from '../../services/theme.service';
+import { CreditService, CreditPackage } from '../../services/credit.service';
 
 interface Plan {
   name: string;
@@ -103,41 +104,8 @@ export class LandingComponent implements OnInit, OnDestroy {
     },
   ];
 
-  plans: Plan[] = [
-    {
-      name: 'Starter',
-      price: '$9',
-      features: ['10 AI-enhanced photos', 'Basic styles', 'Standard resolution', 'Email support'],
-      creditCount: '10 credits',
-    },
-    {
-      name: 'Professional',
-      price: '$29',
-      originalPrice: '$39',
-      features: [
-        '50 AI-enhanced photos',
-        'All premium styles',
-        'HD resolution',
-        'Priority processing',
-        'Download all formats',
-      ],
-      recommended: true,
-      creditCount: '50 credits',
-    },
-    {
-      name: 'Business',
-      price: '$79',
-      features: [
-        '200 AI-enhanced photos',
-        'All styles + custom',
-        '4K resolution',
-        'API access',
-        'Dedicated support',
-        'Bulk processing',
-      ],
-      creditCount: '200 credits',
-    },
-  ];
+  plans: Plan[] = [];
+  isLoadingPackages = true;
 
   testimonials: Testimonial[] = [
     {
@@ -233,13 +201,15 @@ export class LandingComponent implements OnInit, OnDestroy {
     public router: Router,
     private route: ActivatedRoute,
     public navigation: NavigationService,
-    public themeService: ThemeService
+    public themeService: ThemeService,
+    private creditService: CreditService
   ) {
     this.currentTheme$ = this.themeService.theme$;
   }
 
   ngOnInit(): void {
     this.setupSEO();
+    this.loadPackagesFromDatabase();
     this.startBeforeAfterRotation();
     this.startTestimonialRotation();
     this.observeElements();
@@ -252,6 +222,100 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   toggleTheme(): void {
     this.themeService.toggleTheme();
+  }
+
+  loadPackagesFromDatabase(): void {
+    this.isLoadingPackages = true;
+    this.creditService.getCreditPackages().subscribe({
+      next: response => {
+        if (response && response.success && response.data) {
+          // Map database packages to landing page format
+          this.plans = response.data.map((pkg: CreditPackage) => ({
+            name: pkg.name.replace(' Pack', ''), // Remove "Pack" suffix
+            price: `$${Math.floor(pkg.price)}`, // Format price
+            originalPrice: pkg.bonusCredits > 0 ? `$${Math.floor(pkg.price + 10)}` : undefined,
+            features: this.getPackageFeatures(pkg),
+            recommended: pkg.name === 'Professional Pack',
+            creditCount: `${pkg.totalCredits} credits`,
+          }));
+        }
+      },
+      error: error => {
+        console.error('Failed to load packages:', error);
+        // Fallback to default packages if loading fails
+        this.setDefaultPackages();
+      },
+      complete: () => {
+        this.isLoadingPackages = false;
+      },
+    });
+  }
+
+  private getPackageFeatures(pkg: CreditPackage): string[] {
+    if (pkg.name === 'Starter Pack') {
+      return [
+        `${pkg.totalCredits} AI-enhanced photos`,
+        'Basic styles',
+        'Standard resolution',
+        'Email support',
+      ];
+    } else if (pkg.name === 'Professional Pack') {
+      return [
+        `${pkg.totalCredits} AI-enhanced photos`,
+        'All premium styles',
+        'HD resolution',
+        'Priority processing',
+        'Download all formats',
+      ];
+    } else if (pkg.name === 'Studio Pack') {
+      return [
+        `${pkg.totalCredits} AI-enhanced photos`,
+        'All premium styles',
+        'HD+ resolution',
+        'Priority support',
+        'Advanced editing',
+        'Commercial license',
+      ];
+    }
+    return [];
+  }
+
+  private setDefaultPackages(): void {
+    this.plans = [
+      {
+        name: 'Starter',
+        price: '$9',
+        features: ['50 AI-enhanced photos', 'Basic styles', 'Standard resolution', 'Email support'],
+        creditCount: '50 credits',
+      },
+      {
+        name: 'Professional',
+        price: '$19',
+        originalPrice: '$29',
+        features: [
+          '150 AI-enhanced photos',
+          'All premium styles',
+          'HD resolution',
+          'Priority processing',
+          'Download all formats',
+        ],
+        recommended: true,
+        creditCount: '150 credits',
+      },
+      {
+        name: 'Studio',
+        price: '$39',
+        features: [
+          '400 AI-enhanced photos',
+          'All premium styles',
+          'HD+ resolution',
+          'Priority support',
+          'Advanced editing',
+          'Commercial license',
+        ],
+        creditCount: '400 credits',
+      },
+    ];
   }
 
   setupSEO(): void {
@@ -331,8 +395,8 @@ export class LandingComponent implements OnInit, OnDestroy {
       screenshot: 'https://aiprofilephotomaker.com/assets/screenshot.jpg',
       offers: {
         '@type': 'AggregateOffer',
-        lowPrice: '9',
-        highPrice: '79',
+        lowPrice: '9.99',
+        highPrice: '79.99',
         priceCurrency: 'USD',
         offerCount: '3',
       },

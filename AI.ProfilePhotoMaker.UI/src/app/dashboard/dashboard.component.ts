@@ -120,7 +120,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     switch (event.action) {
       case 'purchase':
       case 'viewPackages':
-        this.router.navigate(['/app/packages']);
+        this.router.navigate(['/pricing']);
         break;
       case 'upgrade':
         this.router.navigate(['/premium']);
