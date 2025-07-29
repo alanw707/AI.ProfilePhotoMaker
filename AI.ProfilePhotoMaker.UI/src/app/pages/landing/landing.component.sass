@@ -800,11 +800,11 @@ header
     transform: translateY(8px) rotate(45deg)
 
 // =============================================================================
-// STYLED PHOTOS SHOWCASE
+// ENHANCED STYLES GRID SHOWCASE
 // =============================================================================
 
-.styled-photos-showcase
-  max-width: 1200px
+.styles-grid-showcase
+  max-width: 1400px
   margin: 0 auto
   background: var(--card-bg)
   border-radius: 24px
@@ -813,192 +813,371 @@ header
   transition: all 0.3s ease
   
   &:hover
-    transform: translateY(-4px)
+    transform: translateY(-2px)
     box-shadow: var(--shadow-xl)
 
-.featured-photo-container
-  position: relative
+// Loading state
+.styles-loading
+  display: flex
+  flex-direction: column
+  align-items: center
+  justify-content: center
+  padding: 80px 32px
+  text-align: center
+
+  .loading-spinner
+    width: 48px
+    height: 48px
+    border: 4px solid var(--border-color)
+    border-top: 4px solid var(--primary)
+    border-radius: 50%
+    animation: spin 1s linear infinite
+    margin-bottom: 24px
+
+  .loading-text
+    font-size: 16px
+    color: var(--text-secondary)
+    margin: 0
+
+@keyframes spin
+  0%
+    transform: rotate(0deg)
+  100%
+    transform: rotate(360deg)
+
+// Error state
+.styles-error
+  display: flex
+  flex-direction: column
+  align-items: center
+  justify-content: center
   padding: 32px
+  text-align: center
+  background: var(--warning-bg, rgba(251, 191, 36, 0.1))
+  border-radius: 12px
+  margin: 16px
+
+  .error-icon
+    font-size: 32px
+    margin-bottom: 12px
+
+  .error-text
+    font-size: 14px
+    color: var(--warning-text, #D97706)
+    margin: 0
+    font-weight: 500
+
+// All Styles Grid - Shows all 20+ styles at once
+.all-styles-grid
+  padding: 32px
+  display: grid
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))
+  gap: 24px
+  max-height: none
   
-  .featured-photo-card
-    display: grid
-    grid-template-columns: 1fr 1fr
-    gap: 32px
-    align-items: center
+  @media (max-width: 1200px)
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr))
+    gap: 20px
     
-    @media (max-width: 768px)
-      grid-template-columns: 1fr
-      gap: 24px
-      text-align: center
+  @media (max-width: 768px)
+    padding: 24px
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))
+    gap: 16px
     
-    .photo-container
-      position: relative
-      aspect-ratio: 4/5
-      border-radius: 16px
-      overflow: hidden
-      box-shadow: var(--shadow-soft)
+  @media (max-width: 640px)
+    grid-template-columns: repeat(2, 1fr)
+    gap: 12px
+    
+  @media (max-width: 480px)
+    grid-template-columns: repeat(2, 1fr)
+    gap: 8px
+    padding: 16px
+
+// Individual Style Card - Enhanced UX Design
+.style-card
+  position: relative
+  border-radius: 16px
+  background: var(--surface-bg)
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  cursor: pointer
+  border: 2px solid transparent
+  box-shadow: var(--shadow-soft)
+  overflow: hidden
+  
+  &:hover
+    transform: translateY(-6px)
+    box-shadow: var(--shadow-xl)
+    border-color: rgba(var(--primary-rgb), 0.4)
+    
+    .style-hover-overlay
+      opacity: 1
       
-      .featured-photo
-        width: 100%
-        height: 100%
-        object-fit: cover
-        transition: transform 0.5s ease
-        
-      .photo-gradient-overlay
-        position: absolute
-        inset: 0
-        background: linear-gradient(45deg, rgba(var(--primary-rgb), 0.1), transparent 70%)
-        opacity: 0
-        transition: opacity 0.5s ease
-        
-      &:hover
-        .featured-photo
-          transform: scale(1.05)
-          
-        .photo-gradient-overlay
-          opacity: 1
+    .style-image
+      transform: scale(1.08)
+      
+    .style-info-permanent
+      background: rgba(var(--primary-rgb), 0.05)
+      
+  &.featured
+    border-color: var(--primary)
+    box-shadow: 0 8px 32px rgba(var(--primary-rgb), 0.25)
     
-    .photo-info
+    .style-info-permanent
+      background: rgba(var(--primary-rgb), 0.08)
+      
+      .style-category-badge
+        background: var(--primary)
+        color: white
+    
+  // Image Container
+  .style-image-container
+    position: relative
+    aspect-ratio: 4/5
+    overflow: hidden
+    border-radius: 12px 12px 0 0
+    
+    .style-image
+      width: 100%
+      height: 100%
+      object-fit: cover
+      transition: transform 0.4s ease
+      
+    // Enhanced Hover Overlay
+    .style-hover-overlay
+      position: absolute
+      inset: 0
+      background: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.1) 0%,
+        rgba(0, 0, 0, 0.4) 70%,
+        rgba(0, 0, 0, 0.8) 100%
+      )
+      opacity: 0
+      transition: opacity 0.3s ease
+      display: flex
+      align-items: flex-end
+      padding: 20px
+      color: white
+      
+      .overlay-content
+        width: 100%
+        
+        .overlay-action
+          margin-bottom: 8px
+          
+          .try-style-btn
+            display: inline-flex
+            align-items: center
+            gap: 6px
+            padding: 10px 18px
+            background: rgba(255, 255, 255, 0.95)
+            color: var(--text-primary)
+            border-radius: 25px
+            font-size: 0.9rem
+            font-weight: 600
+            backdrop-filter: blur(12px)
+            transition: all 0.2s ease
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1)
+            
+            &:hover
+              background: white
+              transform: scale(1.05)
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15)
+              
+            .btn-icon
+              font-size: 1rem
+              
+        .overlay-desc
+          font-size: 0.85rem
+          opacity: 0.95
+          margin: 0
+          line-height: 1.4
+          
+  // Always-Visible Style Info
+  .style-info-permanent
+    padding: 16px
+    background: var(--surface-secondary)
+    transition: background-color 0.3s ease
+    
+    .style-header
       display: flex
       flex-direction: column
-      gap: 16px
+      gap: 8px
+      margin-bottom: 8px
       
-      .style-badge
+      .style-category-badge
         display: inline-block
-        padding: 6px 12px
-        background: var(--accent-primary)
-        color: white
-        border-radius: 20px
-        font-size: 0.8rem
+        padding: 4px 10px
+        background: rgba(var(--primary-rgb), 0.15)
+        color: var(--primary)
+        border-radius: 12px
+        font-size: 0.7rem
         font-weight: 600
         text-transform: uppercase
         letter-spacing: 0.5px
         width: fit-content
+        transition: all 0.3s ease
         
-        @media (max-width: 768px)
-          align-self: center
-      
-      .style-name
-        font-size: 2rem
+      .style-title
+        font-size: 1rem
         font-weight: 700
         color: var(--text-primary)
-        line-height: 1.2
         margin: 0
+        line-height: 1.3
         
-        @media (max-width: 768px)
-          font-size: 1.75rem
-      
-      .style-description
-        font-size: 1.1rem
-        color: var(--text-secondary)
-        line-height: 1.6
-        margin: 0
-      
-      .persona-tag
-        display: flex
-        align-items: center
-        gap: 8px
-        padding: 12px 16px
-        background: var(--surface-secondary)
-        border-radius: 12px
-        
-        @media (max-width: 768px)
-          justify-content: center
-        
-        .persona-icon
-          font-size: 1.2rem
-          
-        .persona-text
-          font-weight: 500
-          color: var(--text-secondary)
+    .style-meta
+      .style-persona
+        font-size: 0.8rem
+        color: var(--text-tertiary)
+        font-weight: 500
+        opacity: 0.8
 
-.styles-grid-preview
-  padding: 0 32px 24px
+// Responsive breakpoints for mobile
+@media (max-width: 768px)
+  .style-card
+    .style-image-container
+      aspect-ratio: 1
+      
+    .style-hover-overlay
+      .overlay-content
+        .overlay-action
+          .try-style-btn
+            padding: 8px 14px
+            font-size: 0.85rem
+            
+        .overlay-desc
+          font-size: 0.8rem
+          
+    .style-info-permanent
+      padding: 12px
+      
+      .style-header
+        .style-title
+          font-size: 0.9rem
+          
+        .style-category-badge
+          font-size: 0.65rem
+          padding: 3px 8px
+          
+      .style-meta
+        .style-persona
+          font-size: 0.75rem
+            
+@media (max-width: 640px)
+  .style-card
+    .style-hover-overlay
+      .overlay-content
+        .overlay-action
+          .try-style-btn
+            .btn-text
+              display: none
+            
+    .style-info-permanent
+      padding: 10px
+      
+      .style-header
+        gap: 6px
+        
+        .style-title
+          font-size: 0.85rem
+          
+@media (max-width: 480px)
+  .style-card
+    .style-info-permanent
+      padding: 8px
+      
+      .style-header
+        gap: 4px
+        
+        .style-title
+          font-size: 0.8rem
+          line-height: 1.2
+          
+        .style-category-badge
+          font-size: 0.6rem
+          padding: 2px 6px
+          
+      .style-meta
+        .style-persona
+          font-size: 0.7rem
+          
+    .style-hover-overlay
+      .overlay-content
+        .overlay-action
+          .try-style-btn
+            padding: 6px 10px
+            font-size: 0.8rem
+            
+            .btn-icon
+              font-size: 0.9rem
+              
+        .overlay-desc
+          display: none
+
+// Grid Summary Section
+.styles-summary
+  padding: 24px 32px
+  border-top: 1px solid var(--border-color)
+  background: var(--surface-alt)
   
-  .grid-container
-    display: grid
-    grid-template-columns: repeat(6, 1fr)
-    gap: 12px
+  .summary-stats
+    display: flex
+    justify-content: center
+    align-items: center
+    gap: 32px
+    margin-bottom: 16px
     
     @media (max-width: 768px)
-      grid-template-columns: repeat(4, 1fr)
-      gap: 8px
+      gap: 24px
       
-    @media (max-width: 480px)
-      grid-template-columns: repeat(3, 1fr)
-      gap: 6px
-    
-    .style-thumbnail
-      position: relative
-      aspect-ratio: 1
-      border-radius: 8px
-      overflow: hidden
-      cursor: pointer
-      transition: all 0.3s ease
-      border: 2px solid transparent
+    @media (max-width: 640px)
+      gap: 16px
+      flex-wrap: wrap
       
-      &.active
-        border-color: var(--accent-primary)
-        transform: scale(1.05)
+    .stat-item
+      text-align: center
+      
+      .stat-number
+        display: block
+        font-size: 1.5rem
+        font-weight: 700
+        color: var(--primary)
+        margin-bottom: 4px
         
-      &:hover
-        transform: scale(1.1)
-        
-      .thumbnail-image
-        width: 100%
-        height: 100%
-        object-fit: cover
-        
-      .thumbnail-overlay
-        position: absolute
-        inset: 0
-        background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent 60%)
-        display: flex
-        align-items: flex-end
-        padding: 8px
-        opacity: 0
-        transition: opacity 0.3s ease
-        
-      &:hover .thumbnail-overlay
-        opacity: 1
-        
-      .thumbnail-name
-        font-size: 0.7rem
-        color: white
+        @media (max-width: 640px)
+          font-size: 1.25rem
+          
+      .stat-label
+        font-size: 0.85rem
+        color: var(--text-secondary)
         font-weight: 500
-        line-height: 1.2
-
-.showcase-indicators
-  padding: 0 32px 24px
-  display: flex
-  flex-direction: column
-  align-items: center
-  gap: 16px
-  
-  .indicators-container
-    display: flex
-    gap: 8px
-    
-    .indicator
-      width: 8px
-      height: 8px
-      border-radius: 50%
-      background: rgba(var(--primary-rgb), 0.3)
-      transition: all 0.3s ease
-      cursor: pointer
-      
-      &.active
-        background: var(--accent-primary)
-        transform: scale(1.2)
         
-      &:hover
-        background: var(--accent-secondary)
-  
-  .showcase-counter
-    font-size: 0.9rem
-    color: var(--text-tertiary)
-    margin: 0
+        @media (max-width: 640px)
+          font-size: 0.75rem
+          
+    .stat-divider
+      width: 1px
+      height: 40px
+      background: var(--border-color)
+      
+      @media (max-width: 640px)
+        display: none
+        
+  .summary-text
+    text-align: center
+    font-size: 1rem
+    color: var(--text-secondary)
+    line-height: 1.5
+    max-width: 600px
+    margin: 0 auto
+    
+    @media (max-width: 768px)
+      font-size: 0.9rem
+      
+    @media (max-width: 640px)
+      font-size: 0.85rem
 
+// Showcase CTA Section
 .showcase-cta
   padding: 24px 32px 32px
   text-align: center
@@ -1022,28 +1201,63 @@ header
     
     &:hover
       transform: translateY(-2px)
-      box-shadow: 0 8px 25px rgba(var(--primary-rgb), 0.3)
+      box-shadow: 0 8px 25px rgba(var(--accent-primary-rgb), 0.4)
       
     .btn-icon
       font-size: 1.2rem
       
     .btn-arrow
-      font-size: 1.2rem
       transition: transform 0.3s ease
       
     &:hover .btn-arrow
       transform: translateX(4px)
-  
+      
+    @media (max-width: 768px)
+      padding: 14px 28px
+      font-size: 1rem
+      gap: 10px
+      
+    @media (max-width: 480px)
+      padding: 12px 24px
+      font-size: 0.9rem
+      gap: 8px
+      
   .cta-subtext
-    margin: 12px 0 0 0
+    margin-top: 12px
     font-size: 0.9rem
     color: var(--text-tertiary)
+    opacity: 0.8
+    
+    @media (max-width: 768px)
+      font-size: 0.85rem
+      
+    @media (max-width: 480px)
+      font-size: 0.8rem
 
 // Dark theme enhancements
 [data-theme="dark"]
-  .styled-photos-showcase
+  .styles-grid-showcase
     background: rgba(var(--primary-rgb), 0.05)
     border: 1px solid rgba(255, 255, 255, 0.1)
+    
+  .style-card
+    background: rgba(var(--surface-bg), 0.8)
+    border: 1px solid rgba(255, 255, 255, 0.05)
+    
+    &:hover
+      border-color: rgba(var(--primary-rgb), 0.4)
+      
+    .style-overlay
+      background: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.2) 0%,
+        rgba(0, 0, 0, 0.5) 60%,
+        rgba(0, 0, 0, 0.9) 100%
+      )
+      
+  .styles-summary
+    background: rgba(var(--surface-alt), 0.5)
+    border-top-color: rgba(255, 255, 255, 0.1)
     
   .showcase-cta
     background: rgba(var(--primary-rgb), 0.03)

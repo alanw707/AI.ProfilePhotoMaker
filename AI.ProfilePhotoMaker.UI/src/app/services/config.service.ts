@@ -210,8 +210,72 @@ export class ConfigService {
    * @returns Complete style preview URL
    */
   buildStylePreviewUrl(styleName: string): string {
-    const fileName = styleName.toLowerCase().replace(/[\s\/]+/g, '-');
+    // Map style names to unique filenames that exist on the backend
+    // Each style should have its own unique preview image
+    const styleFileMap: { [key: string]: string } = {
+      // Database style names (with hyphens - exact matches)
+      academic: 'academic',
+      artistic: 'artistic',
+      author: 'author',
+      casual: 'casual',
+      consultant: 'consultant',
+      corporate: 'corporate',
+      creative: 'creative',
+      'digital-nomad': 'digital-nomad',
+      'edgy-urban': 'edgy-urban',
+      entrepreneur: 'entrepreneur',
+      executive: 'executive',
+      fitness: 'fitness',
+      glamour: 'glamour',
+      influencer: 'influencer',
+      legal: 'legal',
+      linkedin: 'linkedin',
+      medical: 'medical',
+      spiritual: 'spiritual',
+      startup: 'startup',
+      'tech-professional': 'tech-professional',
+
+      // Legacy fallback mappings (with spaces - for backwards compatibility)
+      'professional linkedin': 'linkedin',
+      'creative professional': 'creative',
+      'corporate executive': 'corporate',
+      'casual professional': 'casual',
+      'classic headshot': 'corporate',
+      'modern professional': 'linkedin',
+      'elegant portrait': 'executive',
+      'friendly professional': 'consultant',
+      'confident leader': 'executive',
+      'artistic expression': 'artistic',
+      'business casual': 'casual',
+      'tech professional': 'tech-professional',
+      'senior executive': 'executive',
+      'professional consultant': 'consultant',
+      'academic professional': 'academic',
+      'sales professional': 'consultant',
+      'marketing expert': 'creative',
+      'finance professional': 'corporate',
+      'healthcare professional': 'medical',
+      'digital nomad': 'digital-nomad',
+      'edgy urban': 'edgy-urban',
+    };
+
+    const lowerStyleName = styleName.toLowerCase();
+    const fileName = styleFileMap[lowerStyleName] || this.generateUniqueFileName(styleName);
+
     return `/style-previews/${fileName}.jpg`;
+  }
+
+  /**
+   * Generate a unique filename for styles not in the map
+   * @param styleName - The original style name
+   * @returns A unique filename based on the style name
+   */
+  private generateUniqueFileName(styleName: string): string {
+    return styleName
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .trim();
   }
 
   /**

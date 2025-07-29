@@ -9,7 +9,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize]
 public class StyleController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
@@ -153,6 +152,7 @@ public class StyleController : ControllerBase
     /// Save user's selected styles for model training
     /// </summary>
     [HttpPost("select")]
+    [Authorize]
     public async Task<IActionResult> SelectStyles([FromBody] StyleSelectionDto dto)
     {
         if (!ModelState.IsValid)
@@ -216,6 +216,7 @@ public class StyleController : ControllerBase
     /// Get user's previously selected styles
     /// </summary>
     [HttpGet("user-selected")]
+    [Authorize]
     public async Task<IActionResult> GetUserSelectedStyles()
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

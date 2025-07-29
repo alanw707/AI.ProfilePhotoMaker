@@ -6,7 +6,9 @@ import { animate, state, style, transition, trigger } from '@angular/animations'
 import { Observable, Subscription } from 'rxjs';
 import { NavigationService } from '../../services/navigation.service';
 import { ThemeService } from '../../services/theme.service';
-import { CreditService, CreditPackage } from '../../services/credit.service';
+import { CreditPackage, CreditService } from '../../services/credit.service';
+import { Style, StyleService } from '../../services/style.service';
+import { ConfigService } from '../../services/config.service';
 
 interface Plan {
   name: string;
@@ -29,6 +31,15 @@ interface FAQ {
   question: string;
   answer: string;
   open?: boolean;
+}
+
+interface StyledPhoto {
+  id: number;
+  imageUrl: string;
+  style: string;
+  category: string;
+  description: string;
+  persona: string;
 }
 
 @Component({
@@ -66,6 +77,8 @@ export class LandingComponent implements OnInit, OnDestroy {
   // Theme-related properties
   currentTheme$!: Observable<string>;
   private themeSubscription: Subscription = new Subscription();
+
+  // Styled photos showcase - removed carousel, now using grid
 
   @ViewChild('comparisonSlider') comparisonSlider!: ElementRef;
 
@@ -167,26 +180,10 @@ export class LandingComponent implements OnInit, OnDestroy {
     },
   ];
 
-  beforeAfterExamples = [
-    {
-      before: '/assets/examples/before-1.jpg',
-      after: '/assets/examples/after-1.jpg',
-      style: 'Professional LinkedIn',
-      description: 'Perfect for professional networking',
-    },
-    {
-      before: '/assets/examples/before-2.jpg',
-      after: '/assets/examples/after-2.jpg',
-      style: 'Corporate Executive',
-      description: 'Ideal for C-suite and leadership roles',
-    },
-    {
-      before: '/assets/examples/before-3.jpg',
-      after: '/assets/examples/after-3.jpg',
-      style: 'Creative Professional',
-      description: 'Great for designers and artists',
-    },
-  ];
+  styledPhotos: StyledPhoto[] = [];
+  availableStyles: Style[] = [];
+  isLoadingStyles = true;
+  stylesLoadError = false;
 
   stats = [
     { value: '2,847+', label: 'Happy Customers' },
@@ -202,7 +199,9 @@ export class LandingComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     public navigation: NavigationService,
     public themeService: ThemeService,
-    private creditService: CreditService
+    private creditService: CreditService,
+    private styleService: StyleService,
+    private config: ConfigService
   ) {
     this.currentTheme$ = this.themeService.theme$;
   }
@@ -210,7 +209,7 @@ export class LandingComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.setupSEO();
     this.loadPackagesFromDatabase();
-    this.startBeforeAfterRotation();
+    this.loadAvailableStyles();
     this.startTestimonialRotation();
     this.observeElements();
     this.handleRouteData();
@@ -470,11 +469,287 @@ export class LandingComponent implements OnInit, OnDestroy {
     this.navigation.goToRegister();
   }
 
-  startBeforeAfterRotation(): void {
-    setInterval(() => {
-      this.currentBeforeAfterIndex =
-        (this.currentBeforeAfterIndex + 1) % this.beforeAfterExamples.length;
-    }, 4000);
+  loadAvailableStyles(): void {
+    this.isLoadingStyles = true;
+    this.stylesLoadError = false;
+
+    this.styleService.getActiveStyles().subscribe({
+      next: response => {
+        if (response.success && response.data && response.data.length > 0) {
+          console.log(`Successfully loaded ${response.data.length} styles from database`);
+          this.availableStyles = response.data;
+          this.createStyledPhotosFromStyles();
+          this.stylesLoadError = false;
+        } else {
+          console.warn('No styles found in database, using fallback data');
+          this.createFallbackStyledPhotos();
+          this.stylesLoadError = true;
+        }
+        this.isLoadingStyles = false;
+      },
+      error: error => {
+        console.error('Error loading styles from database:', error);
+        console.log('Falling back to predefined styles');
+        this.createFallbackStyledPhotos();
+        this.stylesLoadError = true;
+        this.isLoadingStyles = false;
+      },
+    });
+  }
+
+  createStyledPhotosFromStyles(): void {
+    // Create styled photos array from actual styles
+    this.styledPhotos = this.availableStyles.slice(0, 20).map((style, index) => ({
+      id: style.id,
+      imageUrl: this.config.buildStylePreviewUrl(style.name),
+      style: style.name,
+      category: this.getCategoryFromStyleName(style.name),
+      description: style.description,
+      persona: this.getPersonaFromStyleName(style.name),
+    }));
+  }
+
+  createFallbackStyledPhotos(): void {
+    // Fallback data in case styles can't be loaded
+    const fallbackStyles = [
+      {
+        name: 'Professional LinkedIn',
+        description: 'Corporate professional headshot',
+        category: 'Business',
+        persona: 'Business Executive',
+      },
+      {
+        name: 'Creative Professional',
+        description: 'Artistic and modern look',
+        category: 'Creative',
+        persona: 'Creative Designer',
+      },
+      {
+        name: 'Corporate Executive',
+        description: 'C-suite leadership presence',
+        category: 'Executive',
+        persona: 'CEO',
+      },
+      {
+        name: 'Casual Professional',
+        description: 'Approachable yet professional',
+        category: 'Relaxed',
+        persona: 'Startup Founder',
+      },
+      {
+        name: 'Classic Headshot',
+        description: 'Timeless professional look',
+        category: 'Traditional',
+        persona: 'Consultant',
+      },
+      {
+        name: 'Modern Professional',
+        description: 'Cutting-edge style',
+        category: 'Contemporary',
+        persona: 'Tech Leader',
+      },
+      {
+        name: 'Elegant Portrait',
+        description: 'Refined and polished',
+        category: 'Sophisticated',
+        persona: 'Executive Director',
+      },
+      {
+        name: 'Friendly Professional',
+        description: 'Warm and welcoming',
+        category: 'Approachable',
+        persona: 'HR Manager',
+      },
+      {
+        name: 'Confident Leader',
+        description: 'Strong leadership presence',
+        category: 'Leadership',
+        persona: 'Team Lead',
+      },
+      {
+        name: 'Artistic Expression',
+        description: 'Creative industry focused',
+        category: 'Creative',
+        persona: 'Art Director',
+      },
+      {
+        name: 'Business Casual',
+        description: 'Perfect for most industries',
+        category: 'Versatile',
+        persona: 'Manager',
+      },
+      {
+        name: 'Tech Professional',
+        description: 'Tech industry optimized',
+        category: 'Technology',
+        persona: 'Software Engineer',
+      },
+      {
+        name: 'Senior Executive',
+        description: 'High-level executive presence',
+        category: 'Leadership',
+        persona: 'VP',
+      },
+      {
+        name: 'Professional Consultant',
+        description: 'Expert and trustworthy',
+        category: 'Advisory',
+        persona: 'Senior Consultant',
+      },
+      {
+        name: 'Entrepreneur',
+        description: 'Visionary and forward-thinking',
+        category: 'Innovation',
+        persona: 'Entrepreneur',
+      },
+      {
+        name: 'Academic Professional',
+        description: 'Scholarly and approachable',
+        category: 'Education',
+        persona: 'Professor',
+      },
+      {
+        name: 'Sales Professional',
+        description: 'Trustworthy and engaging',
+        category: 'Sales',
+        persona: 'Sales Director',
+      },
+      {
+        name: 'Marketing Expert',
+        description: 'Creative and strategic',
+        category: 'Marketing',
+        persona: 'Marketing Manager',
+      },
+      {
+        name: 'Finance Professional',
+        description: 'Analytical and precise',
+        category: 'Finance',
+        persona: 'Financial Analyst',
+      },
+      {
+        name: 'Healthcare Professional',
+        description: 'Caring and competent',
+        category: 'Healthcare',
+        persona: 'Healthcare Executive',
+      },
+    ];
+
+    this.styledPhotos = fallbackStyles.map((style, index) => ({
+      id: index + 1,
+      imageUrl: this.config.buildStylePreviewUrl(style.name),
+      style: style.name,
+      category: style.category,
+      description: style.description,
+      persona: style.persona,
+    }));
+  }
+
+  getCategoryFromStyleName(styleName: string): string {
+    const name = styleName.toLowerCase();
+    if (name.includes('professional') || name.includes('linkedin')) {
+      return 'Business';
+    }
+    if (name.includes('creative') || name.includes('artistic')) {
+      return 'Creative';
+    }
+    if (name.includes('executive') || name.includes('corporate')) {
+      return 'Executive';
+    }
+    if (name.includes('casual')) {
+      return 'Relaxed';
+    }
+    if (name.includes('classic') || name.includes('traditional')) {
+      return 'Traditional';
+    }
+    if (name.includes('modern') || name.includes('contemporary')) {
+      return 'Contemporary';
+    }
+    if (name.includes('elegant') || name.includes('sophisticated')) {
+      return 'Sophisticated';
+    }
+    if (name.includes('friendly') || name.includes('approachable')) {
+      return 'Approachable';
+    }
+    if (name.includes('leader') || name.includes('leadership')) {
+      return 'Leadership';
+    }
+    if (name.includes('tech') || name.includes('technology')) {
+      return 'Technology';
+    }
+    return 'Professional';
+  }
+
+  getPersonaFromStyleName(styleName: string): string {
+    const name = styleName.toLowerCase();
+    if (name.includes('linkedin')) {
+      return 'Business Professional';
+    }
+    if (name.includes('creative')) {
+      return 'Creative Designer';
+    }
+    if (name.includes('corporate')) {
+      return 'Corporate Executive';
+    }
+    if (name.includes('executive')) {
+      return 'Senior Executive';
+    }
+    if (name.includes('casual')) {
+      return 'Startup Founder';
+    }
+    if (name.includes('classic')) {
+      return 'Consultant';
+    }
+    if (name.includes('modern')) {
+      return 'Tech Leader';
+    }
+    if (name.includes('elegant')) {
+      return 'Executive Director';
+    }
+    if (name.includes('friendly')) {
+      return 'HR Manager';
+    }
+    if (name.includes('confident')) {
+      return 'Team Lead';
+    }
+    if (name.includes('artistic')) {
+      return 'Art Director';
+    }
+    if (name.includes('tech')) {
+      return 'Software Engineer';
+    }
+    if (name.includes('entrepreneur')) {
+      return 'Entrepreneur';
+    }
+    if (name.includes('academic')) {
+      return 'Professor';
+    }
+    if (name.includes('sales')) {
+      return 'Sales Director';
+    }
+    if (name.includes('marketing')) {
+      return 'Marketing Manager';
+    }
+    if (name.includes('finance')) {
+      return 'Financial Analyst';
+    }
+    if (name.includes('healthcare')) {
+      return 'Healthcare Executive';
+    }
+    return 'Professional';
+  }
+
+  // Style card interaction for new grid layout
+  onStyleCardClick(photo: StyledPhoto, index: number): void {
+    // Trigger get started flow with style context
+    this.getStarted();
+  }
+
+  formatStyleName(styleName: string): string {
+    if (!styleName) return '';
+    return styleName
+      .split(/[-\s]+/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
 
   startTestimonialRotation(): void {
@@ -577,5 +852,121 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   navigateToPricing(): void {
     this.navigation.goToPricing();
+  }
+
+  onImageError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+
+    // Extract style name from alt text or src URL
+    const altText = img.alt || img.src || 'Professional Style';
+    const styleName = this.extractStyleNameFromImageSource(altText);
+
+    // Generate a unique, style-specific SVG placeholder
+    const placeholderSvg = this.generateStyleSpecificPlaceholder(styleName);
+
+    // Convert to base64 data URI
+    img.src = 'data:image/svg+xml;base64,' + btoa(placeholderSvg);
+  }
+
+  private extractStyleNameFromImageSource(source: string): string {
+    // Extract style name from various sources (alt text, URL, etc.)
+    let styleName = 'Professional Style';
+
+    if (source.includes('/style-previews/')) {
+      // Extract from URL path
+      const match = source.match(/\/style-previews\/([^.]+)/);
+      if (match) {
+        styleName = match[1].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      }
+    } else {
+      // Clean up alt text
+      styleName =
+        source
+          .replace(' style example', '')
+          .replace(' thumbnail', '')
+          .replace('style-previews/', '')
+          .replace(/\.(jpg|png|webp)$/, '')
+          .replace(/-/g, ' ')
+          .replace(/\b\w/g, l => l.toUpperCase()) || 'Professional Style';
+    }
+
+    return styleName;
+  }
+
+  private generateStyleSpecificPlaceholder(styleName: string): string {
+    // Generate unique colors and patterns based on style name
+    const colors = this.getStyleSpecificColors(styleName);
+    const pattern = this.getStyleSpecificPattern(styleName);
+
+    return `<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="grad-${this.hashCode(styleName)}" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:${colors.primary};stop-opacity:1" />
+          <stop offset="100%" style="stop-color:${colors.secondary};stop-opacity:1" />
+        </linearGradient>
+        ${pattern.defs}
+      </defs>
+      <rect width="400" height="400" fill="url(#grad-${this.hashCode(styleName)})"/>
+      ${pattern.elements}
+      <text x="50%" y="85%" font-family="Arial, sans-serif" font-size="16" font-weight="500" fill="${colors.text}" text-anchor="middle" dominant-baseline="middle">${styleName}</text>
+    </svg>`;
+  }
+
+  private getStyleSpecificColors(styleName: string): {
+    primary: string;
+    secondary: string;
+    text: string;
+  } {
+    const hash = this.hashCode(styleName);
+    const colorSchemes = [
+      { primary: '#3B82F6', secondary: '#1D4ED8', text: '#E5E7EB' }, // Blue
+      { primary: '#10B981', secondary: '#059669', text: '#E5E7EB' }, // Green
+      { primary: '#8B5CF6', secondary: '#7C3AED', text: '#E5E7EB' }, // Purple
+      { primary: '#F59E0B', secondary: '#D97706', text: '#1F2937' }, // Amber
+      { primary: '#EF4444', secondary: '#DC2626', text: '#E5E7EB' }, // Red
+      { primary: '#6B7280', secondary: '#4B5563', text: '#E5E7EB' }, // Gray
+      { primary: '#EC4899', secondary: '#DB2777', text: '#E5E7EB' }, // Pink
+      { primary: '#14B8A6', secondary: '#0D9488', text: '#E5E7EB' }, // Teal
+    ];
+
+    return colorSchemes[Math.abs(hash) % colorSchemes.length];
+  }
+
+  private getStyleSpecificPattern(styleName: string): { defs: string; elements: string } {
+    const hash = this.hashCode(styleName);
+    const patterns = [
+      {
+        defs: '',
+        elements:
+          '<circle cx="200" cy="150" r="60" fill="white" opacity="0.15"/><rect x="140" y="240" width="120" height="80" rx="8" fill="white" opacity="0.15"/>',
+      },
+      {
+        defs: '',
+        elements:
+          '<polygon points="200,100 250,180 150,180" fill="white" opacity="0.12"/><rect x="160" y="250" width="80" height="100" rx="12" fill="white" opacity="0.12"/>',
+      },
+      {
+        defs: '',
+        elements:
+          '<rect x="150" y="120" width="100" height="100" rx="50" fill="white" opacity="0.1"/><rect x="125" y="240" width="150" height="90" rx="15" fill="white" opacity="0.1"/>',
+      },
+      {
+        defs: '',
+        elements:
+          '<ellipse cx="200" cy="160" rx="70" ry="50" fill="white" opacity="0.13"/><rect x="130" y="230" width="140" height="110" rx="10" fill="white" opacity="0.13"/>',
+      },
+    ];
+
+    return patterns[Math.abs(hash) % patterns.length];
+  }
+
+  private hashCode(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return hash;
   }
 }

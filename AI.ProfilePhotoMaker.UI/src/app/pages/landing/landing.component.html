@@ -336,74 +336,95 @@
         </p>
       </div>
 
-      <!-- Styled Photos Auto-Scroll Showcase -->
-      <div
-        class="styled-photos-showcase"
-        (mouseenter)="onStyledPhotosMouseEnter()"
-        (mouseleave)="onStyledPhotosMouseLeave()">
-        <!-- Main Featured Photo -->
-        <div class="featured-photo-container" *ngIf="styledPhotos.length > 0">
-          <div class="featured-photo-card">
-            <div class="photo-container">
-              <img
-                [src]="styledPhotos[currentStyledPhotoIndex].imageUrl"
-                [alt]="styledPhotos[currentStyledPhotoIndex].style + ' style example'"
-                class="featured-photo"
-                (error)="onImageError($event)" />
-              <div class="photo-gradient-overlay"></div>
-            </div>
-            <div class="photo-info">
-              <div class="style-badge">{{ styledPhotos[currentStyledPhotoIndex].category }}</div>
-              <h3 class="style-name">{{ styledPhotos[currentStyledPhotoIndex].style }}</h3>
-              <p class="style-description">{{ styledPhotos[currentStyledPhotoIndex].description }}</p>
-              <div class="persona-tag">
-                <span class="persona-icon">👤</span>
-                <span class="persona-text">Perfect for {{ styledPhotos[currentStyledPhotoIndex].persona }}</span>
-              </div>
-            </div>
-          </div>
+      <!-- Enhanced Styles Grid Showcase -->
+      <div class="styles-grid-showcase">
+        <!-- Loading State -->
+        <div *ngIf="isLoadingStyles" class="styles-loading">
+          <div class="loading-spinner"></div>
+          <p class="loading-text">Loading professional styles...</p>
         </div>
 
-        <!-- Style Grid Preview -->
-        <div class="styles-grid-preview">
-          <div class="grid-container">
-            <div
-              class="style-thumbnail"
-              *ngFor="let photo of styledPhotos.slice(0, 12); let i = index"
-              [class.active]="i === currentStyledPhotoIndex % 12">
+        <!-- Error State -->
+        <div *ngIf="stylesLoadError && !isLoadingStyles" class="styles-error">
+          <div class="error-icon">⚠️</div>
+          <p class="error-text">Using demo styles (database connection issue)</p>
+        </div>
+
+        <!-- Styles Grid - All 20+ styles visible -->
+        <div class="all-styles-grid" *ngIf="!isLoadingStyles">
+          <div
+            class="style-card"
+            *ngFor="let photo of styledPhotos; let i = index"
+            [class.featured]="i === 0"
+            (click)="onStyleCardClick(photo, i)">
+            <!-- Image Container -->
+            <div class="style-image-container">
               <img
                 [src]="photo.imageUrl"
-                [alt]="photo.style + ' thumbnail'"
-                class="thumbnail-image"
-                (error)="onImageError($event)" />
-              <div class="thumbnail-overlay">
-                <span class="thumbnail-name">{{ photo.style }}</span>
+                [alt]="photo.style + ' professional style example'"
+                class="style-image"
+                (error)="onImageError($event)"
+                loading="lazy"
+                decoding="async" />
+              <!-- Hover Overlay (Enhanced) -->
+              <div class="style-hover-overlay">
+                <div class="overlay-content">
+                  <div class="overlay-action">
+                    <span class="try-style-btn">
+                      <span class="btn-icon">✨</span>
+                      <span class="btn-text">Try Style</span>
+                    </span>
+                  </div>
+                  <p class="overlay-desc">{{ photo.description }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Always-Visible Style Info -->
+            <div class="style-info-permanent">
+              <div class="style-header">
+                <span class="style-category-badge">{{ photo.category }}</span>
+                <h4 class="style-title">{{ formatStyleName(photo.style) }}</h4>
+              </div>
+              <div class="style-meta">
+                <span class="style-persona">{{ photo.persona }}</span>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Progress Indicators -->
-        <div class="showcase-indicators">
-          <div class="indicators-container">
-            <div
-              class="indicator"
-              *ngFor="let photo of styledPhotos.slice(0, 8); let i = index"
-              [class.active]="i === currentStyledPhotoIndex % 8"></div>
+        <!-- Grid Summary -->
+        <div class="styles-summary">
+          <div class="summary-stats">
+            <div class="stat-item">
+              <span class="stat-number">{{ styledPhotos.length }}+</span>
+              <span class="stat-label">Professional Styles</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-number">4.9★</span>
+              <span class="stat-label">Average Rating</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-number">&lt;2min</span>
+              <span class="stat-label">Processing Time</span>
+            </div>
           </div>
-          <p class="showcase-counter">
-            {{ (currentStyledPhotoIndex % styledPhotos.length) + 1 }} of {{ styledPhotos.length }} styles
+          <p class="summary-text">
+            Browse all our professional photo styles at once. Each style is carefully crafted to enhance your
+            professional image.
           </p>
         </div>
 
         <!-- Call to Action -->
         <div class="showcase-cta">
           <button (click)="getStarted()" class="btn-primary showcase-btn">
-            <span class="btn-icon">✨</span>
-            <span class="btn-text">Try These Styles Now</span>
+            <span class="btn-icon">🚀</span>
+            <span class="btn-text">Try All Styles Free</span>
             <span class="btn-arrow">→</span>
           </button>
-          <p class="cta-subtext">Start with 3 free photos • No credit card required</p>
+          <p class="cta-subtext">Start with 3 free photos • No credit card required • All styles included</p>
         </div>
       </div>
     </div>
