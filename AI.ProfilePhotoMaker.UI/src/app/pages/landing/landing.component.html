@@ -157,94 +157,150 @@
     </div>
   </section>
 
-  <!-- Hero Section -->
+  <!-- Enhanced Hero Section -->
   <section
     *ngIf="!showNotFound"
     class="hero-section relative min-h-screen flex items-center justify-center overflow-hidden">
-    <!-- Background decoration -->
-    <div class="absolute inset-0 overflow-hidden">
-      <div
-        class="hero-decoration-1 absolute -top-40 -right-40 w-80 h-80 bg-primary-200 rounded-3xl opacity-30 animate-float"></div>
-      <div
-        class="hero-decoration-2 absolute -bottom-40 -left-40 w-96 h-96 bg-secondary-200 rounded-3xl opacity-30 animate-float"
-        style="animation-delay: 3s"></div>
+    <!-- Animated Background Elements -->
+    <div class="hero-background-animations">
+      <!-- Floating Particles -->
+      <div class="floating-particles">
+        <div class="particle particle-1"></div>
+        <div class="particle particle-2"></div>
+        <div class="particle particle-3"></div>
+        <div class="particle particle-4"></div>
+        <div class="particle particle-5"></div>
+        <div class="particle particle-6"></div>
+      </div>
+
+      <!-- Gradient Orbs -->
+      <div class="gradient-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+      </div>
+
+      <!-- Animated Grid Pattern -->
+      <div class="grid-pattern">
+        <div class="grid-line grid-line-1"></div>
+        <div class="grid-line grid-line-2"></div>
+        <div class="grid-line grid-line-3"></div>
+      </div>
     </div>
 
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 relative z-10">
-      <div class="text-center max-w-5xl mx-auto">
-        <!-- Badge -->
-        <div
-          class="hero-badge inline-flex items-center px-6 py-3 rounded-xl text-sm font-medium mb-6 animate-fade-in-up">
-          <span class="animate-pulse mr-2">🎉</span>
-          <span>Transform your photos with AI in seconds</span>
+    <!-- Hero Badge - Full Width (Outside Container Constraints) -->
+    <div class="hero-badge-container">
+      <div class="hero-badge">
+        <div class="badge-glow"></div>
+        <span class="badge-icon animate-bounce">✨</span>
+        <span class="badge-text">Transform your photos with our latest AI models in seconds</span>
+        <div class="badge-shimmer"></div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 pt-52 pb-16 relative z-10">
+      <div class="text-center max-w-6xl mx-auto">
+        <!-- Enhanced Headline with Typing Animation -->
+        <div class="hero-headline mb-8 md:mb-10 pt-6">
+          <h1 class="text-4xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-6xl font-bold leading-[1.0] tracking-tight">
+            <span class="headline-primary">The Most Realistic</span>
+            <br />
+            <span class="headline-gradient">AI Generated</span>
+            <span class="headline-primary">Profile Photos</span>
+          </h1>
+          <div class="headline-underline"></div>
         </div>
 
-        <!-- Main headline -->
-        <h1 class="text-4xl md:text-6xl lg:text-7xl font-bold animate-fade-in-up" style="animation-delay: 0.2s">
-          <span class="bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent block mb-6">
-            The Most Realistic AI Generated Profile Photos
-          </span>
-        </h1>
-
-        <!-- Subheadline -->
-        <p
-          class="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto animate-fade-in-up"
-          style="animation-delay: 0.4s">
-          Transform your casual selfies into stunning professional headshots. Perfect for LinkedIn, resumes, dating
-          apps, and social media.
-        </p>
-
-        <!-- CTA Buttons -->
-        <div
-          class="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-fade-in-up"
-          style="animation-delay: 0.6s">
-          <button
-            (click)="getStarted()"
-            class="btn-primary px-8 py-4 text-lg font-semibold transform hover:scale-105 transition-all duration-200 shadow-lg"
-            style="border-radius: 8px !important">
-            Start Free Trial →
-          </button>
-          <button
-            (click)="scrollToSection('examples')"
-            class="btn-secondary px-8 py-4 text-lg font-semibold transform hover:scale-105 transition-all duration-200 shadow-lg"
-            style="border-radius: 8px !important">
-            View Examples
-          </button>
+        <!-- Enhanced Subheadline -->
+        <div class="hero-subtext mb-14">
+          <p class="text-lg sm:text-xl md:text-2xl lg:text-3xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
+            Transform your casual selfies into
+            <strong class="text-primary-600">stunning professional headshots</strong>
+            . Perfect for LinkedIn, resumes, dating apps, and social media.
+          </p>
+          <div class="subtext-highlight"></div>
         </div>
 
-        <!-- Trust indicators -->
-        <div
-          class="flex flex-wrap justify-center gap-6 text-sm text-gray-600 animate-fade-in-up"
-          style="animation-delay: 0.8s">
-          <div class="flex items-center">
-            <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                clip-rule="evenodd"></path>
-            </svg>
-            <span>No credit card required</span>
+        <!-- Enhanced CTA Buttons -->
+        <div class="hero-actions mb-16">
+          <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
+            <button (click)="getStarted()" class="cta-primary">
+              <div class="btn-background"></div>
+              <div class="btn-content">
+                <span class="btn-icon">🚀</span>
+                <span class="btn-text">Start Free Trial</span>
+                <span class="btn-arrow">→</span>
+              </div>
+              <div class="btn-glow"></div>
+            </button>
+            <button (click)="scrollToSection('examples')" class="cta-secondary">
+              <div class="btn-content">
+                <span class="btn-icon">👀</span>
+                <span class="btn-text">View Examples</span>
+              </div>
+            </button>
           </div>
-          <div class="flex items-center">
-            <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                clip-rule="evenodd"></path>
-            </svg>
-            <span>2,847+ happy customers</span>
+        </div>
+
+        <!-- Enhanced Trust Indicators -->
+        <div class="hero-trust-indicators">
+          <div class="trust-grid">
+            <div class="trust-item">
+              <div class="trust-icon">
+                <svg class="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path
+                    fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clip-rule="evenodd"></path>
+                </svg>
+              </div>
+              <span class="trust-text">No credit card required</span>
+            </div>
+            <div class="trust-item">
+              <div class="trust-icon">
+                <svg class="w-6 h-6 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <span class="trust-text">2,847+ happy customers</span>
+            </div>
+            <div class="trust-item">
+              <div class="trust-icon">
+                <svg class="w-6 h-6 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path
+                    fill-rule="evenodd"
+                    d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                    clip-rule="evenodd"></path>
+                </svg>
+              </div>
+              <span class="trust-text">100% privacy guaranteed</span>
+            </div>
           </div>
-          <div class="flex items-center">
-            <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                clip-rule="evenodd"></path>
-            </svg>
-            <span>100% privacy guaranteed</span>
+          <div class="trust-stats">
+            <div class="stat-item">
+              <span class="stat-number">4.9★</span>
+              <span class="stat-label">Average Rating</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-number">&lt;2min</span>
+              <span class="stat-label">Processing Time</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-number">20+</span>
+              <span class="stat-label">Professional Styles</span>
+            </div>
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Scroll Indicator -->
+    <div class="scroll-indicator">
+      <div class="scroll-arrow"></div>
+      <span class="scroll-text">Scroll to explore</span>
     </div>
   </section>
 
@@ -270,34 +326,84 @@
     </div>
   </section>
 
-  <!-- Before/After Examples Section -->
+  <!-- Styled Photos Showcase Section -->
   <section *ngIf="!showNotFound" id="examples" class="examples-section py-16 md:py-24">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
       <div class="text-center mb-12 md:mb-16">
-        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">See the AI Magic in Action</h2>
-        <p class="text-xl text-gray-600 max-w-3xl mx-auto">Real transformations from our satisfied customers</p>
+        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Explore Our Professional Styles</h2>
+        <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+          Choose from 20+ AI-powered professional photo styles designed for every industry and personality
+        </p>
       </div>
 
-      <!-- Placeholder for before/after slider -->
-      <div class="max-w-4xl mx-auto">
-        <div class="examples-demo-card rounded-2xl shadow-xl p-8">
-          <div class="grid md:grid-cols-2 gap-8">
-            <div class="text-center">
-              <h3 class="text-lg font-semibold mb-4">Before</h3>
-              <div class="before-photo-placeholder rounded-lg aspect-square flex items-center justify-center">
-                <span>Casual Photo</span>
-              </div>
+      <!-- Styled Photos Auto-Scroll Showcase -->
+      <div
+        class="styled-photos-showcase"
+        (mouseenter)="onStyledPhotosMouseEnter()"
+        (mouseleave)="onStyledPhotosMouseLeave()">
+        <!-- Main Featured Photo -->
+        <div class="featured-photo-container" *ngIf="styledPhotos.length > 0">
+          <div class="featured-photo-card">
+            <div class="photo-container">
+              <img
+                [src]="styledPhotos[currentStyledPhotoIndex].imageUrl"
+                [alt]="styledPhotos[currentStyledPhotoIndex].style + ' style example'"
+                class="featured-photo"
+                (error)="onImageError($event)" />
+              <div class="photo-gradient-overlay"></div>
             </div>
-            <div class="text-center">
-              <h3 class="text-lg font-semibold mb-4">After</h3>
-              <div class="after-photo-placeholder rounded-lg aspect-square flex items-center justify-center">
-                <span>Professional Result</span>
+            <div class="photo-info">
+              <div class="style-badge">{{ styledPhotos[currentStyledPhotoIndex].category }}</div>
+              <h3 class="style-name">{{ styledPhotos[currentStyledPhotoIndex].style }}</h3>
+              <p class="style-description">{{ styledPhotos[currentStyledPhotoIndex].description }}</p>
+              <div class="persona-tag">
+                <span class="persona-icon">👤</span>
+                <span class="persona-text">Perfect for {{ styledPhotos[currentStyledPhotoIndex].persona }}</span>
               </div>
             </div>
           </div>
-          <div class="text-center mt-6">
-            <p class="examples-style-text font-medium">{{ beforeAfterExamples[currentBeforeAfterIndex].style }}</p>
+        </div>
+
+        <!-- Style Grid Preview -->
+        <div class="styles-grid-preview">
+          <div class="grid-container">
+            <div
+              class="style-thumbnail"
+              *ngFor="let photo of styledPhotos.slice(0, 12); let i = index"
+              [class.active]="i === currentStyledPhotoIndex % 12">
+              <img
+                [src]="photo.imageUrl"
+                [alt]="photo.style + ' thumbnail'"
+                class="thumbnail-image"
+                (error)="onImageError($event)" />
+              <div class="thumbnail-overlay">
+                <span class="thumbnail-name">{{ photo.style }}</span>
+              </div>
+            </div>
           </div>
+        </div>
+
+        <!-- Progress Indicators -->
+        <div class="showcase-indicators">
+          <div class="indicators-container">
+            <div
+              class="indicator"
+              *ngFor="let photo of styledPhotos.slice(0, 8); let i = index"
+              [class.active]="i === currentStyledPhotoIndex % 8"></div>
+          </div>
+          <p class="showcase-counter">
+            {{ (currentStyledPhotoIndex % styledPhotos.length) + 1 }} of {{ styledPhotos.length }} styles
+          </p>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="showcase-cta">
+          <button (click)="getStarted()" class="btn-primary showcase-btn">
+            <span class="btn-icon">✨</span>
+            <span class="btn-text">Try These Styles Now</span>
+            <span class="btn-arrow">→</span>
+          </button>
+          <p class="cta-subtext">Start with 3 free photos • No credit card required</p>
         </div>
       </div>
     </div>
