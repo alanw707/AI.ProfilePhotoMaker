@@ -13,7 +13,7 @@ import { CreditsInfo, ReplicateService } from '../../services/replicate.service'
 import { FileUploadService } from '../../services/file-upload.service';
 import { AuthService } from '../../services/auth.service';
 import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
-import { DashboardStateService } from '../../services/dashboard-state.service';
+import { DashboardCoordinatorService } from '../../services/dashboard-coordinator.service';
 import { CreditService, UserCreditStatus } from '../../services/credit.service';
 import { Subscription } from 'rxjs';
 
@@ -47,7 +47,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     private fileUploadService: FileUploadService,
     private authService: AuthService,
     private router: Router,
-    private stateService: DashboardStateService,
+    private stateService: DashboardCoordinatorService,
     private creditService: CreditService,
     private cdr: ChangeDetectorRef
   ) {}

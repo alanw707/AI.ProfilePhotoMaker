@@ -7,7 +7,7 @@ import { HeaderNavigationComponent } from '../../shared/header-navigation/header
 import { ProfileService, UserProfile } from '../../services/profile.service';
 import { FileUploadService } from '../../services/file-upload.service';
 import { NotificationService } from '../../services/notification.service';
-import { DashboardStateService } from '../../services/dashboard-state.service';
+import { DashboardCoordinatorService } from '../../services/dashboard-coordinator.service';
 import { AccountInfoComponent } from '../../components/settings/account-info/account-info.component';
 import { CreditManagementComponent } from '../../components/settings/credit-management/credit-management.component';
 
@@ -74,7 +74,7 @@ export class SettingsComponent implements OnInit {
     private profileService: ProfileService,
     private fileUploadService: FileUploadService,
     private notificationService: NotificationService,
-    private dashboardStateService: DashboardStateService,
+    private dashboardStateService: DashboardCoordinatorService,
     private cdr: ChangeDetectorRef
   ) {}
 

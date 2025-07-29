@@ -17,7 +17,7 @@ import { AuthService } from '../services/auth.service';
 import { StyleService } from '../services/style.service';
 import { NotificationService } from '../services/notification.service';
 import { CreditService } from '../services/credit.service';
-import { DashboardStateService } from '../services/dashboard-state.service';
+import { DashboardCoordinatorService } from '../services/dashboard-coordinator.service';
 import { ConfigService } from '../services/config.service';
 // Lazy-loaded service types
 interface WorkflowProgress {
@@ -136,7 +136,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private styleService: StyleService,
     private notificationService: NotificationService,
     public creditService: CreditService,
-    public stateService: DashboardStateService,
+    public stateService: DashboardCoordinatorService,
     private config: ConfigService,
     private workflowStepService: WorkflowStepService,
     private injector: Injector,
