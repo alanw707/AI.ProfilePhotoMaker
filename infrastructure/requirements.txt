@@ -1,0 +1,12 @@
+# Azure SDK for Python - Infrastructure Deployment
+# Alternative to Azure CLI that bypasses API issues
+
+# Core Azure SDK packages
+azure-identity>=1.15.0
+azure-mgmt-resource>=23.1.0
+
+# Optional: For enhanced authentication options
+azure-cli-core>=2.55.0
+
+# Utilities
+requests>=2.31.0
