@@ -100,13 +100,24 @@ jobs:
           print(f"✅ Secrets substituted in parameters.{env_name}.temp.json")
           EOF
 
-      - name: Create resource group for validation
+      - name: Ensure resource group exists for validation
         run: |
           ENV_NAME=${{ github.event.inputs.environment || 'staging' }}
-          az group create \
-            --name ai-profile-photo-maker-$ENV_NAME \
-            --location "East US" \
-            --output table || echo "Resource group may already exist"
+          RG_NAME="ai-profile-photo-maker-$ENV_NAME"
+          
+          # Check if resource group exists first
+          if az group show --name $RG_NAME --output none 2>/dev/null; then
+            echo "✅ Resource group $RG_NAME already exists"
+          else
+            echo "⏳ Attempting to create resource group $RG_NAME"
+            if az group create --name $RG_NAME --location "East US" --output table; then
+              echo "✅ Resource group $RG_NAME created successfully"
+            else
+              echo "❌ Failed to create resource group. Please ensure it exists or grant additional permissions."
+              echo "Manual command: az group create --name $RG_NAME --location 'East US'"
+              exit 1
+            fi
+          fi
 
       - name: Validate Bicep template
         run: |
@@ -161,12 +172,17 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_011D6FB5A4BC43509D9B165F9842CEBC }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B9C8B148FA76469EB51C84A0DE3D63BB }}
       
-      - name: Create Resource Group
+      - name: Ensure staging resource group exists
         run: |
-          az group create \
-            --name ai-profile-photo-maker-staging \
-            --location "East US" \
-            --output table
+          RG_NAME="ai-profile-photo-maker-staging"
+          
+          # Check if resource group exists first
+          if az group show --name $RG_NAME --output none 2>/dev/null; then
+            echo "✅ Resource group $RG_NAME already exists"
+          else
+            echo "⏳ Creating resource group $RG_NAME"
+            az group create --name $RG_NAME --location "East US" --output table
+          fi
       
       - name: Substitute secrets in parameters
         env:
@@ -240,12 +256,17 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_011D6FB5A4BC43509D9B165F9842CEBC }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B9C8B148FA76469EB51C84A0DE3D63BB }}
       
-      - name: Create Resource Group
+      - name: Ensure production resource group exists
         run: |
-          az group create \
-            --name ai-profile-photo-maker-prod \
-            --location "East US" \
-            --output table
+          RG_NAME="ai-profile-photo-maker-prod"
+          
+          # Check if resource group exists first
+          if az group show --name $RG_NAME --output none 2>/dev/null; then
+            echo "✅ Resource group $RG_NAME already exists"
+          else
+            echo "⏳ Creating resource group $RG_NAME"
+            az group create --name $RG_NAME --location "East US" --output table
+          fi
       
       - name: Substitute secrets in parameters
         env:

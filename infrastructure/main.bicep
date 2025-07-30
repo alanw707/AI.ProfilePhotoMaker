@@ -65,6 +65,9 @@ resource webApp 'Microsoft.Web/sites@2023-01-01' = {
   name: webAppName
   location: location
   kind: 'app'
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     serverFarmId: appServicePlan.id
     siteConfig: {
@@ -327,7 +330,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enableSoftDelete: true
     softDeleteRetentionInDays: 90
     enableRbacAuthorization: false
-    vaultUri: 'https://${keyVaultName}.vault.azure.net/'
+    vaultUri: 'https://${keyVaultName}.${environment().suffixes.keyvaultDns}/'
     provisioningState: 'Succeeded'
     publicNetworkAccess: 'Enabled'
   }
@@ -371,31 +374,24 @@ resource sqlConnectionStringKV 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = 
   }
 }
 
-// Enable Managed Identity for Web App
-resource webAppManagedIdentity 'Microsoft.Web/sites/config@2023-01-01' = {
-  parent: webApp
-  name: 'web'
-  properties: {
-    managedServiceIdentityId: webApp.identity.principalId
-  }
-}
+// Web App has managed identity enabled by default when accessing Key Vault
 
 // Web App Configuration
 resource webAppConfig 'Microsoft.Web/sites/config@2023-01-01' = {
   parent: webApp
   name: 'appsettings'
   properties: {
-    'ConnectionStrings:DefaultConnection': '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/DatabaseConnectionString/)'
-    'Jwt:Secret': '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/JwtSecret/)'
-    'Jwt:ValidAudience': 'https://${staticWebAppName}.azurestaticapps.net'
-    'Jwt:ValidIssuer': 'https://${webAppName}.azurewebsites.net'
-    'Replicate:ApiToken': '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/ReplicateApiToken/)'
-    'Replicate:WebhookSecret': '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/ReplicateWebhookSecret/)'
-    'AzureStorage:ConnectionString': 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
-    'AzureStorage:ContainerName': 'profile-images'
-    'ApplicationInsights:InstrumentationKey': applicationInsights.properties.InstrumentationKey
-    'ApplicationInsights:ConnectionString': applicationInsights.properties.ConnectionString
-    'ASPNETCORE_ENVIRONMENT': environmentName == 'prod' ? 'Production' : 'Development'
+    ConnectionStrings__DefaultConnection: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/DatabaseConnectionString/)'
+    Jwt__Secret: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/JwtSecret/)'
+    Jwt__ValidAudience: 'https://${staticWebAppName}.azurestaticapps.net'
+    Jwt__ValidIssuer: 'https://${webAppName}.azurewebsites.net'
+    Replicate__ApiToken: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/ReplicateApiToken/)'
+    Replicate__WebhookSecret: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/ReplicateWebhookSecret/)'
+    AzureStorage__ConnectionString: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
+    AzureStorage__ContainerName: 'profile-images'
+    ApplicationInsights__InstrumentationKey: applicationInsights.properties.InstrumentationKey
+    ApplicationInsights__ConnectionString: applicationInsights.properties.ConnectionString
+    ASPNETCORE_ENVIRONMENT: environmentName == 'prod' ? 'Production' : 'Development'
   }
   dependsOn: [
     jwtSecretKV
