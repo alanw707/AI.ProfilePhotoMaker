@@ -167,7 +167,6 @@ export class DashboardCoordinatorService implements IDashboardStateService {
    */
   async loadInitialDashboardData(): Promise<void> {
     const startTime = performance.now();
-    console.log('🚀 Starting coordinated dashboard data load...');
 
     // Check if we should debounce this load
     if (
@@ -196,7 +195,6 @@ export class DashboardCoordinatorService implements IDashboardStateService {
       this.loadRemainingDataAsync();
 
       const loadTime = performance.now() - startTime;
-      console.log(`⚡ Coordinated dashboard loaded in ${loadTime.toFixed(2)}ms`);
     } catch (error) {
       console.error('❌ Dashboard coordination failed:', error);
       this.notificationService.error(
@@ -212,8 +210,6 @@ export class DashboardCoordinatorService implements IDashboardStateService {
    * Load basic data for settings page (counts only, no validation)
    */
   async loadBasicDataForSettings(): Promise<void> {
-    console.log('🚀 Loading basic settings data...');
-
     try {
       // Load profile data
       await this.loadProfileData();
@@ -223,8 +219,6 @@ export class DashboardCoordinatorService implements IDashboardStateService {
 
       // Load user images without validation
       await this.imageState.loadUserImages();
-
-      console.log('✅ Basic settings data loaded');
     } catch (error) {
       console.error('❌ Settings data load failed:', error);
     }
@@ -268,8 +262,6 @@ export class DashboardCoordinatorService implements IDashboardStateService {
    * Load remaining data asynchronously after initial render
    */
   private loadRemainingDataAsync(): void {
-    console.log('🔄 Loading remaining dashboard data asynchronously...');
-
     forkJoin({
       trainingStatus: this.fileUploadService.getTrainingStatus().pipe(
         catchError(error => {
@@ -330,8 +322,6 @@ export class DashboardCoordinatorService implements IDashboardStateService {
         if (fallbackCheck.shouldDiscoverModels) {
           this.modelState.runAsyncModelDiscovery();
         }
-
-        console.log('✅ Dashboard secondary data loaded successfully');
       },
       error: error => {
         console.error('Failed to load additional dashboard data:', error);
@@ -377,7 +367,6 @@ export class DashboardCoordinatorService implements IDashboardStateService {
    * Force refresh all services
    */
   forceRefresh(): void {
-    console.log('🔄 Force refreshing all dashboard data...');
     this.cacheManager.forceRefresh(this.CACHE_KEY);
     this.fallbackOps.resetFallbackTracking();
 

@@ -63,20 +63,14 @@ export class ModelStateService implements IModelStateService {
    * Debug methods for console testing
    */
   async debugModelStatus(): Promise<any> {
-    console.log('🔍 Starting comprehensive model status debug...');
-
     try {
       const debugResult = await this.fileUploadService.getDebugModelStatus().toPromise();
-      console.log('🔍 Debug API Result:', debugResult);
 
       const testResult = await this.fileUploadService.testModelCreationEndpoint().toPromise();
-      console.log('🔍 Test Model Creation Endpoint Result:', testResult);
 
       const discoverResult = await this.fileUploadService.discoverUserModels().toPromise();
-      console.log('🔍 Direct Replicate API Discovery Result:', discoverResult);
 
       const specificModelTest = await this.fileUploadService.testSpecificModel().toPromise();
-      console.log('🔍 Specific Model Test Result:', specificModelTest);
 
       return {
         debug: debugResult,
@@ -94,17 +88,12 @@ export class ModelStateService implements IModelStateService {
    * Manual model discovery method
    */
   async triggerModelDiscovery(): Promise<any> {
-    console.log('🔍 Manually triggering model discovery...');
-
     try {
       const discoveryResult = await this.profileService.discoverModels().toPromise();
-      console.log('🔍 Manual Model Discovery Result:', discoveryResult);
 
       if (discoveryResult?.success && discoveryResult?.data?.ModelsAdded > 0) {
-        console.log('🎉 Models found and synced! Updating model status...');
         this.updateModelStatus();
       } else {
-        console.log('ℹ️ No new models found to sync');
       }
 
       return discoveryResult;
@@ -141,22 +130,12 @@ export class ModelStateService implements IModelStateService {
     let latestTrainedModel = null;
 
     // 🔍 ENHANCED DEBUG: Model status data analysis
-    console.log('🔍 MODEL STATUS DEBUG - getModelStatusFromData:');
-    console.log('  - modelRequestsData:', JSON.stringify(modelRequestsData, null, 2));
-    console.log('  - trainingStatus:', JSON.stringify(trainingStatus, null, 2));
-    console.log('  - hasTrainedModel check:', modelRequestsData?.hasTrainedModel);
-    console.log('  - latestTrainedModel check:', modelRequestsData?.latestTrainedModel);
-    console.log(
-      '  - Combined check:',
-      modelRequestsData?.hasTrainedModel && modelRequestsData?.latestTrainedModel
-    );
 
     // Use ModelCreationRequest as single source of truth
     if (modelRequestsData?.hasTrainedModel && modelRequestsData?.latestTrainedModel) {
       hasTrainedModel = true;
       modelStatus = 'Model Ready';
       latestTrainedModel = modelRequestsData.latestTrainedModel;
-      console.log('✅ MODEL STATUS: Setting to Model Ready');
     }
     // Check if we have pending/in-progress training
     else if (
@@ -171,11 +150,6 @@ export class ModelStateService implements IModelStateService {
       modelStatus = trainingStatus?.status || 'Not Started';
     }
 
-    console.log('🔍 FINAL MODEL STATUS RESULT:', {
-      modelStatus,
-      hasTrainedModel,
-      latestTrainedModel,
-    });
     return { modelStatus, hasTrainedModel, latestTrainedModel };
   }
 
@@ -186,17 +160,5 @@ export class ModelStateService implements IModelStateService {
   private notifyModelStatusUpdate(modelStatus: string, latestTrainedModel: any): void {
     // This could emit an event or call a callback
     // For now, just log the update
-    console.log('🔄 Model status updated:', { modelStatus, latestTrainedModel });
-  }
-
-  /**
-   * Enable global debug methods for console access
-   */
-  enableGlobalDebug(): void {
-    (window as any).debugModelStatus = () => this.debugModelStatus();
-    (window as any).discoverModels = () => this.triggerModelDiscovery();
-    console.log('🔍 Model debug enabled! Available commands:');
-    console.log('  - debugModelStatus() - Run comprehensive model debug');
-    console.log('  - discoverModels() - Manually trigger model discovery');
   }
 }

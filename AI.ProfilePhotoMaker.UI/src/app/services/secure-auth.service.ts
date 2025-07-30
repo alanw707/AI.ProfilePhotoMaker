@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { BehaviorSubject, Observable, throwError, timer, EMPTY } from 'rxjs';
+import { BehaviorSubject, Observable, throwError, timer, EMPTY, of } from 'rxjs';
 import { catchError, switchMap, tap, filter, take, finalize } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { ConfigService } from './config.service';
@@ -101,6 +101,18 @@ export class SecureAuthService {
     const session = this.getSecureSession();
 
     if (!session) {
+      // Fallback to traditional localStorage auth token for compatibility
+      const authToken = localStorage.getItem('auth_token') || localStorage.getItem('authToken');
+      if (authToken) {
+        const fallbackRequest = originalRequest.clone({
+          setHeaders: {
+            Authorization: `Bearer ${authToken}`,
+            'X-Requested-With': 'XMLHttpRequest',
+            'ngrok-skip-browser-warning': 'true',
+          },
+        });
+        return next(fallbackRequest);
+      }
       return next(originalRequest);
     }
 
@@ -222,16 +234,16 @@ export class SecureAuthService {
         }));
       }),
       switchMap(response => {
-        if (response.isSuccess) {
-          return [
-            {
-              success: true,
-              token: response.token,
-              expiration: response.expiration,
-            },
-          ];
-        } else {
+        if ('isSuccess' in response && response.isSuccess) {
+          return of({
+            success: true,
+            token: response.token,
+            expiration: response.expiration,
+          });
+        } else if ('message' in response) {
           return throwError(() => ({ success: false, error: response.message }));
+        } else {
+          return throwError(() => ({ success: false, error: 'Token refresh failed' }));
         }
       })
     );
@@ -267,7 +279,7 @@ export class SecureAuthService {
   private validateSession(): Observable<boolean> {
     const session = this.getSecureSession();
     if (!session) {
-      return [false];
+      return of(false);
     }
 
     return this.http
@@ -275,8 +287,8 @@ export class SecureAuthService {
         sessionId: session.sessionId,
       })
       .pipe(
-        switchMap(response => [response.valid]),
-        catchError(() => [false])
+        switchMap(response => of(response.valid)),
+        catchError(() => of(false))
       );
   }
 

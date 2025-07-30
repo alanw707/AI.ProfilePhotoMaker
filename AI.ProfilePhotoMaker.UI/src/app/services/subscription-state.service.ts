@@ -61,15 +61,10 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
   async loadFullSubscriptionData(): Promise<void> {
     const startTime = performance.now();
 
-    console.log('🔍 DEBUG: Starting loadFullSubscriptionData...');
-    console.log('🔍 DEBUG: Current state before loading:', this.getState());
-
     // Check cache first
     const cachedData = this.getCachedData<SubscriptionState>(this.CACHE_KEY);
-    console.log('🔍 DEBUG: Cached data found:', !!cachedData, cachedData);
 
     if (cachedData?.userCreditStatus) {
-      console.log('💾 Using cached subscription data');
       this.setState(cachedData);
       return;
     }
@@ -80,15 +75,8 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
     }
 
     this.setLoading(true);
-    console.log('🚀 Loading full subscription data...');
 
     try {
-      console.log('🔍 DEBUG: Setting up API calls...');
-      console.log(
-        '🔍 DEBUG: Replicate credits enabled:',
-        this.configService.isReplicateCreditsEnabled
-      );
-
       const apiCalls: any = {
         creditStatus: this.creditService.getCreditStatus().pipe(
           catchError(error => {
@@ -117,25 +105,11 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
           })
         );
       } else {
-        console.log('⚡ Replicate credits API disabled via environment config');
         apiCalls.credits = of({ success: false, data: null, error: 'disabled' });
       }
 
-      console.log('🔍 DEBUG: Making API calls:', Object.keys(apiCalls));
       const result: any = await forkJoin(apiCalls).toPromise();
-      console.log('🔍 DEBUG: API calls completed:', {
-        creditStatusSuccess: result?.creditStatus?.success,
-        creditStatusData: result?.creditStatus?.data,
-        creditsSuccess: result?.credits?.success,
-        creditsData: result?.credits?.data,
-        fullResult: result,
-      });
       const { creditStatus, credits } = result;
-
-      console.log('📦 Subscription API responses:', {
-        creditStatusSuccess: creditStatus?.success ?? false,
-        creditsSuccess: credits?.success ?? false,
-      });
 
       const userCreditStatus = creditStatus?.success ? creditStatus.data : null;
       const creditsInfo = credits?.success ? credits.data : null;
@@ -168,7 +142,6 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
         this.configService.isReplicateCreditsEnabled &&
         creditStatus?.success
       ) {
-        console.log('ℹ️ Subscription loaded without external credits API');
       }
 
       this.logPerformance('Subscription data loaded', startTime);
@@ -191,7 +164,6 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
     }>(this.CREDITS_CACHE_KEY);
 
     if (cachedData?.userCreditStatus) {
-      console.log('💾 Using cached internal credits data');
       this.setState({
         userCreditStatus: cachedData.userCreditStatus,
         totalCredits: cachedData.totalCredits,
@@ -207,7 +179,6 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
     }
 
     this.setLoading(true);
-    console.log('🚀 Loading internal credits data...');
 
     try {
       const creditStatus = await this.creditService
@@ -219,10 +190,6 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
           })
         )
         .toPromise();
-
-      console.log('📦 Internal credits API response:', {
-        creditStatusSuccess: creditStatus?.success ?? false,
-      });
 
       const userCreditStatus = creditStatus?.success ? creditStatus.data : null;
 
@@ -253,7 +220,6 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
         );
       }
 
-      console.log('⚡ Internal credits loaded successfully:', totalCredits);
       this.logPerformance('Internal credits loaded', startTime);
     } catch (error) {
       this.handleApiError(error, 'Load Internal Credits');
@@ -265,7 +231,6 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
    * Refresh credit status after purchases or usage
    */
   async refreshCredits(): Promise<void> {
-    console.log('🔄 Refreshing credit status...');
     this.invalidateCache(this.CACHE_KEY);
     this.invalidateCache(this.CREDITS_CACHE_KEY);
     await this.loadFullSubscriptionData();
@@ -321,8 +286,6 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
     const currentState = this.getState();
     const newTotalCredits = Math.max(0, currentState.totalCredits - creditsUsed);
 
-    console.log(`💳 Credits used: ${creditsUsed}, remaining: ${newTotalCredits}`);
-
     this.setState({
       totalCredits: newTotalCredits,
     });
@@ -345,7 +308,6 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
    * Force refresh implementation
    */
   forceRefresh(): void {
-    console.log('🔄 Force refreshing subscription data...');
     this.forceRefreshCache(this.CACHE_KEY);
     this.forceRefreshCache(this.CREDITS_CACHE_KEY);
     this.loadFullSubscriptionData();

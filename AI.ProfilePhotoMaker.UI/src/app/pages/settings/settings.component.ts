@@ -79,16 +79,11 @@ export class SettingsComponent implements OnInit {
   ) {}
 
   async ngOnInit() {
-    console.log('Settings ngOnInit');
-
     // Check authentication first
     if (!this.authService.isAuthenticated()) {
-      console.log('Not authenticated, redirecting to login');
       this.router.navigate(['/auth/login']);
       return;
     }
-
-    console.log('User is authenticated, loading settings data');
 
     try {
       // Load all data in parallel and wait for completion
@@ -563,8 +558,6 @@ export class SettingsComponent implements OnInit {
    * This addresses the issue where model status might be inconsistent across different endpoints
    */
   private async checkTrainedModelStatus(): Promise<void> {
-    console.log('🔍 Checking trained model status using multiple data sources...');
-
     let hasTrainedModel = false;
     const statusSources: string[] = [];
 
@@ -575,7 +568,6 @@ export class SettingsComponent implements OnInit {
         if (trainingStatus?.hasTrainedModel) {
           hasTrainedModel = true;
           statusSources.push('training-status');
-          console.log('✅ Model found via training-status endpoint:', trainingStatus);
         }
       } catch (error) {
         console.warn('⚠️ Training status endpoint failed:', error);
@@ -587,7 +579,6 @@ export class SettingsComponent implements OnInit {
         if (modelRequests?.success && modelRequests.data?.hasTrainedModel) {
           hasTrainedModel = true;
           statusSources.push('model-requests');
-          console.log('✅ Model found via model-requests endpoint:', modelRequests.data);
         }
       } catch (error) {
         console.warn('⚠️ Model requests endpoint failed:', error);
@@ -597,10 +588,6 @@ export class SettingsComponent implements OnInit {
       if (this.userProfile?.trainedModelId) {
         hasTrainedModel = true;
         statusSources.push('user-profile');
-        console.log('✅ Model found via user profile:', {
-          trainedModelId: this.userProfile.trainedModelId,
-          trainedModelVersionId: this.userProfile.trainedModelVersionId,
-        });
       }
 
       // Method 4: Debug endpoint as final verification (if other methods disagree)
@@ -610,7 +597,6 @@ export class SettingsComponent implements OnInit {
           if (debugStatus?.success && debugStatus.data?.hasTrainedModel) {
             hasTrainedModel = true;
             statusSources.push('debug-status');
-            console.log('✅ Model found via debug endpoint:', debugStatus.data);
           }
         } catch (error) {
           console.warn('⚠️ Debug status endpoint failed:', error);
@@ -619,11 +605,6 @@ export class SettingsComponent implements OnInit {
 
       // Update the status
       this.dataStats.hasTrainedModel = hasTrainedModel;
-
-      console.log(`🎯 Final trained model status: ${hasTrainedModel ? 'YES' : 'NO'}`, {
-        sources: statusSources,
-        totalSources: statusSources.length,
-      });
 
       // Log warning if no model found but expected
       if (!hasTrainedModel && statusSources.length === 0) {

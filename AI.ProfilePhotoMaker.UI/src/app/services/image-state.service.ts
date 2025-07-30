@@ -75,7 +75,6 @@ export class ImageStateService extends StateBaseService<ImageState> {
     if (!forceRefresh) {
       const cachedData = this.getCachedData<ImageState>(this.CACHE_KEY);
       if (cachedData?.uploadedImageThumbnails) {
-        console.log('💾 Using cached image data');
         this.setState(cachedData);
 
         // Always validate cached images
@@ -92,7 +91,6 @@ export class ImageStateService extends StateBaseService<ImageState> {
     }
 
     this.setLoading(true);
-    console.log('🚀 Loading user images...');
 
     try {
       const userImages = await this.fileUploadService.getUserImages(forceRefresh).toPromise();
@@ -227,7 +225,7 @@ export class ImageStateService extends StateBaseService<ImageState> {
     isFromCache: boolean
   ): Promise<ImageValidationResult> {
     console.log(
-      `🔍 Validating ${images.length} uploaded images ${isFromCache ? '(from cache)' : '(fresh)'}...`
+      `Validating ${images.length} uploaded images ${isFromCache ? '(from cache)' : '(fresh)'}...`
     );
 
     // Check if image validation is disabled via environment configuration
@@ -443,25 +441,5 @@ export class ImageStateService extends StateBaseService<ImageState> {
     });
 
     this.loadUserImages(true);
-  }
-
-  /**
-   * Enable debug methods
-   */
-  enableGlobalDebug(): void {
-    (window as any).imageState = {
-      getState: () => this.getState(),
-      forceRefresh: () => this.forceRefresh(),
-      validateImages: () => this.validateCurrentImages(),
-      refreshGenerated: () => this.refreshGeneratedPhotosCount(),
-      invalidateAndRefresh: () => this.invalidateAndRefresh(),
-    };
-
-    console.log('🔍 ImageStateService debug enabled! Available commands:');
-    console.log('  - imageState.getState() - View current image state');
-    console.log('  - imageState.forceRefresh() - Force refresh image data');
-    console.log('  - imageState.validateImages() - Validate current images');
-    console.log('  - imageState.refreshGenerated() - Refresh generated photos count');
-    console.log('  - imageState.invalidateAndRefresh() - Invalidate cache and refresh');
   }
 }

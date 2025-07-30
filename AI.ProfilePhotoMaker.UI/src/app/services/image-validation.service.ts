@@ -65,8 +65,6 @@ export class ImageValidationService {
       };
     }
 
-    console.log(`🔍 Validating image URL: ${correctedUrl} (original: ${url})`);
-
     try {
       // Use HEAD request to check if image exists without downloading it
       const controller = new AbortController();
@@ -96,7 +94,6 @@ export class ImageValidationService {
       // Cache the result
       this.cacheResult(correctedUrl, result);
 
-      console.log(`✅ Image validation result for ${correctedUrl}:`, result);
       return result;
     } catch (error: any) {
       console.warn(`❌ Image validation failed for ${correctedUrl}:`, error);
@@ -120,8 +117,6 @@ export class ImageValidationService {
    * Returns detailed validation summary including repair suggestions
    */
   async validateImageUrls(urls: string[]): Promise<ImageValidationSummary> {
-    console.log(`🔍 Validating ${urls.length} image URLs...`);
-
     const validationPromises = urls.map(url => this.validateImageUrl(url));
     const results = await Promise.all(validationPromises);
 
