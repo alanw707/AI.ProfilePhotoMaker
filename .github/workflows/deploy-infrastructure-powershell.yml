@@ -56,7 +56,7 @@ jobs:
         run: |
           Write-Host "🔧 Installing Azure PowerShell modules..."
           Install-Module -Name Az -Force -AllowClobber -Scope CurrentUser -Repository PSGallery
-          Import-Module Az.Accounts, Az.Resources, Az.Profile
+          Import-Module Az.Accounts, Az.Resources
           Write-Host "✅ Azure PowerShell modules installed"
           
       - name: Azure OIDC Login
