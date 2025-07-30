@@ -18,6 +18,14 @@
 *.env.production
 appsettings.Production.json
 appsettings.*.Production.json
+
+# Secret documentation files (keep local, don't commit)
+FINAL_DEPLOYMENT_INSTRUCTIONS.md
+GENERATED_SECRETS_FOR_AZURE.md
+EXTRACT_SECRETS_FROM_DOTNET.md
+SECRETS_CONFIGURATION_GUIDE.md
+GITHUB_SECRETS_SETUP.md
+**/parameters.*.temp.json
 secrets.json
 
 # User secrets (stored separately by .NET)

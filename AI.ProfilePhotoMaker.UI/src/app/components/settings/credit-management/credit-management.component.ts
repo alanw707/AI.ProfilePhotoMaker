@@ -7,7 +7,7 @@ import { RouterModule } from '@angular/router';
   standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './credit-management.component.html',
-  styleUrl: './credit-management.component.sass'
+  styleUrl: './credit-management.component.sass',
 })
 export class CreditManagementComponent {
   @Input() creditsInfo: any = null;
@@ -34,17 +34,31 @@ export class CreditManagementComponent {
   getCreditUsagePercentage(): number {
     const weekly = this.getWeeklyCredits();
     const max = this.getMaxWeeklyCredits();
-    return max > 0 ? (weekly / max) * 100 : 0;
+    const used = max - weekly;
+    return max > 0 ? (used / max) * 100 : 0;
   }
 
   getNextCreditReset(): string {
-    // Calculate next weekly reset (simplified)
+    if (this.userCreditStatus?.nextResetDate) {
+      const resetDate = new Date(this.userCreditStatus.nextResetDate);
+      return resetDate.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+      });
+    }
+
+    // Fallback: Calculate next weekly reset
     const now = new Date();
-    const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    return nextWeek.toLocaleDateString('en-US', {
+    const daysUntilReset = 7 - now.getDay(); // Days until next Sunday
+    const nextReset = new Date(now);
+    nextReset.setDate(now.getDate() + daysUntilReset);
+    nextReset.setHours(0, 0, 0, 0);
+
+    return nextReset.toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
   }
 }

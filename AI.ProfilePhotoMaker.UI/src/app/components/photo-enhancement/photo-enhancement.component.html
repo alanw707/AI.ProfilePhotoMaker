@@ -50,7 +50,12 @@
           <div class="upload-icon">📷</div>
           <h4>Upload a photo to enhance</h4>
           <p>Drag & drop or click to select • JPG, PNG, WebP • Max 7MB</p>
-          <input type="file" #fileInput accept="image/*" (change)="onFileSelected($event)" style="display: none" />
+          <input
+            type="file"
+            #fileInput
+            accept="image/jpeg,image/png,image/webp"
+            (change)="onFileSelected($event)"
+            style="display: none" />
         </div>
       </section>
 

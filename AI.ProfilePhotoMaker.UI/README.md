@@ -40,6 +40,15 @@ Once the server is running, open your browser and navigate to `http://localhost:
 ### Documentation
 - **[Quick Start Guide](../QUICK-START.md)** - Fast setup reference
 - **[Development Environment Guide](../DEV-ENVIRONMENT.md)** - Comprehensive setup and troubleshooting
+- **[Development Backlog](./DEVELOPMENT_BACKLOG.md)** - Current progress and task tracking
+- **[Development Guide](./README.development.md)** - Environment setup and troubleshooting
+
+### Recent Updates
+- **✅ July 17, 2025**: Fixed green cards grid positioning issue in "Review Selected Images" section
+  - Resolved container overflow problems on mobile devices
+  - Adopted conservative flexbox-first responsive strategy
+  - Improved consistency between green and red card layouts
+  - Commit: `6d5be33`
 
 ## Code scaffolding
 

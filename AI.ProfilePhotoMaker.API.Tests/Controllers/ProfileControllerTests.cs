@@ -42,8 +42,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             _fixture.Behaviors.Add(new OmitOnRecursionBehavior());
             _mockUserProfileRepository = new Mock<IUserProfileRepository>();
 
-            // Mock ApplicationDbContext
-            // Mock ApplicationDbContext
+            // Mock ApplicationDbContext            
             // Instead of trying to instantiate with options, we'll mock its DbSet properties.
             // We need to mock the constructor that takes DbContextOptions<ApplicationDbContext>
             // For unit testing, we can pass null or default to the base constructor if it's not used.
@@ -68,7 +67,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             var userId = _fixture.Create<string>();
             var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
             {
-                new Claim(ClaimTypes.NameIdentifier, userId)
+                new(ClaimTypes.NameIdentifier, userId)
             }, "mock"));
 
             _controller.ControllerContext = new ControllerContext

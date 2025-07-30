@@ -1,0 +1,644 @@
+<div class="landing-page">
+  <!-- Theme Toggle Button -->
+  <button (click)="toggleTheme()" class="theme-toggle" aria-label="Toggle theme">
+    <svg
+      *ngIf="(currentTheme$ | async) === 'light'"
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+    <svg
+      *ngIf="(currentTheme$ | async) === 'dark'"
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
+    </svg>
+  </button>
+
+  <!-- Header -->
+  <header
+    class="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+    [class.bg-white]="isScrolled"
+    [class.bg-transparent]="!isScrolled"
+    [class.shadow-lg]="isScrolled">
+    <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center py-4 md:py-6">
+        <!-- Logo -->
+        <div class="flex items-center">
+          <a routerLink="/" class="flex items-center space-x-2">
+            <img
+              src="/assets/Logo.PNG"
+              alt="AI Profile Photo Maker"
+              class="h-10 w-10 md:h-14 md:w-14 lg:h-16 lg:w-16" />
+            <span class="text-xl md:text-2xl font-semibold text-gray-900">AI Profile Photo Maker</span>
+          </a>
+        </div>
+
+        <!-- Desktop Navigation -->
+        <div class="hidden md:flex items-center space-x-8">
+          <a
+            (click)="scrollToSection('features')"
+            class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
+            Features
+          </a>
+          <a
+            (click)="scrollToSection('examples')"
+            class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
+            Examples
+          </a>
+          <a
+            (click)="scrollToSection('pricing')"
+            class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
+            Pricing
+          </a>
+          <a
+            (click)="scrollToSection('testimonials')"
+            class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
+            Reviews
+          </a>
+          <a (click)="navigateToLogin()" class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
+            Login
+          </a>
+          <button (click)="getStarted()" class="btn-primary px-6 py-2" style="border-radius: 8px !important">
+            Get Started
+          </button>
+        </div>
+
+        <!-- Mobile Menu Button -->
+        <button (click)="toggleMobileMenu()" class="md:hidden p-2">
+          <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              *ngIf="!mobileMenuOpen"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 6h16M4 12h16M4 18h16"></path>
+            <path
+              *ngIf="mobileMenuOpen"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Mobile Menu -->
+      <div *ngIf="mobileMenuOpen" class="mobile-menu md:hidden absolute top-full left-0 right-0 shadow-lg">
+        <div class="px-4 py-6 space-y-4">
+          <a (click)="scrollToSection('features')" class="block text-gray-700 hover:text-primary-600 transition-colors">
+            Features
+          </a>
+          <a (click)="scrollToSection('examples')" class="block text-gray-700 hover:text-primary-600 transition-colors">
+            Examples
+          </a>
+          <a (click)="scrollToSection('pricing')" class="block text-gray-700 hover:text-primary-600 transition-colors">
+            Pricing
+          </a>
+          <a
+            (click)="scrollToSection('testimonials')"
+            class="block text-gray-700 hover:text-primary-600 transition-colors">
+            Reviews
+          </a>
+          <a
+            (click)="navigateToLogin()"
+            class="block cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
+            Login
+          </a>
+          <button (click)="getStarted()" class="btn-primary w-full px-6 py-3" style="border-radius: 8px !important">
+            Get Started
+          </button>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <!-- 404 Not Found Section -->
+  <section
+    *ngIf="showNotFound"
+    class="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-orange-50">
+    <div class="text-center max-w-2xl mx-auto px-4">
+      <div class="text-9xl font-bold text-gray-300 mb-4">404</div>
+      <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-6">Page Not Found</h1>
+      <p class="text-xl text-gray-600 mb-8">
+        The page you're looking for doesn't exist. Let's get you back to creating amazing profile photos!
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <button
+          (click)="router.navigate(['/'])"
+          class="btn-primary px-8 py-4 text-lg font-semibold"
+          style="border-radius: 8px !important">
+          Go Home
+        </button>
+        <button
+          (click)="getStarted()"
+          class="btn-secondary px-8 py-4 text-lg font-semibold"
+          style="border-radius: 8px !important">
+          Get Started
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Enhanced Hero Section -->
+  <section
+    *ngIf="!showNotFound"
+    class="hero-section relative min-h-screen flex items-center justify-center overflow-hidden">
+    <!-- Animated Background Elements -->
+    <div class="hero-background-animations">
+      <!-- Floating Particles -->
+      <div class="floating-particles">
+        <div class="particle particle-1"></div>
+        <div class="particle particle-2"></div>
+        <div class="particle particle-3"></div>
+        <div class="particle particle-4"></div>
+        <div class="particle particle-5"></div>
+        <div class="particle particle-6"></div>
+      </div>
+
+      <!-- Gradient Orbs -->
+      <div class="gradient-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+      </div>
+
+      <!-- Animated Grid Pattern -->
+      <div class="grid-pattern">
+        <div class="grid-line grid-line-1"></div>
+        <div class="grid-line grid-line-2"></div>
+        <div class="grid-line grid-line-3"></div>
+      </div>
+    </div>
+
+    <!-- Hero Badge - Full Width (Outside Container Constraints) -->
+    <div class="hero-badge-container">
+      <div class="hero-badge">
+        <div class="badge-glow"></div>
+        <span class="badge-icon animate-bounce">✨</span>
+        <span class="badge-text">Transform your photos with our latest AI models in seconds</span>
+        <div class="badge-shimmer"></div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 pt-52 pb-16 relative z-10">
+      <div class="text-center max-w-6xl mx-auto">
+        <!-- Enhanced Headline with Typing Animation -->
+        <div class="hero-headline mb-8 md:mb-10 pt-6">
+          <h1 class="text-4xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-6xl font-bold leading-[1.0] tracking-tight">
+            <span class="headline-primary">The Most Realistic</span>
+            <br />
+            <span class="headline-gradient">AI Generated</span>
+            <span class="headline-primary">Profile Photos</span>
+          </h1>
+          <div class="headline-underline"></div>
+        </div>
+
+        <!-- Enhanced Subheadline -->
+        <div class="hero-subtext mb-14">
+          <p class="text-lg sm:text-xl md:text-2xl lg:text-3xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
+            Transform your casual selfies into
+            <strong class="text-primary-600">stunning professional headshots</strong>
+            . Perfect for LinkedIn, resumes, dating apps, and social media.
+          </p>
+          <div class="subtext-highlight"></div>
+        </div>
+
+        <!-- Enhanced CTA Buttons -->
+        <div class="hero-actions mb-16">
+          <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
+            <button (click)="getStarted()" class="cta-primary">
+              <div class="btn-background"></div>
+              <div class="btn-content">
+                <span class="btn-icon">🚀</span>
+                <span class="btn-text">Start Free Trial</span>
+                <span class="btn-arrow">→</span>
+              </div>
+              <div class="btn-glow"></div>
+            </button>
+            <button (click)="scrollToSection('examples')" class="cta-secondary">
+              <div class="btn-content">
+                <span class="btn-icon">👀</span>
+                <span class="btn-text">View Examples</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Enhanced Trust Indicators -->
+        <div class="hero-trust-indicators">
+          <div class="trust-grid">
+            <div class="trust-item">
+              <div class="trust-icon">
+                <svg class="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path
+                    fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clip-rule="evenodd"></path>
+                </svg>
+              </div>
+              <span class="trust-text">No credit card required</span>
+            </div>
+            <div class="trust-item">
+              <div class="trust-icon">
+                <svg class="w-6 h-6 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <span class="trust-text">2,847+ happy customers</span>
+            </div>
+            <div class="trust-item">
+              <div class="trust-icon">
+                <svg class="w-6 h-6 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path
+                    fill-rule="evenodd"
+                    d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                    clip-rule="evenodd"></path>
+                </svg>
+              </div>
+              <span class="trust-text">100% privacy guaranteed</span>
+            </div>
+          </div>
+          <div class="trust-stats">
+            <div class="stat-item">
+              <span class="stat-number">4.9★</span>
+              <span class="stat-label">Average Rating</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-number">&lt;2min</span>
+              <span class="stat-label">Processing Time</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-number">20+</span>
+              <span class="stat-label">Professional Styles</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scroll Indicator -->
+    <div class="scroll-indicator">
+      <div class="scroll-arrow"></div>
+      <span class="scroll-text">Scroll to explore</span>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section *ngIf="!showNotFound" id="features" class="features-section py-16 md:py-24">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-12 md:mb-16">
+        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+          Why Choose AI Profile Photo Maker?
+        </h2>
+        <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+          Our advanced AI technology ensures you get professional-quality photos every time
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div *ngFor="let feature of features" class="feature-card">
+          <div class="text-4xl mb-4">{{ feature.icon }}</div>
+          <h3 class="text-xl font-semibold mb-3">{{ feature.title }}</h3>
+          <p>{{ feature.description }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Styled Photos Showcase Section -->
+  <section *ngIf="!showNotFound" id="examples" class="examples-section py-16 md:py-24">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-12 md:mb-16">
+        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Explore Our Professional Styles</h2>
+        <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+          Choose from 20+ AI-powered professional photo styles designed for every industry and personality
+        </p>
+      </div>
+
+      <!-- Enhanced Styles Grid Showcase -->
+      <div class="styles-grid-showcase">
+        <!-- Loading State -->
+        <div *ngIf="isLoadingStyles" class="styles-loading">
+          <div class="loading-spinner"></div>
+          <p class="loading-text">Loading professional styles...</p>
+        </div>
+
+        <!-- Error State -->
+        <div *ngIf="stylesLoadError && !isLoadingStyles" class="styles-error">
+          <div class="error-icon">⚠️</div>
+          <p class="error-text">Using demo styles (database connection issue)</p>
+        </div>
+
+        <!-- Styles Grid - All 20+ styles visible -->
+        <div class="all-styles-grid" *ngIf="!isLoadingStyles">
+          <div
+            class="style-card"
+            *ngFor="let photo of styledPhotos; let i = index"
+            [class.featured]="i === 0"
+            (click)="onStyleCardClick(photo, i)">
+            <!-- Image Container -->
+            <div class="style-image-container">
+              <img
+                [src]="photo.imageUrl"
+                [alt]="photo.style + ' professional style example'"
+                class="style-image"
+                (error)="onImageError($event)"
+                loading="lazy"
+                decoding="async" />
+              <!-- Hover Overlay (Enhanced) -->
+              <div class="style-hover-overlay">
+                <div class="overlay-content">
+                  <div class="overlay-action">
+                    <span class="try-style-btn">
+                      <span class="btn-icon">✨</span>
+                      <span class="btn-text">Try Style</span>
+                    </span>
+                  </div>
+                  <p class="overlay-desc">{{ photo.description }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Always-Visible Style Info -->
+            <div class="style-info-permanent">
+              <div class="style-header">
+                <span class="style-category-badge">{{ photo.category }}</span>
+                <h4 class="style-title">{{ formatStyleName(photo.style) }}</h4>
+              </div>
+              <div class="style-meta">
+                <span class="style-persona">{{ photo.persona }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grid Summary -->
+        <div class="styles-summary">
+          <div class="summary-stats">
+            <div class="stat-item">
+              <span class="stat-number">{{ styledPhotos.length }}+</span>
+              <span class="stat-label">Professional Styles</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-number">4.9★</span>
+              <span class="stat-label">Average Rating</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-number">&lt;2min</span>
+              <span class="stat-label">Processing Time</span>
+            </div>
+          </div>
+          <p class="summary-text">
+            Browse all our professional photo styles at once. Each style is carefully crafted to enhance your
+            professional image.
+          </p>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="showcase-cta">
+          <button (click)="getStarted()" class="btn-primary showcase-btn">
+            <span class="btn-icon">🚀</span>
+            <span class="btn-text">Try All Styles Free</span>
+            <span class="btn-arrow">→</span>
+          </button>
+          <p class="cta-subtext">Start with 3 free photos • No credit card required • All styles included</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing Section -->
+  <section *ngIf="!showNotFound" id="pricing" class="pricing-section py-16 md:py-24">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-12 md:mb-16">
+        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
+        <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+          Choose the perfect plan for your needs. No hidden fees, cancel anytime.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div *ngFor="let plan of plans" class="pricing-card relative" [class.recommended]="plan.recommended">
+          <!-- Recommended badge -->
+          <div *ngIf="plan.recommended" class="absolute -top-5 left-1/2 transform -translate-x-1/2">
+            <span
+              class="px-4 py-1 rounded-xl text-sm font-semibold text-white"
+              style="background: var(--accent-primary)">
+              Most Popular
+            </span>
+          </div>
+
+          <div class="p-8">
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">{{ plan.name }}</h3>
+            <p class="text-gray-600 mb-6">{{ plan.creditCount }}</p>
+
+            <div class="mb-6">
+              <span class="text-4xl font-bold text-gray-900">{{ plan.price }}</span>
+              <span *ngIf="plan.originalPrice" class="text-lg text-gray-500 line-through ml-2">
+                {{ plan.originalPrice }}
+              </span>
+              <span class="text-gray-600">/one-time</span>
+            </div>
+
+            <ul class="space-y-3 mb-8">
+              <li *ngFor="let feature of plan.features" class="flex items-start">
+                <svg class="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path
+                    fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clip-rule="evenodd"></path>
+                </svg>
+                <span class="text-gray-700">{{ feature }}</span>
+              </li>
+            </ul>
+
+            <button
+              (click)="getStarted()"
+              class="w-full py-3 font-semibold transition-all duration-200"
+              [class]="plan.recommended ? 'btn-primary' : 'btn-secondary'"
+              style="border-radius: 8px !important">
+              Get Started
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials Section -->
+  <section *ngIf="!showNotFound" id="testimonials" class="testimonials-section py-16 md:py-24">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-12 md:mb-16">
+        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+          Loved by Thousands of Professionals
+        </h2>
+        <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+          Join 2,847+ satisfied customers who've transformed their profile photos
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div *ngFor="let testimonial of testimonials" class="testimonial-card p-8">
+          <div class="flex items-center mb-4">
+            <div class="text-4xl mr-4">{{ testimonial.avatar }}</div>
+            <div>
+              <h4 class="font-semibold text-gray-900">{{ testimonial.name }}</h4>
+              <p class="text-sm text-gray-600">{{ testimonial.role }}</p>
+            </div>
+          </div>
+
+          <!-- Star rating -->
+          <div class="flex mb-4">
+            <svg
+              *ngFor="let star of [1, 2, 3, 4, 5]"
+              class="w-5 h-5 text-yellow-400"
+              fill="currentColor"
+              viewBox="0 0 20 20">
+              <path
+                d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+            </svg>
+          </div>
+
+          <p class="text-gray-700 italic">"{{ testimonial.content }}"</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section *ngIf="!showNotFound" id="faq" class="faq-section py-16 md:py-24">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
+      <div class="text-center mb-12 md:mb-16">
+        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
+        <p class="text-xl text-gray-600">Everything you need to know about AI Profile Photo Maker</p>
+      </div>
+
+      <div class="space-y-4">
+        <div *ngFor="let faq of faqs; let i = index" class="faq-item rounded-lg overflow-hidden">
+          <button
+            (click)="toggleFAQ(i)"
+            class="faq-button w-full px-6 py-4 text-left flex justify-between items-center transition-colors">
+            <span class="faq-question font-semibold">{{ faq.question }}</span>
+            <svg
+              class="faq-icon w-5 h-5 transform transition-transform duration-200"
+              [class.rotate-180]="faq.open"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </button>
+          <div *ngIf="faq.open" class="faq-answer px-6 pb-4">
+            <p class="faq-answer-text">{{ faq.answer }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section *ngIf="!showNotFound" class="py-16 md:py-24 bg-gradient-to-r from-primary-600 to-secondary-600 text-white">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">Ready to Transform Your Profile Photo?</h2>
+      <p class="text-xl mb-8 max-w-2xl mx-auto opacity-90">
+        Join thousands of professionals who've upgraded their online presence with AI-enhanced photos
+      </p>
+      <button
+        (click)="getStarted()"
+        class="bg-white text-primary-600 px-8 py-4 text-lg font-semibold hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg"
+        style="border-radius: 8px !important">
+        Start Your Free Trial Now →
+      </button>
+      <p class="mt-4 opacity-75">No credit card required • 3 free photos</p>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="landing-footer text-white py-12">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid md:grid-cols-4 gap-8 mb-8">
+        <!-- Company -->
+        <div>
+          <h3 class="font-semibold text-lg mb-4">Company</h3>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">About Us</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Careers</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Press</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Contact</a></li>
+          </ul>
+        </div>
+
+        <!-- Product -->
+        <div>
+          <h3 class="font-semibold text-lg mb-4">Product</h3>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Features</a></li>
+            <li>
+              <a (click)="navigateToPricing()" class="cursor-pointer text-gray-400 hover:text-white transition-colors">
+                Pricing
+              </a>
+            </li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">API</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Integrations</a></li>
+          </ul>
+        </div>
+
+        <!-- Resources -->
+        <div>
+          <h3 class="font-semibold text-lg mb-4">Resources</h3>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Blog</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Help Center</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Tutorials</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Status</a></li>
+          </ul>
+        </div>
+
+        <!-- Legal -->
+        <div>
+          <h3 class="font-semibold text-lg mb-4">Legal</h3>
+          <ul class="space-y-2">
+            <li>
+              <a routerLink="/legal/privacy" class="text-gray-400 hover:text-white transition-colors">Privacy Policy</a>
+            </li>
+            <li>
+              <a routerLink="/legal/terms" class="text-gray-400 hover:text-white transition-colors">Terms of Service</a>
+            </li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Cookie Policy</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">GDPR</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="border-t border-gray-800 pt-8 text-center">
+        <p class="text-gray-400">© 2024 AI Profile Photo Maker. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+</div>

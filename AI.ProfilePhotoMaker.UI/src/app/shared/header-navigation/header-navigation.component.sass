@@ -5,15 +5,21 @@
 
 // Theme toggle uses global styles from styles.sass - no duplication needed
 
-// App Header
+// App Header - Natural document flow with enhanced styling  
 .app-header
   background: var(--header-bg)
-  box-shadow: var(--shadow-sm)
+  backdrop-filter: blur(20px) saturate(180%)
+  -webkit-backdrop-filter: blur(20px) saturate(180%)
+  box-shadow: var(--shadow-md)
   border-bottom: 1px solid var(--border-color)
   padding: 16px 0
-  position: sticky
-  top: 0
+  position: relative  // Changed from fixed to relative for natural flow
   z-index: 100
+  // Removed transform/transition - no longer needed for scroll behavior
+  
+  &.menu-open
+    backdrop-filter: blur(24px) saturate(200%)
+    -webkit-backdrop-filter: blur(24px) saturate(200%)
 
   .header-content
     max-width: 1400px
@@ -28,6 +34,26 @@
     display: flex
     align-items: center
     gap: 16px
+    text-decoration: none
+    color: inherit
+    cursor: pointer
+    transition: all 0.2s ease
+    border-radius: 8px
+    padding: 8px 12px
+    margin: -8px -12px
+
+    &:hover
+      background: var(--bg-secondary)
+      transform: translateY(-1px)
+      
+    &:hover .header-logo
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4))
+      
+    &:hover h1
+      color: var(--primary-color)
+      
+    &:active
+      transform: translateY(0)
 
     .header-logo
       width: 48px
@@ -58,6 +84,7 @@
       border-radius: 8px
       text-decoration: none
       color: var(--text-secondary)
+      font-family: 'Inter', sans-serif !important
       font-weight: 500
       font-size: 13px
       transition: all 0.3s ease
@@ -83,6 +110,30 @@
     align-items: center
     gap: 16px
 
+    .credit-display
+      display: flex
+      align-items: center
+      gap: 8px
+      background: var(--bg-tertiary)
+      padding: 8px 16px
+      border-radius: 20px
+      cursor: pointer
+      transition: all 0.3s ease
+      text-decoration: none
+      
+      &:hover
+        background: var(--primary-bg-light)
+        transform: translateY(-1px)
+        
+      .credit-icon
+        font-size: 18px
+        
+      .credit-amount
+        font-size: 16px
+        font-weight: 700
+        font-family: 'Inter', sans-serif
+        color: var(--primary)
+
     .user-info
       display: flex
       flex-direction: column
@@ -91,11 +142,13 @@
 
       .user-name
         color: var(--text-primary)
+        font-family: 'Inter', sans-serif
         font-weight: 600
         font-size: 13px
 
       .user-email
         color: var(--text-secondary)
+        font-family: 'Inter', sans-serif
         font-size: 11px
 
     .btn-logout
@@ -109,6 +162,7 @@
       border-radius: 8px
       cursor: pointer
       font-size: 12px
+      font-family: 'Inter', sans-serif
       transition: all 0.3s ease
 
       &:hover
@@ -116,22 +170,220 @@
         color: white
         border-color: var(--danger)
 
+    .guest-actions
+      display: flex
+      gap: 12px
+      align-items: center
+      
+      .btn
+        padding: 8px 16px
+        border-radius: 8px
+        text-decoration: none
+        font-size: 13px
+        font-weight: 500
+        font-family: 'Inter', sans-serif
+        transition: all 0.3s ease
+        
+        &.btn-outline
+          border: 1px solid var(--border-color)
+          color: var(--text-secondary)
+          background: transparent
+          
+          &:hover
+            border-color: var(--primary)
+            color: var(--primary)
+            
+        &.btn-primary
+          background: var(--primary)
+          color: white
+          border: 1px solid var(--primary)
+          
+          &:hover
+            background: var(--primary-hover)
+            border-color: var(--primary-hover)
+
+// Mobile menu overlay with modern animations
+.mobile-menu-overlay
+  position: fixed
+  top: 0
+  left: 0
+  right: 0
+  bottom: 0
+  background: rgba(0, 0, 0, 0.6)
+  backdrop-filter: blur(8px)
+  -webkit-backdrop-filter: blur(8px)
+  z-index: 99
+  opacity: 0
+  visibility: hidden
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  
+  &.active
+    opacity: 1
+    visibility: visible
+    
+  @media (min-width: 769px)
+    display: none !important
+
+// Mobile menu toggle button with morph animation
+.mobile-menu-toggle
+  display: none
+  background: transparent
+  border: none
+  padding: 8px
+  cursor: pointer
+  color: var(--text-primary)
+  z-index: 101
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  
+  svg
+    width: 24px
+    height: 24px
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+    
+  &.active
+    color: var(--primary)
+    transform: rotate(90deg)
+    
+  &:hover
+    transform: scale(1.1)
+    
+  &:active
+    transform: scale(0.95)
+    
+  @media (max-width: 768px)
+    display: flex
+    align-items: center
+    justify-content: center
+
 // Responsive behavior
 @media (max-width: 768px)
   .app-header
     .header-content
       padding: 0 16px
-      gap: 16px
+      gap: 12px
+      flex-wrap: wrap
     
     .nav-menu
-      display: none
+      position: absolute  // Changed from fixed to absolute for natural positioning
+      top: 100%  // Position below header instead of fixed 80px
+      left: 0
+      right: 0
+      background: var(--surface-primary)
+      backdrop-filter: blur(16px) saturate(120%)
+      -webkit-backdrop-filter: blur(16px) saturate(120%)
+      flex-direction: column
+      padding: 1.5rem 1rem
+      box-shadow: var(--shadow-lg)
+      border-top: 1px solid var(--border-color)
+      z-index: 101
+      transform: translateY(-100%)
+      opacity: 0
+      visibility: hidden
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1)
+        
+      
+      &.mobile-open
+        transform: translateY(0)
+        opacity: 1
+        visibility: visible
+        
+  // Mobile menu nav-links - clean CSS variable approach
+  .app-header .nav-menu.mobile-open .nav-link
+    // Layout and appearance
+    padding: 16px 20px
+    margin: 6px 0
+    border-radius: 12px
+    font-size: 16px
+    font-family: 'Inter', sans-serif
+    font-weight: 500
+    border: 1px solid transparent
+    text-decoration: none
+    color: var(--text-primary)
+    background: transparent
     
-    .logo-section h1
-      font-size: 16px
+    // Animations and transitions
+    animation: slideInStagger 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards
+    opacity: 0
+    transform: translateX(-20px)
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
     
+    // Staggered animation delays
+    &:nth-child(1)
+      animation-delay: 0.1s
+    &:nth-child(2)
+      animation-delay: 0.15s
+    &:nth-child(3)
+      animation-delay: 0.2s
+    &:nth-child(4)
+      animation-delay: 0.25s
+    &:nth-child(5)
+      animation-delay: 0.3s
+    
+    // Hover state
+    &:hover
+      background: var(--surface-secondary)
+      color: var(--text-primary)
+      transform: translateX(8px)
+      border-color: var(--primary-bg-light)
+      
+    // Active state
+    &.active
+      background: var(--primary)
+      color: white
+      transform: translateX(12px)
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3)
+    
+    // SVG icons
+    svg
+      width: 20px
+      height: 20px
+      color: var(--text-primary)
+      transition: transform 0.3s ease
+    
+    .logo-section
+      flex: 1
+      
+      h1
+        font-size: 16px
+    
+    .credit-display
+      padding: 6px 12px
+      
+      .credit-icon
+        font-size: 16px
+        
+      .credit-amount
+        font-size: 14px
+    
+    .user-section
+      order: 3
+      width: 100%
+      flex-direction: row
+      justify-content: space-between
+      align-items: center
+      border-top: 1px solid var(--border-color)
+      margin-top: 12px
+      padding-top: 12px
+      
     .user-info
       .user-name
-        font-size: 11px
+        font-size: 12px
       
       .user-email
         display: none
+        
+    .guest-actions
+      .btn
+        padding: 6px 12px
+        font-size: 12px
+        font-family: 'Inter', sans-serif
+
+// Animation keyframes for staggered menu items
+@keyframes slideInStagger
+  0%
+    opacity: 0
+    transform: translateX(-20px)
+  100%
+    opacity: 1
+    transform: translateX(0)
+

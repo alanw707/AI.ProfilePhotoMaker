@@ -1,46 +1,55 @@
 /* Global Styles with Theme Support */
 
-// Use statements must come first
+// Use statements must come first - before any other rules
 @use 'app/shared/styles/index' as shared
+
+// Tailwind CSS directives
+@tailwind base
+@tailwind components
+@tailwind utilities
 
 // @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Poppins:wght@400;600;700&display=swap')
 // Using system fonts for build compatibility
 
 // CSS Custom Properties for Theming
 :root
-  // Light Theme Variables
-  --bg-primary: #f8f9fa
-  --bg-secondary: #ffffff
-  --bg-tertiary: #f1f3f4
-  --bg-gradient: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #f1f3f4 100%)
+  // Light Theme Variables - Enhanced sophisticated darker neutral color scheme
+  --bg-primary: #e9ecef
+  --bg-secondary: #dee2e6
+  --bg-tertiary: #ced4da
+  --bg-gradient: linear-gradient(135deg, #e9ecef 0%, #dee2e6 25%, #ced4da 50%, #dee2e6 75%, #e9ecef 100%)
   
   // Much darker text for better contrast
   --text-primary: #1a202c
   --text-secondary: #2d3748
   --text-tertiary: #4a5568
   
-  --border-color: #e9ecef
-  --border-hover: #dee2e6
+  --border-color: #ced4da
+  --border-hover: #adb5bd
   --border-success: #22c55e
   
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08)
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.12)
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.15)
-  --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.2)
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04)
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.06)
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08)
+  --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.12)
   
-  --accent-primary: #7DD3D8
-  --accent-secondary: #6BB6FF
-  --accent-success: #A8E6A1
-  --accent-warning: #F5C85A
-  --accent-danger: #dc3545
+  --accent-primary: #4fd1c7
+  --accent-secondary: #3b82f6
+  --accent-success: #10b981
+  --accent-warning: #f59e0b
+  --accent-danger: #ef4444
   
-  // Primary brand colors
-  --primary-color: #7DD3D8
-  --primary: #7DD3D8
-  --primary-dark: #6BB6FF
-  --primary-rgb: 125, 211, 216
-  --primary-gradient: linear-gradient(135deg, #7DD3D8 0%, #6BB6FF 100%)
-  --primary-bg-light: rgba(125, 211, 216, 0.1)
+  // Primary brand colors - More balanced tones
+  --primary-color: #4fd1c7
+  --primary: #4fd1c7
+  --primary-hover: #06b6d4
+  --primary-dark: #0891b2
+  
+  // Additional semantic colors - Warmer and more balanced
+  --danger: #ef4444
+  --primary-rgb: 79, 209, 199
+  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+  --primary-bg-light: rgba(79, 209, 199, 0.04)
   
   // Semantic colors
   --warning-color: #F5C85A
@@ -53,29 +62,47 @@
   
   --card-bg: #ffffff
   --input-bg: #ffffff
-  --header-bg: #ffffff
-  --hover-bg: rgba(125, 211, 216, 0.1)
+  --header-bg: rgba(233, 236, 239, 0.95)
+  --hover-bg: rgba(0, 0, 0, 0.03)
   
-  // Component backgrounds
-  --background-primary: #ffffff
-  --background-secondary: #f8f9fa
-  --background-tertiary: #e9ecef
+  // Component backgrounds - Sophisticated darker neutral palette
+  --background-primary: #e9ecef
+  --background-secondary: #dee2e6
+  --background-tertiary: #ced4da
   
   // Surface variables (for consistency)
-  --surface-primary: #ffffff
-  --surface-secondary: #f8f9fa
-  --surface-tertiary: #e9ecef
+  --surface-primary: #e9ecef
+  --surface-secondary: #dee2e6
+  --surface-tertiary: #ced4da
+  
+  // Section-specific background variables for visual hierarchy
+  --hero-bg: linear-gradient(135deg, #e9ecef 0%, #dee2e6 50%, #ced4da 100%)
+  --features-bg: #e3f2fd
+  --examples-bg: #dee2e6  
+  --pricing-bg: #e9ecef
+  --testimonials-bg: linear-gradient(135deg, #e3f2fd 0%, #dee2e6 100%)
+  --faq-bg: #dee2e6
+  --footer-bg: #495057
+  
+  // Keep only subtle-gradient as it's actively used
+  --subtle-gradient: linear-gradient(135deg, #e9ecef 0%, #dee2e6 30%, #ced4da 70%, #dee2e6 100%)
+  
+  // Professional shadows for depth
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.02)
+  --shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.04)
+  --shadow-elegant: 0 8px 32px rgba(0, 0, 0, 0.06)
 
-// Dark Theme Variables
+// Dark Theme Variables - Enhanced readability
 [data-theme="dark"]
   --bg-primary: #1a1d23
   --bg-secondary: #2c3e50
   --bg-tertiary: #34495e
   --bg-gradient: linear-gradient(135deg, #1a1d23 0%, #2c3e50 50%, #34495e 100%)
   
-  --text-primary: #ffffff
-  --text-secondary: #e2e8f0
-  --text-tertiary: #a0a9c0
+  // Improved text contrast for dark theme readability
+  --text-primary: #ffffff !important
+  --text-secondary: #f1f5f9 !important
+  --text-tertiary: #cbd5e0 !important
   
   --border-color: rgba(255, 255, 255, 0.1)
   --border-hover: rgba(255, 255, 255, 0.2)
@@ -86,19 +113,23 @@
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5)
   --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.6)
   
-  --accent-primary: #7DD3D8
-  --accent-secondary: #6BB6FF
-  --accent-success: #A8E6A1
-  --accent-warning: #F5C85A
-  --accent-danger: #ff6b6b
+  --accent-primary: #4fd1c7
+  --accent-secondary: #3b82f6
+  --accent-success: #10b981
+  --accent-warning: #f59e0b
+  --accent-danger: #ef4444
   
-  // Primary brand colors - darker theme
-  --primary-color: #7DD3D8
-  --primary: #7DD3D8
-  --primary-dark: #6BB6FF
-  --primary-rgb: 125, 211, 216
+  // Primary brand colors - darker theme with better contrast
+  --primary-color: #4fd1c7
+  --primary: #4fd1c7
+  --primary-hover: #22d3ee
+  --primary-dark: #0891b2
+  
+  // Additional semantic colors
+  --danger: #ff6b6b
+  --primary-rgb: 79, 209, 199
   --primary-gradient: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%)
-  --primary-bg-light: rgba(125, 211, 216, 0.15)
+  --primary-bg-light: rgba(79, 209, 199, 0.12)
   
   // Semantic colors
   --warning-color: #F5C85A
@@ -109,20 +140,32 @@
   --error-bg-light: rgba(255, 107, 107, 0.15)
   --text-danger: #ff6b6b
   
-  --card-bg: rgba(44, 62, 80, 0.95)
-  --input-bg: rgba(255, 255, 255, 0.05)
-  --header-bg: rgba(44, 62, 80, 0.95)
-  --hover-bg: rgba(125, 211, 216, 0.15)
+  --card-bg: rgba(44, 62, 80, 0.95) !important
+  --input-bg: rgba(255, 255, 255, 0.05) !important
+  --header-bg: rgba(44, 62, 80, 0.95) !important
+  --hover-bg: rgba(79, 209, 199, 0.12) !important
   
   // Component backgrounds
-  --background-primary: #1a1d23
-  --background-secondary: #2c3e50
-  --background-tertiary: #34495e
+  --background-primary: #1a1d23 !important
+  --background-secondary: #2c3e50 !important
+  --background-tertiary: #34495e !important
   
   // Surface variables (for consistency)
-  --surface-primary: rgba(44, 62, 80, 0.95)
-  --surface-secondary: #2c3e50
-  --surface-tertiary: #34495e
+  --surface-primary: rgba(44, 62, 80, 0.95) !important
+  --surface-secondary: #2c3e50 !important
+  --surface-tertiary: #34495e !important
+  
+  // Dark theme section-specific background variables
+  --hero-bg: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%) !important
+  --features-bg: #2c3e50 !important
+  --examples-bg: #1a1d23 !important
+  --pricing-bg: #1a1d23 !important
+  --testimonials-bg: linear-gradient(135deg, #1e293b 0%, #2c3e50 100%) !important
+  --faq-bg: #1a1d23 !important
+  --footer-bg: #1a1d23 !important
+  
+  // Dark theme gradient variables - keep only actively used
+  --subtle-gradient: linear-gradient(135deg, #1a1d23 0%, #2c3e50 30%, #34495e 70%, #475569 100%) !important
 
 // Global Styles
 *
@@ -202,12 +245,38 @@ p
 // Dark theme hero section override
 [data-theme="dark"] .hero-section
   background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%) !important
+  color: var(--text-primary) !important
 
 // Dark theme feature cards override  
 [data-theme="dark"] .feature-item
   background: rgba(51, 65, 85, 0.3) !important
   border: 1px solid rgba(148, 163, 184, 0.1) !important
   backdrop-filter: blur(12px) !important
+  color: var(--text-primary) !important
+
+// Ensure text colors work in dark theme for all text elements
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6
+  color: var(--text-primary) !important
+
+[data-theme="dark"] p,
+[data-theme="dark"] span,
+[data-theme="dark"] div
+  color: var(--text-secondary) !important
+
+// Fix specific landing page text elements in dark theme
+[data-theme="dark"] .text-gray-900,
+[data-theme="dark"] .text-gray-800,
+[data-theme="dark"] .text-gray-700
+  color: var(--text-primary) !important
+
+[data-theme="dark"] .text-gray-600,
+[data-theme="dark"] .text-gray-500
+  color: var(--text-secondary) !important
 
 // Fix package features text visibility in light theme
 :root:not([data-theme="dark"]) .premium-package-selection .package-features li
@@ -215,6 +284,213 @@ p
 
 :root:not([data-theme="dark"]) .premium-package-selection .package-header .credits-info
   color: #6b7280 !important
+
+// =============================================================================
+// CRITICAL CSS SPECIFICITY OVERRIDES FOR TAILWIND CLASSES
+// =============================================================================
+// These rules have higher specificity to override hardcoded Tailwind utility classes
+
+// LIGHT THEME - Override hardcoded Tailwind gray text classes
+html:not([data-theme="dark"]) .text-gray-900,
+html:not([data-theme="dark"]) .landing-page .text-gray-900,
+:root:not([data-theme="dark"]) .text-gray-900
+  color: #1a202c !important
+
+html:not([data-theme="dark"]) .text-gray-800,
+html:not([data-theme="dark"]) .landing-page .text-gray-800,
+:root:not([data-theme="dark"]) .text-gray-800
+  color: #2d3748 !important
+
+html:not([data-theme="dark"]) .text-gray-700,
+html:not([data-theme="dark"]) .landing-page .text-gray-700,
+:root:not([data-theme="dark"]) .text-gray-700
+  color: #4a5568 !important
+
+html:not([data-theme="dark"]) .text-gray-600,
+html:not([data-theme="dark"]) .landing-page .text-gray-600,
+:root:not([data-theme="dark"]) .text-gray-600
+  color: #718096 !important
+
+html:not([data-theme="dark"]) .text-gray-500,
+html:not([data-theme="dark"]) .landing-page .text-gray-500,
+:root:not([data-theme="dark"]) .text-gray-500
+  color: #a0aec0 !important
+
+// LIGHT THEME - Header distinction with proper background
+html:not([data-theme="dark"]) header.bg-white,
+html:not([data-theme="dark"]) .landing-page header.bg-white,
+:root:not([data-theme="dark"]) header.bg-white
+  background: rgba(255, 255, 255, 0.98) !important
+  backdrop-filter: blur(20px) saturate(120%) !important
+  -webkit-backdrop-filter: blur(20px) saturate(120%) !important
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04) !important
+
+html:not([data-theme="dark"]) header.bg-transparent,
+html:not([data-theme="dark"]) .landing-page header.bg-transparent,
+:root:not([data-theme="dark"]) header.bg-transparent
+  background: rgba(255, 255, 255, 0.85) !important
+  backdrop-filter: blur(12px) saturate(150%) !important
+  -webkit-backdrop-filter: blur(12px) saturate(150%) !important
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important
+
+// LIGHT THEME - Hero section distinct from header
+html:not([data-theme="dark"]) .hero-section,
+html:not([data-theme="dark"]) .landing-page .hero-section,
+:root:not([data-theme="dark"]) .hero-section
+  background: linear-gradient(135deg, #ffffff 0%, #fafbfc 15%, #f8f9fa 30%, #f6f7f8 45%, #f4f5f6 60%, #f2f3f4 75%, #f0f1f2 90%, #eef0f1 100%) !important
+
+// DARK THEME - Override hardcoded Tailwind classes with improved contrast
+html[data-theme="dark"] .text-gray-900,
+html[data-theme="dark"] .landing-page .text-gray-900,
+[data-theme="dark"] .text-gray-900
+  color: #ffffff !important
+
+html[data-theme="dark"] .text-gray-800,
+html[data-theme="dark"] .landing-page .text-gray-800,
+[data-theme="dark"] .text-gray-800
+  color: #f1f5f9 !important
+
+html[data-theme="dark"] .text-gray-700,
+html[data-theme="dark"] .landing-page .text-gray-700,
+[data-theme="dark"] .text-gray-700
+  color: #e2e8f0 !important
+
+html[data-theme="dark"] .text-gray-600,
+html[data-theme="dark"] .landing-page .text-gray-600,
+[data-theme="dark"] .text-gray-600
+  color: #cbd5e0 !important
+
+html[data-theme="dark"] .text-gray-500,
+html[data-theme="dark"] .landing-page .text-gray-500,
+[data-theme="dark"] .text-gray-500
+  color: #a0aec0 !important
+
+// DARK THEME - Background overrides
+html[data-theme="dark"] .bg-white,
+html[data-theme="dark"] .landing-page .bg-white,
+[data-theme="dark"] .bg-white
+  background: rgba(30, 41, 59, 0.95) !important
+  color: #ffffff !important
+
+html[data-theme="dark"] .bg-gray-50,
+html[data-theme="dark"] .landing-page .bg-gray-50,
+[data-theme="dark"] .bg-gray-50
+  background: rgba(44, 62, 80, 0.8) !important
+
+// DARK THEME - Header specific overrides
+html[data-theme="dark"] header,
+html[data-theme="dark"] .landing-page header,
+[data-theme="dark"] header
+  background: rgba(30, 41, 59, 0.95) !important
+  color: #ffffff !important
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important
+
+// DARK THEME - Hero section
+html[data-theme="dark"] .hero-section,
+html[data-theme="dark"] .landing-page .hero-section,
+[data-theme="dark"] .hero-section
+  background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%) !important
+  color: #ffffff !important
+
+// DARK THEME - All headings
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] h4,
+html[data-theme="dark"] h5,
+html[data-theme="dark"] h6,
+html[data-theme="dark"] .landing-page h1,
+html[data-theme="dark"] .landing-page h2,
+html[data-theme="dark"] .landing-page h3,
+html[data-theme="dark"] .landing-page h4,
+html[data-theme="dark"] .landing-page h5,
+html[data-theme="dark"] .landing-page h6,
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6
+  color: #ffffff !important
+
+// DARK THEME - All paragraph and span text with improved contrast
+html[data-theme="dark"] p,
+html[data-theme="dark"] span,
+html[data-theme="dark"] div,
+html[data-theme="dark"] .landing-page p,
+html[data-theme="dark"] .landing-page span,
+html[data-theme="dark"] .landing-page div,
+[data-theme="dark"] p,
+[data-theme="dark"] span,
+[data-theme="dark"] div
+  color: #f1f5f9 !important
+
+// DARK THEME - Mobile menu overrides
+html[data-theme="dark"] .bg-white.shadow-lg,
+html[data-theme="dark"] .landing-page .bg-white.shadow-lg,
+[data-theme="dark"] .bg-white.shadow-lg
+  background: rgba(30, 41, 59, 0.98) !important
+  color: #ffffff !important
+  border: 1px solid rgba(255, 255, 255, 0.1) !important
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important
+
+// DARK THEME - Button text overrides
+html[data-theme="dark"] button,
+html[data-theme="dark"] .landing-page button,
+[data-theme="dark"] button
+  color: inherit !important
+
+// DARK THEME - Navigation links with improved contrast
+html[data-theme="dark"] a,
+html[data-theme="dark"] .landing-page a,
+[data-theme="dark"] a
+  color: #e2e8f0 !important
+  
+  &:hover
+    color: #4fd1c7 !important
+
+// DARK THEME - SVG icons (ensure they're visible)
+html[data-theme="dark"] svg,
+html[data-theme="dark"] .landing-page svg,
+[data-theme="dark"] svg
+  color: currentColor !important
+
+// GLOBAL - Ensure primary buttons work in both themes
+.btn-primary,
+.bg-primary-600,
+html .btn-primary,
+html .bg-primary-600
+  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--primary-hover) 100%) !important
+  color: white !important
+  border: none !important
+  
+  &:hover
+    background: linear-gradient(135deg, var(--primary-hover) 0%, var(--accent-primary) 100%) !important
+
+// LIGHT THEME - Ensure proper button visibility
+html:not([data-theme="dark"]) .btn-secondary,
+html:not([data-theme="dark"]) .landing-page .btn-secondary,
+:root:not([data-theme="dark"]) .btn-secondary
+  background: #ffffff !important
+  color: #4a5568 !important
+  border: 1px solid rgba(0, 0, 0, 0.12) !important
+  
+  &:hover
+    background: #f7fafc !important
+    border-color: #4fd1c7 !important
+
+// DARK THEME - Secondary buttons
+html[data-theme="dark"] .btn-secondary,
+html[data-theme="dark"] .landing-page .btn-secondary,
+[data-theme="dark"] .btn-secondary
+  background: rgba(44, 62, 80, 0.8) !important
+  color: #ffffff !important
+  border: 1px solid rgba(255, 255, 255, 0.2) !important
+  
+  &:hover
+    background: rgba(51, 65, 85, 0.9) !important
+    border-color: #4fd1c7 !important
 
 a
   color: var(--accent-secondary)
@@ -242,3 +518,4 @@ input, textarea, select
   
   &:hover svg
     transform: rotate(180deg)
+

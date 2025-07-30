@@ -1,10 +1,10 @@
 import {
+  ChangeDetectorRef,
   Component,
   ElementRef,
   OnDestroy,
   OnInit,
   ViewChild,
-  ChangeDetectorRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -13,7 +13,7 @@ import { CreditsInfo, ReplicateService } from '../../services/replicate.service'
 import { FileUploadService } from '../../services/file-upload.service';
 import { AuthService } from '../../services/auth.service';
 import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
-import { DashboardStateService } from '../../services/dashboard-state.service';
+import { DashboardCoordinatorService } from '../../services/dashboard-coordinator.service';
 import { CreditService, UserCreditStatus } from '../../services/credit.service';
 import { Subscription } from 'rxjs';
 
@@ -38,6 +38,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   errorMessage = '';
   isDragOver = false;
   isLoadingCredits = true;
+  allowedTypes: string[] = ['image/jpeg', 'image/png', 'image/webp'];
 
   private stateSubscription!: Subscription;
 
@@ -46,7 +47,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     private fileUploadService: FileUploadService,
     private authService: AuthService,
     private router: Router,
-    private stateService: DashboardStateService,
+    private stateService: DashboardCoordinatorService,
     private creditService: CreditService,
     private cdr: ChangeDetectorRef
   ) {}
@@ -122,9 +123,9 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   processFile(file: File) {
-    // Validate file
-    if (!file.type.startsWith('image/')) {
-      this.errorMessage = 'Please select a valid image file.';
+    // Validate file type
+    if (!this.allowedTypes.includes(file.type)) {
+      this.errorMessage = 'Different format needed. Use JPEG, PNG, or WebP.';
       console.error('Invalid file type:', file.type);
       return;
     }
@@ -262,7 +263,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       }
     } catch (error: any) {
       console.error('Full enhancement error details:', {
-        error: error,
+        error,
         status: error.status,
         message: error.message,
         body: error.error,
@@ -439,7 +440,9 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
    * This removes the temporary image file since we now have the enhanced version from Replicate
    */
   private cleanupTemporaryImage(fileName: string): void {
-    if (!fileName) return;
+    if (!fileName) {
+      return;
+    }
 
     console.log('Cleaning up temporary enhanced image:', fileName);
 

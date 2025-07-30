@@ -8,7 +8,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers;
 
 [Route("api/style-preview")]
 [ApiController]
-[Authorize]
 public class StylePreviewController : ControllerBase
 {
     private readonly ILogger<StylePreviewController> _logger;
@@ -37,6 +36,7 @@ public class StylePreviewController : ControllerBase
     /// Generate a preview image for a specific style
     /// </summary>
     [HttpPost("generate/{styleName}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GenerateStylePreview(string styleName)
     {
         try
@@ -138,6 +138,7 @@ public class StylePreviewController : ControllerBase
     /// Generate preview images for all active styles
     /// </summary>
     [HttpPost("generate-all")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GenerateAllPreviews()
     {
         var styles = await _dbContext.Styles.Where(s => s.IsActive).ToListAsync();

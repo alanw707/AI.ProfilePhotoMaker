@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -7,14 +7,13 @@ import { HeaderNavigationComponent } from '../../shared/header-navigation/header
 import { ProfileService, UserProfile } from '../../services/profile.service';
 import { FileUploadService } from '../../services/file-upload.service';
 import { NotificationService } from '../../services/notification.service';
-import { DashboardStateService } from '../../services/dashboard-state.service';
+import { DashboardCoordinatorService } from '../../services/dashboard-coordinator.service';
 import { AccountInfoComponent } from '../../components/settings/account-info/account-info.component';
 import { CreditManagementComponent } from '../../components/settings/credit-management/credit-management.component';
 
 interface DataStats {
   inputPhotos: number;
   generatedPhotos: number;
-  enhancedPhotos: number;
   hasTrainedModel: boolean;
   totalDataSize: number;
   accountAge: number;
@@ -37,6 +36,9 @@ type DeletionType = 'photos' | 'model' | 'all' | 'account';
   styleUrls: ['./settings.component.sass'],
 })
 export class SettingsComponent implements OnInit {
+  // Constants
+  readonly MAX_PHOTOS_LIMIT = 200;
+
   // User Info
   userProfile: UserProfile | null = null;
   userEmail = '';
@@ -50,7 +52,6 @@ export class SettingsComponent implements OnInit {
   dataStats: DataStats = {
     inputPhotos: 0,
     generatedPhotos: 0,
-    enhancedPhotos: 0,
     hasTrainedModel: false,
     totalDataSize: 0,
     accountAge: 0,
@@ -73,21 +74,16 @@ export class SettingsComponent implements OnInit {
     private profileService: ProfileService,
     private fileUploadService: FileUploadService,
     private notificationService: NotificationService,
-    private dashboardStateService: DashboardStateService,
+    private dashboardStateService: DashboardCoordinatorService,
     private cdr: ChangeDetectorRef
   ) {}
 
   async ngOnInit() {
-    console.log('Settings ngOnInit');
-
     // Check authentication first
     if (!this.authService.isAuthenticated()) {
-      console.log('Not authenticated, redirecting to login');
-      this.router.navigate(['/login']);
+      this.router.navigate(['/auth/login']);
       return;
     }
-
-    console.log('User is authenticated, loading settings data');
 
     try {
       // Load all data in parallel and wait for completion
@@ -162,35 +158,35 @@ export class SettingsComponent implements OnInit {
         this.dataStats = {
           inputPhotos: statsResponse.data.inputPhotos || 0,
           generatedPhotos: statsResponse.data.generatedPhotos || 0,
-          enhancedPhotos: statsResponse.data.enhancedPhotos || 0,
           hasTrainedModel: statsResponse.data.hasTrainedModel || false,
           totalDataSize: statsResponse.data.totalDataSize || 0,
           accountAge: statsResponse.data.accountAge || 0,
         };
+
+        // Even if primary API succeeded, verify trained model status using comprehensive check
+        // This ensures accuracy since model status might be inconsistent across systems
+        await this.checkTrainedModelStatus();
       } else {
         // Fallback to existing method if API is not available
         const imagesResponse = await this.fileUploadService.getUserImages().toPromise();
         if (imagesResponse?.success && imagesResponse.data) {
           const originalImages = imagesResponse.data.images.filter(img => !img.isGenerated);
           const generatedImages = imagesResponse.data.images.filter(img => img.isGenerated);
-          const enhancedImages = imagesResponse.data.images.filter(
-            img =>
-              img.style === 'Enhanced' ||
-              img.style === 'Background Remover' ||
-              img.style === 'Social Media' ||
-              img.style === 'Cartoon'
-          );
 
           this.dataStats.inputPhotos = originalImages.length;
           this.dataStats.generatedPhotos = generatedImages.length;
-          this.dataStats.enhancedPhotos = enhancedImages.length;
+
+          // Calculate total data size from original images (use fileSizeBytes or estimate)
+          this.dataStats.totalDataSize = originalImages.reduce((total, img) => {
+            // Try different size properties that might exist
+            const size =
+              (img as any).fileSizeBytes || (img as any).fileSize || (img as any).size || 0;
+            return total + size;
+          }, 0);
         }
 
-        // Check if user has trained model
-        const trainingStatus = await this.fileUploadService.getTrainingStatus().toPromise();
-        if (trainingStatus) {
-          this.dataStats.hasTrainedModel = trainingStatus.hasTrainedModel;
-        }
+        // Check if user has trained model using multiple data sources for accuracy
+        await this.checkTrainedModelStatus();
       }
     } catch (error) {
       console.error('Error loading data stats:', error);
@@ -361,7 +357,6 @@ export class SettingsComponent implements OnInit {
         this.dataStats = {
           inputPhotos: 0,
           generatedPhotos: 0,
-          enhancedPhotos: 0,
           hasTrainedModel: false,
           totalDataSize: 0,
           accountAge: this.dataStats.accountAge,
@@ -387,7 +382,7 @@ export class SettingsComponent implements OnInit {
         // Log out user immediately
         setTimeout(() => {
           this.authService.logout();
-          this.router.navigate(['/login']);
+          this.router.navigate(['/auth/login']);
         }, 2000);
       } else {
         throw new Error(response?.error?.message || 'Failed to delete account');
@@ -512,8 +507,8 @@ export class SettingsComponent implements OnInit {
         resolve();
       }, 8000);
 
-      // Load initial credit data
-      this.dashboardStateService.loadInitialDashboardData();
+      // Load basic data for settings (no validation, just counts)
+      this.dashboardStateService.loadBasicDataForSettings();
 
       // Subscribe to dashboard state for credit information - take first emission
       let subscription: any;
@@ -521,11 +516,105 @@ export class SettingsComponent implements OnInit {
         clearTimeout(timeout);
         this.creditsInfo = state.creditsInfo;
         this.userCreditStatus = state.userCreditStatus;
+        // Also update data stats with the lighter counts
+        if (state.uploadedImages !== undefined) {
+          this.dataStats.inputPhotos = state.uploadedImages;
+        }
+        if (state.generatedPhotosCount !== undefined) {
+          this.dataStats.generatedPhotos = state.generatedPhotosCount;
+        }
         if (subscription) {
           subscription.unsubscribe();
         }
         resolve();
       });
     });
+  }
+
+  // Helper method to format data size in human-readable format
+  formatDataSize(bytes: number): string {
+    if (bytes === 0) {
+      return '0 MB';
+    }
+
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    const size = parseFloat((bytes / Math.pow(k, i)).toFixed(1));
+
+    return `${size} ${sizes[i]}`;
+  }
+
+  /**
+   * Get the total number of photos (uploaded + generated)
+   */
+  getTotalPhotos(): number {
+    return this.dataStats.inputPhotos + this.dataStats.generatedPhotos;
+  }
+
+  /**
+   * Comprehensive check for trained model status using multiple data sources
+   * This addresses the issue where model status might be inconsistent across different endpoints
+   */
+  private async checkTrainedModelStatus(): Promise<void> {
+    let hasTrainedModel = false;
+    const statusSources: string[] = [];
+
+    try {
+      // Method 1: Check training status endpoint
+      try {
+        const trainingStatus = await this.fileUploadService.getTrainingStatus().toPromise();
+        if (trainingStatus?.hasTrainedModel) {
+          hasTrainedModel = true;
+          statusSources.push('training-status');
+        }
+      } catch (error) {
+        console.warn('⚠️ Training status endpoint failed:', error);
+      }
+
+      // Method 2: Check user model requests endpoint
+      try {
+        const modelRequests = await this.fileUploadService.getUserModelRequests().toPromise();
+        if (modelRequests?.success && modelRequests.data?.hasTrainedModel) {
+          hasTrainedModel = true;
+          statusSources.push('model-requests');
+        }
+      } catch (error) {
+        console.warn('⚠️ Model requests endpoint failed:', error);
+      }
+
+      // Method 3: Check user profile for model IDs
+      if (this.userProfile?.trainedModelId) {
+        hasTrainedModel = true;
+        statusSources.push('user-profile');
+      }
+
+      // Method 4: Debug endpoint as final verification (if other methods disagree)
+      if (!hasTrainedModel) {
+        try {
+          const debugStatus = await this.fileUploadService.getDebugModelStatus().toPromise();
+          if (debugStatus?.success && debugStatus.data?.hasTrainedModel) {
+            hasTrainedModel = true;
+            statusSources.push('debug-status');
+          }
+        } catch (error) {
+          console.warn('⚠️ Debug status endpoint failed:', error);
+        }
+      }
+
+      // Update the status
+      this.dataStats.hasTrainedModel = hasTrainedModel;
+
+      // Log warning if no model found but expected
+      if (!hasTrainedModel && statusSources.length === 0) {
+        console.warn(
+          '⚠️ No trained model found across all endpoints. This might indicate a data consistency issue.'
+        );
+      }
+    } catch (error) {
+      console.error('❌ Error during comprehensive model status check:', error);
+      // Keep existing status as fallback
+    }
   }
 }

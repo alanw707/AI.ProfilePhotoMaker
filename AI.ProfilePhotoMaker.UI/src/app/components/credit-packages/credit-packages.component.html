@@ -2,28 +2,30 @@
   <div class="header">
     <h2>Purchase Credits</h2>
     <p class="subtitle">Choose a credit package to unlock premium features</p>
+    <div class="simulation-notice" *ngIf="paymentConfig?.paymentSimulation?.enabled">
+      <small>
+        <strong>Development Mode:</strong>
+        Payment simulation is enabled - no real charges will be made.
+      </small>
+    </div>
   </div>
 
-  <!-- Current Credit Status -->
-  <div class="current-status" *ngIf="userCreditStatus">
-    <div class="status-card">
-      <h3>Your Current Credits</h3>
-      <div class="credit-breakdown">
-        <div class="credit-item">
-          <span class="label">Total Credits:</span>
-          <span class="value">{{ userCreditStatus.totalCredits }}</span>
-        </div>
-        <div class="credit-item">
-          <span class="label">Weekly Credits:</span>
-          <span class="value">{{ userCreditStatus.weeklyCredits }}</span>
-          <small class="note">(Resets weekly, for basic features only)</small>
-        </div>
-        <div class="credit-item">
-          <span class="label">Purchased Credits:</span>
-          <span class="value">{{ userCreditStatus.purchasedCredits }}</span>
-          <small class="note">(Never expire, all features)</small>
-        </div>
-      </div>
+  <!-- Payment Element -->
+  <div class="payment-container" *ngIf="selectedPackage">
+    <h3>
+      {{ paymentConfig?.paymentSimulation?.enabled ? 'Simulating Payment' : 'Completing Purchase' }} for
+      {{ selectedPackage.name }}
+    </h3>
+    <div class="simulation-payment" *ngIf="paymentConfig?.paymentSimulation?.enabled">
+      <p>Payment simulation in progress...</p>
+      <p><small>This is a simulated payment - no real money will be charged.</small></p>
+    </div>
+    <div #paymentElement></div>
+    <div class="payment-actions">
+      <button (click)="confirmPurchase()" [disabled]="isPurchasing">
+        {{ isPurchasing ? 'Processing...' : 'Pay $' + selectedPackage.price }}
+      </button>
+      <button (click)="cancelPurchase()" [disabled]="isPurchasing">Cancel</button>
     </div>
   </div>
 
@@ -32,17 +34,17 @@
     <p>Loading credit packages...</p>
   </div>
 
+  <!-- Empty State -->
+  <div class="empty-state" *ngIf="!isLoadingPackages && packages.length === 0 && !selectedPackage">
+    <p>No credit packages available at this time.</p>
+    <button class="retry-btn" (click)="loadPackages()">Retry</button>
+  </div>
+
   <!-- Credit Packages -->
-  <div class="packages-grid" *ngIf="!isLoadingPackages">
-    <div 
-      class="package-card" 
-      [class.recommended]="isPackageRecommended(pkg)"
-      *ngFor="let pkg of packages"
-    >
+  <div class="packages-grid" *ngIf="!isLoadingPackages && packages.length > 0 && !selectedPackage">
+    <div class="package-card" [class.recommended]="isPackageRecommended(pkg)" *ngFor="let pkg of packages">
       <!-- Recommended Badge -->
-      <div class="recommended-badge" *ngIf="isPackageRecommended(pkg)">
-        Most Popular
-      </div>
+      <div class="recommended-badge" *ngIf="isPackageRecommended(pkg)">Most Popular</div>
 
       <div class="package-header">
         <h3 class="package-name">{{ pkg.name }}</h3>
@@ -59,7 +61,7 @@
           <span class="total-credits">{{ pkg.totalCredits }}</span>
           <span class="credit-label">Total Credits</span>
         </div>
-        
+
         <div class="value-proposition" *ngIf="pkg.bonusCredits > 0">
           <div class="bonus-highlight">
             <span>+ {{ pkg.bonusCredits }} bonus credits</span>
@@ -81,7 +83,7 @@
             <span class="training-badge">✓ Model Training</span>
           </div>
         </div>
-        
+
         <div class="key-features">
           <div class="feature-item">🎨 20 styles to choose from</div>
           <div class="feature-item">✨ Studio quality photos</div>
@@ -90,13 +92,8 @@
         </div>
       </div>
 
-
       <div class="package-actions">
-        <button 
-          class="purchase-btn"
-          [disabled]="isPurchasing"
-          (click)="purchasePackage(pkg)"
-        >
+        <button class="purchase-btn" [disabled]="isPurchasing" (click)="purchasePackage(pkg)">
           {{ isPurchasing ? 'Processing...' : 'Purchase Credits' }}
         </button>
       </div>

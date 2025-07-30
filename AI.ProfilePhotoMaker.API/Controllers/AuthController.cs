@@ -74,7 +74,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         [HttpGet("google-oauth-url")]
-        public IActionResult GetGoogleOAuthUrl(string returnUrl = "/dashboard")
+        public IActionResult GetGoogleOAuthUrl(string returnUrl = "/app/dashboard")
         {
             var googleClientId = _configuration["Authentication:Google:ClientId"];
             if (string.IsNullOrEmpty(googleClientId))
@@ -97,7 +97,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         [HttpGet("external-login/{provider}")]
-        public IActionResult ExternalLogin(string provider, string returnUrl = "/dashboard")
+        public IActionResult ExternalLogin(string provider, string returnUrl = "/app/dashboard")
         {
             if (provider.ToLower() != "google")
             {
@@ -138,7 +138,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         public async Task<IActionResult> ExternalLoginCallback(string? code = null, string? state = null, string? error = null)
         {
             var frontendBaseUrl = _configuration["AppBaseUrl"] ?? "http://localhost:4200";
-            var returnUrl = HttpContext.Session.GetString("oauth_return_url") ?? "/dashboard";
+            var returnUrl = HttpContext.Session.GetString("oauth_return_url") ?? "/app/dashboard";
 
             Console.WriteLine($"🔄 OAuth Callback - Code: {code?.Substring(0, Math.Min(10, code?.Length ?? 0))}...");
             Console.WriteLine($"   State: {state}");
@@ -427,7 +427,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         [HttpGet("google-oauth-url-alt")]
-        public async Task<IActionResult> GetGoogleOAuthUrlAlternative(string returnUrl = "/dashboard")
+        public async Task<IActionResult> GetGoogleOAuthUrlAlternative(string returnUrl = "/app/dashboard")
         {
             try
             {

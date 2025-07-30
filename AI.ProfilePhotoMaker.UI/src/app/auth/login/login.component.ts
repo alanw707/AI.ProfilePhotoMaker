@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -34,7 +34,7 @@ export class LoginComponent implements OnInit {
     });
 
     // Get return URL from route parameters or default to profile
-    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
+    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/app/dashboard';
   }
 
   ngOnInit(): void {
@@ -68,7 +68,7 @@ export class LoginComponent implements OnInit {
           this.authService.handleOAuthCallback(params['token'], params['expiration']);
           console.log('✅ OAuth callback handled successfully');
           console.log('Navigating to dashboard...');
-          this.router.navigate(['/dashboard']).then(success => {
+          this.router.navigate(['/app/dashboard']).then(success => {
             console.log('Navigation result:', success);
           });
         } catch (error) {
@@ -96,7 +96,7 @@ export class LoginComponent implements OnInit {
             this.authService.handleOAuthCallback(token, expiration || undefined);
             console.log('✅ OAuth callback handled successfully');
             console.log('Navigating to dashboard...');
-            this.router.navigate(['/dashboard']).then(success => {
+            this.router.navigate(['/app/dashboard']).then(success => {
               console.log('Navigation result:', success);
             });
           } else {
@@ -128,7 +128,7 @@ export class LoginComponent implements OnInit {
             this.authService.handleOAuthCallback(token, expiration || undefined);
             console.log('✅ OAuth callback handled successfully');
             console.log('Navigating to dashboard...');
-            this.router.navigate(['/dashboard']).then(success => {
+            this.router.navigate(['/app/dashboard']).then(success => {
               console.log('Navigation result:', success);
             });
           }
@@ -210,7 +210,7 @@ export class LoginComponent implements OnInit {
   }
 
   navigateToRegister() {
-    this.router.navigate(['/register']);
+    this.router.navigate(['/auth/register']);
   }
 
   loginWithGoogle() {

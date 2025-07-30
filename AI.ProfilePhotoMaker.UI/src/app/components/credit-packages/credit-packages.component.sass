@@ -2,7 +2,15 @@
 
 .credit-packages-container
   @include shared.content-container
-  padding: 2rem 1rem
+  padding: 2rem 1.5rem
+  
+  // Wider desktop padding for better centering
+  @media (min-width: 1400px)
+    padding: 2.5rem 2rem
+    
+  // Mobile padding optimization
+  @media (max-width: 640px)
+    padding: 1.5rem 1rem
 
 .header
   text-align: center
@@ -18,65 +26,105 @@
     color: var(--text-secondary)
     margin: 0
 
-.current-status
-  margin-bottom: 3rem
-  
-  .status-card
-    background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)
-    color: white
-    padding: 2rem
-    border-radius: 15px
-    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3)
+  .simulation-notice
+    margin-top: 1rem
+    padding: 0.75rem 1rem
+    background: rgba(245, 200, 90, 0.1)
+    border: 1px solid rgba(245, 200, 90, 0.3)
+    border-radius: 8px
+    text-align: center
     
-    h3
-      margin: 0 0 1.5rem 0
-      font-size: 1.5rem
+    small
+      color: var(--warning-color)
+      font-weight: 500
+
+.payment-container
+  background: var(--card-bg)
+  border: 1px solid var(--border-color)
+  border-radius: 15px
+  padding: 2rem
+  margin-bottom: 3rem
+  box-shadow: var(--shadow-sm)
+  
+  h3
+    margin: 0 0 1.5rem 0
+    color: var(--text-primary)
+    text-align: center
+    
+  .simulation-payment
+    text-align: center
+    margin-bottom: 1.5rem
+    padding: 1rem
+    background: rgba(245, 200, 90, 0.1)
+    border-radius: 8px
+    
+    p
+      color: var(--warning-color)
+      margin: 0.5rem 0
       
-    .credit-breakdown
-      display: grid
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))
-      gap: 1rem
+  .payment-actions
+    display: flex
+    gap: 1rem
+    justify-content: center
+    margin-top: 1.5rem
+    
+    button
+      @include shared.btn-primary
+      min-width: 120px
       
-      .credit-item
-        display: flex
-        flex-direction: column
-        
-        .label
-          font-size: 0.9rem
-          opacity: 0.9
-          margin-bottom: 0.25rem
-          
-        .value
-          font-size: 1.8rem
-          font-weight: bold
-          margin-bottom: 0.25rem
-          
-        .note
-          font-size: 0.8rem
-          opacity: 0.8
+      &:last-child
+        @include shared.btn-secondary
+
 
 .packages-grid
   display: grid
-  grid-template-columns: repeat(4, 1fr)
-  gap: 2.5rem
+  grid-template-columns: repeat(3, 1fr)
+  gap: 2rem
   margin-bottom: 4rem
+  max-width: 1200px
+  margin-left: auto
+  margin-right: auto
   
+  // Large desktop - maintain 3 columns with wider cards
+  @media (min-width: 1400px)
+    max-width: 1400px
+    gap: 2.5rem
+  
+  // Medium desktop - maintain 3 columns
   @media (max-width: 1200px)
-    grid-template-columns: repeat(2, 1fr)
-    gap: 2rem
-    
-  @media (max-width: 768px)
-    grid-template-columns: 1fr
+    max-width: 1000px
     gap: 1.5rem
+  
+  // Tablet - 2 columns (third card wraps below)
+  @media (max-width: 900px)
+    grid-template-columns: repeat(2, 1fr)
+    gap: 1.5rem
+    
+  // Mobile - single column
+  @media (max-width: 640px)
+    grid-template-columns: 1fr
+    gap: 1.25rem
 
 .package-card
   position: relative
   background: white
-  border: 2px solid #e9ecef
-  border-radius: 15px
-  padding: 2.5rem 2rem
+  border: 2px solid #e9ecef  
+  border-radius: 16px
+  padding: 2rem
   transition: all 0.3s ease
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1)
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08)
+  display: flex
+  flex-direction: column
+  height: 100%
+  min-height: 600px
+  
+  // Better proportions for wider 3-column layout
+  @media (max-width: 900px)
+    min-height: 580px
+    
+  @media (max-width: 640px)
+    padding: 1.5rem
+    min-height: 520px
   
   &:hover
     transform: translateY(-5px)
@@ -100,14 +148,14 @@
       font-weight: bold
       
 
-// Dark theme styles using Angular's host-context
-:host-context([data-theme="dark"])
+// Dark theme styles using Angular's host-context - increased specificity
+:host-context([data-theme="dark"]) .credit-packages-container
   .header
     h2
-      color: #e1e5e9
+      color: #e1e5e9 !important
       
     .subtitle
-      color: #a8b3bd
+      color: #a8b3bd !important
       
   .package-card
     background: rgba(255, 255, 255, 0.08) !important
@@ -163,6 +211,35 @@
     background: #1a4a2e !important
     color: #4ade80 !important
 
+  .empty-state
+    p
+      color: #a8b3bd !important
+      
+    .retry-btn
+      background: rgba(255, 255, 255, 0.08) !important
+      color: #e1e5e9 !important
+      border-color: rgba(255, 255, 255, 0.15) !important
+
+  .payment-container
+    background: rgba(255, 255, 255, 0.08) !important
+    border-color: rgba(255, 255, 255, 0.15) !important
+    
+    h3
+      color: #e1e5e9 !important
+      
+    .simulation-payment
+      background: rgba(245, 200, 90, 0.15) !important
+      
+      p
+        color: #F5C85A !important
+
+  .simulation-notice
+    background: rgba(245, 200, 90, 0.15) !important
+    border-color: rgba(245, 200, 90, 0.4) !important
+    
+    small
+      color: #F5C85A !important
+
 .package-highlights
   margin-bottom: 2rem
   
@@ -206,8 +283,8 @@
       &:last-child
         margin-bottom: 0
 
-// Dark theme styles for package highlights
-:host-context([data-theme="dark"])
+// Dark theme styles for package highlights - increased specificity
+:host-context([data-theme="dark"]) .credit-packages-container
   .package-highlights
     .usage-examples 
       .usage-item
@@ -227,11 +304,17 @@
 .package-header
   text-align: center
   margin-bottom: 2rem
+  flex: 0 0 auto
   
   .package-name
-    font-size: 1.5rem
+    font-size: 1.75rem
     color: #2c3e50
     margin: 0 0 1rem 0
+    font-weight: 700
+    line-height: 1.2
+    
+    @media (max-width: 768px)
+      font-size: 1.5rem
     
   .package-price
     display: flex
@@ -262,6 +345,10 @@
 .credit-info
   text-align: center
   margin-bottom: 2rem
+  flex: 1 1 auto
+  display: flex
+  flex-direction: column
+  gap: 1.5rem
   
   .credit-highlight
     background: linear-gradient(135deg, #667eea, #764ba2)
@@ -301,16 +388,23 @@
   display: flex
   flex-direction: column
   gap: 1rem
+  margin-top: auto
+  flex: 0 0 auto
       
   .purchase-btn
     padding: 1rem 1.5rem
     background: linear-gradient(135deg, #667eea, #764ba2)
     color: white
     border: none
-    border-radius: 8px
+    border-radius: 12px
+    width: 100%
     font-weight: 600
     cursor: pointer
     transition: all 0.3s ease
+    
+    @media (max-width: 768px)
+      padding: 0.875rem 1rem
+      font-size: 0.95rem
     
     &:hover:not(:disabled)
       transform: translateY(-2px)
@@ -365,15 +459,81 @@
   padding: 3rem
   color: #7f8c8d
 
-@media (max-width: 768px)
-  .credit-packages-container
-    padding: 1rem
+.empty-state
+  text-align: center
+  padding: 3rem
+  color: #7f8c8d
+  
+  p
+    margin-bottom: 1.5rem
+    font-size: 1.1rem
     
-  .package-card
+  .retry-btn
+    @include shared.btn-secondary
+    padding: 0.75rem 1.5rem
+    font-size: 1rem
+
+// Mobile header typography adjustments
+@media (max-width: 640px)
+  .header
+    margin-bottom: 2rem
+    
+    h2
+      font-size: 1.75rem
+      
+    .subtitle
+      font-size: 0.95rem
+    
+  .credit-info .credit-highlight 
+    padding: 1.25rem
+    
+    .total-credits
+      font-size: 2rem
+      
+    .credit-label
+      font-size: 0.9rem
+    
+  .package-price 
+    .amount
+      font-size: 2.5rem
+      
+  .value-proposition
+    .credits-per-dollar,
+    .bonus-highlight span
+      font-size: 0.875rem
+    
+  .package-highlights 
+    .usage-examples
+      flex-direction: column
+      gap: 1rem
+      
+      .usage-item .count
+        font-size: 1.25rem
+        
+    .key-features
+      .feature-item
+        font-size: 0.85rem
+        margin-bottom: 0.4rem
+        
+  .credit-costs-info
     padding: 1.5rem
     
-  .credit-info .credit-highlight .total-credits
-    font-size: 2rem
+    h3
+      font-size: 1.25rem
+      margin-bottom: 1rem
+      
+    .cost-item
+      padding: 0.875rem
+      
+      .operation
+        font-size: 0.9rem
+        
+      .cost
+        font-size: 1.1rem
+        
+      .note
+        font-size: 0.75rem
     
   .cost-grid
     grid-template-columns: 1fr
+    gap: 0.75rem

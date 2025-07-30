@@ -82,9 +82,8 @@ export class CreditService {
    * Get current user's credit status
    */
   getCreditStatus(): Observable<ApiResponse<UserCreditStatus>> {
-    return this.http.get<ApiResponse<UserCreditStatus>>(
-      this.configService.buildApiEndpoint('credit/status')
-    );
+    const endpoint = this.configService.buildApiEndpoint('credit/status');
+    return this.http.get<ApiResponse<UserCreditStatus>>(endpoint);
   }
 
   /**

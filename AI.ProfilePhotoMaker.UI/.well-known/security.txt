@@ -1,0 +1,4 @@
+Contact: mailto:security@aiprofilephotomaker.com
+Expires: 2025-12-31T23:59:59.000Z
+Preferred-Languages: en
+Canonical: https://aiprofilephotomaker.com/.well-known/security.txt

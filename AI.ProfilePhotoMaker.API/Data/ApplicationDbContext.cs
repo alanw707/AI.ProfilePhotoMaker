@@ -140,7 +140,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .Property(p => p.AmountPaid)
             .HasPrecision(10, 2);
 
-        // Seed credit packages (new unified system)
+        // Seed credit packages (3 packages with Studio Pack)
         builder.Entity<CreditPackage>().HasData(
             new CreditPackage
             {
@@ -174,19 +174,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 Price = 39.99m,
                 Description = "Best value for content creators and businesses",
                 DisplayOrder = 3,
-                BonusCredits = 100, // Generous bonus
-                IsActive = true,
-                CreatedAt = DateTime.UtcNow
-            },
-            new CreditPackage
-            {
-                Id = 4,
-                Name = "Enterprise Pack",
-                Credits = 750,
-                Price = 79.99m,
-                Description = "Maximum credits for agencies and enterprises",
-                DisplayOrder = 4,
-                BonusCredits = 250, // Excellent value
+                BonusCredits = 100, // Great value with bonus credits
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             }

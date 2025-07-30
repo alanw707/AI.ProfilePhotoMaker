@@ -15,6 +15,7 @@
 @use 'styles/gallery'
 @use 'styles/workflow'
 @use 'styles/responsive'
+@use 'styles/accessibility'
 
 // =============================================================================
 // DASHBOARD CONTAINER
@@ -24,19 +25,37 @@
   @include shared.page-container
   // Add gradient background for dark theme consistency
   background: var(--gradient-dashboard-bg)
+  // CSS Grid layout - header auto-sized, content fills remaining space
+  display: grid
+  grid-template-rows: auto 1fr
   min-height: 100vh
+  // No padding needed - natural document flow!
 
 .dashboard-main
   @include shared.content-container
   @include shared.main-content
-  // Override excessive spacing from main-content mixin
-  margin-top: var(--spacing-xl)  // Reduced from 80px for tighter layout
-  padding: var(--spacing-xl) 0   // Reduced from 40px 0 for better balance
+  // Content spacing - no header compensation needed with CSS Grid!
+  margin-top: 0
+  padding: 20px 0   // Content vertical padding
+  
+  // Responsive padding adjustments
+  @media (max-width: 1024px)
+    padding: 16px 0
+    
+  @media (max-width: 768px)
+    padding: 12px 0
 
 .dashboard-content
   display: flex
   flex-direction: column
-  gap: var(--spacing-lg)
+  gap: 32px  // Better spacing between sections
+  
+  // Responsive gap adjustments
+  @media (max-width: 1024px)
+    gap: 28px
+    
+  @media (max-width: 768px)
+    gap: 24px
 
 // =============================================================================
 // STATS SECTION - Grid Layout Only
@@ -45,8 +64,30 @@
 .stats-section
   .stats-grid
     display: grid
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr))
-    gap: var(--spacing-xl)
+    gap: 18px
+    width: 100%
+    
+    // Desktop: 4 cards in one row
+    grid-template-columns: repeat(4, 1fr)
+    
+    // Tablet: 2 cards per row
+    @media (max-width: 1024px)
+      grid-template-columns: repeat(2, 1fr)
+      gap: 14px
+    
+    // Mobile: 2x2 grid for better space efficiency
+    @media (max-width: 768px)
+      grid-template-columns: repeat(2, 1fr)
+      gap: 8px
+      
+    // Very small mobile: maintain 2x2 with tighter spacing
+    @media (max-width: 480px)
+      grid-template-columns: repeat(2, 1fr)
+      gap: 6px
+    
+    // Ensure consistent sizing across all cards
+    > *
+      min-width: 0  // Prevent grid items from overflowing
 
 // =============================================================================
 // WORKFLOW SECTION - Styles moved to _workflow.sass

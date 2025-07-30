@@ -3,82 +3,91 @@
   <p>Monitor your credit usage and purchase additional credits</p>
 </div>
 <div class="section-content">
-  
-  <!-- Credit Overview Cards -->
-  <div class="credit-overview">
-    <div class="credit-card total-credits">
-      <div class="credit-header">
-        <div class="credit-icon">💎</div>
-        <div class="credit-title">
-          <h3>{{getTotalAvailableCredits()}}</h3>
-          <p>Total Credits Available</p>
+  <!-- Current Credit Status -->
+  <div class="credit-status-overview">
+    <h4>Your Current Credits</h4>
+    <div class="credit-breakdown">
+      <div class="credit-stat">
+        <div class="stat-icon">🎯</div>
+        <div class="stat-info">
+          <div class="stat-value">{{ getTotalAvailableCredits() }}</div>
+          <div class="stat-label">Total Credits</div>
+          <div class="stat-description">Available for use right now</div>
+        </div>
+      </div>
+      <div class="credit-stat">
+        <div class="stat-icon">💎</div>
+        <div class="stat-info">
+          <div class="stat-value">{{ getPurchasedCredits() }}</div>
+          <div class="stat-label">Purchased Credits</div>
+          <div class="stat-description">Never expire, all features</div>
+        </div>
+      </div>
+      <div class="credit-stat">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-info">
+          <div class="stat-value">{{ getWeeklyCredits() }}</div>
+          <div class="stat-label">Weekly Credits</div>
+          <div class="stat-description">Free credits, basic features only</div>
         </div>
       </div>
     </div>
-    
-    <div class="credit-card purchased-credits">
-      <div class="credit-header">
-        <div class="credit-icon">🛒</div>
-        <div class="credit-title">
-          <h3>{{getPurchasedCredits()}}</h3>
-          <p>Purchased Credits</p>
-        </div>
-      </div>
-      <div class="credit-details">
-        <small>Never expire • All features</small>
-      </div>
+  </div>
+
+  <!-- Weekly Credit Status -->
+  <div class="weekly-credit-status">
+    <div class="weekly-header">
+      <h4>Weekly Credit Allowance</h4>
+      <span class="reset-info">Resets {{ getNextCreditReset() }}</span>
     </div>
-    
-    <div class="credit-card weekly-credits">
-      <div class="credit-header">
-        <div class="credit-icon">⚡</div>
-        <div class="credit-title">
-          <h3>{{getWeeklyCredits()}}/{{getMaxWeeklyCredits()}}</h3>
-          <p>Free Credits</p>
-        </div>
+    <div class="weekly-progress">
+      <div class="progress-info">
+        <span>{{ getWeeklyCredits() }} of {{ getMaxWeeklyCredits() }} credits remaining</span>
+        <span class="progress-percentage">{{ getCreditUsagePercentage() }}% used</span>
       </div>
-      <div class="credit-progress">
-        <div class="progress-bar">
-          <div class="progress-fill" [style.width.%]="getCreditUsagePercentage()"></div>
-        </div>
-        <small>Resets {{getNextCreditReset()}}</small>
+      <div class="progress-bar">
+        <div class="progress-fill" [style.width.%]="getCreditUsagePercentage()"></div>
       </div>
     </div>
   </div>
 
   <!-- Credit Usage Rules -->
   <div class="credit-usage-rules">
-    <h4>Credit Usage Guidelines</h4>
-    <div class="usage-grid">
-      <div class="usage-item">
-        <div class="usage-icon">⚡</div>
-        <div class="usage-content">
-          <strong>Free Credits ({{getWeeklyCredits()}})</strong>
-          <p>Photo enhancement only • Resets weekly</p>
-        </div>
+    <h4>How Credits Work</h4>
+    <div class="usage-info">
+      <div class="info-item">
+        <div class="info-icon">💡</div>
+        <p>
+          <strong>Free credits</strong>
+          refresh every week and can only be used for photo enhancement
+        </p>
       </div>
-      <div class="usage-item">
-        <div class="usage-icon">💎</div>
-        <div class="usage-content">
-          <strong>Purchased Credits ({{getPurchasedCredits()}})</strong>
-          <p>All features • Never expire</p>
-        </div>
+      <div class="info-item">
+        <div class="info-icon">💡</div>
+        <p>
+          <strong>Purchased credits</strong>
+          never expire and unlock all premium features
+        </p>
+      </div>
+      <div class="info-item">
+        <div class="info-icon">💡</div>
+        <p>When using features, free credits are consumed first, then purchased credits</p>
       </div>
     </div>
   </div>
 
   <!-- Action Buttons -->
   <div class="section-actions">
-    <button class="btn btn-primary" routerLink="/packages">
+    <button class="btn btn-primary" routerLink="/pricing">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <path d="M12 2L3.09 8.26L12 22L20.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" fill="none"/>
+        <path d="M12 2L3.09 8.26L12 22L20.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" fill="none" />
       </svg>
       Purchase Credits
     </button>
-    <button class="btn btn-secondary" routerLink="/enhance">
+    <button class="btn btn-secondary" routerLink="/app/enhance">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-        <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2"/>
+        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+        <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2" />
       </svg>
       Use Free Credits
     </button>

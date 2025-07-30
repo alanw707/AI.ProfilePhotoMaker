@@ -7,7 +7,8 @@ export const environment = {
     debugMode: true,
     useProxy: true,
     cors: true,
-    enableImageValidation: true,
+    enableImageValidation: false, // Disable excessive image validation in development
+    enableReplicateCredits: false, // Disable Replicate API when TestController is disabled
   },
   ngrok: {
     enabled: false,

@@ -15,7 +15,7 @@
   border-radius: 16px
 
   .section-header
-    margin-bottom: 20px
+    margin: 16px 0 20px 0
 
     h4
       font-family: 'Poppins', sans-serif
@@ -29,64 +29,109 @@
       color: var(--text-secondary)
       margin: 0
 
-// Enhanced File Grid - Properly Sized Previews
+// Enhanced File Grid - Optimized for Desktop UX
 .selected-files-grid-enhanced
   display: grid
-  gap: 16px
-  margin-bottom: 20px
+  gap: clamp(0.75rem, 1.5vw, 1.25rem) // Increased spacing for better separation
+  margin-bottom: clamp(0.75rem, 2vw, 1rem) // Reduced bottom spacing
   
-  // Responsive grid for file previews
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))
+  // Desktop-optimized layout with dynamic heights (no 1fr forcing equal heights)
+  grid-template-columns: repeat(auto-fill, minmax(180px, max-content))
+  align-items: start // Prevents height stretching - cards use natural height
+  justify-content: start // Align cards to start when fewer than full row
   
-  // Mobile: single column
+  // Better desktop space utilization
+  @media (min-width: 1200px)
+    grid-template-columns: repeat(auto-fill, minmax(200px, max-content))
+    gap: 1.25rem
+  
+  @media (min-width: 768px) and (max-width: 1199px)
+    grid-template-columns: repeat(auto-fill, minmax(180px, max-content))
+  
+  // Switch to flexbox at 768px for mobile optimization
   @media (max-width: 767px)
-    grid-template-columns: 1fr
+    display: flex
+    flex-direction: column
+    gap: 0.75rem
 
-// Individual File Item - Redesigned Card Layout
+// Individual File Item - Optimized Desktop Card Layout
 .selected-file-item-enhanced
   display: flex
-  align-items: flex-start
-  gap: 16px
-  padding: 20px
+  flex-direction: column // Stack content vertically for better space usage
+  gap: clamp(0.5rem, 1vw, 0.75rem) // Reduced gap for more compact layout
+  padding: clamp(0.75rem, 1.5vw, 1rem) // Balanced padding for all screen sizes
   background: var(--card-bg)
   border: 2px solid var(--border-color)
-  border-radius: 16px
+  border-radius: 12px
   position: relative
   transition: all 0.3s ease
   box-shadow: var(--shadow-card-subtle)
+  width: 100%
+  box-sizing: border-box
+  height: auto // Dynamic height based on content
+  min-height: clamp(120px, 15vw, 180px) // Optimized minimum height for desktop
+  z-index: 1  // Lower z-index to allow icons to appear above
   
 
-  // File states with strong color-coded borders
+  // File states with clean visual separation
   &.file-valid
-    border: 3px solid #28a745 // Strong green border
-    background: rgba(40, 167, 69, 0.02)
-    box-shadow: var(--shadow-file-valid)
+    border: 2px solid #22c55e // Clean green border
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.03) 0%, rgba(22, 163, 74, 0.01) 100%)
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.08), 0 1px 3px rgba(34, 197, 94, 0.05)
+    
+    // Subtle success glow on hover
+    &:hover
+      border-color: #16a34a
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.12), 0 2px 6px rgba(34, 197, 94, 0.08)
+      transform: translateY(-1px)
 
   &.file-invalid
-    border: 3px solid #dc3545 // Strong red border
-    background: rgba(220, 53, 69, 0.02)
-    box-shadow: var(--shadow-file-invalid)
+    border: 2px solid #ef4444 // Clean red border
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.03) 0%, rgba(185, 28, 28, 0.01) 100%)
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.08), 0 1px 3px rgba(220, 38, 38, 0.05)
+    
+    // Subtle error glow on hover
+    &:hover
+      border-color: #dc2626
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.12), 0 2px 6px rgba(220, 38, 38, 0.08)
+      transform: translateY(-1px)
 
-  // File Preview Image - Clean styling
-  img
-    width: 80px !important
-    height: 80px !important
-    border-radius: 12px
-    object-fit: cover
+  // Thumbnail Container - Optimized for vertical card layout
+  .thumbnail-container
+    position: relative
+    width: 100% // Use full card width
+    height: clamp(80px, 12vw, 120px) // Responsive height with good aspect ratio
     flex-shrink: 0
-    border: 2px solid var(--border-color)
-    box-shadow: var(--shadow-card-subtle)
+    z-index: 1  // Lower z-index to ensure tooltip appears above
+    margin-bottom: clamp(0.25rem, 0.5vw, 0.5rem) // Space before file info
+    
+    img
+      width: 100%
+      height: 100%
+      border-radius: 8px // Smaller radius for thumbnails
+      object-fit: cover
+      border: 1px solid var(--border-color)
+      box-shadow: var(--shadow-card-subtle)
+      position: relative
+      z-index: 1  // Keep image below tooltip
+      
+    // Info button positioned within thumbnail bounds
+    .file-info-popup
+      position: absolute
+      top: 6px
+      left: 6px
+      display: inline-flex
+      margin-left: 0
+      z-index: 4 // Above thumbnail but below remove button
 
-// Redesigned Status Header - Move Status to Top
+
+// Score Badge Positioned for Vertical Layout
 .file-status-header
-  position: absolute
-  top: 12px
-  right: 12px
   display: flex
-  flex-direction: column
-  align-items: flex-end
-  gap: 8px
-  z-index: 3
+  justify-content: space-between
+  align-items: center
+  margin-bottom: clamp(0.25rem, 0.5vw, 0.5rem)
+  z-index: 2
 
 // Secondary Status Badge - Bootstrap-style notification
 .status-badge-secondary
@@ -127,62 +172,133 @@
       color: white
       box-shadow: var(--shadow-file-error)
 
-// Quality Score Badge - Secondary position
+// Quality Score Badge - Enhanced Size and Prominence
 .quality-badge
   .quality-score-compact
     display: inline-flex
     align-items: center
     justify-content: center
-    min-width: 32px
-    height: 22px
-    border-radius: 6px
-    font-size: 11px
-    font-weight: 700
-    padding: 0 6px
-    box-shadow: var(--shadow-card-subtle)
-    border: 1px solid
+    min-width: clamp(32px, 7vw, 52px) // Larger responsive width
+    height: clamp(24px, 5vw, 36px) // Larger responsive height  
+    border-radius: clamp(6px, 1.5vw, 10px) // Enhanced border radius
+    font-size: clamp(11px, 2.5vw, 16px) // Larger responsive font size
+    font-weight: 700 // Bold but not too heavy
+    padding: 0 clamp(4px, 1.5vw, 10px) // Enhanced padding
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1) // Enhanced shadow
+    border: 2px solid // Stronger border
+    transition: all 0.3s ease // Smooth transitions
     
     &.score-red
-      background: rgba(239, 68, 68, 0.9)
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) // Gradient background
       color: white
-      border-color: #ef4444
+      border-color: #dc2626
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3), 0 1px 3px rgba(239, 68, 68, 0.2)
+      
+      // Special styling for very low scores
+      &[data-score="below"]
+        background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%)
+        border-color: #991b1b
+        box-shadow: 0 3px 12px rgba(220, 38, 38, 0.4), 0 2px 6px rgba(220, 38, 38, 0.3)
       
     &.score-yellow
-      background: rgba(245, 158, 11, 0.9)
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) // Gradient background
       color: white
-      border-color: #f59e0b
+      border-color: #d97706
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3), 0 1px 3px rgba(245, 158, 11, 0.2)
       
     &.score-green
-      background: rgba(34, 197, 94, 0.9)
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) // Gradient background
       color: white
-      border-color: #22c55e
+      border-color: #16a34a
+      box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3), 0 1px 3px rgba(34, 197, 94, 0.2)
 
-// File Information - Better Layout
+
+// Below Recommended Status - Enhanced Prominence
+.below-recommended-status
+  display: flex
+  align-items: center
+  gap: 6px
+  margin-top: 4px
+  padding: 3px 8px
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.15) 0%, rgba(153, 27, 27, 0.1) 100%)
+  border: 1px solid rgba(220, 38, 38, 0.2)
+  border-radius: 6px
+  font-size: clamp(9px, 1.8vw, 12px)
+  font-weight: 600
+  color: #991b1b
+  text-transform: uppercase
+  letter-spacing: 0.5px
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.1)
+  
+  // Add warning icon
+  &::before
+    content: "⚠️"
+    font-size: clamp(10px, 2vw, 14px)
+    filter: drop-shadow(0 1px 2px rgba(220, 38, 38, 0.3))
+  
+
+// General status labels enhancement
+.status-label
+  display: inline-flex
+  align-items: center
+  gap: 4px
+  padding: 2px 6px
+  border-radius: 4px
+  font-size: clamp(8px, 1.5vw, 11px)
+  font-weight: 600
+  text-transform: uppercase
+  letter-spacing: 0.3px
+  
+  &.status-warning
+    background: rgba(245, 158, 11, 0.1)
+    color: #d97706
+    border: 1px solid rgba(245, 158, 11, 0.2)
+  
+  &.status-error
+    background: rgba(220, 38, 38, 0.1)
+    color: #991b1b
+    border: 1px solid rgba(220, 38, 38, 0.2)
+  
+  &.status-success
+    background: rgba(34, 197, 94, 0.1)
+    color: #16a34a
+    border: 1px solid rgba(34, 197, 94, 0.2)
+
+// File Information - Optimized for Vertical Card Layout
 .file-info-enhanced
   flex: 1
   min-width: 0
-
+  overflow: hidden
+  word-wrap: break-word
+  line-height: 1.4
+  display: flex
+  flex-direction: column
+  gap: clamp(0.25rem, 0.5vw, 0.375rem)
+  
   .file-name
-    display: block
-    font-family: 'Poppins', sans-serif
-    font-size: 14px
+    font-size: clamp(11px, 2.2vw, 14px)
     font-weight: 600
     color: var(--text-primary)
-    margin-bottom: 8px
-    word-break: break-word
-    line-height: 1.3
+    margin: 0
+    white-space: nowrap
+    overflow: hidden
+    text-overflow: ellipsis
 
 // Quality Summary - Clean Information Display
 .file-quality-summary
   display: flex
   flex-direction: column
   gap: 4px
+  position: relative
 
   .summary-item
     display: flex
-    justify-content: space-between
     align-items: center
-    font-size: 12px
+    gap: clamp(3px, 1vw, 8px) // Responsive gap
+    font-size: clamp(9px, 2vw, 14px) // Responsive font size
+    flex-wrap: nowrap
+    white-space: nowrap
+    position: relative
 
     .summary-label,
     .summary-value
@@ -190,22 +306,664 @@
       font-weight: 500
 
     .warning-count
-      color: #f59e0b
-      font-weight: 600
+      color: #d97706
+      font-weight: 700
+      display: inline-flex
+      align-items: center
+      gap: 4px
+      padding: 2px 6px
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%)
+      border: 1px solid rgba(245, 158, 11, 0.2)
+      border-radius: 4px
+      font-size: clamp(9px, 1.8vw, 12px)
+      text-transform: uppercase
+      letter-spacing: 0.3px
+      margin-right: 8px
+      box-shadow: 0 1px 3px rgba(245, 158, 11, 0.1)
+      
+      // Add warning icon
+      &::before
+        content: "⚠️"
+        font-size: clamp(8px, 1.5vw, 10px)
+        filter: drop-shadow(0 1px 1px rgba(245, 158, 11, 0.3))
+        
+      // Clickable styling
+      &.clickable
+        cursor: pointer
+        transition: all 0.2s ease
+        
+        &:hover
+          background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.15) 100%)
+          border-color: rgba(245, 158, 11, 0.3)
+          transform: translateY(-1px)
+          box-shadow: 0 2px 6px rgba(245, 158, 11, 0.2)
+
+    // Enhanced inline error descriptions for better UX
+    .error-inline, .warning-inline
+      margin-top: 4px
+      
+      .error-description, .warning-description
+        font-size: clamp(10px, 2vw, 13px)
+        line-height: 1.3
+        color: var(--text-secondary)
+        display: block
+        
+      .error-description
+        color: #ef4444
+        font-weight: 500
+        
+      .warning-description
+        color: #f59e0b
+        font-weight: 500
+        
+      .additional-count
+        font-size: clamp(9px, 1.8vw, 11px)
+        color: var(--text-tertiary)
+        font-weight: 400
+        margin-left: 4px
+        opacity: 0.8
+
+    // Enhanced details link styling
+    .details-link
+      color: var(--text-secondary)
+      font-size: clamp(10px, 2vw, 12px)
+      text-decoration: none
+      display: inline-flex
+      align-items: center
+      gap: 4px
+      padding: 2px 4px
+      border-radius: 3px
+      transition: all 0.2s ease
+      
+      &:hover
+        color: var(--text-primary)
+        background: rgba(255, 255, 255, 0.05)
+        
+      &::after
+        content: ""
+        width: 0
+        height: 0
+        border-left: 3px solid currentColor
+        border-top: 2px solid transparent
+        border-bottom: 2px solid transparent
+        transition: transform 0.2s ease
+        
+      .clickable-error-info.active &::after
+        transform: rotate(90deg)
 
     .error-count
-      color: #ef4444
-      font-weight: 600
+      color: #991b1b
+      font-weight: 700
+      display: inline-flex
+      align-items: center
+      gap: 4px
+      padding: 2px 6px
+      background: linear-gradient(135deg, rgba(220, 38, 38, 0.15) 0%, rgba(153, 27, 27, 0.1) 100%)
+      border: 1px solid rgba(220, 38, 38, 0.2)
+      border-radius: 4px
+      font-size: clamp(9px, 1.8vw, 12px)
+      text-transform: uppercase
+      letter-spacing: 0.3px
+      box-shadow: 0 1px 3px rgba(220, 38, 38, 0.1)
+      
+      // Add error icon
+      &::before
+        content: "❌"
+        font-size: clamp(8px, 1.5vw, 10px)
+        filter: drop-shadow(0 1px 1px rgba(220, 38, 38, 0.3))
+        
+      // Clickable styling
+      &.clickable
+        cursor: pointer
+        transition: all 0.2s ease
+        
+        &:hover
+          background: linear-gradient(135deg, rgba(220, 38, 38, 0.2) 0%, rgba(153, 27, 27, 0.15) 100%)
+          border-color: rgba(220, 38, 38, 0.3)
+          transform: translateY(-1px)
+          box-shadow: 0 2px 6px rgba(220, 38, 38, 0.2)
 
-// Remove File Button - Clean Design
+// Clickable Error Info Container
+.clickable-error-info
+  position: relative
+  cursor: pointer
+  transition: all 0.2s ease
+  border-radius: 4px
+  padding: 2px 4px
+  
+  &:hover
+    background: rgba(255, 255, 255, 0.03)
+    
+  &:focus
+    outline: 2px solid rgba(59, 130, 246, 0.5)
+    outline-offset: 2px
+    
+  &.active
+    background: rgba(255, 255, 255, 0.05)
+    
+  // Specific positioning for popups in quality summary context
+  .popup-details
+    position: absolute
+    top: 100%
+    left: 0
+    margin-top: 8px
+    z-index: 1000
+    
+    // Override the icon-based positioning for quality summary context
+    .file-quality-summary &
+      top: calc(100% + 4px)
+      left: -60px
+      min-width: 260px
+      max-width: 300px
+      max-height: 200px
+      min-height: 60px
+      display: flex
+      flex-direction: column
+      overflow: hidden
+      // Ensure visual properties are inherited/applied
+      background: rgba(44, 62, 80, 0.95)
+      border: 1px solid rgba(255, 255, 255, 0.1)
+      border-radius: 8px
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3)
+      z-index: 100
+      animation: popupIn 0.15s ease-out
+      backdrop-filter: blur(8px)
+
+// Modern Info Icon Button - Refined Design
+.info-icon-btn
+  position: absolute
+  top: clamp(6px, 1.2vw, 10px)
+  left: clamp(6px, 1.2vw, 10px)
+  width: clamp(20px, 3.8vw, 28px)
+  height: clamp(20px, 3.8vw, 28px)
+  border: none
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.9) 0%, rgba(239, 68, 68, 0.95) 100%)
+  color: white
+  border-radius: 50%
+  cursor: pointer
+  display: flex
+  align-items: center
+  justify-content: center
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1)
+  z-index: 1000  // Much higher z-index to break out of card stacking context
+  box-shadow: 0 2px 6px rgba(248, 113, 113, 0.3), 0 1px 3px rgba(0, 0, 0, 0.15)
+  backdrop-filter: blur(6px)
+  
+  // Glass morphism effect with subtle border
+  &::before
+    content: ''
+    position: absolute
+    inset: 0
+    border-radius: 50%
+    border: 1px solid rgba(255, 255, 255, 0.2)
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)
+    pointer-events: none
+
+  &:hover
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.95) 0%, rgba(220, 38, 38, 1) 100%)
+    transform: translateY(-1px) scale(1.05)
+    box-shadow: 0 3px 12px rgba(248, 113, 113, 0.4), 0 2px 6px rgba(0, 0, 0, 0.2)
+    animation: iconPulse 0.3s ease-out
+    
+    &::before
+      border-color: rgba(255, 255, 255, 0.4)
+
+  &.active
+    background: linear-gradient(135deg, rgba(220, 38, 38, 1) 0%, rgba(185, 28, 28, 1) 100%)
+    transform: translateY(-1px) scale(1.08)
+    box-shadow: 0 4px 16px rgba(248, 113, 113, 0.5), 0 2px 8px rgba(0, 0, 0, 0.25)
+    
+    &::before
+      border-color: rgba(255, 255, 255, 0.5)
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%)
+
+  &:focus
+    outline: none
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25), 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 0 2px rgba(59, 130, 246, 0.5)
+
+  svg
+    width: clamp(12px, 2.5vw, 16px)
+    height: clamp(12px, 2.5vw, 16px)
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))
+    
+    // Subtle rotation animation on active
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)
+  
+  &.active svg
+    transform: rotate(180deg)
+
+// Document-Level Modal Backdrop - True Full Viewport Coverage with Bulletproof Centering
+.global-modal-backdrop
+  // Core positioning - absolute viewport coverage
+  position: fixed !important
+  top: 0 !important
+  left: 0 !important
+  right: 0 !important
+  bottom: 0 !important
+  width: 100vw !important
+  height: 100vh !important
+  z-index: 999998 !important
+  
+  // Visual styling
+  background: rgba(0, 0, 0, 0.4) !important
+  backdrop-filter: blur(4px) !important
+  animation: backdropFadeIn 0.2s ease-out !important
+  
+  // Traditional flexbox centering (most reliable cross-browser)
+  display: flex !important
+  align-items: center !important
+  justify-content: center !important
+  flex-direction: column !important
+  
+  // Reset all potential inheritance conflicts
+  transform: none !important
+  margin: 0 !important
+  padding: 0 !important
+  border: none !important
+  outline: none !important
+  box-sizing: border-box !important
+  contain: layout style paint !important
+  
+  // Ensure modal child positioning
+  & > .global-error-tooltip
+    position: relative !important
+    transform: none !important
+    margin: 0 auto !important
+
+// Modal-Style Error Tooltip - Perfectly Centered Child Element
+.global-error-tooltip
+  position: relative !important
+  z-index: 999999 !important
+  
+  // Responsive sizing relative to viewport
+  width: min(400px, calc(100vw - 32px)) !important
+  max-height: min(480px, calc(100vh - 80px)) !important
+  max-width: 90vw !important
+  min-height: 200px !important
+  
+  // Sizing constraints for flexbox parent
+  flex-shrink: 0 !important
+  flex-grow: 0 !important
+  
+  // Reset positioning - parent flexbox handles centering
+  margin: 0 !important
+  transform: none !important
+  top: auto !important
+  left: auto !important
+  right: auto !important
+  bottom: auto !important
+  
+  // Modal-style design
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(51, 65, 85, 0.96) 100%)
+  border: 1px solid rgba(71, 85, 105, 0.4)
+  border-radius: 12px
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 10px 20px -5px rgba(0, 0, 0, 0.3)
+  backdrop-filter: blur(20px) saturate(130%)
+  
+  // Smooth modal animation
+  animation: modalSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)
+  
+  overflow: hidden !important
+  display: flex !important
+  flex-direction: column !important
+  
+  // Mobile responsive adjustments
+  @media (max-width: 768px)
+    width: min(340px, calc(100vw - 24px))
+    max-height: min(450px, calc(100vh - 48px))
+    border-radius: 8px
+    
+  @media (max-width: 480px)
+    width: calc(100vw - 16px)
+    max-height: calc(100vh - 32px)
+    border-radius: 6px
+
+  // Tooltip Header with Close Button
+  .tooltip-header
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif
+    font-weight: 600
+    font-size: 13px
+    margin: 0
+    padding: 12px 16px 10px 16px
+    border-radius: 8px 8px 0 0
+    display: flex
+    align-items: center
+    justify-content: space-between
+    letter-spacing: -0.02em
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(220, 38, 38, 0.08) 100%)
+    color: rgba(248,113, 113, 0.95)
+    border-bottom: 1px solid rgba(71, 85, 105, 0.3)
+    flex-shrink: 0
+    
+    .tooltip-title
+      display: flex
+      align-items: center
+      gap: 8px
+      
+      svg
+        width: 16px
+        height: 16px
+        opacity: 0.9
+        
+    .tooltip-close
+      background: none
+      border: none
+      color: rgba(255, 255, 255, 0.7)
+      cursor: pointer
+      padding: 4px
+      border-radius: 4px
+      transition: all 0.2s ease
+      display: flex
+      align-items: center
+      justify-content: center
+      
+      &:hover
+        color: white
+        background: rgba(255, 255, 255, 0.1)
+        
+      svg
+        width: 16px
+        height: 16px
+
+  // Scrollable Content Container
+  .tooltip-content
+    padding: 0
+    flex: 1
+    overflow-y: auto
+    overflow-x: hidden
+    min-height: 0
+    
+    // Custom scrollbar styling
+    &::-webkit-scrollbar
+      width: 8px
+      
+    &::-webkit-scrollbar-track
+      background: rgba(255, 255, 255, 0.05)
+      border-radius: 4px
+      
+    &::-webkit-scrollbar-thumb
+      background: rgba(255, 255, 255, 0.2)
+      border-radius: 4px
+      
+      &:hover
+        background: rgba(255, 255, 255, 0.3)
+        
+    // Firefox scrollbar
+    scrollbar-width: thin
+    scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05)
+
+  // File Name Display
+  .tooltip-filename
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif
+    font-size: 11px
+    font-weight: 500
+    color: rgba(203, 213, 225, 0.95)
+    margin: 0 16px 12px 16px
+    padding: 6px 10px
+    background: rgba(71, 85, 105, 0.2)
+    border-radius: 4px
+    word-break: break-all
+    border-left: 2px solid rgba(239, 68, 68, 0.6)
+
+  // Section Styling
+  .tooltip-section
+    margin: 0 16px 16px 16px
+    
+    &:last-child
+      margin-bottom: 16px
+      
+    .section-header
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif
+      font-weight: 600
+      font-size: 11px
+      color: rgba(203, 213, 225, 0.9)
+      margin: 0 0 8px 0
+      display: flex
+      align-items: center
+      gap: 6px
+      text-transform: uppercase
+      letter-spacing: 0.3px
+      
+      svg
+        width: 14px
+        height: 14px
+        opacity: 0.8
+        
+      &.error-header
+        color: rgba(248, 113, 113, 0.95)
+        
+      &.warning-header
+        color: rgba(251, 191, 36, 0.95)
+        
+      &.score-header
+        color: rgba(147, 197, 253, 0.95)
+        
+      &.suggestions-header
+        color: rgba(34, 197, 94, 0.95)
+
+    // Issue Lists
+    .issue-list
+      list-style: none
+      padding: 0
+      margin: 0
+      
+      .issue-item
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif
+        font-size: 10px
+        line-height: 1.4
+        color: rgba(203, 213, 225, 0.95)
+        margin-bottom: 6px
+        padding: 6px 10px
+        background: rgba(71, 85, 105, 0.15)
+        border-radius: 4px
+        border-left: 2px solid rgba(248, 113, 113, 0.6)
+        
+        &.warning
+          color: rgba(253, 230, 138, 0.95)
+          border-left-color: rgba(251, 191, 36, 0.6)
+          
+        &:last-child
+          margin-bottom: 0
+
+    // Suggestion Lists
+    .suggestion-list
+      list-style: none
+      padding: 0
+      margin: 0
+      
+      .suggestion-item
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif
+        font-size: 10px
+        line-height: 1.4
+        color: rgba(167, 243, 208, 0.95)
+        margin-bottom: 6px
+        padding: 6px 10px
+        background: rgba(34, 197, 94, 0.08)
+        border-radius: 4px
+        border-left: 2px solid rgba(34, 197, 94, 0.6)
+        
+        &:last-child
+          margin-bottom: 0
+
+    // Quality Score Display
+    .quality-score-display
+      .score-value
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif
+        font-size: 20px
+        font-weight: 700
+        padding: 8px 12px
+        border-radius: 6px
+        text-align: center
+        
+        &.score-red
+          background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.08) 100%)
+          color: rgba(248, 113, 113, 0.95)
+          border: 1px solid rgba(239, 68, 68, 0.4)
+          
+        &.score-yellow
+          background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.08) 100%)
+          color: rgba(251, 191, 36, 0.95)
+          border: 1px solid rgba(245, 158, 11, 0.4)
+          
+        &.score-green
+          background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.08) 100%)
+          color: rgba(34, 197, 94, 0.95)
+          border: 1px solid rgba(34, 197, 94, 0.4)
+      
+  // Mobile responsiveness
+  @media (max-width: 768px)
+    min-width: 260px
+    max-width: calc(100vw - 24px)
+    max-height: calc(100vh - 80px)
+    
+    .tooltip-header
+      padding: 10px 14px 8px 14px
+      font-size: 12px
+      
+    .tooltip-filename
+      margin: 0 14px 10px 14px
+      font-size: 10px
+      
+    .tooltip-section
+      margin: 0 14px 14px 14px
+      
+      .section-header
+        font-size: 10px
+        
+      .issue-item, .suggestion-item
+        font-size: 9px
+        padding: 5px 8px
+        
+  @media (max-width: 480px)
+    min-width: 240px
+    max-height: calc(100vh - 60px)
+    
+    .tooltip-header
+      padding: 8px 12px 6px 12px
+      font-size: 11px
+      
+      .tooltip-title
+        gap: 4px
+        
+        svg
+          width: 12px
+          height: 12px
+          
+      .tooltip-close svg
+        width: 12px
+        height: 12px
+        
+    .tooltip-filename
+      margin: 0 12px 8px 12px
+      font-size: 9px
+      padding: 4px 8px
+      
+    .tooltip-section
+      margin: 0 12px 10px 12px
+      
+      .section-header
+        font-size: 9px
+        gap: 4px
+        
+        svg
+          width: 12px
+          height: 12px
+          
+      .issue-item, .suggestion-item
+        font-size: 8px
+        padding: 4px 6px
+        margin-bottom: 4px
+        
+      .quality-score-display .score-value
+        font-size: 16px
+        padding: 6px 8px
+
+// Light theme adjustments for backdrop
+.global-modal-backdrop
+  [data-theme="light"] &
+    background: rgba(0, 0, 0, 0.3) !important
+
+// Light theme adjustments for tooltip
+.global-error-tooltip
+  [data-theme="light"] &
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.96) 100%)
+    border: 1px solid rgba(0, 0, 0, 0.1)
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 20px 25px -5px rgba(0, 0, 0, 0.05)
+    
+    .tooltip-header
+      background: linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(185, 28, 28, 0.05) 100%)
+      color: #dc2626
+      border-bottom: 1px solid rgba(220, 38, 38, 0.15)
+      
+      .tooltip-close
+        color: rgba(0, 0, 0, 0.6)
+        
+        &:hover
+          color: rgba(0, 0, 0, 0.8)
+          background: rgba(0, 0, 0, 0.05)
+          
+    .tooltip-filename
+      color: rgba(0, 0, 0, 0.8)
+      background: rgba(0, 0, 0, 0.03)
+      
+    .tooltip-section
+      .section-header
+        color: rgba(0, 0, 0, 0.8)
+        
+      .issue-item
+        color: rgba(0, 0, 0, 0.8)
+        background: rgba(0, 0, 0, 0.03)
+        
+        &.warning
+          color: rgba(120, 53, 15, 0.9)
+          
+      .suggestion-item
+        color: rgba(20, 83, 45, 0.9)
+        
+    &::-webkit-scrollbar-track
+      background: rgba(0, 0, 0, 0.05)
+      
+    &::-webkit-scrollbar-thumb
+      background: rgba(0, 0, 0, 0.2)
+      
+      &:hover
+        background: rgba(0, 0, 0, 0.3)
+
+// Modal animations
+@keyframes modalSlideIn
+  from
+    opacity: 0
+    transform: scale(0.95)
+    filter: blur(4px)
+  to
+    opacity: 1
+    transform: scale(1)
+    filter: blur(0px)
+
+@keyframes backdropFadeIn
+  from
+    opacity: 0
+  to
+    opacity: 1
+
+@keyframes iconPulse
+  0%
+    transform: translateY(-1px) scale(1.05)
+  50%
+    transform: translateY(-2px) scale(1.1)
+  100%
+    transform: translateY(-1px) scale(1.05)
+
+
+// Remove File Button - Positioned for Vertical Card Layout
 .remove-file-btn
   position: absolute
-  top: 12px
-  left: 12px
-  width: 28px
-  height: 28px
+  top: clamp(8px, 1.2vw, 12px)
+  right: clamp(8px, 1.2vw, 12px)
+  width: clamp(22px, 4vw, 28px)
+  height: clamp(22px, 4vw, 28px)
   border: 2px solid white
-  background: rgba(239, 68, 68, 0.9)
+  background: rgba(239, 68, 68, 0.95)
   color: white
   border-radius: 50%
   cursor: pointer
@@ -213,17 +971,20 @@
   align-items: center
   justify-content: center
   transition: all 0.3s ease
-  z-index: 3
-  box-shadow: var(--shadow-card-subtle)
+  z-index: 1001  // Higher than info icon for proper layering
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3)
 
   &:hover
     background: #dc2626
-    transform: scale(1.05)
-    box-shadow: var(--shadow-file-invalid)
+    transform: scale(1.1)
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4)
+
+  &:active
+    transform: scale(0.95)
 
   svg
-    width: 14px
-    height: 14px
+    width: clamp(11px, 2.2vw, 14px)
+    height: clamp(11px, 2.2vw, 14px)
 
 // Upload Summary - Enhanced Stats Display
 .upload-summary-enhanced
@@ -253,24 +1014,84 @@
         color: #ef4444
         background: rgba(239, 68, 68, 0.1)
 
-// Add More Inline Button - Fits with summary stats
-.add-more-inline-btn
-  @include shared.btn-base
-  @include shared.btn-secondary
-  font-family: 'Poppins', sans-serif
-  font-weight: 500
-  padding: 6px 12px
-  font-size: 12px
-  display: inline-flex
-  align-items: center
-  justify-content: center
-  border-radius: 6px
+// =============================================================================
+// IMAGES WITH ISSUES SECTION - Enhanced Visual Treatment
+// =============================================================================
+
+// Main container for problematic files
+.quality-errors-enhanced
+  margin: 24px 0
+  padding: 20px
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.03) 0%, rgba(239, 68, 68, 0.02) 100%)
+  border: 2px solid rgba(220, 38, 38, 0.15)
+  border-radius: 16px
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.08), 0 2px 4px rgba(220, 38, 38, 0.06)
+  position: relative
   
-  svg
-    transition: transform 0.3s ease
+  // Add subtle warning pattern
+  &::before
+    content: ""
+    position: absolute
+    top: 0
+    left: 0
+    right: 0
+    height: 4px
+    background: linear-gradient(90deg, #ef4444 0%, #dc2626 50%, #ef4444 100%)
+    border-radius: 16px 16px 0 0
   
-  &:hover svg
-    transform: scale(1.1)
+  // Enhanced section header for issues
+  .section-header
+    margin: 0 0 20px 0
+    padding: 0 0 16px 0
+    border-bottom: 1px solid rgba(220, 38, 38, 0.1)
+    
+    h5
+      font-family: 'Poppins', sans-serif
+      font-size: 18px
+      font-weight: 700
+      color: #dc2626
+      margin: 0 0 8px 0
+      display: flex
+      align-items: center
+      gap: 8px
+      
+      // Add warning icon
+      &::before
+        content: "⚠️"
+        font-size: 20px
+        filter: drop-shadow(0 1px 2px rgba(220, 38, 38, 0.3))
+    
+    .section-subtitle
+      font-size: 14px
+      color: #991b1b
+      margin: 0
+      font-weight: 500
+      opacity: 0.9
+
+// Error cards grid layout - Optimized for Desktop UX
+.error-cards-grid
+  display: grid
+  gap: clamp(0.75rem, 2vw, 1.25rem)
+  // Dynamic heights - no 1fr forcing equal heights
+  grid-template-columns: repeat(auto-fill, minmax(180px, max-content))
+  align-items: start // Prevents height stretching - cards use natural height
+  justify-content: start // Align cards to start when fewer than full row
+  
+  // Better desktop space utilization
+  @media (min-width: 1200px)
+    grid-template-columns: repeat(auto-fill, minmax(200px, max-content))
+    gap: 1.25rem
+  
+  @media (min-width: 768px) and (max-width: 1199px)
+    grid-template-columns: repeat(auto-fill, minmax(180px, max-content))
+  
+  @media (max-width: 767px)
+    display: flex
+    flex-direction: column
+    gap: 1rem
+
+
+// Add More Inline Button styles removed - button no longer exists
 
 // Large Quality Check Results - Prominent PASS/FAIL
 .file-quality-status
@@ -302,47 +1123,97 @@
 
 .file-info-popup
   position: absolute
-  bottom: 12px
-  right: 12px
+  top: 6px
+  left: 6px
+  display: inline-flex
+  margin-left: 0
+  z-index: 5 // Higher z-index to ensure it's above thumbnail and clickable
 
-// Info Button - Clean circular design
+// Info Button - Subtle design for better UX
 .info-btn
-  width: 32px
-  height: 32px
+  width: clamp(20px, 3.5vw, 24px)
+  height: clamp(20px, 3.5vw, 24px)
   border-radius: 50%
-  background: rgba(220, 53, 69, 0.1)
-  border: 1px solid rgba(220, 53, 69, 0.2)
-  color: #dc3545
+  background: rgba(239, 68, 68, 0.8) // Subtle red background for error context
+  border: 1px solid rgba(255, 255, 255, 0.6) // Thinner white border
+  color: white
   display: flex
   align-items: center
   justify-content: center
   cursor: pointer
   transition: all 0.2s ease
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2) // Subtle shadow
   
   &:hover, &.active
-    background: #dc3545
+    background: rgba(220, 38, 38, 0.9)
     color: white
-    transform: scale(1.05)
-    box-shadow: var(--shadow-file-error)
+    transform: none // Remove scale animation for subtlety
+    box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3)
+    border-color: rgba(255, 255, 255, 0.8)
+    opacity: 1
+  
+  // Default subtle opacity
+  opacity: 0.85
   
   svg
-    width: 16px
-    height: 16px
+    width: clamp(10px, 1.8vw, 12px)
+    height: clamp(10px, 1.8vw, 12px)
 
-// Popup Notification - Dark theme optimized
+// Popup Notification - Positioned for upper left icon
 .popup-details
   position: absolute
-  bottom: 40px
-  right: 0
-  min-width: 280px
-  max-width: 350px
-  background: rgba(44, 62, 80, 0.98)
+  top: 32px // Position below the icon
+  left: 0
+  min-width: 260px
+  max-width: 300px
+  max-height: 200px // Fixed height for scrolling
+  background: rgba(44, 62, 80, 0.95)
   border: 1px solid rgba(255, 255, 255, 0.1)
-  border-radius: 12px
-  box-shadow: var(--shadow-card-modal)
-  z-index: 1000
-  animation: popupIn 0.2s ease-out
-  backdrop-filter: blur(10px)
+  border-radius: 8px
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3)
+  z-index: 100 // Testing lower z-index value per user suggestion
+  animation: popupIn 0.15s ease-out
+  backdrop-filter: blur(8px)
+  overflow: hidden // Hide overflow for custom scrollbar
+  display: flex
+  flex-direction: column
+  
+  // Mobile: wider for better readability with scrolling
+  @media (max-width: 768px)
+    min-width: 240px
+    max-width: 280px
+    max-height: 180px
+    bottom: 35px
+    
+  // Small screens: still readable but compact
+  @media (max-width: 480px)
+    min-width: 220px
+    max-width: 260px
+    max-height: 160px
+    bottom: 30px
+    
+  // Smart positioning variants  
+  &.popup-left-align
+    right: auto
+    left: -240px // Adjusted for wider popup
+    
+    @media (max-width: 768px)
+      left: -220px
+      
+    @media (max-width: 480px)
+      left: -200px
+      
+  &.popup-center-align
+    right: auto
+    left: 50%
+    transform: translateX(-50%)
+    
+    @media (max-width: 768px)
+      left: -120px
+      transform: none
+      
+    @media (max-width: 480px)
+      left: -110px
   
   // Light theme styling
   [data-theme="light"] &
@@ -351,87 +1222,190 @@
     box-shadow: var(--shadow-card-elevated)
     backdrop-filter: none
 
-// Popup Arrow - Dark theme optimized
+// Popup Arrow - Positioned for upper left icon
 .popup-arrow
   position: absolute
-  bottom: -8px
-  right: 12px
+  top: -8px
+  left: 12px
   width: 16px
   height: 16px
   background: rgba(44, 62, 80, 0.98)
-  border-right: 1px solid rgba(255, 255, 255, 0.1)
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1)
+  border-left: 1px solid rgba(255, 255, 255, 0.1)
+  border-top: 1px solid rgba(255, 255, 255, 0.1)
   transform: rotate(45deg)
+  
+  // Adjust arrow position for left-aligned popups
+  @media (max-width: 768px)
+    right: auto
+    left: 12px
+    
+  // Center arrow for full-width popups
+  @media (max-width: 480px)
+    left: 50%
+    transform: translateX(-50%) rotate(45deg)
+    
+  // Position arrow for left-aligned popups
+  .popup-details.popup-left-align &
+    right: auto
+    left: calc(100% - 28px) // Position near the right edge of left-aligned popup
+    
+    // Override mobile positioning for left-aligned
+    @media (max-width: 768px)
+      left: 12px
+      
+    @media (max-width: 480px)
+      left: 50%
+      transform: translateX(-50%) rotate(45deg)
+      
+  // Position arrow for center-aligned popups
+  .popup-details.popup-center-align &
+    right: auto
+    left: 50%
+    transform: translateX(-50%) rotate(45deg)
+    
+    // Override mobile positioning for center-aligned
+    @media (max-width: 768px)
+      left: 12px
+      transform: rotate(45deg)
+      
+    @media (max-width: 480px)
+      left: 50%
+      transform: translateX(-50%) rotate(45deg)
   
   [data-theme="light"] &
     background: white
-    border-right: 1px solid rgba(0, 0, 0, 0.1)
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1)
+    border-left: 1px solid rgba(0, 0, 0, 0.1)
+    border-top: 1px solid rgba(0, 0, 0, 0.1)
 
-// Popup Content - No additional background needed
+// Popup Content - Scrollable hybrid design
 .popup-content
   position: relative
-  padding: 16px
-  border-radius: 12px
+  padding: 12px 14px
+  border-radius: 8px
+  overflow-y: auto
+  overflow-x: hidden
+  flex: 1
+  min-height: 40px // Ensure minimum content height
+  
+  // Force scrollbar to always be visible for UX clarity
+  &::-webkit-scrollbar
+    width: 8px
+    -webkit-appearance: none
+    
+  &::-webkit-scrollbar-track
+    background: rgba(255, 255, 255, 0.2)
+    border-radius: 4px
+    border: 1px solid rgba(255, 255, 255, 0.1)
+    
+  &::-webkit-scrollbar-thumb
+    background: rgba(255, 255, 255, 0.7)
+    border-radius: 4px
+    border: 1px solid rgba(255, 255, 255, 0.2)
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2)
+    
+    &:hover
+      background: rgba(255, 255, 255, 0.9)
+      
+  // Firefox scrollbar - always visible
+  scrollbar-width: auto
+  scrollbar-color: rgba(255, 255, 255, 0.7) rgba(255, 255, 255, 0.2)
+  
+  // Light theme scrollbar adjustments
+  [data-theme="light"] &
+    &::-webkit-scrollbar-track
+      background: rgba(0, 0, 0, 0.15)
+      border: 1px solid rgba(0, 0, 0, 0.1)
+      
+    &::-webkit-scrollbar-thumb
+      background: rgba(0, 0, 0, 0.4)
+      border: 1px solid rgba(0, 0, 0, 0.2)
+      box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.3)
+      
+      &:hover
+        background: rgba(0, 0, 0, 0.6)
+        
+    // Firefox scrollbar for light theme
+    scrollbar-color: rgba(0, 0, 0, 0.4) rgba(0, 0, 0, 0.15)
 
-// Popup Sections - Enhanced contrast
+// Popup Sections - Compact spacing
 .popup-section
-  margin-bottom: 14px
+  margin-bottom: 8px
   
   &:last-child
     margin-bottom: 0
 
+// Redesigned compact titles
 .popup-title
-  font-size: 13px
+  font-size: 11px
   font-weight: 600
   color: white
-  margin: 0 0 8px 0
+  margin: 0 0 4px 0
   display: flex
   align-items: center
-  gap: 6px
-  opacity: 0.95
+  gap: 4px
+  opacity: 0.9
+  text-transform: uppercase
+  letter-spacing: 0.5px
   
   [data-theme="light"] &
     color: var(--text-primary)
     opacity: 1
 
+// Scrollable list design - no truncation needed
 .popup-list
   list-style: none
   padding: 0
   margin: 0
   
   li
-    font-size: 12px
-    line-height: 1.5
-    color: rgba(255, 255, 255, 0.8)
-    padding: 4px 0
-    padding-left: 20px
-    position: relative
+    font-size: 11px
+    line-height: 1.4
+    color: rgba(255, 255, 255, 0.85)
+    padding: 3px 0
+    display: block
+    word-wrap: break-word // Allow text wrapping in scrollable area
     
     [data-theme="light"] &
       color: var(--text-secondary)
     
+    // Add subtle bullets back for better readability
     &::before
       content: "•"
-      position: absolute
-      left: 8px
-      color: #ff6b6b
+      color: rgba(255, 255, 255, 0.5)
       font-weight: bold
+      display: inline-block
+      width: 8px
+      margin-right: 4px
+      
+    [data-theme="light"] &::before
+      color: var(--text-tertiary)
 
-// Quick Fix Section - Better visibility
-.popup-fix
-  margin-top: 12px
-  padding-top: 12px
-  border-top: 1px solid rgba(255, 255, 255, 0.1)
-  font-size: 12px
-  color: #7DD3D8
-  line-height: 1.5
+// Compact summary design (instead of full details)
+.error-summary
+  font-size: 10px
+  color: rgba(255, 255, 255, 0.9)
+  background: rgba(239, 68, 68, 0.2)
+  padding: 4px 6px
+  border-radius: 4px
+  margin-bottom: 6px
   font-weight: 500
   
   [data-theme="light"] &
-    border-top: 1px solid var(--border-color)
-    color: #3b82f6
-    font-weight: 400
+    color: #dc2626
+    background: rgba(239, 68, 68, 0.1)
+
+.warning-summary
+  font-size: 10px
+  color: rgba(255, 255, 255, 0.9)
+  background: rgba(245, 158, 11, 0.2)
+  padding: 4px 6px
+  border-radius: 4px
+  margin-bottom: 4px
+  font-weight: 500
+  
+  [data-theme="light"] &
+    color: #d97706
+    background: rgba(245, 158, 11, 0.1)
 
 // Popup Animation
 @keyframes popupIn
@@ -441,3 +1415,30 @@
   to
     opacity: 1
     transform: translateY(0)
+
+// =============================================================================
+// RESPONSIVE DESIGN - Desktop and Mobile Optimizations
+// =============================================================================
+
+// Keep only container-specific mobile optimizations
+@media (max-width: 768px)
+  .selected-files-preview
+    padding: clamp(8px, 2vw, 12px)
+    margin: clamp(8px, 2vw, 12px) 0
+    
+    .section-header
+      margin: clamp(8px, 2vw, 12px) 0
+
+@media (max-width: 480px)
+  .selected-files-preview
+    padding: 0 0 clamp(8px, 2vw, 12px) 0
+    margin: clamp(6px, 1.5vw, 8px) 0
+    border-radius: 0
+    border-left: none
+    border-right: none
+    
+    .section-header
+      margin: clamp(8px, 2vw, 12px) clamp(8px, 2vw, 12px) clamp(8px, 2vw, 12px) clamp(8px, 2vw, 12px)
+  
+  .selected-file-item-enhanced
+    margin: 0 0 clamp(4px, 1vw, 6px) 0

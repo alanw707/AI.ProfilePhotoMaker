@@ -20,27 +20,112 @@
   gap: 12px
   flex-wrap: wrap
 
-// Credit Management Section
-.credit-overview
-  display: grid
-  grid-template-columns: repeat(3, 1fr)
-  gap: 1.5rem
-  margin-bottom: 2rem
-
-.credit-card
+// Credit Status Overview
+.credit-status-overview
   background: var(--card-bg)
   border: 1px solid var(--border-color)
   border-radius: 12px
-  padding: 1.5rem
-  transition: all 0.2s ease
+  padding: 2rem
+  margin-bottom: 2rem
   
-  &:hover
-    border-color: var(--accent-color)
-    box-shadow: var(--shadow-md)
+  h4
+    font-size: 1.2rem
+    font-weight: 600
+    margin: 0 0 1.5rem 0
+    color: var(--text-primary)
+
+.credit-breakdown
+  display: grid
+  grid-template-columns: repeat(3, 1fr)
+  gap: 2rem
+  
+  @media (max-width: 768px)
+    grid-template-columns: 1fr
+    gap: 1.5rem
+
+.credit-stat
+  display: flex
+  align-items: flex-start
+  gap: 1rem
+  
+  .stat-icon
+    font-size: 2.5rem
+    width: 60px
+    height: 60px
+    display: flex
+    align-items: center
+    justify-content: center
+    background: var(--bg-tertiary)
+    border-radius: 12px
     
-  &.total-credits
-    background: linear-gradient(135deg, rgba(125, 211, 216, 0.1), rgba(59, 130, 246, 0.05))
-    border-color: rgba(125, 211, 216, 0.3)
+  .stat-info
+    flex: 1
+    
+    .stat-value
+      font-size: 2rem
+      font-weight: 700
+      color: var(--text-primary)
+      line-height: 1
+      margin-bottom: 0.25rem
+      
+    .stat-label
+      font-size: 1rem
+      font-weight: 600
+      color: var(--text-primary)
+      margin-bottom: 0.25rem
+      
+    .stat-description
+      font-size: 0.875rem
+      color: var(--text-secondary)
+      line-height: 1.3
+
+// Weekly Credit Status
+.weekly-credit-status
+  background: var(--bg-tertiary)
+  border-radius: 12px
+  padding: 1.5rem
+  margin-bottom: 2rem
+  
+  .weekly-header
+    display: flex
+    justify-content: space-between
+    align-items: center
+    margin-bottom: 1rem
+    
+    h4
+      font-size: 1.1rem
+      font-weight: 600
+      margin: 0
+      color: var(--text-primary)
+      
+    .reset-info
+      font-size: 0.875rem
+      color: var(--text-secondary)
+      
+  .progress-info
+    display: flex
+    justify-content: space-between
+    align-items: center
+    margin-bottom: 0.75rem
+    font-size: 0.9rem
+    color: var(--text-secondary)
+    
+    .progress-percentage
+      font-weight: 600
+      color: var(--accent-primary)
+      
+  .progress-bar
+    width: 100%
+    height: 8px
+    background: rgba(125, 211, 216, 0.2)
+    border-radius: 4px
+    overflow: hidden
+    
+    .progress-fill
+      height: 100%
+      background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))
+      border-radius: 4px
+      transition: width 0.3s ease
 
 .credit-header
   display: flex
@@ -99,6 +184,70 @@
     color: var(--text-secondary)
     font-size: 0.8rem
 
+// Credit Costs Section
+.credit-costs-info
+  background: var(--card-bg)
+  border: 1px solid var(--border-color)
+  border-radius: 12px
+  padding: 1.5rem
+  margin-bottom: 2rem
+  
+  h4
+    font-size: 1.1rem
+    font-weight: 600
+    margin: 0 0 1.5rem 0
+    color: var(--text-primary)
+
+.costs-grid
+  display: grid
+  grid-template-columns: repeat(3, 1fr)
+  gap: 1.5rem
+  
+  @media (max-width: 768px)
+    grid-template-columns: 1fr
+    gap: 1rem
+
+.cost-item
+  display: flex
+  align-items: center
+  gap: 1rem
+  padding: 1rem
+  background: var(--bg-tertiary)
+  border-radius: 8px
+  transition: all 0.2s ease
+  
+  &:hover
+    background: var(--bg-secondary)
+    
+  .cost-icon
+    font-size: 1.5rem
+    width: 40px
+    height: 40px
+    display: flex
+    align-items: center
+    justify-content: center
+    background: var(--card-bg)
+    border-radius: 8px
+    
+  .cost-details
+    flex: 1
+    
+    .cost-name
+      font-weight: 600
+      color: var(--text-primary)
+      margin-bottom: 0.25rem
+      
+    .cost-amount
+      font-size: 1.25rem
+      font-weight: 700
+      color: var(--accent-primary)
+      margin-bottom: 0.25rem
+      
+    .cost-note
+      font-size: 0.8rem
+      color: var(--text-secondary)
+
+// Credit Usage Rules
 .credit-usage-rules
   background: var(--bg-tertiary)
   border-radius: 12px
@@ -110,6 +259,30 @@
     font-weight: 600
     margin: 0 0 1rem 0
     color: var(--text-primary)
+
+.usage-info
+  .info-item
+    display: flex
+    align-items: flex-start
+    gap: 0.75rem
+    margin-bottom: 1rem
+    
+    &:last-child
+      margin-bottom: 0
+      
+    .info-icon
+      font-size: 1.25rem
+      margin-top: 0.125rem
+      
+    p
+      margin: 0
+      font-size: 0.9rem
+      color: var(--text-secondary)
+      line-height: 1.5
+      
+      strong
+        color: var(--text-primary)
+        font-weight: 600
 
 .usage-grid
   display: grid
