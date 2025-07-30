@@ -210,9 +210,10 @@ jobs:
       (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.force_deploy != 'true') ||
       (github.event_name == 'workflow_dispatch' && needs.validate-infrastructure.result == 'success')
-    environment: 
-      name: ${{ github.event.inputs.environment || 'staging' }}
-      url: ${{ steps.deploy.outputs.webAppUrl }}
+    # environment: 
+    #   name: ${{ github.event.inputs.environment || 'staging' }}
+    #   url: ${{ steps.deploy.outputs.webAppUrl }}
+    # Temporarily disabled for OIDC compatibility
     
     outputs:
       web-app-name: ${{ steps.deploy.outputs.webAppName }}
