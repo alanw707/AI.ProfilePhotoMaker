@@ -23,5 +23,11 @@
     "jwtSecret": {
       "value": "REPLACE_WITH_YOUR_JWT_SECRET_KEY_MIN_32_CHARS"
     }
+    // TODO: Before PRODUCTION deployment, replace with DIFFERENT, STRONGER secrets:
+    // - sqlAdminPassword: 16+ chars, different from staging
+    // - replicateApiToken: Production Replicate token (may be same as staging)
+    // - jwtSecret: DIFFERENT 32+ char secret from staging (use: openssl rand -base64 32)
+    // CRITICAL: Use different passwords for production vs staging!
+    // See SECRETS_CONFIGURATION_GUIDE.md for detailed instructions
   }
 }
