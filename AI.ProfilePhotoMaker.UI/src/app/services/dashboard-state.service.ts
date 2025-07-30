@@ -102,19 +102,16 @@ export class DashboardStateService implements IDashboardStateService {
     forkJoin({
       profile: this.profileService.getCurrentUserProfile().pipe(
         catchError(error => {
-          console.warn('⚠️ Profile API failed:', error);
           return of({ success: false, data: null, error });
         })
       ),
       creditStatus: this.creditService.getCreditStatus().pipe(
         catchError(error => {
-          console.warn('⚠️ Credit Status API failed:', error);
           return of({ success: false, data: null, error });
         })
       ),
       userImages: this.fileUploadService.getUserImages().pipe(
         catchError(error => {
-          console.warn('⚠️ User Images API failed:', error);
           return of({ success: false, data: null, error });
         })
       ),
@@ -154,7 +151,6 @@ export class DashboardStateService implements IDashboardStateService {
         );
       },
       error: error => {
-        console.error('❌ Settings data load failed:', error);
         this.setState({ isLoading: false });
       },
     });
@@ -192,7 +188,6 @@ export class DashboardStateService implements IDashboardStateService {
       .getCreditStatus()
       .pipe(
         catchError(error => {
-          console.warn('⚠️ Internal Credit Status API failed:', error);
           return of({ success: false, data: null, error });
         })
       )
@@ -225,7 +220,6 @@ export class DashboardStateService implements IDashboardStateService {
           }
         },
         error: error => {
-          console.error('❌ Internal credits load failed:', error);
           this.setState({ isLoading: false });
         },
       });
@@ -278,13 +272,11 @@ export class DashboardStateService implements IDashboardStateService {
     const apiCalls: any = {
       profile: this.profileService.getCurrentUserProfile().pipe(
         catchError(error => {
-          console.warn('⚠️ Profile API failed:', error);
           return of({ success: false, data: null, error });
         })
       ),
       userImages: this.fileUploadService.getUserImages().pipe(
         catchError(error => {
-          console.warn('⚠️ User Images API failed:', error);
           return of({ success: false, data: null, error });
         })
       ),
@@ -329,11 +321,7 @@ export class DashboardStateService implements IDashboardStateService {
 
               // Only log uploaded images (much cleaner console)
 
-              if (isOriginalByFlag !== isOriginalByStyle) {
-                console.warn(
-                  `⚠️ Image ${img.id} has flag/style mismatch: isOriginalUpload=${isOriginalByFlag}, style=${img.style} - possible database corruption`
-                );
-              }
+              // Skip logging flag/style mismatch - handled by image validation service
 
               return isUploadedImage;
             })
@@ -406,27 +394,22 @@ export class DashboardStateService implements IDashboardStateService {
         setTimeout(() => {
           const currentState = this.getState();
           if (currentState.modelStatus === 'Loading...') {
-            console.warn('⚠️ Model status still loading after 10s, setting fallback status');
             this.setState({ modelStatus: 'Not Started' });
           }
         }, 10000);
       },
       error: error => {
-        console.error('❌ Dashboard API call failed:', error);
-        console.error('Error details:', {
-          message: error.message,
-          status: error.status,
-          statusText: error.statusText,
-          url: error.url,
-          error: error.error,
-        });
+        // Log only critical errors (500+ status codes)
+        if (error?.status >= 500 || !error?.status) {
+          console.error('❌ Dashboard API call failed:', error);
+        }
         this.notificationService.error(
           'Dashboard Load Failed',
           'Could not load dashboard data. Please try again.'
         );
         this.setState({
           isLoading: false,
-          modelStatus: 'Error', // Set error status instead of leaving as "Loading..."
+          modelStatus: 'Error',
         });
       },
     });
@@ -492,7 +475,7 @@ export class DashboardStateService implements IDashboardStateService {
         });
       }
     } catch (error) {
-      console.error('❌ Failed to refresh after repair:', error);
+      // Silent failure - repair issues are handled by parent caller
     }
   }
 
@@ -508,13 +491,11 @@ export class DashboardStateService implements IDashboardStateService {
     forkJoin({
       trainingStatus: this.fileUploadService.getTrainingStatus().pipe(
         catchError(error => {
-          console.warn('⚠️ Training Status API failed:', error);
           return of(null); // Return null for failed training status
         })
       ),
       modelRequests: this.fileUploadService.getUserModelRequests().pipe(
         catchError(error => {
-          console.warn('⚠️ Model Requests API failed:', error);
           return of({ success: false, data: null, error });
         })
       ),
@@ -561,7 +542,7 @@ export class DashboardStateService implements IDashboardStateService {
                 this.setState({ generatedPhotosCount: result.actualGeneratedCount });
               }
             },
-            error: error => console.error('Filesystem check failed:', error),
+            error: error => {}, // Silent failure for filesystem check
           });
         }
 
@@ -570,11 +551,9 @@ export class DashboardStateService implements IDashboardStateService {
         }
       },
       error: error => {
-        console.error('Failed to load additional dashboard data:', error);
         // Set fallback model status on async load failure
         const currentState = this.getState();
         if (currentState.modelStatus === 'Loading...') {
-          console.warn('⚠️ Async load failed, setting fallback model status');
           this.setState({ modelStatus: 'Not Started' });
         }
         // Don't show error to user since initial data loaded successfully
@@ -590,7 +569,6 @@ export class DashboardStateService implements IDashboardStateService {
       .getUserImages()
       .pipe(
         catchError(error => {
-          console.warn('⚠️ User Images refresh failed:', error);
           return of({ success: false, data: null, error });
         })
       )
@@ -605,7 +583,7 @@ export class DashboardStateService implements IDashboardStateService {
           this.setState({ generatedPhotosCount });
         },
         error: error => {
-          console.error('Failed to refresh generated photos count:', error);
+          // Silent failure for photo count refresh
         },
       });
   }
@@ -674,7 +652,7 @@ export class DashboardStateService implements IDashboardStateService {
             };
           }
         } catch (repairError) {
-          console.error('🔧 Database repair failed:', repairError);
+          // Silent failure - repair error is handled by caller
         }
       }
     }
@@ -728,7 +706,6 @@ export class DashboardStateService implements IDashboardStateService {
 
       return cleanUrl;
     } catch (error) {
-      console.warn('Failed to clean image URL:', url, error);
       return url;
     }
   }

@@ -137,11 +137,6 @@ export class ImageStateService extends StateBaseService<ImageState> {
     uploadedImageThumbnails: UploadedImageThumbnail[];
     generatedPhotosCount: number;
   } {
-    console.log('🔍 Processing user images data:', {
-      hasData: !!userImagesData,
-      imagesCount: userImagesData?.images?.length || 0,
-    });
-
     // Process uploaded images with robust filtering
     const rawImageThumbnails: UploadedImageThumbnail[] =
       userImagesData?.images
@@ -158,10 +153,10 @@ export class ImageStateService extends StateBaseService<ImageState> {
 
           const isUploadedImage = (isOriginalByFlag || isOriginalByStyle) && hasUrl;
 
-          // Log flag/style mismatches for debugging
+          // Flag/style mismatch indicates possible database corruption
           if (isOriginalByFlag !== isOriginalByStyle) {
             console.warn(
-              `⚠️ Image ${img.id} has flag/style mismatch: isOriginalUpload=${isOriginalByFlag}, style=${img.style}`
+              `⚠️ Image ${img.id} has flag/style mismatch: isOriginalUpload=${isOriginalByFlag}, style=${img.style} - possible database corruption`
             );
           }
 
@@ -179,11 +174,6 @@ export class ImageStateService extends StateBaseService<ImageState> {
       userImagesData?.images?.filter((img: any) => img.isGenerated)?.length ||
       0;
 
-    console.log('📊 Processed image data:', {
-      uploadedImages: rawImageThumbnails.length,
-      generatedPhotos: generatedPhotosCount,
-    });
-
     return {
       uploadedImages: rawImageThumbnails.length,
       uploadedImageThumbnails: rawImageThumbnails,
@@ -199,15 +189,11 @@ export class ImageStateService extends StateBaseService<ImageState> {
     const validationAge = Date.now() - (currentState.lastValidationTime || 0);
 
     if (currentState.imagesValidated && validationAge < this.VALIDATION_TTL) {
-      console.log('📸 Images recently validated, skipping re-validation');
       return;
     }
-
-    console.log('🔍 Validating cached images...');
     const result = await this.validateAndCleanupImages(images, true);
 
     if (result.removedCount > 0) {
-      console.log(`🧹 Cleaned up ${result.removedCount} broken images from cache`);
       this.updateStateWithValidatedImages(result);
     } else {
       this.setState({
@@ -224,13 +210,8 @@ export class ImageStateService extends StateBaseService<ImageState> {
     images: UploadedImageThumbnail[],
     isFromCache: boolean
   ): Promise<ImageValidationResult> {
-    console.log(
-      `Validating ${images.length} uploaded images ${isFromCache ? '(from cache)' : '(fresh)'}...`
-    );
-
     // Check if image validation is disabled via environment configuration
     if (!this.configService.isImageValidationEnabled) {
-      console.log('⚡ Image validation disabled via environment config');
       return {
         validImages: images,
         removedCount: 0,
@@ -241,24 +222,11 @@ export class ImageStateService extends StateBaseService<ImageState> {
     const validation = await this.imageValidation.filterValidImages(images);
 
     if (validation.removedCount > 0) {
-      console.log(`🧹 Image validation results:`, {
-        source: isFromCache ? 'cache' : 'fresh',
-        total: images.length,
-        valid: validation.validImages.length,
-        removed: validation.removedCount,
-      });
-
       // Trigger repair if 404s were found
       if (validation.repairSuggested && validation.notFoundCount > 0) {
-        console.log(
-          `🔧 Found ${validation.notFoundCount} 404 errors, triggering database repair...`
-        );
-
         try {
           const repairResult = await this.fileUploadService.repairImageDatabase().toPromise();
           if (repairResult?.success) {
-            console.log('✅ Database repair completed successfully');
-
             // Force refresh from server after repair
             await this.forceRefreshAfterRepair();
 
@@ -331,8 +299,6 @@ export class ImageStateService extends StateBaseService<ImageState> {
           imagesValidated: false, // Force validation on fresh data
           lastValidationTime: 0,
         });
-
-        console.log(`✅ Count synchronized: UI now shows ${processed.uploadedImages} images`);
       }
     } catch (error) {
       console.error('❌ Failed to refresh after repair:', error);
@@ -343,8 +309,6 @@ export class ImageStateService extends StateBaseService<ImageState> {
    * Refresh only the generated photos count
    */
   async refreshGeneratedPhotosCount(): Promise<void> {
-    console.log('🔄 Refreshing generated photos count...');
-
     try {
       const userImages = await this.fileUploadService.getUserImages().toPromise();
 
@@ -355,7 +319,6 @@ export class ImageStateService extends StateBaseService<ImageState> {
           userImagesData?.images?.filter((img: any) => img.isGenerated)?.length ||
           0;
 
-        console.log('📊 Generated photos count updated:', generatedPhotosCount);
         this.setState({ generatedPhotosCount });
       }
     } catch (error) {
@@ -389,11 +352,8 @@ export class ImageStateService extends StateBaseService<ImageState> {
     const images = currentState.uploadedImageThumbnails;
 
     if (images.length === 0) {
-      console.log('📸 No images to validate');
       return;
     }
-
-    console.log(`🔍 Manually validating ${images.length} current images...`);
     const result = await this.validateAndCleanupImages(images, false);
 
     if (result.removedCount > 0) {
@@ -421,7 +381,6 @@ export class ImageStateService extends StateBaseService<ImageState> {
    * Invalidate images cache and refresh
    */
   invalidateAndRefresh(): void {
-    console.log('🔄 Invalidating image caches and refreshing data');
     this.fileUploadService.invalidateUserImagesCache();
     this.invalidateCache(this.CACHE_KEY);
     this.loadUserImages(true);
@@ -431,7 +390,6 @@ export class ImageStateService extends StateBaseService<ImageState> {
    * Force refresh implementation
    */
   forceRefresh(): void {
-    console.log('🔄 Force refreshing image data...');
     this.forceRefreshCache(this.CACHE_KEY);
     this.imageValidation.clearCache();
 

@@ -126,7 +126,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.router.navigate(['/premium']);
         break;
       default:
-        console.warn('Unknown credit action:', event.action);
+      // Unknown credit action - silently ignore
     }
   }
 
@@ -194,7 +194,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             selected: false,
           }));
         } else {
-          console.error('Failed to load styles:', response.error);
+          // Failed to load styles - error handled by notification
           this.notificationService.error(
             'Style Load Failed',
             'Could not load available styles. Please refresh the page.'
@@ -202,7 +202,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         }
       },
       error: error => {
-        console.error('Error loading styles:', error);
+        // Error loading styles - handled by notification
         this.notificationService.error(
           'Style Load Failed',
           'Could not load available styles. Please refresh the page.'
@@ -265,7 +265,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.stateService.forceRefresh();
       this.cdr.detectChanges();
     } catch (error) {
-      console.error('Failed to refresh uploaded images:', error);
+      // Failed to refresh images - will be retried on next load
       this.notificationService.error('Refresh Failed', 'Failed to refresh image list from server');
     }
   }
@@ -304,7 +304,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.workflowProgressSubject.next(progress);
       });
     } catch (error) {
-      console.error('Failed to load WorkflowOrchestrationService:', error);
+      // Failed to load workflow service - critical error, propagate
       throw error;
     }
   }
@@ -325,7 +325,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         await this.workflowService.startTrainingWithStyles(selectedStyles, this.imagesPerStyle);
       }
     } catch (error) {
-      console.error('Error in training workflow:', error);
+      // Training workflow error handled by service notifications
       this.isTrainingStarted = false;
       this.currentStep = 2;
     }

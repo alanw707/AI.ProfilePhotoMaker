@@ -93,7 +93,10 @@ export abstract class StateBaseService<T> {
    * Handle API errors consistently
    */
   protected handleApiError(error: any, operation: string, showToUser: boolean = true): void {
-    console.error(`❌ ${operation} failed:`, error);
+    // Log critical errors only to avoid console spam
+    if (error?.status >= 500 || !error?.status) {
+      console.error(`❌ ${operation} failed:`, error);
+    }
     if (showToUser) {
       this.notificationService.error(
         `${operation} Failed`,
@@ -132,11 +135,12 @@ export abstract class StateBaseService<T> {
   }
 
   /**
-   * Log performance timing
+   * Log performance timing (disabled for production)
    */
   protected logPerformance(operation: string, startTime: number): void {
-    const duration = performance.now() - startTime;
-    console.log(`⚡ ${operation} completed in ${duration.toFixed(2)}ms`);
+    // Performance logging disabled for production build
+    // const duration = performance.now() - startTime;
+    // console.log(`⚡ ${operation} completed in ${duration.toFixed(2)}ms`);
   }
 
   /**

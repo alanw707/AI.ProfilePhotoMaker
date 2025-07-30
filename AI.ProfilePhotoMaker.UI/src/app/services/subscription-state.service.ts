@@ -80,12 +80,6 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
       const apiCalls: any = {
         creditStatus: this.creditService.getCreditStatus().pipe(
           catchError(error => {
-            console.error('🔍 DEBUG: Credit Status API FAILED:', {
-              error,
-              message: error?.message,
-              status: error?.status,
-              url: error?.url,
-            });
             return of({ success: false, data: null, error });
           })
         ),
@@ -95,12 +89,6 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
       if (this.configService.isReplicateCreditsEnabled) {
         apiCalls.credits = this.replicateService.getCredits().pipe(
           catchError(error => {
-            console.error('🔍 DEBUG: Replicate Credits API FAILED:', {
-              error,
-              message: error?.message,
-              status: error?.status,
-              url: error?.url,
-            });
             return of({ success: false, data: null, error });
           })
         );
@@ -185,7 +173,6 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
         .getCreditStatus()
         .pipe(
           catchError(error => {
-            console.warn('⚠️ Internal Credit Status API failed:', error);
             return of({ success: false, data: null, error });
           })
         )

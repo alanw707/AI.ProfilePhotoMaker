@@ -548,6 +548,7 @@ export class GalleryComponent implements OnInit {
     } finally {
       this.isDownloading = false;
       this.downloadProgress = 0;
+      this.cdr.detectChanges(); // Force UI update to dismiss modal
 
       // Clear selections after download completes (success or failure)
       if (this.photoGallery) {
