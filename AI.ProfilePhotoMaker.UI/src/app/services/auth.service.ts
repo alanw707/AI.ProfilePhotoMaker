@@ -52,24 +52,45 @@ export class AuthService {
     private config: ConfigService,
     private router: Router
   ) {
-    // Check immediately on service creation
+    // Initialize with secure session check
+    this.initializeSecureAuth();
+  }
+
+  /**
+   * Initialize secure authentication with improved session management
+   */
+  private initializeSecureAuth(): void {
+    // Check existing token validity
     this.checkTokenValidity();
 
-    // Check token validity periodically (every 5 minutes) - but only if we have a token
+    // Set up periodic token validation (reduced frequency for better performance)
     setInterval(
       () => {
         if (localStorage.getItem(this.TOKEN_KEY)) {
           this.checkTokenValidity();
         }
       },
-      5 * 60 * 1000
-    );
+      10 * 60 * 1000
+    ); // Check every 10 minutes instead of 5
   }
 
+  /**
+   * Enhanced token validity check with better error handling
+   */
   private checkTokenValidity(): void {
     const token = localStorage.getItem(this.TOKEN_KEY);
-    if (token && this.isTokenExpired(token)) {
-      this.logout();
+    if (!token) {
+      return;
+    }
+
+    try {
+      if (this.isTokenExpired(token)) {
+        console.warn('🔒 Token expired, initiating secure logout');
+        this.secureLogout('token_expired');
+      }
+    } catch (error) {
+      console.error('🔒 Token validation error:', error);
+      this.secureLogout('token_invalid');
     }
   }
 
@@ -165,8 +186,7 @@ export class AuthService {
   private extractUserFromToken(token: string): AuthResponseDto | null {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
-      console.log('JWT Payload for debugging:', payload);
-      console.log('Available payload keys:', Object.keys(payload));
+      // Remove sensitive payload logging in production
 
       // Check .NET ClaimTypes standard URIs first, then fallback to short names
       const email =
@@ -188,18 +208,9 @@ export class AuthService {
         payload['lastName'] ||
         '';
 
-      console.log(
-        'Extracted values - email:',
-        email,
-        'firstName:',
-        firstName,
-        'lastName:',
-        lastName
-      );
-
       // If no firstName/lastName in JWT, return null to force profile API lookup
       if (!firstName && !lastName) {
-        console.log('No firstName/lastName in JWT, returning null to force profile lookup');
+        console.log('🔒 JWT missing user details, fetching from profile API');
         return null;
       }
 
@@ -218,7 +229,6 @@ export class AuthService {
   login(credentials: LoginDto): Observable<AuthResponseDto> {
     return this.http.post<ApiAuthResponseDto>(this.config.authLoginUrl, credentials).pipe(
       map(apiResponse => {
-        console.log('Login API response:', apiResponse);
         if (!apiResponse.isSuccess) {
           throw new Error(apiResponse.message);
         }
@@ -229,10 +239,9 @@ export class AuthService {
           firstName: apiResponse.firstName || '',
           lastName: apiResponse.lastName || '',
         } as AuthResponseDto;
-        console.log('Mapped auth response:', authResponse);
         return authResponse;
       }),
-      tap(response => this.setSession(response))
+      tap(response => this.setSecureSession(response))
     );
   }
 
@@ -249,54 +258,98 @@ export class AuthService {
           lastName: apiResponse.lastName || '',
         } as AuthResponseDto;
       }),
-      tap(response => this.setSession(response))
+      tap(response => this.setSecureSession(response))
     );
   }
 
+  /**
+   * Enhanced logout with secure session cleanup
+   */
   logout(): void {
-    console.log('Logging out - clearing all auth data');
-    console.log('Before logout - localStorage keys:', Object.keys(localStorage));
+    this.secureLogout('user_initiated');
+  }
 
-    // Clear all possible auth-related keys
-    localStorage.removeItem(this.TOKEN_KEY);
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('tokenExpiration');
-    localStorage.removeItem('current_user');
-    localStorage.removeItem('currentUser');
+  /**
+   * Secure logout with reason tracking and proper cleanup
+   */
+  private secureLogout(reason: string): void {
+    console.log(`🔒 Secure logout initiated - reason: ${reason}`);
 
-    // Clear any other potential auth keys
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('auth');
+    try {
+      // Clear all authentication data securely
+      this.clearAllAuthData();
 
-    // Update subjects
-    this.isAuthenticatedSubject.next(false);
-    this.currentUserSubject.next(null);
+      // Update reactive state
+      this.isAuthenticatedSubject.next(false);
+      this.currentUserSubject.next(null);
 
-    console.log('After logout - localStorage keys:', Object.keys(localStorage));
-    console.log('isAuthenticated after logout:', this.isAuthenticated());
+      // Navigate to login with reason
+      this.navigateToLogin(reason);
 
-    // Navigate to login page after logout
-    console.log('Navigating to login page after logout');
-    this.router.navigate(['/auth/login']).then(success => {
+      console.log('🔒 Secure logout completed successfully');
+    } catch (error) {
+      console.error('🔒 Error during secure logout:', error);
+      // Force clear even if error occurs
+      localStorage.clear();
+      this.router.navigate(['/auth/login']);
+    }
+  }
+
+  /**
+   * Clear all authentication-related data
+   */
+  private clearAllAuthData(): void {
+    const authKeys = [
+      this.TOKEN_KEY,
+      'authToken',
+      'tokenExpiration',
+      'current_user',
+      'currentUser',
+      'token',
+      'user',
+      'auth',
+      'secure_session',
+      'refresh_token',
+    ];
+
+    authKeys.forEach(key => {
+      localStorage.removeItem(key);
+    });
+  }
+
+  /**
+   * Navigate to login page with logout reason
+   */
+  private navigateToLogin(reason: string): void {
+    const queryParams = reason !== 'user_initiated' ? { reason } : {};
+
+    this.router.navigate(['/auth/login'], { queryParams }).then(success => {
       if (success) {
         console.log('✅ Successfully navigated to login page');
       } else {
         console.error('❌ Failed to navigate to login page');
+        // Fallback - force page reload to login
+        window.location.href = '/auth/login';
       }
     });
   }
 
-  // Public method to force clear all auth data - useful for debugging
+  /**
+   * Force logout - clears all auth data (useful for debugging)
+   */
   forceLogout(): void {
-    console.log('Force logout called');
-    localStorage.clear();
-    this.isAuthenticatedSubject.next(false);
-    this.currentUserSubject.next(null);
-    console.log('All localStorage cleared');
-
-    // Navigate to login page after force logout
-    this.router.navigate(['/auth/login']);
+    console.log('🔒 Force logout initiated');
+    try {
+      localStorage.clear();
+      this.isAuthenticatedSubject.next(false);
+      this.currentUserSubject.next(null);
+      this.router.navigate(['/auth/login']);
+      console.log('🔒 Force logout completed');
+    } catch (error) {
+      console.error('🔒 Error during force logout:', error);
+      // Force page reload as fallback
+      window.location.href = '/auth/login';
+    }
   }
 
   getToken(): string | null {
@@ -304,14 +357,7 @@ export class AuthService {
   }
 
   isAuthenticated(): boolean {
-    const hasToken = this.hasToken();
-    console.log('isAuthenticated() called - has token:', hasToken);
-    if (hasToken) {
-      const token = this.getToken();
-      console.log('Token length:', token?.length);
-      console.log('Token preview:', token?.substring(0, 50) + '...');
-    }
-    return hasToken;
+    return this.hasToken();
   }
 
   getCurrentUserId(): string | null {
@@ -328,45 +374,57 @@ export class AuthService {
         payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ||
         payload.sub ||
         payload.userId;
-      console.log('Extracted user ID from token:', userId);
       return userId || null;
     } catch (error) {
-      console.error('Failed to extract user ID from token:', error);
+      console.error('🔒 Failed to extract user ID from token:', error);
       return null;
     }
   }
 
+  /**
+   * Set session with enhanced security
+   */
+  private setSecureSession(authResult: AuthResponseDto): void {
+    try {
+      // Store token and user data
+      localStorage.setItem(this.TOKEN_KEY, authResult.token);
+      localStorage.setItem('currentUser', JSON.stringify(authResult));
+
+      // Clean up old storage keys for security
+      localStorage.removeItem('current_user');
+      localStorage.removeItem('authData'); // Remove any legacy keys
+
+      // Update reactive state
+      this.isAuthenticatedSubject.next(true);
+      this.currentUserSubject.next(authResult);
+
+      console.log('🔒 Secure session established successfully');
+    } catch (error) {
+      console.error('🔒 Failed to establish secure session:', error);
+      throw new Error('Session establishment failed');
+    }
+  }
+
   private setSession(authResult: AuthResponseDto): void {
-    console.log('Setting auth session:', authResult);
-    localStorage.setItem(this.TOKEN_KEY, authResult.token);
-    localStorage.setItem('currentUser', JSON.stringify(authResult));
-    // Clean up old storage keys
-    localStorage.removeItem('current_user');
-    this.isAuthenticatedSubject.next(true);
-    this.currentUserSubject.next(authResult);
+    // Deprecated - use setSecureSession instead
+    this.setSecureSession(authResult);
   }
 
   private hasToken(): boolean {
     const token = localStorage.getItem(this.TOKEN_KEY);
-    console.log('hasToken() check - TOKEN_KEY:', this.TOKEN_KEY);
-    console.log('hasToken() check - token exists:', !!token);
-    console.log('hasToken() check - token length:', token?.length);
 
     if (!token) {
-      console.log('hasToken() - No token found in localStorage');
       return false;
     }
 
     const isExpired = this.isTokenExpired(token);
-    console.log('hasToken() check - token expired:', isExpired);
 
     if (isExpired) {
-      console.warn('Auth token has expired');
+      console.warn('🔒 Auth token has expired');
       this.logout();
       return false;
     }
 
-    console.log('hasToken() - Token is valid and not expired');
     return true;
   }
 

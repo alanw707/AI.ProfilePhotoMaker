@@ -16,7 +16,7 @@ export interface StyleOption {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './style-selector.component.html',
-  styleUrls: ['./style-selector.component.sass']
+  styleUrls: ['./style-selector.component.sass'],
 })
 export class StyleSelectorComponent {
   constructor(private router: Router) {}
@@ -77,7 +77,9 @@ export class StyleSelectorComponent {
   }
 
   formatStyleName(styleName: string): string {
-    if (!styleName) {return '';}
+    if (!styleName) {
+      return '';
+    }
     return styleName
       .split('-')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -92,8 +94,8 @@ export class StyleSelectorComponent {
 
   navigateToGallery() {
     // Navigate to gallery with refresh parameter to force reload
-    this.router.navigate(['/gallery'], { 
-      queryParams: { refresh: Date.now() } 
+    this.router.navigate(['/gallery'], {
+      queryParams: { refresh: Date.now() },
     });
   }
 }

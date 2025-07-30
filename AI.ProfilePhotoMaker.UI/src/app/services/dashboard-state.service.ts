@@ -12,6 +12,7 @@ import { ModelStateService } from './model-state.service';
 import { FallbackOperationsService } from './fallback-operations.service';
 import { ImageValidationService } from './image-validation.service';
 import { ConfigService } from './config.service';
+import { SubscriptionStateService } from './subscription-state.service';
 import {
   DashboardState,
   IDashboardStateService,
@@ -51,7 +52,8 @@ export class DashboardStateService implements IDashboardStateService {
     private modelState: ModelStateService,
     private fallbackOps: FallbackOperationsService,
     private imageValidation: ImageValidationService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private subscriptionState: SubscriptionStateService
   ) {}
 
   getState(): DashboardState {
@@ -245,14 +247,36 @@ export class DashboardStateService implements IDashboardStateService {
       });
   }
 
-  loadInitialDashboardData() {
+  async loadInitialDashboardData() {
     const CACHE_KEY = 'dashboard_data';
 
-    // Check cache first
+    // 🔧 FIX: Load subscription data using dedicated service first
+    console.log('🔄 Loading subscription data via SubscriptionStateService...');
+    await this.subscriptionState.loadFullSubscriptionData();
+
+    // Get the loaded subscription state
+    const subscriptionData = this.subscriptionState.getState();
+    console.log('💳 Subscription data loaded:', {
+      totalCredits: subscriptionData.totalCredits,
+      isPremium: subscriptionData.isPremiumWorkflow,
+      hasUserCreditStatus: !!subscriptionData.userCreditStatus,
+      hasCreditsInfo: !!subscriptionData.creditsInfo,
+    });
+
+    // Check cache first for non-credit data
     const cachedData = this.cacheManager.getCachedData<DashboardState>(CACHE_KEY);
-    if (cachedData?.creditsInfo) {
-      console.log('💾 Using cached dashboard data');
-      this.setState(cachedData);
+    if (cachedData?.userProfile) {
+      console.log('💾 Using cached dashboard data (non-credit data only)');
+      // Merge cached data with fresh subscription data
+      const mergedState = {
+        ...cachedData,
+        userCreditStatus: subscriptionData.userCreditStatus,
+        creditsInfo: subscriptionData.creditsInfo,
+        totalCredits: subscriptionData.totalCredits,
+        isPremiumWorkflow: subscriptionData.isPremiumWorkflow,
+        isLoading: false,
+      };
+      this.setState(mergedState);
 
       // Always validate images even from cache to ensure broken images are cleaned up
       if (cachedData.uploadedImageThumbnails && cachedData.uploadedImageThumbnails.length > 0) {
@@ -276,18 +300,11 @@ export class DashboardStateService implements IDashboardStateService {
 
     console.log('🚀 Starting dashboard data load...');
 
-    // Load critical data, handling all API failures gracefully
-    // Conditionally include Replicate credits API based on feature flag
+    // 🔧 FIX: Load only non-credit data since subscription data is already loaded
     const apiCalls: any = {
       profile: this.profileService.getCurrentUserProfile().pipe(
         catchError(error => {
           console.warn('⚠️ Profile API failed:', error);
-          return of({ success: false, data: null, error });
-        })
-      ),
-      creditStatus: this.creditService.getCreditStatus().pipe(
-        catchError(error => {
-          console.warn('⚠️ Credit Status API failed:', error);
           return of({ success: false, data: null, error });
         })
       ),
@@ -299,35 +316,21 @@ export class DashboardStateService implements IDashboardStateService {
       ),
     };
 
-    // Only call Replicate credits API if enabled in environment
-    if (this.configService.isReplicateCreditsEnabled) {
-      apiCalls.credits = this.replicateService.getCredits().pipe(
-        catchError(error => {
-          console.warn('⚠️ Credits API failed (TestController disabled):', error);
-          return of({ success: false, data: null, error });
-        })
-      );
-    } else {
-      console.log('⚡ Replicate credits API disabled via environment config');
-      apiCalls.credits = of({ success: false, data: null, error: 'disabled' });
-    }
+    // Skip credit API calls since we already loaded subscription data
 
     forkJoin(apiCalls).subscribe({
       next: (result: any) => {
-        const { profile, creditStatus, userImages, credits } = result;
+        const { profile, userImages } = result;
         console.log('📦 Dashboard API responses:', {
           profileSuccess: profile?.success ?? false,
-          creditStatusSuccess: creditStatus?.success ?? false,
           userImagesSuccess: userImages?.success ?? false,
-          creditsSuccess: credits?.success ?? false,
-          creditStatusData: creditStatus?.data ?? null,
-          creditsData: credits?.data ?? null,
-          creditsFailureHandled: !(credits?.success ?? false),
+          subscriptionDataLoaded: !!subscriptionData.userCreditStatus,
         });
 
         const userProfile = profile?.success ? profile.data : null;
-        const userCreditStatus = creditStatus?.success ? creditStatus.data : null;
-        const creditsInfo = credits?.success ? credits.data : null;
+        // 🔧 FIX: Use subscription service data instead of API calls
+        const userCreditStatus = subscriptionData.userCreditStatus;
+        const creditsInfo = subscriptionData.creditsInfo;
 
         // Process uploaded images into thumbnails format
         const userImagesData = userImages?.success ? userImages.data : null;
@@ -424,22 +427,10 @@ export class DashboardStateService implements IDashboardStateService {
           );
         }
 
-        // Calculate total credits for reactive display, handling null creditsInfo gracefully
-        const totalCredits = this.creditService.getTotalAvailableCredits(
-          userCreditStatus,
-          creditsInfo || null
-        );
+        // 🔧 FIX: Use total credits from subscription service
+        const totalCredits = subscriptionData.totalCredits;
 
-        // Show info notification if credits API failed but other data loaded successfully
-        // Only log this if Replicate credits were actually attempted
-        if (
-          !credits?.success &&
-          this.configService.isReplicateCreditsEnabled &&
-          (profile?.success || creditStatus?.success || userImages?.success)
-        ) {
-          console.log('ℹ️ Dashboard loaded without credits API (TestController disabled)');
-          // Don't show notification to user since this is expected during development
-        }
+        console.log('💳 Using subscription service total credits:', totalCredits);
 
         // Set initial state with critical data for fast render
         const newState = {
@@ -450,7 +441,7 @@ export class DashboardStateService implements IDashboardStateService {
           uploadedImageThumbnails,
           generatedPhotosCount,
           modelStatus: 'Loading...', // Temporary status
-          isPremiumWorkflow: (userCreditStatus?.purchasedCredits || 0) > 0,
+          isPremiumWorkflow: subscriptionData.isPremiumWorkflow,
           isLoading: false,
           totalCredits,
         };
@@ -694,29 +685,6 @@ export class DashboardStateService implements IDashboardStateService {
           console.error('Failed to refresh generated photos count:', error);
         },
       });
-  }
-
-  // Make debug methods globally accessible
-  enableGlobalDebug() {
-    // Enable debug methods from each specialized service
-    this.modelState.enableGlobalDebug();
-    this.cacheManager.enableGlobalDebug();
-    this.fallbackOps.enableGlobalDebug();
-
-    // Dashboard-specific debug methods
-    (window as any).forceRefresh = () => this.forceRefresh();
-    (window as any).invalidateImages = () => this.invalidateAndRefreshImages();
-    (window as any).dashboardState = () => this.getState();
-
-    console.log('🔍 Dashboard debug enabled! Available commands:');
-    console.log('  - forceRefresh() - Force refresh dashboard data (clears cache)');
-    console.log('  - invalidateImages() - Invalidate image caches and refresh');
-    console.log('  - dashboardState() - View current dashboard state');
-    console.log('  - validateImages() - Run image validation on current thumbnails');
-    console.log('  + Model, Cache, and Fallback debug commands from specialized services');
-
-    // Add image validation debug method
-    (window as any).validateImages = () => this.validateCurrentImages();
   }
 
   // Validate cached images and update state if needed

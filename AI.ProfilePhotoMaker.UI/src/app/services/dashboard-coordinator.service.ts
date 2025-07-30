@@ -402,31 +402,4 @@ export class DashboardCoordinatorService implements IDashboardStateService {
   refreshGeneratedPhotosCount(): void {
     this.imageState.refreshGeneratedPhotosCount();
   }
-
-  /**
-   * Enable global debug methods for all services
-   */
-  enableGlobalDebug(): void {
-    // Enable debug for specialized services
-    this.imageState.enableGlobalDebug();
-    this.subscriptionState.enableGlobalDebug();
-    this.modelState.enableGlobalDebug();
-    this.cacheManager.enableGlobalDebug();
-    this.fallbackOps.enableGlobalDebug();
-
-    // Dashboard coordinator debug methods
-    (window as any).dashboardCoordinator = {
-      getState: () => this.getState(),
-      forceRefresh: () => this.forceRefresh(),
-      loadBasicData: () => this.loadBasicDataForSettings(),
-      resetState: () => this.resetState(),
-    };
-
-    console.log('🔍 DashboardCoordinatorService debug enabled! Available commands:');
-    console.log('  - dashboardCoordinator.getState() - View combined dashboard state');
-    console.log('  - dashboardCoordinator.forceRefresh() - Force refresh all data');
-    console.log('  - dashboardCoordinator.loadBasicData() - Load basic settings data');
-    console.log('  - dashboardCoordinator.resetState() - Reset all service states');
-    console.log('  + Individual service debug commands (imageState, subscriptionState, etc.)');
-  }
 }

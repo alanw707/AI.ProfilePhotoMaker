@@ -144,9 +144,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ) {
     this.state$ = this.stateService.state$;
     this.workflowProgress$ = this.workflowProgressSubject.asObservable();
-
-    // Enable debug methods for troubleshooting
-    this.stateService.enableGlobalDebug();
   }
 
   ngOnInit() {
@@ -314,6 +311,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   async startTrainingWithStyles() {
     const selectedStyles = this.availableStyles.filter(s => s.selected);
+
     this.isTrainingStarted = true;
     this.currentStep = 3;
 

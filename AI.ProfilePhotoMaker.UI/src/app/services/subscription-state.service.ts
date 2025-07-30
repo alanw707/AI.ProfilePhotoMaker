@@ -61,8 +61,13 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
   async loadFullSubscriptionData(): Promise<void> {
     const startTime = performance.now();
 
+    console.log('🔍 DEBUG: Starting loadFullSubscriptionData...');
+    console.log('🔍 DEBUG: Current state before loading:', this.getState());
+
     // Check cache first
     const cachedData = this.getCachedData<SubscriptionState>(this.CACHE_KEY);
+    console.log('🔍 DEBUG: Cached data found:', !!cachedData, cachedData);
+
     if (cachedData?.userCreditStatus) {
       console.log('💾 Using cached subscription data');
       this.setState(cachedData);
@@ -78,10 +83,21 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
     console.log('🚀 Loading full subscription data...');
 
     try {
+      console.log('🔍 DEBUG: Setting up API calls...');
+      console.log(
+        '🔍 DEBUG: Replicate credits enabled:',
+        this.configService.isReplicateCreditsEnabled
+      );
+
       const apiCalls: any = {
         creditStatus: this.creditService.getCreditStatus().pipe(
           catchError(error => {
-            console.warn('⚠️ Credit Status API failed:', error);
+            console.error('🔍 DEBUG: Credit Status API FAILED:', {
+              error,
+              message: error?.message,
+              status: error?.status,
+              url: error?.url,
+            });
             return of({ success: false, data: null, error });
           })
         ),
@@ -91,7 +107,12 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
       if (this.configService.isReplicateCreditsEnabled) {
         apiCalls.credits = this.replicateService.getCredits().pipe(
           catchError(error => {
-            console.warn('⚠️ Replicate Credits API failed:', error);
+            console.error('🔍 DEBUG: Replicate Credits API FAILED:', {
+              error,
+              message: error?.message,
+              status: error?.status,
+              url: error?.url,
+            });
             return of({ success: false, data: null, error });
           })
         );
@@ -100,7 +121,15 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
         apiCalls.credits = of({ success: false, data: null, error: 'disabled' });
       }
 
+      console.log('🔍 DEBUG: Making API calls:', Object.keys(apiCalls));
       const result: any = await forkJoin(apiCalls).toPromise();
+      console.log('🔍 DEBUG: API calls completed:', {
+        creditStatusSuccess: result?.creditStatus?.success,
+        creditStatusData: result?.creditStatus?.data,
+        creditsSuccess: result?.credits?.success,
+        creditsData: result?.credits?.data,
+        fullResult: result,
+      });
       const { creditStatus, credits } = result;
 
       console.log('📦 Subscription API responses:', {
@@ -320,29 +349,5 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
     this.forceRefreshCache(this.CACHE_KEY);
     this.forceRefreshCache(this.CREDITS_CACHE_KEY);
     this.loadFullSubscriptionData();
-  }
-
-  /**
-   * Enable debug methods
-   */
-  enableGlobalDebug(): void {
-    (window as any).subscriptionState = {
-      getState: () => this.getState(),
-      forceRefresh: () => this.forceRefresh(),
-      refreshCredits: () => this.refreshCredits(),
-      loadCreditsOnly: () => this.loadCreditsOnly(),
-      getCreditBreakdown: () => this.getCreditBreakdown(),
-      hasEnoughCredits: (credits: number) => this.hasEnoughCredits(credits),
-      isPremiumUser: () => this.isPremiumUser(),
-    };
-
-    console.log('🔍 SubscriptionStateService debug enabled! Available commands:');
-    console.log('  - subscriptionState.getState() - View current subscription state');
-    console.log('  - subscriptionState.forceRefresh() - Force refresh subscription data');
-    console.log('  - subscriptionState.refreshCredits() - Refresh credit status');
-    console.log('  - subscriptionState.loadCreditsOnly() - Load only internal credits');
-    console.log('  - subscriptionState.getCreditBreakdown() - Get detailed credit breakdown');
-    console.log('  - subscriptionState.hasEnoughCredits(n) - Check credit availability');
-    console.log('  - subscriptionState.isPremiumUser() - Check premium status');
   }
 }

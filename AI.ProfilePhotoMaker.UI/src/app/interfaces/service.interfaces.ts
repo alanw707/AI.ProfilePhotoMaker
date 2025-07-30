@@ -173,7 +173,6 @@ export interface IDashboardStateService {
   forceRefresh(): void;
   invalidateAndRefreshImages(): void;
   refreshGeneratedPhotosCount(): void;
-  enableGlobalDebug(): void;
 }
 
 // Service Configuration Interface

@@ -3,9 +3,7 @@
     *ngFor="let notification of notifications; trackBy: trackByNotificationId"
     class="notification"
     [ngClass]="'notification-' + notification.type">
-    <div class="notification-icon">
-      <span>{{ getIcon(notification.type) }}</span>
-    </div>
+    <div class="notification-icon" [innerHTML]="getSvgIcon(notification.type)"></div>
 
     <div class="notification-content">
       <h4 class="notification-title">{{ notification.title }}</h4>

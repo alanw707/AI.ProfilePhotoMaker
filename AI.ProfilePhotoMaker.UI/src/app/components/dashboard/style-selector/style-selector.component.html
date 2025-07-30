@@ -245,7 +245,7 @@
   <p>Select at least one style above to proceed with training</p>
 </div>
 
-<div class="training-note" *ngIf="selectedStyles > 0 && uploadedImageCount < 10">
+<div class="training-note" *ngIf="selectedStyles > 0 && uploadedImageCount < 10 && modelStatus !== 'Model Ready'">
   <div class="note-icon">📸</div>
   <p>Upload at least 10 images to enable training (currently: {{ uploadedImageCount }})</p>
 </div>
