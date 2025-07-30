@@ -66,6 +66,42 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
           
+      - name: Connect PowerShell Az Modules
+        shell: pwsh
+        run: |
+          Write-Host "🔐 Connecting PowerShell Az modules to Azure..."
+          
+          # Use the same service principal credentials that were used for OIDC login
+          $clientId = "${{ env.AZURE_CLIENT_ID }}"
+          $tenantId = "${{ env.AZURE_TENANT_ID }}"
+          $subscriptionId = "${{ env.AZURE_SUBSCRIPTION_ID }}"
+          
+          # Get the access token from Azure CLI (already authenticated via OIDC)
+          $accessToken = az account get-access-token --query accessToken --output tsv
+          
+          if ($accessToken) {
+            Write-Host "✅ Access token obtained from Azure CLI"
+            
+            # Connect using the access token
+            $secureToken = ConvertTo-SecureString $accessToken -AsPlainText -Force
+            Connect-AzAccount -AccessToken $secureToken -AccountId $clientId -Subscription $subscriptionId -Tenant $tenantId
+            
+            # Verify connection
+            $context = Get-AzContext
+            if ($context) {
+              Write-Host "✅ PowerShell Az modules connected successfully"
+              Write-Host "  Account: $($context.Account.Id)"
+              Write-Host "  Subscription: $($context.Subscription.Name)"
+              Write-Host "  Tenant: $($context.Tenant.Id)"
+            } else {
+              Write-Error "❌ Failed to establish PowerShell Az context"
+              exit 1
+            }
+          } else {
+            Write-Error "❌ Failed to get access token from Azure CLI"
+            exit 1
+          }
+          
       - name: Prepare Deployment Parameters
         shell: pwsh
         env:
