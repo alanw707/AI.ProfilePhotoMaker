@@ -71,36 +71,49 @@ jobs:
         run: |
           Write-Host "🔐 Connecting PowerShell Az modules to Azure..."
           
-          # Use the same service principal credentials that were used for OIDC login
           $clientId = "${{ env.AZURE_CLIENT_ID }}"
           $tenantId = "${{ env.AZURE_TENANT_ID }}"
           $subscriptionId = "${{ env.AZURE_SUBSCRIPTION_ID }}"
           
-          # Get the access token from Azure CLI (already authenticated via OIDC)
-          $accessToken = az account get-access-token --query accessToken --output tsv
-          
-          if ($accessToken) {
-            Write-Host "✅ Access token obtained from Azure CLI"
+          # Try using the Azure CLI context first - this should inherit OIDC authentication
+          try {
+            Write-Host "🔄 Attempting to import Azure CLI context..."
+            Import-AzContext -Profile (Get-AzContext -ListAvailable | Where-Object { $_.Account.Id -eq $clientId })[0] -Force
             
-            # Connect using the access token
-            $secureToken = ConvertTo-SecureString $accessToken -AsPlainText -Force
-            Connect-AzAccount -AccessToken $secureToken -AccountId $clientId -Subscription $subscriptionId -Tenant $tenantId
-            
-            # Verify connection
             $context = Get-AzContext
-            if ($context) {
-              Write-Host "✅ PowerShell Az modules connected successfully"
+            if ($context -and $context.Account.Id -eq $clientId) {
+              Write-Host "✅ PowerShell Az modules connected using CLI context"
               Write-Host "  Account: $($context.Account.Id)"
               Write-Host "  Subscription: $($context.Subscription.Name)"
               Write-Host "  Tenant: $($context.Tenant.Id)"
-            } else {
-              Write-Error "❌ Failed to establish PowerShell Az context"
-              exit 1
+              return
             }
-          } else {
-            Write-Error "❌ Failed to get access token from Azure CLI"
-            exit 1
+          } catch {
+            Write-Host "⚠️ CLI context import failed: $($_.Exception.Message)"
           }
+          
+          # Alternative: Set the subscription context directly using the OIDC-authenticated session
+          try {
+            Write-Host "🔄 Attempting to set subscription context..."
+            Set-AzContext -Subscription $subscriptionId -Force
+            
+            $context = Get-AzContext
+            if ($context) {
+              Write-Host "✅ PowerShell Az context set successfully"
+              Write-Host "  Account: $($context.Account.Id)"
+              Write-Host "  Subscription: $($context.Subscription.Name)"
+              Write-Host "  Tenant: $($context.Tenant.Id)"
+              return
+            }
+          } catch {
+            Write-Host "⚠️ Set context failed: $($_.Exception.Message)"
+          }
+          
+          Write-Error "❌ Failed to establish PowerShell Az authentication context"
+          Write-Host "💡 Debug info:"
+          Write-Host "  Available contexts: $(Get-AzContext -ListAvailable | Measure-Object | Select-Object -ExpandProperty Count)"
+          Get-AzContext -ListAvailable | ForEach-Object { Write-Host "    - $($_.Account.Id) ($($_.Subscription.Name))" }
+          exit 1
           
       - name: Prepare Deployment Parameters
         shell: pwsh
