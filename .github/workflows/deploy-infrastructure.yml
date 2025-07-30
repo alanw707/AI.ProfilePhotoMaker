@@ -265,7 +265,7 @@ jobs:
               content = content.replace('REPLACE_WITH_PROD_JWT_SECRET', os.environ.get('PROD_JWT_SECRET', ''))
           
           content = content.replace('REPLACE_WITH_REPLICATE_TOKEN', os.environ.get('REPLICATE_TOKEN', ''))
-          content = content.replace('REPLACE_WITH_WEBHOOK_SECRET', os.environ.get('WEBPACK_SECRET', ''))
+          content = content.replace('REPLACE_WITH_WEBHOOK_SECRET', os.environ.get('WEBHOOK_SECRET', ''))
           
           with open(f'parameters.{env_name}.deploy.json', 'w') as f:
               f.write(content)
