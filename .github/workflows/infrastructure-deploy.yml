@@ -56,14 +56,46 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_011D6FB5A4BC43509D9B165F9842CEBC }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B9C8B148FA76469EB51C84A0DE3D63BB }}
       
+      - name: Substitute secrets for validation
+        run: |
+          cd infrastructure
+          ENV_NAME=${{ github.event.inputs.environment || 'staging' }}
+          cp parameters.$ENV_NAME.json parameters.$ENV_NAME.temp.json
+          
+          if [ "$ENV_NAME" = "staging" ]; then
+            sed -i 's/REPLACE_WITH_STAGING_SQL_PASSWORD/${{ secrets.STAGING_SQL_ADMIN_PASSWORD }}/g' parameters.$ENV_NAME.temp.json
+            sed -i 's/REPLACE_WITH_STAGING_JWT_SECRET/${{ secrets.STAGING_JWT_SECRET }}/g' parameters.$ENV_NAME.temp.json
+          else
+            sed -i 's/REPLACE_WITH_PROD_SQL_PASSWORD/${{ secrets.PROD_SQL_ADMIN_PASSWORD }}/g' parameters.$ENV_NAME.temp.json
+            sed -i 's/REPLACE_WITH_PROD_JWT_SECRET/${{ secrets.PROD_JWT_SECRET }}/g' parameters.$ENV_NAME.temp.json
+          fi
+          
+          sed -i 's/REPLACE_WITH_REPLICATE_TOKEN/${{ secrets.REPLICATE_API_TOKEN }}/g' parameters.$ENV_NAME.temp.json
+          sed -i 's/REPLACE_WITH_WEBHOOK_SECRET/${{ secrets.REPLICATE_WEBHOOK_SECRET }}/g' parameters.$ENV_NAME.temp.json
+
+      - name: Create resource group for validation
+        run: |
+          ENV_NAME=${{ github.event.inputs.environment || 'staging' }}
+          az group create \
+            --name ai-profile-photo-maker-$ENV_NAME \
+            --location "East US" \
+            --output table || echo "Resource group may already exist"
+
       - name: Validate Bicep template
         run: |
           cd infrastructure
+          ENV_NAME=${{ github.event.inputs.environment || 'staging' }}
           az deployment group validate \
-            --resource-group ai-profile-photo-maker-${{ github.event.inputs.environment || 'staging' }} \
+            --resource-group ai-profile-photo-maker-$ENV_NAME \
             --template-file main.bicep \
-            --parameters @parameters.${{ github.event.inputs.environment || 'staging' }}.json \
+            --parameters @parameters.$ENV_NAME.temp.json \
             --output table
+      
+      - name: Cleanup validation temp files
+        run: |
+          cd infrastructure
+          ENV_NAME=${{ github.event.inputs.environment || 'staging' }}
+          rm -f parameters.$ENV_NAME.temp.json
       
       - name: Comment validation results
         if: github.event_name == 'pull_request'
