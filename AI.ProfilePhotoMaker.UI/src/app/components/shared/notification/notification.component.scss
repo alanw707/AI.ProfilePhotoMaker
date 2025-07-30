@@ -56,53 +56,56 @@
   position: relative;
 
   &.notification-success {
-    border-left: 4px solid #10b981;
+    border-left: 4px solid var(--accent-success);
 
     .notification-icon {
-      background: #d1fae5;
-      color: #065f46;
+      color: var(--accent-success);
     }
   }
 
   &.notification-error {
-    border-left: 4px solid #ef4444;
+    border-left: 4px solid var(--accent-danger);
 
     .notification-icon {
-      background: #fee2e2;
-      color: #991b1b;
+      color: var(--accent-danger);
     }
   }
 
   &.notification-warning {
-    border-left: 4px solid #f59e0b;
+    border-left: 4px solid var(--accent-warning);
 
     .notification-icon {
-      background: #fef3c7;
-      color: #92400e;
+      color: var(--accent-warning);
     }
   }
 
   &.notification-info {
-    border-left: 4px solid #3b82f6;
+    border-left: 4px solid var(--accent-secondary);
 
     .notification-icon {
-      background: #dbeafe;
-      color: #1e40af;
+      color: var(--accent-secondary);
     }
   }
 }
 
 .notification-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   margin-right: 12px;
-  font-weight: bold;
-  font-size: 18px;
+
+  // SVG icon styling for better visibility
+  svg {
+    display: block;
+    stroke-width: 2.5;
+    fill: none;
+    stroke: currentColor;
+    width: 20px;
+    height: 20px;
+  }
 }
 
 .notification-content {

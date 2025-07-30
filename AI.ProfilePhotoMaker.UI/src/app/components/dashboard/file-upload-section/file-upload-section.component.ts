@@ -16,6 +16,7 @@ import { FormsModule } from '@angular/forms';
 
 import { FileUploadService } from '../../../services/file-upload.service';
 import { NotificationService } from '../../../services/notification.service';
+import { FileSecurityService } from '../../../services/file-security.service';
 
 // Lazy-loaded service interface
 interface FaceDetectionService {
@@ -85,6 +86,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   constructor(
     private fileUploadService: FileUploadService,
     private notificationService: NotificationService,
+    private fileSecurityService: FileSecurityService,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
     private injector: Injector
@@ -167,50 +169,101 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Track validation results
+    console.log('🔒 Starting security validation for', files.length, 'files...');
+
+    // Enhanced security validation using FileSecurityService
     const validationResults = {
       validFiles: [] as File[],
       invalidFiles: [] as File[],
       errors: {
         unsupportedType: [] as string[],
         tooLarge: [] as string[],
+        securityIssues: [] as { fileName: string; issues: string[]; riskLevel: string }[],
       },
     };
 
-    // Validate each file
-    files.forEach(file => {
-      const validation = this.validateFile(file);
-      if (validation.isValid) {
-        validationResults.validFiles.push(file);
-      } else {
-        validationResults.invalidFiles.push(file);
-        if (validation.error === 'type') {
-          validationResults.errors.unsupportedType.push(file.name);
-        } else if (validation.error === 'size') {
-          validationResults.errors.tooLarge.push(file.name);
-        }
-      }
-    });
+    // Validate each file with comprehensive security checks
+    for (const file of files) {
+      try {
+        const securityValidation = await this.fileSecurityService.validateFile(file).toPromise();
 
-    // Update inline feedback for invalid files
+        if (securityValidation?.isValid) {
+          validationResults.validFiles.push(file);
+          console.log(`✅ File ${file.name} passed security validation`);
+        } else {
+          validationResults.invalidFiles.push(file);
+
+          // Categorize security issues for user-friendly error messages
+          const issues = securityValidation?.securityIssues || ['Security validation failed'];
+          const riskLevel = securityValidation?.riskLevel || 'high';
+
+          validationResults.errors.securityIssues.push({
+            fileName: file.name,
+            issues,
+            riskLevel,
+          });
+
+          // Map security issues to existing error categories for UI compatibility
+          if (issues.some(issue => issue.includes('type') || issue.includes('extension'))) {
+            validationResults.errors.unsupportedType.push(file.name);
+          }
+          if (issues.some(issue => issue.includes('size') || issue.includes('large'))) {
+            validationResults.errors.tooLarge.push(file.name);
+          }
+
+          console.warn(`❌ File ${file.name} failed security validation:`, {
+            issues,
+            riskLevel,
+          });
+        }
+      } catch (error) {
+        console.error(`Security validation error for ${file.name}:`, error);
+        validationResults.invalidFiles.push(file);
+        validationResults.errors.securityIssues.push({
+          fileName: file.name,
+          issues: ['Security validation failed due to internal error'],
+          riskLevel: 'critical',
+        });
+      }
+    }
+
+    // Update inline feedback for invalid files with enhanced security messages
     this.invalidFilesFeedback = [];
     validationResults.errors.unsupportedType.forEach(fileName => {
       this.invalidFilesFeedback.push({
         fileName,
-        reason: 'Different format needed. Use JPEG, PNG, or WebP',
+        reason: 'File type not allowed. Use JPEG, PNG, or WebP only',
       });
     });
     validationResults.errors.tooLarge.forEach(fileName => {
       const sizeInMB = (this.maxFileSize / (1024 * 1024)).toFixed(1);
       this.invalidFilesFeedback.push({
         fileName,
-        reason: `Size too large. Max: ${sizeInMB}MB`,
+        reason: `File too large. Maximum: ${sizeInMB}MB`,
       });
+    });
+
+    // Add security-specific feedback
+    validationResults.errors.securityIssues.forEach(({ fileName, issues, riskLevel }) => {
+      // Use the most user-friendly issue message
+      const primaryIssue = issues[0] || 'Security check failed';
+      const reason = this.getSecurityErrorMessage(primaryIssue, riskLevel);
+
+      // Only add if not already covered by type/size errors
+      if (
+        !validationResults.errors.unsupportedType.includes(fileName) &&
+        !validationResults.errors.tooLarge.includes(fileName)
+      ) {
+        this.invalidFilesFeedback.push({
+          fileName,
+          reason,
+        });
+      }
     });
 
     // Show consolidated error notification if any files were invalid
     if (validationResults.invalidFiles.length > 0) {
-      this.showConsolidatedErrors(validationResults);
+      this.showEnhancedSecurityErrors(validationResults);
     }
 
     // If no valid files, return early
@@ -222,7 +275,11 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     this.selectedFiles.push(...validationResults.validFiles);
     this.filesSelected.emit(this.selectedFiles);
 
-    // Start quality validation
+    console.log(
+      `🔒 Security validation complete: ${validationResults.validFiles.length} valid, ${validationResults.invalidFiles.length} rejected`
+    );
+
+    // Start quality validation for security-validated files
     await this.validateImageQuality(validationResults.validFiles);
   }
 
@@ -270,6 +327,86 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
       errors.join('. ') + '. Supported formats: JPEG, PNG, WebP (max 7MB).',
       5000 // Auto-close after 5 seconds
     );
+  }
+
+  private showEnhancedSecurityErrors(results: any): void {
+    const errors = [];
+
+    if (results.errors.unsupportedType.length > 0) {
+      const count = results.errors.unsupportedType.length;
+      const fileList = results.errors.unsupportedType.slice(0, 3).join(', ');
+      const more = count > 3 ? ` and ${count - 3} more` : '';
+      errors.push(
+        `${count} file${count > 1 ? 's have' : ' has'} unsupported format: ${fileList}${more}`
+      );
+    }
+
+    if (results.errors.tooLarge.length > 0) {
+      const count = results.errors.tooLarge.length;
+      const sizeInMB = (this.maxFileSize / (1024 * 1024)).toFixed(1);
+      const fileList = results.errors.tooLarge.slice(0, 3).join(', ');
+      const more = count > 3 ? ` and ${count - 3} more` : '';
+      errors.push(
+        `${count} file${count > 1 ? 's exceed' : ' exceeds'} size limit (${sizeInMB}MB): ${fileList}${more}`
+      );
+    }
+
+    // Add security-specific errors
+    const criticalFiles = results.errors.securityIssues.filter(
+      (s: any) => s.riskLevel === 'critical'
+    );
+    const highRiskFiles = results.errors.securityIssues.filter((s: any) => s.riskLevel === 'high');
+
+    if (criticalFiles.length > 0) {
+      const fileList = criticalFiles
+        .slice(0, 2)
+        .map((s: any) => s.fileName)
+        .join(', ');
+      const more = criticalFiles.length > 2 ? ` and ${criticalFiles.length - 2} more` : '';
+      errors.push(
+        `${criticalFiles.length} file${criticalFiles.length > 1 ? 's have' : ' has'} critical security issues: ${fileList}${more}`
+      );
+    }
+
+    if (highRiskFiles.length > 0) {
+      const fileList = highRiskFiles
+        .slice(0, 2)
+        .map((s: any) => s.fileName)
+        .join(', ');
+      const more = highRiskFiles.length > 2 ? ` and ${highRiskFiles.length - 2} more` : '';
+      errors.push(
+        `${highRiskFiles.length} file${highRiskFiles.length > 1 ? 's have' : ' has'} security concerns: ${fileList}${more}`
+      );
+    }
+
+    const title = criticalFiles.length > 0 ? 'Security Issues Detected' : 'File Validation Failed';
+    const message = errors.join('. ') + '. Only secure JPEG, PNG, and WebP files are allowed.';
+
+    this.notificationService.error(title, message, 6000);
+  }
+
+  private getSecurityErrorMessage(issue: string, riskLevel: string): string {
+    // Map technical security issues to user-friendly messages
+    const errorMap: Record<string, string> = {
+      'File size': 'File too large',
+      'File type': 'Invalid file type',
+      'File extension': 'Invalid file extension',
+      'Empty files': 'Empty file not allowed',
+      'path traversal': 'Unsafe filename detected',
+      'dangerous pattern': 'Potentially harmful file',
+      mismatch: 'File type mismatch detected',
+      'validation failed': 'Security check failed',
+    };
+
+    // Find matching error message
+    for (const [key, message] of Object.entries(errorMap)) {
+      if (issue.toLowerCase().includes(key.toLowerCase())) {
+        return riskLevel === 'critical' ? `🚨 ${message}` : message;
+      }
+    }
+
+    // Fallback for unknown issues
+    return riskLevel === 'critical' ? '🚨 Critical security issue' : 'Security validation failed';
   }
 
   // Quality Validation
