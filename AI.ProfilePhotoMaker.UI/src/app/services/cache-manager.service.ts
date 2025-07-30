@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import { CacheEntry, CacheStats, ICacheManagerService } from '../interfaces/service.interfaces';
-import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
@@ -159,26 +158,5 @@ export class CacheManagerService implements ICacheManagerService {
     }
 
     // Silently clean up expired entries
-  }
-
-  /**
-   * Enable global debug methods for cache inspection (development only)
-   */
-  enableGlobalDebug(): void {
-    if (typeof window !== 'undefined' && !environment.production) {
-      (window as any).cacheStats = () => this.getCacheStats();
-      (window as any).clearCache = (key?: string) => this.forceRefresh(key);
-      (window as any).viewCache = () => {
-        const cacheData: any = {};
-        for (const [key, entry] of this.cache.entries()) {
-          cacheData[key] = {
-            expiry: new Date(entry.expiry).toISOString(),
-            lastAccessed: new Date(entry.lastAccessed).toISOString(),
-            isValid: Date.now() < entry.expiry,
-          };
-        }
-        return cacheData;
-      };
-    }
   }
 }

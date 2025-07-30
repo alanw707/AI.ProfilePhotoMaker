@@ -15,8 +15,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import { FileUploadService } from '../../../services/file-upload.service';
-import { FileUploadManagerService } from '../../../services/file-upload-manager.service';
 import { NotificationService } from '../../../services/notification.service';
+import { FileSecurityService } from '../../../services/file-security.service';
 
 // Lazy-loaded service interface
 interface FaceDetectionService {
@@ -27,19 +27,7 @@ import {
   QualityCheckError,
   QualityCheckResult,
   SelectedFileWithQuality,
-  UploadProgress,
 } from '../../../models/dashboard.types';
-
-export interface FileUploadState {
-  selectedFiles: File[];
-  selectedFilesWithQuality: SelectedFileWithQuality[];
-  isUploading: boolean;
-  uploadProgress: number;
-  isDragOver: boolean;
-  isCheckingQuality: boolean;
-  qualityCheckProgress: string;
-  qualityCheckErrors: QualityCheckError[];
-}
 
 @Component({
   selector: 'app-file-upload-section',
@@ -79,6 +67,15 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   isCheckingQuality = false;
   qualityCheckProgress = '';
   qualityCheckErrors: QualityCheckError[] = [];
+  invalidFilesFeedback: { fileName: string; reason: string }[] = [];
+
+  // Global tooltip state
+  activeTooltipError: QualityCheckError | null = null;
+  tooltipPosition: { x: number; y: number } = { x: 0, y: 0 };
+
+  // Document-level modal elements
+  private modalBackdrop: HTMLElement | null = null;
+  private modalElement: HTMLElement | null = null;
 
   // File preview cache for memory management
   private filePreviewCache = new Map<File, string>();
@@ -88,8 +85,8 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
   constructor(
     private fileUploadService: FileUploadService,
-    private fileUploadManagerService: FileUploadManagerService,
     private notificationService: NotificationService,
+    private fileSecurityService: FileSecurityService,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
     private injector: Injector
@@ -114,6 +111,12 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.cleanupFilePreviewCache();
     document.removeEventListener('click', this.closeAllPopups.bind(this));
+
+    // Clean up any open modals
+    this.removeDocumentLevelModal();
+
+    // Restore body scroll in case modal was open when component destroyed
+    document.body.style.overflow = '';
   }
 
   // File Selection Methods
@@ -166,45 +169,244 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Filter valid files
-    const validFiles = files.filter(file => this.isValidFile(file));
-    if (validFiles.length === 0) {
-      this.notificationService.error(
-        'Invalid Files',
-        'No valid image files were selected. Please select JPEG, PNG, or WebP files under 7MB.'
-      );
+    console.log('🔒 Starting security validation for', files.length, 'files...');
+
+    // Enhanced security validation using FileSecurityService
+    const validationResults = {
+      validFiles: [] as File[],
+      invalidFiles: [] as File[],
+      errors: {
+        unsupportedType: [] as string[],
+        tooLarge: [] as string[],
+        securityIssues: [] as { fileName: string; issues: string[]; riskLevel: string }[],
+      },
+    };
+
+    // Validate each file with comprehensive security checks
+    for (const file of files) {
+      try {
+        const securityValidation = await this.fileSecurityService.validateFile(file).toPromise();
+
+        if (securityValidation?.isValid) {
+          validationResults.validFiles.push(file);
+          console.log(`✅ File ${file.name} passed security validation`);
+        } else {
+          validationResults.invalidFiles.push(file);
+
+          // Categorize security issues for user-friendly error messages
+          const issues = securityValidation?.securityIssues || ['Security validation failed'];
+          const riskLevel = securityValidation?.riskLevel || 'high';
+
+          validationResults.errors.securityIssues.push({
+            fileName: file.name,
+            issues,
+            riskLevel,
+          });
+
+          // Map security issues to existing error categories for UI compatibility
+          if (issues.some(issue => issue.includes('type') || issue.includes('extension'))) {
+            validationResults.errors.unsupportedType.push(file.name);
+          }
+          if (issues.some(issue => issue.includes('size') || issue.includes('large'))) {
+            validationResults.errors.tooLarge.push(file.name);
+          }
+
+          console.warn(`❌ File ${file.name} failed security validation:`, {
+            issues,
+            riskLevel,
+          });
+        }
+      } catch (error) {
+        console.error(`Security validation error for ${file.name}:`, error);
+        validationResults.invalidFiles.push(file);
+        validationResults.errors.securityIssues.push({
+          fileName: file.name,
+          issues: ['Security validation failed due to internal error'],
+          riskLevel: 'critical',
+        });
+      }
+    }
+
+    // Update inline feedback for invalid files with enhanced security messages
+    this.invalidFilesFeedback = [];
+    validationResults.errors.unsupportedType.forEach(fileName => {
+      this.invalidFilesFeedback.push({
+        fileName,
+        reason: 'File type not allowed. Use JPEG, PNG, or WebP only',
+      });
+    });
+    validationResults.errors.tooLarge.forEach(fileName => {
+      const sizeInMB = (this.maxFileSize / (1024 * 1024)).toFixed(1);
+      this.invalidFilesFeedback.push({
+        fileName,
+        reason: `File too large. Maximum: ${sizeInMB}MB`,
+      });
+    });
+
+    // Add security-specific feedback
+    validationResults.errors.securityIssues.forEach(({ fileName, issues, riskLevel }) => {
+      // Use the most user-friendly issue message
+      const primaryIssue = issues[0] || 'Security check failed';
+      const reason = this.getSecurityErrorMessage(primaryIssue, riskLevel);
+
+      // Only add if not already covered by type/size errors
+      if (
+        !validationResults.errors.unsupportedType.includes(fileName) &&
+        !validationResults.errors.tooLarge.includes(fileName)
+      ) {
+        this.invalidFilesFeedback.push({
+          fileName,
+          reason,
+        });
+      }
+    });
+
+    // Show consolidated error notification if any files were invalid
+    if (validationResults.invalidFiles.length > 0) {
+      this.showEnhancedSecurityErrors(validationResults);
+    }
+
+    // If no valid files, return early
+    if (validationResults.validFiles.length === 0) {
       return;
     }
 
     // Add valid files to selection
-    this.selectedFiles.push(...validFiles);
+    this.selectedFiles.push(...validationResults.validFiles);
     this.filesSelected.emit(this.selectedFiles);
 
-    // Start quality validation
-    await this.validateImageQuality(validFiles);
+    console.log(
+      `🔒 Security validation complete: ${validationResults.validFiles.length} valid, ${validationResults.invalidFiles.length} rejected`
+    );
+
+    // Start quality validation for security-validated files
+    await this.validateImageQuality(validationResults.validFiles);
   }
 
-  private isValidFile(file: File): boolean {
+  private validateFile(file: File): { isValid: boolean; error?: 'type' | 'size' } {
     // Check file type
     if (!this.allowedTypes.includes(file.type)) {
-      this.notificationService.error(
-        'Invalid File Type',
-        `${file.name} is not a supported image format. Please use JPEG, PNG, or WebP files.`
-      );
-      return false;
+      return { isValid: false, error: 'type' };
     }
 
     // Check file size
     if (file.size > this.maxFileSize) {
-      const sizeInMB = (this.maxFileSize / (1024 * 1024)).toFixed(1);
-      this.notificationService.error(
-        'File Too Large',
-        `${file.name} is too large. Please use files smaller than ${sizeInMB}MB.`
-      );
-      return false;
+      return { isValid: false, error: 'size' };
     }
 
-    return true;
+    return { isValid: true };
+  }
+
+  private showConsolidatedErrors(results: any): void {
+    const errors = [];
+
+    if (results.errors.unsupportedType.length > 0) {
+      const count = results.errors.unsupportedType.length;
+      const fileList = results.errors.unsupportedType.slice(0, 3).join(', ');
+      const more = count > 3 ? ` and ${count - 3} more` : '';
+      errors.push(
+        `${count} file${count > 1 ? 's need' : ' needs'} a different format: ${fileList}${more}`
+      );
+    }
+
+    if (results.errors.tooLarge.length > 0) {
+      const count = results.errors.tooLarge.length;
+      const sizeInMB = (this.maxFileSize / (1024 * 1024)).toFixed(1);
+      const fileList = results.errors.tooLarge.slice(0, 3).join(', ');
+      const more = count > 3 ? ` and ${count - 3} more` : '';
+      errors.push(
+        `${count} file${count > 1 ? 's are' : ' is'} too large (max ${sizeInMB}MB): ${fileList}${more}`
+      );
+    }
+
+    const totalInvalid = results.invalidFiles.length;
+    const totalFiles = results.validFiles.length + totalInvalid;
+
+    this.notificationService.error(
+      'Please Check File Format',
+      errors.join('. ') + '. Supported formats: JPEG, PNG, WebP (max 7MB).',
+      5000 // Auto-close after 5 seconds
+    );
+  }
+
+  private showEnhancedSecurityErrors(results: any): void {
+    const errors = [];
+
+    if (results.errors.unsupportedType.length > 0) {
+      const count = results.errors.unsupportedType.length;
+      const fileList = results.errors.unsupportedType.slice(0, 3).join(', ');
+      const more = count > 3 ? ` and ${count - 3} more` : '';
+      errors.push(
+        `${count} file${count > 1 ? 's have' : ' has'} unsupported format: ${fileList}${more}`
+      );
+    }
+
+    if (results.errors.tooLarge.length > 0) {
+      const count = results.errors.tooLarge.length;
+      const sizeInMB = (this.maxFileSize / (1024 * 1024)).toFixed(1);
+      const fileList = results.errors.tooLarge.slice(0, 3).join(', ');
+      const more = count > 3 ? ` and ${count - 3} more` : '';
+      errors.push(
+        `${count} file${count > 1 ? 's exceed' : ' exceeds'} size limit (${sizeInMB}MB): ${fileList}${more}`
+      );
+    }
+
+    // Add security-specific errors
+    const criticalFiles = results.errors.securityIssues.filter(
+      (s: any) => s.riskLevel === 'critical'
+    );
+    const highRiskFiles = results.errors.securityIssues.filter((s: any) => s.riskLevel === 'high');
+
+    if (criticalFiles.length > 0) {
+      const fileList = criticalFiles
+        .slice(0, 2)
+        .map((s: any) => s.fileName)
+        .join(', ');
+      const more = criticalFiles.length > 2 ? ` and ${criticalFiles.length - 2} more` : '';
+      errors.push(
+        `${criticalFiles.length} file${criticalFiles.length > 1 ? 's have' : ' has'} critical security issues: ${fileList}${more}`
+      );
+    }
+
+    if (highRiskFiles.length > 0) {
+      const fileList = highRiskFiles
+        .slice(0, 2)
+        .map((s: any) => s.fileName)
+        .join(', ');
+      const more = highRiskFiles.length > 2 ? ` and ${highRiskFiles.length - 2} more` : '';
+      errors.push(
+        `${highRiskFiles.length} file${highRiskFiles.length > 1 ? 's have' : ' has'} security concerns: ${fileList}${more}`
+      );
+    }
+
+    const title = criticalFiles.length > 0 ? 'Security Issues Detected' : 'File Validation Failed';
+    const message = errors.join('. ') + '. Only secure JPEG, PNG, and WebP files are allowed.';
+
+    this.notificationService.error(title, message, 6000);
+  }
+
+  private getSecurityErrorMessage(issue: string, riskLevel: string): string {
+    // Map technical security issues to user-friendly messages
+    const errorMap: Record<string, string> = {
+      'File size': 'File too large',
+      'File type': 'Invalid file type',
+      'File extension': 'Invalid file extension',
+      'Empty files': 'Empty file not allowed',
+      'path traversal': 'Unsafe filename detected',
+      'dangerous pattern': 'Potentially harmful file',
+      mismatch: 'File type mismatch detected',
+      'validation failed': 'Security check failed',
+    };
+
+    // Find matching error message
+    for (const [key, message] of Object.entries(errorMap)) {
+      if (issue.toLowerCase().includes(key.toLowerCase())) {
+        return riskLevel === 'critical' ? `🚨 ${message}` : message;
+      }
+    }
+
+    // Fallback for unknown issues
+    return riskLevel === 'critical' ? '🚨 Critical security issue' : 'Security validation failed';
   }
 
   // Quality Validation
@@ -234,6 +436,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
               `Image resolution ${dimensions.width}x${dimensions.height} is too small. Minimum 512x512 required.`,
             ],
             warnings: [],
+            showErrorDetails: false,
           });
           continue;
         }
@@ -261,6 +464,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
             warnings: qualityResult.warnings || [],
             faceValidation: qualityResult,
             qualityScore: qualityResult.qualityScore,
+            showErrorDetails: false,
           });
         }
       } catch (error) {
@@ -270,6 +474,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
           file,
           errors: ['Failed to analyze image quality'],
           warnings: [],
+          showErrorDetails: false,
         });
       }
 
@@ -304,7 +509,8 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     if (errors.length > 0) {
       this.notificationService.error(
         'Quality Issues Found',
-        `${errors.length} image(s) failed quality validation. Please review and try again.`
+        `${errors.length} image(s) failed quality validation. Please review and try again.`,
+        8000 // 8 seconds - longer than success to account for user reading time
       );
     }
   }
@@ -457,7 +663,6 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   // Handle successful image loads (for debugging)
   onImageLoadSuccess(thumb: any, index: number) {
     // Optional: Log successful loads for debugging
-    // console.log(`✅ Image loaded successfully: ${thumb.url}`);
   }
 
   // Upload Process
@@ -542,6 +747,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     this.selectedFiles = [];
     this.selectedFilesWithQuality = [];
     this.qualityCheckErrors = [];
+    this.invalidFilesFeedback = [];
     this.filesSelected.emit(this.selectedFiles);
   }
 
@@ -587,37 +793,520 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     this.filesSelected.emit(this.selectedFiles);
   }
 
-  // Toggle popup visibility (positioning handled by CSS)
-  toggleErrorDetails(error: QualityCheckError, event: Event) {
+  // Show global tooltip with document.body level positioning
+  showGlobalTooltip(error: QualityCheckError, event: Event) {
     event.stopPropagation();
 
-    // Close other open popups
-    this.qualityCheckErrors.forEach(e => {
-      if (e !== error) {
-        e.showErrorDetails = false;
+    // Close any existing modal first
+    this.closeGlobalTooltip();
+
+    // Set active tooltip error
+    this.activeTooltipError = error;
+
+    // Create modal elements at document.body level
+    this.createDocumentLevelModal(error);
+
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+
+    // Force change detection for component state
+    this.cdr.detectChanges();
+  }
+
+  // Close global tooltip
+  closeGlobalTooltip() {
+    this.activeTooltipError = null;
+
+    // Remove document-level modal elements
+    this.removeDocumentLevelModal();
+
+    // Restore body scroll
+    document.body.style.overflow = '';
+
+    this.cdr.detectChanges();
+  }
+
+  // Simple center-modal tooltip positioning (now handled by CSS flexbox)
+  private calculateTooltipPosition(buttonElement: HTMLElement) {
+    // No positioning needed - CSS flexbox handles centering automatically
+    // Keep this method for compatibility but remove positioning logic
+    this.tooltipPosition = { x: 0, y: 0 };
+  }
+
+  // Create modal elements at document.body level with bulletproof inline positioning
+  private createDocumentLevelModal(error: QualityCheckError): void {
+    // Create backdrop element
+    this.modalBackdrop = document.createElement('div');
+    this.modalBackdrop.className = 'global-modal-backdrop';
+
+    // Apply bulletproof backdrop positioning via inline styles (bypasses ViewEncapsulation)
+    const backdropStyles = this.modalBackdrop.style;
+    backdropStyles.position = 'fixed';
+    backdropStyles.top = '0';
+    backdropStyles.left = '0';
+    backdropStyles.right = '0';
+    backdropStyles.bottom = '0';
+    backdropStyles.width = '100vw';
+    backdropStyles.height = '100vh';
+    backdropStyles.zIndex = '999998';
+    backdropStyles.display = 'flex';
+    backdropStyles.alignItems = 'center';
+    backdropStyles.justifyContent = 'center';
+    backdropStyles.flexDirection = 'column';
+    backdropStyles.background = 'rgba(0, 0, 0, 0.4)';
+    backdropStyles.backdropFilter = 'blur(4px)';
+    backdropStyles.margin = '0';
+    backdropStyles.padding = '0';
+    backdropStyles.border = 'none';
+    backdropStyles.outline = 'none';
+    backdropStyles.boxSizing = 'border-box';
+
+    // Create modal container
+    this.modalElement = document.createElement('div');
+    this.modalElement.className = 'global-error-tooltip';
+    this.modalElement.setAttribute('role', 'dialog');
+    this.modalElement.setAttribute('aria-modal', 'true');
+    this.modalElement.setAttribute('aria-labelledby', 'tooltip-title');
+    this.modalElement.setAttribute('tabindex', '-1');
+
+    // Apply bulletproof modal positioning via inline styles
+    const modalStyles = this.modalElement.style;
+    modalStyles.position = 'relative';
+    modalStyles.margin = '0';
+    modalStyles.transform = 'none';
+    modalStyles.top = 'auto';
+    modalStyles.left = 'auto';
+    modalStyles.right = 'auto';
+    modalStyles.bottom = 'auto';
+    modalStyles.width = 'min(400px, calc(100vw - 32px))';
+    modalStyles.maxHeight = 'min(480px, calc(100vh - 80px))';
+    modalStyles.maxWidth = '90vw';
+    modalStyles.minHeight = '200px';
+    modalStyles.zIndex = '999999';
+    modalStyles.background =
+      'linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(51, 65, 85, 0.96) 100%)';
+    modalStyles.border = '1px solid rgba(71, 85, 105, 0.4)';
+    modalStyles.borderRadius = '12px';
+    modalStyles.boxShadow =
+      '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 10px 20px -5px rgba(0, 0, 0, 0.3)';
+    modalStyles.backdropFilter = 'blur(20px) saturate(130%)';
+    modalStyles.display = 'flex';
+    modalStyles.flexDirection = 'column';
+    modalStyles.overflow = 'hidden';
+
+    // Build modal content
+    this.modalElement.innerHTML = this.buildModalContent(error);
+
+    // Apply comprehensive theme-aware inline styles to inner elements
+    this.applyModalContentStyles();
+
+    // Add event listeners
+    this.modalBackdrop.addEventListener('click', () => this.closeGlobalTooltip());
+    this.modalElement.addEventListener('click', e => e.stopPropagation());
+
+    // Add close button listener
+    const closeButton = this.modalElement.querySelector('.tooltip-close');
+    if (closeButton) {
+      closeButton.addEventListener('click', () => this.closeGlobalTooltip());
+    }
+
+    // Add ESC key listener
+    document.addEventListener('keydown', this.handleModalKeydown);
+
+    // Append to DOM
+    this.modalBackdrop.appendChild(this.modalElement);
+    document.body.appendChild(this.modalBackdrop);
+
+    // Focus the modal for accessibility
+    setTimeout(() => this.modalElement?.focus(), 100);
+  }
+
+  // Apply comprehensive theme-aware inline styles to modal content elements
+  private applyModalContentStyles(): void {
+    if (!this.modalElement) {
+      return;
+    }
+
+    // Detect theme (default to dark if not found)
+    const isDarkTheme =
+      !document.body.hasAttribute('data-theme') ||
+      document.body.getAttribute('data-theme') !== 'light';
+
+    // Theme color schemes
+    const colors = isDarkTheme
+      ? {
+          // Dark theme colors
+          bg: 'rgba(30, 41, 59, 0.98)',
+          bgSecondary: 'rgba(51, 65, 85, 0.96)',
+          border: 'rgba(71, 85, 105, 0.4)',
+          text: 'rgba(248, 250, 252, 0.95)',
+          textSecondary: 'rgba(203, 213, 225, 0.9)',
+          textTertiary: 'rgba(148, 163, 184, 0.8)',
+          error: 'rgba(248, 113, 113, 0.95)',
+          errorBg: 'rgba(239, 68, 68, 0.12)',
+          errorBorder: 'rgba(248, 113, 113, 0.6)',
+          warning: 'rgba(251, 191, 36, 0.95)',
+          warningBg: 'rgba(245, 158, 11, 0.12)',
+          success: 'rgba(34, 197, 94, 0.95)',
+          successBg: 'rgba(34, 197, 94, 0.08)',
+          itemBg: 'rgba(71, 85, 105, 0.15)',
+          closeBtnHover: 'rgba(255, 255, 255, 0.1)',
+        }
+      : {
+          // Light theme colors
+          bg: 'rgba(255, 255, 255, 0.98)',
+          bgSecondary: 'rgba(248, 250, 252, 0.96)',
+          border: 'rgba(0, 0, 0, 0.1)',
+          text: 'rgba(15, 23, 42, 0.95)',
+          textSecondary: 'rgba(51, 65, 85, 0.9)',
+          textTertiary: 'rgba(100, 116, 139, 0.8)',
+          error: '#dc2626',
+          errorBg: 'rgba(220, 38, 38, 0.1)',
+          errorBorder: 'rgba(220, 38, 38, 0.3)',
+          warning: '#d97706',
+          warningBg: 'rgba(217, 119, 6, 0.1)',
+          success: '#16a34a',
+          successBg: 'rgba(22, 163, 74, 0.08)',
+          itemBg: 'rgba(0, 0, 0, 0.03)',
+          closeBtnHover: 'rgba(0, 0, 0, 0.05)',
+        };
+
+    // Update main modal background for theme
+    this.modalElement.style.background = `linear-gradient(135deg, ${colors.bg} 0%, ${colors.bgSecondary} 100%)`;
+    this.modalElement.style.border = `1px solid ${colors.border}`;
+
+    // Style header
+    const header = this.modalElement.querySelector('.tooltip-header') as HTMLElement;
+    if (header) {
+      header.style.background = `linear-gradient(135deg, ${colors.errorBg} 0%, rgba(185, 28, 28, 0.05) 100%)`;
+      header.style.color = colors.error;
+      header.style.borderBottom = `1px solid ${colors.border}`;
+      header.style.padding = '12px 16px 10px 16px';
+      header.style.display = 'flex';
+      header.style.alignItems = 'center';
+      header.style.justifyContent = 'space-between';
+      header.style.fontFamily =
+        "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+      header.style.fontWeight = '600';
+      header.style.fontSize = '13px';
+      header.style.letterSpacing = '-0.02em';
+
+      // Style close button
+      const closeBtn = header.querySelector('.tooltip-close') as HTMLElement;
+      if (closeBtn) {
+        closeBtn.style.background = 'none';
+        closeBtn.style.border = 'none';
+        closeBtn.style.color = colors.textSecondary;
+        closeBtn.style.cursor = 'pointer';
+        closeBtn.style.padding = '4px';
+        closeBtn.style.borderRadius = '4px';
+        closeBtn.style.display = 'flex';
+        closeBtn.style.alignItems = 'center';
+        closeBtn.style.justifyContent = 'center';
+        closeBtn.style.transition = 'all 0.2s ease';
+
+        closeBtn.addEventListener('mouseenter', () => {
+          closeBtn.style.color = colors.text;
+          closeBtn.style.background = colors.closeBtnHover;
+        });
+        closeBtn.addEventListener('mouseleave', () => {
+          closeBtn.style.color = colors.textSecondary;
+          closeBtn.style.background = 'none';
+        });
+      }
+    }
+
+    // Style filename
+    const filename = this.modalElement.querySelector('.tooltip-filename') as HTMLElement;
+    if (filename) {
+      filename.style.fontFamily =
+        "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+      filename.style.fontSize = '11px';
+      filename.style.fontWeight = '500';
+      filename.style.color = colors.textSecondary;
+      filename.style.margin = '0 16px 12px 16px';
+      filename.style.padding = '6px 10px';
+      filename.style.background = colors.itemBg;
+      filename.style.borderRadius = '4px';
+      filename.style.wordBreak = 'break-all';
+      filename.style.borderLeft = `2px solid ${colors.errorBorder}`;
+    }
+
+    // Style sections
+    const sections = this.modalElement.querySelectorAll('.tooltip-section');
+    sections.forEach((section: Element) => {
+      const sectionEl = section as HTMLElement;
+      sectionEl.style.margin = '0 16px 16px 16px';
+
+      // Style section headers
+      const sectionHeader = sectionEl.querySelector('.section-header') as HTMLElement;
+      if (sectionHeader) {
+        sectionHeader.style.fontFamily =
+          "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+        sectionHeader.style.fontWeight = '600';
+        sectionHeader.style.fontSize = '11px';
+        sectionHeader.style.color = colors.textSecondary;
+        sectionHeader.style.margin = '0 0 8px 0';
+        sectionHeader.style.display = 'flex';
+        sectionHeader.style.alignItems = 'center';
+        sectionHeader.style.gap = '6px';
+        sectionHeader.style.textTransform = 'uppercase';
+        sectionHeader.style.letterSpacing = '0.3px';
+
+        // Color section headers based on type
+        if (sectionHeader.classList.contains('error-header')) {
+          sectionHeader.style.color = colors.error;
+        } else if (sectionHeader.classList.contains('warning-header')) {
+          sectionHeader.style.color = colors.warning;
+        } else if (sectionHeader.classList.contains('suggestions-header')) {
+          sectionHeader.style.color = colors.success;
+        }
+      }
+
+      // Style issue lists
+      const issueLists = sectionEl.querySelectorAll('.issue-list, .suggestion-list');
+      issueLists.forEach((list: Element) => {
+        const listEl = list as HTMLElement;
+        listEl.style.listStyle = 'none';
+        listEl.style.padding = '0';
+        listEl.style.margin = '0';
+
+        const items = listEl.querySelectorAll('li');
+        items.forEach((item: Element) => {
+          const itemEl = item as HTMLElement;
+          itemEl.style.fontFamily =
+            "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+          itemEl.style.fontSize = '10px';
+          itemEl.style.lineHeight = '1.4';
+          itemEl.style.color = colors.textSecondary;
+          itemEl.style.marginBottom = '6px';
+          itemEl.style.padding = '6px 10px';
+          itemEl.style.background = colors.itemBg;
+          itemEl.style.borderRadius = '4px';
+          itemEl.style.borderLeft = `2px solid ${colors.errorBorder}`;
+
+          if (itemEl.classList.contains('warning')) {
+            itemEl.style.color = colors.warning;
+            itemEl.style.borderLeftColor = colors.warning;
+          } else if (itemEl.classList.contains('suggestion-item')) {
+            itemEl.style.color = colors.success;
+            itemEl.style.background = colors.successBg;
+            itemEl.style.borderLeftColor = colors.success;
+          }
+        });
+      });
+
+      // Style quality score display
+      const scoreDisplay = sectionEl.querySelector(
+        '.quality-score-display .score-value'
+      ) as HTMLElement;
+      if (scoreDisplay) {
+        scoreDisplay.style.fontFamily =
+          "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+        scoreDisplay.style.fontSize = '20px';
+        scoreDisplay.style.fontWeight = '700';
+        scoreDisplay.style.padding = '8px 12px';
+        scoreDisplay.style.borderRadius = '6px';
+        scoreDisplay.style.textAlign = 'center';
+
+        if (scoreDisplay.classList.contains('score-red')) {
+          scoreDisplay.style.background = colors.errorBg;
+          scoreDisplay.style.color = colors.error;
+          scoreDisplay.style.border = `1px solid ${colors.errorBorder}`;
+        } else if (scoreDisplay.classList.contains('score-yellow')) {
+          scoreDisplay.style.background = colors.warningBg;
+          scoreDisplay.style.color = colors.warning;
+          scoreDisplay.style.border = `1px solid ${colors.warning}`;
+        } else if (scoreDisplay.classList.contains('score-green')) {
+          scoreDisplay.style.background = colors.successBg;
+          scoreDisplay.style.color = colors.success;
+          scoreDisplay.style.border = `1px solid ${colors.success}`;
+        }
       }
     });
 
-    error.showErrorDetails = !error.showErrorDetails;
+    // Style scrollable content
+    const content = this.modalElement.querySelector('.tooltip-content') as HTMLElement;
+    if (content) {
+      content.style.flex = '1';
+      content.style.overflowY = 'auto';
+      content.style.overflowX = 'hidden';
+      content.style.minHeight = '0';
+
+      // Custom scrollbar
+      const scrollbarColor = isDarkTheme ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
+      const scrollbarTrack = isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+
+      content.style.scrollbarWidth = 'thin';
+      content.style.scrollbarColor = scrollbarColor + ' ' + scrollbarTrack;
+    }
   }
 
-  // Close all error detail popups
+  // Remove modal elements from document.body
+  private removeDocumentLevelModal(): void {
+    if (this.modalBackdrop) {
+      // Remove event listeners
+      document.removeEventListener('keydown', this.handleModalKeydown);
+
+      // Remove from DOM
+      document.body.removeChild(this.modalBackdrop);
+
+      // Clear references
+      this.modalBackdrop = null;
+      this.modalElement = null;
+    }
+  }
+
+  // Handle keydown for document-level modal
+  private handleModalKeydown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      this.closeGlobalTooltip();
+      event.preventDefault();
+    }
+  };
+
+  // Build modal HTML content
+  private buildModalContent(error: QualityCheckError): string {
+    const errorsList =
+      error.errors?.map(err => `<li class="issue-item error">${err}</li>`).join('') || '';
+    const warningsList =
+      error.warnings?.map(warn => `<li class="issue-item warning">${warn}</li>`).join('') || '';
+    const suggestionsList =
+      error.qualityScore?.suggestions
+        ?.map(sug => `<li class="suggestion-item">${sug}</li>`)
+        .join('') || '';
+
+    const scoreClass = error.qualityScore
+      ? error.qualityScore.overall < 50
+        ? 'score-red'
+        : error.qualityScore.overall < 75
+          ? 'score-yellow'
+          : 'score-green'
+      : 'score-red';
+
+    return `
+      <!-- Tooltip Header -->
+      <div class="tooltip-header">
+        <div class="tooltip-title" id="tooltip-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="m9,9a3,3 0 0 1 6,0c0,2 -3,3 -3,3"></path>
+            <path d="m12,17h.01"></path>
+          </svg>
+          Image Issues
+        </div>
+        <button class="tooltip-close" title="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Scrollable Content -->
+      <div class="tooltip-content">
+        <!-- File Name -->
+        <div class="tooltip-filename">${error.fileName}</div>
+
+        ${
+          error.errors?.length
+            ? `
+        <!-- Errors Section -->
+        <div class="tooltip-section">
+          <div class="section-header error-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+            Issues (${error.errors.length})
+          </div>
+          <ul class="issue-list">${errorsList}</ul>
+        </div>`
+            : ''
+        }
+
+        ${
+          error.warnings?.length
+            ? `
+        <!-- Warnings Section -->
+        <div class="tooltip-section">
+          <div class="section-header warning-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m21,16l-9,-15l-9,15l18,0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            Warnings (${error.warnings.length})
+          </div>
+          <ul class="issue-list">${warningsList}</ul>
+        </div>`
+            : ''
+        }
+
+        ${
+          error.qualityScore
+            ? `
+        <!-- Quality Score Section -->
+        <div class="tooltip-section">
+          <div class="section-header score-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"></path>
+              <path d="M21 11H17a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"></path>
+              <path d="M7 21V10a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v11"></path>
+            </svg>
+            Quality Score
+          </div>
+          <div class="quality-score-display">
+            <div class="score-value ${scoreClass}">${error.qualityScore.overall}/100</div>
+          </div>
+        </div>`
+            : ''
+        }
+
+        ${
+          error.qualityScore?.suggestions?.length
+            ? `
+        <!-- Suggestions Section -->
+        <div class="tooltip-section">
+          <div class="section-header suggestions-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="m9,12l2,2l4,-4"></path>
+            </svg>
+            Suggestions (${error.qualityScore.suggestions.length})
+          </div>
+          <ul class="suggestion-list">${suggestionsList}</ul>
+        </div>`
+            : ''
+        }
+      </div>
+    `;
+  }
+
+  // Close global tooltip when clicking outside
   private closeAllPopups(event?: Event) {
     if (event) {
-      // Don't close if clicking on popup or its children
+      // Don't close if clicking on global tooltip or info icon buttons
       const target = event.target as HTMLElement;
-      if (target.closest('.error-details-popup') || target.closest('.error-info-btn')) {
+      if (target.closest('.global-error-tooltip') || target.closest('.info-icon-btn')) {
         return;
       }
     }
 
-    this.qualityCheckErrors.forEach(error => {
-      error.showErrorDetails = false;
-    });
+    // Close global tooltip (this will restore body scroll)
+    this.closeGlobalTooltip();
 
+    // Legacy: Close any remaining old-style popups (for compatibility)
     this.selectedFilesWithQuality.forEach(file => {
       file.showDetails = false;
     });
+  }
+
+  // Inline Feedback Management
+  dismissInlineFeedback(): void {
+    this.invalidFilesFeedback = [];
+    this.cdr.detectChanges();
   }
 
   // Helper Methods
@@ -671,6 +1360,51 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     }
 
     return message;
+  }
+
+  // Compact suggestion utility for UX-optimized tooltips
+  getCompactSuggestion(suggestion: string): string {
+    const suggestionMap: Record<string, string> = {
+      'Try uploading a clearer photo with better lighting.': 'Use better lighting',
+      'Upload a closer headshot photo.': 'Take closer photo',
+      'Ensure only one person is in the photo.': 'Remove other people',
+      'Use a higher resolution image.': 'Higher resolution',
+      'Take photo with better focus.': 'Better focus needed',
+      'Improve lighting conditions.': 'Better lighting',
+      'Remove sunglasses or accessories covering face.': 'Remove accessories',
+    };
+
+    // Return mapped suggestion if found, otherwise truncate
+    if (suggestionMap[suggestion]) {
+      return suggestionMap[suggestion];
+    }
+
+    // Truncate suggestions longer than 25 characters for tooltip
+    if (suggestion.length > 25) {
+      return suggestion.substring(0, 22) + '...';
+    }
+
+    return suggestion;
+  }
+
+  // Truncate filename for better card layout consistency (kept for compatibility)
+  truncateFilename(filename: string): string {
+    if (!filename) {
+      return '';
+    }
+
+    // Extract name and extension
+    const lastDotIndex = filename.lastIndexOf('.');
+    const name = lastDotIndex > -1 ? filename.substring(0, lastDotIndex) : filename;
+    const extension = lastDotIndex > -1 ? filename.substring(lastDotIndex) : '';
+
+    // Truncate to max 12 characters for the name part
+    const maxNameLength = 12;
+    if (name.length > maxNameLength) {
+      return name.substring(0, maxNameLength) + '...' + extension;
+    }
+
+    return filename;
   }
 
   // UI State Getters

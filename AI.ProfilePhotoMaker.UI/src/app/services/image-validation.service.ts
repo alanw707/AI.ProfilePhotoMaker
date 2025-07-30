@@ -65,8 +65,6 @@ export class ImageValidationService {
       };
     }
 
-    console.log(`🔍 Validating image URL: ${correctedUrl} (original: ${url})`);
-
     try {
       // Use HEAD request to check if image exists without downloading it
       const controller = new AbortController();
@@ -96,7 +94,6 @@ export class ImageValidationService {
       // Cache the result
       this.cacheResult(correctedUrl, result);
 
-      console.log(`✅ Image validation result for ${correctedUrl}:`, result);
       return result;
     } catch (error: any) {
       console.warn(`❌ Image validation failed for ${correctedUrl}:`, error);
@@ -120,8 +117,6 @@ export class ImageValidationService {
    * Returns detailed validation summary including repair suggestions
    */
   async validateImageUrls(urls: string[]): Promise<ImageValidationSummary> {
-    console.log(`🔍 Validating ${urls.length} image URLs...`);
-
     const validationPromises = urls.map(url => this.validateImageUrl(url));
     const results = await Promise.all(validationPromises);
 
@@ -203,7 +198,9 @@ export class ImageValidationService {
 
   private isCacheValid(url: string): boolean {
     const cached = this.validationCache.get(url) as any;
-    if (!cached) return false;
+    if (!cached) {
+      return false;
+    }
 
     const age = Date.now() - (cached.timestamp || 0);
     return age < this.CACHE_TTL;
@@ -279,7 +276,9 @@ export class ImageValidationService {
    * Skips validation for relative URLs and known-good patterns to improve performance
    */
   private shouldSkipValidation(url: string): boolean {
-    if (!url) return true;
+    if (!url) {
+      return true;
+    }
 
     // Skip validation for relative URLs (they go through proxy)
     if (
@@ -303,7 +302,9 @@ export class ImageValidationService {
    * Fixes the architectural issue where frontend URLs don't route through the backend
    */
   private correctImageUrl(url: string): string {
-    if (!url) return url;
+    if (!url) {
+      return url;
+    }
 
     // If it's already a relative path, keep it as is
     if (url.startsWith('/')) {

@@ -11,7 +11,7 @@
         <p>View, download, and manage all your generated and enhanced photos</p>
         <div class="retention-info">
           <small class="text-muted">
-            📅 AI headshots stored for 30 days • Input photos deleted after 7 days • 
+            📅 AI headshots stored for 30 days • Input photos deleted after 7 days •
             <strong>Manage your data in account settings</strong>
           </small>
         </div>
@@ -23,7 +23,6 @@
         <p>Loading your photos...</p>
       </div>
 
-
       <!-- Gallery Component -->
       <section class="gallery-section" *ngIf="!isLoading" [class.downloading]="isDownloading">
         <app-photo-gallery
@@ -34,8 +33,7 @@
           (imageDownload)="onImageDownload($event)"
           (imageShare)="onImageShare($event)"
           (imageDelete)="onImageDelete($event)"
-          (bulkDownload)="onBulkDownload($event)">
-        </app-photo-gallery>
+          (bulkDownload)="onBulkDownload($event)"></app-photo-gallery>
       </section>
 
       <!-- Empty State -->
@@ -43,21 +41,24 @@
         <div class="empty-state">
           <div class="empty-icon">🖼️</div>
           <h3>No Photos Yet</h3>
-          <p>Start by uploading photos and generating professional headshots in the Studio, or enhance existing photos with our AI enhancement tools.</p>
+          <p>
+            Start by uploading photos and generating professional headshots in the Studio, or enhance existing photos
+            with our AI enhancement tools.
+          </p>
           <div class="empty-actions">
-            <button class="btn btn-primary" routerLink="/dashboard">
+            <button class="btn btn-primary" routerLink="/app/dashboard">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="7" height="9" stroke="currentColor" stroke-width="2"/>
-                <rect x="13" y="3" width="8" height="5" stroke="currentColor" stroke-width="2"/>
-                <rect x="13" y="12" width="8" height="9" stroke="currentColor" stroke-width="2"/>
-                <rect x="3" y="16" width="7" height="5" stroke="currentColor" stroke-width="2"/>
+                <rect x="3" y="3" width="7" height="9" stroke="currentColor" stroke-width="2" />
+                <rect x="13" y="3" width="8" height="5" stroke="currentColor" stroke-width="2" />
+                <rect x="13" y="12" width="8" height="9" stroke="currentColor" stroke-width="2" />
+                <rect x="3" y="16" width="7" height="5" stroke="currentColor" stroke-width="2" />
               </svg>
               Go to Studio
             </button>
-            <button class="btn btn-outline" routerLink="/enhance">
+            <button class="btn btn-outline" routerLink="/app/enhance">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+                <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2" />
               </svg>
               Enhance Photos
             </button>
@@ -83,7 +84,7 @@
             <div class="progress-fill" [style.width.%]="downloadProgress"></div>
           </div>
           <div class="progress-info">
-            <span class="progress-percent">{{downloadProgress}}%</span>
+            <span class="progress-percent">{{ downloadProgress }}%</span>
           </div>
         </div>
       </div>

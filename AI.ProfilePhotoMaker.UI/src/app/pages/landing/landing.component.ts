@@ -1,0 +1,972 @@
+import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { Meta, Title } from '@angular/platform-browser';
+import { animate, state, style, transition, trigger } from '@angular/animations';
+import { Observable, Subscription } from 'rxjs';
+import { NavigationService } from '../../services/navigation.service';
+import { ThemeService } from '../../services/theme.service';
+import { CreditPackage, CreditService } from '../../services/credit.service';
+import { Style, StyleService } from '../../services/style.service';
+import { ConfigService } from '../../services/config.service';
+
+interface Plan {
+  name: string;
+  price: string;
+  originalPrice?: string;
+  features: string[];
+  recommended?: boolean;
+  creditCount: string;
+}
+
+interface Testimonial {
+  name: string;
+  role: string;
+  content: string;
+  avatar: string;
+  rating: number;
+}
+
+interface FAQ {
+  question: string;
+  answer: string;
+  open?: boolean;
+}
+
+interface StyledPhoto {
+  id: number;
+  imageUrl: string;
+  style: string;
+  category: string;
+  description: string;
+  persona: string;
+}
+
+@Component({
+  selector: 'app-landing',
+  standalone: true,
+  imports: [CommonModule, RouterModule],
+  templateUrl: './landing.component.html',
+  styleUrls: ['./landing.component.sass'],
+  animations: [
+    trigger('fadeInUp', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateY(20px)' }),
+        animate('0.6s ease-out', style({ opacity: 1, transform: 'translateY(0)' })),
+      ]),
+    ]),
+    trigger('fadeIn', [
+      transition(':enter', [
+        style({ opacity: 0 }),
+        animate('0.6s ease-out', style({ opacity: 1 })),
+      ]),
+    ]),
+  ],
+})
+export class LandingComponent implements OnInit, OnDestroy {
+  isScrolled = false;
+  mobileMenuOpen = false;
+  currentBeforeAfterIndex = 0;
+  currentTestimonialIndex = 0;
+  isComparisonDragging = false;
+  comparisonPosition = 50;
+  newsletterEmail = '';
+  showThankYou = false;
+  showNotFound = false;
+
+  // Theme-related properties
+  currentTheme$!: Observable<string>;
+  private themeSubscription: Subscription = new Subscription();
+
+  // Styled photos showcase - removed carousel, now using grid
+
+  @ViewChild('comparisonSlider') comparisonSlider!: ElementRef;
+
+  features = [
+    {
+      icon: '🤖',
+      title: 'AI-Powered Enhancement',
+      description:
+        'Advanced AI technology that transforms your casual photos into professional headshots',
+    },
+    {
+      icon: '🎨',
+      title: 'Multiple Style Options',
+      description:
+        'Choose from 20+ professional styles including LinkedIn, corporate, creative, and more',
+    },
+    {
+      icon: '⚡',
+      title: 'Instant Results',
+      description: 'Get your enhanced photos in minutes, not hours or days',
+    },
+    {
+      icon: '🔒',
+      title: 'Privacy First',
+      description: 'Your photos are encrypted and automatically deleted after processing',
+    },
+    {
+      icon: '📱',
+      title: 'Works Everywhere',
+      description: 'Access from any device - desktop, tablet, or mobile',
+    },
+    {
+      icon: '💎',
+      title: 'HD Quality',
+      description: 'High-resolution outputs perfect for all professional platforms',
+    },
+  ];
+
+  plans: Plan[] = [];
+  isLoadingPackages = true;
+
+  testimonials: Testimonial[] = [
+    {
+      name: 'Sarah Johnson',
+      role: 'Marketing Director',
+      content:
+        'The AI transformed my casual selfie into a professional headshot that looks like it was taken in a studio. Amazing!',
+      avatar: '👩‍💼',
+      rating: 5,
+    },
+    {
+      name: 'Michael Chen',
+      role: 'Software Engineer',
+      content:
+        'Finally updated my LinkedIn photo after years. The quality is incredible and it only took 2 minutes!',
+      avatar: '👨‍💻',
+      rating: 5,
+    },
+    {
+      name: 'Emily Rodriguez',
+      role: 'Freelance Designer',
+      content:
+        'I use different styles for different platforms. The variety and quality are unmatched. Worth every penny!',
+      avatar: '👩‍🎨',
+      rating: 5,
+    },
+  ];
+
+  faqs: FAQ[] = [
+    {
+      question: 'How does the AI enhancement work?',
+      answer:
+        'Our advanced AI analyzes your photo, enhances facial features, improves lighting, and applies professional styling while maintaining your natural appearance. The process typically takes 1-2 minutes per photo.',
+    },
+    {
+      question: 'What photo formats are supported?',
+      answer:
+        'We support all major image formats including JPG, PNG, WEBP, and HEIF. Photos should be at least 512x512 pixels for best results.',
+    },
+    {
+      question: 'Are my photos safe and private?',
+      answer:
+        'Absolutely! All photos are encrypted during upload and processing. We automatically delete your original photos after 24 hours and never share your data with third parties.',
+    },
+    {
+      question: 'Can I use the photos commercially?',
+      answer:
+        'Yes! You have full commercial rights to all enhanced photos. Use them for LinkedIn, resumes, websites, business cards, or any other purpose.',
+    },
+    {
+      question: "What if I'm not satisfied with the results?",
+      answer:
+        "We offer a 100% satisfaction guarantee. If you're not happy with your enhanced photos, contact us within 7 days for a full refund.",
+    },
+    {
+      question: 'Do you offer team or enterprise plans?',
+      answer:
+        'Yes! We have custom plans for teams and enterprises with bulk pricing, API access, and dedicated support. Contact us for more information.',
+    },
+  ];
+
+  styledPhotos: StyledPhoto[] = [];
+  availableStyles: Style[] = [];
+  isLoadingStyles = true;
+  stylesLoadError = false;
+
+  stats = [
+    { value: '2,847+', label: 'Happy Customers' },
+    { value: '4.9/5', label: 'Average Rating' },
+    { value: '< 2min', label: 'Processing Time' },
+    { value: '100%', label: 'Privacy Guaranteed' },
+  ];
+
+  constructor(
+    private meta: Meta,
+    private title: Title,
+    public router: Router,
+    private route: ActivatedRoute,
+    public navigation: NavigationService,
+    public themeService: ThemeService,
+    private creditService: CreditService,
+    private styleService: StyleService,
+    private config: ConfigService
+  ) {
+    this.currentTheme$ = this.themeService.theme$;
+  }
+
+  ngOnInit(): void {
+    this.setupSEO();
+    this.loadPackagesFromDatabase();
+    this.loadAvailableStyles();
+    this.startTestimonialRotation();
+    this.observeElements();
+    this.handleRouteData();
+  }
+
+  ngOnDestroy(): void {
+    this.themeSubscription.unsubscribe();
+  }
+
+  toggleTheme(): void {
+    this.themeService.toggleTheme();
+  }
+
+  loadPackagesFromDatabase(): void {
+    this.isLoadingPackages = true;
+    this.creditService.getCreditPackages().subscribe({
+      next: response => {
+        if (response && response.success && response.data) {
+          // Map database packages to landing page format
+          this.plans = response.data.map((pkg: CreditPackage) => ({
+            name: pkg.name.replace(' Pack', ''), // Remove "Pack" suffix
+            price: `$${Math.floor(pkg.price)}`, // Format price
+            originalPrice: pkg.bonusCredits > 0 ? `$${Math.floor(pkg.price + 10)}` : undefined,
+            features: this.getPackageFeatures(pkg),
+            recommended: pkg.name === 'Professional Pack',
+            creditCount: `${pkg.totalCredits} credits`,
+          }));
+        }
+      },
+      error: error => {
+        console.error('Failed to load packages:', error);
+        // Fallback to default packages if loading fails
+        this.setDefaultPackages();
+      },
+      complete: () => {
+        this.isLoadingPackages = false;
+      },
+    });
+  }
+
+  private getPackageFeatures(pkg: CreditPackage): string[] {
+    if (pkg.name === 'Starter Pack') {
+      return [
+        `${pkg.totalCredits} AI-enhanced photos`,
+        'Basic styles',
+        'Standard resolution',
+        'Email support',
+      ];
+    } else if (pkg.name === 'Professional Pack') {
+      return [
+        `${pkg.totalCredits} AI-enhanced photos`,
+        'All premium styles',
+        'HD resolution',
+        'Priority processing',
+        'Download all formats',
+      ];
+    } else if (pkg.name === 'Studio Pack') {
+      return [
+        `${pkg.totalCredits} AI-enhanced photos`,
+        'All premium styles',
+        'HD+ resolution',
+        'Priority support',
+        'Advanced editing',
+        'Commercial license',
+      ];
+    }
+    return [];
+  }
+
+  private setDefaultPackages(): void {
+    this.plans = [
+      {
+        name: 'Starter',
+        price: '$9',
+        features: ['50 AI-enhanced photos', 'Basic styles', 'Standard resolution', 'Email support'],
+        creditCount: '50 credits',
+      },
+      {
+        name: 'Professional',
+        price: '$19',
+        originalPrice: '$29',
+        features: [
+          '150 AI-enhanced photos',
+          'All premium styles',
+          'HD resolution',
+          'Priority processing',
+          'Download all formats',
+        ],
+        recommended: true,
+        creditCount: '150 credits',
+      },
+      {
+        name: 'Studio',
+        price: '$39',
+        features: [
+          '400 AI-enhanced photos',
+          'All premium styles',
+          'HD+ resolution',
+          'Priority support',
+          'Advanced editing',
+          'Commercial license',
+        ],
+        creditCount: '400 credits',
+      },
+    ];
+  }
+
+  setupSEO(): void {
+    // Set page title
+    this.title.setTitle(
+      'AI Profile Photo Maker - Transform Your Photos into Professional Headshots | Instant AI Enhancement'
+    );
+
+    // Meta tags
+    this.meta.updateTag({
+      name: 'description',
+      content:
+        'Create stunning professional profile photos with AI in seconds. Perfect for LinkedIn, dating apps, resumes, and social media. Transform casual selfies into polished headshots. Try free - no credit card required.',
+    });
+    this.meta.updateTag({
+      name: 'keywords',
+      content:
+        'AI profile photo maker, professional headshot generator, LinkedIn photo AI, AI photo enhancement, profile picture creator, headshot AI tool, professional photo maker, AI portrait generator, business photo creator, social media profile photo',
+    });
+    this.meta.updateTag({ name: 'author', content: 'AI Profile Photo Maker' });
+    this.meta.updateTag({ name: 'robots', content: 'index, follow' });
+    this.meta.updateTag({ name: 'viewport', content: 'width=device-width, initial-scale=1' });
+
+    // Open Graph tags
+    this.meta.updateTag({
+      property: 'og:title',
+      content: 'AI Profile Photo Maker - Professional Headshots in Minutes',
+    });
+    this.meta.updateTag({
+      property: 'og:description',
+      content:
+        'Transform your casual photos into professional headshots with AI. Perfect for LinkedIn, resumes, and social media. Try free today!',
+    });
+    this.meta.updateTag({ property: 'og:type', content: 'website' });
+    this.meta.updateTag({ property: 'og:url', content: 'https://aiprofilephotomaker.com' });
+    this.meta.updateTag({
+      property: 'og:image',
+      content: 'https://aiprofilephotomaker.com/assets/og-image.jpg',
+    });
+    this.meta.updateTag({ property: 'og:image:width', content: '1200' });
+    this.meta.updateTag({ property: 'og:image:height', content: '630' });
+    this.meta.updateTag({ property: 'og:site_name', content: 'AI Profile Photo Maker' });
+
+    // Twitter Card tags
+    this.meta.updateTag({ name: 'twitter:card', content: 'summary_large_image' });
+    this.meta.updateTag({
+      name: 'twitter:title',
+      content: 'AI Profile Photo Maker - Create Professional Headshots with AI',
+    });
+    this.meta.updateTag({
+      name: 'twitter:description',
+      content:
+        'Transform casual photos into professional headshots in seconds. Perfect for LinkedIn, dating apps & social media.',
+    });
+    this.meta.updateTag({
+      name: 'twitter:image',
+      content: 'https://aiprofilephotomaker.com/assets/twitter-card.jpg',
+    });
+    this.meta.updateTag({ name: 'twitter:creator', content: '@aiprofilephoto' });
+
+    // Additional SEO tags
+    this.meta.updateTag({ name: 'theme-color', content: '#4F46E5' });
+    this.meta.updateTag({ name: 'apple-mobile-web-app-capable', content: 'yes' });
+    this.meta.updateTag({ name: 'apple-mobile-web-app-status-bar-style', content: 'default' });
+
+    // Structured data for SEO
+    const structuredData = {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: 'AI Profile Photo Maker',
+      description:
+        'Transform casual photos into professional headshots with AI technology. Create stunning LinkedIn photos, dating app profiles, and social media pictures in seconds.',
+      applicationCategory: 'PhotographyApplication',
+      operatingSystem: 'Web',
+      url: 'https://aiprofilephotomaker.com',
+      image: 'https://aiprofilephotomaker.com/assets/Logo.PNG',
+      screenshot: 'https://aiprofilephotomaker.com/assets/screenshot.jpg',
+      offers: {
+        '@type': 'AggregateOffer',
+        lowPrice: '9.99',
+        highPrice: '79.99',
+        priceCurrency: 'USD',
+        offerCount: '3',
+      },
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: '4.9',
+        reviewCount: '2847',
+        bestRating: '5',
+        worstRating: '1',
+      },
+      creator: {
+        '@type': 'Organization',
+        name: 'AI Profile Photo Maker',
+        url: 'https://aiprofilephotomaker.com',
+      },
+      datePublished: '2024-01-01',
+      featureList: [
+        'AI-powered photo enhancement',
+        '20+ professional style options',
+        'Instant processing',
+        'Privacy-first approach',
+        'HD quality output',
+        'Cross-platform compatibility',
+      ],
+    };
+
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.text = JSON.stringify(structuredData);
+    document.head.appendChild(script);
+
+    // Add FAQ structured data
+    const faqData = {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: this.faqs.map(faq => ({
+        '@type': 'Question',
+        name: faq.question,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: faq.answer,
+        },
+      })),
+    };
+
+    const faqScript = document.createElement('script');
+    faqScript.type = 'application/ld+json';
+    faqScript.text = JSON.stringify(faqData);
+    document.head.appendChild(faqScript);
+  }
+
+  @HostListener('window:scroll', [])
+  onWindowScroll(): void {
+    this.isScrolled = window.scrollY > 20;
+  }
+
+  toggleMobileMenu(): void {
+    this.mobileMenuOpen = !this.mobileMenuOpen;
+  }
+
+  toggleFAQ(index: number): void {
+    this.faqs[index].open = !this.faqs[index].open;
+  }
+
+  scrollToSection(sectionId: string): void {
+    this.navigation.scrollToSection(sectionId);
+    this.mobileMenuOpen = false;
+  }
+
+  getStarted(): void {
+    this.navigation.goToRegister();
+  }
+
+  loadAvailableStyles(): void {
+    this.isLoadingStyles = true;
+    this.stylesLoadError = false;
+
+    this.styleService.getActiveStyles().subscribe({
+      next: response => {
+        if (response.success && response.data && response.data.length > 0) {
+          console.log(`Successfully loaded ${response.data.length} styles from database`);
+          this.availableStyles = response.data;
+          this.createStyledPhotosFromStyles();
+          this.stylesLoadError = false;
+        } else {
+          console.warn('No styles found in database, using fallback data');
+          this.createFallbackStyledPhotos();
+          this.stylesLoadError = true;
+        }
+        this.isLoadingStyles = false;
+      },
+      error: error => {
+        console.error('Error loading styles from database:', error);
+        console.log('Falling back to predefined styles');
+        this.createFallbackStyledPhotos();
+        this.stylesLoadError = true;
+        this.isLoadingStyles = false;
+      },
+    });
+  }
+
+  createStyledPhotosFromStyles(): void {
+    // Create styled photos array from actual styles
+    this.styledPhotos = this.availableStyles.slice(0, 20).map((style, index) => ({
+      id: style.id,
+      imageUrl: this.config.buildStylePreviewUrl(style.name),
+      style: style.name,
+      category: this.getCategoryFromStyleName(style.name),
+      description: style.description,
+      persona: this.getPersonaFromStyleName(style.name),
+    }));
+  }
+
+  createFallbackStyledPhotos(): void {
+    // Fallback data in case styles can't be loaded
+    const fallbackStyles = [
+      {
+        name: 'Professional LinkedIn',
+        description: 'Corporate professional headshot',
+        category: 'Business',
+        persona: 'Business Executive',
+      },
+      {
+        name: 'Creative Professional',
+        description: 'Artistic and modern look',
+        category: 'Creative',
+        persona: 'Creative Designer',
+      },
+      {
+        name: 'Corporate Executive',
+        description: 'C-suite leadership presence',
+        category: 'Executive',
+        persona: 'CEO',
+      },
+      {
+        name: 'Casual Professional',
+        description: 'Approachable yet professional',
+        category: 'Relaxed',
+        persona: 'Startup Founder',
+      },
+      {
+        name: 'Classic Headshot',
+        description: 'Timeless professional look',
+        category: 'Traditional',
+        persona: 'Consultant',
+      },
+      {
+        name: 'Modern Professional',
+        description: 'Cutting-edge style',
+        category: 'Contemporary',
+        persona: 'Tech Leader',
+      },
+      {
+        name: 'Elegant Portrait',
+        description: 'Refined and polished',
+        category: 'Sophisticated',
+        persona: 'Executive Director',
+      },
+      {
+        name: 'Friendly Professional',
+        description: 'Warm and welcoming',
+        category: 'Approachable',
+        persona: 'HR Manager',
+      },
+      {
+        name: 'Confident Leader',
+        description: 'Strong leadership presence',
+        category: 'Leadership',
+        persona: 'Team Lead',
+      },
+      {
+        name: 'Artistic Expression',
+        description: 'Creative industry focused',
+        category: 'Creative',
+        persona: 'Art Director',
+      },
+      {
+        name: 'Business Casual',
+        description: 'Perfect for most industries',
+        category: 'Versatile',
+        persona: 'Manager',
+      },
+      {
+        name: 'Tech Professional',
+        description: 'Tech industry optimized',
+        category: 'Technology',
+        persona: 'Software Engineer',
+      },
+      {
+        name: 'Senior Executive',
+        description: 'High-level executive presence',
+        category: 'Leadership',
+        persona: 'VP',
+      },
+      {
+        name: 'Professional Consultant',
+        description: 'Expert and trustworthy',
+        category: 'Advisory',
+        persona: 'Senior Consultant',
+      },
+      {
+        name: 'Entrepreneur',
+        description: 'Visionary and forward-thinking',
+        category: 'Innovation',
+        persona: 'Entrepreneur',
+      },
+      {
+        name: 'Academic Professional',
+        description: 'Scholarly and approachable',
+        category: 'Education',
+        persona: 'Professor',
+      },
+      {
+        name: 'Sales Professional',
+        description: 'Trustworthy and engaging',
+        category: 'Sales',
+        persona: 'Sales Director',
+      },
+      {
+        name: 'Marketing Expert',
+        description: 'Creative and strategic',
+        category: 'Marketing',
+        persona: 'Marketing Manager',
+      },
+      {
+        name: 'Finance Professional',
+        description: 'Analytical and precise',
+        category: 'Finance',
+        persona: 'Financial Analyst',
+      },
+      {
+        name: 'Healthcare Professional',
+        description: 'Caring and competent',
+        category: 'Healthcare',
+        persona: 'Healthcare Executive',
+      },
+    ];
+
+    this.styledPhotos = fallbackStyles.map((style, index) => ({
+      id: index + 1,
+      imageUrl: this.config.buildStylePreviewUrl(style.name),
+      style: style.name,
+      category: style.category,
+      description: style.description,
+      persona: style.persona,
+    }));
+  }
+
+  getCategoryFromStyleName(styleName: string): string {
+    const name = styleName.toLowerCase();
+    if (name.includes('professional') || name.includes('linkedin')) {
+      return 'Business';
+    }
+    if (name.includes('creative') || name.includes('artistic')) {
+      return 'Creative';
+    }
+    if (name.includes('executive') || name.includes('corporate')) {
+      return 'Executive';
+    }
+    if (name.includes('casual')) {
+      return 'Relaxed';
+    }
+    if (name.includes('classic') || name.includes('traditional')) {
+      return 'Traditional';
+    }
+    if (name.includes('modern') || name.includes('contemporary')) {
+      return 'Contemporary';
+    }
+    if (name.includes('elegant') || name.includes('sophisticated')) {
+      return 'Sophisticated';
+    }
+    if (name.includes('friendly') || name.includes('approachable')) {
+      return 'Approachable';
+    }
+    if (name.includes('leader') || name.includes('leadership')) {
+      return 'Leadership';
+    }
+    if (name.includes('tech') || name.includes('technology')) {
+      return 'Technology';
+    }
+    return 'Professional';
+  }
+
+  getPersonaFromStyleName(styleName: string): string {
+    const name = styleName.toLowerCase();
+    if (name.includes('linkedin')) {
+      return 'Business Professional';
+    }
+    if (name.includes('creative')) {
+      return 'Creative Designer';
+    }
+    if (name.includes('corporate')) {
+      return 'Corporate Executive';
+    }
+    if (name.includes('executive')) {
+      return 'Senior Executive';
+    }
+    if (name.includes('casual')) {
+      return 'Startup Founder';
+    }
+    if (name.includes('classic')) {
+      return 'Consultant';
+    }
+    if (name.includes('modern')) {
+      return 'Tech Leader';
+    }
+    if (name.includes('elegant')) {
+      return 'Executive Director';
+    }
+    if (name.includes('friendly')) {
+      return 'HR Manager';
+    }
+    if (name.includes('confident')) {
+      return 'Team Lead';
+    }
+    if (name.includes('artistic')) {
+      return 'Art Director';
+    }
+    if (name.includes('tech')) {
+      return 'Software Engineer';
+    }
+    if (name.includes('entrepreneur')) {
+      return 'Entrepreneur';
+    }
+    if (name.includes('academic')) {
+      return 'Professor';
+    }
+    if (name.includes('sales')) {
+      return 'Sales Director';
+    }
+    if (name.includes('marketing')) {
+      return 'Marketing Manager';
+    }
+    if (name.includes('finance')) {
+      return 'Financial Analyst';
+    }
+    if (name.includes('healthcare')) {
+      return 'Healthcare Executive';
+    }
+    return 'Professional';
+  }
+
+  // Style card interaction for new grid layout
+  onStyleCardClick(photo: StyledPhoto, index: number): void {
+    // Trigger get started flow with style context
+    this.getStarted();
+  }
+
+  formatStyleName(styleName: string): string {
+    if (!styleName) return '';
+    return styleName
+      .split(/[-\s]+/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
+  startTestimonialRotation(): void {
+    setInterval(() => {
+      this.currentTestimonialIndex = (this.currentTestimonialIndex + 1) % this.testimonials.length;
+    }, 5000);
+  }
+
+  observeElements(): void {
+    const observer = new IntersectionObserver(
+      entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('animate-in');
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    // Observe all animatable elements
+    setTimeout(() => {
+      const elements = document.querySelectorAll('.animate-on-scroll');
+      elements.forEach(el => observer.observe(el));
+    }, 100);
+  }
+
+  startComparison(event: MouseEvent | TouchEvent): void {
+    this.isComparisonDragging = true;
+    this.updateComparisonPosition(event);
+  }
+
+  moveComparison(event: MouseEvent | TouchEvent): void {
+    if (!this.isComparisonDragging) {
+      return;
+    }
+    this.updateComparisonPosition(event);
+  }
+
+  endComparison(): void {
+    this.isComparisonDragging = false;
+  }
+
+  updateComparisonPosition(event: MouseEvent | TouchEvent): void {
+    if (!this.comparisonSlider) {
+      return;
+    }
+
+    const rect = this.comparisonSlider.nativeElement.getBoundingClientRect();
+    const x = event instanceof MouseEvent ? event.clientX : event.touches[0].clientX;
+    const position = ((x - rect.left) / rect.width) * 100;
+
+    this.comparisonPosition = Math.max(0, Math.min(100, position));
+  }
+
+  subscribeNewsletter(): void {
+    if (this.newsletterEmail && this.newsletterEmail.includes('@')) {
+      // Here you would normally send the email to your backend
+      this.showThankYou = true;
+      this.newsletterEmail = '';
+
+      setTimeout(() => {
+        this.showThankYou = false;
+      }, 5000);
+    }
+  }
+
+  handleRouteData(): void {
+    // Handle route data for scrolling and special views
+    this.route.data.subscribe(data => {
+      if (data['scrollTo']) {
+        setTimeout(() => {
+          this.scrollToSection(data['scrollTo']);
+        }, 500);
+      }
+
+      if (data['showNotFound']) {
+        this.showNotFound = true;
+      }
+
+      // Update meta tags if provided
+      if (data['meta']) {
+        if (data['meta']['description']) {
+          this.meta.updateTag({ name: 'description', content: data['meta']['description'] });
+        }
+        if (data['meta']['keywords']) {
+          this.meta.updateTag({ name: 'keywords', content: data['meta']['keywords'] });
+        }
+      }
+    });
+  }
+
+  navigateToLogin(): void {
+    this.navigation.goToLogin();
+  }
+
+  navigateToDashboard(): void {
+    this.navigation.goToDashboard();
+  }
+
+  navigateToPricing(): void {
+    this.navigation.goToPricing();
+  }
+
+  onImageError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+
+    // Extract style name from alt text or src URL
+    const altText = img.alt || img.src || 'Professional Style';
+    const styleName = this.extractStyleNameFromImageSource(altText);
+
+    // Generate a unique, style-specific SVG placeholder
+    const placeholderSvg = this.generateStyleSpecificPlaceholder(styleName);
+
+    // Convert to base64 data URI
+    img.src = 'data:image/svg+xml;base64,' + btoa(placeholderSvg);
+  }
+
+  private extractStyleNameFromImageSource(source: string): string {
+    // Extract style name from various sources (alt text, URL, etc.)
+    let styleName = 'Professional Style';
+
+    if (source.includes('/style-previews/')) {
+      // Extract from URL path
+      const match = source.match(/\/style-previews\/([^.]+)/);
+      if (match) {
+        styleName = match[1].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      }
+    } else {
+      // Clean up alt text
+      styleName =
+        source
+          .replace(' style example', '')
+          .replace(' thumbnail', '')
+          .replace('style-previews/', '')
+          .replace(/\.(jpg|png|webp)$/, '')
+          .replace(/-/g, ' ')
+          .replace(/\b\w/g, l => l.toUpperCase()) || 'Professional Style';
+    }
+
+    return styleName;
+  }
+
+  private generateStyleSpecificPlaceholder(styleName: string): string {
+    // Generate unique colors and patterns based on style name
+    const colors = this.getStyleSpecificColors(styleName);
+    const pattern = this.getStyleSpecificPattern(styleName);
+
+    return `<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="grad-${this.hashCode(styleName)}" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:${colors.primary};stop-opacity:1" />
+          <stop offset="100%" style="stop-color:${colors.secondary};stop-opacity:1" />
+        </linearGradient>
+        ${pattern.defs}
+      </defs>
+      <rect width="400" height="400" fill="url(#grad-${this.hashCode(styleName)})"/>
+      ${pattern.elements}
+      <text x="50%" y="85%" font-family="Arial, sans-serif" font-size="16" font-weight="500" fill="${colors.text}" text-anchor="middle" dominant-baseline="middle">${styleName}</text>
+    </svg>`;
+  }
+
+  private getStyleSpecificColors(styleName: string): {
+    primary: string;
+    secondary: string;
+    text: string;
+  } {
+    const hash = this.hashCode(styleName);
+    const colorSchemes = [
+      { primary: '#3B82F6', secondary: '#1D4ED8', text: '#E5E7EB' }, // Blue
+      { primary: '#10B981', secondary: '#059669', text: '#E5E7EB' }, // Green
+      { primary: '#8B5CF6', secondary: '#7C3AED', text: '#E5E7EB' }, // Purple
+      { primary: '#F59E0B', secondary: '#D97706', text: '#1F2937' }, // Amber
+      { primary: '#EF4444', secondary: '#DC2626', text: '#E5E7EB' }, // Red
+      { primary: '#6B7280', secondary: '#4B5563', text: '#E5E7EB' }, // Gray
+      { primary: '#EC4899', secondary: '#DB2777', text: '#E5E7EB' }, // Pink
+      { primary: '#14B8A6', secondary: '#0D9488', text: '#E5E7EB' }, // Teal
+    ];
+
+    return colorSchemes[Math.abs(hash) % colorSchemes.length];
+  }
+
+  private getStyleSpecificPattern(styleName: string): { defs: string; elements: string } {
+    const hash = this.hashCode(styleName);
+    const patterns = [
+      {
+        defs: '',
+        elements:
+          '<circle cx="200" cy="150" r="60" fill="white" opacity="0.15"/><rect x="140" y="240" width="120" height="80" rx="8" fill="white" opacity="0.15"/>',
+      },
+      {
+        defs: '',
+        elements:
+          '<polygon points="200,100 250,180 150,180" fill="white" opacity="0.12"/><rect x="160" y="250" width="80" height="100" rx="12" fill="white" opacity="0.12"/>',
+      },
+      {
+        defs: '',
+        elements:
+          '<rect x="150" y="120" width="100" height="100" rx="50" fill="white" opacity="0.1"/><rect x="125" y="240" width="150" height="90" rx="15" fill="white" opacity="0.1"/>',
+      },
+      {
+        defs: '',
+        elements:
+          '<ellipse cx="200" cy="160" rx="70" ry="50" fill="white" opacity="0.13"/><rect x="130" y="230" width="140" height="110" rx="10" fill="white" opacity="0.13"/>',
+      },
+    ];
+
+    return patterns[Math.abs(hash) % patterns.length];
+  }
+
+  private hashCode(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return hash;
+  }
+}

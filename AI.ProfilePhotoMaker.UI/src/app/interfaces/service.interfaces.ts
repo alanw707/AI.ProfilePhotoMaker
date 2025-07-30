@@ -68,7 +68,6 @@ export interface ICacheManagerService {
   shouldDebounceRequest(requestKey: string, debounceMs: number): boolean;
   forceRefresh(cacheKey?: string): void;
   getCacheStats(): CacheStats;
-  enableGlobalDebug(): void;
 }
 
 // Model State Service Interface
@@ -89,7 +88,6 @@ export interface IModelStateService {
     uploadedImages: number
   ): boolean;
   getModelStatusFromData(modelRequestsData: any, trainingStatus: any): ModelStatusInfo;
-  enableGlobalDebug(): void;
 }
 
 // Fallback Operations Service Interfaces
@@ -139,7 +137,6 @@ export interface IFallbackOperationsService {
   getFallbackTracker(): FallbackTracker;
   markFilesystemCheckCompleted(): void;
   markModelDiscoveryCompleted(): void;
-  enableGlobalDebug(): void;
 }
 
 // Dashboard State Service Interface
@@ -173,7 +170,6 @@ export interface IDashboardStateService {
   forceRefresh(): void;
   invalidateAndRefreshImages(): void;
   refreshGeneratedPhotosCount(): void;
-  enableGlobalDebug(): void;
 }
 
 // Service Configuration Interface
@@ -200,9 +196,7 @@ export interface ServiceResult<T> {
 }
 
 // Common service operation interfaces
-export interface IServiceWithDebug {
-  enableGlobalDebug(): void;
-}
+export interface IServiceWithDebug {}
 
 export interface IServiceWithCache {
   invalidateCache(): void;

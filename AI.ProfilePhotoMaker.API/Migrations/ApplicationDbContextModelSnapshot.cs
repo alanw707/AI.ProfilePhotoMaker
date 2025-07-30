@@ -148,7 +148,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 1,
                             BonusCredits = 0,
-                            CreatedAt = new DateTime(2025, 7, 14, 12, 41, 23, 771, DateTimeKind.Utc).AddTicks(2240),
+                            CreatedAt = new DateTime(2025, 7, 29, 11, 15, 1, 759, DateTimeKind.Utc).AddTicks(5635),
                             Credits = 50,
                             Description = "Perfect for trying out custom training and styled generations",
                             DisplayOrder = 1,
@@ -160,7 +160,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 2,
                             BonusCredits = 30,
-                            CreatedAt = new DateTime(2025, 7, 14, 12, 41, 23, 771, DateTimeKind.Utc).AddTicks(2243),
+                            CreatedAt = new DateTime(2025, 7, 29, 11, 15, 1, 759, DateTimeKind.Utc).AddTicks(5638),
                             Credits = 120,
                             Description = "Most popular - great for professionals",
                             DisplayOrder = 2,
@@ -172,25 +172,13 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 3,
                             BonusCredits = 100,
-                            CreatedAt = new DateTime(2025, 7, 14, 12, 41, 23, 771, DateTimeKind.Utc).AddTicks(2245),
+                            CreatedAt = new DateTime(2025, 7, 29, 11, 15, 1, 759, DateTimeKind.Utc).AddTicks(5640),
                             Credits = 300,
                             Description = "Best value for content creators and businesses",
                             DisplayOrder = 3,
                             IsActive = true,
                             Name = "Studio Pack",
                             Price = 39.99m
-                        },
-                        new
-                        {
-                            Id = 4,
-                            BonusCredits = 250,
-                            CreatedAt = new DateTime(2025, 7, 14, 12, 41, 23, 771, DateTimeKind.Utc).AddTicks(2248),
-                            Credits = 750,
-                            Description = "Maximum credits for agencies and enterprises",
-                            DisplayOrder = 4,
-                            IsActive = true,
-                            Name = "Enterprise Pack",
-                            Price = 79.99m
                         });
                 });
 

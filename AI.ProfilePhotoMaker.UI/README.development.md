@@ -138,6 +138,12 @@ dotnet run
    - **Cause**: Missing dependency  
    - **Solution**: `npm install` or `npm install concurrently --save-dev`
 
+5. **Grid Layout Issues (RESOLVED)**
+   - **Issue**: Green cards going off grid lines in "Review Selected Images"
+   - **Root Cause**: Aggressive grid-first approach caused container overflow
+   - **Solution**: Adopted conservative flexbox-first strategy (Fixed in commit 6d5be33)
+   - **Technical Fix**: Modified `.selected-files-grid-enhanced` to use flexbox at 768px breakpoint
+
 ### **Debug Commands**
 ```bash
 # Check running processes

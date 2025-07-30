@@ -290,6 +290,17 @@
   border-radius: 16px
   box-shadow: var(--shadow-card-subtle)
   
+  // Mobile: smaller padding and margins
+  @media (max-width: 767px)
+    margin: 20px 0
+    padding: 20px
+    
+  // Very small mobile: even smaller padding
+  @media (max-width: 480px)
+    margin: 16px 0
+    padding: 16px
+    border-radius: 12px
+  
   h5
     font-family: 'Poppins', sans-serif
     font-size: 18px
@@ -299,6 +310,16 @@
     display: flex
     align-items: center
     gap: 8px
+    
+    // Mobile: smaller font size
+    @media (max-width: 767px)
+      font-size: 16px
+      
+    // Very small mobile: center alignment
+    @media (max-width: 480px)
+      font-size: 16px
+      justify-content: center
+      text-align: center
     
 
   .count-options
@@ -310,6 +331,12 @@
     // Mobile: smaller gaps and full width
     @media (max-width: 767px)
       gap: 8px
+      
+    // Very small mobile: single column grid
+    @media (max-width: 480px)
+      display: grid
+      grid-template-columns: 1fr 1fr
+      gap: 10px
 
   .count-option
     display: flex

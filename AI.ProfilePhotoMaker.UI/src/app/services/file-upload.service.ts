@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpEventType } from '@angular/common/http';
-import { map, Observable, of, tap, catchError, mergeMap } from 'rxjs';
+import { catchError, map, mergeMap, Observable, of, tap } from 'rxjs';
 import { ConfigService } from './config.service';
 import { ImageUrlService } from './image-url.service';
 
@@ -149,11 +149,9 @@ export class FileUploadService {
 
     // Return cached data if available and not expired
     if (!forceRefresh && this.userImagesCache && now < this.userImagesCacheExpiry) {
-      console.log('💾 Using cached user images data');
       return of({ success: true, data: this.userImagesCache });
     }
 
-    console.log('🌐 Fetching fresh user images data from API');
     return this.http
       .get<{
         success: boolean;
@@ -203,7 +201,6 @@ export class FileUploadService {
 
   // Cache management methods
   invalidateUserImagesCache(): void {
-    console.log('🗑️ Invalidating user images cache');
     this.userImagesCache = null;
     this.userImagesCacheExpiry = 0;
   }
@@ -333,18 +330,11 @@ export class FileUploadService {
 
   uploadSingleImage(
     file: File,
-    isEnhanced: boolean = true
+    isEnhanced = true
   ): Observable<{
     progress: number;
     response?: { success: boolean; data: { url: string; fileName: string } };
   }> {
-    console.log('uploadSingleImage called with:', {
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type,
-      isEnhanced: isEnhanced,
-    });
-
     const formData = new FormData();
     formData.append('images', file, file.name);
     formData.append('forTraining', 'false');

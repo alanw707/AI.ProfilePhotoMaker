@@ -205,36 +205,81 @@
       &:last-child
         margin-bottom: 0
 
-// Upload Area
+// Upload Area - Enhanced prominence and visual hierarchy
 .upload-area
-  border: 2px dashed var(--border-hover)
-  border-radius: 16px
-  padding: 48px 24px
+  border: 3px dashed var(--border-hover)  // Thicker border for prominence
+  border-radius: 20px  // More rounded for modern feel
+  padding: 56px 32px  // More generous padding
   text-align: center
   cursor: pointer
-  transition: all 0.3s ease
-  background: var(--card-bg)
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1)  // Smoother transition
+  background: linear-gradient(135deg, var(--card-bg) 0%, rgba(125, 211, 216, 0.02) 100%)  // Subtle gradient
+  box-shadow: 0 4px 20px rgba(125, 211, 216, 0.08)  // Soft elevation
+  position: relative
+  overflow: hidden
+
+  // Subtle background pattern
+  &::before
+    content: ''
+    position: absolute
+    top: 0
+    left: 0
+    right: 0
+    bottom: 0
+    background: radial-gradient(circle at 50% 50%, rgba(125, 211, 216, 0.03) 0%, transparent 70%)
+    pointer-events: none
 
   &:hover, &.drag-over
     border-color: var(--accent-primary)
-    background: var(--bg-tertiary)
-    transform: translateY(-2px)
+    background: linear-gradient(135deg, var(--bg-tertiary) 0%, rgba(125, 211, 216, 0.05) 100%)
+    transform: translateY(-4px) scale(1.02)  // More dramatic hover effect
+    box-shadow: 0 12px 40px rgba(125, 211, 216, 0.15)  // Enhanced shadow
+    
+    .upload-icon
+      transform: scale(1.1) rotate(5deg)
+      filter: drop-shadow(0 4px 12px rgba(125, 211, 216, 0.3))
+  
+  // Loading state with pulsing animation
+  &.uploading
+    border-color: var(--accent-primary)
+    animation: uploadPulse 2s ease-in-out infinite
+    pointer-events: none
+    
+    .upload-icon
+      animation: uploadSpin 1.5s linear infinite
+    
+    h4, p
+      opacity: 0.7
+  
+  // Success state
+  &.upload-success
+    border-color: var(--accent-success)
+    background: linear-gradient(135deg, var(--card-bg) 0%, rgba(34, 197, 94, 0.03) 100%)
+    
+    .upload-icon
+      color: var(--accent-success)
+      animation: successBounce 0.6s ease-out
 
   .upload-icon
-    font-size: 48px
-    margin-bottom: 16px
+    font-size: 56px  // Larger icon for better visibility
+    margin-bottom: 20px
+    color: var(--accent-primary)  // Branded color
+    filter: drop-shadow(0 2px 8px rgba(125, 211, 216, 0.2))  // Icon shadow
 
   h4
     color: var(--text-primary)
     font-family: 'Poppins', sans-serif
-    font-size: 18px
-    font-weight: 600
-    margin: 0 0 8px 0
+    font-size: 22px  // Larger for better hierarchy
+    font-weight: 700  // Bolder weight
+    margin: 0 0 12px 0
+    letter-spacing: -0.01em
 
   p
     color: var(--text-secondary)
-    font-size: 14px
+    font-size: 16px  // Larger for better readability
     margin: 0
+    font-weight: 500
+    line-height: 1.5
 
 .uploaded-images
   display: grid
@@ -375,6 +420,29 @@
     transform: translateX(-100%)
   100%
     transform: translateX(300%)
+
+// Upload state animations
+@keyframes uploadPulse
+  0%, 100%
+    border-color: var(--accent-primary)
+    box-shadow: 0 4px 20px rgba(125, 211, 216, 0.08)
+  50%
+    border-color: var(--accent-secondary)
+    box-shadow: 0 8px 30px rgba(125, 211, 216, 0.25)
+
+@keyframes uploadSpin
+  0%
+    transform: rotate(0deg)
+  100%
+    transform: rotate(360deg)
+
+@keyframes successBounce
+  0%
+    transform: scale(1)
+  50%
+    transform: scale(1.2)
+  100%
+    transform: scale(1.1)
 
 // Quality Check Error Display
 .quality-check-errors

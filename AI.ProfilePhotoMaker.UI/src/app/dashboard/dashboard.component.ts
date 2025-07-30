@@ -1,4 +1,4 @@
-import { Component, Injector, OnDestroy, OnInit, ChangeDetectorRef } from '@angular/core';
+import { ChangeDetectorRef, Component, Injector, OnDestroy, OnInit } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -17,7 +17,7 @@ import { AuthService } from '../services/auth.service';
 import { StyleService } from '../services/style.service';
 import { NotificationService } from '../services/notification.service';
 import { CreditService } from '../services/credit.service';
-import { DashboardStateService } from '../services/dashboard-state.service';
+import { DashboardCoordinatorService } from '../services/dashboard-coordinator.service';
 import { ConfigService } from '../services/config.service';
 // Lazy-loaded service types
 interface WorkflowProgress {
@@ -120,13 +120,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     switch (event.action) {
       case 'purchase':
       case 'viewPackages':
-        this.router.navigate(['/packages']);
+        this.router.navigate(['/pricing']);
         break;
       case 'upgrade':
         this.router.navigate(['/premium']);
         break;
       default:
-        console.warn('Unknown credit action:', event.action);
+      // Unknown credit action - silently ignore
     }
   }
 
@@ -136,7 +136,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private styleService: StyleService,
     private notificationService: NotificationService,
     public creditService: CreditService,
-    public stateService: DashboardStateService,
+    public stateService: DashboardCoordinatorService,
     private config: ConfigService,
     private workflowStepService: WorkflowStepService,
     private injector: Injector,
@@ -144,14 +144,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ) {
     this.state$ = this.stateService.state$;
     this.workflowProgress$ = this.workflowProgressSubject.asObservable();
-
-    // Enable debug methods for troubleshooting
-    this.stateService.enableGlobalDebug();
   }
 
   ngOnInit() {
     if (!this.authService.isAuthenticated()) {
-      this.router.navigate(['/login']);
+      this.router.navigate(['/auth/login']);
       return;
     }
 
@@ -197,7 +194,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             selected: false,
           }));
         } else {
-          console.error('Failed to load styles:', response.error);
+          // Failed to load styles - error handled by notification
           this.notificationService.error(
             'Style Load Failed',
             'Could not load available styles. Please refresh the page.'
@@ -205,7 +202,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         }
       },
       error: error => {
-        console.error('Error loading styles:', error);
+        // Error loading styles - handled by notification
         this.notificationService.error(
           'Style Load Failed',
           'Could not load available styles. Please refresh the page.'
@@ -268,7 +265,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.stateService.forceRefresh();
       this.cdr.detectChanges();
     } catch (error) {
-      console.error('Failed to refresh uploaded images:', error);
+      // Failed to refresh images - will be retried on next load
       this.notificationService.error('Refresh Failed', 'Failed to refresh image list from server');
     }
   }
@@ -307,13 +304,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.workflowProgressSubject.next(progress);
       });
     } catch (error) {
-      console.error('Failed to load WorkflowOrchestrationService:', error);
+      // Failed to load workflow service - critical error, propagate
       throw error;
     }
   }
 
   async startTrainingWithStyles() {
     const selectedStyles = this.availableStyles.filter(s => s.selected);
+
     this.isTrainingStarted = true;
     this.currentStep = 3;
 
@@ -327,7 +325,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         await this.workflowService.startTrainingWithStyles(selectedStyles, this.imagesPerStyle);
       }
     } catch (error) {
-      console.error('Error in training workflow:', error);
+      // Training workflow error handled by service notifications
       this.isTrainingStarted = false;
       this.currentStep = 2;
     }
@@ -461,7 +459,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       "Training and generation will continue. We'll email you when your photos are ready."
     );
     // Navigate to gallery with refresh parameter to force reload
-    this.router.navigate(['/gallery'], {
+    this.router.navigate(['/app/gallery'], {
       queryParams: { refresh: Date.now() },
     });
   }
