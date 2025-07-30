@@ -15,19 +15,16 @@
       "value": "aiprofileadmin"
     },
     "sqlAdminPassword": {
-      "value": "REPLACE_WITH_STRONG_PASSWORD_123!"
+      "value": "REPLACE_WITH_PROD_SQL_PASSWORD"
     },
     "replicateApiToken": {
-      "value": "REPLACE_WITH_YOUR_REPLICATE_TOKEN"
+      "value": "REPLACE_WITH_REPLICATE_TOKEN"
     },
     "jwtSecret": {
-      "value": "REPLACE_WITH_YOUR_JWT_SECRET_KEY_MIN_32_CHARS"
+      "value": "REPLACE_WITH_PROD_JWT_SECRET"
+    },
+    "replicateWebhookSecret": {
+      "value": "REPLACE_WITH_WEBHOOK_SECRET"
     }
-    // TODO: Before PRODUCTION deployment, replace with DIFFERENT, STRONGER secrets:
-    // - sqlAdminPassword: 16+ chars, different from staging
-    // - replicateApiToken: Production Replicate token (may be same as staging)
-    // - jwtSecret: DIFFERENT 32+ char secret from staging (use: openssl rand -base64 32)
-    // CRITICAL: Use different passwords for production vs staging!
-    // See SECRETS_CONFIGURATION_GUIDE.md for detailed instructions
   }
 }

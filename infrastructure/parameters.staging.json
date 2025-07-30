@@ -15,18 +15,16 @@
       "value": "aiprofileadmin"
     },
     "sqlAdminPassword": {
-      "value": "REPLACE_WITH_STRONG_PASSWORD_STAGING_123!"
+      "value": "REPLACE_WITH_STAGING_SQL_PASSWORD"
     },
     "replicateApiToken": {
-      "value": "REPLACE_WITH_YOUR_REPLICATE_TOKEN"
+      "value": "REPLACE_WITH_REPLICATE_TOKEN"
     },
     "jwtSecret": {
-      "value": "REPLACE_WITH_YOUR_JWT_SECRET_KEY_STAGING_MIN_32_CHARS"
+      "value": "REPLACE_WITH_STAGING_JWT_SECRET"
+    },
+    "replicateWebhookSecret": {
+      "value": "REPLACE_WITH_WEBHOOK_SECRET"
     }
-    // TODO: Before deployment, replace the above placeholder values with:
-    // - sqlAdminPassword: 16+ chars with uppercase, lowercase, numbers, symbols
-    // - replicateApiToken: Get from https://replicate.com account settings
-    // - jwtSecret: Generate 32+ char random string (use: openssl rand -base64 32)
-    // See SECRETS_CONFIGURATION_GUIDE.md for detailed instructions
   }
 }

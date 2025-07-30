@@ -27,6 +27,10 @@ param replicateApiToken string
 @secure()
 param jwtSecret string
 
+@description('The Replicate webhook secret for signature validation')
+@secure()
+param replicateWebhookSecret string
+
 // Variables
 var uniqueSuffix = uniqueString(resourceGroup().id)
 var appServicePlanName = '${namePrefix}-asp-${environmentName}'
@@ -350,6 +354,15 @@ resource replicateTokenKV 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
+// Replicate Webhook Secret for signature validation
+resource replicateWebhookSecretKV 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'ReplicateWebhookSecret'
+  properties: {
+    value: replicateWebhookSecret
+  }
+}
+
 resource sqlConnectionStringKV 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
   name: 'DatabaseConnectionString'
@@ -377,6 +390,7 @@ resource webAppConfig 'Microsoft.Web/sites/config@2023-01-01' = {
     'Jwt:ValidAudience': 'https://${staticWebAppName}.azurestaticapps.net'
     'Jwt:ValidIssuer': 'https://${webAppName}.azurewebsites.net'
     'Replicate:ApiToken': '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/ReplicateApiToken/)'
+    'Replicate:WebhookSecret': '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/ReplicateWebhookSecret/)'
     'AzureStorage:ConnectionString': 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
     'AzureStorage:ContainerName': 'profile-images'
     'ApplicationInsights:InstrumentationKey': applicationInsights.properties.InstrumentationKey

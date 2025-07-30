@@ -109,10 +109,29 @@ jobs:
             --location "East US" \
             --output table
       
+      - name: Substitute secrets in parameters
+        run: |
+          cd infrastructure
+          # Create a copy of the parameters file with secrets substituted
+          cp parameters.staging.json parameters.staging.temp.json
+          sed -i 's/REPLACE_WITH_STAGING_SQL_PASSWORD/${{ secrets.STAGING_SQL_ADMIN_PASSWORD }}/g' parameters.staging.temp.json
+          sed -i 's/REPLACE_WITH_REPLICATE_TOKEN/${{ secrets.REPLICATE_API_TOKEN }}/g' parameters.staging.temp.json
+          sed -i 's/REPLACE_WITH_STAGING_JWT_SECRET/${{ secrets.STAGING_JWT_SECRET }}/g' parameters.staging.temp.json
+          sed -i 's/REPLACE_WITH_WEBHOOK_SECRET/${{ secrets.REPLICATE_WEBHOOK_SECRET }}/g' parameters.staging.temp.json
+      
       - name: Deploy Infrastructure
         run: |
           cd infrastructure
-          ./deploy.sh --environment staging --resource-group ai-profile-photo-maker-staging
+          az deployment group create \
+            --resource-group ai-profile-photo-maker-staging \
+            --template-file main.bicep \
+            --parameters @parameters.staging.temp.json \
+            --output table
+      
+      - name: Cleanup temp files
+        run: |
+          cd infrastructure
+          rm -f parameters.staging.temp.json
       
       - name: Output deployment results
         run: |
@@ -151,10 +170,29 @@ jobs:
             --location "East US" \
             --output table
       
+      - name: Substitute secrets in parameters
+        run: |
+          cd infrastructure
+          # Create a copy of the parameters file with secrets substituted
+          cp parameters.prod.json parameters.prod.temp.json
+          sed -i 's/REPLACE_WITH_PROD_SQL_PASSWORD/${{ secrets.PROD_SQL_ADMIN_PASSWORD }}/g' parameters.prod.temp.json
+          sed -i 's/REPLACE_WITH_REPLICATE_TOKEN/${{ secrets.REPLICATE_API_TOKEN }}/g' parameters.prod.temp.json
+          sed -i 's/REPLACE_WITH_PROD_JWT_SECRET/${{ secrets.PROD_JWT_SECRET }}/g' parameters.prod.temp.json
+          sed -i 's/REPLACE_WITH_WEBHOOK_SECRET/${{ secrets.REPLICATE_WEBHOOK_SECRET }}/g' parameters.prod.temp.json
+      
       - name: Deploy Infrastructure
         run: |
           cd infrastructure
-          ./deploy.sh --environment prod --resource-group ai-profile-photo-maker-prod
+          az deployment group create \
+            --resource-group ai-profile-photo-maker-prod \
+            --template-file main.bicep \
+            --parameters @parameters.prod.temp.json \
+            --output table
+      
+      - name: Cleanup temp files
+        run: |
+          cd infrastructure
+          rm -f parameters.prod.temp.json
       
       - name: Output deployment results
         run: |
