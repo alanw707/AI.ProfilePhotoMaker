@@ -100,22 +100,26 @@ jobs:
           print(f"✅ Secrets substituted in parameters.{env_name}.temp.json")
           EOF
 
-      - name: Ensure resource group exists for validation
+      - name: Check resource group status
         run: |
           ENV_NAME=${{ github.event.inputs.environment || 'staging' }}
           RG_NAME="ai-profile-photo-maker-$ENV_NAME"
           
-          # Check if resource group exists first
+          echo "🔍 Checking resource group: $RG_NAME"
           if az group show --name $RG_NAME --output none 2>/dev/null; then
-            echo "✅ Resource group $RG_NAME already exists"
+            echo "✅ Resource group $RG_NAME exists - proceeding with validation"
           else
-            echo "⏳ Attempting to create resource group $RG_NAME"
-            if az group create --name $RG_NAME --location "East US" --output table; then
-              echo "✅ Resource group $RG_NAME created successfully"
+            echo "ℹ️  Resource group $RG_NAME does not exist"
+            echo "ℹ️  Creating resource group for validation purposes only..."
+            echo "ℹ️  Manual command to create: az group create --name $RG_NAME --location 'East US'"
+            echo "⚠️  Since we cannot create resource groups, creating temporary one for validation..."
+            
+            # Try to create, but don't fail if it doesn't work
+            if az group create --name $RG_NAME --location "East US" --output table 2>/dev/null; then
+              echo "✅ Resource group created successfully"
             else
-              echo "❌ Failed to create resource group. Please ensure it exists or grant additional permissions."
-              echo "Manual command: az group create --name $RG_NAME --location 'East US'"
-              exit 1
+              echo "⚠️  Cannot create resource group due to permissions - this will likely cause validation to fail"
+              echo "   Please ensure the resource group exists manually before deployment"
             fi
           fi
 
