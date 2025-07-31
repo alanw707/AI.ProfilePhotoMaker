@@ -2,7 +2,7 @@ name: '🚀 Deploy Infrastructure'
 
 on:
   push:
-    branches: [main]
+    branches: [main, fix/deployment-testing]
     paths: ['infrastructure/**', '.github/workflows/deploy-infrastructure.yml']
   pull_request:
     branches: [main]
