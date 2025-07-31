@@ -173,15 +173,22 @@ jobs:
       - name: '🧪 ARM Template Validation'
         id: arm-validation
         if: github.event.inputs.force_deploy != 'true'
-        uses: azure/arm-deploy@v2
-        with:
-          scope: resourcegroup
-          resourceGroupName: ${{ steps.config.outputs.resource-group }}
-          template: ./infrastructure/main.json
-          parameters: ./infrastructure/parameters.${{ steps.config.outputs.environment }}.work.json
-          deploymentMode: Validate
-          deploymentName: validate-${{ steps.config.outputs.deployment-name }}
-          failOnStdErr: false
+        run: |
+          cd infrastructure
+          
+          echo "🔍 Validating ARM template with Azure CLI..."
+          az deployment group validate \
+            --resource-group "${{ steps.config.outputs.resource-group }}" \
+            --template-file main.json \
+            --parameters @parameters.${{ steps.config.outputs.environment }}.work.json \
+            --output table
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ ARM template validation passed"
+          else
+            echo "❌ ARM template validation failed"
+            exit 1
+          fi
       
       - name: '📝 Validation Summary'
         run: |
@@ -285,15 +292,32 @@ jobs:
       
       - name: '🏗️ Deploy Infrastructure'
         id: deploy
-        uses: azure/arm-deploy@v2
-        with:
-          scope: resourcegroup
-          resourceGroupName: ${{ needs.validate-infrastructure.outputs.resource-group }}
-          template: ./infrastructure/main.json
-          parameters: ./infrastructure/parameters.${{ env.ENV_NAME }}.deploy.json
-          deploymentMode: Incremental
-          deploymentName: ${{ needs.validate-infrastructure.outputs.deployment-name }}
-          failOnStdErr: false
+        run: |
+          cd infrastructure
+          
+          echo "🚀 Starting Azure CLI deployment..."
+          DEPLOYMENT_OUTPUT=$(az deployment group create \
+            --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" \
+            --template-file main.json \
+            --parameters @parameters.${{ env.ENV_NAME }}.deploy.json \
+            --name "${{ needs.validate-infrastructure.outputs.deployment-name }}" \
+            --output json)
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ Deployment succeeded"
+            
+            # Extract outputs for downstream jobs
+            echo "$DEPLOYMENT_OUTPUT" | jq -r '.properties.outputs | to_entries[] | "\(.key)=\(.value.value)"' | while read line; do
+              key=$(echo $line | cut -d'=' -f1)
+              value=$(echo $line | cut -d'=' -f2)
+              echo "$key=$value" >> $GITHUB_OUTPUT
+            done
+            
+            echo "🎯 Infrastructure deployment completed successfully"
+          else
+            echo "❌ Deployment failed"
+            exit 1
+          fi
       
       - name: '🔍 Post-Deployment Validation'
         id: validation
