@@ -72,7 +72,7 @@ jobs:
       
       - name: '🔧 Install Frontend Dependencies'
         working-directory: AI.ProfilePhotoMaker.UI
-        run: npm ci --prefer-offline --no-audit
+        run: npm ci --prefer-offline --no-audit --legacy-peer-deps
       
       - name: '📋 .NET Format Check'
         run: |
@@ -188,7 +188,7 @@ jobs:
       - name: '🔧 Restore Dependencies'
         run: |
           dotnet restore
-          cd AI.ProfilePhotoMaker.UI && npm ci
+          cd AI.ProfilePhotoMaker.UI && npm ci --legacy-peer-deps
       
       - name: '🔒 .NET Security Audit'
         id: dotnet-security
@@ -349,7 +349,7 @@ jobs:
       - name: '🔧 Restore Dependencies'
         run: |
           dotnet restore
-          cd AI.ProfilePhotoMaker.UI && npm ci
+          cd AI.ProfilePhotoMaker.UI && npm ci --legacy-peer-deps
       
       - name: '🔨 Build Projects'
         run: |
@@ -602,7 +602,7 @@ jobs:
       - name: '🔧 Build Applications'
         run: |
           dotnet build --configuration Release
-          cd AI.ProfilePhotoMaker.UI && npm ci && npm run build
+          cd AI.ProfilePhotoMaker.UI && npm ci --legacy-peer-deps && npm run build
       
       - name: '⚡ Frontend Performance Tests'
         working-directory: AI.ProfilePhotoMaker.UI
