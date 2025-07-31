@@ -172,7 +172,7 @@ jobs:
       
       - name: '🧪 ARM Template Validation'
         id: arm-validation
-        if: github.event.inputs.force_deploy != 'true' # Skip validation only when force deploy is enabled
+        if: false # Temporarily disabled due to Azure CLI 'content already consumed' API issue
         run: |
           cd infrastructure
           
@@ -211,6 +211,18 @@ jobs:
             echo "❌ ARM template validation failed after $MAX_RETRIES attempts"
             exit 1
           fi
+      
+      - name: '🐍 Python SDK Validation (Alternative)'
+        run: |
+          cd infrastructure
+          echo "🐍 Using Python SDK for validation (bypasses Azure CLI API issues)..."
+          
+          # Install Python dependencies
+          pip install azure-identity azure-mgmt-resource
+          
+          # Run validation using Python SDK
+          python3 deploy_azure_sdk.py --validate --environment staging
+          echo "✅ Python SDK validation completed"
       
       - name: '📝 Validation Summary'
         run: |
