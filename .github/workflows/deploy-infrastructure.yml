@@ -155,7 +155,7 @@ jobs:
             echo "📦 Creating resource group: ${{ steps.config.outputs.resource-group }}"
             az group create \
               --name "${{ steps.config.outputs.resource-group }}" \
-              --location "East US" \
+              --location "East US 2" \
               --tags "Environment=${{ steps.config.outputs.environment }}" "Application=AI-ProfilePhotoMaker" "CreatedBy=GitHub-Actions"
           else
             echo "✅ Resource group exists: ${{ steps.config.outputs.resource-group }}"
@@ -172,7 +172,7 @@ jobs:
       
       - name: '🧪 ARM Template Validation'
         id: arm-validation
-        if: false # Temporarily disabled due to Azure CLI 'content already consumed' issue
+        if: github.event.inputs.force_deploy != 'true' # Skip validation only when force deploy is enabled
         run: |
           cd infrastructure
           
