@@ -172,7 +172,7 @@ jobs:
       
       - name: '🧪 ARM Template Validation'
         id: arm-validation
-        if: github.event.inputs.force_deploy != 'true'
+        if: false # Temporarily disabled due to Azure CLI 'content already consumed' issue
         run: |
           cd infrastructure
           
