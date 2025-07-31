@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
   ElementRef,
@@ -27,6 +28,7 @@ import { Subscription } from 'rxjs';
   imports: [CommonModule],
   templateUrl: './credit-packages.component.html',
   styleUrls: ['./credit-packages.component.sass'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CreditPackagesComponent implements OnInit, OnDestroy {
   @Output() packagePurchased = new EventEmitter<UserCreditStatus>();
@@ -44,107 +46,115 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
   elements: StripeElements | undefined;
   selectedPackage: CreditPackage | null = null;
 
-  private themeSubscription: Subscription | null = null;
+  private _themeSubscription: Subscription | null = null;
 
   constructor(
-    private creditService: CreditService,
-    private notificationService: NotificationService,
-    private stripeService: StripeService,
-    private themeService: ThemeService,
-    private cdr: ChangeDetectorRef
+    private _creditService: CreditService,
+    private _notificationService: NotificationService,
+    private _stripeService: StripeService,
+    private _themeService: ThemeService,
+    private _cdr: ChangeDetectorRef
   ) {}
 
-  ngOnInit() {
+  ngOnInit(): void {
     // Subscribe to theme changes to ensure proper re-rendering
-    this.themeSubscription = this.themeService.theme$.subscribe(() => {
+    this._themeSubscription = this._themeService.theme$.subscribe(() => {
       // Force change detection to ensure styles are updated
       setTimeout(() => {
-        this.cdr.markForCheck();
-        this.cdr.detectChanges();
+        this._cdr.markForCheck();
+        this._cdr.detectChanges();
       });
     });
 
     this.loadPackages();
     this.loadCreditStatus();
     this.loadPaymentConfig();
-    this.stripeService.getStripe().then(stripe => {
+    this._stripeService.getStripe().then(stripe => {
       this.stripe = stripe;
       if (!stripe && this.paymentConfig?.paymentSimulation?.enabled) {
-        console.log('Stripe.js not loaded - using payment simulation mode');
+        console.warn('Stripe.js not loaded - using payment simulation mode');
       }
     });
   }
 
-  ngOnDestroy() {
-    if (this.themeSubscription) {
-      this.themeSubscription.unsubscribe();
+  ngOnDestroy(): void {
+    if (this._themeSubscription) {
+      this._themeSubscription.unsubscribe();
     }
   }
 
-  loadPackages() {
+  loadPackages(): void {
     this.isLoadingPackages = true;
 
-    this.creditService.getCreditPackages().subscribe({
-      next: response => {
-        if (response && response.success) {
-          this.packages = response.data || [];
-          if (this.packages.length === 0) {
-            this.notificationService.warning(
-              'No Packages Available',
-              'No credit packages are currently available.'
-            );
-          }
-        } else {
-          console.error('Failed to load packages:', response?.error);
-          this.packages = [];
-          this.notificationService.error(
-            'Failed to Load Packages',
-            response?.error?.message || 'Unable to load credit packages.'
-          );
-        }
-      },
-      error: error => {
-        console.error('Error loading packages:', error);
-        console.error('Error status:', error.status);
-        console.error('Error message:', error.message);
-        this.packages = [];
-
-        if (error.status === 0) {
-          this.notificationService.error(
-            'Connection Error',
-            'Unable to connect to the server. Please check if the server is running.'
-          );
-        } else if (error.status === 401) {
-          // This should no longer happen with [AllowAnonymous] on the API endpoint
-          console.log('Unexpected 401 error - API endpoint should allow anonymous access');
-          this.packages = [];
-          this.notificationService.error(
-            'Access Error',
-            'Unable to load packages. Please try again later.'
-          );
-        } else if (error.status === 500) {
-          this.notificationService.error(
-            'Server Error',
-            'Server error while loading packages. Please try again later.'
-          );
-        } else {
-          this.notificationService.error(
-            'Network Error',
-            `Error ${error.status}: ${error.message || 'Please try again.'}`
-          );
-        }
-      },
+    this._creditService.getCreditPackages().subscribe({
+      next: response => this._handlePackagesResponse(response),
+      error: error => this._handlePackagesError(error),
       complete: () => {
         this.isLoadingPackages = false;
-        // Force change detection to ensure UI updates
-        this.cdr.detectChanges();
+        this._cdr.detectChanges();
       },
     });
   }
 
-  loadCreditStatus() {
+  private _handlePackagesResponse(response: any): void {
+    if (response?.success) {
+      this.packages = response.data || [];
+      if (this.packages.length === 0) {
+        this._notificationService.warning(
+          'No Packages Available',
+          'No credit packages are currently available.'
+        );
+      }
+    } else {
+      console.error('Failed to load packages:', response?.error);
+      this.packages = [];
+      this._notificationService.error(
+        'Failed to Load Packages',
+        response?.error?.message || 'Unable to load credit packages.'
+      );
+    }
+  }
+
+  private _handlePackagesError(error: any): void {
+    console.error('Error loading packages:', error);
+    this.packages = [];
+
+    const errorMessage = this._getErrorMessage(error);
+    this._notificationService.error(errorMessage.title, errorMessage.message);
+  }
+
+  private _getErrorMessage(error: any): { title: string; message: string } {
+    if (error.status === 0) {
+      return {
+        title: 'Connection Error',
+        message: 'Unable to connect to the server. Please check if the server is running.'
+      };
+    }
+    
+    if (error.status === 401) {
+      console.warn('Unexpected 401 error - API endpoint should allow anonymous access');
+      return {
+        title: 'Access Error',
+        message: 'Unable to load packages. Please try again later.'
+      };
+    }
+    
+    if (error.status === 500) {
+      return {
+        title: 'Server Error',
+        message: 'Server error while loading packages. Please try again later.'
+      };
+    }
+    
+    return {
+      title: 'Network Error',
+      message: `Error ${error.status}: ${error.message || 'Please try again.'}`
+    };
+  }
+
+  loadCreditStatus(): void {
     this.isLoadingStatus = true;
-    this.creditService.getCreditStatus().subscribe({
+    this._creditService.getCreditStatus().subscribe({
       next: response => {
         if (response.success) {
           this.userCreditStatus = response.data;
@@ -159,8 +169,8 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     });
   }
 
-  loadPaymentConfig() {
-    this.creditService.getPaymentConfig().subscribe({
+  loadPaymentConfig(): void {
+    this._creditService.getPaymentConfig().subscribe({
       next: response => {
         if (response.success) {
           this.paymentConfig = response.data;
@@ -179,52 +189,64 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     });
   }
 
-  async purchasePackage(pkg: CreditPackage) {
+  async purchasePackage(pkg: CreditPackage): Promise<void> {
     this.isPurchasing = true;
     this.selectedPackage = pkg;
 
-    // Check if payment simulation is enabled
-    if (
-      this.paymentConfig?.paymentSimulation?.enabled &&
-      this.paymentConfig?.paymentSimulation?.skipStripeIntegration
-    ) {
-      // Skip Stripe integration and simulate payment
+    if (this._shouldUsePaymentSimulation()) {
       this.simulatePayment(pkg);
       return;
     }
 
-    // Original Stripe flow
-    if (!this.stripe && !this.paymentConfig?.paymentSimulation?.enabled) {
-      this.notificationService.error('Payment Error', 'Stripe is not loaded yet.');
+    if (!this._isStripeReady()) {
+      this._notificationService.error('Payment Error', 'Stripe is not loaded yet.');
       this.isPurchasing = false;
       return;
     }
 
-    this.creditService.createPaymentIntent({ packageId: pkg.id }).subscribe({
-      next: async (response: any) => {
+    this._processStripePayment(pkg);
+  }
+
+  private _shouldUsePaymentSimulation(): boolean {
+    return !!(
+      this.paymentConfig?.paymentSimulation?.enabled &&
+      this.paymentConfig?.paymentSimulation?.skipStripeIntegration
+    );
+  }
+
+  private _isStripeReady(): boolean {
+    return !!(this.stripe || this.paymentConfig?.paymentSimulation?.enabled);
+  }
+
+  private _processStripePayment(pkg: CreditPackage): void {
+    this._creditService.createPaymentIntent({ packageId: pkg.id }).subscribe({
+      next: async (response: { success: boolean; data: { isSimulation: boolean; clientSecret: string } }) => {
         if (response.success) {
           if (response.data.isSimulation) {
-            // Backend is in simulation mode
             this.simulatePayment(pkg);
           } else {
-            // Real Stripe integration
-            this.elements = this.stripe?.elements({ clientSecret: response.data.clientSecret });
-            const paymentElement = this.elements?.create('payment');
-            paymentElement?.mount(this.paymentElementRef.nativeElement);
+            this._setupStripeElements(response.data.clientSecret);
           }
         } else {
-          this.notificationService.error('Payment Error', 'Could not create payment intent.');
-          this.isPurchasing = false;
+          this._handlePaymentError('Could not create payment intent.');
         }
       },
-      error: (error: any) => {
-        this.notificationService.error('Payment Error', 'Could not create payment intent.');
-        this.isPurchasing = false;
-      },
+      error: (_error: Error) => this._handlePaymentError('Could not create payment intent.'),
     });
   }
 
-  async confirmPurchase() {
+  private _setupStripeElements(clientSecret: string): void {
+    this.elements = this.stripe?.elements({ clientSecret });
+    const paymentElement = this.elements?.create('payment');
+    paymentElement?.mount(this.paymentElementRef.nativeElement);
+  }
+
+  private _handlePaymentError(message: string): void {
+    this._notificationService.error('Payment Error', message);
+    this.isPurchasing = false;
+  }
+
+  async confirmPurchase(): Promise<void> {
     if (!this.stripe || !this.elements) {
       return;
     }
@@ -236,13 +258,13 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     });
 
     if (error) {
-      this.notificationService.error(
+      this._notificationService.error(
         'Payment Failed',
         error.message || 'An unknown error occurred.'
       );
       this.isPurchasing = false;
     } else {
-      this.notificationService.success(
+      this._notificationService.success(
         'Payment Successful!',
         'Your payment was successful. Updating your credits...'
       );
@@ -253,13 +275,13 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     }
   }
 
-  simulatePayment(pkg: CreditPackage) {
+  simulatePayment(pkg: CreditPackage): void {
     // Simulate payment processing delay
     setTimeout(() => {
       // Call the purchase endpoint directly with a simulated transaction ID
       const mockTransactionId = `sim_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      this.creditService
+      this._creditService
         .purchaseCreditPackage({
           packageId: pkg.id,
           paymentTransactionId: mockTransactionId,
@@ -267,7 +289,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
         .subscribe({
           next: response => {
             if (response.success) {
-              this.notificationService.success(
+              this._notificationService.success(
                 'Payment Simulated Successfully!',
                 `Your payment simulation was successful. ${pkg.totalCredits} credits added to your account!`
               );
@@ -285,22 +307,22 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
                 });
               }
             } else {
-              this.notificationService.error(
+              this._notificationService.error(
                 'Simulation Failed',
                 response.error?.message || 'Payment simulation failed.'
               );
               this.isPurchasing = false;
             }
           },
-          error: error => {
-            this.notificationService.error('Simulation Error', 'Payment simulation failed.');
+          error: _error => {
+            this._notificationService.error('Simulation Error', 'Payment simulation failed.');
             this.isPurchasing = false;
           },
         });
     }, 2000); // 2 second delay to simulate processing
   }
 
-  cancelPurchase() {
+  cancelPurchase(): void {
     this.selectedPackage = null;
   }
 
@@ -333,5 +355,9 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
   canAffordTraining(pkg: CreditPackage): boolean {
     // Model training costs 15 credits
     return pkg.totalCredits >= 15;
+  }
+
+  trackByPackageId(_index: number, pkg: CreditPackage): string {
+    return pkg.id;
   }
 }

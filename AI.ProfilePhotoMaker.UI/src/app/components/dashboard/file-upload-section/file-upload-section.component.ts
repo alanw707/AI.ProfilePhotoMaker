@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
   ElementRef,
@@ -20,7 +21,7 @@ import { FileSecurityService } from '../../../services/file-security.service';
 
 // Lazy-loaded service interface
 interface FaceDetectionService {
-  validateImage(file: File): Promise<any>;
+  validateImage(file: File): Promise<{ isValid: boolean; confidence: number; faces: number }>;
 }
 
 import {
@@ -35,12 +36,13 @@ import {
   imports: [CommonModule, FormsModule],
   templateUrl: './file-upload-section.component.html',
   styleUrls: ['./file-upload-section.component.sass'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FileUploadSectionComponent implements OnInit, OnDestroy {
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
   // Input properties
-  @Input() uploadedImageThumbnails: any[] = [];
+  @Input() uploadedImageThumbnails: { id: string; url: string; name: string }[] = [];
   @Input() currentStep = 1;
   @Input() maxFiles = 20;
   @Input() maxFileSize: number = 7 * 1024 * 1024; // 7MB
@@ -48,12 +50,12 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
   // Output events
   @Output() filesSelected = new EventEmitter<File[]>();
-  @Output() uploadCompleted = new EventEmitter<any[]>();
+  @Output() uploadCompleted = new EventEmitter<{ id: string; url: string; name: string }[]>();
   @Output() uploadProgress = new EventEmitter<number>();
   @Output() qualityCheckCompleted = new EventEmitter<QualityCheckResult>();
   @Output() fileRemoved = new EventEmitter<number>();
   @Output() uploadedImageDeleted = new EventEmitter<{
-    thumb: any;
+    thumb: { id: string; url: string; name: string };
     index: number;
     refreshRequired?: boolean;
   }>();
@@ -74,25 +76,25 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   tooltipPosition: { x: number; y: number } = { x: 0, y: 0 };
 
   // Document-level modal elements
-  private modalBackdrop: HTMLElement | null = null;
-  private modalElement: HTMLElement | null = null;
+  private _modalBackdrop: HTMLElement | null = null;
+  private _modalElement: HTMLElement | null = null;
 
   // File preview cache for memory management
-  private filePreviewCache = new Map<File, string>();
+  private _filePreviewCache = new Map<File, string>();
 
   // Lazy-loaded service
-  private faceDetectionService: FaceDetectionService | null = null;
+  private _faceDetectionService: FaceDetectionService | null = null;
 
   constructor(
-    private fileUploadService: FileUploadService,
-    private notificationService: NotificationService,
-    private fileSecurityService: FileSecurityService,
-    private ngZone: NgZone,
-    private cdr: ChangeDetectorRef,
-    private injector: Injector
+    private _fileUploadService: FileUploadService,
+    private _notificationService: NotificationService,
+    private _fileSecurityService: FileSecurityService,
+    private _ngZone: NgZone,
+    private _cdr: ChangeDetectorRef,
+    private _injector: Injector
   ) {}
 
-  ngOnInit() {
+  ngOnInit(): void {
     // Face detection models will be loaded automatically when validateImage is called
 
     // Close popups when clicking outside
@@ -100,51 +102,52 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   }
 
   // Lazy loading method for face detection service
-  private async loadFaceDetectionService(): Promise<FaceDetectionService> {
-    if (!this.faceDetectionService) {
-      const { FaceDetectionService } = await import('../../../services/face-detection.service');
-      this.faceDetectionService = this.injector.get(FaceDetectionService);
+  private async _loadFaceDetectionService(): Promise<FaceDetectionService> {
+    if (!this._faceDetectionService) {
+      const { FaceDetectionService: faceDetectionServiceClass } = await import('../../../services/face-detection.service');
+      this._faceDetectionService = this._injector.get(faceDetectionServiceClass);
     }
-    return this.faceDetectionService;
+    return this._faceDetectionService;
   }
 
-  ngOnDestroy() {
-    this.cleanupFilePreviewCache();
+  ngOnDestroy(): void {
+    this._cleanupFilePreviewCache();
     document.removeEventListener('click', this.closeAllPopups.bind(this));
 
     // Clean up any open modals
-    this.removeDocumentLevelModal();
+    this._removeDocumentLevelModal();
 
     // Restore body scroll in case modal was open when component destroyed
     document.body.style.overflow = '';
   }
 
   // File Selection Methods
-  triggerFileUpload() {
+  triggerFileUpload(): void {
     this.fileInput.nativeElement.click();
   }
 
-  onFileSelected(event: any) {
-    const files = Array.from(event.target.files) as File[];
+  onFileSelected(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const files = Array.from(target.files || []) as File[];
     this.handleFileSelection(files);
     // Reset the input value to allow selecting the same files again
     this.fileInput.nativeElement.value = '';
   }
 
   // Drag and Drop Methods
-  onDragOver(event: DragEvent) {
+  onDragOver(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
     this.isDragOver = true;
   }
 
-  onDragLeave(event: DragEvent) {
+  onDragLeave(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
     this.isDragOver = false;
   }
 
-  onDrop(event: DragEvent) {
+  onDrop(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
     this.isDragOver = false;
@@ -154,7 +157,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   }
 
   // Core File Handling
-  async handleFileSelection(files: File[]) {
+  async handleFileSelection(files: File[]): Promise<void> {
     if (!files || files.length === 0) {
       return;
     }
@@ -162,14 +165,14 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     // Check total file count limit
     const totalFiles = this.selectedFiles.length + files.length;
     if (totalFiles > this.maxFiles) {
-      this.notificationService.error(
+      this._notificationService.error(
         'Too Many Files',
         `You can only upload a maximum of ${this.maxFiles} files. You've selected ${totalFiles} files.`
       );
       return;
     }
 
-    console.log('🔒 Starting security validation for', files.length, 'files...');
+    console.warn('Starting security validation for', files.length, 'files...');
 
     // Enhanced security validation using FileSecurityService
     const validationResults = {
@@ -185,11 +188,11 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     // Validate each file with comprehensive security checks
     for (const file of files) {
       try {
-        const securityValidation = await this.fileSecurityService.validateFile(file).toPromise();
+        const securityValidation = await this._fileSecurityService.validateFile(file).toPromise();
 
         if (securityValidation?.isValid) {
           validationResults.validFiles.push(file);
-          console.log(`✅ File ${file.name} passed security validation`);
+          console.warn(`File ${file.name} passed security validation`);
         } else {
           validationResults.invalidFiles.push(file);
 
@@ -247,7 +250,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     validationResults.errors.securityIssues.forEach(({ fileName, issues, riskLevel }) => {
       // Use the most user-friendly issue message
       const primaryIssue = issues[0] || 'Security check failed';
-      const reason = this.getSecurityErrorMessage(primaryIssue, riskLevel);
+      const reason = this._getSecurityErrorMessage(primaryIssue, riskLevel);
 
       // Only add if not already covered by type/size errors
       if (
@@ -263,7 +266,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
     // Show consolidated error notification if any files were invalid
     if (validationResults.invalidFiles.length > 0) {
-      this.showEnhancedSecurityErrors(validationResults);
+      this._showEnhancedSecurityErrors(validationResults);
     }
 
     // If no valid files, return early
@@ -275,15 +278,15 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     this.selectedFiles.push(...validationResults.validFiles);
     this.filesSelected.emit(this.selectedFiles);
 
-    console.log(
-      `🔒 Security validation complete: ${validationResults.validFiles.length} valid, ${validationResults.invalidFiles.length} rejected`
+    console.warn(
+      `Security: ${validationResults.validFiles.length} valid, ${validationResults.invalidFiles.length} rejected`
     );
 
     // Start quality validation for security-validated files
-    await this.validateImageQuality(validationResults.validFiles);
+    await this._validateImageQuality(validationResults.validFiles);
   }
 
-  private validateFile(file: File): { isValid: boolean; error?: 'type' | 'size' } {
+  private _validateFile(file: File): { isValid: boolean; error?: 'type' | 'size' } {
     // Check file type
     if (!this.allowedTypes.includes(file.type)) {
       return { isValid: false, error: 'type' };
@@ -297,7 +300,14 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     return { isValid: true };
   }
 
-  private showConsolidatedErrors(results: any): void {
+  private _showConsolidatedErrors(results: {
+    errors: {
+      unsupportedType: string[];
+      tooLarge: string[];
+    };
+    invalidFiles: File[];
+    validFiles: File[];
+  }): void {
     const errors = [];
 
     if (results.errors.unsupportedType.length > 0) {
@@ -319,17 +329,23 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
       );
     }
 
-    const totalInvalid = results.invalidFiles.length;
-    const totalFiles = results.validFiles.length + totalInvalid;
 
-    this.notificationService.error(
+    this._notificationService.error(
       'Please Check File Format',
       errors.join('. ') + '. Supported formats: JPEG, PNG, WebP (max 7MB).',
       5000 // Auto-close after 5 seconds
     );
   }
 
-  private showEnhancedSecurityErrors(results: any): void {
+  private _showEnhancedSecurityErrors(results: {
+    errors: {
+      unsupportedType: string[];
+      tooLarge: string[];
+      securityIssues: { fileName: string; issues: string[]; riskLevel: string }[];
+    };
+    invalidFiles: File[];
+    validFiles: File[];
+  }): void {
     const errors = [];
 
     if (results.errors.unsupportedType.length > 0) {
@@ -353,14 +369,14 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
     // Add security-specific errors
     const criticalFiles = results.errors.securityIssues.filter(
-      (s: any) => s.riskLevel === 'critical'
+      (s) => s.riskLevel === 'critical'
     );
-    const highRiskFiles = results.errors.securityIssues.filter((s: any) => s.riskLevel === 'high');
+    const highRiskFiles = results.errors.securityIssues.filter((s) => s.riskLevel === 'high');
 
     if (criticalFiles.length > 0) {
       const fileList = criticalFiles
         .slice(0, 2)
-        .map((s: any) => s.fileName)
+        .map((s) => s.fileName)
         .join(', ');
       const more = criticalFiles.length > 2 ? ` and ${criticalFiles.length - 2} more` : '';
       errors.push(
@@ -371,7 +387,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     if (highRiskFiles.length > 0) {
       const fileList = highRiskFiles
         .slice(0, 2)
-        .map((s: any) => s.fileName)
+        .map((s) => s.fileName)
         .join(', ');
       const more = highRiskFiles.length > 2 ? ` and ${highRiskFiles.length - 2} more` : '';
       errors.push(
@@ -382,20 +398,20 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     const title = criticalFiles.length > 0 ? 'Security Issues Detected' : 'File Validation Failed';
     const message = errors.join('. ') + '. Only secure JPEG, PNG, and WebP files are allowed.';
 
-    this.notificationService.error(title, message, 6000);
+    this._notificationService.error(title, message, 6000);
   }
 
-  private getSecurityErrorMessage(issue: string, riskLevel: string): string {
+  private _getSecurityErrorMessage(issue: string, riskLevel: string): string {
     // Map technical security issues to user-friendly messages
     const errorMap: Record<string, string> = {
-      'File size': 'File too large',
-      'File type': 'Invalid file type',
-      'File extension': 'Invalid file extension',
-      'Empty files': 'Empty file not allowed',
-      'path traversal': 'Unsafe filename detected',
-      'dangerous pattern': 'Potentially harmful file',
-      mismatch: 'File type mismatch detected',
-      'validation failed': 'Security check failed',
+      'fileSize': 'File too large',
+      'fileType': 'Invalid file type',
+      'fileExtension': 'Invalid file extension',
+      'emptyFiles': 'Empty file not allowed',
+      'pathTraversal': 'Unsafe filename detected',
+      'dangerousPattern': 'Potentially harmful file',
+      'mismatch': 'File type mismatch detected',
+      'validationFailed': 'Security check failed',
     };
 
     // Find matching error message
@@ -410,24 +426,24 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   }
 
   // Quality Validation
-  private async validateImageQuality(files: File[]) {
+  private async _validateImageQuality(files: File[]): Promise<void> {
     this.isCheckingQuality = true;
     this.qualityCheckProgress = 'Starting quality analysis...';
     this.qualityCheckErrors = [];
-    this.cdr.detectChanges();
+    this._cdr.detectChanges();
 
     const validFiles: File[] = [];
     const errors: QualityCheckError[] = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const progress = Math.round(((i + 1) / files.length) * 100);
+      const _progress = Math.round(((i + 1) / files.length) * 100);
       this.qualityCheckProgress = `Analyzing ${file.name} (${i + 1}/${files.length})...`;
-      this.cdr.detectChanges();
+      this._cdr.detectChanges();
 
       try {
         // Check image dimensions
-        const dimensions = await this.getImageDimensions(file);
+        const dimensions = await this._getImageDimensions(file);
         if (dimensions.width < 512 || dimensions.height < 512) {
           errors.push({
             fileName: file.name,
@@ -442,7 +458,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
         }
 
         // Perform face detection and quality analysis
-        const faceDetectionService = await this.loadFaceDetectionService();
+        const faceDetectionService = await this._loadFaceDetectionService();
         const qualityResult = await faceDetectionService.validateImage(file);
 
         if (qualityResult.isValid) {
@@ -479,16 +495,16 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
       }
 
       // Update progress
-      await this.ngZone.run(async () => {
+      await this._ngZone.run(async () => {
         this.qualityCheckProgress = `Analyzed ${i + 1} of ${files.length} images...`;
-        this.cdr.detectChanges();
+        this._cdr.detectChanges();
       });
     }
 
     this.isCheckingQuality = false;
     this.qualityCheckProgress = '';
     this.qualityCheckErrors = errors;
-    this.cdr.detectChanges();
+    this._cdr.detectChanges();
 
     // Emit quality check results
     this.qualityCheckCompleted.emit({
@@ -500,14 +516,14 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
     // Show summary notification
     if (validFiles.length > 0) {
-      this.notificationService.success(
+      this._notificationService.success(
         'Quality Check Complete',
         `${validFiles.length} of ${files.length} images passed quality checks.`
       );
     }
 
     if (errors.length > 0) {
-      this.notificationService.error(
+      this._notificationService.error(
         'Quality Issues Found',
         `${errors.length} image(s) failed quality validation. Please review and try again.`,
         8000 // 8 seconds - longer than success to account for user reading time
@@ -515,7 +531,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     }
   }
 
-  private getImageDimensions(file: File): Promise<{ width: number; height: number }> {
+  private _getImageDimensions(file: File): Promise<{ width: number; height: number }> {
     return new Promise((resolve, reject) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
@@ -535,14 +551,14 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   }
 
   // File Management
-  removeFile(index: number) {
+  removeFile(index: number): void {
     if (index >= 0 && index < this.selectedFiles.length) {
       const removedFile = this.selectedFiles[index];
 
       // Clean up preview cache
-      if (this.filePreviewCache.has(removedFile)) {
-        URL.revokeObjectURL(this.filePreviewCache.get(removedFile)!);
-        this.filePreviewCache.delete(removedFile);
+      if (this._filePreviewCache.has(removedFile)) {
+        URL.revokeObjectURL(this._filePreviewCache.get(removedFile)!);
+        this._filePreviewCache.delete(removedFile);
       }
 
       // Remove from arrays
@@ -557,12 +573,12 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     }
   }
 
-  deleteUploadedImage(thumb: any, index: number) {
-    console.log('Attempting to delete image:', { thumb, index });
+  deleteUploadedImage(thumb: { id: string; url: string; name: string }, index: number): void {
+    console.warn('Attempting to delete image:', { thumb, index });
 
     if (!thumb?.id) {
       console.error('Thumbnail missing or invalid:', thumb);
-      this.notificationService.error(
+      this._notificationService.error(
         'Error',
         'Cannot delete image: missing or invalid thumbnail data'
       );
@@ -573,20 +589,20 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     const imageId = parseInt(thumb.id.toString(), 10);
     if (isNaN(imageId)) {
       console.error('Invalid image ID format:', thumb.id);
-      this.notificationService.error('Error', 'Cannot delete image: invalid ID format');
+      this._notificationService.error('Error', 'Cannot delete image: invalid ID format');
       return;
     }
 
-    console.log('Parsed image ID:', imageId);
+    console.warn('Parsed image ID:', imageId);
 
-    this.fileUploadService.deleteImage(imageId).subscribe({
+    this._fileUploadService.deleteImage(imageId).subscribe({
       next: response => {
         if (response.success) {
           this.uploadedImageDeleted.emit({ thumb, index });
 
           // Show different messages based on whether repair was triggered
           if (response.repairTriggered) {
-            this.notificationService.success(
+            this._notificationService.success(
               'Repaired & Synchronized',
               'Detected data inconsistency and automatically repaired. Database synchronized with filesystem.'
             );
@@ -597,11 +613,11 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
               refreshRequired: true,
             });
           } else {
-            this.notificationService.success('Deleted', 'Image deleted successfully');
+            this._notificationService.success('Deleted', 'Image deleted successfully');
           }
         } else {
           console.error('Delete failed on server:', response);
-          this.notificationService.error('Error', response.message || 'Failed to delete image');
+          this._notificationService.error('Error', response.message || 'Failed to delete image');
         }
       },
       error: error => {
@@ -622,21 +638,21 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
           errorMessage = 'Server error while deleting image';
         }
 
-        this.notificationService.error(
+        this._notificationService.error(
           'Error',
           `${errorMessage}: ${error.message || error.statusText || 'Unknown error'}`
         );
 
         // If image wasn't found, refresh the uploaded images to sync with server
         if (shouldRefreshData) {
-          this.refreshUploadedImages();
+          this._refreshUploadedImages();
         }
       },
     });
   }
 
   // Method to refresh uploaded images from server
-  private refreshUploadedImages() {
+  private _refreshUploadedImages(): void {
     // Emit an event to parent component to refresh the uploaded images
     // This will be handled by the dashboard component
     this.uploadedImageDeleted.emit({
@@ -647,7 +663,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   }
 
   // Handle image load errors (404s, network failures, etc.)
-  onImageLoadError(thumb: any, index: number) {
+  onImageLoadError(thumb: { id: string; url: string; name: string }, index: number): void {
     console.warn(`🖼️ Image failed to load: ${thumb.url}`, {
       thumb,
       index,
@@ -661,14 +677,14 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   }
 
   // Handle successful image loads (for debugging)
-  onImageLoadSuccess(thumb: any, index: number) {
+  onImageLoadSuccess(_thumb: unknown, _index: number): void {
     // Optional: Log successful loads for debugging
   }
 
   // Upload Process
-  uploadImages() {
+  uploadImages(): void {
     if (this.selectedFiles.length === 0) {
-      this.notificationService.error('No Files Selected', 'Please select files to upload');
+      this._notificationService.error('No Files Selected', 'Please select files to upload');
       return;
     }
 
@@ -676,7 +692,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     const validFiles = this.selectedFilesWithQuality.filter(f => f.isValid).map(f => f.file);
 
     if (validFiles.length === 0) {
-      this.notificationService.error(
+      this._notificationService.error(
         'No Valid Files',
         'Please fix quality issues or select different files before uploading'
       );
@@ -686,7 +702,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     // Show info about excluded files
     const invalidCount = this.selectedFiles.length - validFiles.length;
     if (invalidCount > 0) {
-      this.notificationService.info(
+      this._notificationService.info(
         'Files Excluded',
         `${invalidCount} file(s) with quality issues were excluded. Uploading ${validFiles.length} valid file(s).`
       );
@@ -694,28 +710,28 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
     this.isUploading = true;
     this.uploadProgressValue = 0;
-    this.cdr.detectChanges();
+    this._cdr.detectChanges();
 
     // Upload only valid files, set forTraining=false to avoid premature ZIP creation
-    this.fileUploadService.uploadImages(validFiles, undefined, false).subscribe({
+    this._fileUploadService.uploadImages(validFiles, undefined, false).subscribe({
       next: result => {
         if (result.progress !== undefined) {
           this.uploadProgressValue = result.progress;
           this.uploadProgress.emit(result.progress);
-          this.cdr.detectChanges();
+          this._cdr.detectChanges();
         }
 
         if (result.response) {
           // Upload completed successfully
-          console.log('🎉 Upload completed successfully:', result.response);
+          console.warn('Upload completed successfully:', result.response);
 
           // Force UI state reset BEFORE emitting events
           this.isUploading = false;
           this.uploadProgressValue = 0;
-          this.cdr.detectChanges();
+          this._cdr.detectChanges();
 
           // Clear selected files
-          this.clearSelectedFiles();
+          this._clearSelectedFiles();
 
           // Emit completion event to trigger dashboard refresh
           const uploadedFiles = result.response?.uploadedFiles || [];
@@ -723,27 +739,27 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
           // Show success notification with null safety
           const fileCount = uploadedFiles.length;
-          this.notificationService.success(
+          this._notificationService.success(
             'Upload Complete',
             `${fileCount} image(s) uploaded successfully!`
           );
 
           // Force final change detection
-          this.cdr.detectChanges();
+          this._cdr.detectChanges();
         }
       },
       error: error => {
         console.error('Upload error:', error);
-        this.notificationService.error('Upload Error', 'An error occurred during upload');
+        this._notificationService.error('Upload Error', 'An error occurred during upload');
         this.isUploading = false;
         this.uploadProgressValue = 0;
-        this.cdr.detectChanges();
+        this._cdr.detectChanges();
       },
     });
   }
 
-  private clearSelectedFiles() {
-    this.cleanupFilePreviewCache();
+  private _clearSelectedFiles(): void {
+    this._cleanupFilePreviewCache();
     this.selectedFiles = [];
     this.selectedFilesWithQuality = [];
     this.qualityCheckErrors = [];
@@ -753,19 +769,19 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
   // File Preview Management
   getFilePreview(file: File): string {
-    if (!this.filePreviewCache.has(file)) {
+    if (!this._filePreviewCache.has(file)) {
       const url = URL.createObjectURL(file);
-      this.filePreviewCache.set(file, url);
+      this._filePreviewCache.set(file, url);
     }
-    return this.filePreviewCache.get(file)!;
+    return this._filePreviewCache.get(file)!;
   }
 
-  private cleanupFilePreviewCache() {
-    this.filePreviewCache.forEach(url => URL.revokeObjectURL(url));
-    this.filePreviewCache.clear();
+  private _cleanupFilePreviewCache(): void {
+    this._filePreviewCache.forEach(url => URL.revokeObjectURL(url));
+    this._filePreviewCache.clear();
   }
 
-  removeFileFromErrors(error: QualityCheckError) {
+  removeFileFromErrors(error: QualityCheckError): void {
     // Remove from selectedFiles
     const fileIndex = this.selectedFiles.findIndex(f => f === error.file);
     if (fileIndex !== -1) {
@@ -785,16 +801,16 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     }
 
     // Clean up preview cache
-    if (this.filePreviewCache.has(error.file)) {
-      URL.revokeObjectURL(this.filePreviewCache.get(error.file)!);
-      this.filePreviewCache.delete(error.file);
+    if (this._filePreviewCache.has(error.file)) {
+      URL.revokeObjectURL(this._filePreviewCache.get(error.file)!);
+      this._filePreviewCache.delete(error.file);
     }
 
     this.filesSelected.emit(this.selectedFiles);
   }
 
   // Show global tooltip with document.body level positioning
-  showGlobalTooltip(error: QualityCheckError, event: Event) {
+  showGlobalTooltip(error: QualityCheckError, event: Event): void {
     event.stopPropagation();
 
     // Close any existing modal first
@@ -804,43 +820,43 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     this.activeTooltipError = error;
 
     // Create modal elements at document.body level
-    this.createDocumentLevelModal(error);
+    this._createDocumentLevelModal(error);
 
     // Prevent body scroll
     document.body.style.overflow = 'hidden';
 
     // Force change detection for component state
-    this.cdr.detectChanges();
+    this._cdr.detectChanges();
   }
 
   // Close global tooltip
-  closeGlobalTooltip() {
+  closeGlobalTooltip(): void {
     this.activeTooltipError = null;
 
     // Remove document-level modal elements
-    this.removeDocumentLevelModal();
+    this._removeDocumentLevelModal();
 
     // Restore body scroll
     document.body.style.overflow = '';
 
-    this.cdr.detectChanges();
+    this._cdr.detectChanges();
   }
 
   // Simple center-modal tooltip positioning (now handled by CSS flexbox)
-  private calculateTooltipPosition(buttonElement: HTMLElement) {
+  private _calculateTooltipPosition(_buttonElement: HTMLElement): void {
     // No positioning needed - CSS flexbox handles centering automatically
     // Keep this method for compatibility but remove positioning logic
     this.tooltipPosition = { x: 0, y: 0 };
   }
 
   // Create modal elements at document.body level with bulletproof inline positioning
-  private createDocumentLevelModal(error: QualityCheckError): void {
+  private _createDocumentLevelModal(error: QualityCheckError): void {
     // Create backdrop element
-    this.modalBackdrop = document.createElement('div');
-    this.modalBackdrop.className = 'global-modal-backdrop';
+    this._modalBackdrop = document.createElement('div');
+    this._modalBackdrop.className = 'global-modal-backdrop';
 
     // Apply bulletproof backdrop positioning via inline styles (bypasses ViewEncapsulation)
-    const backdropStyles = this.modalBackdrop.style;
+    const backdropStyles = this._modalBackdrop.style;
     backdropStyles.position = 'fixed';
     backdropStyles.top = '0';
     backdropStyles.left = '0';
@@ -862,15 +878,15 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     backdropStyles.boxSizing = 'border-box';
 
     // Create modal container
-    this.modalElement = document.createElement('div');
-    this.modalElement.className = 'global-error-tooltip';
-    this.modalElement.setAttribute('role', 'dialog');
-    this.modalElement.setAttribute('aria-modal', 'true');
-    this.modalElement.setAttribute('aria-labelledby', 'tooltip-title');
-    this.modalElement.setAttribute('tabindex', '-1');
+    this._modalElement = document.createElement('div');
+    this._modalElement.className = 'global-error-tooltip';
+    this._modalElement.setAttribute('role', 'dialog');
+    this._modalElement.setAttribute('aria-modal', 'true');
+    this._modalElement.setAttribute('aria-labelledby', 'tooltip-title');
+    this._modalElement.setAttribute('tabindex', '-1');
 
     // Apply bulletproof modal positioning via inline styles
-    const modalStyles = this.modalElement.style;
+    const modalStyles = this._modalElement.style;
     modalStyles.position = 'relative';
     modalStyles.margin = '0';
     modalStyles.transform = 'none';
@@ -895,35 +911,35 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     modalStyles.overflow = 'hidden';
 
     // Build modal content
-    this.modalElement.innerHTML = this.buildModalContent(error);
+    this._modalElement.innerHTML = this.buildModalContent(error);
 
     // Apply comprehensive theme-aware inline styles to inner elements
-    this.applyModalContentStyles();
+    this._applyModalContentStyles();
 
     // Add event listeners
-    this.modalBackdrop.addEventListener('click', () => this.closeGlobalTooltip());
-    this.modalElement.addEventListener('click', e => e.stopPropagation());
+    this._modalBackdrop.addEventListener('click', () => this.closeGlobalTooltip());
+    this._modalElement.addEventListener('click', e => e.stopPropagation());
 
     // Add close button listener
-    const closeButton = this.modalElement.querySelector('.tooltip-close');
+    const closeButton = this._modalElement.querySelector('.tooltip-close');
     if (closeButton) {
       closeButton.addEventListener('click', () => this.closeGlobalTooltip());
     }
 
     // Add ESC key listener
-    document.addEventListener('keydown', this.handleModalKeydown);
+    document.addEventListener('keydown', this._handleModalKeydown);
 
     // Append to DOM
-    this.modalBackdrop.appendChild(this.modalElement);
-    document.body.appendChild(this.modalBackdrop);
+    this._modalBackdrop.appendChild(this._modalElement);
+    document.body.appendChild(this._modalBackdrop);
 
     // Focus the modal for accessibility
-    setTimeout(() => this.modalElement?.focus(), 100);
+    setTimeout(() => this._modalElement?.focus(), 100);
   }
 
   // Apply comprehensive theme-aware inline styles to modal content elements
-  private applyModalContentStyles(): void {
-    if (!this.modalElement) {
+  private _applyModalContentStyles(): void {
+    if (!this._modalElement) {
       return;
     }
 
@@ -972,11 +988,11 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
         };
 
     // Update main modal background for theme
-    this.modalElement.style.background = `linear-gradient(135deg, ${colors.bg} 0%, ${colors.bgSecondary} 100%)`;
-    this.modalElement.style.border = `1px solid ${colors.border}`;
+    this._modalElement.style.background = `linear-gradient(135deg, ${colors.bg} 0%, ${colors.bgSecondary} 100%)`;
+    this._modalElement.style.border = `1px solid ${colors.border}`;
 
     // Style header
-    const header = this.modalElement.querySelector('.tooltip-header') as HTMLElement;
+    const header = this._modalElement.querySelector('.tooltip-header') as HTMLElement;
     if (header) {
       header.style.background = `linear-gradient(135deg, ${colors.errorBg} 0%, rgba(185, 28, 28, 0.05) 100%)`;
       header.style.color = colors.error;
@@ -1017,7 +1033,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     }
 
     // Style filename
-    const filename = this.modalElement.querySelector('.tooltip-filename') as HTMLElement;
+    const filename = this._modalElement.querySelector('.tooltip-filename') as HTMLElement;
     if (filename) {
       filename.style.fontFamily =
         "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -1033,7 +1049,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     }
 
     // Style sections
-    const sections = this.modalElement.querySelectorAll('.tooltip-section');
+    const sections = this._modalElement.querySelectorAll('.tooltip-section');
     sections.forEach((section: Element) => {
       const sectionEl = section as HTMLElement;
       sectionEl.style.margin = '0 16px 16px 16px';
@@ -1126,7 +1142,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     });
 
     // Style scrollable content
-    const content = this.modalElement.querySelector('.tooltip-content') as HTMLElement;
+    const content = this._modalElement.querySelector('.tooltip-content') as HTMLElement;
     if (content) {
       content.style.flex = '1';
       content.style.overflowY = 'auto';
@@ -1143,22 +1159,22 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   }
 
   // Remove modal elements from document.body
-  private removeDocumentLevelModal(): void {
-    if (this.modalBackdrop) {
+  private _removeDocumentLevelModal(): void {
+    if (this._modalBackdrop) {
       // Remove event listeners
-      document.removeEventListener('keydown', this.handleModalKeydown);
+      document.removeEventListener('keydown', this._handleModalKeydown);
 
       // Remove from DOM
-      document.body.removeChild(this.modalBackdrop);
+      document.body.removeChild(this._modalBackdrop);
 
       // Clear references
-      this.modalBackdrop = null;
-      this.modalElement = null;
+      this._modalBackdrop = null;
+      this._modalElement = null;
     }
   }
 
   // Handle keydown for document-level modal
-  private handleModalKeydown = (event: KeyboardEvent) => {
+  private _handleModalKeydown = (event: KeyboardEvent) => {
     if (event.key === 'Escape') {
       this.closeGlobalTooltip();
       event.preventDefault();
@@ -1285,7 +1301,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   }
 
   // Close global tooltip when clicking outside
-  private closeAllPopups(event?: Event) {
+  private closeAllPopups(event?: Event): void {
     if (event) {
       // Don't close if clicking on global tooltip or info icon buttons
       const target = event.target as HTMLElement;
@@ -1306,7 +1322,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   // Inline Feedback Management
   dismissInlineFeedback(): void {
     this.invalidFilesFeedback = [];
-    this.cdr.detectChanges();
+    this._cdr.detectChanges();
   }
 
   // Helper Methods

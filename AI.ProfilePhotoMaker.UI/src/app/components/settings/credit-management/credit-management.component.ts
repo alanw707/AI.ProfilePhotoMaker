@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 
@@ -8,10 +8,11 @@ import { RouterModule } from '@angular/router';
   imports: [CommonModule, RouterModule],
   templateUrl: './credit-management.component.html',
   styleUrl: './credit-management.component.sass',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CreditManagementComponent {
-  @Input() creditsInfo: any = null;
-  @Input() userCreditStatus: any = null;
+  @Input() creditsInfo: unknown = null;
+  @Input() userCreditStatus: unknown = null;
 
   getTotalAvailableCredits(): number {
     const weeklyCredits = this.getWeeklyCredits();
@@ -20,11 +21,11 @@ export class CreditManagementComponent {
   }
 
   getPurchasedCredits(): number {
-    return this.userCreditStatus?.purchasedCredits || 0;
+    return (this.userCreditStatus as any)?.purchasedCredits || 0;
   }
 
   getWeeklyCredits(): number {
-    return this.userCreditStatus?.weeklyCredits || this.creditsInfo?.availableCredits || 0;
+    return (this.userCreditStatus as any)?.weeklyCredits || (this.creditsInfo as any)?.availableCredits || 0;
   }
 
   getMaxWeeklyCredits(): number {
@@ -39,8 +40,8 @@ export class CreditManagementComponent {
   }
 
   getNextCreditReset(): string {
-    if (this.userCreditStatus?.nextResetDate) {
-      const resetDate = new Date(this.userCreditStatus.nextResetDate);
+    if ((this.userCreditStatus as any)?.nextResetDate) {
+      const resetDate = new Date((this.userCreditStatus as any).nextResetDate);
       return resetDate.toLocaleDateString('en-US', {
         weekday: 'long',
         month: 'short',

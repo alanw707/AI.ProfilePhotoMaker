@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -17,6 +17,7 @@ import { ConfigService } from '../../services/config.service';
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.sass'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RegisterComponent {
   registerForm: FormGroup;
@@ -24,12 +25,12 @@ export class RegisterComponent {
   error = '';
 
   constructor(
-    private formBuilder: FormBuilder,
-    private authService: AuthService,
-    private router: Router,
-    private configService: ConfigService
+    private _formBuilder: FormBuilder,
+    private _authService: AuthService,
+    private _router: Router,
+    private _configService: ConfigService
   ) {
-    this.registerForm = this.formBuilder.group(
+    this.registerForm = this._formBuilder.group(
       {
         firstName: ['', [Validators.required, Validators.minLength(2)]],
         lastName: ['', [Validators.required, Validators.minLength(2)]],
@@ -45,11 +46,11 @@ export class RegisterComponent {
     );
   }
 
-  get f() {
+  get f(): Record<string, AbstractControl> {
     return this.registerForm.controls;
   }
 
-  passwordMatchValidator(control: AbstractControl): Record<string, any> | null {
+  passwordMatchValidator(control: AbstractControl): Record<string, boolean> | null {
     const password = control.get('password');
     const confirmPassword = control.get('confirmPassword');
 
@@ -59,7 +60,7 @@ export class RegisterComponent {
     return null;
   }
 
-  onSubmit() {
+  onSubmit(): void {
     this.error = '';
 
     if (this.registerForm.invalid) {
@@ -76,10 +77,10 @@ export class RegisterComponent {
       ethnicity: this.f['ethnicity'].value,
     };
 
-    this.authService.register(registerData).subscribe({
-      next: response => {
+    this._authService.register(registerData).subscribe({
+      next: _response => {
         // Registration successful, navigate to dashboard
-        this.router.navigate(['/app/dashboard']);
+        this._router.navigate(['/app/dashboard']);
       },
       error: error => {
         this.error = error.message || 'Registration failed. Please try again.';
@@ -88,32 +89,28 @@ export class RegisterComponent {
     });
   }
 
-  navigateToLogin() {
-    this.router.navigate(['/auth/login']);
+  navigateToLogin(): void {
+    this._router.navigate(['/auth/login']);
   }
 
-  registerWithGoogle() {
+  registerWithGoogle(): void {
     // Use configuration-based URL for Google OAuth registration
     // Use configuration-based URL for Google OAuth with dynamic redirect handling
-    const oauthBaseUrl = this.configService.getOAuthRedirectUrl();
-    const fullReturnUrl = `${this.configService.frontendBaseUrl}/app/dashboard`;
+    const oauthBaseUrl = this._configService.getOAuthRedirectUrl();
+    const fullReturnUrl = `${this._configService.frontendBaseUrl}/app/dashboard`;
 
-    console.log('OAuth redirect details (register):', {
-      oauthBaseUrl,
-      fullReturnUrl,
-      isExternalAccess: this.configService.isExternalAccess(),
-      currentOrigin: window.location.origin,
-    });
+    // OAuth redirect debugging info available in development console
 
-    window.location.href = `${oauthBaseUrl}/api/auth/external-login/Google?returnUrl=${encodeURIComponent(fullReturnUrl)}`;
+    const oauthUrl = `${oauthBaseUrl}/api/auth/external-login/Google?returnUrl=${encodeURIComponent(fullReturnUrl)}`;
+    window.location.href = oauthUrl;
   }
 
-  registerWithFacebook() {
+  registerWithFacebook(): void {
     // TODO: Implement Facebook OAuth when needed
     this.error = 'Facebook registration not yet implemented.';
   }
 
-  registerWithApple() {
+  registerWithApple(): void {
     // TODO: Implement Apple OAuth when needed
     this.error = 'Apple registration not yet implemented.';
   }

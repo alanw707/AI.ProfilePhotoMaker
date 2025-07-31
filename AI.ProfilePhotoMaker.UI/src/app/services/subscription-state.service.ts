@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
-import { Observable, forkJoin, of } from 'rxjs';
+import { forkJoin, Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { StateBaseService } from './state-base.service';
 import { CreditService, UserCreditStatus } from './credit.service';
-import { ReplicateService, CreditsInfo } from './replicate.service';
+import { CreditsInfo, ReplicateService } from './replicate.service';
 import { ConfigService } from './config.service';
 import { CacheManagerService } from './cache-manager.service';
 import { NotificationService } from './notification.service';
@@ -285,7 +285,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
   /**
    * Check if credits need refreshing based on last update time
    */
-  shouldRefreshCredits(maxAgeMinutes: number = 15): boolean {
+  shouldRefreshCredits(maxAgeMinutes = 15): boolean {
     // This could be enhanced to track last refresh time
     // For now, we'll use cache validity
     return !this.getCachedData<SubscriptionState>(this.CACHE_KEY);

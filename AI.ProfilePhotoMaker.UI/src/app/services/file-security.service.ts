@@ -300,7 +300,7 @@ export class FileSecurityService {
   }
 
   private validateMimeExtensionMatch(mimeType: string, extension: string): boolean {
-    const mimeExtensionMap: { [key: string]: string[] } = {
+    const mimeExtensionMap: Record<string, string[]> = {
       'image/jpeg': ['.jpg', '.jpeg'],
       'image/png': ['.png'],
       'image/webp': ['.webp'],
@@ -322,7 +322,7 @@ export class FileSecurityService {
   }
 
   private detectFileTypeFromSignature(signature: string): string | null {
-    const signatures: { [key: string]: string } = {
+    const signatures: Record<string, string> = {
       ffd8ff: 'image/jpeg',
       '89504e47': 'image/png',
       '52494646': 'image/webp', // Partial - WebP starts with RIFF
@@ -340,7 +340,7 @@ export class FileSecurityService {
   }
 
   private formatFileSize(bytes: number): string {
-    if (bytes === 0) return '0 B';
+    if (bytes === 0) {return '0 B';}
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));

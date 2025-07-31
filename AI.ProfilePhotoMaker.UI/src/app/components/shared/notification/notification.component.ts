@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Notification, NotificationService } from '../../../services/notification.service';
 import { Subject } from 'rxjs';
@@ -10,22 +10,23 @@ import { takeUntil } from 'rxjs/operators';
   imports: [CommonModule],
   templateUrl: './notification.component.html',
   styleUrls: ['./notification.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NotificationComponent implements OnInit, OnDestroy {
   notifications: Notification[] = [];
   private destroy$ = new Subject<void>();
 
   constructor(
-    private notificationService: NotificationService,
-    private cdr: ChangeDetectorRef
+    private _notificationService: NotificationService,
+    private _cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
-    this.notificationService.notifications$
+    this._notificationService.notifications$
       .pipe(takeUntil(this.destroy$))
       .subscribe(notifications => {
         this.notifications = notifications;
-        this.cdr.detectChanges();
+        this._cdr.detectChanges();
       });
   }
 
@@ -35,8 +36,8 @@ export class NotificationComponent implements OnInit, OnDestroy {
   }
 
   removeNotification(id: string): void {
-    this.notificationService.removeNotification(id);
-    this.cdr.detectChanges();
+    this._notificationService.removeNotification(id);
+    this._cdr.detectChanges();
   }
 
   getSvgIcon(type: string): string {

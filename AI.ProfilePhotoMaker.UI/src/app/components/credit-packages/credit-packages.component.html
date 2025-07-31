@@ -42,7 +42,7 @@
 
   <!-- Credit Packages -->
   <div class="packages-grid" *ngIf="!isLoadingPackages && packages.length > 0 && !selectedPackage">
-    <div class="package-card" [class.recommended]="isPackageRecommended(pkg)" *ngFor="let pkg of packages">
+    <div class="package-card" [class.recommended]="isPackageRecommended(pkg)" *ngFor="let pkg of packages; trackBy: trackByPackageId">
       <!-- Recommended Badge -->
       <div class="recommended-badge" *ngIf="isPackageRecommended(pkg)">Most Popular</div>
 

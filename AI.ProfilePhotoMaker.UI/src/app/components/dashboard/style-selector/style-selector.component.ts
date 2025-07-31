@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -17,9 +17,10 @@ export interface StyleOption {
   imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './style-selector.component.html',
   styleUrls: ['./style-selector.component.sass'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StyleSelectorComponent {
-  constructor(private router: Router) {}
+  constructor(private _router: Router) {}
   @Input() availableStyles: StyleOption[] = [];
   @Input() imagesPerStyle = 2;
   @Input() selectedStyles = 0;
@@ -47,32 +48,32 @@ export class StyleSelectorComponent {
   @Output() continueInBackground = new EventEmitter<void>();
   @Output() dismissSuccessMessage = new EventEmitter<void>();
 
-  onToggleStyle(style: StyleOption) {
+  onToggleStyle(style: StyleOption): void {
     this.styleToggled.emit(style);
   }
 
-  onImagesPerStyleChange(count: number) {
+  onImagesPerStyleChange(count: number): void {
     this.imagesPerStyle = count;
     this.imagesPerStyleChanged.emit(count);
   }
 
-  onSelectAll() {
+  onSelectAll(): void {
     this.selectAllStyles.emit();
   }
 
-  onDeselectAll() {
+  onDeselectAll(): void {
     this.deselectAllStyles.emit();
   }
 
-  onStartTraining() {
+  onStartTraining(): void {
     this.startTraining.emit();
   }
 
-  onContinueInBackground() {
+  onContinueInBackground(): void {
     this.continueInBackground.emit();
   }
 
-  onDismissSuccessMessage() {
+  onDismissSuccessMessage(): void {
     this.dismissSuccessMessage.emit();
   }
 

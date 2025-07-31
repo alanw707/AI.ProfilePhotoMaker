@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run stricter linting before push (errors only, no warnings)
+echo "🔍 Running pre-push linting validation..."
+npm run lint:errors-only
+
+# Optional: Run type checking
+echo "🔧 Running TypeScript compilation check..."
+npx tsc --noEmit
+
+echo "✅ Pre-push validation completed!"

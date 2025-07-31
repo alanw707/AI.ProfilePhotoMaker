@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
   ElementRef,
@@ -9,7 +10,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { CreditsInfo, ReplicateService } from '../../services/replicate.service';
+import { ReplicateService } from '../../services/replicate.service';
 import { FileUploadService } from '../../services/file-upload.service';
 import { AuthService } from '../../services/auth.service';
 import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
@@ -23,6 +24,7 @@ import { Subscription } from 'rxjs';
   imports: [CommonModule, FormsModule, RouterModule, HeaderNavigationComponent],
   templateUrl: './photo-enhancement.component.html',
   styleUrls: ['./photo-enhancement.component.sass'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
@@ -33,28 +35,28 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   isProcessing = false;
   processingProgress = 0;
   processingStatus = '';
-  enhancedImage: any = null;
+  enhancedImage: unknown = null;
   userCreditStatus: UserCreditStatus | null = null;
   errorMessage = '';
   isDragOver = false;
   isLoadingCredits = true;
   allowedTypes: string[] = ['image/jpeg', 'image/png', 'image/webp'];
 
-  private stateSubscription!: Subscription;
+  private _stateSubscription!: Subscription;
 
   constructor(
-    private replicateService: ReplicateService,
-    private fileUploadService: FileUploadService,
-    private authService: AuthService,
-    private router: Router,
-    private stateService: DashboardCoordinatorService,
-    private creditService: CreditService,
-    private cdr: ChangeDetectorRef
+    private _replicateService: ReplicateService,
+    private _fileUploadService: FileUploadService,
+    private _authService: AuthService,
+    private _router: Router,
+    private _stateService: DashboardCoordinatorService,
+    private _creditService: CreditService,
+    private _cdr: ChangeDetectorRef
   ) {}
 
   // Get total available credits from internal sources only
   getTotalAvailableCredits(): number {
-    return this.creditService.getTotalAvailableCredits(
+    return this._creditService.getTotalAvailableCredits(
       this.userCreditStatus,
       null // No Replicate credits
     );
@@ -68,26 +70,26 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     // Load user credit status
-    const currentState = this.stateService.getState();
+    const currentState = this._stateService.getState();
 
     if (!currentState.userCreditStatus) {
       this.isLoadingCredits = true;
-      this.stateService.loadCreditsOnly();
+      this._stateService.loadCreditsOnly();
     } else {
       this.isLoadingCredits = false;
       this.userCreditStatus = currentState.userCreditStatus;
     }
 
-    this.stateSubscription = this.stateService.state$.subscribe(state => {
+    this._stateSubscription = this._stateService.state$.subscribe(state => {
       this.userCreditStatus = state.userCreditStatus;
       this.isLoadingCredits = state.isLoading;
-      this.cdr.detectChanges();
+      this._cdr.detectChanges();
     });
   }
 
   ngOnDestroy() {
-    if (this.stateSubscription) {
-      this.stateSubscription.unsubscribe();
+    if (this._stateSubscription) {
+      this._stateSubscription.unsubscribe();
     }
   }
 
@@ -143,12 +145,12 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     const reader = new FileReader();
     reader.onload = e => {
       this.imagePreview = e.target?.result as string;
-      this.cdr.detectChanges();
+      this._cdr.detectChanges();
     };
     reader.onerror = e => {
       console.error('FileReader error:', e);
       this.errorMessage = 'Failed to read the image file.';
-      this.cdr.detectChanges();
+      this._cdr.detectChanges();
     };
     reader.readAsDataURL(file);
   }
@@ -158,7 +160,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     this.imagePreview = null;
     this.errorMessage = '';
     // Trigger change detection to update the view
-    this.cdr.detectChanges();
+    this._cdr.detectChanges();
   }
 
   async startEnhancement() {
@@ -194,7 +196,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         enhancementType: this.enhancementType,
       };
 
-      const enhanceResponse = await this.replicateService.enhancePhoto(enhanceRequest).toPromise();
+      const enhanceResponse = await this._replicateService.enhancePhoto(enhanceRequest).toPromise();
 
       if (!enhanceResponse?.success) {
         const errorMsg = enhanceResponse?.error?.message || 'Enhancement failed';
@@ -210,7 +212,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       // Step 3: Poll for completion
       this.processingProgress = 50;
       this.processingStatus = 'AI is enhancing your photo...';
-      this.cdr.detectChanges();
+      this._cdr.detectChanges();
 
       const predictionId = enhanceResponse.data.prediction.id;
 
@@ -247,12 +249,12 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
         if (isBase64) {
           // Multi-stage change detection for large base64 data
-          this.cdr.detectChanges();
+          this._cdr.detectChanges();
           setTimeout(() => {
-            this.cdr.detectChanges();
+            this._cdr.detectChanges();
           }, 50);
         } else {
-          this.cdr.detectChanges();
+          this._cdr.detectChanges();
         }
 
         // Clean up the temporary uploaded image since we now have the enhanced version
@@ -301,15 +303,15 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     }
 
     return new Promise((resolve, reject) => {
-      this.fileUploadService.uploadSingleImage(this.selectedFile!).subscribe({
+      this._fileUploadService.uploadSingleImage(this.selectedFile!).subscribe({
         next: result => {
           if (result.progress < 100) {
             this.processingProgress = Math.round(result.progress * 0.2);
-            this.cdr.detectChanges();
+            this._cdr.detectChanges();
           } else if (result.response) {
             if (result.response.success) {
               this.processingProgress = 20;
-              this.cdr.detectChanges();
+              this._cdr.detectChanges();
               resolve(result.response.data);
             } else {
               console.error('Upload failed - server returned success=false');
@@ -331,7 +333,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
     while (attempts < maxAttempts) {
       try {
-        const statusResponse = await this.replicateService
+        const statusResponse = await this._replicateService
           .getPredictionStatus(predictionId)
           .toPromise();
 
@@ -447,7 +449,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     console.log('Cleaning up temporary enhanced image:', fileName);
 
     // Call backend API to delete the temporary file
-    this.fileUploadService.deleteTemporaryEnhancedImage(fileName).subscribe({
+    this._fileUploadService.deleteTemporaryEnhancedImage(fileName).subscribe({
       next: response => {
         if (response.success) {
           console.log('✅ Temporary enhanced image cleaned up successfully');
@@ -464,7 +466,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
   resetComponent() {
     this.enhanceAnother();
-    this.stateService.loadCreditsOnly();
+    this._stateService.loadCreditsOnly();
   }
 
   getNextResetText(resetDate: Date): string {

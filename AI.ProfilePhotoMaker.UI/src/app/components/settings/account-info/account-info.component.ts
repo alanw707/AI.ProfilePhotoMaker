@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { UserProfile } from '../../../services/profile.service';
 
@@ -7,7 +7,8 @@ import { UserProfile } from '../../../services/profile.service';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './account-info.component.html',
-  styleUrl: './account-info.component.sass'
+  styleUrl: './account-info.component.sass',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AccountInfoComponent {
   @Input() userEmail = '';
@@ -21,7 +22,7 @@ export class AccountInfoComponent {
     return `${this.userProfile.firstName} ${this.userProfile.lastName}`.trim();
   }
 
-  formatDate(date: any): string {
+  formatDate(date: string | Date | null): string {
     if (!date) {return '';}
     const d = new Date(date);
     return d.toLocaleDateString('en-US', { 

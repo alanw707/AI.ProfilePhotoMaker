@@ -745,7 +745,7 @@ export class LandingComponent implements OnInit, OnDestroy {
   }
 
   formatStyleName(styleName: string): string {
-    if (!styleName) return '';
+    if (!styleName) {return '';}
     return styleName
       .split(/[-\s]+/)
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))

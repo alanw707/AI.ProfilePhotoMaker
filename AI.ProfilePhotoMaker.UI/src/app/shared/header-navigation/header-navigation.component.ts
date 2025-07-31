@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
@@ -12,6 +12,7 @@ import { Subscription } from 'rxjs';
   imports: [CommonModule, RouterModule],
   templateUrl: './header-navigation.component.html',
   styleUrls: ['./header-navigation.component.sass'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HeaderNavigationComponent implements OnInit, OnDestroy {
   userName = '';
@@ -22,15 +23,15 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
   private creditSubscription?: Subscription;
 
   constructor(
-    private authService: AuthService,
-    private router: Router,
+    private _authService: AuthService,
+    private _router: Router,
     public themeService: ThemeService,
-    private creditService: CreditService,
-    private cdr: ChangeDetectorRef
+    private _creditService: CreditService,
+    private _cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
-    this.userSubscription = this.authService.currentUser$.subscribe(user => {
+    this.userSubscription = this._authService.currentUser$.subscribe(user => {
       if (user) {
         this.userEmail = user.email;
         this.userName =
@@ -57,21 +58,21 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
   }
 
   loadCreditStatus() {
-    this.creditSubscription = this.creditService.getCreditStatus().subscribe({
+    this.creditSubscription = this._creditService.getCreditStatus().subscribe({
       next: response => {
         if (response.success) {
           this.userCreditStatus = response.data;
           // Force change detection to update the view
-          this.cdr.detectChanges();
+          this._cdr.detectChanges();
         } else {
           this.userCreditStatus = null;
-          this.cdr.detectChanges();
+          this._cdr.detectChanges();
         }
       },
       error: error => {
         console.error('Failed to load credit status:', error);
         this.userCreditStatus = null;
-        this.cdr.detectChanges();
+        this._cdr.detectChanges();
       },
     });
   }
@@ -81,7 +82,7 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
   }
 
   logout() {
-    this.authService.logout();
+    this._authService.logout();
     // Navigation handled by auth service
   }
 

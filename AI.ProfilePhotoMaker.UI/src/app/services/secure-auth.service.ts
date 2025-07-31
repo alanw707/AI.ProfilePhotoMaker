@@ -1,10 +1,10 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { BehaviorSubject, Observable, throwError, timer, EMPTY, of } from 'rxjs';
-import { catchError, switchMap, tap, filter, take, finalize } from 'rxjs/operators';
+import { BehaviorSubject, EMPTY, Observable, of, throwError, timer } from 'rxjs';
+import { catchError, filter, finalize, switchMap, take, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { ConfigService } from './config.service';
-import { AuthService, AuthResponseDto, ApiAuthResponseDto } from './auth.service';
+import { ApiAuthResponseDto, AuthResponseDto, AuthService } from './auth.service';
 
 export interface TokenRefreshResponse {
   success: boolean;
@@ -28,7 +28,7 @@ export interface SecureSession {
 @Injectable({
   providedIn: 'root',
 })
-export class SecureAuthService {
+export class SecureAuthService implements OnDestroy {
   private readonly TOKEN_KEY = 'auth_token';
   private readonly REFRESH_TOKEN_KEY = 'refresh_token';
   private readonly SESSION_KEY = 'secure_session';

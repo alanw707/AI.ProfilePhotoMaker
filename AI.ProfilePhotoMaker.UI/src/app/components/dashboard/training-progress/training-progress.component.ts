@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { interval, Subscription } from 'rxjs';
 import { TrainingStatus } from '../../../models/dashboard.types';
@@ -75,7 +75,8 @@ import { TrainingStatus } from '../../../models/dashboard.types';
       </div>
     </div>
   `,
-  styleUrls: ['./training-progress.component.sass']
+  styleUrls: ['./training-progress.component.sass'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TrainingProgressComponent implements OnInit, OnDestroy {
   @Input() trainingStatus: TrainingStatus = {
@@ -91,18 +92,18 @@ export class TrainingProgressComponent implements OnInit, OnDestroy {
 
   private progressSubscription?: Subscription;
 
-  ngOnInit() {
+  ngOnInit(): void {
     // Auto-refresh status every 30 seconds during training
     if (this.trainingStatus.isTraining) {
       this.startProgressPolling();
     }
   }
 
-  ngOnDestroy() {
+  ngOnDestroy(): void {
     this.stopProgressPolling();
   }
 
-  private startProgressPolling() {
+  private startProgressPolling(): void {
     this.progressSubscription = interval(30000).subscribe(() => {
       if (this.trainingStatus.isTraining) {
         this.onRefreshStatus();
@@ -112,26 +113,26 @@ export class TrainingProgressComponent implements OnInit, OnDestroy {
     });
   }
 
-  private stopProgressPolling() {
+  private stopProgressPolling(): void {
     if (this.progressSubscription) {
       this.progressSubscription.unsubscribe();
       this.progressSubscription = undefined;
     }
   }
 
-  onContinueInBackground() {
+  onContinueInBackground(): void {
     this.continueInBackground.emit();
   }
 
-  onRefreshStatus() {
+  onRefreshStatus(): void {
     this.refreshStatus.emit();
   }
 
-  onStartGeneration() {
+  onStartGeneration(): void {
     this.startGeneration.emit();
   }
 
-  onRetryTraining() {
+  onRetryTraining(): void {
     this.retryTraining.emit();
   }
 

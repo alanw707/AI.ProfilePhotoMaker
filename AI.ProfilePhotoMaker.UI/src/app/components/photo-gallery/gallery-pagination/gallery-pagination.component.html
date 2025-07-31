@@ -1,7 +1,7 @@
 <!-- Pagination Controls -->
 <div class="pagination-section" *ngIf="totalItems > pageSize">
   <div class="pagination-info">
-    <span>Showing {{(currentPage - 1) * pageSize + 1}}-{{Math.min(currentPage * pageSize, totalItems)}} of {{totalItems}} images</span>
+    <span>Showing {{(currentPage - 1) * pageSize + 1}}-{{mathHelper.min(currentPage * pageSize, totalItems)}} of {{totalItems}} images</span>
   </div>
   
   <div class="pagination-controls">

@@ -92,7 +92,7 @@ export abstract class StateBaseService<T> {
   /**
    * Handle API errors consistently
    */
-  protected handleApiError(error: any, operation: string, showToUser: boolean = true): void {
+  protected handleApiError(error: any, operation: string, showToUser = true): void {
     // Log critical errors only to avoid console spam
     if (error?.status >= 500 || !error?.status) {
       console.error(`❌ ${operation} failed:`, error);
