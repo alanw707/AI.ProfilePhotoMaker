@@ -190,7 +190,7 @@ jobs:
             if VALIDATION_OUTPUT=$(az deployment group validate \
               --resource-group "${{ steps.config.outputs.resource-group }}" \
               --template-file main.json \
-              --parameters @parameters.${{ steps.config.outputs.environment }}.work.json \
+              --parameters @parameters.${{ steps.config.outputs.environment }}.json \
               --output table 2>&1); then
               echo "✅ ARM template validation passed"
               echo "$VALIDATION_OUTPUT"
