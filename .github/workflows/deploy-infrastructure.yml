@@ -176,19 +176,33 @@ jobs:
         run: |
           cd infrastructure
           
-          echo "🔍 Validating ARM template with Azure CLI..."
-          az deployment group validate \
-            --resource-group "${{ steps.config.outputs.resource-group }}" \
-            --template-file main.json \
-            --parameters @parameters.${{ steps.config.outputs.environment }}.work.json \
-            --output table
+          echo "🔍 Validating ARM template with Azure CLI (with retry logic)..."
           
-          if [ $? -eq 0 ]; then
-            echo "✅ ARM template validation passed"
-          else
-            echo "❌ ARM template validation failed"
-            exit 1
-          fi
+          # Retry logic for Azure API "content already consumed" errors
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "🔄 Validation attempt $((RETRY_COUNT + 1))/$MAX_RETRIES..."
+            
+            if az deployment group validate \
+              --resource-group "${{ steps.config.outputs.resource-group }}" \
+              --template-file main.json \
+              --parameters @parameters.${{ steps.config.outputs.environment }}.work.json \
+              --output table 2>&1; then
+              echo "✅ ARM template validation passed"
+              break
+            else
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "⚠️ Validation failed, retrying in 30 seconds..."
+                sleep 30
+              else
+                echo "❌ ARM template validation failed after $MAX_RETRIES attempts"
+                exit 1
+              fi
+            fi
+          done
       
       - name: '📝 Validation Summary'
         run: |
@@ -295,29 +309,45 @@ jobs:
         run: |
           cd infrastructure
           
-          echo "🚀 Starting Azure CLI deployment..."
-          DEPLOYMENT_OUTPUT=$(az deployment group create \
-            --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" \
-            --template-file main.json \
-            --parameters @parameters.${{ env.ENV_NAME }}.deploy.json \
-            --name "${{ needs.validate-infrastructure.outputs.deployment-name }}" \
-            --output json)
+          echo "🚀 Starting Azure CLI deployment (with retry logic)..."
           
-          if [ $? -eq 0 ]; then
-            echo "✅ Deployment succeeded"
+          # Retry logic for Azure API "content already consumed" errors
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          DEPLOYMENT_OUTPUT=""
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "🔄 Deployment attempt $((RETRY_COUNT + 1))/$MAX_RETRIES..."
             
-            # Extract outputs for downstream jobs
-            echo "$DEPLOYMENT_OUTPUT" | jq -r '.properties.outputs | to_entries[] | "\(.key)=\(.value.value)"' | while read line; do
-              key=$(echo $line | cut -d'=' -f1)
-              value=$(echo $line | cut -d'=' -f2)
-              echo "$key=$value" >> $GITHUB_OUTPUT
-            done
-            
-            echo "🎯 Infrastructure deployment completed successfully"
-          else
-            echo "❌ Deployment failed"
-            exit 1
-          fi
+            if DEPLOYMENT_OUTPUT=$(az deployment group create \
+              --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" \
+              --template-file main.json \
+              --parameters @parameters.${{ env.ENV_NAME }}.deploy.json \
+              --name "${{ needs.validate-infrastructure.outputs.deployment-name }}-attempt-$((RETRY_COUNT + 1))" \
+              --output json 2>&1); then
+              echo "✅ Deployment succeeded"
+              
+              # Extract outputs for downstream jobs
+              echo "$DEPLOYMENT_OUTPUT" | jq -r '.properties.outputs | to_entries[] | "\(.key)=\(.value.value)"' | while read line; do
+                key=$(echo $line | cut -d'=' -f1)
+                value=$(echo $line | cut -d'=' -f2)
+                echo "$key=$value" >> $GITHUB_OUTPUT
+              done
+              
+              echo "🎯 Infrastructure deployment completed successfully"
+              break
+            else
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "⚠️ Deployment failed, retrying in 30 seconds..."
+                sleep 30
+              else
+                echo "❌ Deployment failed after $MAX_RETRIES attempts"
+                echo "Last error: $DEPLOYMENT_OUTPUT"
+                exit 1
+              fi
+            fi
+          done
       
       - name: '🔍 Post-Deployment Validation'
         id: validation

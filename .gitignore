@@ -108,3 +108,4 @@ coverage/
 
 # Cache files
 **/.cache/
+infrastructure/venv-azure/
