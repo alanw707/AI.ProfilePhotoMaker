@@ -178,31 +178,39 @@ jobs:
           
           echo "🔍 Validating ARM template with Azure CLI (with retry logic)..."
           
-          # Retry logic for Azure API "content already consumed" errors
+          # Retry logic for Azure API reliability
           MAX_RETRIES=3
           RETRY_COUNT=0
+          VALIDATION_SUCCESS=false
           
-          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$VALIDATION_SUCCESS" = "false" ]; do
             echo "🔄 Validation attempt $((RETRY_COUNT + 1))/$MAX_RETRIES..."
             
-            if az deployment group validate \
+            # Capture validation result to avoid response consumption issues
+            if VALIDATION_OUTPUT=$(az deployment group validate \
               --resource-group "${{ steps.config.outputs.resource-group }}" \
               --template-file main.json \
               --parameters @parameters.${{ steps.config.outputs.environment }}.work.json \
-              --output table 2>&1; then
+              --output table 2>&1); then
               echo "✅ ARM template validation passed"
-              break
+              echo "$VALIDATION_OUTPUT"
+              VALIDATION_SUCCESS=true
             else
               RETRY_COUNT=$((RETRY_COUNT + 1))
+              echo "⚠️ Validation failed (attempt $RETRY_COUNT/$MAX_RETRIES)"
+              echo "$VALIDATION_OUTPUT"
+              
               if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-                echo "⚠️ Validation failed, retrying in 30 seconds..."
+                echo "🔄 Retrying in 30 seconds..."
                 sleep 30
-              else
-                echo "❌ ARM template validation failed after $MAX_RETRIES attempts"
-                exit 1
               fi
             fi
           done
+          
+          if [ "$VALIDATION_SUCCESS" = "false" ]; then
+            echo "❌ ARM template validation failed after $MAX_RETRIES attempts"
+            exit 1
+          fi
       
       - name: '📝 Validation Summary'
         run: |

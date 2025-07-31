@@ -73,17 +73,22 @@ jobs:
       - name: '⚙️ Configure Deployment'
         id: config
         run: |
-          # Determine environment
+          # Determine environment with fallback to staging
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            ENV_NAME="${{ github.event.inputs.environment }}"
-            DEPLOY_BACKEND="${{ github.event.inputs.deploy_backend }}"
-            DEPLOY_FRONTEND="${{ github.event.inputs.deploy_frontend }}"
-            RUN_MIGRATIONS="${{ github.event.inputs.run_migrations }}"
+            ENV_NAME="${{ github.event.inputs.environment || 'staging' }}"
+            DEPLOY_BACKEND="${{ github.event.inputs.deploy_backend || 'true' }}"
+            DEPLOY_FRONTEND="${{ github.event.inputs.deploy_frontend || 'true' }}"
+            RUN_MIGRATIONS="${{ github.event.inputs.run_migrations || 'true' }}"
           else
             ENV_NAME="staging"  # Auto-deploy to staging on main branch
             DEPLOY_BACKEND="true"
             DEPLOY_FRONTEND="true"
             RUN_MIGRATIONS="true"
+          fi
+          
+          # Ensure ENV_NAME is never empty
+          if [ -z "$ENV_NAME" ]; then
+            ENV_NAME="staging"
           fi
           
           RG_NAME="ai-profile-photo-maker-$ENV_NAME"
@@ -191,8 +196,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: pre-deployment
     if: needs.pre-deployment.outputs.run-migrations == 'true'
-    environment: 
-      name: ${{ needs.pre-deployment.outputs.environment }}
+    # environment: 
+    #   name: ${{ needs.pre-deployment.outputs.environment }} # Disabled for OIDC compatibility
     
     steps:
       - name: '📥 Checkout Code'
@@ -234,6 +239,7 @@ jobs:
           echo "server-fqdn=$SQL_SERVER_FQDN" >> $GITHUB_OUTPUT
       
       - name: '🔓 Configure SQL Server Access'
+        id: configure-access
         run: |
           echo "🔓 Configuring database access..."
           
@@ -292,9 +298,9 @@ jobs:
       always() &&
       needs.pre-deployment.outputs.deploy-backend == 'true' &&
       (needs.database-migrations.result == 'success' || needs.database-migrations.result == 'skipped')
-    environment: 
-      name: ${{ needs.pre-deployment.outputs.environment }}
-      url: ${{ steps.deployment.outputs.webapp-url }}
+    # environment: 
+    #   name: ${{ needs.pre-deployment.outputs.environment }}
+    #   url: ${{ steps.deployment.outputs.webapp-url }} # Disabled for OIDC compatibility
     
     steps:
       - name: '📥 Checkout Code'
@@ -406,8 +412,8 @@ jobs:
       always() &&
       needs.pre-deployment.outputs.deploy-frontend == 'true' &&
       (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped')
-    environment: 
-      name: ${{ needs.pre-deployment.outputs.environment }}
+    # environment: 
+    #   name: ${{ needs.pre-deployment.outputs.environment }} # Disabled for OIDC compatibility
     
     steps:
       - name: '📥 Checkout Code'
@@ -511,6 +517,7 @@ jobs:
           skip_app_build: true
       
       - name: '🔍 Post-deployment Verification'
+        id: verification
         run: |
           echo "🔍 Verifying frontend deployment..."
           
