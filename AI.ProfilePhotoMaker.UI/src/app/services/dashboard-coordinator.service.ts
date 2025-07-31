@@ -38,20 +38,20 @@ export class DashboardCoordinatorService implements IDashboardStateService {
   public readonly state$: Observable<DashboardState>;
 
   constructor(
-    private profileService: ProfileService,
-    private modelState: ModelStateService,
-    private fallbackOps: FallbackOperationsService,
-    private cacheManager: CacheManagerService,
-    private notificationService: NotificationService,
-    private imageState: ImageStateService,
-    private subscriptionState: SubscriptionStateService,
-    private fileUploadService: FileUploadService
+    private _profileService: ProfileService,
+    private _modelState: ModelStateService,
+    private _fallbackOps: FallbackOperationsService,
+    private _cacheManager: CacheManagerService,
+    private _notificationService: NotificationService,
+    private _imageState: ImageStateService,
+    private _subscriptionState: SubscriptionStateService,
+    private _fileUploadService: FileUploadService
   ) {
     // Combine states from specialized services
     this.state$ = combineLatest([
       this._coordinatorState.asObservable(),
-      this.imageState.state$,
-      this.subscriptionState.state$,
+      this._imageState.state$,
+      this._subscriptionState.state$,
     ]).pipe(
       map(([coordinator, images, subscription]) => ({
         // Profile and model data
@@ -83,8 +83,8 @@ export class DashboardCoordinatorService implements IDashboardStateService {
    */
   getState(): DashboardState {
     const coordinator = this._coordinatorState.getValue();
-    const images = this.imageState.getState();
-    const subscription = this.subscriptionState.getState();
+    const images = this._imageState.getState();
+    const subscription = this._subscriptionState.getState();
 
     return {
       userProfile: coordinator.userProfile,
@@ -140,7 +140,7 @@ export class DashboardCoordinatorService implements IDashboardStateService {
     }, {} as Record<string, unknown>);
 
     if (Object.keys(imageUpdate).length > 0) {
-      this.imageState.setState(imageUpdate);
+      this._imageState.setState(imageUpdate);
     }
 
     // Delegate subscription-related updates to SubscriptionStateService
@@ -158,7 +158,7 @@ export class DashboardCoordinatorService implements IDashboardStateService {
     }, {} as Record<string, unknown>);
 
     if (Object.keys(subscriptionUpdate).length > 0) {
-      this.subscriptionState.setState(subscriptionUpdate);
+      this._subscriptionState.setState(subscriptionUpdate);
     }
   }
 
@@ -170,7 +170,7 @@ export class DashboardCoordinatorService implements IDashboardStateService {
 
     // Check if we should debounce this load
     if (
-      this.cacheManager.shouldDebounceRequest(
+      this._cacheManager.shouldDebounceRequest(
         'dashboard_coordinator_load',
         CacheManagerService.LOAD_DEBOUNCE_MS
       )
@@ -185,8 +185,8 @@ export class DashboardCoordinatorService implements IDashboardStateService {
       const profilePromise = this.loadProfileData();
 
       // Load specialized service data in parallel
-      const imagePromise = this.imageState.loadUserImages();
-      const subscriptionPromise = this.subscriptionState.loadFullSubscriptionData();
+      const imagePromise = this._imageState.loadUserImages();
+      const subscriptionPromise = this._subscriptionState.loadFullSubscriptionData();
 
       // Wait for core data to load
       await Promise.all([profilePromise, imagePromise, subscriptionPromise]);
@@ -197,7 +197,7 @@ export class DashboardCoordinatorService implements IDashboardStateService {
       const loadTime = performance.now() - startTime;
     } catch (error) {
       console.error('❌ Dashboard coordination failed:', error);
-      this.notificationService.error(
+      this._notificationService.error(
         'Dashboard Load Failed',
         'Could not load dashboard data. Please try again.'
       );
@@ -215,10 +215,10 @@ export class DashboardCoordinatorService implements IDashboardStateService {
       await this.loadProfileData();
 
       // Load only internal credits (faster)
-      await this.subscriptionState.loadCreditsOnly();
+      await this._subscriptionState.loadCreditsOnly();
 
       // Load user images without validation
-      await this.imageState.loadUserImages();
+      await this._imageState.loadUserImages();
     } catch (error) {
       console.error('❌ Settings data load failed:', error);
     }
@@ -228,7 +228,7 @@ export class DashboardCoordinatorService implements IDashboardStateService {
    * Load only internal credits
    */
   async loadCreditsOnly(): Promise<void> {
-    await this.subscriptionState.loadCreditsOnly();
+    await this._subscriptionState.loadCreditsOnly();
   }
 
   /**
@@ -263,13 +263,13 @@ export class DashboardCoordinatorService implements IDashboardStateService {
    */
   private loadRemainingDataAsync(): void {
     forkJoin({
-      trainingStatus: this.fileUploadService.getTrainingStatus().pipe(
+      trainingStatus: this._fileUploadService.getTrainingStatus().pipe(
         catchError(error => {
           console.warn('⚠️ Training Status API failed:', error);
           return of(null);
         })
       ),
-      modelRequests: this.fileUploadService.getUserModelRequests().pipe(
+      modelRequests: this._fileUploadService.getUserModelRequests().pipe(
         catchError(error => {
           console.warn('⚠️ Model Requests API failed:', error);
           return of({ success: false, data: null, error });
@@ -281,7 +281,7 @@ export class DashboardCoordinatorService implements IDashboardStateService {
         const trainingStatusData = trainingStatus;
 
         // Get model status using ModelStateService
-        const modelInfo = this.modelState.getModelStatusFromData(
+        const modelInfo = this._modelState.getModelStatusFromData(
           modelRequestsData,
           trainingStatusData
         );
@@ -294,11 +294,11 @@ export class DashboardCoordinatorService implements IDashboardStateService {
         });
 
         // Reset fallback tracking periodically
-        this.fallbackOps.resetFallbackTracking();
+        this._fallbackOps.resetFallbackTracking();
 
         // Check if fallback operations are needed
         const dashboardState = this.getState();
-        const fallbackCheck = this.fallbackOps.checkIfFallbackNeeded({
+        const fallbackCheck = this._fallbackOps.checkIfFallbackNeeded({
           generatedPhotosCount: dashboardState.generatedPhotosCount,
           modelStatus: modelInfo.modelStatus,
           hasLatestTrainedModel: !!modelInfo.latestTrainedModel,
@@ -309,10 +309,10 @@ export class DashboardCoordinatorService implements IDashboardStateService {
 
         // Execute fallback operations if needed
         if (fallbackCheck.shouldCheckFilesystem) {
-          this.fallbackOps.checkGeneratedImagesFromFilesystem().subscribe({
+          this._fallbackOps.checkGeneratedImagesFromFilesystem().subscribe({
             next: result => {
               if (result.actualGeneratedCount) {
-                this.imageState.setState({ generatedPhotosCount: result.actualGeneratedCount });
+                this._imageState.setState({ generatedPhotosCount: result.actualGeneratedCount });
               }
             },
             error: error => console.error('Filesystem check failed:', error),
@@ -320,7 +320,7 @@ export class DashboardCoordinatorService implements IDashboardStateService {
         }
 
         if (fallbackCheck.shouldDiscoverModels) {
-          this.modelState.runAsyncModelDiscovery();
+          this._modelState.runAsyncModelDiscovery();
         }
       },
       error: error => {
@@ -358,21 +358,21 @@ export class DashboardCoordinatorService implements IDashboardStateService {
       isLoading: false,
     });
 
-    this.imageState.resetState();
-    this.subscriptionState.resetState();
-    this.cacheManager.invalidateCache(this.CACHE_KEY);
+    this._imageState.resetState();
+    this._subscriptionState.resetState();
+    this._cacheManager.invalidateCache(this.CACHE_KEY);
   }
 
   /**
    * Force refresh all services
    */
   forceRefresh(): void {
-    this.cacheManager.forceRefresh(this.CACHE_KEY);
-    this.fallbackOps.resetFallbackTracking();
+    this._cacheManager.forceRefresh(this.CACHE_KEY);
+    this._fallbackOps.resetFallbackTracking();
 
     // Force refresh specialized services
-    this.imageState.forceRefresh();
-    this.subscriptionState.forceRefresh();
+    this._imageState.forceRefresh();
+    this._subscriptionState.forceRefresh();
 
     // Reload dashboard data
     this.loadInitialDashboardData();
@@ -382,13 +382,13 @@ export class DashboardCoordinatorService implements IDashboardStateService {
    * Invalidate and refresh images (delegate to ImageStateService)
    */
   invalidateAndRefreshImages(): void {
-    this.imageState.invalidateAndRefresh();
+    this._imageState.invalidateAndRefresh();
   }
 
   /**
    * Refresh generated photos count (delegate to ImageStateService)
    */
   refreshGeneratedPhotosCount(): void {
-    this.imageState.refreshGeneratedPhotosCount();
+    this._imageState.refreshGeneratedPhotosCount();
   }
 }

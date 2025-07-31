@@ -134,7 +134,7 @@ export class PhotoGenerationComponent implements OnInit, OnDestroy {
   @Output() generateMore = new EventEmitter<void>();
   @Output() retryGeneration = new EventEmitter<void>();
 
-  private progressSubscription?: Subscription;
+  private _progressSubscription?: Subscription;
 
   ngOnInit(): void {
     if (this.generationStatus.isGenerating) {
@@ -147,7 +147,7 @@ export class PhotoGenerationComponent implements OnInit, OnDestroy {
   }
 
   private startProgressPolling(): void {
-    this.progressSubscription = interval(10000).subscribe(() => {
+    this._progressSubscription = interval(10000).subscribe(() => {
       if (this.generationStatus.isGenerating) {
         this.onRefreshStatus();
       } else {
@@ -157,9 +157,9 @@ export class PhotoGenerationComponent implements OnInit, OnDestroy {
   }
 
   private stopProgressPolling(): void {
-    if (this.progressSubscription) {
-      this.progressSubscription.unsubscribe();
-      this.progressSubscription = undefined;
+    if (this._progressSubscription) {
+      this._progressSubscription.unsubscribe();
+      this._progressSubscription = undefined;
     }
   }
 

@@ -45,11 +45,11 @@ export class ImageStateService extends StateBaseService<ImageState> {
   };
 
   constructor(
-    cacheManager: CacheManagerService,
-    notificationService: NotificationService,
-    private fileUploadService: FileUploadService,
-    private imageValidation: ImageValidationService,
-    private configService: ConfigService
+    _cacheManager: CacheManagerService,
+    _notificationService: NotificationService,
+    private _fileUploadService: FileUploadService,
+    private _imageValidation: ImageValidationService,
+    private _configService: ConfigService
   ) {
     super(
       {
@@ -60,8 +60,8 @@ export class ImageStateService extends StateBaseService<ImageState> {
         imagesValidated: false,
         lastValidationTime: 0,
       },
-      cacheManager,
-      notificationService
+      _cacheManager,
+      _notificationService
     );
   }
 
@@ -93,7 +93,7 @@ export class ImageStateService extends StateBaseService<ImageState> {
     this.setLoading(true);
 
     try {
-      const userImages = await this.fileUploadService.getUserImages(forceRefresh).toPromise();
+      const userImages = await this._fileUploadService.getUserImages(forceRefresh).toPromise();
 
       if (userImages?.success && userImages.data) {
         const processed = this.processUserImagesData(userImages.data);
@@ -211,7 +211,7 @@ export class ImageStateService extends StateBaseService<ImageState> {
     isFromCache: boolean
   ): Promise<ImageValidationResult> {
     // Check if image validation is disabled via environment configuration
-    if (!this.configService.isImageValidationEnabled) {
+    if (!this._configService.isImageValidationEnabled) {
       return {
         validImages: images,
         removedCount: 0,
@@ -219,13 +219,13 @@ export class ImageStateService extends StateBaseService<ImageState> {
       };
     }
 
-    const validation = await this.imageValidation.filterValidImages(images);
+    const validation = await this._imageValidation.filterValidImages(images);
 
     if (validation.removedCount > 0) {
       // Trigger repair if 404s were found
       if (validation.repairSuggested && validation.notFoundCount > 0) {
         try {
-          const repairResult = await this.fileUploadService.repairImageDatabase().toPromise();
+          const repairResult = await this._fileUploadService.repairImageDatabase().toPromise();
           if (repairResult?.success) {
             // Force refresh from server after repair
             await this.forceRefreshAfterRepair();
@@ -283,11 +283,11 @@ export class ImageStateService extends StateBaseService<ImageState> {
     try {
       // Clear all caches
       this.forceRefreshCache(this.CACHE_KEY);
-      this.fileUploadService.invalidateUserImagesCache();
-      this.imageValidation.clearCache();
+      this._fileUploadService.invalidateUserImagesCache();
+      this._imageValidation.clearCache();
 
       // Get fresh data from server
-      const userImages = await this.fileUploadService.getUserImages(true).toPromise();
+      const userImages = await this._fileUploadService.getUserImages(true).toPromise();
 
       if (userImages?.success && userImages.data) {
         const processed = this.processUserImagesData(userImages.data);
@@ -310,7 +310,7 @@ export class ImageStateService extends StateBaseService<ImageState> {
    */
   async refreshGeneratedPhotosCount(): Promise<void> {
     try {
-      const userImages = await this.fileUploadService.getUserImages().toPromise();
+      const userImages = await this._fileUploadService.getUserImages().toPromise();
 
       if (userImages?.success && userImages.data) {
         const userImagesData = userImages.data;
@@ -381,7 +381,7 @@ export class ImageStateService extends StateBaseService<ImageState> {
    * Invalidate images cache and refresh
    */
   invalidateAndRefresh(): void {
-    this.fileUploadService.invalidateUserImagesCache();
+    this._fileUploadService.invalidateUserImagesCache();
     this.invalidateCache(this.CACHE_KEY);
     this.loadUserImages(true);
   }
@@ -391,7 +391,7 @@ export class ImageStateService extends StateBaseService<ImageState> {
    */
   forceRefresh(): void {
     this.forceRefreshCache(this.CACHE_KEY);
-    this.imageValidation.clearCache();
+    this._imageValidation.clearCache();
 
     this.setState({
       imagesValidated: false,

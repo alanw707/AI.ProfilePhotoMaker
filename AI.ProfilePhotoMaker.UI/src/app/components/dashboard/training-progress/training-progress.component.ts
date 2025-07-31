@@ -90,7 +90,7 @@ export class TrainingProgressComponent implements OnInit, OnDestroy {
   @Output() startGeneration = new EventEmitter<void>();
   @Output() retryTraining = new EventEmitter<void>();
 
-  private progressSubscription?: Subscription;
+  private _progressSubscription?: Subscription;
 
   ngOnInit(): void {
     // Auto-refresh status every 30 seconds during training
@@ -104,7 +104,7 @@ export class TrainingProgressComponent implements OnInit, OnDestroy {
   }
 
   private startProgressPolling(): void {
-    this.progressSubscription = interval(30000).subscribe(() => {
+    this._progressSubscription = interval(30000).subscribe(() => {
       if (this.trainingStatus.isTraining) {
         this.onRefreshStatus();
       } else {
@@ -114,9 +114,9 @@ export class TrainingProgressComponent implements OnInit, OnDestroy {
   }
 
   private stopProgressPolling(): void {
-    if (this.progressSubscription) {
-      this.progressSubscription.unsubscribe();
-      this.progressSubscription = undefined;
+    if (this._progressSubscription) {
+      this._progressSubscription.unsubscribe();
+      this._progressSubscription = undefined;
     }
   }
 

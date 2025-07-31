@@ -6,25 +6,22 @@
  */
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { DebugElement } from '@angular/core';
 import { By } from '@angular/platform-browser';
-import { Router } from '@angular/router';
-import { Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 
 // Mock Services
 export class MockAuthService {
-  private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
-  isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
+  private _isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
+  isAuthenticated$ = this._isAuthenticatedSubject.asObservable();
   
-  login(email: string, password: string): Observable<{ token: string; user: { email: string } }> {
-    this.isAuthenticatedSubject.next(true);
+  login(email: string, _password: string): Observable<{ token: string; user: { email: string } }> {
+    this._isAuthenticatedSubject.next(true);
     return of({ token: 'mock-token', user: { email } });
   }
   
   logout(): void {
-    this.isAuthenticatedSubject.next(false);
+    this._isAuthenticatedSubject.next(false);
   }
   
   getCurrentUser(): Observable<{ id: string; email: string; name: string }> {
@@ -37,7 +34,7 @@ export class MockAuthService {
 }
 
 export class MockDashboardStateService {
-  private stateSubject = new BehaviorSubject({
+  private _stateSubject = new BehaviorSubject({
     uploadedImages: [],
     selectedStyles: [],
     isTraining: false,
@@ -46,60 +43,63 @@ export class MockDashboardStateService {
     trainedModelId: null
   });
   
-  state$ = this.stateSubject.asObservable();
+  state$ = this._stateSubject.asObservable();
   
   updateUploadedImages(images: never[]): void {
-    const currentState = this.stateSubject.value;
-    this.stateSubject.next({ ...currentState, uploadedImages: images });
+    const currentState = this._stateSubject.value;
+    this._stateSubject.next({ ...currentState, uploadedImages: images });
   }
   
   updateSelectedStyles(styles: never[]): void {
-    const currentState = this.stateSubject.value;
-    this.stateSubject.next({ ...currentState, selectedStyles: styles });
+    const currentState = this._stateSubject.value;
+    this._stateSubject.next({ ...currentState, selectedStyles: styles });
   }
   
   setTrainingStatus(isTraining: boolean): void {
-    const currentState = this.stateSubject.value;
-    this.stateSubject.next({ ...currentState, isTraining });
+    const currentState = this._stateSubject.value;
+    this._stateSubject.next({ ...currentState, isTraining });
   }
   
   setGeneratingStatus(isGenerating: boolean): void {
-    const currentState = this.stateSubject.value;
-    this.stateSubject.next({ ...currentState, isGenerating });
+    const currentState = this._stateSubject.value;
+    this._stateSubject.next({ ...currentState, isGenerating });
   }
   
   updateCredits(credits: number): void {
-    const currentState = this.stateSubject.value;
-    this.stateSubject.next({ ...currentState, credits });
+    const currentState = this._stateSubject.value;
+    this._stateSubject.next({ ...currentState, credits });
   }
 }
 
 export class MockNotificationService {
-  private notifications: any[] = [];
+  private _notifications: unknown[] = [];
   
   showSuccess(message: string, title?: string): void {
-    this.notifications.push({ type: 'success', message, title });
+    this._notifications.push({ type: 'success', message, title });
   }
   
   showError(message: string, title?: string): void {
-    this.notifications.push({ type: 'error', message, title });
+    this._notifications.push({ type: 'error', message, title });
   }
   
   showInfo(message: string, title?: string): void {
-    this.notifications.push({ type: 'info', message, title });
+    this._notifications.push({ type: 'info', message, title });
   }
   
   getNotifications(): unknown[] {
-    return [...this.notifications];
+    return [...this._notifications];
   }
   
   clearNotifications(): void {
-    this.notifications = [];
+    this._notifications = [];
   }
 }
 
 export class MockFileUploadService {
-  uploadMultipleImages(files: File[]): Observable<{ success: boolean; data: { id: string; filename: string; url: string; size: number }[] }> {
+  uploadMultipleImages(files: File[]): Observable<{
+    success: boolean;
+    data: { id: string; filename: string; url: string; size: number }[];
+  }> {
     return of({
       success: true,
       data: files.map((file, index) => ({
@@ -111,7 +111,10 @@ export class MockFileUploadService {
     });
   }
   
-  uploadSingleImage(file: File): Observable<{ success: boolean; data: { id: string; filename: string; url: string; size: number } }> {
+  uploadSingleImage(file: File): Observable<{
+    success: boolean;
+    data: { id: string; filename: string; url: string; size: number };
+  }> {
     return of({
       success: true,
       data: {
@@ -123,13 +126,16 @@ export class MockFileUploadService {
     });
   }
   
-  deleteImage(imageId: string): Observable<{ success: boolean }> {
+  deleteImage(_imageId: string): Observable<{ success: boolean }> {
     return of({ success: true });
   }
 }
 
 export class MockReplicateService {
-  trainModel(request: unknown): Observable<{ success: boolean; data: { id: string; status: string; estimatedTime: number } }> {
+  trainModel(_request: unknown): Observable<{
+    success: boolean;
+    data: { id: string; status: string; estimatedTime: number };
+  }> {
     return of({
       success: true,
       data: {
@@ -140,7 +146,10 @@ export class MockReplicateService {
     });
   }
   
-  generateImages(request: unknown): Observable<{ success: boolean; data: { id: string; status: string; estimatedTime: number } }> {
+  generateImages(_request: unknown): Observable<{
+    success: boolean;
+    data: { id: string; status: string; estimatedTime: number };
+  }> {
     return of({
       success: true,
       data: {
@@ -151,7 +160,10 @@ export class MockReplicateService {
     });
   }
   
-  enhancePhoto(request: unknown): Observable<{ success: boolean; data: { id: string; status: string; url: string } }> {
+  enhancePhoto(_request: unknown): Observable<{
+    success: boolean;
+    data: { id: string; status: string; url: string };
+  }> {
     return of({
       success: true,
       data: {
@@ -162,7 +174,10 @@ export class MockReplicateService {
     });
   }
   
-  checkTrainingStatus(id: string): Observable<{ success: boolean; data: { id: string; status: string; modelId: string } }> {
+  checkTrainingStatus(id: string): Observable<{
+    success: boolean;
+    data: { id: string; status: string; modelId: string };
+  }> {
     return of({
       success: true,
       data: {
@@ -173,7 +188,10 @@ export class MockReplicateService {
     });
   }
   
-  checkGenerationStatus(id: string): Observable<{ success: boolean; data: { id: string; status: string; images: { url: string; style: string }[] } }> {
+  checkGenerationStatus(id: string): Observable<{
+    success: boolean;
+    data: { id: string; status: string; images: { url: string; style: string }[] };
+  }> {
     return of({
       success: true,
       data: {
@@ -189,7 +207,10 @@ export class MockReplicateService {
 }
 
 export class MockCreditService {
-  getCredits(): Observable<{ success: boolean; data: { weeklyCredits: number; purchasedCredits: number; totalCredits: number } }> {
+  getCredits(): Observable<{
+    success: boolean;
+    data: { weeklyCredits: number; purchasedCredits: number; totalCredits: number };
+  }> {
     return of({
       success: true,
       data: {
@@ -200,7 +221,10 @@ export class MockCreditService {
     });
   }
   
-  consumeCredits(amount: number, operation: string): Observable<{ success: boolean; data: { remainingCredits: number; operation: string } }> {
+  consumeCredits(amount: number, operation: string): Observable<{
+    success: boolean;
+    data: { remainingCredits: number; operation: string };
+  }> {
     return of({
       success: true,
       data: {
@@ -210,7 +234,10 @@ export class MockCreditService {
     });
   }
   
-  purchaseCredits(_packageId: string): Observable<{ success: boolean; data: { creditsAdded: number; totalCredits: number } }> {
+  purchaseCredits(_packageId: string): Observable<{
+    success: boolean;
+    data: { creditsAdded: number; totalCredits: number };
+  }> {
     return of({
       success: true,
       data: {
@@ -226,7 +253,13 @@ export class MockFaceDetectionService {
     return Promise.resolve();
   }
   
-  validateImageQuality(_file: File): Promise<{ isValid: boolean; score: number; reasons: unknown[]; faceCount: number; dimensions: { width: number; height: number } }> {
+  validateImageQuality(_file: File): Promise<{
+    isValid: boolean;
+    score: number;
+    reasons: unknown[];
+    faceCount: number;
+    dimensions: { width: number; height: number };
+  }> {
     return Promise.resolve({
       isValid: true,
       score: 0.85,
@@ -236,7 +269,11 @@ export class MockFaceDetectionService {
     });
   }
   
-  detectFaces(_imageUrl: string): Promise<{ detection: { box: { x: number; y: number; width: number; height: number } }; landmarks: unknown[]; descriptor: Float32Array }[]> {
+  detectFaces(_imageUrl: string): Promise<{
+    detection: { box: { x: number; y: number; width: number; height: number } };
+    landmarks: unknown[];
+    descriptor: Float32Array;
+  }[]> {
     return Promise.resolve([
       {
         detection: { box: { x: 100, y: 100, width: 200, height: 200 } },
@@ -252,7 +289,7 @@ export class TestingHelpers {
   /**
    * Creates a mock file for testing file upload functionality
    */
-  static createMockFile(name = 'test.jpg', size = 1024, type = 'image/jpeg'): File {
+  static createMockFile(name = 'test.jpg', _size = 1024, type = 'image/jpeg'): File {
     const blob = new Blob(['mock file content'], { type });
     return new File([blob], name, { type, lastModified: Date.now() });
   }
@@ -269,7 +306,11 @@ export class TestingHelpers {
   /**
    * Triggers a file input change event for testing
    */
-  static triggerFileInputChange(fixture: ComponentFixture<unknown>, files: File[], inputSelector = 'input[type="file"]'): void {
+  static triggerFileInputChange(
+    fixture: ComponentFixture<unknown>,
+    files: File[],
+    inputSelector = 'input[type="file"]'
+  ): void {
     const fileInput = fixture.debugElement.query(By.css(inputSelector));
     if (fileInput) {
       const event = new Event('change');
@@ -304,7 +345,11 @@ export class TestingHelpers {
   /**
    * Sets up a basic test module configuration
    */
-  static async setupTestModule(component: unknown, providers: unknown[] = [], imports: unknown[] = []): Promise<void> {
+  static async setupTestModule(
+    component: unknown,
+    providers: unknown[] = [],
+    imports: unknown[] = []
+  ): Promise<void> {
     await TestBed.configureTestingModule({
       imports: [component, ...imports],
       providers: [

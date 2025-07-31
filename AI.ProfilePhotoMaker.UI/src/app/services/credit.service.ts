@@ -68,14 +68,14 @@ export interface ApiResponse<T> {
   providedIn: 'root',
 })
 export class CreditService {
-  private apiUrl: string;
-  private creditCosts: CreditCosts | null = null;
+  private _apiUrl: string;
+  private _creditCosts: CreditCosts | null = null;
 
   constructor(
     private _http: HttpClient,
     private _configService: ConfigService
   ) {
-    this.apiUrl = this._configService.getApiUrl();
+    this._apiUrl = this._configService.getApiUrl();
   }
 
   /**
@@ -146,11 +146,11 @@ export class CreditService {
    * Get credit cost for a specific operation (async version)
    */
   async getCreditCost(operation: string): Promise<number> {
-    if (!this.creditCosts) {
+    if (!this._creditCosts) {
       try {
         const response = await this.getCreditCosts().toPromise();
         if (response?.success) {
-          this.creditCosts = response.data;
+          this._creditCosts = response.data;
         }
       } catch (error) {
         console.error('Failed to fetch credit costs:', error);
@@ -161,12 +161,12 @@ export class CreditService {
 
     switch (operation.toLowerCase()) {
       case 'photo_enhancement':
-        return this.creditCosts?.photoEnhancement.cost || 1;
+        return this._creditCosts?.photoEnhancement.cost || 1;
       case 'model_training':
-        return this.creditCosts?.modelTraining.cost || 15;
+        return this._creditCosts?.modelTraining.cost || 15;
       case 'styled_generation':
       case 'image_generation':
-        return this.creditCosts?.styledGeneration.cost || 5;
+        return this._creditCosts?.styledGeneration.cost || 5;
       default:
         return 1;
     }
@@ -176,18 +176,18 @@ export class CreditService {
    * Get credit cost for a specific operation (sync version with cached data)
    */
   getCreditCostSync(operation: string): number {
-    if (!this.creditCosts) {
+    if (!this._creditCosts) {
       return this.getFallbackCreditCost(operation);
     }
 
     switch (operation.toLowerCase()) {
       case 'photo_enhancement':
-        return this.creditCosts.photoEnhancement.cost;
+        return this._creditCosts.photoEnhancement.cost;
       case 'model_training':
-        return this.creditCosts.modelTraining.cost;
+        return this._creditCosts.modelTraining.cost;
       case 'styled_generation':
       case 'image_generation':
-        return this.creditCosts.styledGeneration.cost;
+        return this._creditCosts.styledGeneration.cost;
       default:
         return 1;
     }
@@ -197,11 +197,11 @@ export class CreditService {
    * Check if an operation can use weekly credits (async version)
    */
   async canUseWeeklyCredits(operation: string): Promise<boolean> {
-    if (!this.creditCosts) {
+    if (!this._creditCosts) {
       try {
         const response = await this.getCreditCosts().toPromise();
         if (response?.success) {
-          this.creditCosts = response.data;
+          this._creditCosts = response.data;
         }
       } catch (error) {
         console.error('Failed to fetch credit costs:', error);
@@ -211,12 +211,12 @@ export class CreditService {
 
     switch (operation.toLowerCase()) {
       case 'photo_enhancement':
-        return this.creditCosts?.photoEnhancement.canUseWeeklyCredits || true;
+        return this._creditCosts?.photoEnhancement.canUseWeeklyCredits || true;
       case 'model_training':
-        return this.creditCosts?.modelTraining.canUseWeeklyCredits || false;
+        return this._creditCosts?.modelTraining.canUseWeeklyCredits || false;
       case 'styled_generation':
       case 'image_generation':
-        return this.creditCosts?.styledGeneration.canUseWeeklyCredits || false;
+        return this._creditCosts?.styledGeneration.canUseWeeklyCredits || false;
       default:
         return false;
     }
@@ -226,18 +226,18 @@ export class CreditService {
    * Check if an operation can use weekly credits (sync version with cached data)
    */
   canUseWeeklyCreditSync(operation: string): boolean {
-    if (!this.creditCosts) {
+    if (!this._creditCosts) {
       return this.getFallbackWeeklyCreditsUsage(operation);
     }
 
     switch (operation.toLowerCase()) {
       case 'photo_enhancement':
-        return this.creditCosts.photoEnhancement.canUseWeeklyCredits;
+        return this._creditCosts.photoEnhancement.canUseWeeklyCredits;
       case 'model_training':
-        return this.creditCosts.modelTraining.canUseWeeklyCredits;
+        return this._creditCosts.modelTraining.canUseWeeklyCredits;
       case 'styled_generation':
       case 'image_generation':
-        return this.creditCosts.styledGeneration.canUseWeeklyCredits;
+        return this._creditCosts.styledGeneration.canUseWeeklyCredits;
       default:
         return false;
     }
@@ -250,7 +250,7 @@ export class CreditService {
     try {
       const response = await this.getCreditCosts().toPromise();
       if (response?.success) {
-        this.creditCosts = response.data;
+        this._creditCosts = response.data;
       }
     } catch (error) {
       console.error('Failed to load credit costs:', error);

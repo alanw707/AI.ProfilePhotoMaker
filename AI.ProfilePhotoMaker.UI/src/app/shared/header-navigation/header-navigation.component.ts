@@ -19,8 +19,8 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
   userEmail = '';
   userCreditStatus: UserCreditStatus | null = null;
   isMobileMenuOpen = false;
-  private userSubscription?: Subscription;
-  private creditSubscription?: Subscription;
+  private _userSubscription?: Subscription;
+  private _creditSubscription?: Subscription;
 
   constructor(
     private _authService: AuthService,
@@ -30,8 +30,8 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
     private _cdr: ChangeDetectorRef
   ) {}
 
-  ngOnInit() {
-    this.userSubscription = this._authService.currentUser$.subscribe(user => {
+  ngOnInit(): void {
+    this._userSubscription = this._authService.currentUser$.subscribe(user => {
       if (user) {
         this.userEmail = user.email;
         this.userName =
@@ -48,17 +48,17 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnDestroy() {
-    if (this.userSubscription) {
-      this.userSubscription.unsubscribe();
+  ngOnDestroy(): void {
+    if (this._userSubscription) {
+      this._userSubscription.unsubscribe();
     }
-    if (this.creditSubscription) {
-      this.creditSubscription.unsubscribe();
+    if (this._creditSubscription) {
+      this._creditSubscription.unsubscribe();
     }
   }
 
-  loadCreditStatus() {
-    this.creditSubscription = this._creditService.getCreditStatus().subscribe({
+  loadCreditStatus(): void {
+    this._creditSubscription = this._creditService.getCreditStatus().subscribe({
       next: response => {
         if (response.success) {
           this.userCreditStatus = response.data;
@@ -77,22 +77,22 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
     });
   }
 
-  toggleTheme() {
+  toggleTheme(): void {
     this.themeService.toggleTheme();
   }
 
-  logout() {
+  logout(): void {
     this._authService.logout();
     // Navigation handled by auth service
   }
 
-  toggleMobileMenu() {
+  toggleMobileMenu(): void {
     this.isMobileMenuOpen = !this.isMobileMenuOpen;
     // Control body scrolling when mobile menu is open
     document.body.style.overflow = this.isMobileMenuOpen ? 'hidden' : 'auto';
   }
 
-  closeMobileMenu() {
+  closeMobileMenu(): void {
     this.isMobileMenuOpen = false;
     // Always restore body scrolling when menu closes
     document.body.style.overflow = 'auto';
