@@ -41,11 +41,11 @@ export interface ApiAuthResponseDto {
 export class AuthService {
   private readonly TOKEN_KEY = 'auth_token';
 
-  private isAuthenticatedSubject = new BehaviorSubject<boolean>(this.hasToken());
-  public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
+  private _isAuthenticatedSubject = new BehaviorSubject<boolean>(this.hasToken());
+  public isAuthenticated$ = this._isAuthenticatedSubject.asObservable();
 
-  private currentUserSubject = new BehaviorSubject<AuthResponseDto | null>(this.getCurrentUser());
-  public currentUser$ = this.currentUserSubject.asObservable();
+  private _currentUserSubject = new BehaviorSubject<AuthResponseDto | null>(this.getCurrentUser());
+  public currentUser$ = this._currentUserSubject.asObservable();
 
   constructor(
     private _http: HttpClient,
@@ -111,18 +111,18 @@ export class AuthService {
         if (user && user.firstName && user.lastName) {
           // Complete user data from JWT
           localStorage.setItem('currentUser', JSON.stringify(user));
-          this.currentUserSubject.next(user);
-          this.isAuthenticatedSubject.next(true);
+          this._currentUserSubject.next(user);
+          this._isAuthenticatedSubject.next(true);
         } else {
           // Incomplete JWT data, fetch from profile API
-          this.isAuthenticatedSubject.next(true);
+          this._isAuthenticatedSubject.next(true);
 
           // Fetch user profile data from API to get complete firstName/lastName
           this.fetchUserProfileForOAuth(token);
         }
       } catch (error) {
         console.error('Error in OAuth callback handling:', error);
-        this.isAuthenticatedSubject.next(false);
+        this._isAuthenticatedSubject.next(false);
       }
     }
   }
@@ -144,7 +144,7 @@ export class AuthService {
     };
 
     localStorage.setItem('currentUser', JSON.stringify(tempUser));
-    this.currentUserSubject.next(tempUser);
+    this._currentUserSubject.next(tempUser);
 
     // Fetch user profile from API to get firstName/lastName
     this._http.get<{ firstName?: string; lastName?: string; email?: string }>(`${this._config.baseUrl}/profile`).subscribe({
@@ -159,7 +159,7 @@ export class AuthService {
           };
 
           localStorage.setItem('currentUser', JSON.stringify(completeUser));
-          this.currentUserSubject.next(completeUser);
+          this._currentUserSubject.next(completeUser);
         } else {
           // Keep the temp user with email username as firstName
           const fallbackUser = {
@@ -167,7 +167,7 @@ export class AuthService {
             firstName: email.split('@')[0],
           };
           localStorage.setItem('currentUser', JSON.stringify(fallbackUser));
-          this.currentUserSubject.next(fallbackUser);
+          this._currentUserSubject.next(fallbackUser);
         }
       },
       error: error => {
@@ -178,7 +178,7 @@ export class AuthService {
           firstName: email.split('@')[0],
         };
         localStorage.setItem('currentUser', JSON.stringify(fallbackUser));
-        this.currentUserSubject.next(fallbackUser);
+        this._currentUserSubject.next(fallbackUser);
       },
     });
   }
@@ -280,8 +280,8 @@ export class AuthService {
       this.clearAllAuthData();
 
       // Update reactive state
-      this.isAuthenticatedSubject.next(false);
-      this.currentUserSubject.next(null);
+      this._isAuthenticatedSubject.next(false);
+      this._currentUserSubject.next(null);
 
       // Navigate to login with reason
       this.navigateToLogin(reason);
@@ -341,8 +341,8 @@ export class AuthService {
     console.log('🔒 Force logout initiated');
     try {
       localStorage.clear();
-      this.isAuthenticatedSubject.next(false);
-      this.currentUserSubject.next(null);
+      this._isAuthenticatedSubject.next(false);
+      this._currentUserSubject.next(null);
       this._router.navigate(['/auth/login']);
       console.log('🔒 Force logout completed');
     } catch (error) {
@@ -395,8 +395,8 @@ export class AuthService {
       localStorage.removeItem('authData'); // Remove any legacy keys
 
       // Update reactive state
-      this.isAuthenticatedSubject.next(true);
-      this.currentUserSubject.next(authResult);
+      this._isAuthenticatedSubject.next(true);
+      this._currentUserSubject.next(authResult);
 
       console.log('🔒 Secure session established successfully');
     } catch (error) {

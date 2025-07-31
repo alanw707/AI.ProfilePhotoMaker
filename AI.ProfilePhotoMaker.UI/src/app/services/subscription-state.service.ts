@@ -36,11 +36,11 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
   };
 
   constructor(
-    cacheManager: CacheManagerService,
-    notificationService: NotificationService,
-    private creditService: CreditService,
-    private replicateService: ReplicateService,
-    private configService: ConfigService
+    _cacheManager: CacheManagerService,
+    _notificationService: NotificationService,
+    private _creditService: CreditService,
+    private _replicateService: ReplicateService,
+    private _configService: ConfigService
   ) {
     super(
       {
@@ -50,8 +50,8 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
         isPremiumWorkflow: false,
         isLoading: false,
       },
-      cacheManager,
-      notificationService
+      _cacheManager,
+      _notificationService
     );
   }
 
@@ -78,7 +78,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
 
     try {
       const apiCalls: any = {
-        creditStatus: this.creditService.getCreditStatus().pipe(
+        creditStatus: this._creditService.getCreditStatus().pipe(
           catchError(error => {
             return of({ success: false, data: null, error });
           })
@@ -86,8 +86,8 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
       };
 
       // Only call Replicate credits API if enabled in environment
-      if (this.configService.isReplicateCreditsEnabled) {
-        apiCalls.credits = this.replicateService.getCredits().pipe(
+      if (this._configService.isReplicateCreditsEnabled) {
+        apiCalls.credits = this._replicateService.getCredits().pipe(
           catchError(error => {
             return of({ success: false, data: null, error });
           })
@@ -103,7 +103,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
       const creditsInfo = credits?.success ? credits.data : null;
 
       // Calculate total credits
-      const totalCredits = this.creditService.getTotalAvailableCredits(
+      const totalCredits = this._creditService.getTotalAvailableCredits(
         userCreditStatus,
         creditsInfo || null
       );
@@ -127,7 +127,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
       // Show info if credits API failed but internal credits loaded
       if (
         !credits?.success &&
-        this.configService.isReplicateCreditsEnabled &&
+        this._configService.isReplicateCreditsEnabled &&
         creditStatus?.success
       ) {
       }
@@ -169,7 +169,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
     this.setLoading(true);
 
     try {
-      const creditStatus = await this.creditService
+      const creditStatus = await this._creditService
         .getCreditStatus()
         .pipe(
           catchError(error => {
@@ -181,7 +181,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
       const userCreditStatus = creditStatus?.success ? creditStatus.data : null;
 
       // Calculate total credits from internal sources only
-      const totalCredits = this.creditService.getTotalAvailableCredits(
+      const totalCredits = this._creditService.getTotalAvailableCredits(
         userCreditStatus,
         null // No Replicate credits
       );
@@ -285,7 +285,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
   /**
    * Check if credits need refreshing based on last update time
    */
-  shouldRefreshCredits(maxAgeMinutes = 15): boolean {
+  shouldRefreshCredits(_maxAgeMinutes = 15): boolean {
     // This could be enhanced to track last refresh time
     // For now, we'll use cache validity
     return !this.getCachedData<SubscriptionState>(this.CACHE_KEY);

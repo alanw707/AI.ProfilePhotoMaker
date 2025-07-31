@@ -15,11 +15,11 @@ export abstract class StateBaseService<T> {
   public readonly state$: Observable<T>;
 
   constructor(
-    protected initialState: T,
-    protected cacheManager: CacheManagerService,
-    protected notificationService: NotificationService
+    protected _initialState: T,
+    protected _cacheManager: CacheManagerService,
+    protected _notificationService: NotificationService
   ) {
-    this._state = new BehaviorSubject<T>(this.initialState);
+    this._state = new BehaviorSubject<T>(this._initialState);
     this.state$ = this._state.asObservable();
   }
 
@@ -44,7 +44,7 @@ export abstract class StateBaseService<T> {
    * Reset state to initial values
    */
   resetState(): void {
-    this._state.next(this.initialState);
+    this._state.next(this._initialState);
   }
 
   /**
@@ -54,14 +54,14 @@ export abstract class StateBaseService<T> {
     key: string,
     debounceMs: number = CacheManagerService.LOAD_DEBOUNCE_MS
   ): boolean {
-    return this.cacheManager.shouldDebounceRequest(key, debounceMs);
+    return this._cacheManager.shouldDebounceRequest(key, debounceMs);
   }
 
   /**
    * Get cached data with type safety
    */
   protected getCachedData<TCache>(key: string): TCache | null {
-    return this.cacheManager.getCachedData<TCache>(key);
+    return this._cacheManager.getCachedData<TCache>(key);
   }
 
   /**
@@ -72,21 +72,21 @@ export abstract class StateBaseService<T> {
     data: TCache,
     ttl: number = CacheManagerService.DASHBOARD_CACHE_DURATION_MS
   ): void {
-    this.cacheManager.setCachedData(key, data, ttl);
+    this._cacheManager.setCachedData(key, data, ttl);
   }
 
   /**
    * Invalidate specific cache key
    */
   protected invalidateCache(key: string): void {
-    this.cacheManager.invalidateCache(key);
+    this._cacheManager.invalidateCache(key);
   }
 
   /**
    * Force refresh by clearing cache
    */
   protected forceRefreshCache(key: string): void {
-    this.cacheManager.forceRefresh(key);
+    this._cacheManager.forceRefresh(key);
   }
 
   /**
@@ -98,7 +98,7 @@ export abstract class StateBaseService<T> {
       console.error(`❌ ${operation} failed:`, error);
     }
     if (showToUser) {
-      this.notificationService.error(
+      this._notificationService.error(
         `${operation} Failed`,
         'An error occurred while loading data. Please try again.'
       );
@@ -109,21 +109,21 @@ export abstract class StateBaseService<T> {
    * Show success notification
    */
   protected showSuccess(title: string, message: string): void {
-    this.notificationService.success(title, message);
+    this._notificationService.success(title, message);
   }
 
   /**
    * Show info notification
    */
   protected showInfo(title: string, message: string): void {
-    this.notificationService.info(title, message);
+    this._notificationService.info(title, message);
   }
 
   /**
    * Show warning notification
    */
   protected showWarning(title: string, message: string): void {
-    this.notificationService.warning(title, message);
+    this._notificationService.warning(title, message);
   }
 
   /**
