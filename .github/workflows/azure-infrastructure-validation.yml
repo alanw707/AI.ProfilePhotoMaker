@@ -6,6 +6,10 @@ on:
       - 'infrastructure/**'
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   validate-infrastructure:
     runs-on: ubuntu-latest
@@ -24,9 +28,11 @@ jobs:
           az --version
         
     - name: Login to Azure
-      uses: azure/login@v1
+      uses: azure/login@v2
       with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_C73973894C7140DEAF8637A42FA0C131 }}
+        tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_011D6FB5A4BC43509D9B165F9842CEBC }}
+        subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B9C8B148FA76469EB51C84A0DE3D63BB }}
         
     - name: Install Bicep CLI
       run: az bicep install
