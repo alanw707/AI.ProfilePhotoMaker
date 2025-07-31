@@ -92,8 +92,8 @@ jobs:
           fi
           
           RG_NAME="ai-profile-photo-maker-$ENV_NAME"
-          WEB_APP_NAME="aiprofilephotomakerapi-$ENV_NAME"
-          SWA_NAME="aiprofilephotomaker-swa-$ENV_NAME"
+          WEB_APP_NAME="aiappapi-$ENV_NAME"
+          SWA_NAME="aiapp-swa-$ENV_NAME"
           
           echo "environment=$ENV_NAME" >> $GITHUB_OUTPUT
           echo "resource-group=$RG_NAME" >> $GITHUB_OUTPUT
