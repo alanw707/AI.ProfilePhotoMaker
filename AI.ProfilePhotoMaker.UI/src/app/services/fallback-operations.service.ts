@@ -25,17 +25,17 @@ export class FallbackOperationsService implements IFallbackOperationsService {
   private readonly FALLBACK_RESET_INTERVAL_MS = 300000; // 5 minutes
 
   constructor(
-    private http: HttpClient,
-    private authService: AuthService,
-    private config: ConfigService,
-    private fileUploadService: FileUploadService
+    private _http: HttpClient,
+    private _authService: AuthService,
+    private _config: ConfigService,
+    private _fileUploadService: FileUploadService
   ) {}
 
   /**
    * Check filesystem for missing generated images and sync to database
    */
   checkGeneratedImagesFromFilesystem(): Observable<any> {
-    const token = this.authService.getToken();
+    const token = this._authService.getToken();
     if (!token) {
       throw new Error('No authentication token available for fix endpoint');
     }
@@ -46,7 +46,7 @@ export class FallbackOperationsService implements IFallbackOperationsService {
     });
 
     return new Observable(observer => {
-      this.http
+      this._http
         .post(this.config.getFullUrl('/test/fix-generated-images'), {}, { headers })
         .subscribe({
           next: (response: any) => {

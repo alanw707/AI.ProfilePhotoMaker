@@ -79,8 +79,7 @@ Linting "AI.ProfilePhotoMaker.UI"...
   560:16  warning  The cyclomatic complexity 39 exceeds the defined limit 10                               @angular-eslint/template/cyclomatic-complexity
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/dashboard/file-upload-section/file-upload-section.component.spec.ts
-  20:7   error  'mockFileUploadManagerService' is assigned a value but never used                                                        @typescript-eslint/no-unused-vars
-  66:38  error  The `Function` type accepts any function-like value.
+  61:38  error  The `Function` type accepts any function-like value.
 Prefer explicitly defining any function parameters and return type  @typescript-eslint/no-unsafe-function-type
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/dashboard/file-upload-section/file-upload-section.component.ts
@@ -91,9 +90,8 @@ Prefer explicitly defining any function parameters and return type  @typescript-
    340:38  warning  Method '_showEnhancedSecurityErrors' has a complexity of 14. Maximum allowed is 10                                                                                            complexity
    429:3   warning  Async method '_validateImageQuality' has too many lines (89). Maximum allowed is 50                                                                                           max-lines-per-function
    429:38  warning  Async method '_validateImageQuality' has a complexity of 11. Maximum allowed is 10                                                                                            complexity
-   440:13  error    Variable name `_progress` must match one of the following formats: camelCase, UPPER_CASE                                                                                      @typescript-eslint/naming-convention
-   440:13  error    '_progress' is assigned a value but never used                                                                                                                                @typescript-eslint/no-unused-vars
-   512:1   warning  File has too many lines (1115). Maximum allowed is 400                                                                                                                        max-lines
+   440:13  error    'progress' is assigned a value but never used                                                                                                                                 @typescript-eslint/no-unused-vars
+   512:1   warning  File has too many lines (1147). Maximum allowed is 400                                                                                                                        max-lines
    539:23  warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
    544:24  warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
    576:3   warning  Method 'deleteUploadedImage' has too many lines (64). Maximum allowed is 50                                                                                                   max-lines-per-function
@@ -102,25 +100,23 @@ Prefer explicitly defining any function parameters and return type  @typescript-
    941:3   warning  Method '_applyModalContentStyles' has too many lines (186). Maximum allowed is 50                                                                                             max-lines-per-function
   1053:22  warning  Arrow function has too many lines (79). Maximum allowed is 50                                                                                                                 max-lines-per-function
   1177:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-  1185:3   warning  Method 'buildModalContent' has too many lines (110). Maximum allowed is 50                                                                                                    max-lines-per-function
-  1185:11  error    Class Method name `buildModalContent` must have one leading underscore(s)                                                                                                     @typescript-eslint/naming-convention
-  1185:28  warning  Method 'buildModalContent' has a complexity of 19. Maximum allowed is 10                                                                                                      complexity
-  1304:11  error    Class Method name `closeAllPopups` must have one leading underscore(s)                                                                                                        @typescript-eslint/naming-convention
-  1353:7   error    Object Literal Property name `No face detected in image. Please upload a clear photo with your face visible.` must match one of the following formats: camelCase              @typescript-eslint/naming-convention
-  1355:7   error    Object Literal Property name `Unable to determine photo composition. Please upload a clear headshot or upper body photo.` must match one of the following formats: camelCase  @typescript-eslint/naming-convention
-  1357:7   error    Object Literal Property name `Image quality is below recommended standards. Consider uploading a higher quality photo.` must match one of the following formats: camelCase    @typescript-eslint/naming-convention
-  1359:7   error    Object Literal Property name `Full body photo detected. Please upload headshot or upper body photos only.` must match one of the following formats: camelCase                 @typescript-eslint/naming-convention
-  1361:7   error    Object Literal Property name `Multiple faces detected in image. Please upload a photo with only one person.` must match one of the following formats: camelCase               @typescript-eslint/naming-convention
-  1363:7   error    Object Literal Property name `Face is too small in the image. Please upload a closer headshot.` must match one of the following formats: camelCase                            @typescript-eslint/naming-convention
-  1364:7   error    Object Literal Property name `Image is too blurry. Please upload a sharper photo.` must match one of the following formats: camelCase                                         @typescript-eslint/naming-convention
-  1365:7   error    Object Literal Property name `Poor lighting detected. Please upload a well-lit photo.` must match one of the following formats: camelCase                                     @typescript-eslint/naming-convention
-  1384:7   error    Object Literal Property name `Try uploading a clearer photo with better lighting.` must match one of the following formats: camelCase                                         @typescript-eslint/naming-convention
-  1385:7   error    Object Literal Property name `Upload a closer headshot photo.` must match one of the following formats: camelCase                                                             @typescript-eslint/naming-convention
-  1386:7   error    Object Literal Property name `Ensure only one person is in the photo.` must match one of the following formats: camelCase                                                     @typescript-eslint/naming-convention
-  1387:7   error    Object Literal Property name `Use a higher resolution image.` must match one of the following formats: camelCase                                                              @typescript-eslint/naming-convention
-  1388:7   error    Object Literal Property name `Take photo with better focus.` must match one of the following formats: camelCase                                                               @typescript-eslint/naming-convention
-  1389:7   error    Object Literal Property name `Improve lighting conditions.` must match one of the following formats: camelCase                                                                @typescript-eslint/naming-convention
-  1390:7   error    Object Literal Property name `Remove sunglasses or accessories covering face.` must match one of the following formats: camelCase                                             @typescript-eslint/naming-convention
+  1185:3   warning  Method '_buildModalContent' has too many lines (110). Maximum allowed is 50                                                                                                   max-lines-per-function
+  1185:29  warning  Method '_buildModalContent' has a complexity of 19. Maximum allowed is 10                                                                                                     complexity
+  1370:7   error    Object Literal Property name `No face detected in image. Please upload a clear photo with your face visible.` must match one of the following formats: camelCase              @typescript-eslint/naming-convention
+  1372:7   error    Object Literal Property name `Unable to determine photo composition. Please upload a clear headshot or upper body photo.` must match one of the following formats: camelCase  @typescript-eslint/naming-convention
+  1374:7   error    Object Literal Property name `Image quality is below recommended standards. Consider uploading a higher quality photo.` must match one of the following formats: camelCase    @typescript-eslint/naming-convention
+  1376:7   error    Object Literal Property name `Full body photo detected. Please upload headshot or upper body photos only.` must match one of the following formats: camelCase                 @typescript-eslint/naming-convention
+  1378:7   error    Object Literal Property name `Multiple faces detected in image. Please upload a photo with only one person.` must match one of the following formats: camelCase               @typescript-eslint/naming-convention
+  1380:7   error    Object Literal Property name `Face is too small in the image. Please upload a closer headshot.` must match one of the following formats: camelCase                            @typescript-eslint/naming-convention
+  1381:7   error    Object Literal Property name `Image is too blurry. Please upload a sharper photo.` must match one of the following formats: camelCase                                         @typescript-eslint/naming-convention
+  1382:7   error    Object Literal Property name `Poor lighting detected. Please upload a well-lit photo.` must match one of the following formats: camelCase                                     @typescript-eslint/naming-convention
+  1417:7   error    Object Literal Property name `Try uploading a clearer photo with better lighting.` must match one of the following formats: camelCase                                         @typescript-eslint/naming-convention
+  1418:7   error    Object Literal Property name `Upload a closer headshot photo.` must match one of the following formats: camelCase                                                             @typescript-eslint/naming-convention
+  1419:7   error    Object Literal Property name `Ensure only one person is in the photo.` must match one of the following formats: camelCase                                                     @typescript-eslint/naming-convention
+  1420:7   error    Object Literal Property name `Use a higher resolution image.` must match one of the following formats: camelCase                                                              @typescript-eslint/naming-convention
+  1421:7   error    Object Literal Property name `Take photo with better focus.` must match one of the following formats: camelCase                                                               @typescript-eslint/naming-convention
+  1422:7   error    Object Literal Property name `Improve lighting conditions.` must match one of the following formats: camelCase                                                                @typescript-eslint/naming-convention
+  1423:7   error    Object Literal Property name `Remove sunglasses or accessories covering face.` must match one of the following formats: camelCase                                             @typescript-eslint/naming-convention
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/dashboard/photo-generation/photo-generation.component.ts
   149:11  error    Class Method name `startProgressPolling` must have one leading underscore(s)            @typescript-eslint/naming-convention
@@ -1418,7 +1414,7 @@ Prefer explicitly defining any function parameters and return type  @typescript-
   23:1  error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
   23:1  error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
 
-✖ 1250 problems (631 errors, 619 warnings)
+✖ 1246 problems (627 errors, 619 warnings)
 
 Lint warnings found in the listed files.
 
