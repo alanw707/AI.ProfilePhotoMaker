@@ -323,8 +323,8 @@ Prerequisites:
                        help='Resource group name (default: ai-profile-photo-maker-{environment})')
     
     parser.add_argument('-l', '--location',
-                       default='East US',
-                       help='Azure location (default: East US)')
+                       default='East US 2',
+                       help='Azure location (default: East US 2)')
     
     parser.add_argument('--template',
                        default='main.json',
