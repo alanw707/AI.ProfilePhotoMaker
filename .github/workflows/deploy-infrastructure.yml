@@ -172,6 +172,7 @@ jobs:
       
       - name: '🧪 ARM Template Validation'
         id: arm-validation
+        if: github.event.inputs.force_deploy != 'true'
         uses: azure/arm-deploy@v2
         with:
           scope: resourcegroup
@@ -189,7 +190,11 @@ jobs:
           echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Resource Group | ✅ Ready |" >> $GITHUB_STEP_SUMMARY
           echo "| Bicep Template | ✅ Valid |" >> $GITHUB_STEP_SUMMARY
-          echo "| ARM Validation | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ github.event.inputs.force_deploy }}" == "true" ]]; then
+            echo "| ARM Validation | ⚠️ Skipped (Force Deploy) |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| ARM Validation | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "| Parameters | ✅ Processed |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Environment**: ${{ steps.config.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
@@ -207,9 +212,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: validate-infrastructure
     if: |
-      (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.force_deploy != 'true') ||
-      (github.event_name == 'workflow_dispatch' && needs.validate-infrastructure.result == 'success')
+      always() && (
+        (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.force_deploy == 'true') ||
+        (github.event_name == 'workflow_dispatch' && needs.validate-infrastructure.result == 'success')
+      )
     # environment: 
     #   name: ${{ github.event.inputs.environment || 'staging' }}
     #   url: ${{ steps.deploy.outputs.webAppUrl }}
