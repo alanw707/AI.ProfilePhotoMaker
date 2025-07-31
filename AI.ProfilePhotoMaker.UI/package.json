@@ -34,10 +34,16 @@
     "_comment_quality": "=== CODE QUALITY ===",
     "lint": "ng lint",
     "lint:fix": "ng lint --fix",
+    "lint:errors-only": "ng lint --quiet",
+    "lint:cache": "ng lint --cache",
+    "lint:ci": "ng lint --quiet --cache --format json",
+    "lint:changed": "lint-staged --no-push",
     "format": "prettier --write \"src/**/*.{ts,html,scss,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,html,scss,json}\"",
     "quality:check": "npm run lint && npm run format:check",
     "quality:fix": "npm run lint:fix && npm run format",
+    "precommit": "lint-staged",
+    "prepush": "npm run lint:errors-only",
     "_comment_utilities": "=== UTILITY SCRIPTS ===",
     "watch": "ng build --watch --configuration development",
     "prepare": "husky"
@@ -89,10 +95,12 @@
   },
   "lint-staged": {
     "src/**/*.{ts,js}": [
-      "prettier --write"
+      "prettier --write",
+      "eslint --fix"
     ],
-    "src/**/*.{html}": [
-      "prettier --write"
+    "src/**/*.html": [
+      "prettier --write",
+      "eslint --fix"
     ],
     "src/**/*.{scss,css}": [
       "prettier --write"

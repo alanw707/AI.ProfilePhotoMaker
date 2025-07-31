@@ -10,7 +10,7 @@ import { DebugElement } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { Location } from '@angular/common';
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 
 // Mock Services
@@ -18,20 +18,20 @@ export class MockAuthService {
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
   isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
   
-  login(email: string, password: string) {
+  login(email: string, password: string): Observable<{ token: string; user: { email: string } }> {
     this.isAuthenticatedSubject.next(true);
     return of({ token: 'mock-token', user: { email } });
   }
   
-  logout() {
+  logout(): void {
     this.isAuthenticatedSubject.next(false);
   }
   
-  getCurrentUser() {
+  getCurrentUser(): Observable<{ id: string; email: string; name: string }> {
     return of({ id: '1', email: 'test@example.com', name: 'Test User' });
   }
   
-  getToken() {
+  getToken(): string {
     return 'mock-jwt-token';
   }
 }
@@ -48,27 +48,27 @@ export class MockDashboardStateService {
   
   state$ = this.stateSubject.asObservable();
   
-  updateUploadedImages(images: never[]) {
+  updateUploadedImages(images: never[]): void {
     const currentState = this.stateSubject.value;
     this.stateSubject.next({ ...currentState, uploadedImages: images });
   }
   
-  updateSelectedStyles(styles: never[]) {
+  updateSelectedStyles(styles: never[]): void {
     const currentState = this.stateSubject.value;
     this.stateSubject.next({ ...currentState, selectedStyles: styles });
   }
   
-  setTrainingStatus(isTraining: boolean) {
+  setTrainingStatus(isTraining: boolean): void {
     const currentState = this.stateSubject.value;
     this.stateSubject.next({ ...currentState, isTraining });
   }
   
-  setGeneratingStatus(isGenerating: boolean) {
+  setGeneratingStatus(isGenerating: boolean): void {
     const currentState = this.stateSubject.value;
     this.stateSubject.next({ ...currentState, isGenerating });
   }
   
-  updateCredits(credits: number) {
+  updateCredits(credits: number): void {
     const currentState = this.stateSubject.value;
     this.stateSubject.next({ ...currentState, credits });
   }
@@ -77,29 +77,29 @@ export class MockDashboardStateService {
 export class MockNotificationService {
   private notifications: any[] = [];
   
-  showSuccess(message: string, title?: string) {
+  showSuccess(message: string, title?: string): void {
     this.notifications.push({ type: 'success', message, title });
   }
   
-  showError(message: string, title?: string) {
+  showError(message: string, title?: string): void {
     this.notifications.push({ type: 'error', message, title });
   }
   
-  showInfo(message: string, title?: string) {
+  showInfo(message: string, title?: string): void {
     this.notifications.push({ type: 'info', message, title });
   }
   
-  getNotifications() {
+  getNotifications(): unknown[] {
     return [...this.notifications];
   }
   
-  clearNotifications() {
+  clearNotifications(): void {
     this.notifications = [];
   }
 }
 
 export class MockFileUploadService {
-  uploadMultipleImages(files: File[]) {
+  uploadMultipleImages(files: File[]): Observable<{ success: boolean; data: { id: string; filename: string; url: string; size: number }[] }> {
     return of({
       success: true,
       data: files.map((file, index) => ({
@@ -111,7 +111,7 @@ export class MockFileUploadService {
     });
   }
   
-  uploadSingleImage(file: File) {
+  uploadSingleImage(file: File): Observable<{ success: boolean; data: { id: string; filename: string; url: string; size: number } }> {
     return of({
       success: true,
       data: {
@@ -123,13 +123,13 @@ export class MockFileUploadService {
     });
   }
   
-  deleteImage(imageId: string) {
+  deleteImage(imageId: string): Observable<{ success: boolean }> {
     return of({ success: true });
   }
 }
 
 export class MockReplicateService {
-  trainModel(request: any) {
+  trainModel(request: unknown): Observable<{ success: boolean; data: { id: string; status: string; estimatedTime: number } }> {
     return of({
       success: true,
       data: {
@@ -140,7 +140,7 @@ export class MockReplicateService {
     });
   }
   
-  generateImages(request: any) {
+  generateImages(request: unknown): Observable<{ success: boolean; data: { id: string; status: string; estimatedTime: number } }> {
     return of({
       success: true,
       data: {
@@ -151,7 +151,7 @@ export class MockReplicateService {
     });
   }
   
-  enhancePhoto(request: any) {
+  enhancePhoto(request: unknown): Observable<{ success: boolean; data: { id: string; status: string; url: string } }> {
     return of({
       success: true,
       data: {
@@ -162,7 +162,7 @@ export class MockReplicateService {
     });
   }
   
-  checkTrainingStatus(id: string) {
+  checkTrainingStatus(id: string): Observable<{ success: boolean; data: { id: string; status: string; modelId: string } }> {
     return of({
       success: true,
       data: {
@@ -173,7 +173,7 @@ export class MockReplicateService {
     });
   }
   
-  checkGenerationStatus(id: string) {
+  checkGenerationStatus(id: string): Observable<{ success: boolean; data: { id: string; status: string; images: { url: string; style: string }[] } }> {
     return of({
       success: true,
       data: {
@@ -189,7 +189,7 @@ export class MockReplicateService {
 }
 
 export class MockCreditService {
-  getCredits() {
+  getCredits(): Observable<{ success: boolean; data: { weeklyCredits: number; purchasedCredits: number; totalCredits: number } }> {
     return of({
       success: true,
       data: {
@@ -200,7 +200,7 @@ export class MockCreditService {
     });
   }
   
-  consumeCredits(amount: number, operation: string) {
+  consumeCredits(amount: number, operation: string): Observable<{ success: boolean; data: { remainingCredits: number; operation: string } }> {
     return of({
       success: true,
       data: {
@@ -210,7 +210,7 @@ export class MockCreditService {
     });
   }
   
-  purchaseCredits(packageId: string) {
+  purchaseCredits(_packageId: string): Observable<{ success: boolean; data: { creditsAdded: number; totalCredits: number } }> {
     return of({
       success: true,
       data: {
@@ -222,11 +222,11 @@ export class MockCreditService {
 }
 
 export class MockFaceDetectionService {
-  loadModels() {
+  loadModels(): Promise<void> {
     return Promise.resolve();
   }
   
-  validateImageQuality(file: File) {
+  validateImageQuality(_file: File): Promise<{ isValid: boolean; score: number; reasons: unknown[]; faceCount: number; dimensions: { width: number; height: number } }> {
     return Promise.resolve({
       isValid: true,
       score: 0.85,
@@ -236,7 +236,7 @@ export class MockFaceDetectionService {
     });
   }
   
-  detectFaces(imageUrl: string) {
+  detectFaces(_imageUrl: string): Promise<{ detection: { box: { x: number; y: number; width: number; height: number } }; landmarks: unknown[]; descriptor: Float32Array }[]> {
     return Promise.resolve([
       {
         detection: { box: { x: 100, y: 100, width: 200, height: 200 } },
@@ -269,7 +269,7 @@ export class TestingHelpers {
   /**
    * Triggers a file input change event for testing
    */
-  static triggerFileInputChange(fixture: ComponentFixture<any>, files: File[], inputSelector = 'input[type="file"]') {
+  static triggerFileInputChange(fixture: ComponentFixture<unknown>, files: File[], inputSelector = 'input[type="file"]'): void {
     const fileInput = fixture.debugElement.query(By.css(inputSelector));
     if (fileInput) {
       const event = new Event('change');
@@ -285,7 +285,7 @@ export class TestingHelpers {
   /**
    * Clicks a button and waits for change detection
    */
-  static clickButton(fixture: ComponentFixture<any>, buttonSelector: string) {
+  static clickButton(fixture: ComponentFixture<unknown>, buttonSelector: string): void {
     const button = fixture.debugElement.query(By.css(buttonSelector));
     if (button) {
       button.nativeElement.click();
@@ -296,7 +296,7 @@ export class TestingHelpers {
   /**
    * Waits for async operations to complete
    */
-  static async waitForAsync(fixture: ComponentFixture<any>) {
+  static async waitForAsync(fixture: ComponentFixture<unknown>): Promise<void> {
     await fixture.whenStable();
     fixture.detectChanges();
   }
@@ -304,7 +304,7 @@ export class TestingHelpers {
   /**
    * Sets up a basic test module configuration
    */
-  static async setupTestModule(component: any, providers: any[] = [], imports: any[] = []) {
+  static async setupTestModule(component: unknown, providers: unknown[] = [], imports: unknown[] = []): Promise<void> {
     await TestBed.configureTestingModule({
       imports: [component, ...imports],
       providers: [
@@ -322,7 +322,10 @@ export class TestingHelpers {
 }
 
 // Mock Router for navigation testing
-@Component({ template: '' })
+@Component({ 
+  template: '',
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
 export class MockComponent { }
 
 export const mockRoutes = [
@@ -336,25 +339,25 @@ export const mockRoutes = [
 /**
  * Test constants for consistent testing values
  */
-export const TestConstants = {
-  MOCK_USER: {
+export const testConstants = {
+  mockUser: {
     id: '123',
     email: 'test@example.com',
     name: 'Test User',
     credits: 3
   },
-  MOCK_STYLES: [
+  mockStyles: [
     { id: '1', name: 'corporate', displayName: 'Corporate' },
     { id: '2', name: 'casual', displayName: 'Casual' },
     { id: '3', name: 'artistic', displayName: 'Artistic' }
   ],
-  MOCK_IMAGES: [
+  mockImages: [
     { id: '1', filename: 'test1.jpg', url: 'mock-url-1' },
     { id: '2', filename: 'test2.jpg', url: 'mock-url-2' }
   ],
-  TIMEOUTS: {
-    SHORT: 1000,
-    MEDIUM: 5000,
-    LONG: 10000
+  timeouts: {
+    short: 1000,
+    medium: 5000,
+    long: 10000
   }
 };

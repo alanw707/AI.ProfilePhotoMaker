@@ -1,0 +1,935 @@
+name: '🚀 Optimized Test & Quality Assurance'
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      test_level:
+        description: 'Test level to run'
+        required: true
+        default: 'full'
+        type: choice
+        options: ['unit', 'integration', 'e2e', 'full', 'performance']
+      environment:
+        description: 'Target environment for E2E tests'
+        required: false
+        default: 'staging'
+        type: choice
+        options: ['staging', 'production']
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  checks: write
+  security-events: write
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  NODE_VERSION: '20'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  # Fast Frontend Linting (Optimized)
+  frontend-linting:
+    name: '⚡ Frontend Linting (ESLint)'
+    runs-on: ubuntu-latest
+    outputs:
+      lint-cache-hit: ${{ steps.lint-cache.outputs.cache-hit }}
+      lint-errors: ${{ steps.lint-results.outputs.errors }}
+      lint-warnings: ${{ steps.lint-results.outputs.warnings }}
+    
+    steps:
+      - name: '📥 Checkout Code'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for change detection
+
+      - name: '⚙️ Setup Node.js'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'AI.ProfilePhotoMaker.UI/package-lock.json'
+
+      - name: '📦 Cache Dependencies & ESLint Cache'
+        id: lint-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            AI.ProfilePhotoMaker.UI/node_modules
+            AI.ProfilePhotoMaker.UI/.eslintcache
+          key: ${{ runner.os }}-frontend-lint-${{ hashFiles('AI.ProfilePhotoMaker.UI/package-lock.json', 'AI.ProfilePhotoMaker.UI/eslint.config.js') }}
+          restore-keys: |
+            ${{ runner.os }}-frontend-lint-
+            ${{ runner.os }}-frontend-
+
+      - name: '🔧 Install Dependencies'
+        working-directory: AI.ProfilePhotoMaker.UI
+        run: |
+          if [ "${{ steps.lint-cache.outputs.cache-hit }}" != "true" ]; then
+            echo "📦 Installing dependencies (cache miss)"
+            npm ci --prefer-offline --no-audit --legacy-peer-deps
+          else
+            echo "✅ Dependencies restored from cache"
+          fi
+
+      - name: '🎯 Detect Changed Files (PR Mode)'
+        id: changed-files
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "🔍 Detecting changed files for incremental linting..."
+          cd AI.ProfilePhotoMaker.UI
+          
+          # Get changed files in src directory
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- "src/**/*.{ts,js,html}" | tr '\n' ' ')
+          
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No frontend files changed, skipping ESLint"
+            echo "skip-lint=true" >> $GITHUB_OUTPUT
+            echo "files-changed=0" >> $GITHUB_OUTPUT
+          else
+            echo "Changed files: $CHANGED_FILES"
+            echo "skip-lint=false" >> $GITHUB_OUTPUT
+            echo "files-changed=$(echo $CHANGED_FILES | wc -w)" >> $GITHUB_OUTPUT
+            echo "changed-files=$CHANGED_FILES" >> $GITHUB_OUTPUT
+          fi
+
+      - name: '📋 Run ESLint (Full - Push to main/develop)'
+        if: github.event_name == 'push' || steps.changed-files.outputs.skip-lint != 'true'
+        working-directory: AI.ProfilePhotoMaker.UI
+        run: |
+          echo "🔍 Running full ESLint analysis..."
+          
+          # Create performance timing
+          START_TIME=$(date +%s)
+          
+          # Run with cache and error-only for faster feedback
+          if npm run lint:errors-only -- --cache --cache-location .eslintcache --format json --output-file eslint-results.json; then
+            LINT_STATUS="passed"
+            echo "✅ ESLint passed"
+          else
+            LINT_STATUS="failed"
+            echo "❌ ESLint issues found"
+          fi
+          
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          
+          echo "⏱️ ESLint completed in ${DURATION}s"
+          echo "lint-status=$LINT_STATUS" >> $GITHUB_OUTPUT
+          echo "lint-duration=$DURATION" >> $GITHUB_OUTPUT
+
+      - name: '📋 Run ESLint (Incremental - PR)'
+        if: github.event_name == 'pull_request' && steps.changed-files.outputs.skip-lint != 'true'
+        working-directory: AI.ProfilePhotoMaker.UI
+        run: |
+          echo "🎯 Running incremental ESLint on changed files..."
+          echo "Files to lint: ${{ steps.changed-files.outputs.changed-files }}"
+          
+          START_TIME=$(date +%s)
+          
+          # Run ESLint only on changed files
+          if npx eslint ${{ steps.changed-files.outputs.changed-files }} --cache --cache-location .eslintcache --format json --output-file eslint-results.json; then
+            LINT_STATUS="passed"
+            echo "✅ Incremental ESLint passed"
+          else
+            LINT_STATUS="failed" 
+            echo "❌ ESLint issues found in changed files"
+          fi
+          
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          
+          echo "⚡ Incremental ESLint completed in ${DURATION}s"
+          echo "Files checked: ${{ steps.changed-files.outputs.files-changed }}"
+          echo "lint-status=$LINT_STATUS" >> $GITHUB_OUTPUT
+          echo "lint-duration=$DURATION" >> $GITHUB_OUTPUT
+
+      - name: '📊 Process Lint Results'
+        id: lint-results
+        if: always()
+        working-directory: AI.ProfilePhotoMaker.UI
+        run: |
+          if [ -f "eslint-results.json" ]; then
+            # Parse ESLint JSON results
+            ERRORS=$(cat eslint-results.json | jq '[.[].messages[] | select(.severity == 2)] | length')
+            WARNINGS=$(cat eslint-results.json | jq '[.[].messages[] | select(.severity == 1)] | length')
+            TOTAL_FILES=$(cat eslint-results.json | jq 'length')
+            
+            echo "errors=$ERRORS" >> $GITHUB_OUTPUT
+            echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
+            echo "total-files=$TOTAL_FILES" >> $GITHUB_OUTPUT
+            
+            echo "📊 ESLint Results:"
+            echo "  • Files Checked: $TOTAL_FILES"
+            echo "  • Errors: $ERRORS"
+            echo "  • Warnings: $WARNINGS"
+            
+            # Fail if errors found
+            if [ "$ERRORS" -gt 0 ]; then
+              echo "::error::ESLint found $ERRORS errors"
+              
+              # Show first 10 errors for context
+              echo "📋 First 10 ESLint errors:"
+              cat eslint-results.json | jq -r '[.[].messages[] | select(.severity == 2)][0:10] | .[] | "  • \(.ruleId): \(.message) (line \(.line))"'
+              
+              exit 1
+            fi
+          else
+            echo "No ESLint results file found"
+            echo "errors=0" >> $GITHUB_OUTPUT
+            echo "warnings=0" >> $GITHUB_OUTPUT
+            echo "total-files=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: '📤 Upload ESLint Results'
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eslint-results
+          path: AI.ProfilePhotoMaker.UI/eslint-results.json
+          retention-days: 30
+
+  # Frontend Formatting (Parallel)
+  frontend-formatting:
+    name: '🎨 Frontend Formatting (Prettier)'
+    runs-on: ubuntu-latest
+    outputs:
+      format-status: ${{ steps.format-check.outputs.status }}
+    
+    steps:
+      - name: '📥 Checkout Code'
+        uses: actions/checkout@v4
+
+      - name: '⚙️ Setup Node.js'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'AI.ProfilePhotoMaker.UI/package-lock.json'
+
+      - name: '🔧 Install Dependencies'
+        working-directory: AI.ProfilePhotoMaker.UI
+        run: npm ci --prefer-offline --no-audit --legacy-peer-deps
+
+      - name: '🎨 Check Prettier Formatting'
+        id: format-check
+        working-directory: AI.ProfilePhotoMaker.UI
+        run: |
+          echo "🔍 Checking Prettier formatting..."
+          
+          if npm run format:check; then
+            echo "✅ Prettier formatting is correct"
+            echo "status=passed" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Prettier formatting issues found"
+            echo "::error::Prettier formatting issues detected. Run 'npm run format' to fix."
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+  # TypeScript Type Checking (Parallel)
+  frontend-typecheck:
+    name: '🔍 TypeScript Type Check'
+    runs-on: ubuntu-latest
+    outputs:
+      typecheck-status: ${{ steps.type-check.outputs.status }}
+    
+    steps:
+      - name: '📥 Checkout Code'
+        uses: actions/checkout@v4
+
+      - name: '⚙️ Setup Node.js'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'AI.ProfilePhotoMaker.UI/package-lock.json'
+
+      - name: '🔧 Install Dependencies'
+        working-directory: AI.ProfilePhotoMaker.UI
+        run: npm ci --prefer-offline --no-audit --legacy-peer-deps
+
+      - name: '🔍 Run TypeScript Type Check'
+        id: type-check
+        working-directory: AI.ProfilePhotoMaker.UI
+        run: |
+          echo "🔍 Running TypeScript type check..."
+          
+          if npm run type-check; then
+            echo "✅ TypeScript type check passed"
+            echo "status=passed" >> $GITHUB_OUTPUT
+          else
+            echo "❌ TypeScript type errors found"
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+  # .NET Quality (Parallel)
+  dotnet-quality:
+    name: '📝 .NET Code Quality'
+    runs-on: ubuntu-latest
+    outputs:
+      dotnet-format-status: ${{ steps.dotnet-format.outputs.status }}
+    
+    steps:
+      - name: '📥 Checkout Code'
+        uses: actions/checkout@v4
+
+      - name: '⚙️ Setup .NET'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: '📦 Cache .NET Dependencies'
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/*.sln') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: '🔧 Restore .NET Packages'
+        run: dotnet restore --verbosity minimal
+
+      - name: '📋 .NET Format Check'
+        id: dotnet-format
+        run: |
+          echo "🔍 Checking .NET code formatting..."
+          
+          if dotnet format --verify-no-changes --verbosity diagnostic; then
+            echo "✅ .NET code formatting is correct"
+            echo "status=passed" >> $GITHUB_OUTPUT
+          else
+            echo "❌ .NET code formatting issues found"
+            echo "::error::Code formatting issues detected. Run 'dotnet format' to fix."
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+  # Security Scanning (Optimized)
+  security-scan:
+    name: '🔒 Security Scanning'
+    runs-on: ubuntu-latest
+    outputs:
+      security-score: ${{ steps.security-analysis.outputs.score }}
+      vulnerabilities: ${{ steps.security-analysis.outputs.vulnerabilities }}
+    
+    steps:
+      - name: '📥 Checkout Code'
+        uses: actions/checkout@v4
+      
+      - name: '⚙️ Setup .NET'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      
+      - name: '⚙️ Setup Node.js'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'AI.ProfilePhotoMaker.UI/package-lock.json'
+      
+      - name: '🔧 Restore Dependencies'
+        run: |
+          dotnet restore
+          cd AI.ProfilePhotoMaker.UI && npm ci --legacy-peer-deps
+      
+      - name: '🔒 .NET Security Audit'
+        id: dotnet-security
+        run: |
+          echo "🔍 Scanning .NET dependencies for vulnerabilities..."
+          
+          VULNERABLE_PACKAGES=$(dotnet list package --vulnerable --include-transitive 2>&1 || echo "")
+          DEPRECATED_PACKAGES=$(dotnet list package --deprecated 2>&1 || echo "")
+          
+          VULN_COUNT=0
+          if echo "$VULNERABLE_PACKAGES" | grep -q "has the following vulnerable packages"; then
+            VULN_COUNT=$(echo "$VULNERABLE_PACKAGES" | grep -c "Severity:" || echo "0")
+          fi
+          
+          DEPRECATED_COUNT=0
+          if echo "$DEPRECATED_PACKAGES" | grep -q "has the following deprecated packages"; then
+            DEPRECATED_COUNT=$(echo "$DEPRECATED_PACKAGES" | grep -c "Reason:" || echo "0")
+          fi
+          
+          echo "dotnet-vulnerabilities=$VULN_COUNT" >> $GITHUB_OUTPUT
+          echo "dotnet-deprecated=$DEPRECATED_COUNT" >> $GITHUB_OUTPUT
+          
+          echo "📊 .NET Security Scan Results:"
+          echo "  • Vulnerable Packages: $VULN_COUNT"
+          echo "  • Deprecated Packages: $DEPRECATED_COUNT"
+          
+          if [ $VULN_COUNT -gt 0 ]; then
+            echo "::warning::.NET dependencies have $VULN_COUNT vulnerable packages"
+          fi
+      
+      - name: '🔒 Node.js Security Audit'
+        id: npm-security
+        working-directory: AI.ProfilePhotoMaker.UI
+        run: |
+          echo "🔍 Scanning Node.js dependencies for vulnerabilities..."
+          
+          if npm audit --audit-level=moderate --json > audit-results.json 2>/dev/null; then
+            NPM_VULNERABILITIES=0
+            echo "✅ No npm vulnerabilities found"
+          else
+            NPM_VULNERABILITIES=$(cat audit-results.json | jq '.metadata.vulnerabilities.total // 0' 2>/dev/null || echo "0")
+            
+            if [ $NPM_VULNERABILITIES -gt 0 ]; then
+              echo "::warning::npm dependencies have $NPM_VULNERABILITIES vulnerabilities"
+              
+              HIGH_VULNS=$(cat audit-results.json | jq '.metadata.vulnerabilities.high // 0' 2>/dev/null || echo "0")
+              MODERATE_VULNS=$(cat audit-results.json | jq '.metadata.vulnerabilities.moderate // 0' 2>/dev/null || echo "0")
+              LOW_VULNS=$(cat audit-results.json | jq '.metadata.vulnerabilities.low // 0' 2>/dev/null || echo "0")
+              
+              echo "  • High: $HIGH_VULNS"
+              echo "  • Moderate: $MODERATE_VULNS" 
+              echo "  • Low: $LOW_VULNS"
+            fi
+          fi
+          
+          echo "npm-vulnerabilities=$NPM_VULNERABILITIES" >> $GITHUB_OUTPUT
+          rm -f audit-results.json
+      
+      - name: '🕵️ CodeQL Security Analysis'
+        uses: github/codeql-action/init@v3
+        with:
+          languages: 'csharp,javascript'
+          config: |
+            paths-ignore:
+              - "**/*.min.js"
+              - "**/node_modules/**"
+              - "**/bin/**"
+              - "**/obj/**"
+      
+      - name: '🔨 Build for CodeQL'
+        run: |
+          dotnet build --configuration Release --no-restore
+          cd AI.ProfilePhotoMaker.UI && npm run build
+      
+      - name: '🕵️ Perform CodeQL Analysis'
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:csharp,javascript'
+      
+      - name: '📊 Security Analysis Summary'
+        id: security-analysis
+        run: |
+          DOTNET_VULNS="${{ steps.dotnet-security.outputs.dotnet-vulnerabilities }}"
+          NPM_VULNS="${{ steps.npm-security.outputs.npm-vulnerabilities }}"
+          
+          TOTAL_VULNS=$((DOTNET_VULNS + NPM_VULNS))
+          
+          SECURITY_SCORE=$((100 - TOTAL_VULNS))
+          if [ $SECURITY_SCORE -lt 0 ]; then
+            SECURITY_SCORE=0
+          fi
+          
+          echo "score=$SECURITY_SCORE" >> $GITHUB_OUTPUT
+          echo "vulnerabilities=$TOTAL_VULNS" >> $GITHUB_OUTPUT
+          
+          echo "📊 Security Analysis Summary:"
+          echo "  • Total Vulnerabilities: $TOTAL_VULNS"
+          echo "  • Security Score: $SECURITY_SCORE/100"
+
+  # Unit Tests (Optimized)
+  unit-tests:
+    name: '🧪 Unit Tests'
+    runs-on: ubuntu-latest
+    if: |
+      github.event.inputs.test_level == 'unit' ||
+      github.event.inputs.test_level == 'full' ||
+      github.event.inputs.test_level == '' ||
+      github.event_name != 'workflow_dispatch'
+    outputs:
+      coverage-percentage: ${{ steps.coverage-analysis.outputs.percentage }}
+      test-results: ${{ steps.test-execution.outputs.results }}
+    
+    steps:
+      - name: '📥 Checkout Code'
+        uses: actions/checkout@v4
+      
+      - name: '⚙️ Setup .NET'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      
+      - name: '⚙️ Setup Node.js'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'AI.ProfilePhotoMaker.UI/package-lock.json'
+      
+      - name: '📦 Cache Dependencies'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.nuget/packages
+            AI.ProfilePhotoMaker.UI/node_modules
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/*.csproj', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-deps-
+      
+      - name: '🔧 Restore Dependencies'
+        run: |
+          dotnet restore
+          cd AI.ProfilePhotoMaker.UI && npm ci --legacy-peer-deps
+      
+      - name: '🔨 Build Projects'
+        run: |
+          dotnet build --configuration Release --no-restore
+          cd AI.ProfilePhotoMaker.UI && npm run build
+      
+      - name: '🧪 Run .NET Unit Tests'
+        id: dotnet-tests
+        run: |
+          echo "🧪 Running .NET unit tests with coverage..."
+          
+          dotnet test \
+            --configuration Release \
+            --no-build \
+            --verbosity normal \
+            --logger "trx;LogFileName=test-results.trx" \
+            --logger "html;LogFileName=test-results.html" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory TestResults \
+            --settings coverlet.runsettings \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+          
+          echo "✅ .NET unit tests completed"
+      
+      - name: '🧪 Run Frontend Unit Tests'
+        id: frontend-tests
+        working-directory: AI.ProfilePhotoMaker.UI
+        run: |
+          echo "🧪 Running frontend unit tests..."
+          
+          if npm test -- --coverage --watchAll=false --passWithNoTests; then
+            echo "✅ Frontend unit tests completed"
+          else
+            echo "❌ Frontend unit tests failed"
+            exit 1
+          fi
+      
+      - name: '📊 Process Test Results'
+        id: test-execution
+        run: |
+          echo "📊 Processing test results..."
+          
+          if [ -f "TestResults/test-results.trx" ]; then
+            DOTNET_TESTS_TOTAL=$(grep -o 'total="[0-9]*"' TestResults/test-results.trx | grep -o '[0-9]*' || echo "0")
+            DOTNET_TESTS_PASSED=$(grep -o 'passed="[0-9]*"' TestResults/test-results.trx | grep -o '[0-9]*' || echo "0")
+            DOTNET_TESTS_FAILED=$(grep -o 'failed="[0-9]*"' TestResults/test-results.trx | grep -o '[0-9]*' || echo "0")
+          else
+            DOTNET_TESTS_TOTAL=0
+            DOTNET_TESTS_PASSED=0
+            DOTNET_TESTS_FAILED=0
+          fi
+          
+          FRONTEND_TESTS_TOTAL=0
+          FRONTEND_TESTS_PASSED=0
+          FRONTEND_TESTS_FAILED=0
+          
+          if [ -f "AI.ProfilePhotoMaker.UI/coverage/coverage-summary.json" ]; then
+            FRONTEND_TESTS_TOTAL=$(cat AI.ProfilePhotoMaker.UI/coverage/coverage-summary.json | jq '.total.lines.total // 0')
+          fi
+          
+          TOTAL_TESTS=$((DOTNET_TESTS_TOTAL + FRONTEND_TESTS_TOTAL))
+          TOTAL_PASSED=$((DOTNET_TESTS_PASSED + FRONTEND_TESTS_PASSED))
+          TOTAL_FAILED=$((DOTNET_TESTS_FAILED + FRONTEND_TESTS_FAILED))
+          
+          echo "results={\"total\":$TOTAL_TESTS,\"passed\":$TOTAL_PASSED,\"failed\":$TOTAL_FAILED}" >> $GITHUB_OUTPUT
+          
+          echo "📊 Test Results Summary:"
+          echo "  • .NET Tests: $DOTNET_TESTS_PASSED/$DOTNET_TESTS_TOTAL passed"
+          echo "  • Frontend Tests: $FRONTEND_TESTS_PASSED/$FRONTEND_TESTS_TOTAL passed"
+          echo "  • Total: $TOTAL_PASSED/$TOTAL_TESTS passed"
+      
+      - name: '📊 Coverage Analysis'
+        id: coverage-analysis
+        run: |
+          echo "📊 Analyzing test coverage..."
+          
+          DOTNET_COVERAGE=0
+          if find TestResults -name "coverage.cobertura.xml" -type f | head -1 | xargs -I {} test -f {}; then
+            COVERAGE_FILE=$(find TestResults -name "coverage.cobertura.xml" -type f | head -1)
+            if [ -f "$COVERAGE_FILE" ]; then
+              DOTNET_COVERAGE=$(grep -o 'line-rate="[0-9.]*"' "$COVERAGE_FILE" | head -1 | grep -o '[0-9.]*' | awk '{print int($1*100)}' || echo "0")
+            fi
+          fi
+          
+          FRONTEND_COVERAGE=0
+          if [ -f "AI.ProfilePhotoMaker.UI/coverage/coverage-summary.json" ]; then
+            FRONTEND_COVERAGE=$(cat AI.ProfilePhotoMaker.UI/coverage/coverage-summary.json | jq '.total.lines.pct // 0' | awk '{print int($1)}')
+          fi
+          
+          if [ $DOTNET_COVERAGE -gt 0 ] && [ $FRONTEND_COVERAGE -gt 0 ]; then
+            OVERALL_COVERAGE=$(((DOTNET_COVERAGE + FRONTEND_COVERAGE) / 2))
+          elif [ $DOTNET_COVERAGE -gt 0 ]; then
+            OVERALL_COVERAGE=$DOTNET_COVERAGE
+          elif [ $FRONTEND_COVERAGE -gt 0 ]; then
+            OVERALL_COVERAGE=$FRONTEND_COVERAGE
+          else
+            OVERALL_COVERAGE=0
+          fi
+          
+          echo "percentage=$OVERALL_COVERAGE" >> $GITHUB_OUTPUT
+          
+          echo "📊 Coverage Analysis:"
+          echo "  • .NET Coverage: $DOTNET_COVERAGE%"
+          echo "  • Frontend Coverage: $FRONTEND_COVERAGE%"
+          echo "  • Overall Coverage: $OVERALL_COVERAGE%"
+          
+          COVERAGE_THRESHOLD=80
+          if [ $OVERALL_COVERAGE -lt $COVERAGE_THRESHOLD ]; then
+            echo "::warning::Coverage $OVERALL_COVERAGE% is below threshold $COVERAGE_THRESHOLD%"
+          else
+            echo "✅ Coverage $OVERALL_COVERAGE% meets threshold $COVERAGE_THRESHOLD%"
+          fi
+      
+      - name: '📤 Upload Test Results'
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            TestResults/
+            AI.ProfilePhotoMaker.UI/coverage/
+          retention-days: 30
+      
+      - name: '📋 Test Report'
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: '.NET Test Results'
+          path: 'TestResults/*.trx'
+          reporter: 'dotnet-trx'
+          fail-on-error: true
+
+  # Integration Tests (Unchanged but referenced)
+  integration-tests:
+    name: '🔗 Integration Tests'
+    runs-on: ubuntu-latest
+    if: |
+      github.event.inputs.test_level == 'integration' ||
+      github.event.inputs.test_level == 'full' ||
+      github.event.inputs.test_level == '' ||
+      github.event_name != 'workflow_dispatch'
+    
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: 'TestPassword123!'
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P TestPassword123! -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: '📥 Checkout Code'
+        uses: actions/checkout@v4
+      
+      - name: '⚙️ Setup .NET'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      
+      - name: '🔧 Restore Dependencies'
+        run: dotnet restore
+      
+      - name: '🔨 Build Application'
+        run: dotnet build --configuration Release --no-restore
+      
+      - name: '🗄️ Setup Test Database'
+        env:
+          ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=AIProfilePhotoMakerTest;User Id=sa;Password=TestPassword123!;TrustServerCertificate=true;"
+        run: |
+          echo "🗄️ Setting up test database..."
+          sleep 10
+          /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'TestPassword123!' -Q "CREATE DATABASE AIProfilePhotoMakerTest"
+          cd AI.ProfilePhotoMaker.API
+          dotnet ef database update --connection "Server=localhost,1433;Database=AIProfilePhotoMakerTest;User Id=sa;Password=TestPassword123!;TrustServerCertificate=true;"
+          echo "✅ Test database ready"
+      
+      - name: '🧪 Run Integration Tests'
+        env:
+          ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=AIProfilePhotoMakerTest;User Id=sa;Password=TestPassword123!;TrustServerCertificate=true;"
+          ASPNETCORE_ENVIRONMENT: Testing
+        run: |
+          echo "🧪 Running integration tests..."
+          dotnet test AI.ProfilePhotoMaker.API.Tests \
+            --configuration Release \
+            --no-build \
+            --verbosity normal \
+            --logger "trx;LogFileName=integration-test-results.trx" \
+            --results-directory TestResults \
+            --filter "Category=Integration"
+          echo "✅ Integration tests completed"
+      
+      - name: '📤 Upload Integration Test Results'
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: TestResults/integration-test-results.trx
+          retention-days: 30
+
+  # Performance Tests (Optimized)
+  performance-tests:
+    name: '⚡ Performance Tests'
+    runs-on: ubuntu-latest
+    if: |
+      github.event.inputs.test_level == 'performance' ||
+      github.event.inputs.test_level == 'full' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    
+    steps:
+      - name: '📥 Checkout Code'
+        uses: actions/checkout@v4
+      
+      - name: '⚙️ Setup .NET'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      
+      - name: '⚙️ Setup Node.js'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'AI.ProfilePhotoMaker.UI/package-lock.json'
+      
+      - name: '🔧 Build Applications'
+        run: |
+          dotnet build --configuration Release
+          cd AI.ProfilePhotoMaker.UI && npm ci --legacy-peer-deps && npm run build
+      
+      - name: '⚡ Frontend Performance Tests'
+        working-directory: AI.ProfilePhotoMaker.UI
+        run: |
+          echo "⚡ Running frontend performance analysis..."
+          
+          npm install -g @lhci/cli@0.12.x
+          
+          echo "📦 Analyzing bundle size..."
+          if command -v webpack-bundle-analyzer &> /dev/null; then
+            npx webpack-bundle-analyzer dist/stats.json --report --mode static --output-dir performance-reports
+          fi
+          
+          BUNDLE_SIZE=$(du -k dist/assets/*.js 2>/dev/null | awk '{total+=$1} END {print total}' || echo "0")
+          BUNDLE_LIMIT=500
+          
+          echo "📊 Bundle Analysis:"
+          echo "  • Total JS Bundle Size: ${BUNDLE_SIZE}KB"
+          echo "  • Bundle Size Limit: ${BUNDLE_LIMIT}KB"
+          
+          if [ $BUNDLE_SIZE -gt $BUNDLE_LIMIT ]; then
+            echo "::warning::Bundle size ${BUNDLE_SIZE}KB exceeds limit ${BUNDLE_LIMIT}KB"
+          else
+            echo "✅ Bundle size within limits"
+          fi
+      
+      - name: '⚡ API Performance Tests'
+        run: |
+          echo "⚡ Running API performance tests..."
+          
+          cd AI.ProfilePhotoMaker.API
+          dotnet run --configuration Release --urls "http://localhost:5000" &
+          API_PID=$!
+          
+          sleep 15
+          
+          echo "🔍 Testing API endpoints..."
+          
+          if curl -f -s -w "%{time_total}" "http://localhost:5000/health" -o /dev/null; then
+            echo "✅ Health endpoint responding"
+          else
+            echo "❌ Health endpoint not responding"
+          fi
+          
+          RESPONSE_TIME=$(curl -o /dev/null -s -w "%{time_total}" "http://localhost:5000/health")
+          RESPONSE_TIME_MS=$(echo "$RESPONSE_TIME * 1000" | bc -l | cut -d. -f1)
+          
+          echo "📊 API Performance:"
+          echo "  • Health Endpoint Response Time: ${RESPONSE_TIME_MS}ms"
+          
+          RESPONSE_LIMIT=500
+          
+          if [ $RESPONSE_TIME_MS -gt $RESPONSE_LIMIT ]; then
+            echo "::warning::API response time ${RESPONSE_TIME_MS}ms exceeds limit ${RESPONSE_LIMIT}ms"
+          else
+            echo "✅ API response time within limits"
+          fi
+          
+          kill $API_PID 2>/dev/null || true
+      
+      - name: '📊 Performance Summary'
+        run: |
+          echo "## ⚡ Performance Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Test | Result | Threshold |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|------|--------|-----------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend | Bundle Size | Check logs | 500KB |" >> $GITHUB_STEP_SUMMARY
+          echo "| API | Response Time | Check logs | 500ms |" >> $GITHUB_STEP_SUMMARY
+
+  # Optimized Quality Gate
+  quality-gate:
+    name: '🚪 Quality Gate'
+    runs-on: ubuntu-latest
+    needs: [frontend-linting, frontend-formatting, frontend-typecheck, dotnet-quality, security-scan, unit-tests]
+    if: always()
+    
+    steps:
+      - name: '📊 Quality Gate Analysis'
+        id: quality-gate
+        run: |
+          echo "🚪 Evaluating quality gate criteria..."
+          
+          # Get results from parallel jobs
+          FRONTEND_LINT_ERRORS="${{ needs.frontend-linting.outputs.lint-errors || '0' }}"
+          FRONTEND_FORMAT_STATUS="${{ needs.frontend-formatting.outputs.format-status || 'unknown' }}"
+          FRONTEND_TYPECHECK_STATUS="${{ needs.frontend-typecheck.outputs.typecheck-status || 'unknown' }}"
+          DOTNET_FORMAT_STATUS="${{ needs.dotnet-quality.outputs.dotnet-format-status || 'unknown' }}"
+          
+          SECURITY_SCORE="${{ needs.security-scan.outputs.security-score || '0' }}"
+          COVERAGE_PERCENTAGE="${{ needs.unit-tests.outputs.coverage-percentage || '0' }}"
+          VULNERABILITIES="${{ needs.security-scan.outputs.vulnerabilities || '0' }}"
+          
+          # Define thresholds
+          MAX_LINT_ERRORS=0
+          MIN_SECURITY_SCORE=90
+          MIN_COVERAGE=75
+          MAX_VULNERABILITIES=0
+          
+          # Evaluate criteria
+          LINT_PASS=$( [ $FRONTEND_LINT_ERRORS -le $MAX_LINT_ERRORS ] && echo "true" || echo "false" )
+          FORMAT_PASS=$( [ "$FRONTEND_FORMAT_STATUS" = "passed" ] && echo "true" || echo "false" )
+          TYPECHECK_PASS=$( [ "$FRONTEND_TYPECHECK_STATUS" = "passed" ] && echo "true" || echo "false" )
+          DOTNET_PASS=$( [ "$DOTNET_FORMAT_STATUS" = "passed" ] && echo "true" || echo "false" )
+          SECURITY_PASS=$( [ $SECURITY_SCORE -ge $MIN_SECURITY_SCORE ] && echo "true" || echo "false" )
+          COVERAGE_PASS=$( [ $COVERAGE_PERCENTAGE -ge $MIN_COVERAGE ] && echo "true" || echo "false" )
+          VULN_PASS=$( [ $VULNERABILITIES -le $MAX_VULNERABILITIES ] && echo "true" || echo "false" )
+          
+          # Calculate quality score
+          QUALITY_SCORE=100
+          [ "$LINT_PASS" = "false" ] && QUALITY_SCORE=$((QUALITY_SCORE - 25))
+          [ "$FORMAT_PASS" = "false" ] && QUALITY_SCORE=$((QUALITY_SCORE - 15))
+          [ "$TYPECHECK_PASS" = "false" ] && QUALITY_SCORE=$((QUALITY_SCORE - 20))
+          [ "$DOTNET_PASS" = "false" ] && QUALITY_SCORE=$((QUALITY_SCORE - 15))
+          
+          # Overall gate status
+          if [ "$LINT_PASS" = "true" ] && [ "$FORMAT_PASS" = "true" ] && [ "$TYPECHECK_PASS" = "true" ] && \
+             [ "$DOTNET_PASS" = "true" ] && [ "$SECURITY_PASS" = "true" ] && \
+             [ "$COVERAGE_PASS" = "true" ] && [ "$VULN_PASS" = "true" ]; then
+            GATE_STATUS="passed"
+            echo "✅ Quality gate PASSED"
+          else
+            GATE_STATUS="failed"
+            echo "❌ Quality gate FAILED"
+          fi
+          
+          echo "gate-status=$GATE_STATUS" >> $GITHUB_OUTPUT
+          echo "quality-score=$QUALITY_SCORE" >> $GITHUB_OUTPUT
+          
+          # Detailed results with performance insights
+          echo "📊 Quality Gate Results:"
+          echo "  • Frontend Linting: $FRONTEND_LINT_ERRORS errors $([ "$LINT_PASS" = "true" ] && echo "✅" || echo "❌")"
+          echo "  • Frontend Formatting: $FRONTEND_FORMAT_STATUS $([ "$FORMAT_PASS" = "true" ] && echo "✅" || echo "❌")"
+          echo "  • TypeScript Types: $FRONTEND_TYPECHECK_STATUS $([ "$TYPECHECK_PASS" = "true" ] && echo "✅" || echo "❌")"
+          echo "  • .NET Formatting: $DOTNET_FORMAT_STATUS $([ "$DOTNET_PASS" = "true" ] && echo "✅" || echo "❌")"
+          echo "  • Security Score: $SECURITY_SCORE/$MIN_SECURITY_SCORE $([ "$SECURITY_PASS" = "true" ] && echo "✅" || echo "❌")"
+          echo "  • Test Coverage: $COVERAGE_PERCENTAGE%/$MIN_COVERAGE% $([ "$COVERAGE_PASS" = "true" ] && echo "✅" || echo "❌")"
+          echo "  • Vulnerabilities: $VULNERABILITIES/$MAX_VULNERABILITIES $([ "$VULN_PASS" = "true" ] && echo "✅" || echo "❌")"
+          echo "  • Overall Quality Score: $QUALITY_SCORE/100"
+          
+          # Performance metrics
+          LINT_DURATION="${{ needs.frontend-linting.outputs.lint-duration || 'N/A' }}"
+          echo "  • Frontend Linting Duration: ${LINT_DURATION}s"
+          
+          # Create detailed summary
+          echo "## 🚪 Quality Gate Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Overall Status: $([ "$GATE_STATUS" = "passed" ] && echo "✅ PASSED" || echo "❌ FAILED")" >> $GITHUB_STEP_SUMMARY
+          echo "### Quality Score: $QUALITY_SCORE/100" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Criteria | Result | Status | Performance |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Linting | $FRONTEND_LINT_ERRORS errors | $([ "$LINT_PASS" = "true" ] && echo "✅ Pass" || echo "❌ Fail") | ${LINT_DURATION}s |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Formatting | $FRONTEND_FORMAT_STATUS | $([ "$FORMAT_PASS" = "true" ] && echo "✅ Pass" || echo "❌ Fail") | Parallel |" >> $GITHUB_STEP_SUMMARY
+          echo "| TypeScript Types | $FRONTEND_TYPECHECK_STATUS | $([ "$TYPECHECK_PASS" = "true" ] && echo "✅ Pass" || echo "❌ Fail") | Parallel |" >> $GITHUB_STEP_SUMMARY
+          echo "| .NET Formatting | $DOTNET_FORMAT_STATUS | $([ "$DOTNET_PASS" = "true" ] && echo "✅ Pass" || echo "❌ Fail") | Parallel |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security | $SECURITY_SCORE/100 | $([ "$SECURITY_PASS" = "true" ] && echo "✅ Pass" || echo "❌ Fail") | CodeQL + Audit |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Coverage | $COVERAGE_PERCENTAGE% | $([ "$COVERAGE_PASS" = "true" ] && echo "✅ Pass" || echo "❌ Fail") | Unit + Integration |" >> $GITHUB_STEP_SUMMARY
+          echo "| Vulnerabilities | $VULNERABILITIES | $([ "$VULN_PASS" = "true" ] && echo "✅ Pass" || echo "❌ Fail") | .NET + npm |" >> $GITHUB_STEP_SUMMARY
+          
+          # Performance improvements summary
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 Performance Improvements" >> $GITHUB_STEP_SUMMARY
+          echo "- **Parallel Execution**: Quality checks run in parallel instead of sequential" >> $GITHUB_STEP_SUMMARY
+          echo "- **Incremental Linting**: PRs only lint changed files for faster feedback" >> $GITHUB_STEP_SUMMARY
+          echo "- **Enhanced Caching**: ESLint cache and dependency caching for speed" >> $GITHUB_STEP_SUMMARY
+          echo "- **Fail-Fast Strategy**: Early error detection with optimized ESLint flags" >> $GITHUB_STEP_SUMMARY
+          
+          # Exit with error if gate failed
+          if [ "$GATE_STATUS" = "failed" ]; then
+            echo "::error::Quality gate failed - see summary for details"
+            exit 1
+          fi
+      
+      - name: '📝 Update PR with Quality Results'
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const lintErrors = '${{ needs.frontend-linting.outputs.lint-errors }}';
+            const lintWarnings = '${{ needs.frontend-linting.outputs.lint-warnings }}';
+            const qualityScore = '${{ steps.quality-gate.outputs.quality-score }}';
+            const securityScore = '${{ needs.security-scan.outputs.security-score }}';
+            const coverage = '${{ needs.unit-tests.outputs.coverage-percentage }}';
+            const vulnerabilities = '${{ needs.security-scan.outputs.vulnerabilities }}';
+            const gateStatus = '${{ steps.quality-gate.outputs.gate-status }}';
+            const lintDuration = '${{ needs.frontend-linting.outputs.lint-duration }}' || 'N/A';
+            
+            const statusIcon = gateStatus === 'passed' ? '✅' : '❌';
+            const statusText = gateStatus === 'passed' ? 'PASSED' : 'FAILED';
+            
+            const body = `## 🚀 Optimized Quality Gate ${statusIcon} ${statusText}
+            
+            ### 📊 Quality Metrics
+            | Metric | Score | Status | Performance |
+            |--------|-------|--------|-------------|
+            | **Overall Quality** | **${qualityScore}/100** | **${gateStatus === 'passed' ? '✅' : '❌'}** | **Optimized** |
+            | Frontend Linting | ${lintErrors} errors, ${lintWarnings} warnings | ${lintErrors == 0 ? '✅' : '❌'} | ${lintDuration}s |
+            | Security | ${securityScore}/100 | ${securityScore >= 90 ? '✅' : '❌'} | CodeQL + Audit |
+            | Test Coverage | ${coverage}% | ${coverage >= 75 ? '✅' : '❌'} | Unit + Integration |
+            | Vulnerabilities | ${vulnerabilities} | ${vulnerabilities <= 0 ? '✅' : '❌'} | .NET + npm |
+            
+            ### 🚀 Performance Improvements
+            - **⚡ Parallel Execution**: Quality checks run in parallel (4 jobs instead of 1)
+            - **🎯 Incremental Linting**: Only changed files linted in PRs
+            - **💾 Enhanced Caching**: ESLint cache + dependency caching  
+            - **🏃 Fail-Fast**: Early error detection with optimized flags
+            
+            ${gateStatus === 'failed' ? '⚠️ **Quality gate failed** - Please address the issues above before merging.' : '🎉 **All quality checks passed** - Ready for review!'}
+            
+            ---
+            _Updated by [Optimized Quality Gate](../../actions/runs/${{ github.run_id }}) • [Performance Details](../../actions/runs/${{ github.run_id }})_`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

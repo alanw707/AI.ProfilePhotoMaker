@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -6,7 +6,8 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './gallery-pagination.component.html',
-  styleUrls: ['./gallery-pagination.component.sass']
+  styleUrls: ['./gallery-pagination.component.sass'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class GalleryPaginationComponent implements OnInit, OnChanges {
   @Input() totalItems = 0;
@@ -17,43 +18,43 @@ export class GalleryPaginationComponent implements OnInit, OnChanges {
   @Output() pageSizeChange = new EventEmitter<number>();
 
   // Make Math available in template
-  Math = Math;
+  mathHelper = Math;
 
   totalPages = 1;
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.updateTotalPages();
   }
 
-  ngOnChanges(changes: SimpleChanges) {
+  ngOnChanges(changes: SimpleChanges): void {
     if (changes['totalItems'] || changes['pageSize']) {
       this.updateTotalPages();
     }
   }
 
-  private updateTotalPages() {
+  private updateTotalPages(): void {
     this.totalPages = Math.ceil(this.totalItems / this.pageSize);
   }
 
-  goToPage(page: number) {
+  goToPage(page: number): void {
     if (page >= 1 && page <= this.totalPages && page !== this.currentPage) {
       this.pageChange.emit(page);
     }
   }
 
-  nextPage() {
+  nextPage(): void {
     if (this.currentPage < this.totalPages) {
       this.goToPage(this.currentPage + 1);
     }
   }
 
-  previousPage() {
+  previousPage(): void {
     if (this.currentPage > 1) {
       this.goToPage(this.currentPage - 1);
     }
   }
 
-  changePageSize(size: number) {
+  changePageSize(size: number): void {
     this.pageSizeChange.emit(size);
   }
 

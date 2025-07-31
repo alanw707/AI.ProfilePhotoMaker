@@ -212,7 +212,7 @@ export class ConfigService {
   buildStylePreviewUrl(styleName: string): string {
     // Map style names to unique filenames that exist on the backend
     // Each style should have its own unique preview image
-    const styleFileMap: { [key: string]: string } = {
+    const styleFileMap: Record<string, string> = {
       // Database style names (with hyphens - exact matches)
       academic: 'academic',
       artistic: 'artistic',

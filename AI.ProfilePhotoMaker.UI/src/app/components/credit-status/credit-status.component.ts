@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CreditService, UserCreditStatus } from '../../services/credit.service';
 
@@ -6,7 +6,8 @@ import { CreditService, UserCreditStatus } from '../../services/credit.service';
   selector: 'app-credit-status',
   imports: [CommonModule],
   templateUrl: './credit-status.component.html',
-  styleUrl: './credit-status.component.sass'
+  styleUrl: './credit-status.component.sass',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CreditStatusComponent implements OnInit {
   @Input() showDetailed = false;
@@ -14,15 +15,15 @@ export class CreditStatusComponent implements OnInit {
   creditStatus: UserCreditStatus | null = null;
   isLoading = false;
   
-  constructor(private creditService: CreditService) {}
+  constructor(private _creditService: CreditService) {}
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.loadCreditStatus();
   }
 
-  loadCreditStatus() {
+  loadCreditStatus(): void {
     this.isLoading = true;
-    this.creditService.getCreditStatus().subscribe({
+    this._creditService.getCreditStatus().subscribe({
       next: (response) => {
         if (response.success) {
           this.creditStatus = response.data;
@@ -37,7 +38,7 @@ export class CreditStatusComponent implements OnInit {
     });
   }
 
-  refresh() {
+  refresh(): void {
     this.loadCreditStatus();
   }
 
@@ -53,14 +54,14 @@ export class CreditStatusComponent implements OnInit {
   }
 
   getOperationCost(operation: string): number {
-    return this.creditService.getCreditCostSync(operation);
+    return this._creditService.getCreditCostSync(operation);
   }
 
   canAffordOperation(operation: string): boolean {
     if (!this.creditStatus) {return false;}
     
     const cost = this.getOperationCost(operation);
-    const canUseWeekly = this.creditService.canUseWeeklyCreditSync(operation);
+    const canUseWeekly = this._creditService.canUseWeeklyCreditSync(operation);
     
     const availableCredits = this.creditStatus.purchasedCredits + 
                            (canUseWeekly ? this.creditStatus.weeklyCredits : 0);

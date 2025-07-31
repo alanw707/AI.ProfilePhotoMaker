@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GalleryImage } from '../photo-gallery.component';
 
@@ -13,7 +13,8 @@ export interface FilterControls {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './gallery-filter-controls.component.html',
-  styleUrls: ['./gallery-filter-controls.component.sass']
+  styleUrls: ['./gallery-filter-controls.component.sass'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class GalleryFilterControlsComponent {
   @Input() title = 'Photo Gallery';
@@ -31,26 +32,27 @@ export class GalleryFilterControlsComponent {
   @Output() selectAll = new EventEmitter<void>();
   @Output() downloadSelected = new EventEmitter<void>();
 
-  onFilterChange(event: any) {
-    this.filterChange.emit(event.target.value);
+  onFilterChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    this.filterChange.emit(target.value);
   }
 
-  setViewMode(mode: 'grid' | 'list') {
+  setViewMode(mode: 'grid' | 'list'): void {
     this.viewModeChange.emit(mode);
   }
 
-  onPageSizeChange(event: Event) {
+  onPageSizeChange(event: Event): void {
     const target = event.target as HTMLSelectElement;
     if (target && target.value) {
       this.pageSizeChange.emit(+target.value);
     }
   }
 
-  onSelectAll() {
+  onSelectAll(): void {
     this.selectAll.emit();
   }
 
-  onDownloadSelected() {
+  onDownloadSelected(): void {
     this.downloadSelected.emit();
   }
 

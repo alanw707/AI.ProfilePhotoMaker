@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService, LoginDto } from '../../services/auth.service';
@@ -46,9 +46,9 @@ export class LoginComponent implements OnInit {
 
     // Handle OAuth callbacks
     this._route.queryParams.subscribe(params => {
-      if (this.handleDirectTokenParams(params)) return;
-      if (this.handleTokenInReturnUrl(params)) return;
-      if (this.handleTokenInFragment()) return;
+      if (this._handleDirectTokenParams(params)) {return;}
+      if (this._handleTokenInReturnUrl(params)) {return;}
+      if (this._handleTokenInFragment()) {return;}
 
       if (params['error']) {
         this.error = 'OAuth login failed: ' + params['error'];
@@ -56,7 +56,7 @@ export class LoginComponent implements OnInit {
     });
   }
 
-  private handleDirectTokenParams(params: any): boolean {
+  private _handleDirectTokenParams(params: Record<string, string>): boolean {
     if (params['token']) {
       try {
         this._authService.handleOAuthCallback(params['token'], params['expiration']);
@@ -70,7 +70,7 @@ export class LoginComponent implements OnInit {
     return false;
   }
 
-  private handleTokenInReturnUrl(params: any): boolean {
+  private _handleTokenInReturnUrl(params: Record<string, string>): boolean {
     if (params['returnUrl']?.includes('token=')) {
       try {
         const urlObj = new URL('http://dummy.com' + params['returnUrl']);
@@ -90,9 +90,9 @@ export class LoginComponent implements OnInit {
     return false;
   }
 
-  private handleTokenInFragment(): boolean {
+  private _handleTokenInFragment(): boolean {
     const fragment = window.location.hash;
-    if (fragment && fragment.includes('token=')) {
+    if (fragment?.includes('token=')) {
       try {
         const urlObj = new URL('http://dummy.com/?' + fragment.substring(1));
         const token = urlObj.searchParams.get('token');
@@ -111,7 +111,7 @@ export class LoginComponent implements OnInit {
     return false;
   }
 
-  private extractUserFromToken(token: string): any {
+  private _extractUserFromToken(token: string): { email: string; firstName: string; lastName: string } | null {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       return {
@@ -126,11 +126,11 @@ export class LoginComponent implements OnInit {
     }
   }
 
-  get f() {
+  get f(): Record<string, AbstractControl> {
     return this.loginForm.controls;
   }
 
-  onSubmit() {
+  onSubmit(): void {
     this.error = '';
 
     if (this.loginForm.invalid) {
@@ -144,7 +144,7 @@ export class LoginComponent implements OnInit {
     };
 
     this._authService.login(loginData).subscribe({
-      next: response => {
+      next: _response => {
         this.loading = false;
         this._router.navigate([this.returnUrl]);
       },
@@ -156,15 +156,15 @@ export class LoginComponent implements OnInit {
     });
   }
 
-  toggleTheme() {
+  toggleTheme(): void {
     this.themeService.toggleTheme();
   }
 
-  navigateToRegister() {
+  navigateToRegister(): void {
     this._router.navigate(['/auth/register']);
   }
 
-  loginWithGoogle() {
+  loginWithGoogle(): void {
     // Get OAuth base URL from config service using modern inject function
     const configService = inject(ConfigService);
     const oauthBaseUrl = configService.getOAuthBaseUrl();
@@ -175,12 +175,12 @@ export class LoginComponent implements OnInit {
     window.location.href = oauthUrl;
   }
 
-  loginWithFacebook() {
+  loginWithFacebook(): void {
     // TODO: Implement Facebook OAuth when needed
     this.error = 'Facebook login not yet implemented.';
   }
 
-  loginWithApple() {
+  loginWithApple(): void {
     // TODO: Implement Apple OAuth when needed
     this.error = 'Apple login not yet implemented.';
   }

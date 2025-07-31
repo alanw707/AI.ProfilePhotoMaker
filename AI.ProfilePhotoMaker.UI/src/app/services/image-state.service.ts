@@ -68,7 +68,7 @@ export class ImageStateService extends StateBaseService<ImageState> {
   /**
    * Load user images and process them into thumbnails
    */
-  async loadUserImages(forceRefresh: boolean = false): Promise<void> {
+  async loadUserImages(forceRefresh = false): Promise<void> {
     const startTime = performance.now();
 
     // Check cache first

@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { interval, Subscription } from 'rxjs';
@@ -8,6 +8,7 @@ import { GeneratedPhoto, GenerationStatus } from '../../../models/dashboard.type
   selector: 'app-photo-generation',
   standalone: true,
   imports: [CommonModule, RouterModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <!-- Generation In Progress -->
     <div class="generation-progress-container" *ngIf="generationStatus.isGenerating">
@@ -135,17 +136,17 @@ export class PhotoGenerationComponent implements OnInit, OnDestroy {
 
   private progressSubscription?: Subscription;
 
-  ngOnInit() {
+  ngOnInit(): void {
     if (this.generationStatus.isGenerating) {
       this.startProgressPolling();
     }
   }
 
-  ngOnDestroy() {
+  ngOnDestroy(): void {
     this.stopProgressPolling();
   }
 
-  private startProgressPolling() {
+  private startProgressPolling(): void {
     this.progressSubscription = interval(10000).subscribe(() => {
       if (this.generationStatus.isGenerating) {
         this.onRefreshStatus();
@@ -155,34 +156,34 @@ export class PhotoGenerationComponent implements OnInit, OnDestroy {
     });
   }
 
-  private stopProgressPolling() {
+  private stopProgressPolling(): void {
     if (this.progressSubscription) {
       this.progressSubscription.unsubscribe();
       this.progressSubscription = undefined;
     }
   }
 
-  onContinueInBackground() {
+  onContinueInBackground(): void {
     this.continueInBackground.emit();
   }
 
-  onRefreshStatus() {
+  onRefreshStatus(): void {
     this.refreshStatus.emit();
   }
 
-  onViewPhoto(photo: GeneratedPhoto) {
+  onViewPhoto(photo: GeneratedPhoto): void {
     this.viewPhoto.emit(photo);
   }
 
-  onDownloadAll() {
+  onDownloadAll(): void {
     this.downloadAll.emit();
   }
 
-  onGenerateMore() {
+  onGenerateMore(): void {
     this.generateMore.emit();
   }
 
-  onRetryGeneration() {
+  onRetryGeneration(): void {
     this.retryGeneration.emit();
   }
 
@@ -199,7 +200,9 @@ export class PhotoGenerationComponent implements OnInit, OnDestroy {
   }
 
   formatStyleName(style: string): string {
-    if (!style) {return '';}
+    if (!style) {
+      return '';
+    }
     return style
       .replace(/[-_/]/g, ' ')
       .split(' ')

@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GalleryImage } from '../photo-gallery.component';
 
@@ -7,7 +7,8 @@ import { GalleryImage } from '../photo-gallery.component';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './gallery-image-actions.component.html',
-  styleUrls: ['./gallery-image-actions.component.sass']
+  styleUrls: ['./gallery-image-actions.component.sass'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class GalleryImageActionsComponent {
   @Input() image!: GalleryImage;
@@ -19,28 +20,28 @@ export class GalleryImageActionsComponent {
   @Output() share = new EventEmitter<GalleryImage>();
   @Output() delete = new EventEmitter<GalleryImage>();
 
-  onView(event?: Event) {
+  onView(event?: Event): void {
     if (event) {
       event.stopPropagation();
     }
     this.view.emit(this.image);
   }
 
-  onDownload(event?: Event) {
+  onDownload(event?: Event): void {
     if (event) {
       event.stopPropagation();
     }
     this.download.emit(this.image);
   }
 
-  onShare(event?: Event) {
+  onShare(event?: Event): void {
     if (event) {
       event.stopPropagation();
     }
     this.share.emit(this.image);
   }
 
-  onDelete(event?: Event) {
+  onDelete(event?: Event): void {
     if (event) {
       event.stopPropagation();
     }

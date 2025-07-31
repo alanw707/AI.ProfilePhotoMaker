@@ -72,26 +72,26 @@ export class CreditService {
   private creditCosts: CreditCosts | null = null;
 
   constructor(
-    private http: HttpClient,
-    private configService: ConfigService
+    private _http: HttpClient,
+    private _configService: ConfigService
   ) {
-    this.apiUrl = this.configService.getApiUrl();
+    this.apiUrl = this._configService.getApiUrl();
   }
 
   /**
    * Get current user's credit status
    */
   getCreditStatus(): Observable<ApiResponse<UserCreditStatus>> {
-    const endpoint = this.configService.buildApiEndpoint('credit/status');
-    return this.http.get<ApiResponse<UserCreditStatus>>(endpoint);
+    const endpoint = this._configService.buildApiEndpoint('credit/status');
+    return this._http.get<ApiResponse<UserCreditStatus>>(endpoint);
   }
 
   /**
    * Get all available credit packages
    */
   getCreditPackages(): Observable<ApiResponse<CreditPackage[]>> {
-    return this.http.get<ApiResponse<CreditPackage[]>>(
-      this.configService.buildApiEndpoint('credit/packages')
+    return this._http.get<ApiResponse<CreditPackage[]>>(
+      this._configService.buildApiEndpoint('credit/packages')
     );
   }
 
@@ -99,17 +99,17 @@ export class CreditService {
    * Get payment configuration including simulation settings
    */
   getPaymentConfig(): Observable<ApiResponse<PaymentConfig>> {
-    return this.http.get<ApiResponse<PaymentConfig>>(
-      this.configService.buildApiEndpoint('credit/payment-config')
+    return this._http.get<ApiResponse<PaymentConfig>>(
+      this._configService.buildApiEndpoint('credit/payment-config')
     );
   }
 
   /**
    * Create a payment intent for Stripe
    */
-  createPaymentIntent(request: { packageId: number }): Observable<any> {
-    return this.http.post<any>(
-      this.configService.buildApiEndpoint('credit/create-payment-intent'),
+  createPaymentIntent(request: { packageId: number }): Observable<{ success: boolean; data: { clientSecret: string; isSimulation: boolean } }> {
+    return this._http.post<{ success: boolean; data: { clientSecret: string; isSimulation: boolean } }>(
+      this._configService.buildApiEndpoint('credit/create-payment-intent'),
       request
     );
   }
@@ -117,9 +117,9 @@ export class CreditService {
   /**
    * Purchase a credit package
    */
-  purchaseCreditPackage(request: PurchaseCreditPackageRequest): Observable<ApiResponse<any>> {
-    return this.http.post<ApiResponse<any>>(
-      this.configService.buildApiEndpoint('credit/purchase'),
+  purchaseCreditPackage(request: PurchaseCreditPackageRequest): Observable<ApiResponse<{ updatedCredits: UserCreditStatus }>> {
+    return this._http.post<ApiResponse<{ updatedCredits: UserCreditStatus }>>(
+      this._configService.buildApiEndpoint('credit/purchase'),
       request
     );
   }
@@ -128,8 +128,8 @@ export class CreditService {
    * Get user's credit purchase history
    */
   getPurchaseHistory(): Observable<ApiResponse<CreditPurchase[]>> {
-    return this.http.get<ApiResponse<CreditPurchase[]>>(
-      this.configService.buildApiEndpoint('credit/history')
+    return this._http.get<ApiResponse<CreditPurchase[]>>(
+      this._configService.buildApiEndpoint('credit/history')
     );
   }
 
@@ -137,8 +137,8 @@ export class CreditService {
    * Get credit costs configuration from API
    */
   getCreditCosts(): Observable<ApiResponse<CreditCosts>> {
-    return this.http.get<ApiResponse<CreditCosts>>(
-      this.configService.buildApiEndpoint('credit/costs')
+    return this._http.get<ApiResponse<CreditCosts>>(
+      this._configService.buildApiEndpoint('credit/costs')
     );
   }
 

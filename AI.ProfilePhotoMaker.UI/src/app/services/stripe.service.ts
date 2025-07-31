@@ -9,12 +9,12 @@ export class StripeService {
   private stripePromise: Promise<Stripe | null> | null = null;
   private paymentConfigLoaded = false;
 
-  constructor(private creditService: CreditService) {}
+  constructor(private _creditService: CreditService) {}
 
   private async loadStripe(): Promise<Stripe | null> {
     try {
       // Check payment configuration first
-      const configResponse = await this.creditService.getPaymentConfig().toPromise();
+      const configResponse = await this._creditService.getPaymentConfig().toPromise();
       
       if (configResponse?.success && configResponse.data.paymentSimulation?.enabled) {
         console.log('Payment simulation enabled - skipping Stripe.js loading');

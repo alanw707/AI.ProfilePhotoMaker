@@ -48,9 +48,9 @@ export class AuthService {
   public currentUser$ = this.currentUserSubject.asObservable();
 
   constructor(
-    private http: HttpClient,
-    private config: ConfigService,
-    private router: Router
+    private _http: HttpClient,
+    private _config: ConfigService,
+    private _router: Router
   ) {
     // Initialize with secure session check
     this.initializeSecureAuth();
@@ -147,7 +147,7 @@ export class AuthService {
     this.currentUserSubject.next(tempUser);
 
     // Fetch user profile from API to get firstName/lastName
-    this.http.get<any>(`${this.config.baseUrl}/profile`).subscribe({
+    this._http.get<{ firstName?: string; lastName?: string; email?: string }>(`${this._config.baseUrl}/profile`).subscribe({
       next: response => {
         // Handle response that contains data directly (not wrapped in success/data structure)
         if (response && (response.firstName || response.lastName)) {
@@ -227,7 +227,7 @@ export class AuthService {
   }
 
   login(credentials: LoginDto): Observable<AuthResponseDto> {
-    return this.http.post<ApiAuthResponseDto>(this.config.authLoginUrl, credentials).pipe(
+    return this._http.post<ApiAuthResponseDto>(this._config.authLoginUrl, credentials).pipe(
       map(apiResponse => {
         if (!apiResponse.isSuccess) {
           throw new Error(apiResponse.message);
@@ -246,7 +246,7 @@ export class AuthService {
   }
 
   register(userData: RegisterDto): Observable<AuthResponseDto> {
-    return this.http.post<ApiAuthResponseDto>(this.config.authRegisterUrl, userData).pipe(
+    return this._http.post<ApiAuthResponseDto>(this._config.authRegisterUrl, userData).pipe(
       map(apiResponse => {
         if (!apiResponse.isSuccess) {
           throw new Error(apiResponse.message);
@@ -291,7 +291,7 @@ export class AuthService {
       console.error('🔒 Error during secure logout:', error);
       // Force clear even if error occurs
       localStorage.clear();
-      this.router.navigate(['/auth/login']);
+      this._router.navigate(['/auth/login']);
     }
   }
 
@@ -323,7 +323,7 @@ export class AuthService {
   private navigateToLogin(reason: string): void {
     const queryParams = reason !== 'user_initiated' ? { reason } : {};
 
-    this.router.navigate(['/auth/login'], { queryParams }).then(success => {
+    this._router.navigate(['/auth/login'], { queryParams }).then(success => {
       if (success) {
         console.log('✅ Successfully navigated to login page');
       } else {
@@ -343,7 +343,7 @@ export class AuthService {
       localStorage.clear();
       this.isAuthenticatedSubject.next(false);
       this.currentUserSubject.next(null);
-      this.router.navigate(['/auth/login']);
+      this._router.navigate(['/auth/login']);
       console.log('🔒 Force logout completed');
     } catch (error) {
       console.error('🔒 Error during force logout:', error);

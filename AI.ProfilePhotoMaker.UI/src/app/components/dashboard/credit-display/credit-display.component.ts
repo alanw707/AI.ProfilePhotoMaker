@@ -1,18 +1,18 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 
 export interface CreditInfo {
   availableCredits: number;
   totalCredits?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface UserCreditStatus {
   weeklyCredits: number;
   purchasedCredits: number;
   totalCredits?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface CreditActionEvent {
@@ -25,7 +25,8 @@ export interface CreditActionEvent {
   standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './credit-display.component.html',
-  styleUrls: ['./credit-display.component.sass']
+  styleUrls: ['./credit-display.component.sass'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CreditDisplayComponent {
   @Input() creditsInfo: CreditInfo | null = null;
@@ -119,7 +120,8 @@ export class CreditDisplayComponent {
     const purchasedCredits = this.getPurchasedCredits();
     
     // Show prompt if no purchased credits and either no total credits or insufficient for required amount
-    return (purchasedCredits === 0 && (totalCredits === 0 || (this.requiredCredits > 0 && totalCredits < this.requiredCredits)));
+    return (purchasedCredits === 0 && 
+            (totalCredits === 0 || (this.requiredCredits > 0 && totalCredits < this.requiredCredits)));
   }
 
   /**

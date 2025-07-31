@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnChanges, OnInit, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GalleryFilterControlsComponent } from './gallery-filter-controls/gallery-filter-controls.component';
 import { GalleryPaginationComponent } from './gallery-pagination/gallery-pagination.component';
@@ -195,6 +195,7 @@ export interface GalleryImage {
     </div>
   `,
   styleUrls: ['./photo-gallery.component.sass'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PhotoGalleryComponent implements OnInit, OnChanges {
   @Input() images: GalleryImage[] = [];
@@ -203,7 +204,7 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
   @Input() showBulkActions = true;
 
   // Make Math available in template
-  Math = Math;
+  mathHelper = Math;
 
   @Output() imageClick = new EventEmitter<GalleryImage>();
   @Output() imageDownload = new EventEmitter<GalleryImage>();
@@ -222,11 +223,11 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
   totalPages = 1;
   paginatedImages: GalleryImage[] = [];
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.updateFilteredImages();
   }
 
-  ngOnChanges() {
+  ngOnChanges(): void {
     this.updateFilteredImages();
     // Deselect any images that no longer exist after deletion
     this.selectedImages = this.selectedImages.filter(sel =>
@@ -234,16 +235,16 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
     );
   }
 
-  setViewMode(mode: 'grid' | 'list') {
+  setViewMode(mode: 'grid' | 'list'): void {
     this.viewMode = mode;
   }
 
-  onFilterChange(filterType: string) {
+  onFilterChange(filterType: string): void {
     this.filterType = filterType;
     this.updateFilteredImages();
   }
 
-  updateFilteredImages() {
+  updateFilteredImages(): void {
     if (this.filterType === 'all') {
       this.filteredImages = [...this.images];
     } else {
@@ -252,7 +253,7 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
     this.updatePagination();
   }
 
-  updatePagination() {
+  updatePagination(): void {
     this.totalPages = Math.ceil(this.filteredImages.length / this.pageSize);
     if (this.currentPage > this.totalPages) {
       this.currentPage = Math.max(1, this.totalPages);
@@ -267,23 +268,23 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
     return image.id;
   }
 
-  openImage(image: GalleryImage) {
+  openImage(image: GalleryImage): void {
     this.imageClick.emit(image);
   }
 
-  downloadImage(image: GalleryImage) {
+  downloadImage(image: GalleryImage): void {
     this.imageDownload.emit(image);
   }
 
-  shareImage(image: GalleryImage) {
+  shareImage(image: GalleryImage): void {
     this.imageShare.emit(image);
   }
 
-  deleteImage(image: GalleryImage) {
+  deleteImage(image: GalleryImage): void {
     this.imageDelete.emit(image);
   }
 
-  selectAll() {
+  selectAll(): void {
     if (this.selectedImages.length === this.filteredImages.length) {
       this.selectedImages = [];
     } else {
@@ -291,11 +292,11 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
     }
   }
 
-  downloadSelected() {
+  downloadSelected(): void {
     this.bulkDownload.emit(this.selectedImages);
   }
 
-  clearSelections() {
+  clearSelections(): void {
     this.selectedImages = [];
   }
 
@@ -303,7 +304,7 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
     return this.selectedImages.some(selected => selected.id === image.id);
   }
 
-  toggleSelection(image: GalleryImage) {
+  toggleSelection(image: GalleryImage): void {
     const index = this.selectedImages.findIndex(selected => selected.id === image.id);
     if (index > -1) {
       this.selectedImages.splice(index, 1);
@@ -312,20 +313,21 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
     }
   }
 
-  onImageClick(image: GalleryImage, event?: Event) {
+  onImageClick(image: GalleryImage, event?: Event): void {
     if (event) {
       event.stopPropagation();
     }
     this.toggleSelection(image);
   }
 
-  onImageLoad(event: any) {
+  onImageLoad(event: unknown): void {
     // Handle successful image load
   }
 
-  onImageError(event: any) {
+  onImageError(event: Event): void {
     // Handle image load error gracefully
-    console.warn('Image failed to load:', event.target.src);
+    const target = event.target as HTMLImageElement;
+    console.warn('Image failed to load:', target.src);
 
     // Create a simple gray placeholder with an icon
     const canvas = document.createElement('canvas');
@@ -355,7 +357,7 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
       ctx.fillText('Image unavailable', 150, 180);
 
       // Set the canvas as the image source
-      event.target.src = canvas.toDataURL();
+      target.src = canvas.toDataURL();
     }
   }
 
@@ -406,12 +408,12 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
   }
 
   // Pagination methods
-  goToPage(page: number) {
+  goToPage(page: number): void {
     this.currentPage = page;
     this.updatePagination();
   }
 
-  changePageSize(size: number) {
+  changePageSize(size: number): void {
     this.pageSize = size;
     this.currentPage = 1;
     this.updatePagination();

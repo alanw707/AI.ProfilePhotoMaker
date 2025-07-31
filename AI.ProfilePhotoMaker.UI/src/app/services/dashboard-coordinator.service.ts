@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, combineLatest, forkJoin, of } from 'rxjs';
+import { BehaviorSubject, combineLatest, forkJoin, Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { ProfileService, UserProfile } from './profile.service';
 import { ModelStateService } from './model-state.service';
@@ -25,7 +25,7 @@ export class DashboardCoordinatorService implements IDashboardStateService {
   private readonly _coordinatorState = new BehaviorSubject<{
     userProfile: UserProfile | null;
     modelStatus: string;
-    latestTrainedModel: any;
+    latestTrainedModel: unknown;
     isLoading: boolean;
   }>({
     userProfile: null,
@@ -137,7 +137,7 @@ export class DashboardCoordinatorService implements IDashboardStateService {
         acc[field] = newState[field as keyof DashboardState];
       }
       return acc;
-    }, {} as any);
+    }, {} as Record<string, unknown>);
 
     if (Object.keys(imageUpdate).length > 0) {
       this.imageState.setState(imageUpdate);
@@ -155,7 +155,7 @@ export class DashboardCoordinatorService implements IDashboardStateService {
         acc[field] = newState[field as keyof DashboardState];
       }
       return acc;
-    }, {} as any);
+    }, {} as Record<string, unknown>);
 
     if (Object.keys(subscriptionUpdate).length > 0) {
       this.subscriptionState.setState(subscriptionUpdate);

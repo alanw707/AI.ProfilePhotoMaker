@@ -7,26 +7,33 @@
 
 // Disable zone.js patching for Image onload/onerror events
 // This prevents zone.js violations when face-api.js loads model files
-(window as any).__Zone_disable_on_property = true;
+// eslint-disable-next-line @typescript-eslint/naming-convention
+(window as unknown as { __Zone_disable_on_property: boolean }).__Zone_disable_on_property = true;
 
 // Disable zone.js patching for XMLHttpRequest
 // This prevents violations when face-api.js downloads model files from CDN
-(window as any).__Zone_disable_XMLHttpRequest = true;
+// eslint-disable-next-line @typescript-eslint/naming-convention
+(window as unknown as { __Zone_disable_XMLHttpRequest: boolean }).__Zone_disable_XMLHttpRequest = true;
 
 // Disable zone.js patching for custom elements (additional safety)
-(window as any).__Zone_disable_customElements = true;
+// eslint-disable-next-line @typescript-eslint/naming-convention
+(window as unknown as { __Zone_disable_customElements: boolean }).__Zone_disable_customElements = true;
 
 // Web Locks API polyfill/wrapper to prevent NavigatorLockAcquireTimeoutError
 if (typeof navigator !== 'undefined' && navigator.locks) {
   const originalRequest = navigator.locks.request;
-  navigator.locks.request = function(name: string, optionsOrCallback: any, callback?: any) {
+  navigator.locks.request = function(
+    name: string,
+    optionsOrCallback: LockOptions | LockGrantedCallback,
+    callback?: LockGrantedCallback
+  ): Promise<unknown> {
     // Extract the actual callback and options
     const hasOptions = typeof optionsOrCallback === 'object' && optionsOrCallback !== null;
-    const actualCallback = hasOptions ? callback : optionsOrCallback;
-    const actualOptions = hasOptions ? optionsOrCallback : {};
+    const actualCallback = hasOptions ? callback : optionsOrCallback as LockGrantedCallback;
+    const actualOptions = hasOptions ? optionsOrCallback as LockOptions : {};
     
     // Add a timeout to prevent infinite waiting
-    const timeoutOptions = {
+    const timeoutOptions: LockOptions = {
       ...actualOptions,
       ifAvailable: actualOptions.ifAvailable ?? true,
       steal: actualOptions.steal ?? false

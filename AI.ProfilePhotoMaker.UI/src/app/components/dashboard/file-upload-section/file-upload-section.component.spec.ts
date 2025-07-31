@@ -2,14 +2,13 @@ import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testin
 import { NgZone } from '@angular/core';
 import { of, throwError } from 'rxjs';
 
-import { FileUploadSectionComponent, FileUploadState } from './file-upload-section.component';
+import { FileUploadSectionComponent } from './file-upload-section.component';
 import { FileUploadService } from '../../../services/file-upload.service';
 import { FaceDetectionService } from '../../../services/face-detection.service';
 import { FileUploadManagerService } from '../../../services/file-upload-manager.service';
 import { NotificationService } from '../../../services/notification.service';
 import {
   QualityCheckError,
-  QualityCheckResult,
   SelectedFileWithQuality,
 } from '../../../models/dashboard.types';
 
