@@ -19,6 +19,9 @@ jobs:
       uses: azure/CLI@v1
       with:
         azcliversion: latest
+        inlineScript: |
+          echo "Azure CLI setup completed"
+          az --version
         
     - name: Login to Azure
       uses: azure/login@v1
