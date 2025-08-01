@@ -143,15 +143,15 @@ jobs:
           echo "🔐 Logging into Container Registry: $REGISTRY_NAME"
           az acr login --name "$REGISTRY_NAME"
           
-          # Build and push backend with proper tagging
+          # Build and push backend with proper tagging (PowerShell script expects 'api')
           echo "🔧 Building backend API image..."
-          docker build -f Dockerfile.backend -t ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-backend:latest .
-          docker push ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-backend:latest
+          docker build -f Dockerfile.backend -t ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-api:latest .
+          docker push ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-api:latest
           
-          # Build and push frontend with proper tagging
+          # Build and push frontend with proper tagging (PowerShell script expects 'ui')
           echo "🎨 Building frontend UI image..."
-          docker build -f Dockerfile.frontend -t ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-frontend:latest .
-          docker push ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-frontend:latest
+          docker build -f Dockerfile.frontend -t ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-ui:latest .
+          docker push ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-ui:latest
           
           echo "✅ Container images built and pushed successfully"
           
