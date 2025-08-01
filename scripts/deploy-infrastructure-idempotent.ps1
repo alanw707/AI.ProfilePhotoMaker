@@ -356,12 +356,12 @@ try {
         return $result
     }
     
-    # Step 8.5: Build and push container images (if requested)
+    # Step 8.5: Build and push container images (TEMPORARILY DISABLED - using placeholder images)
+    $imagesBuildSuccess = $false
     if ($BuildImages -and $registryExists) {
-        $imagesBuildSuccess = Build-ContainerImages -RegistryName $containerRegistryName -ResourceGroup $ResourceGroupName
-        if (-not $imagesBuildSuccess) {
-            Write-Host "⚠️ Container image build failed, but continuing with deployment using placeholder images" -ForegroundColor Yellow
-        }
+        Write-Host "⚠️ Image building temporarily disabled - using placeholder images for initial deployment" -ForegroundColor Yellow
+        Write-Host "   Use separate image build process after infrastructure deployment completes" -ForegroundColor Yellow
+        # $imagesBuildSuccess = Build-ContainerImages -RegistryName $containerRegistryName -ResourceGroup $ResourceGroupName
     }
     
     # Step 9: Create Backend Container App (with existence check)
