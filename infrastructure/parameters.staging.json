@@ -25,18 +25,6 @@
     },
     "replicateWebhookSecret": {
       "value": "REPLACE_WITH_WEBHOOK_SECRET"
-    },
-    "redisCacheSku": {
-      "value": "Basic"
-    },
-    "redisCacheCapacity": {
-      "value": 0
-    },
-    "enableContainerRegistry": {
-      "value": false
-    },
-    "containerRegistrySku": {
-      "value": "Basic"
     }
   }
 }
