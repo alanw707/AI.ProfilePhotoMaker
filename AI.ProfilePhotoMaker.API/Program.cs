@@ -54,12 +54,15 @@ if (builder.Environment.IsDevelopment())
 
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-if (builder.Environment.IsDevelopment())
-{
-    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlite(connectionString));
-}
-else
+
+// Determine database provider based on connection string
+bool isAzureSqlServer = !string.IsNullOrEmpty(connectionString) && 
+                       (connectionString.Contains("azure") || 
+                        connectionString.Contains("database.windows.net") || 
+                        connectionString.Contains("SqlServer") ||
+                        connectionString.Contains("Authentication=Active Directory"));
+
+if (isAzureSqlServer)
 {
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
         options.UseSqlServer(connectionString, sqlServerOptionsAction: sqlOptions =>
@@ -69,6 +72,12 @@ else
                 maxRetryDelay: TimeSpan.FromSeconds(30),
                 errorNumbersToAdd: null);
         }));
+}
+else
+{
+    // Use SQLite for local development
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlite(connectionString ?? "Data Source=ProfilePhotoMaker.db"));
 }
 
 // Add Identity
