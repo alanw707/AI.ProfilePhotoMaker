@@ -1,0 +1,174 @@
+name: '🚀 Deploy Infrastructure (Fixed)'
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options: ['staging', 'production']
+      validate_only:
+        description: 'Validate only (no deployment)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+  pull-requests: write
+
+env:
+  AZURE_RESOURCE_MANAGER_URL: 'https://management.azure.com/'
+  ARM_CLIENT_ID: ${{ secrets.AZUREAPPSERVICE_CLIENTID_C73973894C7140DEAF8637A42FA0C131 }}
+  ARM_TENANT_ID: ${{ secrets.AZUREAPPSERVICE_TENANTID_011D6FB5A4BC43509D9B165F9842CEBC }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B9C8B148FA76469EB51C84A0DE3D63BB }}
+
+jobs:
+  deploy-staging:
+    name: "🏗️ Deploy to ${{ github.event.inputs.environment || 'staging' }}"
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    outputs:
+      deployment-status: ${{ steps.deploy.outputs.status }}
+      api-url: ${{ steps.deploy.outputs.api-url }}
+      frontend-url: ${{ steps.deploy.outputs.frontend-url }}
+    
+    steps:
+      - name: '📥 Checkout Repository'
+        uses: actions/checkout@v4
+      
+      - name: '🔐 Azure Login (OIDC)'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.ARM_CLIENT_ID }}
+          tenant-id: ${{ env.ARM_TENANT_ID }}
+          subscription-id: ${{ env.ARM_SUBSCRIPTION_ID }}
+      
+      - name: '🔧 Setup Environment'
+        id: setup
+        run: |
+          ENV_NAME="${{ github.event.inputs.environment || 'staging' }}"
+          RESOURCE_GROUP="ai-profile-photo-maker-${ENV_NAME}"
+          DEPLOYMENT_NAME="infrastructure-$(date +%Y%m%d-%H%M%S)"
+          
+          echo "env-name=${ENV_NAME}" >> $GITHUB_OUTPUT
+          echo "resource-group=${RESOURCE_GROUP}" >> $GITHUB_OUTPUT
+          echo "deployment-name=${DEPLOYMENT_NAME}" >> $GITHUB_OUTPUT
+          
+          echo "Environment: ${ENV_NAME}"
+          echo "Resource Group: ${RESOURCE_GROUP}"
+          echo "Deployment Name: ${DEPLOYMENT_NAME}"
+      
+      - name: '🔍 Create Resource Group'
+        run: |
+          RG="${{ steps.setup.outputs.resource-group }}"
+          
+          if ! az group exists --name "${RG}"; then
+            echo "📦 Creating resource group: ${RG}"
+            az group create \
+              --name "${RG}" \
+              --location "East US 2" \
+              --tags Environment="${{ steps.setup.outputs.env-name }}" Application=AI-ProfilePhotoMaker CreatedBy=GitHub-Actions
+          else
+            echo "✅ Resource group exists: ${RG}"
+          fi
+      
+      - name: '🧪 Validate Templates'
+        run: |
+          cd infrastructure
+          
+          # Build and validate Bicep template
+          echo "🔍 Building Bicep template..."
+          bicep build main.bicep --outfile main.json
+          
+          # Simple parameter check
+          if [ ! -f "parameters.${{ steps.setup.outputs.env-name }}.json" ]; then
+            echo "❌ Parameter file not found: parameters.${{ steps.setup.outputs.env-name }}.json"
+            exit 1
+          fi
+          
+          echo "✅ Templates validated successfully"
+      
+      - name: '🚀 Deploy Infrastructure'
+        id: deploy
+        if: github.event.inputs.validate_only != 'true'
+        run: |
+          cd infrastructure
+          
+          RG="${{ steps.setup.outputs.resource-group }}"
+          DEPLOY_NAME="${{ steps.setup.outputs.deployment-name }}"
+          
+          echo "🚀 Starting deployment: ${DEPLOY_NAME}"
+          echo "📍 Resource Group: ${RG}"
+          
+          # Deploy with timeout and better error handling
+          if timeout 20m az deployment group create \
+            --resource-group "${RG}" \
+            --name "${DEPLOY_NAME}" \
+            --template-file main.json \
+            --parameters @parameters.${{ steps.setup.outputs.env-name }}.json \
+            --output table; then
+            
+            echo "✅ Deployment completed successfully"
+            echo "status=success" >> $GITHUB_OUTPUT
+            
+            # Get resource URLs with simple queries
+            API_URL=$(az webapp list --resource-group "${RG}" --query "[?contains(name, 'api')].defaultHostName | [0]" -o tsv 2>/dev/null || echo "")
+            SWA_URL=$(az staticwebapp list --resource-group "${RG}" --query "[0].defaultHostname" -o tsv 2>/dev/null || echo "")
+            
+            if [ -n "${API_URL}" ] && [ "${API_URL}" != "null" ]; then
+              echo "api-url=https://${API_URL}" >> $GITHUB_OUTPUT
+            fi
+            
+            if [ -n "${SWA_URL}" ] && [ "${SWA_URL}" != "null" ]; then
+              echo "frontend-url=https://${SWA_URL}" >> $GITHUB_OUTPUT
+            fi
+            
+          else
+            echo "❌ Deployment failed"
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+      
+      - name: '✅ Success Summary'
+        if: steps.deploy.outputs.status == 'success'
+        run: |
+          echo "🎉 Infrastructure deployment completed successfully!"
+          echo "🔗 API URL: ${{ steps.deploy.outputs.api-url || 'Pending resource setup' }}"
+          echo "🔗 Frontend URL: ${{ steps.deploy.outputs.frontend-url || 'Pending resource setup' }}"
+      
+      - name: '❌ Failure Cleanup'
+        if: failure()
+        run: |
+          echo "🔄 Deployment failed - checking for partial resources..."
+          RG="${{ steps.setup.outputs.resource-group }}"
+          
+          # List any created resources for manual cleanup reference
+          if az group exists --name "${RG}"; then
+            echo "📋 Resources in ${RG}:"
+            az resource list --resource-group "${RG}" --query "[].{Name:name,Type:type,Status:properties.provisioningState}" -o table || true
+          fi
+          
+          echo "::error::Deployment failed. Check logs above for details."
+
+  notify-completion:
+    name: '📢 Notify Completion'
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: always()
+    
+    steps:
+      - name: '📢 Deployment Notification'
+        run: |
+          if [[ "${{ needs.deploy-staging.result }}" == "success" ]]; then
+            echo "🎉 Infrastructure deployment completed successfully!"
+            echo "🔗 API: ${{ needs.deploy-staging.outputs.api-url }}"
+            echo "🔗 Frontend: ${{ needs.deploy-staging.outputs.frontend-url }}"
+          else
+            echo "❌ Infrastructure deployment failed"
+            echo "📋 Check the logs above for details"
+          fi

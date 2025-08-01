@@ -48,10 +48,10 @@ var staticWebAppName = '${namePrefix}-swa-${environmentName}'
 var sqlServerName = '${namePrefix}-sql-${environmentName}-${uniqueSuffix}'
 var sqlDatabaseName = '${namePrefix}db'
 var storageAccountName = '${take(namePrefix, 14)}st${take(uniqueSuffix, 8)}'
-var keyVaultName = '${take(namePrefix, 8)}-kv-${take(uniqueSuffix, 8)}'
+// Fixed Key Vault naming to prevent URI truncation issues
+var keyVaultName = '${take(namePrefix, 10)}kv${take(uniqueSuffix, 6)}'
 var applicationInsightsName = '${namePrefix}-ai-${environmentName}'
 var logAnalyticsName = '${namePrefix}-la-${environmentName}'
-// Redis Cache variable removed
 var containerRegistryName = '${take(namePrefix, 14)}cr${take(uniqueSuffix, 8)}'
 
 // App Service Plan
@@ -341,8 +341,6 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enableSoftDelete: true
     softDeleteRetentionInDays: 90
     enableRbacAuthorization: false
-    vaultUri: 'https://${keyVaultName}.vault.azure.net/'
-    provisioningState: 'Succeeded'
     publicNetworkAccess: 'Enabled'
   }
   tags: {
@@ -535,7 +533,7 @@ resource availabilityTest 'Microsoft.Insights/webtests@2022-06-15' = {
   }
 }
 
-// Metric Alerts
+// Metric Alerts - Fixed metric names for Web Apps
 resource webAppResponseTimeAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
   name: '${namePrefix}-webapp-response-time-${environmentName}'
   location: 'Global'
@@ -552,10 +550,10 @@ resource webAppResponseTimeAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = 
       'odata.type': 'Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria'
       allOf: [
         {
-          name: 'ResponseTime'
-          metricName: 'AverageResponseTime'
+          name: 'HttpResponseTime'
+          metricName: 'HttpResponseTime'
           operator: 'GreaterThan'
-          threshold: 5000 // 5 seconds
+          threshold: 5 // 5 seconds (in seconds, not milliseconds)
           timeAggregation: 'Average'
           criterionType: 'StaticThresholdCriterion'
         }
