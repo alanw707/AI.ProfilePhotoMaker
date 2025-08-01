@@ -172,7 +172,7 @@ try {
     $containerRegistryName = "${AppName}cr${Environment}"
     $sqlServerName = "${AppName}-sql-${Environment}"
     $storageAccountName = "${AppName}st${Environment}"  # Storage accounts don't support dashes
-    $keyVaultName = "${AppName}-kv-${Environment}"
+    $keyVaultName = "${AppName}kv${Environment}"
     $containerEnvName = "${AppName}-env-${Environment}"
     $backendAppName = "${AppName}-api-${Environment}"
     $frontendAppName = "${AppName}-web-${Environment}"
