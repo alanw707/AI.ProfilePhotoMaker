@@ -1,4 +1,4 @@
-name: '🚀 Deploy Infrastructure'
+name: '🚀 Deploy Staging Infrastructure (Container Apps)'
 
 on:
   push:
@@ -9,12 +9,6 @@ on:
     paths: ['infrastructure/**', '.github/workflows/deploy-infrastructure.yml']
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Target environment'
-        required: true
-        default: 'staging'
-        type: choice
-        options: ['staging', 'production']
       force_deploy:
         description: 'Force deployment (skip validation)'
         required: false
@@ -53,19 +47,19 @@ jobs:
         with:
           fetch-depth: 2
       
-      - name: '⚙️ Configure Environment'
+      - name: '⚙️ Configure Staging Environment'
         id: config
         run: |
-          ENV_NAME="${{ github.event.inputs.environment || 'staging' }}"
-          RG_NAME="ai-profile-photo-maker-${ENV_NAME}"
-          DEPLOYMENT_NAME="infra-deploy-$(date +%Y%m%d-%H%M%S)"
+          ENV_NAME="staging"
+          RG_NAME="ai-profile-photo-maker-staging"
+          DEPLOYMENT_NAME="container-apps-deploy-$(date +%Y%m%d-%H%M%S)"
           
           echo "environment=${ENV_NAME}" >> $GITHUB_OUTPUT
           echo "resource-group=${RG_NAME}" >> $GITHUB_OUTPUT  
           echo "deployment-name=${DEPLOYMENT_NAME}" >> $GITHUB_OUTPUT
-          echo "parameters-file=parameters.${ENV_NAME}.json" >> $GITHUB_OUTPUT
+          echo "parameters-file=parameters.staging.json" >> $GITHUB_OUTPUT
           
-          echo "🎯 Target Environment: ${ENV_NAME}"
+          echo "🎯 Target Environment: ${ENV_NAME} (Container Apps)"
           echo "📦 Resource Group: ${RG_NAME}"
           echo "🆔 Deployment Name: ${DEPLOYMENT_NAME}"
       
@@ -253,7 +247,7 @@ jobs:
           rm -f parameters.*.work.json main.validated.json
 
   deploy-infrastructure:
-    name: "Deploy to ${{ needs.validate-infrastructure.outputs.environment || github.event.inputs.environment || 'staging' }}"
+    name: "Deploy Staging Container Apps Infrastructure"
     runs-on: ubuntu-latest
     needs: validate-infrastructure
     if: |
@@ -268,13 +262,15 @@ jobs:
     # Temporarily disabled for OIDC compatibility
     
     outputs:
-      web-app-name: ${{ steps.deploy.outputs.webAppName }}
-      web-app-url: ${{ steps.deploy.outputs.webAppUrl }}
+      container-app-name: ${{ steps.deploy.outputs.containerAppName }}
+      container-app-url: ${{ steps.deploy.outputs.containerAppUrl }}
+      container-app-environment-name: ${{ steps.deploy.outputs.containerAppEnvironmentName }}  
       static-web-app-name: ${{ steps.deploy.outputs.staticWebAppName }}
       static-web-app-url: ${{ steps.deploy.outputs.staticWebAppUrl }}
       sql-server-name: ${{ steps.deploy.outputs.sqlServerName }}
       storage-account-name: ${{ steps.deploy.outputs.storageAccountName }}
       key-vault-name: ${{ steps.deploy.outputs.keyVaultName }}
+      cost-optimized: ${{ steps.deploy.outputs.costOptimized }}
     
     steps:
       - name: '📥 Checkout Repository'
@@ -287,46 +283,38 @@ jobs:
           tenant-id: ${{ env.ARM_TENANT_ID }}
           subscription-id: ${{ env.ARM_SUBSCRIPTION_ID }}
       
-      - name: '🔄 Process Parameters'
+      - name: '🔄 Process Staging Parameters'
         env:
           STAGING_SQL_PASSWORD: ${{ secrets.STAGING_SQL_ADMIN_PASSWORD }}
           STAGING_JWT_SECRET: ${{ secrets.STAGING_JWT_SECRET }}
-          PROD_SQL_PASSWORD: ${{ secrets.PROD_SQL_ADMIN_PASSWORD }}
-          PROD_JWT_SECRET: ${{ secrets.PROD_JWT_SECRET }}
           REPLICATE_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
           WEBHOOK_SECRET: ${{ secrets.REPLICATE_WEBHOOK_SECRET }}
         run: |
           cd infrastructure
-          ENV_NAME="${{ github.event.inputs.environment || 'staging' }}"
+          ENV_NAME="staging"
           
-          cp "parameters.${ENV_NAME}.json" "parameters.${ENV_NAME}.deploy.json"
+          cp "parameters.staging.json" "parameters.staging.deploy.json"
           
           python3 << 'EOF'
           import os
           import json
           
-          env_name = os.environ.get('ENV_NAME', 'staging')
-          
-          with open(f'parameters.{env_name}.deploy.json', 'r') as f:
+          with open('parameters.staging.deploy.json', 'r') as f:
               content = f.read()
           
-          if env_name == 'staging':
-              content = content.replace('REPLACE_WITH_STAGING_SQL_PASSWORD', os.environ.get('STAGING_SQL_PASSWORD', ''))
-              content = content.replace('REPLACE_WITH_STAGING_JWT_SECRET', os.environ.get('STAGING_JWT_SECRET', ''))
-          else:
-              content = content.replace('REPLACE_WITH_PROD_SQL_PASSWORD', os.environ.get('PROD_SQL_PASSWORD', ''))
-              content = content.replace('REPLACE_WITH_PROD_JWT_SECRET', os.environ.get('PROD_JWT_SECRET', ''))
-          
+          # Replace staging-specific secrets
+          content = content.replace('REPLACE_WITH_STAGING_SQL_PASSWORD', os.environ.get('STAGING_SQL_PASSWORD', ''))
+          content = content.replace('REPLACE_WITH_STAGING_JWT_SECRET', os.environ.get('STAGING_JWT_SECRET', ''))
           content = content.replace('REPLACE_WITH_REPLICATE_TOKEN', os.environ.get('REPLICATE_TOKEN', ''))
           content = content.replace('REPLACE_WITH_WEBHOOK_SECRET', os.environ.get('WEBHOOK_SECRET', ''))
           
-          with open(f'parameters.{env_name}.deploy.json', 'w') as f:
+          with open('parameters.staging.deploy.json', 'w') as f:
               f.write(content)
           
-          print("✅ Deployment parameters ready")
+          print("✅ Staging deployment parameters ready for Container Apps")
           EOF
           
-          echo "ENV_NAME=${ENV_NAME}" >> $GITHUB_ENV
+          echo "ENV_NAME=staging" >> $GITHUB_ENV
       
       - name: '🏗️ Deploy Infrastructure'
         id: deploy
@@ -345,7 +333,7 @@ jobs:
           if az deployment group create \
             --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" \
             --template-file main.json \
-            --parameters @parameters.${{ env.ENV_NAME }}.deploy.json \
+            --parameters @parameters.staging.deploy.json \
             --parameters location="East US 2" \
             --name "${DEPLOYMENT_NAME}" \
             --output table; then

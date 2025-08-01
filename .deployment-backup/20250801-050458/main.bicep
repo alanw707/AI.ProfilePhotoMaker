@@ -1,16 +1,16 @@
-// Main Bicep template for AI Profile Photo Maker Azure infrastructure
-@description('The name of the environment (e.g., dev, staging, prod)')
-param environmentName string = 'prod'
+// Staging-Only Bicep template for AI Profile Photo Maker Azure infrastructure
+@description('The environment is fixed to staging for cost optimization')
+param environmentName string = 'staging'
 
 @description('The Azure region for resource deployment')
 param location string = resourceGroup().location
 
-@description('The name prefix for all resources')
-param namePrefix string = 'aiprofilephotomaker'
+@description('The base name prefix for staging resources')
+param namePrefix string = 'aiprofilephotomaker-staging'
 
-@description('The SKU for the App Service Plan')
-@allowed(['F1', 'D1', 'B1', 'B2', 'B3', 'S1', 'S2', 'S3', 'P1', 'P2', 'P3'])
-param appServicePlanSku string = 'B1'
+@description('Generate unique resource names to prevent conflicts')
+var uniqueStagingSuffix = uniqueString(resourceGroup().id, 'staging')
+var shortStagingSuffix = take(uniqueStagingSuffix, 6)
 
 @description('The database administrator username')
 param sqlAdminUsername string = 'aiprofileadmin'
@@ -31,79 +31,162 @@ param jwtSecret string
 @secure()
 param replicateWebhookSecret string
 
-// Redis Cache parameters removed - not needed for current deployment
-
-@description('Enable Container Registry for Docker images')
+@description('Enable Container Registry for staging Docker images (cost-optimized)')
 param enableContainerRegistry bool = false
 
-@description('Container Registry SKU')
-@allowed(['Basic', 'Standard', 'Premium'])
-param containerRegistrySku string = 'Standard'
+@description('Container Registry SKU - Basic tier for staging cost optimization')
+@allowed(['Basic', 'Standard'])
+param containerRegistrySku string = 'Basic'
 
-// Variables
-var uniqueSuffix = uniqueString(resourceGroup().id)
-var appServicePlanName = '${namePrefix}-asp-${environmentName}'
-var webAppName = '${namePrefix}api-${environmentName}'
-var staticWebAppName = '${namePrefix}-swa-${environmentName}'
-var sqlServerName = '${namePrefix}-sql-${environmentName}-${uniqueSuffix}'
-var sqlDatabaseName = '${namePrefix}db'
-var storageAccountName = '${take(namePrefix, 14)}st${take(uniqueSuffix, 8)}'
-// Fixed Key Vault naming to prevent URI truncation issues
-var keyVaultName = '${take(namePrefix, 10)}kv${take(uniqueSuffix, 6)}'
-var applicationInsightsName = '${namePrefix}-ai-${environmentName}'
-var logAnalyticsName = '${namePrefix}-la-${environmentName}'
-var containerRegistryName = '${take(namePrefix, 14)}cr${take(uniqueSuffix, 8)}'
+// Staging-Optimized Variables with unique naming
+var containerAppEnvironmentName = 'app-env-staging-${shortStagingSuffix}'
+var containerAppName = 'api-staging-${shortStagingSuffix}'
+var staticWebAppName = 'swa-staging-${shortStagingSuffix}'
+var sqlServerName = 'sql-staging-${uniqueStagingSuffix}'
+var sqlDatabaseName = 'profilephotomakerdb-staging'
+var storageAccountName = 'stgstaging${shortStagingSuffix}'
+// Staging Key Vault with unique naming
+var keyVaultName = 'kv-stg-${shortStagingSuffix}'
+var applicationInsightsName = 'ai-staging-${shortStagingSuffix}'
+var logAnalyticsName = 'logs-staging-${shortStagingSuffix}'
+var containerRegistryName = 'acrstaging${shortStagingSuffix}'
 
-// App Service Plan
-resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
-  name: appServicePlanName
+// Container App Environment (replaces App Service Plan for cost optimization)
+resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' = {
+  name: containerAppEnvironmentName
   location: location
-  sku: {
-    name: appServicePlanSku
-  }
-  kind: 'app'
   properties: {
-    reserved: false
+    workloadProfiles: [
+      {
+        name: 'Consumption'
+        workloadProfileType: 'Consumption'
+      }
+    ]
+    appLogsConfiguration: {
+      destination: 'log-analytics'
+      logAnalyticsConfiguration: {
+        customerId: logAnalyticsWorkspace.properties.customerId
+        sharedKey: logAnalyticsWorkspace.listKeys().primarySharedKey
+      }
+    }
   }
   tags: {
     Environment: environmentName
-    Application: 'AI Profile Photo Maker'
+    Application: 'AI Profile Photo Maker Staging'
+    CostOptimized: 'true'
   }
 }
 
-// Web App (Backend API)
-resource webApp 'Microsoft.Web/sites@2023-01-01' = {
-  name: webAppName
+// Container App (Backend API) - Cost-Optimized for Staging
+resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
+  name: containerAppName
   location: location
-  kind: 'app'
   identity: {
     type: 'SystemAssigned'
   }
   properties: {
-    serverFarmId: appServicePlan.id
-    siteConfig: {
-      netFrameworkVersion: 'v8.0'
-      defaultDocuments: []
-      httpLoggingEnabled: true
-      logsDirectorySizeLimit: 35
-      detailedErrorLoggingEnabled: true
-      requestTracingEnabled: true
-      ftpsState: 'Disabled'
-      minTlsVersion: '1.2'
-      cors: {
-        allowedOrigins: [
-          'https://${staticWebAppName}.azurestaticapps.net'
-          'https://${namePrefix}.azurestaticapps.net'
-        ]
-        supportCredentials: false
+    environmentId: containerAppEnvironment.id
+    configuration: {
+      ingress: {
+        external: true
+        targetPort: 80
+        allowInsecure: false
+        transport: 'auto'
+        corsPolicy: {
+          allowedOrigins: [
+            'https://${staticWebAppName}.azurestaticapps.net'
+            'https://${staticWebAppName}.azurestaticapps.net'
+          ]
+          allowCredentials: false
+        }
       }
+      secrets: [
+        {
+          name: 'db-connection-string'
+          keyVaultUrl: '${keyVault.properties.vaultUri}secrets/DatabaseConnectionString'
+          identity: 'system'
+        }
+        {
+          name: 'jwt-secret'
+          keyVaultUrl: '${keyVault.properties.vaultUri}secrets/JwtSecret'
+          identity: 'system'
+        }
+        {
+          name: 'replicate-token'
+          keyVaultUrl: '${keyVault.properties.vaultUri}secrets/ReplicateApiToken'
+          identity: 'system'
+        }
+        {
+          name: 'webhook-secret'
+          keyVaultUrl: '${keyVault.properties.vaultUri}secrets/ReplicateWebhookSecret'
+          identity: 'system'
+        }
+      ]
     }
-    httpsOnly: true
-    clientAffinityEnabled: false
+    template: {
+      revisionSuffix: 'staging-v1'
+      scale: {
+        minReplicas: 0  // Cost optimization: scale to zero when idle
+        maxReplicas: 2  // Staging limit: max 2 replicas
+      }
+      containers: [
+        {
+          name: 'api-container'
+          image: 'mcr.microsoft.com/dotnet/aspnet:8.0' // Placeholder - update with actual image
+          resources: {
+            cpu: json('0.25')      // Minimal CPU for staging
+            memory: '0.5Gi'        // Minimal memory for staging
+          }
+          env: [
+            {
+              name: 'ConnectionStrings__DefaultConnection'
+              secretRef: 'db-connection-string'
+            }
+            {
+              name: 'Jwt__Secret'
+              secretRef: 'jwt-secret'
+            }
+            {
+              name: 'Jwt__ValidAudience'
+              value: 'https://${staticWebAppName}.azurestaticapps.net'
+            }
+            {
+              name: 'Jwt__ValidIssuer'
+              value: 'https://${containerAppName}.${containerAppEnvironment.properties.defaultDomain}'
+            }
+            {
+              name: 'Replicate__ApiToken'
+              secretRef: 'replicate-token'
+            }
+            {
+              name: 'Replicate__WebhookSecret'
+              secretRef: 'webhook-secret'
+            }
+            {
+              name: 'AzureStorage__ConnectionString'
+              value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
+            }
+            {
+              name: 'AzureStorage__ContainerName'
+              value: 'profile-images'
+            }
+            {
+              name: 'ApplicationInsights__ConnectionString'
+              value: applicationInsights.properties.ConnectionString
+            }
+            {
+              name: 'ASPNETCORE_ENVIRONMENT'
+              value: 'Staging'
+            }
+          ]
+        }
+      ]
+    }
   }
   tags: {
     Environment: environmentName
-    Application: 'AI Profile Photo Maker'
+    Application: 'AI Profile Photo Maker Staging'
+    CostOptimized: 'true'
   }
 }
 
@@ -271,7 +354,7 @@ resource storageContainer 'Microsoft.Storage/storageAccounts/blobServices/contai
   }
 }
 
-// Log Analytics Workspace
+// Log Analytics Workspace - Staging Cost Optimized
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: logAnalyticsName
   location: location
@@ -279,19 +362,20 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09
     sku: {
       name: 'PerGB2018'
     }
-    retentionInDays: 30
+    retentionInDays: 7      // Reduced retention for staging cost optimization
     features: {
       enableLogAccessUsingOnlyResourcePermissions: true
     }
     workspaceCapping: {
-      dailyQuotaGb: 1
+      dailyQuotaGb: json('0.5')  // Reduced daily quota for staging
     }
     publicNetworkAccessForIngestion: 'Enabled'
     publicNetworkAccessForQuery: 'Enabled'
   }
   tags: {
     Environment: environmentName
-    Application: 'AI Profile Photo Maker'
+    Application: 'AI Profile Photo Maker Staging'
+    CostOptimized: 'true'
   }
 }
 
@@ -313,7 +397,7 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
-// Key Vault
+// Key Vault - Staging Configuration
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: keyVaultName
   location: location
@@ -326,7 +410,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     accessPolicies: [
       {
         tenantId: subscription().tenantId
-        objectId: webApp.identity.principalId
+        objectId: containerApp.identity.principalId
         permissions: {
           secrets: [
             'get'
@@ -339,13 +423,14 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enabledForDiskEncryption: false
     enabledForTemplateDeployment: false
     enableSoftDelete: true
-    softDeleteRetentionInDays: 90
+    softDeleteRetentionInDays: 30  // Reduced for staging cost optimization
     enableRbacAuthorization: false
     publicNetworkAccess: 'Enabled'
   }
   tags: {
     Environment: environmentName
-    Application: 'AI Profile Photo Maker'
+    Application: 'AI Profile Photo Maker Staging'
+    CostOptimized: 'true'
   }
 }
 
@@ -383,32 +468,8 @@ resource sqlConnectionStringKV 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = 
   }
 }
 
-// Web App has managed identity enabled by default when accessing Key Vault
-
-// Web App Configuration
-resource webAppConfig 'Microsoft.Web/sites/config@2023-01-01' = {
-  parent: webApp
-  name: 'appsettings'
-  properties: {
-    ConnectionStrings__DefaultConnection: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/DatabaseConnectionString/)'
-    Jwt__Secret: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/JwtSecret/)'
-    Jwt__ValidAudience: 'https://${staticWebAppName}.azurestaticapps.net'
-    Jwt__ValidIssuer: 'https://${webAppName}.azurewebsites.net'
-    Replicate__ApiToken: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/ReplicateApiToken/)'
-    Replicate__WebhookSecret: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/ReplicateWebhookSecret/)'
-    AzureStorage__ConnectionString: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
-    AzureStorage__ContainerName: 'profile-images'
-    // Redis connection string removed - Redis Cache not deployed
-    ApplicationInsights__InstrumentationKey: applicationInsights.properties.InstrumentationKey
-    ApplicationInsights__ConnectionString: applicationInsights.properties.ConnectionString
-    ASPNETCORE_ENVIRONMENT: environmentName == 'prod' ? 'Production' : 'Development'
-  }
-  dependsOn: [
-    jwtSecretKV
-    replicateTokenKV
-    sqlConnectionStringKV
-  ]
-}
+// Container App configuration is handled directly in the containerApp resource template
+// Environment variables and secrets are configured in the Container App definition above
 
 // Redis Cache removed - not needed for current deployment
 
@@ -533,27 +594,27 @@ resource availabilityTest 'Microsoft.Insights/webtests@2022-06-15' = {
   }
 }
 
-// Metric Alerts - Fixed metric names for Web Apps
-resource webAppResponseTimeAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
-  name: '${namePrefix}-webapp-response-time-${environmentName}'
+// Staging-Optimized Metric Alerts for Container Apps
+resource containerAppResponseTimeAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
+  name: 'containerapp-response-time-staging-${shortStagingSuffix}'
   location: 'Global'
   properties: {
-    description: 'Alert when web app response time is high'
-    severity: 2
+    description: 'Alert when container app response time is high (staging threshold)'
+    severity: 3  // Lower severity for staging
     enabled: true
     scopes: [
-      webApp.id
+      containerApp.id
     ]
-    evaluationFrequency: 'PT5M'
-    windowSize: 'PT15M'
+    evaluationFrequency: 'PT15M'  // Less frequent evaluation for staging
+    windowSize: 'PT30M'           // Longer window for staging
     criteria: {
       'odata.type': 'Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria'
       allOf: [
         {
-          name: 'HttpResponseTime'
-          metricName: 'HttpResponseTime'
+          name: 'RequestsPerSecond'
+          metricName: 'RequestsPerSecond'
           operator: 'GreaterThan'
-          threshold: 5 // 5 seconds (in seconds, not milliseconds)
+          threshold: 10 // Relaxed threshold for staging
           timeAggregation: 'Average'
           criterionType: 'StaticThresholdCriterion'
         }
@@ -567,7 +628,8 @@ resource webAppResponseTimeAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = 
   }
   tags: {
     Environment: environmentName
-    Application: 'AI Profile Photo Maker'
+    Application: 'AI Profile Photo Maker Staging'
+    CostOptimized: 'true'
   }
 }
 
@@ -610,22 +672,30 @@ resource sqlDtuAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
 
 // Redis memory alert removed - Redis Cache not deployed
 
-// Diagnostic Settings for Web App
-resource webAppDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-  name: 'webApp-diagnostics'
-  scope: webApp
+// Diagnostic Settings for Container App
+resource containerAppDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'containerApp-diagnostics-staging'
+  scope: containerApp
   properties: {
     workspaceId: logAnalyticsWorkspace.id
     logs: [
       {
         categoryGroup: 'allLogs'
         enabled: true
+        retentionPolicy: {
+          enabled: true
+          days: 7  // Staging retention optimization
+        }
       }
     ]
     metrics: [
       {
         category: 'AllMetrics'
         enabled: true
+        retentionPolicy: {
+          enabled: true
+          days: 7  // Staging retention optimization
+        }
       }
     ]
   }
@@ -654,9 +724,10 @@ resource sqlDatabaseDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-0
 
 // Redis Cache diagnostics removed - Redis Cache not deployed
 
-// Outputs
-output webAppName string = webApp.name
-output webAppUrl string = 'https://${webApp.properties.defaultHostName}'
+// Staging-Optimized Outputs
+output containerAppName string = containerApp.name
+output containerAppUrl string = 'https://${containerApp.properties.configuration.ingress.fqdn}'
+output containerAppEnvironmentName string = containerAppEnvironment.name
 output staticWebAppName string = staticWebApp.name
 output staticWebAppUrl string = 'https://${staticWebApp.properties.defaultHostname}'
 output sqlServerName string = sqlServer.name
@@ -664,6 +735,11 @@ output sqlDatabaseName string = sqlDatabase.name
 output storageAccountName string = storageAccount.name
 output keyVaultName string = keyVault.name
 output applicationInsightsName string = applicationInsights.name
-// Redis Cache outputs removed - Redis Cache not deployed
+output logAnalyticsName string = logAnalyticsWorkspace.name
 output containerRegistryName string = enableContainerRegistry ? containerRegistry.name : ''
 output containerRegistryLoginServer string = enableContainerRegistry ? containerRegistry.properties.loginServer : ''
+
+// Staging Environment Info
+output environmentName string = environmentName
+output resourceNamingSuffix string = shortStagingSuffix
+output costOptimized bool = true
