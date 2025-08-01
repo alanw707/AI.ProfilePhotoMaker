@@ -26,6 +26,7 @@ import { NotificationService } from '../services/notification.service';
 import { CreditService } from '../services/credit.service';
 import { DashboardCoordinatorService } from '../services/dashboard-coordinator.service';
 import { ConfigService } from '../services/config.service';
+import { WorkflowStepService, ImageThumbnail } from '../services/workflow-step.service';
 import { DashboardState } from '../interfaces/service.interfaces';
 // Lazy-loaded service types
 interface WorkflowProgress {
@@ -61,7 +62,6 @@ interface WorkflowOrchestrationService {
   dismissSuccessMessage(): void;
   dispose(): void;
 }
-import { WorkflowStepService } from '../services/workflow-step.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -194,9 +194,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
   private _updateCurrentStep(): void {
     const state = this.stateService.getState();
+    const convertedThumbnails: ImageThumbnail[] = state.uploadedImageThumbnails.map(thumb => ({
+      id: thumb.id.toString(),
+      name: thumb.fileName,
+      url: thumb.url
+    }));
     this.currentStep = this._workflowStepService.updateCurrentStep(
       state.uploadedImages,
-      state.uploadedImageThumbnails,
+      convertedThumbnails,
       state.generatedPhotosCount,
       this.currentStep
     );
@@ -367,10 +372,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getStepStatus(step: number): string {
     const state = this.stateService.getState();
+    const convertedThumbnails: ImageThumbnail[] = state.uploadedImageThumbnails.map(thumb => ({
+      id: thumb.id.toString(),
+      name: thumb.fileName,
+      url: thumb.url
+    }));
     return this._workflowStepService.getStepStatus(
       step,
       state.uploadedImages,
-      state.uploadedImageThumbnails,
+      convertedThumbnails,
       state.generatedPhotosCount,
       this.currentStep
     );
@@ -378,10 +388,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getStepStatusText(step: number): string {
     const state = this.stateService.getState();
+    const convertedThumbnails: ImageThumbnail[] = state.uploadedImageThumbnails.map(thumb => ({
+      id: thumb.id.toString(),
+      name: thumb.fileName,
+      url: thumb.url
+    }));
     return this._workflowStepService.getStepStatusText(
       step,
       state.uploadedImages,
-      state.uploadedImageThumbnails,
+      convertedThumbnails,
       state.generatedPhotosCount,
       this.currentStep
     );

@@ -1488,7 +1488,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     return `${item.file.name}-${item.file.size}-${index}`;
   }
 
-  trackByErrorMessage(index: number, item: string): string {
-    return `${index}-${item}`;
+  trackByErrorMessage(index: number, item: { fileName: string; reason: string }): string {
+    return `${index}-${item.fileName}`;
   }
 }

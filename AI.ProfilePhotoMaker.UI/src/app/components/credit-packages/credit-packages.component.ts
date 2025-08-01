@@ -98,7 +98,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
 
   private _handlePackagesResponse(response: { success?: boolean; data?: unknown; error?: unknown }): void {
     if (response?.success) {
-      this.packages = response.data || [];
+      this.packages = Array.isArray(response.data) ? response.data : [];
       if (this.packages.length === 0) {
         this._notificationService.warning(
           'No Packages Available',
@@ -110,7 +110,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
       this.packages = [];
       this._notificationService.error(
         'Failed to Load Packages',
-        response?.error?.message || 'Unable to load credit packages.'
+        (response?.error as any)?.message || 'Unable to load credit packages.'
       );
     }
   }
@@ -123,7 +123,9 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     this._notificationService.error(errorMessage.title, errorMessage.message);
   }
 
-  private _getErrorMessage(error: { status?: number; message?: string; error?: { message?: string } }): { title: string; message: string } {
+  private _getErrorMessage(
+    error: { status?: number; message?: string; error?: { message?: string } }
+  ): { title: string; message: string } {
     if (error.status === 0) {
       return {
         title: 'Connection Error',

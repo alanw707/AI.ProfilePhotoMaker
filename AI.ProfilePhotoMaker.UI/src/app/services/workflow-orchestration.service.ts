@@ -1,4 +1,4 @@
-import { Injectable, Injector, NgZone, inject } from '@angular/core';
+import { Injectable, inject, Injector, NgZone } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { AuthService } from './auth.service';
 import { NotificationService } from './notification.service';
@@ -9,34 +9,62 @@ import { StyleOption } from '../components/dashboard/style-selector/style-select
 
 // Lazy-loaded service types
 interface TrainingZipResponse {
-  url: string;
-  fileName: string;
-  size?: number;
+  success: boolean;
+  zipCreated: boolean;
+  zipPath: string;
+  message: string;
+  error?: any;
 }
 
 interface TrainingStatusResponse {
-  id: string;
-  status: 'starting' | 'processing' | 'succeeded' | 'failed' | 'canceled';
-  version?: string;
-  error?: string;
-  logs?: string[];
+  success: boolean;
+  data: {
+    id: string;
+    status: string;
+    created_at: string;
+    completed_at?: string;
+    version?: string;
+    error?: string;
+    logs?: string;
+  };
+  error?: any;
 }
 
 interface BatchGenerationResponse {
-  predictions: PredictionResult[];
-  failures?: GenerationFailure[];
+  success: boolean;
+  data: {
+    predictions: { style: string; result: any }[];
+    creditsRemaining: number;
+    creditsCost: number;
+    successfulStyles: number;
+    failedStyles: number;
+    failures: { style: string; error: string }[];
+  };
+  error?: any;
 }
 
 interface PredictionStatusResponse {
-  id: string;
-  status: 'starting' | 'processing' | 'succeeded' | 'failed' | 'canceled';
-  output?: string[];
-  error?: string;
+  success: boolean;
+  data: {
+    id: string;
+    status: string;
+    created_at: string;
+    completed_at?: string;
+    output?: string[];
+    error?: string;
+    logs?: string;
+    dataUrl?: string;
+  };
+  error?: any;
 }
 
 interface FileUploadService {
   createTrainingZip(): Observable<TrainingZipResponse>;
-  getLatestTrainingZip(): Observable<TrainingZipResponse>;
+  getLatestTrainingZip(): Observable<{
+    success: boolean;
+    data: { fileName: string; publicUrl: string; createdAt: string; sizeBytes: number };
+    error?: any;
+  }>;
   invalidateUserImagesCache(): void;
 }
 

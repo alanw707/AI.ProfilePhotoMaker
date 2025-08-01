@@ -102,17 +102,17 @@ export class DashboardStateService implements IDashboardStateService {
     forkJoin({
       profile: this._profileService.getCurrentUserProfile().pipe(
         catchError(_error => {
-          return of({ success: false, data: null, error });
+          return of({ success: false, data: null, error: _error });
         })
       ),
       creditStatus: this._creditService.getCreditStatus().pipe(
         catchError(_error => {
-          return of({ success: false, data: null, error });
+          return of({ success: false, data: null, error: _error });
         })
       ),
       userImages: this._fileUploadService.getUserImages().pipe(
         catchError(_error => {
-          return of({ success: false, data: null, error });
+          return of({ success: false, data: null, error: _error });
         })
       ),
     }).subscribe({
@@ -188,7 +188,7 @@ export class DashboardStateService implements IDashboardStateService {
       .getCreditStatus()
       .pipe(
         catchError(_error => {
-          return of({ success: false, data: null, error });
+          return of({ success: false, data: null, error: _error });
         })
       )
       .subscribe({
@@ -273,12 +273,12 @@ export class DashboardStateService implements IDashboardStateService {
     const apiCalls: any = {
       profile: this._profileService.getCurrentUserProfile().pipe(
         catchError(_error => {
-          return of({ success: false, data: null, error });
+          return of({ success: false, data: null, error: _error });
         })
       ),
       userImages: this._fileUploadService.getUserImages().pipe(
         catchError(_error => {
-          return of({ success: false, data: null, error });
+          return of({ success: false, data: null, error: _error });
         })
       ),
     };
@@ -403,8 +403,8 @@ export class DashboardStateService implements IDashboardStateService {
       },
       error: _error => {
         // Log only critical errors (500+ status codes)
-        if (error?.status >= 500 || !error?.status) {
-          console.error('❌ Dashboard API call failed:', error);
+        if (_error?.status >= 500 || !_error?.status) {
+          console.error('❌ Dashboard API call failed:', _error);
         }
         this._notificationService.error(
           'Dashboard Load Failed',
@@ -419,7 +419,7 @@ export class DashboardStateService implements IDashboardStateService {
   }
 
   resetState() {
-    this._state.next(this.initialState);
+    this._state.next(this._initialState);
     this._cacheManager.invalidateCache('dashboard_data');
   }
 
@@ -499,7 +499,7 @@ export class DashboardStateService implements IDashboardStateService {
       ),
       modelRequests: this._fileUploadService.getUserModelRequests().pipe(
         catchError(_error => {
-          return of({ success: false, data: null, error });
+          return of({ success: false, data: null, error: _error });
         })
       ),
     }).subscribe({
@@ -574,7 +574,7 @@ export class DashboardStateService implements IDashboardStateService {
       .getUserImages()
       .pipe(
         catchError(_error => {
-          return of({ success: false, data: null, error });
+          return of({ success: false, data: null, error: _error });
         })
       )
       .subscribe({
