@@ -23,6 +23,9 @@ var backendAppName = '${appName}-api-${environment}'
 var frontendAppName = '${appName}-web-${environment}'
 var applicationInsightsName = '${appName}-ai-${environment}'
 
+// Variables to cache potentially problematic function calls
+var storageAccountKeys = storageAccount.listKeys()
+
 // Container Registry
 resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
   name: containerRegistryName
@@ -197,6 +200,10 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
           name: 'connection-string'
           value: 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${sqlDatabase.name};Authentication=Active Directory Default;Encrypt=True;'
         }
+        {
+          name: 'storage-connection-string'
+          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccountKeys.keys[0].value};EndpointSuffix=core.windows.net'
+        }
       ]
     }
     template: {
@@ -227,7 +234,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             }
             {
               name: 'AzureStorage__ConnectionString'
-              value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
+              secretRef: 'storage-connection-string'
             }
             {
               name: 'ApplicationInsights__ConnectionString'
