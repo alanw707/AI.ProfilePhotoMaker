@@ -10,7 +10,7 @@ chmod +x cleanup-old-deployment-files.sh
 ```
 
 This will keep only the essential files:
-- `infrastructure/simple-deploy.bicep` - Your infrastructure template
+- `scripts/deploy-infrastructure-idempotent.ps1` - PowerShell deployment script
 - `.github/workflows/simple-deploy.yml` - Your CI/CD pipeline
 - `SIMPLE-DEPLOYMENT-GUIDE.md` - Setup instructions
 
@@ -38,7 +38,7 @@ This will keep only the essential files:
 4. **Configure Domain** (Optional)
    - Buy a custom domain
    - Set up Azure DNS
-   - Update the Bicep template with your domain
+   - Update the PowerShell deployment script with your domain
 
 5. **Set up Monitoring Alerts**
    - Configure email alerts for errors
@@ -156,5 +156,11 @@ You now have a **production-ready, scalable AI application** deployed in Azure w
 Your deployment is designed to scale from your first user to thousands of users without major changes. Start building and let Azure handle the scaling!
 
 ---
+
+## 📝 Deployment Architecture Decision
+
+**Single Deployment Method**: PowerShell + Azure CLI  
+**Rationale**: Simplified operations, proven reliability, easier maintenance  
+**Removed**: Legacy Bicep templates (unused, caused confusion)  
 
 *Questions? Check the SIMPLE-DEPLOYMENT-GUIDE.md or create a GitHub issue.*

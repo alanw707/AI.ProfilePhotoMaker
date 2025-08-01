@@ -12,7 +12,7 @@ on:
         type: boolean
 
 env:
-  RESOURCE_GROUP: rg-aiprofilemaker-staging-v2
+  RESOURCE_GROUP: rg-aiprofilemaker-staging
   
 permissions:
   id-token: write
