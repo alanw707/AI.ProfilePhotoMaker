@@ -105,10 +105,10 @@
   <div *ngIf="showUploadedImages" class="uploaded-images-section">
     <h4>Uploaded Images ({{ uploadedImageThumbnails.length }})</h4>
     <div class="uploaded-thumbnails">
-      <div *ngFor="let thumb of uploadedImageThumbnails; let i = index" class="uploaded-thumbnail">
+      <div *ngFor="let thumb of uploadedImageThumbnails; let i = index; trackBy: trackByThumbnailId" class="uploaded-thumbnail">
         <img
           [src]="thumb.url"
-          [alt]="thumb.filename || 'Uploaded image'"
+          [alt]="thumb.name || 'Uploaded image'"
           (error)="onImageLoadError(thumb, i)"
           (load)="onImageLoadSuccess(thumb, i)"
           loading="lazy"
@@ -221,7 +221,12 @@
     (dragover)="onDragOver($event)"
     (dragleave)="onDragLeave($event)"
     (drop)="onDrop($event)"
-    (click)="triggerFileUpload()">
+    (click)="triggerFileUpload()"
+    (keyup.enter)="triggerFileUpload()"
+    (keyup.space)="triggerFileUpload()"
+    tabindex="0"
+    role="button"
+    [attr.aria-label]="'Upload photos by clicking or dragging files here'">
     <div class="upload-content">
       <div class="upload-icon">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -260,7 +265,7 @@
       </button>
     </div>
     <ul class="feedback-list">
-      <li *ngFor="let feedback of invalidFilesFeedback" class="feedback-item">
+      <li *ngFor="let feedback of invalidFilesFeedback; trackBy: trackByErrorMessage" class="feedback-item">
         <span class="file-name">{{ feedback.fileName }}</span>
         <span class="format-help">{{ feedback.reason }}</span>
       </li>
@@ -298,7 +303,7 @@
 
     <div class="selected-files-grid-enhanced">
       <div
-        *ngFor="let fileData of selectedFilesWithQuality; let i = index"
+        *ngFor="let fileData of selectedFilesWithQuality; let i = index; trackBy: trackByFileIndex"
         class="selected-file-item-enhanced"
         [class.file-valid]="fileData.isValid"
         [class.file-invalid]="!fileData.isValid">

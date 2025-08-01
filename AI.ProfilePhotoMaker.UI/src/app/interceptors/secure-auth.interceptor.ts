@@ -1,7 +1,7 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, finalize, switchMap } from 'rxjs/operators';
-import { throwError, timer } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { throwError } from 'rxjs';
 import { SecureAuthService } from '../services/secure-auth.service';
 
 /**

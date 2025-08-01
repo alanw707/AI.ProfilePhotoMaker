@@ -18,6 +18,11 @@ import { DashboardCoordinatorService } from '../../services/dashboard-coordinato
 import { CreditService, UserCreditStatus } from '../../services/credit.service';
 import { Subscription } from 'rxjs';
 
+interface EnhancedImage {
+  url: string;
+  type?: string;
+}
+
 @Component({
   selector: 'app-photo-enhancement',
   standalone: true,
@@ -35,7 +40,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   isProcessing = false;
   processingProgress = 0;
   processingStatus = '';
-  enhancedImage: unknown = null;
+  enhancedImage: EnhancedImage | null = null;
   userCreditStatus: UserCreditStatus | null = null;
   errorMessage = '';
   isDragOver = false;

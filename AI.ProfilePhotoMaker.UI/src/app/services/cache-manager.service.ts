@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { CacheEntry, CacheStats, ICacheManagerService } from '../interfaces/service.interfaces';
+import { CacheEntry, ICacheManagerService } from '../interfaces/service.interfaces';
 
 @Injectable({
   providedIn: 'root',
@@ -124,7 +124,7 @@ export class CacheManagerService implements ICacheManagerService {
     let validEntries = 0;
     let expiredEntries = 0;
 
-    for (const [key, entry] of this.cache.entries()) {
+    for (const [, entry] of this.cache.entries()) {
       if (now < entry.expiry) {
         validEntries++;
       } else {
@@ -148,12 +148,10 @@ export class CacheManagerService implements ICacheManagerService {
    */
   private cleanupExpiredEntries(): void {
     const now = Date.now();
-    let cleanedCount = 0;
 
     for (const [key, entry] of this.cache.entries()) {
       if (now >= entry.expiry) {
         this.cache.delete(key);
-        cleanedCount++;
       }
     }
 

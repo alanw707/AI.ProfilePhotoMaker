@@ -25,17 +25,17 @@ export class FallbackOperationsService implements IFallbackOperationsService {
   private readonly FALLBACK_RESET_INTERVAL_MS = 300000; // 5 minutes
 
   constructor(
-    private http: HttpClient,
-    private authService: AuthService,
-    private config: ConfigService,
-    private fileUploadService: FileUploadService
+    private _http: HttpClient,
+    private _authService: AuthService,
+    private _config: ConfigService,
+    private _fileUploadService: FileUploadService
   ) {}
 
   /**
    * Check filesystem for missing generated images and sync to database
    */
   checkGeneratedImagesFromFilesystem(): Observable<any> {
-    const token = this.authService.getToken();
+    const token = this._authService.getToken();
     if (!token) {
       throw new Error('No authentication token available for fix endpoint');
     }
@@ -46,21 +46,21 @@ export class FallbackOperationsService implements IFallbackOperationsService {
     });
 
     return new Observable(observer => {
-      this.http
-        .post(this.config.getFullUrl('/test/fix-generated-images'), {}, { headers })
+      this._http
+        .post(this._config.getFullUrl('/test/fix-generated-images'), {}, { headers })
         .subscribe({
           next: (response: any) => {
             if (response.success && response.data?.addedCount > 0) {
               // Invalidate user images cache for fresh data
-              this.fileUploadService.invalidateUserImagesCache();
+              this._fileUploadService.invalidateUserImagesCache();
 
               // Get fresh data to ensure we have the correct total count
-              this.fileUploadService.getUserImages(true).subscribe({
-                next: freshData => {
+              this._fileUploadService.getUserImages(true).subscribe({
+                next: (freshData: any) => {
                   const userData = freshData.success ? freshData.data : null;
                   const actualGeneratedCount =
                     userData?.generatedImages ||
-                    userData?.images?.filter(img => img.isGenerated)?.length ||
+                    userData?.images?.filter((img: any) => img.isGenerated)?.length ||
                     0;
 
                   observer.next({
@@ -70,7 +70,7 @@ export class FallbackOperationsService implements IFallbackOperationsService {
                   });
                   observer.complete();
                 },
-                error: error => {
+                error: (error: any) => {
                   console.error('Failed to refresh generated photos count after fix:', error);
                   observer.error(error);
                 },
@@ -157,13 +157,13 @@ export class FallbackOperationsService implements IFallbackOperationsService {
    */
   async debugDataDiscrepancy(): Promise<DataDiscrepancyResult> {
     try {
-      const freshData = await this.fileUploadService.getUserImages(true).toPromise();
+      const freshData = await this._fileUploadService.getUserImages(true).toPromise();
       const userData = freshData?.success ? freshData.data : null;
 
       const result: DataDiscrepancyResult = {
         dashboardCount: 0, // This would be passed from dashboard state
         apiGeneratedField: userData?.generatedImages || 0,
-        filteredCount: userData?.images?.filter(img => img.isGenerated)?.length || 0,
+        filteredCount: userData?.images?.filter((img: any) => img.isGenerated)?.length || 0,
         totalImages: userData?.totalImages || 0,
         allImages: userData?.images || [],
       };

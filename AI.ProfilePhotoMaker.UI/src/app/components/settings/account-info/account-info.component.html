@@ -5,27 +5,27 @@
 <div class="section-content">
   <div class="info-grid">
     <div class="info-item">
-      <label>Email Address</label>
+      <span class="info-label">Email Address</span>
       <span>{{userEmail}}</span>
     </div>
     <div class="info-item" *ngIf="userProfile">
-      <label>Full Name</label>
+      <span class="info-label">Full Name</span>
       <span>{{getFullName()}}</span>
     </div>
     <div class="info-item" *ngIf="userProfile?.gender">
-      <label>Gender</label>
+      <span class="info-label">Gender</span>
       <span>{{userProfile?.gender}}</span>
     </div>
     <div class="info-item" *ngIf="userProfile?.ethnicity">
-      <label>Ethnicity</label>
+      <span class="info-label">Ethnicity</span>
       <span>{{userProfile?.ethnicity}}</span>
     </div>
     <div class="info-item" *ngIf="userProfile">
-      <label>Account Created</label>
+      <span class="info-label">Account Created</span>
       <span>{{formatDate(userProfile.createdAt)}}</span>
     </div>
     <div class="info-item" *ngIf="userProfile?.subscriptionTier">
-      <label>Subscription Tier</label>
+      <span class="info-label">Subscription Tier</span>
       <span class="tier-badge" [ngClass]="userProfile?.subscriptionTier?.toLowerCase()">
         {{userProfile?.subscriptionTier}}
       </span>

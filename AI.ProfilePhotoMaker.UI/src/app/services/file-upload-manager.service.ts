@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import { FaceDetectionService } from './face-detection.service';
-import { FaceValidationResult, QualityScore } from '../interfaces/service.interfaces';
+import { FaceValidationResult } from '../interfaces/service.interfaces';
 import { QualityCheckError, QualityCheckResult, SelectedFileWithQuality, UploadProgress } from '../models/dashboard.types';
 
 @Injectable({
@@ -108,7 +108,7 @@ export class FileUploadManagerService {
         warnings.push('Lighting could be improved for better results');
       }
 
-    } catch (error) {
+    } catch {
       warnings.push('Could not analyze image quality');
     }
 

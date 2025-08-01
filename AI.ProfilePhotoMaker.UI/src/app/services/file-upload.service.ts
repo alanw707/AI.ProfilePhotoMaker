@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpEventType } from '@angular/common/http';
-import { catchError, map, mergeMap, Observable, of, tap } from 'rxjs';
+import { catchError, map, Observable, of, tap } from 'rxjs';
 import { ConfigService } from './config.service';
 import { ImageUrlService } from './image-url.service';
 
@@ -71,7 +71,7 @@ export class FileUploadService {
   ): Observable<{ progress: number; response?: UploadResponse }> {
     const formData = new FormData();
 
-    files.forEach((file, index) => {
+    files.forEach((file) => {
       formData.append('images', file, file.name);
     });
 
@@ -114,15 +114,18 @@ export class FileUploadService {
       .pipe(
         map(event => {
           switch (event.type) {
-            case HttpEventType.UploadProgress:
+            case HttpEventType.UploadProgress: {
               const progress = event.total ? Math.round((100 * event.loaded) / event.total) : 0;
               return { progress };
-            case HttpEventType.Response:
+            }
+            case HttpEventType.Response: {
               // API returns wrapped response: { success: true, data: {...} }
-              const apiResponse = event.body as any;
-              if (apiResponse?.success && apiResponse?.data) {
+              const apiResponse = event.body as unknown;
+              if (apiResponse && typeof apiResponse === 'object' && 
+                  'success' in apiResponse && 'data' in apiResponse &&
+                  (apiResponse as any).success && (apiResponse as any).data) {
                 // Transform API response to match UploadResponse interface
-                const data = apiResponse.data;
+                const data = (apiResponse as any).data;
                 const transformedResponse: UploadResponse = {
                   profileId: data.ProfileId || data.profileId,
                   uploadedFiles: data.UploadedFiles || data.uploadedFiles || [],
@@ -137,6 +140,7 @@ export class FileUploadService {
                 console.error('Unexpected upload response structure:', apiResponse);
                 return { progress: 100, response: event.body as UploadResponse };
               }
+            }
             default:
               return { progress: 0 };
           }
@@ -363,10 +367,11 @@ export class FileUploadService {
       .pipe(
         map(event => {
           switch (event.type) {
-            case HttpEventType.UploadProgress:
+            case HttpEventType.UploadProgress: {
               const progress = event.total ? Math.round((100 * event.loaded) / event.total) : 0;
               return { progress };
-            case HttpEventType.Response:
+            }
+            case HttpEventType.Response: {
               // Extract the first uploaded file URL from the response
               const response = event.body;
               console.log('Upload API response:', response);
@@ -444,6 +449,7 @@ export class FileUploadService {
                 progress: 100,
                 response: { success: false, data: { url: '', fileName: '' } },
               };
+            }
             default:
               return { progress: 0 };
           }

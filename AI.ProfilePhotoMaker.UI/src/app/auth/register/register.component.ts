@@ -50,6 +50,35 @@ export class RegisterComponent {
     return this.registerForm.controls;
   }
 
+  // Template helper methods to reduce cyclomatic complexity
+  shouldShowEmailError(): boolean {
+    return this.f['email'].invalid && this.f['email'].touched;
+  }
+
+  shouldShowPasswordError(): boolean {
+    return this.f['password'].invalid && this.f['password'].touched;
+  }
+
+  shouldShowConfirmPasswordError(): boolean {
+    return this.f['confirmPassword'].invalid && this.f['confirmPassword'].touched;
+  }
+
+  shouldShowFirstNameError(): boolean {
+    return this.f['firstName'].invalid && this.f['firstName'].touched;
+  }
+
+  shouldShowLastNameError(): boolean {
+    return this.f['lastName'].invalid && this.f['lastName'].touched;
+  }
+
+  shouldShowGenderError(): boolean {
+    return this.f['gender'].invalid && this.f['gender'].touched;
+  }
+
+  shouldShowEthnicityError(): boolean {
+    return this.f['ethnicity'].invalid && this.f['ethnicity'].touched;
+  }
+
   passwordMatchValidator(control: AbstractControl): Record<string, boolean> | null {
     const password = control.get('password');
     const confirmPassword = control.get('confirmPassword');

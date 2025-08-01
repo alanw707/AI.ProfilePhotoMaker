@@ -8,7 +8,7 @@ import {
   PhotoGalleryComponent,
 } from '../../components/photo-gallery/photo-gallery.component';
 import { FileUploadService, ProcessedImage } from '../../services/file-upload.service';
-import JSZip from 'jszip';
+import jsZip from 'jszip';
 
 @Component({
   selector: 'app-gallery',
@@ -24,24 +24,24 @@ export class GalleryComponent implements OnInit {
   isLoading = false;
   isDownloading = false;
   downloadProgress = 0;
-  private hasRunInitialRepair = false;
+  private _hasRunInitialRepair = false;
 
   constructor(
-    private authService: AuthService,
-    private router: Router,
-    private route: ActivatedRoute,
-    private fileUploadService: FileUploadService,
-    private cdr: ChangeDetectorRef
+    private _authService: AuthService,
+    private _router: Router,
+    private _route: ActivatedRoute,
+    private _fileUploadService: FileUploadService,
+    private _cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
-    if (!this.authService.isAuthenticated()) {
-      this.router.navigate(['/auth/login']);
+    if (!this._authService.isAuthenticated()) {
+      this._router.navigate(['/auth/login']);
       return;
     }
 
     // Check for refresh parameter
-    this.route.queryParams.subscribe(params => {
+    this._route.queryParams.subscribe(params => {
       if (params['refresh']) {
         console.log('🔄 Gallery refresh requested via query parameter');
         this.loadImages(true);
@@ -61,20 +61,20 @@ export class GalleryComponent implements OnInit {
     this.isLoading = true;
     try {
       // Run image database repair on first load only to sync filesystem with database
-      if (!this.hasRunInitialRepair && !forceRefresh) {
+      if (!this._hasRunInitialRepair && !forceRefresh) {
         console.log('🔧 Running initial image database repair...');
         try {
-          const repairResponse = await this.fileUploadService.repairImageDatabase().toPromise();
+          const repairResponse = await this._fileUploadService.repairImageDatabase().toPromise();
           if (repairResponse?.success) {
             console.log('✅ Image repair completed:', repairResponse.message);
           }
         } catch (repairError) {
           console.warn('⚠️ Image repair failed, continuing with normal load:', repairError);
         }
-        this.hasRunInitialRepair = true;
+        this._hasRunInitialRepair = true;
       }
 
-      const response = await this.fileUploadService.getUserImages(forceRefresh).toPromise();
+      const response = await this._fileUploadService.getUserImages(forceRefresh).toPromise();
       console.log('📡 API Response received:', {
         success: response?.success,
         hasData: !!response?.data,
@@ -145,13 +145,13 @@ export class GalleryComponent implements OnInit {
         }
 
         // Force change detection after processing images
-        this.cdr.detectChanges();
+        this._cdr.detectChanges();
       }
     } catch (error) {
       console.error('❌ Failed to load images:', error);
     } finally {
       this.isLoading = false;
-      this.cdr.detectChanges(); // Force Angular to update UI
+      this._cdr.detectChanges(); // Force Angular to update UI
       console.log('✅ Gallery loadImages COMPLETE:', {
         isLoading: this.isLoading,
         galleryImagesCount: this.galleryImages.length,
@@ -178,7 +178,7 @@ export class GalleryComponent implements OnInit {
       });
 
       return response.ok;
-    } catch (error) {
+    } catch {
       // Try with img element to test basic accessibility
       return new Promise(resolve => {
         const img = new Image();
@@ -337,7 +337,7 @@ export class GalleryComponent implements OnInit {
       alert(
         `Download initiated via fallback method. If the image opens in a new tab instead of downloading, please right-click and select "Save image as..." to save as ${filename}`
       );
-    } catch (fallbackError) {
+    } catch {
       alert(
         'Download failed completely. Please right-click the image and select "Save image as..." or check if the image URL is accessible.'
       );
@@ -360,7 +360,7 @@ export class GalleryComponent implements OnInit {
     if (confirm(`Are you sure you want to delete "${image.title}"?`)) {
       console.log('🗑️ Deleting image:', { id: image.id, title: image.title });
 
-      this.fileUploadService.deleteImage(image.id).subscribe({
+      this._fileUploadService.deleteImage(image.id).subscribe({
         next: response => {
           console.log('🗑️ Delete response:', response);
           if (response.success) {
@@ -383,7 +383,7 @@ export class GalleryComponent implements OnInit {
             }
 
             // Force change detection to update UI
-            this.cdr.detectChanges();
+            this._cdr.detectChanges();
 
             // Log final state for debugging
             console.log('🔄 Gallery state after delete:', {
@@ -451,7 +451,7 @@ export class GalleryComponent implements OnInit {
     this.downloadProgress = 0;
 
     try {
-      const zip = new JSZip();
+      const zip = new jsZip();
       const imageFolder = zip.folder('profile-photos');
 
       for (let i = 0; i < images.length; i++) {
@@ -511,7 +511,7 @@ export class GalleryComponent implements OnInit {
           } else {
             zip.file(filename, blob);
           }
-        } catch (error) {
+        } catch {
           // Continue with other images instead of failing completely
         }
       }
@@ -543,12 +543,12 @@ export class GalleryComponent implements OnInit {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(zipUrl);
       }, 100);
-    } catch (error) {
+    } catch {
       alert('Failed to create zip file. Please try downloading images individually.');
     } finally {
       this.isDownloading = false;
       this.downloadProgress = 0;
-      this.cdr.detectChanges(); // Force UI update to dismiss modal
+      this._cdr.detectChanges(); // Force UI update to dismiss modal
 
       // Clear selections after download completes (success or failure)
       if (this.photoGallery) {

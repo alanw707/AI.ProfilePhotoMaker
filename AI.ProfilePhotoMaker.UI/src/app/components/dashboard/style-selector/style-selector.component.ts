@@ -95,7 +95,7 @@ export class StyleSelectorComponent {
 
   navigateToGallery() {
     // Navigate to gallery with refresh parameter to force reload
-    this.router.navigate(['/gallery'], {
+    this._router.navigate(['/gallery'], {
       queryParams: { refresh: Date.now() },
     });
   }

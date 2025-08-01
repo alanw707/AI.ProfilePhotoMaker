@@ -5,7 +5,6 @@ import { of, throwError } from 'rxjs';
 import { FileUploadSectionComponent } from './file-upload-section.component';
 import { FileUploadService } from '../../../services/file-upload.service';
 import { FaceDetectionService } from '../../../services/face-detection.service';
-import { FileUploadManagerService } from '../../../services/file-upload-manager.service';
 import { NotificationService } from '../../../services/notification.service';
 import {
   QualityCheckError,
@@ -17,7 +16,6 @@ describe('FileUploadSectionComponent', () => {
   let fixture: ComponentFixture<FileUploadSectionComponent>;
   let mockFileUploadService: jasmine.SpyObj<FileUploadService>;
   let mockFaceDetectionService: jasmine.SpyObj<FaceDetectionService>;
-  let mockFileUploadManagerService: jasmine.SpyObj<FileUploadManagerService>;
   let mockNotificationService: jasmine.SpyObj<NotificationService>;
   let mockNgZone: jasmine.SpyObj<NgZone>;
 
@@ -54,9 +52,6 @@ describe('FileUploadSectionComponent', () => {
     mockFaceDetectionService = TestBed.inject(
       FaceDetectionService
     ) as jasmine.SpyObj<FaceDetectionService>;
-    mockFileUploadManagerService = TestBed.inject(
-      FileUploadManagerService
-    ) as jasmine.SpyObj<FileUploadManagerService>;
     mockNotificationService = TestBed.inject(
       NotificationService
     ) as jasmine.SpyObj<NotificationService>;

@@ -1,10 +1,17 @@
 import { Injectable } from '@angular/core';
 
+export interface ImageThumbnail {
+  id?: string;
+  name?: string;
+  url?: string;
+  file?: File;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class WorkflowStepService {
-  constructor() {}
+  // Service doesn't need constructor - Angular will provide singleton instance
 
   /**
    * Determines the status of a workflow step based on current progress
@@ -18,7 +25,7 @@ export class WorkflowStepService {
   getStepStatus(
     step: number,
     uploadedImages: number,
-    uploadedImageThumbnails: any[],
+    uploadedImageThumbnails: ImageThumbnail[],
     generatedPhotosCount: number,
     currentStep: number
   ): string {
@@ -26,35 +33,39 @@ export class WorkflowStepService {
 
     switch (step) {
       case 1:
-        if (hasUploadedImages) {
-          return 'completed';
-        }
-        if (currentStep === 1) {
-          return 'active';
-        }
-        return 'pending';
+        return this._getStep1Status(hasUploadedImages, currentStep);
       case 2:
-        if (hasUploadedImages && generatedPhotosCount === 0) {
-          return 'active';
-        }
-        if (generatedPhotosCount > 0) {
-          return 'completed';
-        }
-        return 'pending';
+        return this._getStep2Status(hasUploadedImages, generatedPhotosCount);
       case 3:
-        if (generatedPhotosCount > 0) {
-          return 'completed';
-        }
-        return 'pending';
+        return this._getStep3Status(generatedPhotosCount);
       default:
-        if (step < currentStep) {
-          return 'completed';
-        }
-        if (step === currentStep) {
-          return 'active';
-        }
-        return 'pending';
+        return this._getDefaultStepStatus(step, currentStep);
     }
+  }
+
+  private _getStep1Status(hasUploadedImages: boolean, currentStep: number): string {
+    if (hasUploadedImages) {
+      return 'completed';
+    }
+    return currentStep === 1 ? 'active' : 'pending';
+  }
+
+  private _getStep2Status(hasUploadedImages: boolean, generatedPhotosCount: number): string {
+    if (hasUploadedImages && generatedPhotosCount === 0) {
+      return 'active';
+    }
+    return generatedPhotosCount > 0 ? 'completed' : 'pending';
+  }
+
+  private _getStep3Status(generatedPhotosCount: number): string {
+    return generatedPhotosCount > 0 ? 'completed' : 'pending';
+  }
+
+  private _getDefaultStepStatus(step: number, currentStep: number): string {
+    if (step < currentStep) {
+      return 'completed';
+    }
+    return step === currentStep ? 'active' : 'pending';
   }
 
   /**
@@ -69,7 +80,7 @@ export class WorkflowStepService {
   getStepStatusText(
     step: number,
     uploadedImages: number,
-    uploadedImageThumbnails: any[],
+    uploadedImageThumbnails: ImageThumbnail[],
     generatedPhotosCount: number,
     currentStep: number
   ): string {
@@ -100,7 +111,7 @@ export class WorkflowStepService {
    */
   updateCurrentStep(
     uploadedImages: number,
-    uploadedImageThumbnails: any[],
+    uploadedImageThumbnails: ImageThumbnail[],
     generatedPhotosCount: number,
     currentStep: number
   ): number {

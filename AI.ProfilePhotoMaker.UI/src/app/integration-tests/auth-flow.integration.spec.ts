@@ -5,16 +5,12 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { Component } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { of, throwError } from 'rxjs';
 import { RouterTestingModule } from '@angular/router/testing';
 
 import { AuthService } from '../services/auth.service';
 import { ConfigService } from '../services/config.service';
 import { authGuard } from '../guards/auth.guard';
 import { guestGuard } from '../guards/guest.guard';
-import { LoginComponent } from '../auth/login/login.component';
-import { RegisterComponent } from '../auth/register/register.component';
-import { DashboardComponent } from '../dashboard/dashboard.component';
 
 // Mock components for routing tests
 @Component({ template: 'Mock Dashboard' })

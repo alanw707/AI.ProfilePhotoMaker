@@ -1,4 +1,4 @@
-import { Injectable, Injector, NgZone } from '@angular/core';
+import { Injectable, inject, Injector, NgZone } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { AuthService } from './auth.service';
 import { NotificationService } from './notification.service';
@@ -8,17 +8,71 @@ import { ConfigService } from './config.service';
 import { StyleOption } from '../components/dashboard/style-selector/style-selector.component';
 
 // Lazy-loaded service types
+interface TrainingZipResponse {
+  success: boolean;
+  zipCreated: boolean;
+  zipPath: string;
+  message: string;
+  error?: any;
+}
+
+interface TrainingStatusResponse {
+  success: boolean;
+  data: {
+    id: string;
+    status: string;
+    created_at: string;
+    completed_at?: string;
+    version?: string;
+    error?: string;
+    logs?: string;
+  };
+  error?: any;
+}
+
+interface BatchGenerationResponse {
+  success: boolean;
+  data: {
+    predictions: { style: string; result: any }[];
+    creditsRemaining: number;
+    creditsCost: number;
+    successfulStyles: number;
+    failedStyles: number;
+    failures: { style: string; error: string }[];
+  };
+  error?: any;
+}
+
+interface PredictionStatusResponse {
+  success: boolean;
+  data: {
+    id: string;
+    status: string;
+    created_at: string;
+    completed_at?: string;
+    output?: string[];
+    error?: string;
+    logs?: string;
+    dataUrl?: string;
+  };
+  error?: any;
+}
+
 interface FileUploadService {
-  createTrainingZip(): Observable<any>;
-  getLatestTrainingZip(): Observable<any>;
+  createTrainingZip(): Observable<TrainingZipResponse>;
+  getLatestTrainingZip(): Observable<{
+    success: boolean;
+    data: { fileName: string; publicUrl: string; createdAt: string; sizeBytes: number };
+    error?: any;
+  }>;
   invalidateUserImagesCache(): void;
 }
 
 interface ReplicateService {
-  trainModel(request: TrainModelRequest): Observable<any>;
-  getTrainingStatus(trainingId: string): Observable<any>;
-  generateBatchImages(request: GenerateBatchImagesRequest): Observable<any>;
-  getPredictionStatus(predictionId: string): Observable<any>;
+  trainModel(request: TrainModelRequest): Observable<TrainingStatusResponse>;
+  getTrainingStatus(trainingId: string): Observable<TrainingStatusResponse>;
+  generateBatchImages(request: GenerateBatchImagesRequest): Observable<BatchGenerationResponse>;
+  getPredictionStatus(predictionId: string): Observable<PredictionStatusResponse>;
 }
 
 interface TrainModelRequest {
@@ -74,11 +128,20 @@ export interface CreditCalculation {
   remainingCredits: number;
 }
 
+interface WorkflowOrchestrationDependencies {
+  authService: AuthService;
+  notificationService: NotificationService;
+  stateService: DashboardStateService;
+  subscriptionState: SubscriptionStateService;
+  config: ConfigService;
+}
+
 @Injectable({
   providedIn: 'root',
 })
+
 export class WorkflowOrchestrationService {
-  private readonly initialProgress: WorkflowProgress = {
+  private readonly _initialProgress: WorkflowProgress = {
     isTraining: false,
     isGenerating: false,
     progressPercentage: 0,
@@ -92,55 +155,68 @@ export class WorkflowOrchestrationService {
     activePredictionIds: [],
   };
 
-  private readonly _progress = new BehaviorSubject<WorkflowProgress>(this.initialProgress);
+  private readonly _progress = new BehaviorSubject<WorkflowProgress>(this._initialProgress);
   readonly progress$ = this._progress.asObservable();
 
-  private pollingInterval?: any;
-  private photoCompletionPollingInterval?: any;
-  private timeBasedProgressInterval?: any;
+  private _pollingInterval?: NodeJS.Timeout;
+  private _photoCompletionPollingInterval?: NodeJS.Timeout;
+  private _timeBasedProgressInterval?: NodeJS.Timeout;
 
   // Lazy-loaded services
-  private fileUploadService: FileUploadService | null = null;
-  private replicateService: ReplicateService | null = null;
+  private _fileUploadService: FileUploadService | null = null;
+  private _replicateService: ReplicateService | null = null;
+
+  // Core dependencies
+  private readonly _deps: WorkflowOrchestrationDependencies;
+
+  // Use inject pattern to reduce constructor parameters
+  private readonly _ngZone = inject(NgZone);
+  private readonly _injector = inject(Injector);
 
   constructor(
-    private authService: AuthService,
-    private notificationService: NotificationService,
-    private stateService: DashboardStateService,
-    private subscriptionState: SubscriptionStateService,
-    private config: ConfigService,
-    private ngZone: NgZone,
-    private injector: Injector
-  ) {}
+    authService: AuthService,
+    notificationService: NotificationService,
+    stateService: DashboardStateService,
+    subscriptionState: SubscriptionStateService,
+    config: ConfigService
+  ) {
+    this._deps = {
+      authService,
+      notificationService,
+      stateService,
+      subscriptionState,
+      config,
+    };
+  }
 
   getProgress(): WorkflowProgress {
     return this._progress.getValue();
   }
 
-  private setProgress(update: Partial<WorkflowProgress>) {
+  private _setProgress(update: Partial<WorkflowProgress>): void {
     this._progress.next({
       ...this.getProgress(),
       ...update,
     });
   }
 
-  resetProgress() {
-    this._progress.next(this.initialProgress);
-    this.clearAllIntervals();
+  resetProgress(): void {
+    this._progress.next(this._initialProgress);
+    this._clearAllIntervals();
   }
 
-  private clearAllIntervals() {
-    if (this.pollingInterval) {
-      clearInterval(this.pollingInterval);
-      this.pollingInterval = undefined;
+  private _clearAllIntervals(): void {
+    if (this._pollingInterval) {
+      clearInterval(this._pollingInterval);
+      this._pollingInterval = undefined;
     }
-    if (this.photoCompletionPollingInterval) {
-      clearInterval(this.photoCompletionPollingInterval);
-      this.photoCompletionPollingInterval = undefined;
+    if (this._photoCompletionPollingInterval) {
+      clearInterval(this._photoCompletionPollingInterval);
+      this._photoCompletionPollingInterval = undefined;
     }
-    if (this.timeBasedProgressInterval) {
-      clearInterval(this.timeBasedProgressInterval);
-      this.timeBasedProgressInterval = undefined;
+    if (this._timeBasedProgressInterval) {
+      clearInterval(this._timeBasedProgressInterval);
+      this._timeBasedProgressInterval = undefined;
     }
   }
 
@@ -150,11 +226,11 @@ export class WorkflowOrchestrationService {
     imagesPerStyle: number,
     modelStatus: string
   ): CreditCalculation {
-    const trainingCredits = this.calculateTrainingCredits(modelStatus);
-    const generationCredits = this.calculateGenerationCredits(selectedStyles, imagesPerStyle);
+    const trainingCredits = this._calculateTrainingCredits(modelStatus);
+    const generationCredits = this._calculateGenerationCredits(selectedStyles, imagesPerStyle);
     const totalCredits = trainingCredits + generationCredits;
 
-    const availableCredits = this.getTotalAvailableCredits();
+    const availableCredits = this._getTotalAvailableCredits();
     const hasEnoughCredits = availableCredits >= totalCredits;
     const remainingCredits = availableCredits - totalCredits;
 
@@ -167,14 +243,14 @@ export class WorkflowOrchestrationService {
     };
   }
 
-  private calculateTrainingCredits(modelStatus: string): number {
+  private _calculateTrainingCredits(modelStatus: string): number {
     if (modelStatus === 'Model Ready') {
       return 0; // Model already trained, no additional cost
     }
     return 15; // Training required - 15 credits
   }
 
-  private calculateGenerationCredits(
+  private _calculateGenerationCredits(
     selectedStyles: StyleOption[],
     imagesPerStyle: number
   ): number {
@@ -184,15 +260,15 @@ export class WorkflowOrchestrationService {
     return totalImages * generationCostPerImage;
   }
 
-  private getTotalAvailableCredits(): number {
+  private _getTotalAvailableCredits(): number {
     // Primary: Check subscription service first (same source as UI)
-    const subscriptionState = this.subscriptionState.getState();
+    const subscriptionState = this._deps.subscriptionState.getState();
     if (subscriptionState.totalCredits !== undefined && subscriptionState.totalCredits > 0) {
       return subscriptionState.totalCredits;
     }
 
     // Secondary: Dashboard state service
-    const state = this.stateService.getState();
+    const state = this._deps.stateService.getState();
     if (state.totalCredits !== undefined && state.totalCredits > 0) {
       return state.totalCredits;
     }
@@ -204,6 +280,10 @@ export class WorkflowOrchestrationService {
     }
 
     // Last resort: Manual calculation from dashboard state
+    return this._calculateCreditsFromState(state);
+  }
+
+  private _calculateCreditsFromState(state: any): number {
     const userCreditStatus = state.userCreditStatus;
     const creditsInfo = state.creditsInfo;
 
@@ -219,18 +299,18 @@ export class WorkflowOrchestrationService {
     imagesPerStyle: number
   ): Promise<void> {
     if (selectedStyles.length === 0) {
-      this.notificationService.error('Training Error', 'Please select at least one style');
+      this._deps.notificationService.error('Training Error', 'Please select at least one style');
       return;
     }
 
     // Ensure we have the latest credit data before validation
-    await this.stateService.loadInitialDashboardData();
+    await this._deps.stateService.loadInitialDashboardData();
 
     // Wait a moment for state to fully propagate
     await new Promise(resolve => setTimeout(resolve, 500));
 
     // Get current state after loading
-    const currentState = this.stateService.getState();
+    const currentState = this._deps.stateService.getState();
 
     // Check if user has enough credits
     const creditCalc = this.calculateCredits(
@@ -240,15 +320,15 @@ export class WorkflowOrchestrationService {
     );
 
     if (!creditCalc.hasEnoughCredits) {
-      const availableCredits = this.getTotalAvailableCredits();
+      const availableCredits = this._getTotalAvailableCredits();
 
       if (availableCredits === 0) {
-        this.notificationService.error(
+        this._deps.notificationService.error(
           'Credits Not Loaded',
           `Unable to load current credit balance. Please refresh the page and try again.`
         );
       } else {
-        this.notificationService.error(
+        this._deps.notificationService.error(
           'Insufficient Credits',
           `You need ${creditCalc.totalCredits} credits but only have ${availableCredits}. Please purchase more credits.`
         );
@@ -266,30 +346,30 @@ export class WorkflowOrchestrationService {
         const modelId = latestTrainedModel?.replicateModelId || latestTrainedModel?.modelId;
 
         if (modelVersion) {
-          this.notificationService.info(
+          this._deps.notificationService.info(
             'Using Existing Model',
             'Using your previously trained model for generation'
           );
-          await this.generateImagesWithStyles(selectedStyles, imagesPerStyle, modelVersion);
+          await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, modelVersion);
         } else if (modelId) {
-          this.notificationService.info(
+          this._deps.notificationService.info(
             'Using Existing Model',
             'Using your previously trained model for generation'
           );
-          await this.generateImagesWithStyles(selectedStyles, imagesPerStyle, modelId);
+          await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, modelId);
         } else {
-          this.notificationService.error(
+          this._deps.notificationService.error(
             'Model Error',
             'Model data not found. Please refresh and try again.'
           );
           return;
         }
       } else {
-        await this.startModelTraining(selectedStyles, imagesPerStyle);
+        await this._startModelTraining(selectedStyles, imagesPerStyle);
       }
     } catch (error) {
       console.error('Error in training workflow:', error);
-      this.notificationService.error(
+      this._deps.notificationService.error(
         'Training Error',
         'Failed to start training. Please try again.'
       );
@@ -297,137 +377,150 @@ export class WorkflowOrchestrationService {
   }
 
   // Lazy loading methods
-  private async loadFileUploadService(): Promise<FileUploadService> {
-    if (!this.fileUploadService) {
-      const { FileUploadService } = await import('./file-upload.service');
-      this.fileUploadService = this.injector.get(FileUploadService);
+  private async _loadFileUploadService(): Promise<FileUploadService> {
+    if (!this._fileUploadService) {
+      const { FileUploadService: fileUploadServiceClass } = await import('./file-upload.service');
+      this._fileUploadService = this._injector.get(fileUploadServiceClass);
     }
-    return this.fileUploadService;
+    return this._fileUploadService;
   }
 
-  private async loadReplicateService(): Promise<ReplicateService> {
-    if (!this.replicateService) {
-      const { ReplicateService } = await import('./replicate.service');
-      this.replicateService = this.injector.get(ReplicateService);
+  private async _loadReplicateService(): Promise<ReplicateService> {
+    if (!this._replicateService) {
+      const { ReplicateService: replicateServiceClass } = await import('./replicate.service');
+      this._replicateService = this._injector.get(replicateServiceClass);
     }
-    return this.replicateService;
+    return this._replicateService;
   }
 
   // Model training workflow
-  private async startModelTraining(
+  private async _startModelTraining(
     selectedStyles: StyleOption[],
     imagesPerStyle: number
   ): Promise<void> {
     try {
-      this.setProgress({
-        isTraining: true,
-        progressPercentage: 0,
-        progressMessage: 'Preparing your images for training...',
-        estimatedCompletion: '15-20 minutes',
-      });
-
-      this.notificationService.info(
-        'Starting Training',
-        'Creating training ZIP and starting model training...'
-      );
-
-      // Step 1: Create training ZIP from uploaded images
-      this.setProgress({
-        progressPercentage: 10,
-        progressMessage: 'Creating training package from your images...',
-      });
-
-      const fileUploadService = await this.loadFileUploadService();
-      const zipResult = await fileUploadService.createTrainingZip().toPromise();
-
-      if (!zipResult?.success || !zipResult.zipCreated) {
-        throw new Error(zipResult?.error?.message || 'Failed to create training ZIP');
-      }
-
-      // Step 2: Get the public URL for the latest training ZIP
-      this.setProgress({
-        progressPercentage: 20,
-        progressMessage: 'Uploading training data...',
-      });
-
-      const latestZipResult = await fileUploadService.getLatestTrainingZip().toPromise();
-
-      if (!latestZipResult?.success || !latestZipResult.data?.publicUrl) {
-        throw new Error('Failed to get training ZIP URL');
-      }
-
-      // Step 3: Start model training with Replicate
-      const userId = this.authService.getCurrentUserId();
-      if (!userId) {
-        console.error('Failed to get user ID. Token exists:', !!this.authService.getToken());
-        console.error('Authentication status:', this.authService.isAuthenticated());
-        throw new Error('User not authenticated - unable to extract user ID from token');
-      }
-      console.log('Starting training for user ID:', userId);
-
-      this.setProgress({
-        progressPercentage: 30,
-        progressMessage: 'Initializing AI model training...',
-      });
-
-      const trainRequest: TrainModelRequest = {
-        userId,
-        imageZipUrl: latestZipResult.data.publicUrl,
-      };
-
-      const replicateService = await this.loadReplicateService();
-      const trainResult = await replicateService.trainModel(trainRequest).toPromise();
-
-      if (!trainResult?.success) {
-        throw new Error(trainResult?.error?.message || 'Failed to start model training');
-      }
-
-      this.setProgress({
-        trainingId: trainResult.data.id,
-        progressPercentage: 40,
-        progressMessage: 'AI model is learning your features...',
-      });
-
-      this.notificationService.success(
-        'Training Started',
-        'Model training has begun. This will take 15-20 minutes.'
-      );
-
-      // Calculate estimated completion time
-      const estimatedMinutes = 18;
-      const completionTime = new Date(Date.now() + estimatedMinutes * 60000);
-      this.setProgress({
-        estimatedCompletion: completionTime.toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-      });
-
-      // Start polling for training completion
-      this.startTrainingStatusPolling(selectedStyles, imagesPerStyle);
-    } catch (error: any) {
+      this._initializeTrainingProgress();
+      await this._createTrainingZip();
+      const zipUrl = await this._getTrainingZipUrl();
+      const trainingId = await this._startReplicateTraining(zipUrl);
+      this._finalizeTrainingSetup(trainingId);
+      this._startTrainingStatusPolling(selectedStyles, imagesPerStyle);
+    } catch (error: unknown) {
       console.error('Training startup error:', error);
-      this.setProgress({ isTraining: false });
-      throw new Error(error.message || 'Failed to start training');
+      this._setProgress({ isTraining: false });
+      throw new Error(
+        error instanceof Error ? error.message : 'Failed to start training'
+      );
     }
   }
 
+  private _initializeTrainingProgress(): void {
+    this._setProgress({
+      isTraining: true,
+      progressPercentage: 0,
+      progressMessage: 'Preparing your images for training...',
+      estimatedCompletion: '15-20 minutes',
+    });
+
+    this._deps.notificationService.info(
+      'Starting Training',
+      'Creating training ZIP and starting model training...'
+    );
+  }
+
+  private async _createTrainingZip(): Promise<void> {
+    this._setProgress({
+      progressPercentage: 10,
+      progressMessage: 'Creating training package from your images...',
+    });
+
+    const fileUploadService = await this._loadFileUploadService();
+    const zipResult = await fileUploadService.createTrainingZip().toPromise();
+
+    if (!zipResult?.success || !zipResult.zipCreated) {
+      throw new Error(zipResult?.error?.message || 'Failed to create training ZIP');
+    }
+  }
+
+  private async _getTrainingZipUrl(): Promise<string> {
+    this._setProgress({
+      progressPercentage: 20,
+      progressMessage: 'Uploading training data...',
+    });
+
+    const fileUploadService = await this._loadFileUploadService();
+    const latestZipResult = await fileUploadService.getLatestTrainingZip().toPromise();
+
+    if (!latestZipResult?.success || !latestZipResult.data?.publicUrl) {
+      throw new Error('Failed to get training ZIP URL');
+    }
+
+    return latestZipResult.data.publicUrl;
+  }
+
+  private async _startReplicateTraining(zipUrl: string): Promise<string> {
+    const userId = this._deps.authService.getCurrentUserId();
+    if (!userId) {
+      console.warn('Failed to get user ID. Token exists:', !!this._deps.authService.getToken());
+      console.warn('Authentication status:', this._deps.authService.isAuthenticated());
+      throw new Error('User not authenticated - unable to extract user ID from token');
+    }
+    console.warn('Starting training for user ID:', userId);
+
+    this._setProgress({
+      progressPercentage: 30,
+      progressMessage: 'Initializing AI model training...',
+    });
+
+    const trainRequest: TrainModelRequest = { userId, imageZipUrl: zipUrl };
+    const replicateService = await this._loadReplicateService();
+    const trainResult = await replicateService.trainModel(trainRequest).toPromise();
+
+    if (!trainResult?.success) {
+      throw new Error(trainResult?.error?.message || 'Failed to start model training');
+    }
+
+    return trainResult.data.id;
+  }
+
+  private _finalizeTrainingSetup(trainingId: string): void {
+    this._setProgress({
+      trainingId,
+      progressPercentage: 40,
+      progressMessage: 'AI model is learning your features...',
+    });
+
+    this._deps.notificationService.success(
+      'Training Started',
+      'Model training has begun. This will take 15-20 minutes.'
+    );
+
+    const estimatedMinutes = 18;
+    const completionTime = new Date(Date.now() + estimatedMinutes * 60000);
+    this._setProgress({
+      estimatedCompletion: completionTime.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    });
+  }
+
   // Training status polling
-  private startTrainingStatusPolling(selectedStyles: StyleOption[], imagesPerStyle: number): void {
+  private _startTrainingStatusPolling(selectedStyles: StyleOption[], imagesPerStyle: number): void {
     let progressIncrement = 0;
     const maxTrainingProgress = 90; // Training goes up to 90%, generation takes the last 10%
 
-    this.pollingInterval = this.ngZone.runOutsideAngular(() =>
+    this._pollingInterval = this._ngZone.runOutsideAngular(() =>
       setInterval(async () => {
-        this.ngZone.run(async () => {
+        this._ngZone.run(async () => {
           try {
             const currentProgress = this.getProgress();
             if (!currentProgress.trainingId) {
-              clearInterval(this.pollingInterval);
+              clearInterval(this._pollingInterval);
               return;
             }
 
-            const replicateService = await this.loadReplicateService();
+            const replicateService = await this._loadReplicateService();
             const statusResult = await replicateService
               .getTrainingStatus(currentProgress.trainingId)
               .toPromise();
@@ -451,21 +544,21 @@ export class WorkflowOrchestrationService {
                 message = 'Finalizing your custom AI model...';
               }
 
-              this.setProgress({
+              this._setProgress({
                 progressPercentage: newProgress,
                 progressMessage: message,
               });
             }
 
             if (status === 'succeeded') {
-              clearInterval(this.pollingInterval);
-              this.setProgress({
+              clearInterval(this._pollingInterval);
+              this._setProgress({
                 progressPercentage: maxTrainingProgress,
                 progressMessage: 'Model training complete! Starting image generation...',
                 isTraining: false,
               });
 
-              this.notificationService.success(
+              this._deps.notificationService.success(
                 'Training Complete',
                 'Model training finished! Starting image generation...'
               );
@@ -473,19 +566,19 @@ export class WorkflowOrchestrationService {
               // Force reload dashboard data to get updated model status
               // Wait a bit for the webhook to update the database
               await new Promise(resolve =>
-                this.ngZone.runOutsideAngular(() => setTimeout(resolve, 3000))
+                this._ngZone.runOutsideAngular(() => setTimeout(resolve, 3000))
               );
-              await this.stateService.loadInitialDashboardData();
+              await this._deps.stateService.loadInitialDashboardData();
 
               // Wait for state to update
               await new Promise(resolve =>
-                this.ngZone.runOutsideAngular(() => setTimeout(resolve, 500))
+                this._ngZone.runOutsideAngular(() => setTimeout(resolve, 500))
               );
 
               // Start generation with the new model
-              const userProfile = this.stateService.getState().userProfile;
+              const userProfile = this._deps.stateService.getState().userProfile;
               if (userProfile?.trainedModelVersionId) {
-                await this.generateImagesWithStyles(
+                await this._generateImagesWithStyles(
                   selectedStyles,
                   imagesPerStyle,
                   userProfile.trainedModelVersionId
@@ -494,22 +587,22 @@ export class WorkflowOrchestrationService {
                 // If model version not found, try to extract from training result
                 const versionId = statusResult.data.version;
                 if (versionId) {
-                  await this.generateImagesWithStyles(selectedStyles, imagesPerStyle, versionId);
+                  await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, versionId);
                 } else {
-                  this.notificationService.error(
+                  this._deps.notificationService.error(
                     'Generation Error',
                     'Could not find trained model version. Please refresh and try again.'
                   );
                 }
               }
             } else if (status === 'failed') {
-              clearInterval(this.pollingInterval);
-              this.setProgress({
+              clearInterval(this._pollingInterval);
+              this._setProgress({
                 isTraining: false,
                 progressPercentage: 0,
                 progressMessage: '',
               });
-              this.notificationService.error(
+              this._deps.notificationService.error(
                 'Training Failed',
                 'Model training failed. Please try again.'
               );
@@ -523,21 +616,21 @@ export class WorkflowOrchestrationService {
   }
 
   // Image generation workflow
-  private async generateImagesWithStyles(
+  private async _generateImagesWithStyles(
     selectedStyles: StyleOption[],
     imagesPerStyle: number,
     modelVersion: string
   ): Promise<void> {
     try {
-      const userId = this.authService.getCurrentUserId();
+      const userId = this._deps.authService.getCurrentUserId();
       if (!userId) {
         throw new Error('User not authenticated - unable to extract user ID from token');
       }
 
       // Clear previous generation state and caches
-      this.clearAllIntervals();
+      this._clearAllIntervals();
 
-      this.setProgress({
+      this._setProgress({
         isGenerating: true,
         lastGenerationCount: 0,
         showLastGenerationMessage: false,
@@ -546,10 +639,10 @@ export class WorkflowOrchestrationService {
       });
 
       // Invalidate image cache to ensure fresh data
-      const fileUploadService = await this.loadFileUploadService();
+      const fileUploadService = await this._loadFileUploadService();
       fileUploadService.invalidateUserImagesCache();
 
-      this.notificationService.info(
+      this._deps.notificationService.info(
         'Generating Images',
         `Starting batch generation for ${selectedStyles.length} style(s)...`
       );
@@ -560,8 +653,8 @@ export class WorkflowOrchestrationService {
         userId,
         styles: selectedStyles.map(style => style.name),
         userInfo: {
-          gender: this.stateService.getState().userProfile?.gender,
-          ethnicity: this.stateService.getState().userProfile?.ethnicity,
+          gender: this._deps.stateService.getState().userProfile?.gender,
+          ethnicity: this._deps.stateService.getState().userProfile?.ethnicity,
         },
         numOutputsPerStyle: imagesPerStyle, // Use the selected number of images per style
       };
@@ -569,7 +662,7 @@ export class WorkflowOrchestrationService {
       // Store precise timestamp BEFORE API call to capture all generated images
       const preciseGenerationStartTime = Date.now();
 
-      const replicateService = await this.loadReplicateService();
+      const replicateService = await this._loadReplicateService();
       const generateResult = await replicateService
         .generateBatchImages(generateRequest)
         .toPromise();
@@ -585,22 +678,25 @@ export class WorkflowOrchestrationService {
       const predictionIds = (predictions as PredictionResult[]).map(p => p.result.id);
 
       // Store prediction IDs for polling
-      this.setProgress({
+      this._setProgress({
         activePredictionIds: predictionIds,
         generationStartTime: preciseGenerationStartTime,
       });
 
       // Report results to user
       if (successfulStyles > 0) {
-        this.notificationService.success(
+        this._deps.notificationService.success(
           'Generation Started',
-          `Successfully started generation for ${successfulStyles} style(s). Images will appear in your gallery when ready.`
+          `Successfully started generation for ${successfulStyles} style(s). ` +
+            `Images will appear in your gallery when ready.`
         );
       }
 
       if (failedStyles > 0) {
-        const failedStyleNames = (failures as GenerationFailure[]).map(f => f.style).join(', ');
-        this.notificationService.warning(
+        const failedStyleNames = (failures as GenerationFailure[])
+          .map((f: GenerationFailure) => f.style)
+          .join(', ');
+        this._deps.notificationService.warning(
           'Partial Success',
           `Failed to start generation for ${failedStyles} style(s): ${failedStyleNames}`
         );
@@ -615,7 +711,7 @@ export class WorkflowOrchestrationService {
       const estimatedCompletion = new Date(Date.now() + estimatedMinutes * 60000);
 
       // Start with realistic progress and update based on time
-      this.setProgress({
+      this._setProgress({
         progressPercentage: 15,
         progressMessage: `Creating professional photos with your selected styles...`,
         generationStartTime: preciseGenerationStartTime,
@@ -624,34 +720,40 @@ export class WorkflowOrchestrationService {
       });
 
       // Start time-based progress updates
-      this.startTimeBasedProgress();
+      this._startTimeBasedProgress();
 
-      this.notificationService.info(
+      const timeString = estimatedCompletion.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      this._deps.notificationService.info(
         'Generation Progress',
-        `Generating ${successfulStyles} style(s) with ${imagesPerStyle} images each. Estimated completion: ${estimatedCompletion.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Cost: ${creditsCost} credits.`
+        `Generating ${successfulStyles} style(s) with ${imagesPerStyle} images each. ` +
+          `Estimated completion: ${timeString}. Cost: ${creditsCost} credits.`
       );
 
       // Start polling for prediction completion
-      await this.startPredictionCompletionPolling();
+      await this._startPredictionCompletionPolling();
 
       // Refresh dashboard state to update model status
-      await this.stateService.loadInitialDashboardData();
-    } catch (error: any) {
+      await this._deps.stateService.loadInitialDashboardData();
+    } catch (error: unknown) {
       console.error('Error in batch image generation:', error);
-      this.setProgress({
+      this._setProgress({
         isGenerating: false,
         progressPercentage: 0,
         progressMessage: '',
       });
-      this.notificationService.error(
+      this._deps.notificationService.error(
         'Generation Error',
-        error.message || 'Failed to generate images'
+        error instanceof Error ? error.message : 'Failed to generate images'
       );
     }
   }
 
   // Prediction completion polling - tracks specific prediction IDs
-  private async startPredictionCompletionPolling(): Promise<void> {
+  private async _startPredictionCompletionPolling(): Promise<void> {
     const currentProgress = this.getProgress();
     const predictionIds = currentProgress.activePredictionIds;
 
@@ -660,13 +762,13 @@ export class WorkflowOrchestrationService {
     }
 
     // Clear any existing polling interval to prevent duplicates
-    if (this.photoCompletionPollingInterval) {
-      clearInterval(this.photoCompletionPollingInterval);
+    if (this._photoCompletionPollingInterval) {
+      clearInterval(this._photoCompletionPollingInterval);
     }
 
-    this.photoCompletionPollingInterval = this.ngZone.runOutsideAngular(() =>
+    this._photoCompletionPollingInterval = this._ngZone.runOutsideAngular(() =>
       setInterval(async () => {
-        this.ngZone.run(async () => {
+        this._ngZone.run(async () => {
           try {
             const currentProgress = this.getProgress();
 
@@ -679,7 +781,7 @@ export class WorkflowOrchestrationService {
             const predictionStatuses = await Promise.all(
               currentProgress.activePredictionIds.map(async predictionId => {
                 try {
-                  const replicateService = await this.loadReplicateService();
+                  const replicateService = await this._loadReplicateService();
                   const result = await replicateService
                     .getPredictionStatus(predictionId)
                     .toPromise();
@@ -688,7 +790,7 @@ export class WorkflowOrchestrationService {
                     status: result?.success ? result.data.status : 'unknown',
                     data: result?.data,
                   };
-                } catch (error) {
+                } catch {
                   return {
                     id: predictionId,
                     status: 'error',
@@ -710,42 +812,42 @@ export class WorkflowOrchestrationService {
               const completionRatio = completedPredictions.length / totalPredictions;
               const progress = Math.round(85 + completionRatio * 15); // 85% to 100%
 
-              this.setProgress({
+              this._setProgress({
                 progressPercentage: progress,
                 progressMessage: `Processing ${completedPredictions.length} of ${totalPredictions} generations...`,
               });
 
               // Clear time-based progress since we have real progress
-              if (this.timeBasedProgressInterval) {
-                clearInterval(this.timeBasedProgressInterval);
-                this.timeBasedProgressInterval = undefined;
+              if (this._timeBasedProgressInterval) {
+                clearInterval(this._timeBasedProgressInterval);
+                this._timeBasedProgressInterval = undefined;
               }
             }
 
             // Check if all predictions are completed (successfully)
             if (completedPredictions.length === totalPredictions) {
               // Stop polling and generating
-              clearInterval(this.photoCompletionPollingInterval);
-              this.setProgress({ isGenerating: false });
-              this.onPhotoGenerationComplete(totalPredictions);
+              clearInterval(this._photoCompletionPollingInterval);
+              this._setProgress({ isGenerating: false });
+              this._onPhotoGenerationComplete(totalPredictions);
             } else if (
               failedPredictions.length > 0 &&
               completedPredictions.length + failedPredictions.length === totalPredictions
             ) {
               // All predictions finished but some failed
-              clearInterval(this.photoCompletionPollingInterval);
-              this.setProgress({ isGenerating: false });
+              clearInterval(this._photoCompletionPollingInterval);
+              this._setProgress({ isGenerating: false });
 
               if (completedPredictions.length > 0) {
                 // Some succeeded
-                this.onPhotoGenerationComplete(completedPredictions.length);
-                this.notificationService.warning(
+                this._onPhotoGenerationComplete(completedPredictions.length);
+                this._deps.notificationService.warning(
                   'Partial Success',
                   `${completedPredictions.length} photos generated successfully, ${failedPredictions.length} failed.`
                 );
               } else {
                 // All failed
-                this.notificationService.error(
+                this._deps.notificationService.error(
                   'Generation Failed',
                   'All photo generations failed. Please try again.'
                 );
@@ -760,15 +862,15 @@ export class WorkflowOrchestrationService {
   }
 
   // Time-based progress tracking
-  private startTimeBasedProgress(): void {
+  private _startTimeBasedProgress(): void {
     // Clear any existing time-based progress interval
-    if (this.timeBasedProgressInterval) {
-      clearInterval(this.timeBasedProgressInterval);
+    if (this._timeBasedProgressInterval) {
+      clearInterval(this._timeBasedProgressInterval);
     }
 
-    this.timeBasedProgressInterval = this.ngZone.runOutsideAngular(() =>
+    this._timeBasedProgressInterval = this._ngZone.runOutsideAngular(() =>
       setInterval(() => {
-        this.ngZone.run(() => {
+        this._ngZone.run(() => {
           const currentProgress = this.getProgress();
 
           if (!currentProgress.isGenerating || currentProgress.generationStartTime === 0) {
@@ -776,11 +878,12 @@ export class WorkflowOrchestrationService {
           }
 
           const elapsed = Date.now() - currentProgress.generationStartTime;
-          const progressRatio = Math.min(elapsed / currentProgress.expectedGenerationTime, 0.85); // Cap at 85% for time-based
+          // Cap at 85% for time-based progress
+          const progressRatio = Math.min(elapsed / currentProgress.expectedGenerationTime, 0.85);
           const newProgress = 15 + progressRatio * 70; // 15% to 85% based on time
 
           // Update progress message based on elapsed time
-          const elapsedMinutes = Math.floor(elapsed / 60000);
+          // elapsedMinutes variable removed as it was unused
           const remainingTime = Math.max(
             0,
             Math.ceil((currentProgress.expectedGenerationTime - elapsed) / 60000)
@@ -791,7 +894,7 @@ export class WorkflowOrchestrationService {
             message = 'Finalizing your photos...';
           }
 
-          this.setProgress({
+          this._setProgress({
             progressPercentage: Math.round(newProgress),
             progressMessage: message,
           });
@@ -801,20 +904,20 @@ export class WorkflowOrchestrationService {
   }
 
   // Photo generation completion
-  private onPhotoGenerationComplete(photoCount: number): void {
+  private _onPhotoGenerationComplete(photoCount: number): void {
     // Clear all intervals
-    if (this.timeBasedProgressInterval) {
-      clearInterval(this.timeBasedProgressInterval);
-      this.timeBasedProgressInterval = undefined;
+    if (this._timeBasedProgressInterval) {
+      clearInterval(this._timeBasedProgressInterval);
+      this._timeBasedProgressInterval = undefined;
     }
 
     // Invalidate cache BEFORE showing celebration to ensure gallery has fresh data
-    if (this.fileUploadService) {
-      this.fileUploadService.invalidateUserImagesCache();
+    if (this._fileUploadService) {
+      this._fileUploadService.invalidateUserImagesCache();
     }
 
     // Complete the generation process
-    this.setProgress({
+    this._setProgress({
       progressPercentage: 100,
       progressMessage: 'All photos ready!',
       isGenerating: false,
@@ -822,26 +925,26 @@ export class WorkflowOrchestrationService {
       showLastGenerationMessage: true,
     });
 
-    this.notificationService.success(
+    this._deps.notificationService.success(
       'Photos Ready!',
       `${photoCount} professional photos are ready to view in your gallery.`
     );
 
     // Refresh photo count and dashboard state
-    this.ngZone.runOutsideAngular(() => {
+    this._ngZone.runOutsideAngular(() => {
       setTimeout(() => {
-        this.ngZone.run(() => {
-          this.stateService.refreshGeneratedPhotosCount();
-          this.stateService.invalidateAndRefreshImages();
+        this._ngZone.run(() => {
+          this._deps.stateService.refreshGeneratedPhotosCount();
+          this._deps.stateService.invalidateAndRefreshImages();
         });
       }, 500);
     });
 
     // Reset progress after showing completion
-    this.ngZone.runOutsideAngular(() => {
+    this._ngZone.runOutsideAngular(() => {
       setTimeout(() => {
-        this.ngZone.run(() => {
-          this.setProgress({
+        this._ngZone.run(() => {
+          this._setProgress({
             progressPercentage: 0,
             progressMessage: '',
           });
@@ -852,7 +955,7 @@ export class WorkflowOrchestrationService {
 
   // Utility methods
   dismissSuccessMessage(): void {
-    this.setProgress({
+    this._setProgress({
       showLastGenerationMessage: false,
       lastGenerationCount: 0,
     });
@@ -860,7 +963,7 @@ export class WorkflowOrchestrationService {
 
   // Cleanup method
   dispose(): void {
-    this.clearAllIntervals();
+    this._clearAllIntervals();
     this.resetProgress();
   }
 }

@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
-import { Component, ElementRef, ViewChild } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { of, throwError } from 'rxjs';
@@ -27,7 +27,7 @@ function createMockFile(name = 'test.jpg', type = 'image/jpeg', size: number = 1
 
 function createMockFileReader(result = 'data:image/jpeg;base64,mock-data'): FileReader {
   const reader = {
-    readAsDataURL: jasmine.createSpy('readAsDataURL').and.callFake(function(file: File) {
+    readAsDataURL: jasmine.createSpy('readAsDataURL').and.callFake(function(_file: File) {
       setTimeout(() => {
         this.onload({ target: { result } });
       }, 0);
@@ -321,14 +321,14 @@ describe('Photo Enhancement Flow Integration Tests', () => {
       }));
 
       // Mock polling timeout by spying on setTimeout
-      spyOn(window, 'setTimeout').and.callFake((callback: Function) => {
+      spyOn(window, 'setTimeout').and.callFake((_callback: Function) => {
         // Return promise that never resolves to simulate timeout
         return setTimeout(() => {}, 10) as any;
       });
 
       try {
         await component.startEnhancement();
-      } catch (error) {
+      } catch {
         expect(component.errorMessage).toContain('Enhancement timed out');
       }
     });
@@ -399,7 +399,7 @@ describe('Photo Enhancement Flow Integration Tests', () => {
         response: null
       }));
 
-      const uploadPromise = component['uploadImageForEnhancement']();
+      component['uploadImageForEnhancement']();
 
       setTimeout(() => {
         expect(component.processingProgress).toBe(10); // 50% * 0.2 = 10%

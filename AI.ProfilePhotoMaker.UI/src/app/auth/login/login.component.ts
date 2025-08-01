@@ -20,13 +20,15 @@ export class LoginComponent implements OnInit {
   error = '';
   returnUrl = '';
 
-  constructor(
-    private _formBuilder: FormBuilder,
-    private _authService: AuthService,
-    private _router: Router,
-    private _route: ActivatedRoute,
-    public themeService: ThemeService
-  ) {
+  // Use inject function to reduce constructor parameters
+  private readonly _formBuilder = inject(FormBuilder);
+  private readonly _authService = inject(AuthService);
+  private readonly _router = inject(Router);
+  private readonly _route = inject(ActivatedRoute);
+  public readonly themeService = inject(ThemeService);
+  private readonly _configService = inject(ConfigService);
+
+  constructor() {
     this.loginForm = this._formBuilder.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]],
@@ -165,13 +167,10 @@ export class LoginComponent implements OnInit {
   }
 
   loginWithGoogle(): void {
-    // Get OAuth base URL from config service using modern inject function
-    const configService = inject(ConfigService);
-    const oauthBaseUrl = configService.getOAuthBaseUrl();
-
+    // Get OAuth base URL from config service via constructor injection
+    const oauthBaseUrl = this._configService.getOAuthBaseUrl();
     // Use standard OAuth flow - redirect to the external login endpoint
     const oauthUrl = `${oauthBaseUrl}/api/auth/external-login/google?returnUrl=${encodeURIComponent(this.returnUrl)}`;
-
     window.location.href = oauthUrl;
   }
 

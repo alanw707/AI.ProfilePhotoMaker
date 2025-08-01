@@ -193,8 +193,6 @@ export class DashboardCoordinatorService implements IDashboardStateService {
 
       // Load remaining data asynchronously (non-blocking)
       this.loadRemainingDataAsync();
-
-      const loadTime = performance.now() - startTime;
     } catch (error) {
       console.error('❌ Dashboard coordination failed:', error);
       this._notificationService.error(
@@ -236,7 +234,7 @@ export class DashboardCoordinatorService implements IDashboardStateService {
    */
   private async loadProfileData(): Promise<void> {
     try {
-      const profile = await this.profileService
+      const profile = await this._profileService
         .getCurrentUserProfile()
         .pipe(
           catchError(error => {

@@ -47,8 +47,6 @@ describe('Photo Generation Flow Integration Tests', () => {
   let authService: jasmine.SpyObj<AuthService>;
   let fileUploadService: jasmine.SpyObj<FileUploadService>;
   let styleService: jasmine.SpyObj<StyleService>;
-  let replicateService: jasmine.SpyObj<ReplicateService>;
-  let creditService: jasmine.SpyObj<CreditService>;
   let stateService: jasmine.SpyObj<DashboardStateService>;
   let workflowService: jasmine.SpyObj<WorkflowOrchestrationService>;
   let configService: jasmine.SpyObj<ConfigService>;

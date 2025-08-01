@@ -18,11 +18,7 @@ import { FormsModule } from '@angular/forms';
 import { FileUploadService } from '../../../services/file-upload.service';
 import { NotificationService } from '../../../services/notification.service';
 import { FileSecurityService } from '../../../services/file-security.service';
-
-// Lazy-loaded service interface
-interface FaceDetectionService {
-  validateImage(file: File): Promise<{ isValid: boolean; confidence: number; faces: number }>;
-}
+import { FaceDetectionService } from '../../../services/face-detection.service';
 
 import {
   QualityCheckError,
@@ -55,7 +51,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   @Output() qualityCheckCompleted = new EventEmitter<QualityCheckResult>();
   @Output() fileRemoved = new EventEmitter<number>();
   @Output() uploadedImageDeleted = new EventEmitter<{
-    thumb: { id: string; url: string; name: string };
+    thumb: { id: string; url: string; name: string } | null;
     index: number;
     refreshRequired?: boolean;
   }>();
@@ -98,21 +94,20 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     // Face detection models will be loaded automatically when validateImage is called
 
     // Close popups when clicking outside
-    document.addEventListener('click', this.closeAllPopups.bind(this));
+    document.addEventListener('click', this._closeAllPopups.bind(this));
   }
 
   // Lazy loading method for face detection service
   private async _loadFaceDetectionService(): Promise<FaceDetectionService> {
     if (!this._faceDetectionService) {
-      const { FaceDetectionService: faceDetectionServiceClass } = await import('../../../services/face-detection.service');
-      this._faceDetectionService = this._injector.get(faceDetectionServiceClass);
+      this._faceDetectionService = this._injector.get(FaceDetectionService);
     }
     return this._faceDetectionService;
   }
 
   ngOnDestroy(): void {
     this._cleanupFilePreviewCache();
-    document.removeEventListener('click', this.closeAllPopups.bind(this));
+    document.removeEventListener('click', this._closeAllPopups.bind(this));
 
     // Clean up any open modals
     this._removeDocumentLevelModal();
@@ -437,7 +432,6 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const _progress = Math.round(((i + 1) / files.length) * 100);
       this.qualityCheckProgress = `Analyzing ${file.name} (${i + 1}/${files.length})...`;
       this._cdr.detectChanges();
 
@@ -735,7 +729,12 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
           // Emit completion event to trigger dashboard refresh
           const uploadedFiles = result.response?.uploadedFiles || [];
-          this.uploadCompleted.emit(uploadedFiles);
+          const transformedFiles = uploadedFiles.map((file: any) => ({
+            id: file.id || crypto.randomUUID(),
+            url: file.url,
+            name: file.fileName || file.name,
+          }));
+          this.uploadCompleted.emit(transformedFiles);
 
           // Show success notification with null safety
           const fileCount = uploadedFiles.length;
@@ -911,7 +910,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     modalStyles.overflow = 'hidden';
 
     // Build modal content
-    this._modalElement.innerHTML = this.buildModalContent(error);
+    this._modalElement.innerHTML = this._buildModalContent(error);
 
     // Apply comprehensive theme-aware inline styles to inner elements
     this._applyModalContentStyles();
@@ -1182,7 +1181,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   };
 
   // Build modal HTML content
-  private buildModalContent(error: QualityCheckError): string {
+  private _buildModalContent(error: QualityCheckError): string {
     const errorsList =
       error.errors?.map(err => `<li class="issue-item error">${err}</li>`).join('') || '';
     const warningsList =
@@ -1301,7 +1300,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   }
 
   // Close global tooltip when clicking outside
-  private closeAllPopups(event?: Event): void {
+  private _closeAllPopups(event?: Event): void {
     if (event) {
       // Don't close if clicking on global tooltip or info icon buttons
       const target = event.target as HTMLElement;
@@ -1350,20 +1349,43 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   // Compact error message utility
   getCompactErrorMessage(message: string): string {
     const messageMap: Record<string, string> = {
-      'No face detected in image. Please upload a clear photo with your face visible.':
+      noFaceDetected:
         'No face detected',
-      'Unable to determine photo composition. Please upload a clear headshot or upper body photo.':
+      unclearComposition:
         'Unclear composition',
-      'Image quality is below recommended standards. Consider uploading a higher quality photo.':
+      lowImageQuality:
         'Low image quality',
-      'Full body photo detected. Please upload headshot or upper body photos only.':
+      fullBodyPhotoDetected:
         'Full body photo detected',
-      'Multiple faces detected in image. Please upload a photo with only one person.':
+      multipleFacesDetected:
         'Multiple faces detected',
-      'Face is too small in the image. Please upload a closer headshot.': 'Face too small',
-      'Image is too blurry. Please upload a sharper photo.': 'Image too blurry',
-      'Poor lighting detected. Please upload a well-lit photo.': 'Poor lighting',
+      faceTooSmall: 'Face too small',
+      imageTooBlurry: 'Image too blurry',
+      poorLighting: 'Poor lighting',
     };
+
+    // Map full messages to keys
+    const fullMessageToKey: Record<string, string> = {
+      noFaceDetected:
+        'No face detected in image. Please upload a clear photo with your face visible.',
+      unclearComposition:
+        'Unable to determine photo composition. Please upload a clear headshot or upper body photo.',
+      lowImageQuality:
+        'Image quality is below recommended standards. Consider uploading a higher quality photo.',
+      fullBodyPhotoDetected:
+        'Full body photo detected. Please upload headshot or upper body photos only.',
+      multipleFacesDetected:
+        'Multiple faces detected in image. Please upload a photo with only one person.',
+      faceTooSmall: 'Face is too small in the image. Please upload a closer headshot.',
+      imageTooBlurry: 'Image is too blurry. Please upload a sharper photo.',
+      poorLighting: 'Poor lighting detected. Please upload a well-lit photo.',
+    };
+
+    // Find the key by searching for the message in the values
+    const key = Object.keys(fullMessageToKey).find(k => fullMessageToKey[k] === message);
+    if (key && messageMap[key]) {
+      return messageMap[key];
+    }
 
     // Return mapped message if found, otherwise truncate long messages
     if (messageMap[message]) {
@@ -1381,14 +1403,31 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   // Compact suggestion utility for UX-optimized tooltips
   getCompactSuggestion(suggestion: string): string {
     const suggestionMap: Record<string, string> = {
-      'Try uploading a clearer photo with better lighting.': 'Use better lighting',
-      'Upload a closer headshot photo.': 'Take closer photo',
-      'Ensure only one person is in the photo.': 'Remove other people',
-      'Use a higher resolution image.': 'Higher resolution',
-      'Take photo with better focus.': 'Better focus needed',
-      'Improve lighting conditions.': 'Better lighting',
-      'Remove sunglasses or accessories covering face.': 'Remove accessories',
+      useBetterLighting: 'Use better lighting',
+      takeCloserPhoto: 'Take closer photo',
+      removeOtherPeople: 'Remove other people',
+      higherResolution: 'Higher resolution',
+      betterFocusNeeded: 'Better focus needed',
+      betterLighting: 'Better lighting',
+      removeAccessories: 'Remove accessories',
     };
+
+    // Map suggestion keys to full messages
+    const fullSuggestionToKey: Record<string, string> = {
+      useBetterLighting: 'Try uploading a clearer photo with better lighting.',
+      takeCloserPhoto: 'Upload a closer headshot photo.',
+      removeOtherPeople: 'Ensure only one person is in the photo.',
+      higherResolution: 'Use a higher resolution image.',
+      betterFocusNeeded: 'Take photo with better focus.',
+      betterLighting: 'Improve lighting conditions.',
+      removeAccessories: 'Remove sunglasses or accessories covering face.',
+    };
+
+    // Find the key by searching for the suggestion in the values
+    const key = Object.keys(fullSuggestionToKey).find(k => fullSuggestionToKey[k] === suggestion);
+    if (key && suggestionMap[key]) {
+      return suggestionMap[key];
+    }
 
     // Return mapped suggestion if found, otherwise truncate
     if (suggestionMap[suggestion]) {
@@ -1438,5 +1477,18 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
   get showUploadedImages(): boolean {
     return this.uploadedImageThumbnails.length > 0;
+  }
+
+  // TrackBy functions for ngFor performance
+  trackByThumbnailId(index: number, item: { id: string; url: string; name: string }): string {
+    return item.id;
+  }
+
+  trackByFileIndex(index: number, item: SelectedFileWithQuality): string {
+    return `${item.file.name}-${item.file.size}-${index}`;
+  }
+
+  trackByErrorMessage(index: number, item: { fileName: string; reason: string }): string {
+    return `${index}-${item.fileName}`;
   }
 }
