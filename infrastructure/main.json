@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.177.2456",
-      "templateHash": "13060606818972255767"
+      "templateHash": "7980213928155814570"
     }
   },
   "parameters": {
@@ -80,6 +80,53 @@
       "metadata": {
         "description": "The Replicate webhook secret for signature validation"
       }
+    },
+    "redisCacheSku": {
+      "type": "string",
+      "defaultValue": "Standard",
+      "allowedValues": [
+        "Basic",
+        "Standard",
+        "Premium"
+      ],
+      "metadata": {
+        "description": "The Redis Cache SKU"
+      }
+    },
+    "redisCacheCapacity": {
+      "type": "int",
+      "defaultValue": 1,
+      "allowedValues": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "metadata": {
+        "description": "The Redis Cache capacity"
+      }
+    },
+    "enableContainerRegistry": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Enable Container Registry for Docker images"
+      }
+    },
+    "containerRegistrySku": {
+      "type": "string",
+      "defaultValue": "Standard",
+      "allowedValues": [
+        "Basic",
+        "Standard",
+        "Premium"
+      ],
+      "metadata": {
+        "description": "Container Registry SKU"
+      }
     }
   },
   "variables": {
@@ -90,9 +137,11 @@
     "sqlServerName": "[format('{0}-sql-{1}-{2}', parameters('namePrefix'), parameters('environmentName'), variables('uniqueSuffix'))]",
     "sqlDatabaseName": "[format('{0}db', parameters('namePrefix'))]",
     "storageAccountName": "[format('{0}st{1}', take(parameters('namePrefix'), 14), take(variables('uniqueSuffix'), 8))]",
-    "keyVaultName": "[format('{0}-kv-{1}-{2}', parameters('namePrefix'), parameters('environmentName'), variables('uniqueSuffix'))]",
+    "keyVaultName": "[format('{0}-kv-{1}', take(parameters('namePrefix'), 8), take(variables('uniqueSuffix'), 8))]",
     "applicationInsightsName": "[format('{0}-ai-{1}', parameters('namePrefix'), parameters('environmentName'))]",
-    "logAnalyticsName": "[format('{0}-la-{1}', parameters('namePrefix'), parameters('environmentName'))]"
+    "logAnalyticsName": "[format('{0}-la-{1}', parameters('namePrefix'), parameters('environmentName'))]",
+    "redisCacheName": "[format('{0}-redis-{1}-{2}', parameters('namePrefix'), parameters('environmentName'), variables('uniqueSuffix'))]",
+    "containerRegistryName": "[format('{0}cr{1}', take(parameters('namePrefix'), 14), take(variables('uniqueSuffix'), 8))]"
   },
   "resources": [
     {
@@ -467,6 +516,7 @@
         "Replicate__WebhookSecret": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/ReplicateWebhookSecret/)', reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), '2023-07-01').vaultUri)]",
         "AzureStorage__ConnectionString": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2023-01-01').keys[0].value)]",
         "AzureStorage__ContainerName": "profile-images",
+        "Redis__ConnectionString": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/RedisCacheConnectionString/)', reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), '2023-07-01').vaultUri)]",
         "ApplicationInsights__InstrumentationKey": "[reference(resourceId('Microsoft.Insights/components', variables('applicationInsightsName')), '2020-02-02').InstrumentationKey]",
         "ApplicationInsights__ConnectionString": "[reference(resourceId('Microsoft.Insights/components', variables('applicationInsightsName')), '2020-02-02').ConnectionString]",
         "ASPNETCORE_ENVIRONMENT": "[if(equals(parameters('environmentName'), 'prod'), 'Production', 'Development')]"
@@ -475,10 +525,405 @@
         "[resourceId('Microsoft.Insights/components', variables('applicationInsightsName'))]",
         "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), 'JwtSecret')]",
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), 'RedisCacheConnectionString')]",
         "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), 'ReplicateApiToken')]",
         "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), 'DatabaseConnectionString')]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
         "[resourceId('Microsoft.Web/sites', variables('webAppName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Cache/redis",
+      "apiVersion": "2023-08-01",
+      "name": "[variables('redisCacheName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": {
+          "name": "[parameters('redisCacheSku')]",
+          "family": "[if(equals(parameters('redisCacheSku'), 'Premium'), 'P', 'C')]",
+          "capacity": "[parameters('redisCacheCapacity')]"
+        },
+        "enableNonSslPort": false,
+        "minimumTlsVersion": "1.2",
+        "publicNetworkAccess": "Enabled",
+        "redisConfiguration": {
+          "maxmemory-reserved": "50",
+          "maxfragmentationmemory-reserved": "50",
+          "maxmemory-delta": "50"
+        }
+      },
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Application": "AI Profile Photo Maker"
+      }
+    },
+    {
+      "condition": "[parameters('enableContainerRegistry')]",
+      "type": "Microsoft.ContainerRegistry/registries",
+      "apiVersion": "2023-11-01-preview",
+      "name": "[variables('containerRegistryName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "[parameters('containerRegistrySku')]"
+      },
+      "properties": {
+        "adminUserEnabled": true,
+        "policies": {
+          "quarantinePolicy": {
+            "status": "enabled"
+          },
+          "trustPolicy": {
+            "type": "Notary",
+            "status": "enabled"
+          },
+          "retentionPolicy": {
+            "days": 7,
+            "status": "enabled"
+          }
+        },
+        "encryption": {
+          "status": "enabled"
+        },
+        "dataEndpointEnabled": false,
+        "publicNetworkAccess": "Enabled",
+        "networkRuleBypassOptions": "AzureServices",
+        "zoneRedundancy": "Disabled"
+      },
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Application": "AI Profile Photo Maker"
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'RedisCacheConnectionString')]",
+      "properties": {
+        "value": "[format('{0}:{1},password={2},ssl=True,abortConnect=False', reference(resourceId('Microsoft.Cache/redis', variables('redisCacheName')), '2023-08-01').hostName, reference(resourceId('Microsoft.Cache/redis', variables('redisCacheName')), '2023-08-01').sslPort, listKeys(resourceId('Microsoft.Cache/redis', variables('redisCacheName')), '2023-08-01').primaryKey)]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.Cache/redis', variables('redisCacheName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('enableContainerRegistry')]",
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'ContainerRegistryUsername')]",
+      "properties": {
+        "value": "[variables('containerRegistryName')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('enableContainerRegistry')]",
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'ContainerRegistryPassword')]",
+      "properties": {
+        "value": "[if(parameters('enableContainerRegistry'), listCredentials(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-11-01-preview').passwords[0].value, '')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/actionGroups",
+      "apiVersion": "2023-01-01",
+      "name": "[format('{0}-alerts-{1}', parameters('namePrefix'), parameters('environmentName'))]",
+      "location": "Global",
+      "properties": {
+        "groupShortName": "AIProfileAlerts",
+        "enabled": true,
+        "emailReceivers": [
+          {
+            "name": "AdminEmail",
+            "emailAddress": "admin@example.com",
+            "useCommonAlertSchema": true
+          }
+        ],
+        "smsReceivers": [],
+        "webhookReceivers": [],
+        "azureAppPushReceivers": [],
+        "itsmReceivers": [],
+        "azureAutomationRunbookReceivers": [],
+        "voiceReceivers": [],
+        "armRoleReceivers": [],
+        "azureFunctionReceivers": [],
+        "logicAppReceivers": []
+      },
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Application": "AI Profile Photo Maker"
+      }
+    },
+    {
+      "type": "Microsoft.Insights/webtests",
+      "apiVersion": "2022-06-15",
+      "name": "[format('{0}-availability-{1}', parameters('namePrefix'), parameters('environmentName'))]",
+      "location": "[parameters('location')]",
+      "kind": "ping",
+      "properties": {
+        "SyntheticMonitorId": "[format('{0}-availability-{1}', parameters('namePrefix'), parameters('environmentName'))]",
+        "Name": "AI Profile Photo Maker Availability Test",
+        "Description": "Availability test for the AI Profile Photo Maker application",
+        "Enabled": true,
+        "Frequency": 300,
+        "Timeout": 120,
+        "Kind": "ping",
+        "RetryEnabled": true,
+        "Locations": [
+          {
+            "Id": "us-ca-sjc-azr"
+          },
+          {
+            "Id": "us-tx-sn1-azr"
+          },
+          {
+            "Id": "us-il-ch1-azr"
+          }
+        ],
+        "Configuration": {
+          "WebTest": "[format('<WebTest Name=\"AI Profile Photo Maker Test\" Id=\"{0}\" Enabled=\"True\" CssProjectStructure=\"\" CssIteration=\"\" Timeout=\"120\" WorkItemIds=\"\" xmlns=\"http://microsoft.com/schemas/VisualStudio/TeamTest/2010\" Description=\"\" CredentialUserName=\"\" CredentialPassword=\"\" PreAuthenticate=\"True\" Proxy=\"default\" StopOnError=\"False\" RecordedResultFile=\"\" ResultsLocale=\"\"><Items><Request Method=\"GET\" Guid=\"{1}\" Version=\"1.1\" Url=\"https://{2}.azurewebsites.net/health\" ThinkTime=\"0\" Timeout=\"120\" ParseDependentRequests=\"False\" FollowRedirects=\"True\" RecordResult=\"True\" Cache=\"False\" ResponseTimeGoal=\"0\" Encoding=\"utf-8\" ExpectedHttpStatusCode=\"200\" ExpectedResponseUrl=\"\" ReportingName=\"\" IgnoreHttpStatusCode=\"False\" /></Items></WebTest>', guid(resourceGroup().id, 'availability'), guid(resourceGroup().id, 'request'), variables('webAppName'))]"
+        }
+      },
+      "tags": {
+        "[format('hidden-link:{0}', resourceId('Microsoft.Insights/components', variables('applicationInsightsName')))]": "Resource",
+        "Environment": "[parameters('environmentName')]",
+        "Application": "AI Profile Photo Maker"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', variables('applicationInsightsName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "[format('{0}-webapp-response-time-{1}', parameters('namePrefix'), parameters('environmentName'))]",
+      "location": "Global",
+      "properties": {
+        "description": "Alert when web app response time is high",
+        "severity": 2,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.Web/sites', variables('webAppName'))]"
+        ],
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "ResponseTime",
+              "metricName": "ResponseTime",
+              "operator": "GreaterThan",
+              "threshold": 5000,
+              "timeAggregation": "Average",
+              "criterionType": "StaticThresholdCriterion"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', format('{0}-alerts-{1}', parameters('namePrefix'), parameters('environmentName')))]"
+          }
+        ]
+      },
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Application": "AI Profile Photo Maker"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/actionGroups', format('{0}-alerts-{1}', parameters('namePrefix'), parameters('environmentName')))]",
+        "[resourceId('Microsoft.Web/sites', variables('webAppName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "[format('{0}-sql-dtu-{1}', parameters('namePrefix'), parameters('environmentName'))]",
+      "location": "Global",
+      "properties": {
+        "description": "Alert when SQL Database DTU usage is high",
+        "severity": 1,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.Sql/servers/databases', variables('sqlServerName'), variables('sqlDatabaseName'))]"
+        ],
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "DTUPercentage",
+              "metricName": "dtu_consumption_percent",
+              "operator": "GreaterThan",
+              "threshold": 80,
+              "timeAggregation": "Average",
+              "criterionType": "StaticThresholdCriterion"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', format('{0}-alerts-{1}', parameters('namePrefix'), parameters('environmentName')))]"
+          }
+        ]
+      },
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Application": "AI Profile Photo Maker"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/actionGroups', format('{0}-alerts-{1}', parameters('namePrefix'), parameters('environmentName')))]",
+        "[resourceId('Microsoft.Sql/servers/databases', variables('sqlServerName'), variables('sqlDatabaseName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "[format('{0}-redis-memory-{1}', parameters('namePrefix'), parameters('environmentName'))]",
+      "location": "Global",
+      "properties": {
+        "description": "Alert when Redis Cache memory usage is high",
+        "severity": 2,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.Cache/redis', variables('redisCacheName'))]"
+        ],
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "UsedMemoryPercentage",
+              "metricName": "usedmemorypercentage",
+              "operator": "GreaterThan",
+              "threshold": 85,
+              "timeAggregation": "Average",
+              "criterionType": "StaticThresholdCriterion"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', format('{0}-alerts-{1}', parameters('namePrefix'), parameters('environmentName')))]"
+          }
+        ]
+      },
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Application": "AI Profile Photo Maker"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/actionGroups', format('{0}-alerts-{1}', parameters('namePrefix'), parameters('environmentName')))]",
+        "[resourceId('Microsoft.Cache/redis', variables('redisCacheName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/diagnosticSettings",
+      "apiVersion": "2021-05-01-preview",
+      "scope": "[format('Microsoft.Web/sites/{0}', variables('webAppName'))]",
+      "name": "webApp-diagnostics",
+      "properties": {
+        "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]",
+        "logs": [
+          {
+            "categoryGroup": "allLogs",
+            "enabled": true,
+            "retentionPolicy": {
+              "enabled": true,
+              "days": 30
+            }
+          }
+        ],
+        "metrics": [
+          {
+            "category": "AllMetrics",
+            "enabled": true,
+            "retentionPolicy": {
+              "enabled": true,
+              "days": 30
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]",
+        "[resourceId('Microsoft.Web/sites', variables('webAppName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/diagnosticSettings",
+      "apiVersion": "2021-05-01-preview",
+      "scope": "[format('Microsoft.Sql/servers/{0}/databases/{1}', variables('sqlServerName'), variables('sqlDatabaseName'))]",
+      "name": "sqlDatabase-diagnostics",
+      "properties": {
+        "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]",
+        "logs": [
+          {
+            "categoryGroup": "allLogs",
+            "enabled": true,
+            "retentionPolicy": {
+              "enabled": true,
+              "days": 30
+            }
+          }
+        ],
+        "metrics": [
+          {
+            "category": "AllMetrics",
+            "enabled": true,
+            "retentionPolicy": {
+              "enabled": true,
+              "days": 30
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]",
+        "[resourceId('Microsoft.Sql/servers/databases', variables('sqlServerName'), variables('sqlDatabaseName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/diagnosticSettings",
+      "apiVersion": "2021-05-01-preview",
+      "scope": "[format('Microsoft.Cache/redis/{0}', variables('redisCacheName'))]",
+      "name": "redisCache-diagnostics",
+      "properties": {
+        "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]",
+        "logs": [
+          {
+            "categoryGroup": "allLogs",
+            "enabled": true,
+            "retentionPolicy": {
+              "enabled": true,
+              "days": 30
+            }
+          }
+        ],
+        "metrics": [
+          {
+            "category": "AllMetrics",
+            "enabled": true,
+            "retentionPolicy": {
+              "enabled": true,
+              "days": 30
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]",
+        "[resourceId('Microsoft.Cache/redis', variables('redisCacheName'))]"
       ]
     }
   ],
@@ -518,6 +963,22 @@
     "applicationInsightsName": {
       "type": "string",
       "value": "[variables('applicationInsightsName')]"
+    },
+    "redisCacheName": {
+      "type": "string",
+      "value": "[variables('redisCacheName')]"
+    },
+    "redisCacheHostName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Cache/redis', variables('redisCacheName')), '2023-08-01').hostName]"
+    },
+    "containerRegistryName": {
+      "type": "string",
+      "value": "[if(parameters('enableContainerRegistry'), variables('containerRegistryName'), '')]"
+    },
+    "containerRegistryLoginServer": {
+      "type": "string",
+      "value": "[if(parameters('enableContainerRegistry'), reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-11-01-preview').loginServer, '')]"
     }
   }
 }
