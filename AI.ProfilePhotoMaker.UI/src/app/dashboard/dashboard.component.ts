@@ -26,6 +26,7 @@ import { NotificationService } from '../services/notification.service';
 import { CreditService } from '../services/credit.service';
 import { DashboardCoordinatorService } from '../services/dashboard-coordinator.service';
 import { ConfigService } from '../services/config.service';
+import { DashboardState } from '../interfaces/service.interfaces';
 // Lazy-loaded service types
 interface WorkflowProgress {
   isTraining: boolean;
@@ -80,7 +81,7 @@ import { WorkflowStepService } from '../services/workflow-step.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-  state$: Observable<unknown>;
+  state$: Observable<DashboardState>;
   workflowProgress$: Observable<WorkflowProgress>;
 
   // Component-specific state
@@ -151,6 +152,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ) {
     this.state$ = this.stateService.state$;
     this.workflowProgress$ = this._workflowProgressSubject.asObservable();
+  }
+
+  // Transform uploaded image thumbnails to match the expected format
+  getTransformedUploadedImageThumbnails(): { id: string; url: string; name: string }[] {
+    const thumbnails = this.stateService.getState().uploadedImageThumbnails;
+    return thumbnails.map(thumb => ({
+      id: thumb.id.toString(),
+      url: thumb.url,
+      name: thumb.fileName
+    }));
   }
 
   ngOnInit(): void {

@@ -35,14 +35,6 @@ export class ImageStateService extends StateBaseService<ImageState> {
   private readonly CACHE_KEY = 'image_state_data';
   private readonly VALIDATION_TTL = 5 * 60 * 1000; // 5 minutes
 
-  protected override initialState: ImageState = {
-    uploadedImages: 0,
-    uploadedImageThumbnails: [],
-    generatedPhotosCount: 0,
-    isLoading: false,
-    imagesValidated: false,
-    lastValidationTime: 0,
-  };
 
   constructor(
     _cacheManager: CacheManagerService,

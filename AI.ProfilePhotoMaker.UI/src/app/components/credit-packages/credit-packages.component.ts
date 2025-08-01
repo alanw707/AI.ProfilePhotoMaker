@@ -357,7 +357,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     return pkg.totalCredits >= 15;
   }
 
-  trackByPackageId(_index: number, pkg: CreditPackage): string {
+  trackByPackageId(_index: number, pkg: CreditPackage): number {
     return pkg.id;
   }
 }

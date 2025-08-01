@@ -108,7 +108,7 @@
       <div *ngFor="let thumb of uploadedImageThumbnails; let i = index" class="uploaded-thumbnail">
         <img
           [src]="thumb.url"
-          [alt]="thumb.filename || 'Uploaded image'"
+          [alt]="thumb.name || 'Uploaded image'"
           (error)="onImageLoadError(thumb, i)"
           (load)="onImageLoadSuccess(thumb, i)"
           loading="lazy"

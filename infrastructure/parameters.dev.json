@@ -3,40 +3,40 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "environmentName": {
-      "value": "prod"
+      "value": "dev"
     },
     "namePrefix": {
       "value": "aiprofilephotomaker"
     },
     "appServicePlanSku": {
-      "value": "B1"
+      "value": "F1"
     },
     "sqlAdminUsername": {
       "value": "aiprofileadmin"
     },
     "sqlAdminPassword": {
-      "value": "REPLACE_WITH_PROD_SQL_PASSWORD"
+      "value": "REPLACE_WITH_DEV_SQL_PASSWORD"
     },
     "replicateApiToken": {
       "value": "REPLACE_WITH_REPLICATE_TOKEN"
     },
     "jwtSecret": {
-      "value": "REPLACE_WITH_PROD_JWT_SECRET"
+      "value": "REPLACE_WITH_DEV_JWT_SECRET"
     },
     "replicateWebhookSecret": {
       "value": "REPLACE_WITH_WEBHOOK_SECRET"
     },
     "redisCacheSku": {
-      "value": "Standard"
+      "value": "Basic"
     },
     "redisCacheCapacity": {
-      "value": 1
+      "value": 0
     },
     "enableContainerRegistry": {
-      "value": true
+      "value": false
     },
     "containerRegistrySku": {
-      "value": "Standard"
+      "value": "Basic"
     }
   }
 }

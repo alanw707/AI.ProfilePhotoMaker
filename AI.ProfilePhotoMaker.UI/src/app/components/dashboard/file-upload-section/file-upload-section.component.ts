@@ -18,11 +18,7 @@ import { FormsModule } from '@angular/forms';
 import { FileUploadService } from '../../../services/file-upload.service';
 import { NotificationService } from '../../../services/notification.service';
 import { FileSecurityService } from '../../../services/file-security.service';
-
-// Lazy-loaded service interface
-interface FaceDetectionService {
-  validateImage(file: File): Promise<{ isValid: boolean; confidence: number; faces: number }>;
-}
+import { FaceDetectionService } from '../../../services/face-detection.service';
 
 import {
   QualityCheckError,
@@ -55,7 +51,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   @Output() qualityCheckCompleted = new EventEmitter<QualityCheckResult>();
   @Output() fileRemoved = new EventEmitter<number>();
   @Output() uploadedImageDeleted = new EventEmitter<{
-    thumb: { id: string; url: string; name: string };
+    thumb: { id: string; url: string; name: string } | null;
     index: number;
     refreshRequired?: boolean;
   }>();
@@ -104,8 +100,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   // Lazy loading method for face detection service
   private async _loadFaceDetectionService(): Promise<FaceDetectionService> {
     if (!this._faceDetectionService) {
-      const { FaceDetectionService: faceDetectionServiceClass } = await import('../../../services/face-detection.service');
-      this._faceDetectionService = this._injector.get(faceDetectionServiceClass);
+      this._faceDetectionService = this._injector.get(FaceDetectionService);
     }
     return this._faceDetectionService;
   }
@@ -734,7 +729,12 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
           // Emit completion event to trigger dashboard refresh
           const uploadedFiles = result.response?.uploadedFiles || [];
-          this.uploadCompleted.emit(uploadedFiles);
+          const transformedFiles = uploadedFiles.map((file: any) => ({
+            id: file.id || crypto.randomUUID(),
+            url: file.url,
+            name: file.fileName || file.name,
+          }));
+          this.uploadCompleted.emit(transformedFiles);
 
           // Show success notification with null safety
           const fileCount = uploadedFiles.length;

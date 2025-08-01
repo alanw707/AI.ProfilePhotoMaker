@@ -27,13 +27,6 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
   private readonly CACHE_KEY = 'subscription_state_data';
   private readonly CREDITS_CACHE_KEY = 'credits_data';
 
-  protected override initialState: SubscriptionState = {
-    userCreditStatus: null,
-    creditsInfo: null,
-    totalCredits: 0,
-    isPremiumWorkflow: false,
-    isLoading: false,
-  };
 
   constructor(
     _cacheManager: CacheManagerService,

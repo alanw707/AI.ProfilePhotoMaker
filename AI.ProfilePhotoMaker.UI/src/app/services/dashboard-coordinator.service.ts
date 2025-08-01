@@ -236,7 +236,7 @@ export class DashboardCoordinatorService implements IDashboardStateService {
    */
   private async loadProfileData(): Promise<void> {
     try {
-      const profile = await this.profileService
+      const profile = await this._profileService
         .getCurrentUserProfile()
         .pipe(
           catchError(error => {

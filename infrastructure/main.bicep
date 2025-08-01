@@ -31,6 +31,21 @@ param jwtSecret string
 @secure()
 param replicateWebhookSecret string
 
+@description('The Redis Cache SKU')
+@allowed(['Basic', 'Standard', 'Premium'])
+param redisCacheSku string = 'Standard'
+
+@description('The Redis Cache capacity')
+@allowed([0, 1, 2, 3, 4, 5, 6])
+param redisCacheCapacity int = 1
+
+@description('Enable Container Registry for Docker images')
+param enableContainerRegistry bool = false
+
+@description('Container Registry SKU')
+@allowed(['Basic', 'Standard', 'Premium'])
+param containerRegistrySku string = 'Standard'
+
 // Variables
 var uniqueSuffix = uniqueString(resourceGroup().id)
 var appServicePlanName = '${namePrefix}-asp-${environmentName}'
@@ -42,6 +57,8 @@ var storageAccountName = '${take(namePrefix, 14)}st${take(uniqueSuffix, 8)}'
 var keyVaultName = '${namePrefix}-kv-${environmentName}-${uniqueSuffix}'
 var applicationInsightsName = '${namePrefix}-ai-${environmentName}'
 var logAnalyticsName = '${namePrefix}-la-${environmentName}'
+var redisCacheName = '${namePrefix}-redis-${environmentName}-${uniqueSuffix}'
+var containerRegistryName = '${take(namePrefix, 14)}cr${take(uniqueSuffix, 8)}'
 
 // App Service Plan
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
@@ -389,6 +406,7 @@ resource webAppConfig 'Microsoft.Web/sites/config@2023-01-01' = {
     Replicate__WebhookSecret: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/ReplicateWebhookSecret/)'
     AzureStorage__ConnectionString: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
     AzureStorage__ContainerName: 'profile-images'
+    Redis__ConnectionString: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/RedisCacheConnectionString/)'
     ApplicationInsights__InstrumentationKey: applicationInsights.properties.InstrumentationKey
     ApplicationInsights__ConnectionString: applicationInsights.properties.ConnectionString
     ASPNETCORE_ENVIRONMENT: environmentName == 'prod' ? 'Production' : 'Development'
@@ -397,7 +415,360 @@ resource webAppConfig 'Microsoft.Web/sites/config@2023-01-01' = {
     jwtSecretKV
     replicateTokenKV
     sqlConnectionStringKV
+    redisCacheConnectionStringKV
   ]
+}
+
+// Redis Cache for Azure
+resource redisCache 'Microsoft.Cache/redis@2023-08-01' = {
+  name: redisCacheName
+  location: location
+  properties: {
+    sku: {
+      name: redisCacheSku
+      family: redisCacheSku == 'Premium' ? 'P' : 'C'
+      capacity: redisCacheCapacity
+    }
+    enableNonSslPort: false
+    minimumTlsVersion: '1.2'
+    publicNetworkAccess: 'Enabled'
+    redisConfiguration: {
+      'maxmemory-reserved': '50'
+      'maxfragmentationmemory-reserved': '50'
+      'maxmemory-delta': '50'
+    }
+  }
+  tags: {
+    Environment: environmentName
+    Application: 'AI Profile Photo Maker'
+  }
+}
+
+// Container Registry (optional)
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-11-01-preview' = if (enableContainerRegistry) {
+  name: containerRegistryName
+  location: location
+  sku: {
+    name: containerRegistrySku
+  }
+  properties: {
+    adminUserEnabled: true
+    policies: {
+      quarantinePolicy: {
+        status: 'enabled'
+      }
+      trustPolicy: {
+        type: 'Notary'
+        status: 'enabled'
+      }
+      retentionPolicy: {
+        days: 7
+        status: 'enabled'
+      }
+    }
+    encryption: {
+      status: 'enabled'
+    }
+    dataEndpointEnabled: false
+    publicNetworkAccess: 'Enabled'
+    networkRuleBypassOptions: 'AzureServices'
+    zoneRedundancy: 'Disabled'
+  }
+  tags: {
+    Environment: environmentName
+    Application: 'AI Profile Photo Maker'
+  }
+}
+
+// Redis Cache Connection String in Key Vault
+resource redisCacheConnectionStringKV 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'RedisCacheConnectionString'
+  properties: {
+    value: '${redisCache.properties.hostName}:${redisCache.properties.sslPort},password=${redisCache.listKeys().primaryKey},ssl=True,abortConnect=False'
+  }
+}
+
+// Container Registry credentials in Key Vault (if enabled)
+resource containerRegistryUsernameKV 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (enableContainerRegistry) {
+  parent: keyVault
+  name: 'ContainerRegistryUsername'
+  properties: {
+    value: containerRegistry.name
+  }
+}
+
+resource containerRegistryPasswordKV 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (enableContainerRegistry) {
+  parent: keyVault
+  name: 'ContainerRegistryPassword'
+  properties: {
+    value: enableContainerRegistry ? containerRegistry.listCredentials().passwords[0].value : ''
+  }
+}
+
+// Action Group for Alerts
+resource actionGroup 'Microsoft.Insights/actionGroups@2023-01-01' = {
+  name: '${namePrefix}-alerts-${environmentName}'
+  location: 'Global'
+  properties: {
+    groupShortName: 'AIProfileAlerts'
+    enabled: true
+    emailReceivers: [
+      {
+        name: 'AdminEmail'
+        emailAddress: 'admin@example.com' // Replace with actual email
+        useCommonAlertSchema: true
+      }
+    ]
+    smsReceivers: []
+    webhookReceivers: []
+    azureAppPushReceivers: []
+    itsmReceivers: []
+    azureAutomationRunbookReceivers: []
+    voiceReceivers: []
+    armRoleReceivers: []
+    azureFunctionReceivers: []
+    logicAppReceivers: []
+  }
+  tags: {
+    Environment: environmentName
+    Application: 'AI Profile Photo Maker'
+  }
+}
+
+// Application Insights Availability Test
+resource availabilityTest 'Microsoft.Insights/webtests@2022-06-15' = {
+  name: '${namePrefix}-availability-${environmentName}'
+  location: location
+  kind: 'ping'
+  properties: {
+    SyntheticMonitorId: '${namePrefix}-availability-${environmentName}'
+    Name: 'AI Profile Photo Maker Availability Test'
+    Description: 'Availability test for the AI Profile Photo Maker application'
+    Enabled: true
+    Frequency: 300 // 5 minutes
+    Timeout: 120 // 2 minutes
+    Kind: 'ping'
+    RetryEnabled: true
+    Locations: [
+      {
+        Id: 'us-ca-sjc-azr'
+      }
+      {
+        Id: 'us-tx-sn1-azr'
+      }
+      {
+        Id: 'us-il-ch1-azr'
+      }
+    ]
+    Configuration: {
+      WebTest: '<WebTest Name="AI Profile Photo Maker Test" Id="${guid(resourceGroup().id, 'availability')}" Enabled="True" CssProjectStructure="" CssIteration="" Timeout="120" WorkItemIds="" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010" Description="" CredentialUserName="" CredentialPassword="" PreAuthenticate="True" Proxy="default" StopOnError="False" RecordedResultFile="" ResultsLocale=""><Items><Request Method="GET" Guid="${guid(resourceGroup().id, 'request')}" Version="1.1" Url="https://${webAppName}.azurewebsites.net/health" ThinkTime="0" Timeout="120" ParseDependentRequests="False" FollowRedirects="True" RecordResult="True" Cache="False" ResponseTimeGoal="0" Encoding="utf-8" ExpectedHttpStatusCode="200" ExpectedResponseUrl="" ReportingName="" IgnoreHttpStatusCode="False" /></Items></WebTest>'
+    }
+  }
+  tags: {
+    'hidden-link:${applicationInsights.id}': 'Resource'
+    Environment: environmentName
+    Application: 'AI Profile Photo Maker'
+  }
+}
+
+// Metric Alerts
+resource webAppResponseTimeAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
+  name: '${namePrefix}-webapp-response-time-${environmentName}'
+  location: 'Global'
+  properties: {
+    description: 'Alert when web app response time is high'
+    severity: 2
+    enabled: true
+    scopes: [
+      webApp.id
+    ]
+    evaluationFrequency: 'PT5M'
+    windowSize: 'PT15M'
+    criteria: {
+      'odata.type': 'Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria'
+      allOf: [
+        {
+          name: 'ResponseTime'
+          metricName: 'ResponseTime'
+          operator: 'GreaterThan'
+          threshold: 5000 // 5 seconds
+          timeAggregation: 'Average'
+          criterionType: 'StaticThresholdCriterion'
+        }
+      ]
+    }
+    actions: [
+      {
+        actionGroupId: actionGroup.id
+      }
+    ]
+  }
+  tags: {
+    Environment: environmentName
+    Application: 'AI Profile Photo Maker'
+  }
+}
+
+resource sqlDtuAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
+  name: '${namePrefix}-sql-dtu-${environmentName}'
+  location: 'Global'
+  properties: {
+    description: 'Alert when SQL Database DTU usage is high'
+    severity: 1
+    enabled: true
+    scopes: [
+      sqlDatabase.id
+    ]
+    evaluationFrequency: 'PT5M'
+    windowSize: 'PT15M'
+    criteria: {
+      'odata.type': 'Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria'
+      allOf: [
+        {
+          name: 'DTUPercentage'
+          metricName: 'dtu_consumption_percent'
+          operator: 'GreaterThan'
+          threshold: 80
+          timeAggregation: 'Average'
+          criterionType: 'StaticThresholdCriterion'
+        }
+      ]
+    }
+    actions: [
+      {
+        actionGroupId: actionGroup.id
+      }
+    ]
+  }
+  tags: {
+    Environment: environmentName
+    Application: 'AI Profile Photo Maker'
+  }
+}
+
+resource redisMemoryAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
+  name: '${namePrefix}-redis-memory-${environmentName}'
+  location: 'Global'
+  properties: {
+    description: 'Alert when Redis Cache memory usage is high'
+    severity: 2
+    enabled: true
+    scopes: [
+      redisCache.id
+    ]
+    evaluationFrequency: 'PT5M'
+    windowSize: 'PT15M'
+    criteria: {
+      'odata.type': 'Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria'
+      allOf: [
+        {
+          name: 'UsedMemoryPercentage'
+          metricName: 'usedmemorypercentage'
+          operator: 'GreaterThan'
+          threshold: 85
+          timeAggregation: 'Average'
+          criterionType: 'StaticThresholdCriterion'
+        }
+      ]
+    }
+    actions: [
+      {
+        actionGroupId: actionGroup.id
+      }
+    ]
+  }
+  tags: {
+    Environment: environmentName
+    Application: 'AI Profile Photo Maker'
+  }
+}
+
+// Diagnostic Settings for Web App
+resource webAppDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'webApp-diagnostics'
+  scope: webApp
+  properties: {
+    workspaceId: logAnalyticsWorkspace.id
+    logs: [
+      {
+        categoryGroup: 'allLogs'
+        enabled: true
+        retentionPolicy: {
+          enabled: true
+          days: 30
+        }
+      }
+    ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+        retentionPolicy: {
+          enabled: true
+          days: 30
+        }
+      }
+    ]
+  }
+}
+
+// Diagnostic Settings for SQL Database
+resource sqlDatabaseDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'sqlDatabase-diagnostics'
+  scope: sqlDatabase
+  properties: {
+    workspaceId: logAnalyticsWorkspace.id
+    logs: [
+      {
+        categoryGroup: 'allLogs'
+        enabled: true
+        retentionPolicy: {
+          enabled: true
+          days: 30
+        }
+      }
+    ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+        retentionPolicy: {
+          enabled: true
+          days: 30
+        }
+      }
+    ]
+  }
+}
+
+// Diagnostic Settings for Redis Cache
+resource redisCacheDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'redisCache-diagnostics'
+  scope: redisCache
+  properties: {
+    workspaceId: logAnalyticsWorkspace.id
+    logs: [
+      {
+        categoryGroup: 'allLogs'
+        enabled: true
+        retentionPolicy: {
+          enabled: true
+          days: 30
+        }
+      }
+    ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+        retentionPolicy: {
+          enabled: true
+          days: 30
+        }
+      }
+    ]
+  }
 }
 
 // Outputs
@@ -410,3 +781,7 @@ output sqlDatabaseName string = sqlDatabase.name
 output storageAccountName string = storageAccount.name
 output keyVaultName string = keyVault.name
 output applicationInsightsName string = applicationInsights.name
+output redisCacheName string = redisCache.name
+output redisCacheHostName string = redisCache.properties.hostName
+output containerRegistryName string = enableContainerRegistry ? containerRegistry.name : ''
+output containerRegistryLoginServer string = enableContainerRegistry ? containerRegistry.properties.loginServer : ''

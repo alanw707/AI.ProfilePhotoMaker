@@ -138,7 +138,7 @@
               ">
               <!-- File Upload Section Component -->
               <app-file-upload-section
-                [uploadedImageThumbnails]="stateService.getState().uploadedImageThumbnails"
+                [uploadedImageThumbnails]="getTransformedUploadedImageThumbnails()"
                 [currentStep]="currentStep"
                 [maxFiles]="20"
                 [maxFileSize]="7 * 1024 * 1024"
