@@ -109,7 +109,7 @@ jobs:
         run: |
           echo "🔍 Running TypeScript type check..."
           
-          if npm run type-check; then
+          if npx tsc --noEmit --project tsconfig.app.json; then
             echo "✅ TypeScript type check passed"
             echo "status=passed" >> $GITHUB_OUTPUT
           else
