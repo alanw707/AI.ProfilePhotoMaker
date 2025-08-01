@@ -344,6 +344,7 @@ jobs:
             --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" \
             --template-file main.json \
             --parameters @parameters.${{ env.ENV_NAME }}.deploy.json \
+            --parameters location="East US 2" \
             --name "${DEPLOYMENT_NAME}" \
             --output table; then
             
@@ -387,13 +388,14 @@ jobs:
             echo "🐍 Installing Python dependencies..."
             pip install azure-identity azure-mgmt-resource
             
-            # Pass subscription ID explicitly to Python script
+            # Pass subscription ID and location explicitly to Python script
             python3 deploy_azure_sdk.py \
               --environment "${{ env.ENV_NAME }}" \
               --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" \
               --template main.json \
               --parameters parameters.${{ env.ENV_NAME }}.deploy.json \
-              --subscription-id "${{ env.ARM_SUBSCRIPTION_ID }}"
+              --subscription-id "${{ env.ARM_SUBSCRIPTION_ID }}" \
+              --location "East US 2"
             
             if [ $? -eq 0 ]; then
               echo "✅ Python SDK deployment succeeded"

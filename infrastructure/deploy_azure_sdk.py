@@ -382,6 +382,11 @@ Prerequisites:
         parameters_raw = load_json_file(parameters_file)
         parameters = extract_parameters(parameters_raw)
         
+        # Override location parameter if provided
+        if args.location:
+            logger.info(f"🌐 Overriding location parameter with: {args.location}")
+            parameters['location'] = {'value': args.location}
+        
         # Initialize deployer
         logger.info("🔐 Initializing Azure connection...")
         deployer = AzureDeployer(subscription_id=args.subscription_id)
