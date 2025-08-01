@@ -51,6 +51,13 @@ try {
     Write-Host "📦 Creating Resource Group..." -ForegroundColor Green
     az group create --name $ResourceGroupName --location $Location --tags Environment=$Environment Application=AIProfileMaker
     
+    # Step 1.5: Register required resource providers
+    Write-Host "🔧 Registering Azure resource providers..." -ForegroundColor Green
+    az provider register --namespace Microsoft.ContainerRegistry --wait
+    az provider register --namespace Microsoft.App --wait
+    az provider register --namespace Microsoft.ContainerService --wait
+    az provider register --namespace Microsoft.OperationalInsights --wait
+    
     # Step 2: Deploy Storage Account (first to avoid API consumption conflicts)
     Write-Host "💾 Creating Storage Account..." -ForegroundColor Green
     $storageResult = az storage account create `
