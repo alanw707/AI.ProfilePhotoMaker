@@ -28,7 +28,8 @@ Write-Host "📍 Environment: $Environment" -ForegroundColor Yellow
 
 try {
     # Generate unique suffix for resources
-    $uniqueSuffix = -join ((Get-Random -Count 8 -InputObject (0..9,'a'..'z')))
+    $chars = @('0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z')
+    $uniqueSuffix = -join ((1..8) | ForEach-Object { Get-Random -InputObject $chars })
     
     # Define resource names
     $containerRegistryName = "${AppName}cr${uniqueSuffix}"
