@@ -335,18 +335,41 @@ jobs:
           
           echo "🚀 Starting infrastructure deployment with multiple fallback methods..."
           
-          # Method 1: Try Azure CLI with improved error handling
-          echo "🔄 Attempting Azure CLI deployment..."
+          # Method 1: Try Azure CLI with improved error handling and retry logic
+          echo "🔄 Attempting Azure CLI deployment with retry logic..."
           DEPLOYMENT_NAME="${{ needs.validate-infrastructure.outputs.deployment-name }}"
           
-          # Use table output to avoid JSON parsing issues, then query deployment separately
-          if az deployment group create \
-            --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" \
-            --template-file main.json \
-            --parameters @parameters.${{ env.ENV_NAME }}.deploy.json \
-            --parameters location="East US 2" \
-            --name "${DEPLOYMENT_NAME}" \
-            --output table; then
+          # Retry logic for deployment reliability
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          DEPLOYMENT_SUCCESS=false
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$DEPLOYMENT_SUCCESS" = "false" ]; do
+            echo "🚀 Deployment attempt $((RETRY_COUNT + 1))/$MAX_RETRIES..."
+            
+            if az deployment group create \
+              --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" \
+              --template-file main.json \
+              --parameters @parameters.${{ env.ENV_NAME }}.deploy.json \
+              --parameters location="East US 2" \
+              --name "${DEPLOYMENT_NAME}-attempt-$((RETRY_COUNT + 1))" \
+              --output table; then
+              
+              DEPLOYMENT_SUCCESS=true
+              echo "✅ Azure CLI deployment succeeded on attempt $((RETRY_COUNT + 1))"
+              break
+            else
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              echo "⚠️ Deployment failed (attempt $RETRY_COUNT/$MAX_RETRIES)"
+              
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "🔄 Retrying in 60 seconds..."
+                sleep 60
+              fi
+            fi
+          done
+          
+          if [ "$DEPLOYMENT_SUCCESS" = "true" ]; then
             
             echo "✅ Azure CLI deployment succeeded"
             
@@ -380,6 +403,22 @@ jobs:
             done
             
             echo "🎯 Infrastructure deployment completed successfully"
+            
+            # Deploy Key Vault access policies separately to avoid circular dependency
+            echo "🔑 Configuring Key Vault access policies..."
+            sleep 30  # Allow Web App identity to be fully provisioned
+            
+            if az deployment group create \
+              --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" \
+              --template-file keyvault-access-policy.json \
+              --parameters keyVaultName="$(az keyvault list --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" --query "[0].name" -o tsv)" \
+              --parameters webAppName="$(az webapp list --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" --query "[0].name" -o tsv)" \
+              --name "${DEPLOYMENT_NAME}-keyvault-policy" \
+              --output table; then
+              echo "✅ Key Vault access policies configured successfully"
+            else
+              echo "⚠️ Key Vault access policy deployment failed, but continuing..."
+            fi
             
           else
             echo "⚠️ Azure CLI deployment failed, trying Python SDK fallback..."
