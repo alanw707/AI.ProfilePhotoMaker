@@ -372,13 +372,15 @@ try:
         with open('/tmp/deployment_outputs.txt', 'w') as f:
             for key, value in outputs.items():
                 if isinstance(value, dict) and 'value' in value:
-                    print(f'{key}={value[\"value\"]}')
-                    f.write(f'{key}={value[\"value\"]}\n')
+                    output_line = key + '=' + str(value['value'])
+                    print(output_line)
+                    f.write(output_line + '\n')
                 else:
-                    print(f'{key}={value}')
-                    f.write(f'{key}={value}\n')
+                    output_line = key + '=' + str(value)
+                    print(output_line)
+                    f.write(output_line + '\n')
 except Exception as e:
-    print(f'Error parsing outputs: {e}')
+    print('Error parsing outputs: ' + str(e))
 "
                 
                 # Read outputs into GitHub Actions
