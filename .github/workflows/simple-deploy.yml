@@ -82,8 +82,8 @@ jobs:
         run: |
           echo "🔍 Checking for existing core resources..."
           
-          # Check for existing Container Registry
-          REGISTRY_NAME="aiprofilemakercrz3bawc74"
+          # Check for existing Container Registry (consistent staging naming)
+          REGISTRY_NAME="aiprofilemaker-cr-staging"
           if az acr show --name "$REGISTRY_NAME" --resource-group "${{ env.RESOURCE_GROUP }}" --output none 2>/dev/null; then
             echo "✅ Found existing Container Registry: $REGISTRY_NAME"
             echo "registry-exists=true" >> $GITHUB_OUTPUT
@@ -93,11 +93,11 @@ jobs:
             echo "registry-exists=false" >> $GITHUB_OUTPUT
           fi
           
-          # Check for duplicate registries (with random suffixes)
+          # Check for duplicate registries (cleanup old random suffix ones)
           echo "🔍 Checking for duplicate Container Registries..."
-          DUPLICATE_REGISTRIES=$(az acr list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?starts_with(name, 'aiprofilemaker')].name" -o tsv | grep -v "aiprofilemakercrz3bawc74" || true)
+          DUPLICATE_REGISTRIES=$(az acr list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?starts_with(name, 'aiprofilemaker') && name != 'aiprofilemaker-cr-staging'].name" -o tsv || true)
           if [ -n "$DUPLICATE_REGISTRIES" ]; then
-            echo "⚠️ Found duplicate registries with random suffixes:"
+            echo "⚠️ Found old registries with inconsistent naming:"
             echo "$DUPLICATE_REGISTRIES"
             echo "duplicate-registries<<EOF" >> $GITHUB_OUTPUT
             echo "$DUPLICATE_REGISTRIES" >> $GITHUB_OUTPUT
@@ -121,17 +121,17 @@ jobs:
             -JwtSecret "${{ secrets.JWT_SECRET }}" `
             -ReplicateApiToken "${{ secrets.REPLICATE_API_TOKEN }}" `
             -AppName "aiprofilemaker" `
-            -Environment "z3bawc74" `
+            -Environment "staging" `
             -BuildImages
           
       - name: ⚠️ Duplicate Resources Warning
         if: steps.resource_check.outputs.duplicate-registries != ''
         run: |
-          echo "⚠️ WARNING: Found duplicate Container Registries with random suffixes!"
+          echo "⚠️ WARNING: Found old Container Registries with inconsistent naming!"
           echo "These should be cleaned up to avoid unnecessary costs:"
           echo "${{ steps.resource_check.outputs.duplicate-registries }}"
           echo ""
-          echo "💡 The deployment will use the correct deterministic registry: aiprofilemakercrz3bawc74"
+          echo "💡 The deployment will use the correct consistent registry: aiprofilemaker-cr-staging"
           echo "💰 Cleanup these duplicates to save \$150-250/month"
 
       - name: 🐳 Build & Push Images
