@@ -22,6 +22,7 @@
     "ngrok": "npm run tunnel:frontend",
     "_comment_build": "=== BUILD SCRIPTS ===",
     "build": "npm run lint && ng build",
+    "build:staging": "ng build --configuration staging",
     "build:dev": "npm run lint && ng build --configuration development",
     "build:test": "npm run lint && ng build --configuration test",
     "build:ngrok": "npm run lint && ng build --configuration ngrok",
@@ -52,6 +53,7 @@
   "dependencies": {
     "@abacritt/angularx-social-login": "2.4.0",
     "@angular/animations": "^19.2.0",
+    "@stripe/stripe-js": "^4.7.0",
     "@angular/common": "^19.2.0",
     "@angular/compiler": "^19.2.0",
     "@angular/core": "^19.2.0",
