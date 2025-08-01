@@ -178,18 +178,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
         targetPort: 80
         allowInsecure: false
       }
-      registries: [
-        {
-          server: containerRegistry.properties.loginServer
-          username: containerRegistry.listCredentials().username
-          passwordSecretRef: 'registry-password'
-        }
-      ]
       secrets: [
-        {
-          name: 'registry-password'
-          value: containerRegistry.listCredentials().passwords[0].value
-        }
         {
           name: 'jwt-secret'
           value: jwtSecret
@@ -272,18 +261,7 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
         targetPort: 80
         allowInsecure: false
       }
-      registries: [
-        {
-          server: containerRegistry.properties.loginServer
-          username: containerRegistry.listCredentials().username
-          passwordSecretRef: 'registry-password'
-        }
-      ]
       secrets: [
-        {
-          name: 'registry-password'
-          value: containerRegistry.listCredentials().passwords[0].value
-        }
       ]
     }
     template: {
