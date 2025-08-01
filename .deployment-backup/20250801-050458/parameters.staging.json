@@ -6,10 +6,7 @@
       "value": "staging"
     },
     "namePrefix": {
-      "value": "aiprofilephotomaker"
-    },
-    "appServicePlanSku": {
-      "value": "D1"
+      "value": "aiprofilephotomaker-staging"
     },
     "sqlAdminUsername": {
       "value": "aiprofileadmin"

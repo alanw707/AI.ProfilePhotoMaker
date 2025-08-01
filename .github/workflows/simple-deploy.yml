@@ -1,4 +1,4 @@
-name: 🚀 Simple Deploy
+name: 🚀 Staging Deploy
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
         type: boolean
 
 env:
-  RESOURCE_GROUP: rg-aiprofilemaker
+  RESOURCE_GROUP: rg-aiprofilemaker-staging
   
 permissions:
   id-token: write
@@ -75,7 +75,7 @@ jobs:
           az group create \
             --name ${{ env.RESOURCE_GROUP }} \
             --location eastus2 \
-            --tags Environment=prod Application=AIProfileMaker
+            --tags Environment=staging Application=AIProfileMaker
             
       - name: 🏗️ Deploy Infrastructure
         id: infra
