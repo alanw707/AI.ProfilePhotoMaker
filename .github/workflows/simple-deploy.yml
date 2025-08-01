@@ -84,9 +84,10 @@ jobs:
           
           DEPLOYMENT_NAME="deploy-$(date +%Y%m%d-%H%M%S)"
           
+          # Use the fixed template that avoids API consumption errors
           az deployment group create \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --template-file simple-deploy.bicep \
+            --template-file simple-deploy-fixed.bicep \
             --parameters \
               sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}' \
               jwtSecret='${{ secrets.JWT_SECRET }}' \
