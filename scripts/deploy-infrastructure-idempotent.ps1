@@ -112,11 +112,17 @@ function Build-ContainerImages {
         
         # Build and push backend image
         Write-Host "   🔧 Building backend API image..." -ForegroundColor Gray
-        az acr build --registry $RegistryName --image "${AppName}-api:${Environment}-latest" --image "${AppName}-api:${Environment}-$(Get-Date -Format 'yyyyMMdd-HHmmss')" --file "Dockerfile.backend" .
+        $backendBuild = az acr build --registry $RegistryName --image "${AppName}-api:${Environment}-latest" --image "${AppName}-api:${Environment}-$(Get-Date -Format 'yyyyMMdd-HHmmss')" --file "../Dockerfile.backend" ..
+        if ($LASTEXITCODE -ne 0) {
+            throw "Backend image build failed"
+        }
         
         # Build and push frontend image  
         Write-Host "   🎨 Building frontend UI image..." -ForegroundColor Gray
-        az acr build --registry $RegistryName --image "${AppName}-ui:${Environment}-latest" --image "${AppName}-ui:${Environment}-$(Get-Date -Format 'yyyyMMdd-HHmmss')" --file "Dockerfile.frontend" .
+        $frontendBuild = az acr build --registry $RegistryName --image "${AppName}-ui:${Environment}-latest" --image "${AppName}-ui:${Environment}-$(Get-Date -Format 'yyyyMMdd-HHmmss')" --file "../Dockerfile.frontend" ..
+        if ($LASTEXITCODE -ne 0) {
+            throw "Frontend image build failed"
+        }
         
         Write-Host "   ✅ Container images built and pushed successfully" -ForegroundColor Green
         return $true
