@@ -1,6 +1,4 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
 import { StateBaseService } from './state-base.service';
 import { FileUploadService } from './file-upload.service';
 import { ImageValidationService } from './image-validation.service';
@@ -35,14 +33,6 @@ export class ImageStateService extends StateBaseService<ImageState> {
   private readonly CACHE_KEY = 'image_state_data';
   private readonly VALIDATION_TTL = 5 * 60 * 1000; // 5 minutes
 
-  protected override initialState: ImageState = {
-    uploadedImages: 0,
-    uploadedImageThumbnails: [],
-    generatedPhotosCount: 0,
-    isLoading: false,
-    imagesValidated: false,
-    lastValidationTime: 0,
-  };
 
   constructor(
     _cacheManager: CacheManagerService,
@@ -208,7 +198,7 @@ export class ImageStateService extends StateBaseService<ImageState> {
    */
   async validateAndCleanupImages(
     images: UploadedImageThumbnail[],
-    isFromCache: boolean
+    _isFromCache: boolean
   ): Promise<ImageValidationResult> {
     // Check if image validation is disabled via environment configuration
     if (!this._configService.isImageValidationEnabled) {

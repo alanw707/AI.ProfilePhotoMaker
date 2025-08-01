@@ -40,13 +40,13 @@ class MockPhotoGalleryComponent {
 // Mock JSZip for testing
 class MockJSZip {
   constructor() {}
-  folder(name: string) {
+  folder(_name: string) {
     return {
-      file: (filename: string, data: any) => {}
+      file: (_filename: string, _data: any) => {}
     };
   }
-  file(filename: string, data: any) {}
-  async generateAsync(options: any) {
+  file(_filename: string, _data: any) {}
+  async generateAsync(_options: any) {
     return new Blob(['mock zip content'], { type: 'application/zip' });
   }
 }
@@ -548,7 +548,6 @@ describe('Gallery Management Flow Integration Tests', () => {
       }));
 
       const progressValues: number[] = [];
-      const originalCreateZip = component['createZipDownload'];
       
       spyOn(component, 'createZipDownload').and.callFake(async (images) => {
         component.isDownloading = true;

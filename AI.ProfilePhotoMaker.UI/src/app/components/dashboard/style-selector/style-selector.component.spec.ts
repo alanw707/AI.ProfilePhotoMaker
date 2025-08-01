@@ -190,7 +190,7 @@ describe('StyleSelectorComponent', () => {
     });
 
     it('should navigate to gallery with current timestamp', () => {
-      const dateSpy = spyOn(Date, 'now').and.returnValue(12345);
+      spyOn(Date, 'now').and.returnValue(12345);
 
       component.navigateToGallery();
 

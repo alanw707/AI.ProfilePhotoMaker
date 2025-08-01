@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, of } from 'rxjs';
 
 export interface FileSecurityValidation {
   isValid: boolean;
@@ -26,7 +26,7 @@ export interface SecurityConfig {
   providedIn: 'root',
 })
 export class FileSecurityService {
-  private readonly DEFAULT_CONFIG: SecurityConfig = {
+  private readonly _defaultConfig: SecurityConfig = {
     maxFileSize: 10 * 1024 * 1024, // 10MB
     allowedMimeTypes: [
       'image/jpeg',
@@ -43,7 +43,7 @@ export class FileSecurityService {
     validateFileHeaders: true,
   };
 
-  private config: SecurityConfig = { ...this.DEFAULT_CONFIG };
+  private _config: SecurityConfig = { ...this._defaultConfig };
 
   /**
    * Validate a single file against security policies
@@ -57,10 +57,11 @@ export class FileSecurityService {
 
     try {
       // 1. File size validation
-      if (file.size > this.config.maxFileSize) {
+      if (file.size > this._config.maxFileSize) {
         validation.isValid = false;
         validation.securityIssues.push(
-          `File size ${this.formatFileSize(file.size)} exceeds maximum allowed size ${this.formatFileSize(this.config.maxFileSize)}`
+          `File size ${this._formatFileSize(file.size)} exceeds maximum allowed ` +
+          `size ${this._formatFileSize(this._config.maxFileSize)}`
         );
         validation.riskLevel = 'medium';
       }
@@ -73,43 +74,43 @@ export class FileSecurityService {
       }
 
       // 3. MIME type validation
-      if (!this.config.allowedMimeTypes.includes(file.type)) {
+      if (!this._config.allowedMimeTypes.includes(file.type)) {
         validation.isValid = false;
         validation.securityIssues.push(`File type '${file.type}' is not allowed`);
         validation.riskLevel = 'high';
       }
 
       // 4. File extension validation
-      const extension = this.getFileExtension(file.name).toLowerCase();
-      if (!this.config.allowedExtensions.includes(extension)) {
+      const extension = this._getFileExtension(file.name).toLowerCase();
+      if (!this._config.allowedExtensions.includes(extension)) {
         validation.isValid = false;
         validation.securityIssues.push(`File extension '${extension}' is not allowed`);
         validation.riskLevel = 'high';
       }
 
       // 5. Filename validation (prevent path traversal)
-      if (this.containsPathTraversal(file.name)) {
+      if (this._containsPathTraversal(file.name)) {
         validation.isValid = false;
         validation.securityIssues.push('Filename contains potentially dangerous path characters');
         validation.riskLevel = 'critical';
       }
 
       // 6. Dangerous filename patterns
-      if (this.hasDangerousFilename(file.name)) {
+      if (this._hasDangerousFilename(file.name)) {
         validation.isValid = false;
         validation.securityIssues.push('Filename matches dangerous pattern');
         validation.riskLevel = 'critical';
       }
 
       // 7. MIME type vs extension mismatch
-      if (!this.validateMimeExtensionMatch(file.type, extension)) {
+      if (!this._validateMimeExtensionMatch(file.type, extension)) {
         validation.isValid = false;
         validation.securityIssues.push('File type and extension do not match');
         validation.riskLevel = 'high';
       }
 
       return of(validation);
-    } catch (error) {
+    } catch {
       validation.isValid = false;
       validation.securityIssues.push('File validation failed due to internal error');
       validation.riskLevel = 'critical';
@@ -139,25 +140,26 @@ export class FileSecurityService {
     const batchIssues: string[] = [];
     let batchValid = true;
 
-    if (files.length > this.config.maxFilesPerUpload) {
+    if (files.length > this._config.maxFilesPerUpload) {
       batchValid = false;
       batchIssues.push(
-        `Too many files: ${files.length} exceeds maximum of ${this.config.maxFilesPerUpload}`
+        `Too many files: ${files.length} exceeds maximum of ${this._config.maxFilesPerUpload}`
       );
     }
 
     const totalSize = files.reduce((sum, file) => sum + file.size, 0);
-    if (totalSize > this.config.maxTotalSize) {
+    if (totalSize > this._config.maxTotalSize) {
       batchValid = false;
       batchIssues.push(
-        `Total size ${this.formatFileSize(totalSize)} exceeds maximum ${this.formatFileSize(this.config.maxTotalSize)}`
+        `Total size ${this._formatFileSize(totalSize)} exceeds maximum ` +
+        `${this._formatFileSize(this._config.maxTotalSize)}`
       );
     }
 
     // Validate individual files
     const fileValidations: FileSecurityValidation[] = [];
     for (const file of files) {
-      const validation = this.validateFileSynchronously(file);
+      const validation = this._validateFileSynchronously(file);
       fileValidations.push(validation);
       if (!validation.isValid) {
         batchValid = false;
@@ -177,14 +179,19 @@ export class FileSecurityService {
    */
   sanitizeFilename(filename: string): string {
     // Remove path traversal attempts
-    let sanitized = filename.replace(/[\/\\\.]{2,}/g, '');
+    let sanitized = filename.replace(/[/\\]{2,}/g, '');
 
-    // Remove dangerous characters
-    sanitized = sanitized.replace(/[<>:"|?*\x00-\x1f]/g, '_');
+    // Remove dangerous characters and control characters  
+    sanitized = sanitized.replace(/[<>:"|?*]/g, '_');
+    // Remove ASCII control characters (0-31) - using String methods to avoid regex warning
+    sanitized = sanitized.split('').map(char => {
+      const code = char.charCodeAt(0);
+      return code >= 0 && code <= 31 ? '_' : char;
+    }).join('');
 
     // Limit length
     if (sanitized.length > 255) {
-      const extension = this.getFileExtension(sanitized);
+      const extension = this._getFileExtension(sanitized);
       const nameOnly = sanitized.substring(0, sanitized.lastIndexOf('.'));
       sanitized = nameOnly.substring(0, 255 - extension.length) + extension;
     }
@@ -203,17 +210,17 @@ export class FileSecurityService {
   async validateFileHeaders(
     file: File
   ): Promise<{ isValid: boolean; detectedType: string; issues: string[] }> {
-    if (!this.config.validateFileHeaders) {
+    if (!this._config.validateFileHeaders) {
       return { isValid: true, detectedType: file.type, issues: [] };
     }
 
     try {
-      const buffer = await this.readFileBuffer(file, 12); // Read first 12 bytes for magic numbers
+      const buffer = await this._readFileBuffer(file, 12); // Read first 12 bytes for magic numbers
       const signature = Array.from(new Uint8Array(buffer))
         .map(byte => byte.toString(16).padStart(2, '0'))
         .join('');
 
-      const detectedType = this.detectFileTypeFromSignature(signature);
+      const detectedType = this._detectFileTypeFromSignature(signature);
       const issues: string[] = [];
 
       if (detectedType && detectedType !== file.type) {
@@ -222,7 +229,7 @@ export class FileSecurityService {
       }
 
       return { isValid: true, detectedType: detectedType || file.type, issues: [] };
-    } catch (error) {
+    } catch {
       return {
         isValid: false,
         detectedType: 'unknown',
@@ -235,20 +242,20 @@ export class FileSecurityService {
    * Update security configuration
    */
   updateConfig(newConfig: Partial<SecurityConfig>): void {
-    this.config = { ...this.config, ...newConfig };
-    console.log('🔒 File security configuration updated:', this.config);
+    this._config = { ...this._config, ...newConfig };
+    console.log('🔒 File security configuration updated:', this._config);
   }
 
   /**
    * Get current security configuration
    */
   getConfig(): Readonly<SecurityConfig> {
-    return { ...this.config };
+    return { ...this._config };
   }
 
   // Private helper methods
 
-  private validateFileSynchronously(file: File): FileSecurityValidation {
+  private _validateFileSynchronously(file: File): FileSecurityValidation {
     const validation: FileSecurityValidation = {
       isValid: true,
       securityIssues: [],
@@ -256,22 +263,22 @@ export class FileSecurityService {
     };
 
     // File size validation
-    if (file.size > this.config.maxFileSize) {
+    if (file.size > this._config.maxFileSize) {
       validation.isValid = false;
       validation.securityIssues.push('File too large');
       validation.riskLevel = 'medium';
     }
 
     // MIME type validation
-    if (!this.config.allowedMimeTypes.includes(file.type)) {
+    if (!this._config.allowedMimeTypes.includes(file.type)) {
       validation.isValid = false;
       validation.securityIssues.push('Invalid file type');
       validation.riskLevel = 'high';
     }
 
     // Extension validation
-    const extension = this.getFileExtension(file.name).toLowerCase();
-    if (!this.config.allowedExtensions.includes(extension)) {
+    const extension = this._getFileExtension(file.name).toLowerCase();
+    if (!this._config.allowedExtensions.includes(extension)) {
       validation.isValid = false;
       validation.securityIssues.push('Invalid file extension');
       validation.riskLevel = 'high';
@@ -280,16 +287,16 @@ export class FileSecurityService {
     return validation;
   }
 
-  private getFileExtension(filename: string): string {
+  private _getFileExtension(filename: string): string {
     const lastDot = filename.lastIndexOf('.');
     return lastDot >= 0 ? filename.substring(lastDot) : '';
   }
 
-  private containsPathTraversal(filename: string): boolean {
+  private _containsPathTraversal(filename: string): boolean {
     return /\.\.\/|\.\.\\|\/\.\.|\\\.\./.test(filename);
   }
 
-  private hasDangerousFilename(filename: string): boolean {
+  private _hasDangerousFilename(filename: string): boolean {
     const dangerousPatterns = [
       /^\./, // Hidden files
       /\.(exe|bat|cmd|scr|pif|com|dll|vbs|js|jar|sh)$/i, // Executable extensions
@@ -299,7 +306,7 @@ export class FileSecurityService {
     return dangerousPatterns.some(pattern => pattern.test(filename));
   }
 
-  private validateMimeExtensionMatch(mimeType: string, extension: string): boolean {
+  private _validateMimeExtensionMatch(mimeType: string, extension: string): boolean {
     const mimeExtensionMap: Record<string, string[]> = {
       'image/jpeg': ['.jpg', '.jpeg'],
       'image/png': ['.png'],
@@ -312,7 +319,7 @@ export class FileSecurityService {
     return validExtensions ? validExtensions.includes(extension) : false;
   }
 
-  private async readFileBuffer(file: File, bytes: number): Promise<ArrayBuffer> {
+  private async _readFileBuffer(file: File, bytes: number): Promise<ArrayBuffer> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as ArrayBuffer);
@@ -321,7 +328,7 @@ export class FileSecurityService {
     });
   }
 
-  private detectFileTypeFromSignature(signature: string): string | null {
+  private _detectFileTypeFromSignature(signature: string): string | null {
     const signatures: Record<string, string> = {
       ffd8ff: 'image/jpeg',
       '89504e47': 'image/png',
@@ -339,7 +346,7 @@ export class FileSecurityService {
     return null;
   }
 
-  private formatFileSize(bytes: number): string {
+  private _formatFileSize(bytes: number): string {
     if (bytes === 0) {return '0 B';}
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];

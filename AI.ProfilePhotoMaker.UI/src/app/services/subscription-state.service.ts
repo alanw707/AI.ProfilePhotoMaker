@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { forkJoin, Observable, of } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { StateBaseService } from './state-base.service';
 import { CreditService, UserCreditStatus } from './credit.service';
@@ -24,16 +24,9 @@ export interface SubscriptionState {
   providedIn: 'root',
 })
 export class SubscriptionStateService extends StateBaseService<SubscriptionState> {
-  private readonly CACHE_KEY = 'subscription_state_data';
-  private readonly CREDITS_CACHE_KEY = 'credits_data';
+  private readonly cacheKey = 'subscription_state_data';
+  private readonly creditsCacheKey = 'credits_data';
 
-  protected override initialState: SubscriptionState = {
-    userCreditStatus: null,
-    creditsInfo: null,
-    totalCredits: 0,
-    isPremiumWorkflow: false,
-    isLoading: false,
-  };
 
   constructor(
     _cacheManager: CacheManagerService,
@@ -62,7 +55,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
     const startTime = performance.now();
 
     // Check cache first
-    const cachedData = this.getCachedData<SubscriptionState>(this.CACHE_KEY);
+    const cachedData = this.getCachedData<SubscriptionState>(this.cacheKey);
 
     if (cachedData?.userCreditStatus) {
       this.setState(cachedData);
@@ -77,7 +70,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
     this.setLoading(true);
 
     try {
-      const apiCalls: any = {
+      const apiCalls: Record<string, any> = {
         creditStatus: this._creditService.getCreditStatus().pipe(
           catchError(error => {
             return of({ success: false, data: null, error });
@@ -87,20 +80,23 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
 
       // Only call Replicate credits API if enabled in environment
       if (this._configService.isReplicateCreditsEnabled) {
-        apiCalls.credits = this._replicateService.getCredits().pipe(
+        apiCalls['credits'] = this._replicateService.getCredits().pipe(
           catchError(error => {
             return of({ success: false, data: null, error });
           })
         );
       } else {
-        apiCalls.credits = of({ success: false, data: null, error: 'disabled' });
+        apiCalls['credits'] = of({ success: false, data: null, error: 'disabled' });
       }
 
-      const result: any = await forkJoin(apiCalls).toPromise();
+      const result = await forkJoin(apiCalls).toPromise();
+      if (!result) {
+        throw new Error('Failed to load subscription data');
+      }
       const { creditStatus, credits } = result;
 
-      const userCreditStatus = creditStatus?.success ? creditStatus.data : null;
-      const creditsInfo = credits?.success ? credits.data : null;
+      const userCreditStatus = (creditStatus as any)?.success ? (creditStatus as any).data : null;
+      const creditsInfo = (credits as any)?.success ? (credits as any).data : null;
 
       // Calculate total credits
       const totalCredits = this._creditService.getTotalAvailableCredits(
@@ -122,14 +118,16 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
       this.setState(newState);
 
       // Cache the subscription data
-      this.setCachedData(this.CACHE_KEY, newState);
+      this.setCachedData(this.cacheKey, newState);
 
       // Show info if credits API failed but internal credits loaded
       if (
-        !credits?.success &&
+        !(credits as any)?.success &&
         this._configService.isReplicateCreditsEnabled &&
-        creditStatus?.success
+        (creditStatus as any)?.success
       ) {
+        // Could add notification about external credits not available
+        console.info('External credits API not available, using internal credits only');
       }
 
       this.logPerformance('Subscription data loaded', startTime);
@@ -149,7 +147,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
     const cachedData = this.getCachedData<{
       userCreditStatus: UserCreditStatus;
       totalCredits: number;
-    }>(this.CREDITS_CACHE_KEY);
+    }>(this.creditsCacheKey);
 
     if (cachedData?.userCreditStatus) {
       this.setState({
@@ -201,7 +199,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
       // Cache the internal credits data
       if (userCreditStatus) {
         this.setCachedData(
-          this.CREDITS_CACHE_KEY,
+          this.creditsCacheKey,
           { userCreditStatus, totalCredits },
           CacheManagerService.DASHBOARD_CACHE_DURATION_MS
         );
@@ -218,8 +216,8 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
    * Refresh credit status after purchases or usage
    */
   async refreshCredits(): Promise<void> {
-    this.invalidateCache(this.CACHE_KEY);
-    this.invalidateCache(this.CREDITS_CACHE_KEY);
+    this.invalidateCache(this.cacheKey);
+    this.invalidateCache(this.creditsCacheKey);
     await this.loadFullSubscriptionData();
   }
 
@@ -278,8 +276,8 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
     });
 
     // Invalidate cache to ensure fresh data on next load
-    this.invalidateCache(this.CACHE_KEY);
-    this.invalidateCache(this.CREDITS_CACHE_KEY);
+    this.invalidateCache(this.cacheKey);
+    this.invalidateCache(this.creditsCacheKey);
   }
 
   /**
@@ -288,15 +286,15 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
   shouldRefreshCredits(_maxAgeMinutes = 15): boolean {
     // This could be enhanced to track last refresh time
     // For now, we'll use cache validity
-    return !this.getCachedData<SubscriptionState>(this.CACHE_KEY);
+    return !this.getCachedData<SubscriptionState>(this.cacheKey);
   }
 
   /**
    * Force refresh implementation
    */
   forceRefresh(): void {
-    this.forceRefreshCache(this.CACHE_KEY);
-    this.forceRefreshCache(this.CREDITS_CACHE_KEY);
+    this.forceRefreshCache(this.cacheKey);
+    this.forceRefreshCache(this.creditsCacheKey);
     this.loadFullSubscriptionData();
   }
 }

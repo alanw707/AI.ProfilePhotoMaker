@@ -106,6 +106,16 @@ coverage/
 *.pdb
 *.exe
 
+# Lint output files (temporary/generated)
+lint-output.txt
+lint-results.json
+lint-dashboard.json
+current-lint-errors.json
+**/lint-output.txt
+**/lint-results.json
+**/lint-dashboard.json
+**/current-lint-errors.json
+
 # Cache files
 **/.cache/
 infrastructure/venv-azure/

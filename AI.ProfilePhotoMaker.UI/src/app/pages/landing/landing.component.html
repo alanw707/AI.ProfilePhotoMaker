@@ -58,25 +58,52 @@
         <div class="hidden md:flex items-center space-x-8">
           <a
             (click)="scrollToSection('features')"
-            class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
+            (keydown.enter)="scrollToSection('features')"
+            (keydown.space)="scrollToSection('features')"
+            tabindex="0"
+            role="button"
+            class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors"
+            aria-label="Navigate to Features section">
             Features
           </a>
           <a
             (click)="scrollToSection('examples')"
-            class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
+            (keydown.enter)="scrollToSection('examples')"
+            (keydown.space)="scrollToSection('examples')"
+            tabindex="0"
+            role="button"
+            class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors"
+            aria-label="Navigate to Examples section">
             Examples
           </a>
           <a
             (click)="scrollToSection('pricing')"
-            class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
+            (keydown.enter)="scrollToSection('pricing')"
+            (keydown.space)="scrollToSection('pricing')"
+            tabindex="0"
+            role="button"
+            class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors"
+            aria-label="Navigate to Pricing section">
             Pricing
           </a>
           <a
             (click)="scrollToSection('testimonials')"
-            class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
+            (keydown.enter)="scrollToSection('testimonials')"
+            (keydown.space)="scrollToSection('testimonials')"
+            tabindex="0"
+            role="button"
+            class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors"
+            aria-label="Navigate to Reviews section">
             Reviews
           </a>
-          <a (click)="navigateToLogin()" class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
+          <a 
+            (click)="navigateToLogin()" 
+            (keydown.enter)="navigateToLogin()"
+            (keydown.space)="navigateToLogin()"
+            tabindex="0"
+            role="button"
+            class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors"
+            aria-label="Navigate to Login page">
             Login
           </a>
           <button (click)="getStarted()" class="btn-primary px-6 py-2" style="border-radius: 8px !important">
@@ -106,23 +133,54 @@
       <!-- Mobile Menu -->
       <div *ngIf="mobileMenuOpen" class="mobile-menu md:hidden absolute top-full left-0 right-0 shadow-lg">
         <div class="px-4 py-6 space-y-4">
-          <a (click)="scrollToSection('features')" class="block text-gray-700 hover:text-primary-600 transition-colors">
+          <a 
+            (click)="scrollToSection('features')" 
+            (keydown.enter)="scrollToSection('features')"
+            (keydown.space)="scrollToSection('features')"
+            tabindex="0"
+            role="button"
+            class="block text-gray-700 hover:text-primary-600 transition-colors"
+            aria-label="Navigate to Features section">
             Features
           </a>
-          <a (click)="scrollToSection('examples')" class="block text-gray-700 hover:text-primary-600 transition-colors">
+          <a 
+            (click)="scrollToSection('examples')" 
+            (keydown.enter)="scrollToSection('examples')"
+            (keydown.space)="scrollToSection('examples')"
+            tabindex="0"
+            role="button"
+            class="block text-gray-700 hover:text-primary-600 transition-colors"
+            aria-label="Navigate to Examples section">
             Examples
           </a>
-          <a (click)="scrollToSection('pricing')" class="block text-gray-700 hover:text-primary-600 transition-colors">
+          <a 
+            (click)="scrollToSection('pricing')" 
+            (keydown.enter)="scrollToSection('pricing')"
+            (keydown.space)="scrollToSection('pricing')"
+            tabindex="0"
+            role="button"
+            class="block text-gray-700 hover:text-primary-600 transition-colors"
+            aria-label="Navigate to Pricing section">
             Pricing
           </a>
           <a
             (click)="scrollToSection('testimonials')"
-            class="block text-gray-700 hover:text-primary-600 transition-colors">
+            (keydown.enter)="scrollToSection('testimonials')"
+            (keydown.space)="scrollToSection('testimonials')"
+            tabindex="0"
+            role="button"
+            class="block text-gray-700 hover:text-primary-600 transition-colors"
+            aria-label="Navigate to Reviews section">
             Reviews
           </a>
           <a
             (click)="navigateToLogin()"
-            class="block cursor-pointer text-gray-700 hover:text-primary-600 transition-colors">
+            (keydown.enter)="navigateToLogin()"
+            (keydown.space)="navigateToLogin()"
+            tabindex="0"
+            role="button"
+            class="block cursor-pointer text-gray-700 hover:text-primary-600 transition-colors"
+            aria-label="Navigate to Login page">
             Login
           </a>
           <button (click)="getStarted()" class="btn-primary w-full px-6 py-3" style="border-radius: 8px !important">
@@ -359,7 +417,12 @@
             class="style-card"
             *ngFor="let photo of styledPhotos; let i = index"
             [class.featured]="i === 0"
-            (click)="onStyleCardClick(photo, i)">
+            (click)="onStyleCardClick(photo, i)"
+            (keydown.enter)="onStyleCardClick(photo, i)"
+            (keydown.space)="onStyleCardClick(photo, i)"
+            tabindex="0"
+            role="button"
+            [attr.aria-label]="'Try ' + formatStyleName(photo.style) + ' professional photo style'">
             <!-- Image Container -->
             <div class="style-image-container">
               <img
@@ -543,7 +606,11 @@
         <div *ngFor="let faq of faqs; let i = index" class="faq-item rounded-lg overflow-hidden">
           <button
             (click)="toggleFAQ(i)"
-            class="faq-button w-full px-6 py-4 text-left flex justify-between items-center transition-colors">
+            (keydown.enter)="toggleFAQ(i)"
+            (keydown.space)="toggleFAQ(i)"
+            class="faq-button w-full px-6 py-4 text-left flex justify-between items-center transition-colors"
+            [attr.aria-expanded]="faq.open"
+            [attr.aria-label]="'Toggle FAQ: ' + faq.question">
             <span class="faq-question font-semibold">{{ faq.question }}</span>
             <svg
               class="faq-icon w-5 h-5 transform transition-transform duration-200"
@@ -600,7 +667,14 @@
           <ul class="space-y-2">
             <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Features</a></li>
             <li>
-              <a (click)="navigateToPricing()" class="cursor-pointer text-gray-400 hover:text-white transition-colors">
+              <a 
+                (click)="navigateToPricing()" 
+                (keydown.enter)="navigateToPricing()"
+                (keydown.space)="navigateToPricing()"
+                tabindex="0"
+                role="button"
+                class="cursor-pointer text-gray-400 hover:text-white transition-colors"
+                aria-label="Navigate to Pricing page">
                 Pricing
               </a>
             </li>

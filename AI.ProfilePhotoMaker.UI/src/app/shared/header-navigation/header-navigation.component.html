@@ -20,7 +20,15 @@
 </button>
 
 <!-- Mobile Menu Overlay -->
-<div class="mobile-menu-overlay" [class.active]="isMobileMenuOpen" (click)="closeMobileMenu()"></div>
+<div 
+  class="mobile-menu-overlay" 
+  [class.active]="isMobileMenuOpen" 
+  (click)="closeMobileMenu()"
+  (keydown.enter)="closeMobileMenu()"
+  (keydown.space)="closeMobileMenu()"
+  [tabindex]="isMobileMenuOpen ? 0 : -1"
+  role="button"
+  aria-label="Close mobile menu overlay"></div>
 
 <!-- Navigation Header -->
 <header class="app-header" [class.menu-open]="isMobileMenuOpen">

@@ -1,8 +1,4 @@
 
-> ai.profile-photo-maker.ui@0.0.0 lint
-> ng lint
-
-
 Linting "AI.ProfilePhotoMaker.UI"...
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/auth/register/register.component.html
@@ -19,51 +15,15 @@ Linting "AI.ProfilePhotoMaker.UI"...
   148:16  warning  The cyclomatic complexity 21 exceeds the defined limit 10  @angular-eslint/template/cyclomatic-complexity
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/credit-packages/credit-packages.component.html
-  45:79  warning  Missing trackBy function in ngFor directive                @angular-eslint/template/use-track-by-function
   82:44  warning  The cyclomatic complexity 11 exceeds the defined limit 10  @angular-eslint/template/cyclomatic-complexity
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/credit-packages/credit-packages.component.ts
-   24:1   warning  The component's `changeDetection` value should be set to `ChangeDetectionStrategy.OnPush`   @angular-eslint/prefer-on-push-component-change-detection
-   47:11  error    Class Property name `themeSubscription` must have one leading underscore(s)                 @typescript-eslint/naming-convention
-   50:13  error    Parameter Property name `creditService` must have one leading underscore(s)                 @typescript-eslint/naming-convention
-   51:13  error    Parameter Property name `notificationService` must have one leading underscore(s)           @typescript-eslint/naming-convention
-   52:13  error    Parameter Property name `stripeService` must have one leading underscore(s)                 @typescript-eslint/naming-convention
-   53:13  error    Parameter Property name `themeService` must have one leading underscore(s)                  @typescript-eslint/naming-convention
-   54:13  error    Parameter Property name `cdr` must have one leading underscore(s)                           @typescript-eslint/naming-convention
-   57:3   warning  Missing return type on function                                                             @typescript-eslint/explicit-function-return-type
-   73:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
-   78:3   warning  Missing return type on function                                                             @typescript-eslint/explicit-function-return-type
-   84:3   warning  Method 'loadPackages' has too many lines (56). Maximum allowed is 50                        max-lines-per-function
-   84:3   warning  Missing return type on function                                                             @typescript-eslint/explicit-function-return-type
-   89:13  error    Prefer using an optional chain expression instead, as it's more concise and easier to read  @typescript-eslint/prefer-optional-chain
-  119:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
-  145:3   warning  Missing return type on function                                                             @typescript-eslint/explicit-function-return-type
-  162:3   warning  Missing return type on function                                                             @typescript-eslint/explicit-function-return-type
-  182:3   warning  Missing return type on function                                                             @typescript-eslint/explicit-function-return-type
-  182:24  warning  Async method 'purchasePackage' has a complexity of 11. Maximum allowed is 10                complexity
-  204:30  warning  Unexpected any. Specify a different type                                                    @typescript-eslint/no-explicit-any
-  220:15  error    'error' is defined but never used. Allowed unused args must match /^_/u                     @typescript-eslint/no-unused-vars
-  220:22  warning  Unexpected any. Specify a different type                                                    @typescript-eslint/no-explicit-any
-  227:3   warning  Missing return type on function                                                             @typescript-eslint/explicit-function-return-type
-  256:3   warning  Missing return type on function                                                             @typescript-eslint/explicit-function-return-type
-  295:18  error    'error' is defined but never used. Allowed unused args must match /^_/u                     @typescript-eslint/no-unused-vars
-  303:3   warning  Missing return type on function                                                             @typescript-eslint/explicit-function-return-type
-
-/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/credit-status/credit-status.component.ts
-   5:1   warning  The component's `changeDetection` value should be set to `ChangeDetectionStrategy.OnPush`  @angular-eslint/prefer-on-push-component-change-detection
-  17:23  error    Parameter Property name `creditService` must have one leading underscore(s)                @typescript-eslint/naming-convention
-  19:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  23:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  40:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
+   99:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  118:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  126:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/dashboard/credit-display/credit-display.component.html
   117:39  warning  The cyclomatic complexity 11 exceeds the defined limit 10  @angular-eslint/template/cyclomatic-complexity
-
-/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/dashboard/credit-display/credit-display.component.ts
-    8:18  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
-   15:18  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
-   23:1   warning  The component's `changeDetection` value should be set to `ChangeDetectionStrategy.OnPush`  @angular-eslint/prefer-on-push-component-change-detection
-  122:1   error    This line has a length of 129. Maximum allowed is 120                                      max-len
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/dashboard/file-upload-section/file-upload-section.component.html
   108:12  warning  Missing trackBy function in ngFor directive                                             @angular-eslint/template/use-track-by-function
@@ -119,160 +79,55 @@ Linting "AI.ProfilePhotoMaker.UI"...
   560:16  warning  The cyclomatic complexity 39 exceeds the defined limit 10                               @angular-eslint/template/cyclomatic-complexity
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/dashboard/file-upload-section/file-upload-section.component.spec.ts
-   5:38  error  'FileUploadState' is defined but never used                                                                              @typescript-eslint/no-unused-vars
-  12:3   error  'QualityCheckResult' is defined but never used                                                                           @typescript-eslint/no-unused-vars
-  21:7   error  'mockFileUploadManagerService' is assigned a value but never used                                                        @typescript-eslint/no-unused-vars
-  67:38  error  The `Function` type accepts any function-like value.
+  61:38  error  The `Function` type accepts any function-like value.
 Prefer explicitly defining any function parameters and return type  @typescript-eslint/no-unsafe-function-type
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/dashboard/file-upload-section/file-upload-section.component.ts
-    23:38  warning  Unexpected any. Specify a different type                                                                                                                                      @typescript-eslint/no-explicit-any
-    32:1   warning  The component's `changeDetection` value should be set to `ChangeDetectionStrategy.OnPush`                                                                                     @angular-eslint/prefer-on-push-component-change-detection
-    43:37  warning  Unexpected any. Specify a different type                                                                                                                                      @typescript-eslint/no-explicit-any
-    51:48  warning  Unexpected any. Specify a different type                                                                                                                                      @typescript-eslint/no-explicit-any
-    56:12  warning  Unexpected any. Specify a different type                                                                                                                                      @typescript-eslint/no-explicit-any
-    77:11  error    Class Property name `modalBackdrop` must have one leading underscore(s)                                                                                                       @typescript-eslint/naming-convention
-    78:11  error    Class Property name `modalElement` must have one leading underscore(s)                                                                                                        @typescript-eslint/naming-convention
-    81:11  error    Class Property name `filePreviewCache` must have one leading underscore(s)                                                                                                    @typescript-eslint/naming-convention
-    84:11  error    Class Property name `faceDetectionService` must have one leading underscore(s)                                                                                                @typescript-eslint/naming-convention
-    86:3   warning  Constructor has too many parameters (6). Maximum allowed is 5                                                                                                                 max-params
-    87:13  error    Parameter Property name `fileUploadService` must have one leading underscore(s)                                                                                               @typescript-eslint/naming-convention
-    88:13  error    Parameter Property name `notificationService` must have one leading underscore(s)                                                                                             @typescript-eslint/naming-convention
-    89:13  error    Parameter Property name `fileSecurityService` must have one leading underscore(s)                                                                                             @typescript-eslint/naming-convention
-    90:13  error    Parameter Property name `ngZone` must have one leading underscore(s)                                                                                                          @typescript-eslint/naming-convention
-    91:13  error    Parameter Property name `cdr` must have one leading underscore(s)                                                                                                             @typescript-eslint/naming-convention
-    92:13  error    Parameter Property name `injector` must have one leading underscore(s)                                                                                                        @typescript-eslint/naming-convention
-    95:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   103:17  error    Class Method name `loadFaceDetectionService` must have one leading underscore(s)                                                                                              @typescript-eslint/naming-convention
-   105:15  error    Variable name `FaceDetectionService` must match one of the following formats: camelCase, UPPER_CASE                                                                           @typescript-eslint/naming-convention
-   111:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   123:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   127:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   127:25  warning  Unexpected any. Specify a different type                                                                                                                                      @typescript-eslint/no-explicit-any
-   135:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   141:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   147:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   157:3   warning  Async method 'handleFileSelection' has too many lines (98). Maximum allowed is 50                                                                                             max-lines-per-function
-   157:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   157:28  warning  Async method 'handleFileSelection' has a complexity of 16. Maximum allowed is 10                                                                                              complexity
-   172:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                             no-console
-   192:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                             no-console
-   278:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                             no-console
-   279:1   error    This line has a length of 135. Maximum allowed is 120                                                                                                                         max-len
-   286:11  error    Class Method name `validateFile` must have one leading underscore(s)                                                                                                          @typescript-eslint/naming-convention
-   300:11  error    Class Method name `showConsolidatedErrors` must have one leading underscore(s)                                                                                                @typescript-eslint/naming-convention
-   300:43  warning  Unexpected any. Specify a different type                                                                                                                                      @typescript-eslint/no-explicit-any
-   323:11  error    'totalFiles' is assigned a value but never used                                                                                                                               @typescript-eslint/no-unused-vars
-   332:11  error    Class Method name `showEnhancedSecurityErrors` must have one leading underscore(s)                                                                                            @typescript-eslint/naming-convention
-   332:37  warning  Method 'showEnhancedSecurityErrors' has a complexity of 14. Maximum allowed is 10                                                                                             complexity
-   332:47  warning  Unexpected any. Specify a different type                                                                                                                                      @typescript-eslint/no-explicit-any
-   356:11  warning  Unexpected any. Specify a different type                                                                                                                                      @typescript-eslint/no-explicit-any
-   358:68  warning  Unexpected any. Specify a different type                                                                                                                                      @typescript-eslint/no-explicit-any
-   363:18  warning  Unexpected any. Specify a different type                                                                                                                                      @typescript-eslint/no-explicit-any
-   374:18  warning  Unexpected any. Specify a different type                                                                                                                                      @typescript-eslint/no-explicit-any
-   388:11  error    Class Method name `getSecurityErrorMessage` must have one leading underscore(s)                                                                                               @typescript-eslint/naming-convention
-   391:7   error    Object Literal Property name `File size` must match one of the following formats: camelCase                                                                                   @typescript-eslint/naming-convention
-   392:7   error    Object Literal Property name `File type` must match one of the following formats: camelCase                                                                                   @typescript-eslint/naming-convention
-   393:7   error    Object Literal Property name `File extension` must match one of the following formats: camelCase                                                                              @typescript-eslint/naming-convention
-   394:7   error    Object Literal Property name `Empty files` must match one of the following formats: camelCase                                                                                 @typescript-eslint/naming-convention
-   395:7   error    Object Literal Property name `path traversal` must match one of the following formats: camelCase                                                                              @typescript-eslint/naming-convention
-   396:7   error    Object Literal Property name `dangerous pattern` must match one of the following formats: camelCase                                                                           @typescript-eslint/naming-convention
-   398:7   error    Object Literal Property name `validation failed` must match one of the following formats: camelCase                                                                           @typescript-eslint/naming-convention
-   413:3   warning  Async method 'validateImageQuality' has too many lines (89). Maximum allowed is 50                                                                                            max-lines-per-function
-   413:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   413:17  error    Class Method name `validateImageQuality` must have one leading underscore(s)                                                                                                  @typescript-eslint/naming-convention
-   413:37  warning  Async method 'validateImageQuality' has a complexity of 11. Maximum allowed is 10                                                                                             complexity
-   424:13  error    'progress' is assigned a value but never used                                                                                                                                 @typescript-eslint/no-unused-vars
-   515:1   warning  File has too many lines (1099). Maximum allowed is 400                                                                                                                        max-lines
-   518:11  error    Class Method name `getImageDimensions` must have one leading underscore(s)                                                                                                    @typescript-eslint/naming-convention
-   523:23  warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   528:24  warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   538:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   560:3   warning  Method 'deleteUploadedImage' has too many lines (64). Maximum allowed is 50                                                                                                   max-lines-per-function
-   560:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   560:30  warning  Unexpected any. Specify a different type                                                                                                                                      @typescript-eslint/no-explicit-any
-   561:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                             no-console
-   580:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                             no-console
-   639:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   639:11  error    Class Method name `refreshUploadedImages` must have one leading underscore(s)                                                                                                 @typescript-eslint/naming-convention
-   650:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   650:27  warning  Unexpected any. Specify a different type                                                                                                                                      @typescript-eslint/no-explicit-any
-   664:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   664:22  error    'thumb' is defined but never used. Allowed unused args must match /^_/u                                                                                                       @typescript-eslint/no-unused-vars
-   664:29  warning  Unexpected any. Specify a different type                                                                                                                                      @typescript-eslint/no-explicit-any
-   664:34  error    'index' is defined but never used. Allowed unused args must match /^_/u                                                                                                       @typescript-eslint/no-unused-vars
-   669:3   warning  Method 'uploadImages' has too many lines (55). Maximum allowed is 50                                                                                                          max-lines-per-function
-   669:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   710:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                             no-console
-   745:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   745:11  error    Class Method name `clearSelectedFiles` must have one leading underscore(s)                                                                                                    @typescript-eslint/naming-convention
-   763:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   763:11  error    Class Method name `cleanupFilePreviewCache` must have one leading underscore(s)                                                                                               @typescript-eslint/naming-convention
-   768:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   797:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   817:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   830:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-   830:11  error    Class Method name `calculateTooltipPosition` must have one leading underscore(s)                                                                                              @typescript-eslint/naming-convention
-   830:36  error    'buttonElement' is defined but never used. Allowed unused args must match /^_/u                                                                                               @typescript-eslint/no-unused-vars
-   837:3   warning  Method 'createDocumentLevelModal' has too many lines (65). Maximum allowed is 50                                                                                              max-lines-per-function
-   837:11  error    Class Method name `createDocumentLevelModal` must have one leading underscore(s)                                                                                              @typescript-eslint/naming-convention
-   925:3   warning  Method 'applyModalContentStyles' has too many lines (186). Maximum allowed is 50                                                                                              max-lines-per-function
-   925:11  error    Class Method name `applyModalContentStyles` must have one leading underscore(s)                                                                                               @typescript-eslint/naming-convention
-  1037:22  warning  Arrow function has too many lines (79). Maximum allowed is 50                                                                                                                 max-lines-per-function
-  1146:11  error    Class Method name `removeDocumentLevelModal` must have one leading underscore(s)                                                                                              @typescript-eslint/naming-convention
-  1161:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-  1161:11  error    Class Method name `handleModalKeydown` must have one leading underscore(s)                                                                                                    @typescript-eslint/naming-convention
-  1169:3   warning  Method 'buildModalContent' has too many lines (110). Maximum allowed is 50                                                                                                    max-lines-per-function
-  1169:11  error    Class Method name `buildModalContent` must have one leading underscore(s)                                                                                                     @typescript-eslint/naming-convention
-  1169:28  warning  Method 'buildModalContent' has a complexity of 19. Maximum allowed is 10                                                                                                      complexity
-  1288:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
-  1288:11  error    Class Method name `closeAllPopups` must have one leading underscore(s)                                                                                                        @typescript-eslint/naming-convention
-  1337:7   error    Object Literal Property name `No face detected in image. Please upload a clear photo with your face visible.` must match one of the following formats: camelCase              @typescript-eslint/naming-convention
-  1339:7   error    Object Literal Property name `Unable to determine photo composition. Please upload a clear headshot or upper body photo.` must match one of the following formats: camelCase  @typescript-eslint/naming-convention
-  1341:7   error    Object Literal Property name `Image quality is below recommended standards. Consider uploading a higher quality photo.` must match one of the following formats: camelCase    @typescript-eslint/naming-convention
-  1343:7   error    Object Literal Property name `Full body photo detected. Please upload headshot or upper body photos only.` must match one of the following formats: camelCase                 @typescript-eslint/naming-convention
-  1345:7   error    Object Literal Property name `Multiple faces detected in image. Please upload a photo with only one person.` must match one of the following formats: camelCase               @typescript-eslint/naming-convention
-  1347:7   error    Object Literal Property name `Face is too small in the image. Please upload a closer headshot.` must match one of the following formats: camelCase                            @typescript-eslint/naming-convention
-  1348:7   error    Object Literal Property name `Image is too blurry. Please upload a sharper photo.` must match one of the following formats: camelCase                                         @typescript-eslint/naming-convention
-  1349:7   error    Object Literal Property name `Poor lighting detected. Please upload a well-lit photo.` must match one of the following formats: camelCase                                     @typescript-eslint/naming-convention
-  1368:7   error    Object Literal Property name `Try uploading a clearer photo with better lighting.` must match one of the following formats: camelCase                                         @typescript-eslint/naming-convention
-  1369:7   error    Object Literal Property name `Upload a closer headshot photo.` must match one of the following formats: camelCase                                                             @typescript-eslint/naming-convention
-  1370:7   error    Object Literal Property name `Ensure only one person is in the photo.` must match one of the following formats: camelCase                                                     @typescript-eslint/naming-convention
-  1371:7   error    Object Literal Property name `Use a higher resolution image.` must match one of the following formats: camelCase                                                              @typescript-eslint/naming-convention
-  1372:7   error    Object Literal Property name `Take photo with better focus.` must match one of the following formats: camelCase                                                               @typescript-eslint/naming-convention
-  1373:7   error    Object Literal Property name `Improve lighting conditions.` must match one of the following formats: camelCase                                                                @typescript-eslint/naming-convention
-  1374:7   error    Object Literal Property name `Remove sunglasses or accessories covering face.` must match one of the following formats: camelCase                                             @typescript-eslint/naming-convention
-
-/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/dashboard/photo-generation/photo-generation.component.spec.ts
-  4:26  error  'GenerationStatus' is defined but never used  @typescript-eslint/no-unused-vars
+    88:3   warning  Constructor has too many parameters (6). Maximum allowed is 5                                                                                                                 max-params
+   160:3   warning  Async method 'handleFileSelection' has too many lines (98). Maximum allowed is 50                                                                                             max-lines-per-function
+   160:28  warning  Async method 'handleFileSelection' has a complexity of 16. Maximum allowed is 10                                                                                              complexity
+   340:3   warning  Method '_showEnhancedSecurityErrors' has too many lines (55). Maximum allowed is 50                                                                                           max-lines-per-function
+   340:38  warning  Method '_showEnhancedSecurityErrors' has a complexity of 14. Maximum allowed is 10                                                                                            complexity
+   429:3   warning  Async method '_validateImageQuality' has too many lines (89). Maximum allowed is 50                                                                                           max-lines-per-function
+   429:38  warning  Async method '_validateImageQuality' has a complexity of 11. Maximum allowed is 10                                                                                            complexity
+   440:13  error    'progress' is assigned a value but never used                                                                                                                                 @typescript-eslint/no-unused-vars
+   512:1   warning  File has too many lines (1147). Maximum allowed is 400                                                                                                                        max-lines
+   539:23  warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
+   544:24  warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
+   576:3   warning  Method 'deleteUploadedImage' has too many lines (64). Maximum allowed is 50                                                                                                   max-lines-per-function
+   685:3   warning  Method 'uploadImages' has too many lines (55). Maximum allowed is 50                                                                                                          max-lines-per-function
+   853:3   warning  Method '_createDocumentLevelModal' has too many lines (65). Maximum allowed is 50                                                                                             max-lines-per-function
+   941:3   warning  Method '_applyModalContentStyles' has too many lines (186). Maximum allowed is 50                                                                                             max-lines-per-function
+  1053:22  warning  Arrow function has too many lines (79). Maximum allowed is 50                                                                                                                 max-lines-per-function
+  1177:3   warning  Missing return type on function                                                                                                                                               @typescript-eslint/explicit-function-return-type
+  1185:3   warning  Method '_buildModalContent' has too many lines (110). Maximum allowed is 50                                                                                                   max-lines-per-function
+  1185:29  warning  Method '_buildModalContent' has a complexity of 19. Maximum allowed is 10                                                                                                     complexity
+  1370:7   error    Object Literal Property name `No face detected in image. Please upload a clear photo with your face visible.` must match one of the following formats: camelCase              @typescript-eslint/naming-convention
+  1372:7   error    Object Literal Property name `Unable to determine photo composition. Please upload a clear headshot or upper body photo.` must match one of the following formats: camelCase  @typescript-eslint/naming-convention
+  1374:7   error    Object Literal Property name `Image quality is below recommended standards. Consider uploading a higher quality photo.` must match one of the following formats: camelCase    @typescript-eslint/naming-convention
+  1376:7   error    Object Literal Property name `Full body photo detected. Please upload headshot or upper body photos only.` must match one of the following formats: camelCase                 @typescript-eslint/naming-convention
+  1378:7   error    Object Literal Property name `Multiple faces detected in image. Please upload a photo with only one person.` must match one of the following formats: camelCase               @typescript-eslint/naming-convention
+  1380:7   error    Object Literal Property name `Face is too small in the image. Please upload a closer headshot.` must match one of the following formats: camelCase                            @typescript-eslint/naming-convention
+  1381:7   error    Object Literal Property name `Image is too blurry. Please upload a sharper photo.` must match one of the following formats: camelCase                                         @typescript-eslint/naming-convention
+  1382:7   error    Object Literal Property name `Poor lighting detected. Please upload a well-lit photo.` must match one of the following formats: camelCase                                     @typescript-eslint/naming-convention
+  1417:7   error    Object Literal Property name `Try uploading a clearer photo with better lighting.` must match one of the following formats: camelCase                                         @typescript-eslint/naming-convention
+  1418:7   error    Object Literal Property name `Upload a closer headshot photo.` must match one of the following formats: camelCase                                                             @typescript-eslint/naming-convention
+  1419:7   error    Object Literal Property name `Ensure only one person is in the photo.` must match one of the following formats: camelCase                                                     @typescript-eslint/naming-convention
+  1420:7   error    Object Literal Property name `Use a higher resolution image.` must match one of the following formats: camelCase                                                              @typescript-eslint/naming-convention
+  1421:7   error    Object Literal Property name `Take photo with better focus.` must match one of the following formats: camelCase                                                               @typescript-eslint/naming-convention
+  1422:7   error    Object Literal Property name `Improve lighting conditions.` must match one of the following formats: camelCase                                                                @typescript-eslint/naming-convention
+  1423:7   error    Object Literal Property name `Remove sunglasses or accessories covering face.` must match one of the following formats: camelCase                                             @typescript-eslint/naming-convention
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/dashboard/photo-generation/photo-generation.component.ts
-    7:1   warning  The component's `changeDetection` value should be set to `ChangeDetectionStrategy.OnPush`  @angular-eslint/prefer-on-push-component-change-detection
-  136:11  error    Class Property name `progressSubscription` must have one leading underscore(s)             @typescript-eslint/naming-convention
-  138:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  144:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  148:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  148:11  error    Class Method name `startProgressPolling` must have one leading underscore(s)               @typescript-eslint/naming-convention
-  158:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  158:11  error    Class Method name `stopProgressPolling` must have one leading underscore(s)                @typescript-eslint/naming-convention
-  165:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  169:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  173:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  177:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  181:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  185:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-   70:13  error    click must be accompanied by either keyup, keydown or keypress event for accessibility     @angular-eslint/template/click-events-have-key-events
-   70:13  error    Elements with interaction handlers must be focusable                                       @angular-eslint/template/interactive-supports-focus
-   72:15  warning  Missing trackBy function in ngFor directive                                                @angular-eslint/template/use-track-by-function
+  149:11  error    Class Method name `startProgressPolling` must have one leading underscore(s)            @typescript-eslint/naming-convention
+  159:11  error    Class Method name `stopProgressPolling` must have one leading underscore(s)             @typescript-eslint/naming-convention
+   71:13  error    click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+   71:13  error    Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+   73:15  warning  Missing trackBy function in ngFor directive                                             @angular-eslint/template/use-track-by-function
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/dashboard/stats-card/stats-card.component.html
   1:1  error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
   1:1  error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
-
-/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/dashboard/stats-card/stats-card.component.ts
-   5:1   warning  The component's `changeDetection` value should be set to `ChangeDetectionStrategy.OnPush`  @angular-eslint/prefer-on-push-component-change-detection
-  24:23  error    Parameter Property name `router` must have one leading underscore(s)                       @typescript-eslint/naming-convention
-  26:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/dashboard/style-selector/style-selector.component.html
    27:35  warning  Missing trackBy function in ngFor directive                                             @angular-eslint/template/use-track-by-function
@@ -305,157 +160,77 @@ Prefer explicitly defining any function parameters and return type  @typescript-
   193:13  error  'dateSpy' is assigned a value but never used  @typescript-eslint/no-unused-vars
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/dashboard/style-selector/style-selector.component.ts
-  14:1   warning  The component's `changeDetection` value should be set to `ChangeDetectionStrategy.OnPush`  @angular-eslint/prefer-on-push-component-change-detection
-  22:23  error    Parameter Property name `router` must have one leading underscore(s)                       @typescript-eslint/naming-convention
-  50:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  54:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  59:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  63:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  67:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  71:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  75:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  89:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  89:23  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
-  95:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
+  90:3   warning  Missing return type on function           @typescript-eslint/explicit-function-return-type
+  90:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  96:3   warning  Missing return type on function           @typescript-eslint/explicit-function-return-type
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/dashboard/training-progress/training-progress.component.ts
-    6:1   warning  The component's `changeDetection` value should be set to `ChangeDetectionStrategy.OnPush`  @angular-eslint/prefer-on-push-component-change-detection
-   92:11  error    Class Property name `progressSubscription` must have one leading underscore(s)             @typescript-eslint/naming-convention
-   94:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  101:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  105:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  105:11  error    Class Method name `startProgressPolling` must have one leading underscore(s)               @typescript-eslint/naming-convention
-  115:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  115:11  error    Class Method name `stopProgressPolling` must have one leading underscore(s)                @typescript-eslint/naming-convention
-  122:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  126:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  130:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  134:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
+  106:11  error  Class Method name `startProgressPolling` must have one leading underscore(s)  @typescript-eslint/naming-convention
+  116:11  error  Class Method name `stopProgressPolling` must have one leading underscore(s)   @typescript-eslint/naming-convention
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.html
   43:9  error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
   43:9  error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
 
-/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.spec.ts
-  7:3  error  'MockNotificationService' is defined but never used  @typescript-eslint/no-unused-vars
-  9:3  error  'TestConstants' is defined but never used            @typescript-eslint/no-unused-vars
-
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/photo-enhancement/photo-enhancement.component.ts
-   12:10  error    'CreditsInfo' is defined but never used                                                    @typescript-eslint/no-unused-vars
-   20:1   warning  The component's `changeDetection` value should be set to `ChangeDetectionStrategy.OnPush`  @angular-eslint/prefer-on-push-component-change-detection
-   36:18  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
-   43:11  error    Class Property name `stateSubscription` must have one leading underscore(s)                @typescript-eslint/naming-convention
-   45:3   warning  Constructor has too many parameters (7). Maximum allowed is 5                              max-params
-   46:13  error    Parameter Property name `replicateService` must have one leading underscore(s)             @typescript-eslint/naming-convention
-   47:13  error    Parameter Property name `fileUploadService` must have one leading underscore(s)            @typescript-eslint/naming-convention
-   48:13  error    Parameter Property name `authService` must have one leading underscore(s)                  @typescript-eslint/naming-convention
-   49:13  error    Parameter Property name `router` must have one leading underscore(s)                       @typescript-eslint/naming-convention
-   50:13  error    Parameter Property name `stateService` must have one leading underscore(s)                 @typescript-eslint/naming-convention
-   51:13  error    Parameter Property name `creditService` must have one leading underscore(s)                @typescript-eslint/naming-convention
-   52:13  error    Parameter Property name `cdr` must have one leading underscore(s)                          @typescript-eslint/naming-convention
-   69:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-   88:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-   94:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-   98:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-   98:25  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
-  105:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  110:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  115:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  125:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  144:23  warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  148:24  warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  156:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  164:3   warning  Async method 'startEnhancement' has too many lines (100). Maximum allowed is 50            max-lines-per-function
-  164:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  164:25  warning  Async method 'startEnhancement' has a complexity of 35. Maximum allowed is 10              complexity
-  264:21  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
-  298:17  error    Class Method name `uploadImageForEnhancement` must have one leading underscore(s)          @typescript-eslint/naming-convention
-  328:17  error    Class Method name `pollForCompletion` must have one leading underscore(s)                  @typescript-eslint/naming-convention
-  328:34  warning  Async method 'pollForCompletion' has a complexity of 11. Maximum allowed is 10             complexity
-  328:66  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
-  350:13  error    Blocks are nested too deeply (5). Maximum allowed is 4                                     max-depth
-  373:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  386:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  414:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  426:11  error    Class Method name `verifyUIState` must have one leading underscore(s)                      @typescript-eslint/naming-convention
-  427:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error          no-console
-  442:11  error    Class Method name `cleanupTemporaryImage` must have one leading underscore(s)              @typescript-eslint/naming-convention
-  447:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error          no-console
-  453:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error          no-console
-  465:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
+   47:3   warning  Constructor has too many parameters (7). Maximum allowed is 5                      max-params
+   71:3   warning  Missing return type on function                                                    @typescript-eslint/explicit-function-return-type
+   90:3   warning  Missing return type on function                                                    @typescript-eslint/explicit-function-return-type
+   96:3   warning  Missing return type on function                                                    @typescript-eslint/explicit-function-return-type
+  100:3   warning  Missing return type on function                                                    @typescript-eslint/explicit-function-return-type
+  100:25  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  107:3   warning  Missing return type on function                                                    @typescript-eslint/explicit-function-return-type
+  112:3   warning  Missing return type on function                                                    @typescript-eslint/explicit-function-return-type
+  117:3   warning  Missing return type on function                                                    @typescript-eslint/explicit-function-return-type
+  127:3   warning  Missing return type on function                                                    @typescript-eslint/explicit-function-return-type
+  146:23  warning  Missing return type on function                                                    @typescript-eslint/explicit-function-return-type
+  150:24  warning  Missing return type on function                                                    @typescript-eslint/explicit-function-return-type
+  158:3   warning  Missing return type on function                                                    @typescript-eslint/explicit-function-return-type
+  166:3   warning  Async method 'startEnhancement' has too many lines (100). Maximum allowed is 50    max-lines-per-function
+  166:3   warning  Missing return type on function                                                    @typescript-eslint/explicit-function-return-type
+  166:25  warning  Async method 'startEnhancement' has a complexity of 35. Maximum allowed is 10      complexity
+  266:21  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  300:17  error    Class Method name `uploadImageForEnhancement` must have one leading underscore(s)  @typescript-eslint/naming-convention
+  330:17  error    Class Method name `pollForCompletion` must have one leading underscore(s)          @typescript-eslint/naming-convention
+  330:34  warning  Async method 'pollForCompletion' has a complexity of 11. Maximum allowed is 10     complexity
+  330:66  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  352:13  error    Blocks are nested too deeply (5). Maximum allowed is 4                             max-depth
+  375:3   warning  Missing return type on function                                                    @typescript-eslint/explicit-function-return-type
+  388:3   warning  Missing return type on function                                                    @typescript-eslint/explicit-function-return-type
+  416:3   warning  Missing return type on function                                                    @typescript-eslint/explicit-function-return-type
+  428:11  error    Class Method name `verifyUIState` must have one leading underscore(s)              @typescript-eslint/naming-convention
+  429:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  444:11  error    Class Method name `cleanupTemporaryImage` must have one leading underscore(s)      @typescript-eslint/naming-convention
+  449:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  455:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  467:3   warning  Missing return type on function                                                    @typescript-eslint/explicit-function-return-type
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/photo-gallery/gallery-filter-controls/gallery-filter-controls.component.ts
-  11:1   warning  The component's `changeDetection` value should be set to `ChangeDetectionStrategy.OnPush`   @angular-eslint/prefer-on-push-component-change-detection
-  34:3   warning  Missing return type on function                                                             @typescript-eslint/explicit-function-return-type
-  34:25  warning  Unexpected any. Specify a different type                                                    @typescript-eslint/no-explicit-any
-  38:3   warning  Missing return type on function                                                             @typescript-eslint/explicit-function-return-type
-  42:3   warning  Missing return type on function                                                             @typescript-eslint/explicit-function-return-type
-  44:9   error    Prefer using an optional chain expression instead, as it's more concise and easier to read  @typescript-eslint/prefer-optional-chain
-  49:3   warning  Missing return type on function                                                             @typescript-eslint/explicit-function-return-type
-  53:3   warning  Missing return type on function                                                             @typescript-eslint/explicit-function-return-type
-
-/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/photo-gallery/gallery-image-actions/gallery-image-actions.component.ts
-   5:1  warning  The component's `changeDetection` value should be set to `ChangeDetectionStrategy.OnPush`  @angular-eslint/prefer-on-push-component-change-detection
-  22:3  warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  29:3  warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  36:3  warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  43:3  warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
+  46:9  error  Prefer using an optional chain expression instead, as it's more concise and easier to read  @typescript-eslint/prefer-optional-chain
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/photo-gallery/gallery-pagination/gallery-pagination.component.html
   17:9  warning  Missing trackBy function in ngFor directive  @angular-eslint/template/use-track-by-function
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/photo-gallery/gallery-pagination/gallery-pagination.component.ts
-   4:1   warning  The component's `changeDetection` value should be set to `ChangeDetectionStrategy.OnPush`  @angular-eslint/prefer-on-push-component-change-detection
-  20:3   error    Class Property name `Math` must match one of the following formats: camelCase              @typescript-eslint/naming-convention
-  24:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  28:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  34:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  34:11  error    Class Method name `updateTotalPages` must have one leading underscore(s)                   @typescript-eslint/naming-convention
-  38:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  44:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  50:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  56:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
+  35:11  error  Class Method name `updateTotalPages` must have one leading underscore(s)  @typescript-eslint/naming-convention
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/photo-gallery/photo-gallery.component.ts
-   20:1   warning  The component's `changeDetection` value should be set to `ChangeDetectionStrategy.OnPush`  @angular-eslint/prefer-on-push-component-change-detection
-  206:3   error    Class Property name `Math` must match one of the following formats: camelCase              @typescript-eslint/naming-convention
-  225:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  229:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  237:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  241:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  246:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  255:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  270:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  274:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  278:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  282:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  286:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  294:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  298:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  306:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  315:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  322:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  322:15  error    'event' is defined but never used. Allowed unused args must match /^_/u                    @typescript-eslint/no-unused-vars
-  322:22  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
-  326:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  326:23  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
-  409:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  414:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-   48:12  error    Duplicate attribute `class`                                                                @angular-eslint/template/no-duplicate-attributes
-   48:36  error    Duplicate attribute `class`                                                                @angular-eslint/template/no-duplicate-attributes
-   65:15  error    click must be accompanied by either keyup, keydown or keypress event for accessibility     @angular-eslint/template/click-events-have-key-events
-   65:15  error    Elements with interaction handlers must be focusable                                       @angular-eslint/template/interactive-supports-focus
-   75:15  error    click must be accompanied by either keyup, keydown or keypress event for accessibility     @angular-eslint/template/click-events-have-key-events
-   75:15  error    Elements with interaction handlers must be focusable                                       @angular-eslint/template/interactive-supports-focus
-  101:20  error    Duplicate attribute `class`                                                                @angular-eslint/template/no-duplicate-attributes
-  101:39  error    Duplicate attribute `class`                                                                @angular-eslint/template/no-duplicate-attributes
-  149:13  error    click must be accompanied by either keyup, keydown or keypress event for accessibility     @angular-eslint/template/click-events-have-key-events
-  149:13  error    Elements with interaction handlers must be focusable                                       @angular-eslint/template/interactive-supports-focus
-  156:22  error    Duplicate attribute `class`                                                                @angular-eslint/template/no-duplicate-attributes
-  156:47  error    Duplicate attribute `class`                                                                @angular-eslint/template/no-duplicate-attributes
-  162:42  warning  The cyclomatic complexity 11 exceeds the defined limit 10                                  @angular-eslint/template/cyclomatic-complexity
-  166:23  error    Duplicate attribute `class`                                                                @angular-eslint/template/no-duplicate-attributes
-  166:53  error    Duplicate attribute `class`                                                                @angular-eslint/template/no-duplicate-attributes
+  323:15  error    'event' is defined but never used. Allowed unused args must match /^_/u                 @typescript-eslint/no-unused-vars
+   48:12  error    Duplicate attribute `class`                                                             @angular-eslint/template/no-duplicate-attributes
+   48:36  error    Duplicate attribute `class`                                                             @angular-eslint/template/no-duplicate-attributes
+   65:15  error    click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+   65:15  error    Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+   75:15  error    click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+   75:15  error    Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+  101:20  error    Duplicate attribute `class`                                                             @angular-eslint/template/no-duplicate-attributes
+  101:39  error    Duplicate attribute `class`                                                             @angular-eslint/template/no-duplicate-attributes
+  149:13  error    click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
+  149:13  error    Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
+  156:22  error    Duplicate attribute `class`                                                             @angular-eslint/template/no-duplicate-attributes
+  156:47  error    Duplicate attribute `class`                                                             @angular-eslint/template/no-duplicate-attributes
+  162:42  warning  The cyclomatic complexity 11 exceeds the defined limit 10                               @angular-eslint/template/cyclomatic-complexity
+  166:23  error    Duplicate attribute `class`                                                             @angular-eslint/template/no-duplicate-attributes
+  166:53  error    Duplicate attribute `class`                                                             @angular-eslint/template/no-duplicate-attributes
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/settings/account-info/account-info.component.html
    8:7  error  A label component must be associated with a form element  @angular-eslint/template/label-has-associated-control
@@ -465,79 +240,51 @@ Prefer explicitly defining any function parameters and return type  @typescript-
   24:7  error  A label component must be associated with a form element  @angular-eslint/template/label-has-associated-control
   28:7  error  A label component must be associated with a form element  @angular-eslint/template/label-has-associated-control
 
-/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/settings/account-info/account-info.component.ts
-   5:1   warning  The component's `changeDetection` value should be set to `ChangeDetectionStrategy.OnPush`  @angular-eslint/prefer-on-push-component-change-detection
-  24:20  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
-
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/settings/credit-management/credit-management.component.ts
-   5:1   warning  The component's `changeDetection` value should be set to `ChangeDetectionStrategy.OnPush`  @angular-eslint/prefer-on-push-component-change-detection
-  13:25  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
-  14:30  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+  24:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  28:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  28:82  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  43:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  44:60  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/components/shared/notification/notification.component.ts
-   7:1   warning  The component's `changeDetection` value should be set to `ChangeDetectionStrategy.OnPush`  @angular-eslint/prefer-on-push-component-change-detection
-  16:11  error    Class Property name `destroy$` must have one leading underscore(s)                         @typescript-eslint/naming-convention
-  19:13  error    Parameter Property name `notificationService` must have one leading underscore(s)          @typescript-eslint/naming-convention
-  20:13  error    Parameter Property name `cdr` must have one leading underscore(s)                          @typescript-eslint/naming-convention
+  17:11  error  Class Property name `destroy$` must have one leading underscore(s)  @typescript-eslint/naming-convention
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/dashboard/dashboard.component.html
   135:34  warning  The conditional complexity 5 exceeds the defined limit 3  @angular-eslint/template/conditional-complexity
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/dashboard/dashboard.component.ts
-   56:1   warning  The component's `changeDetection` value should be set to `ChangeDetectionStrategy.OnPush`                    @angular-eslint/prefer-on-push-component-change-detection
-   73:22  warning  Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
-   84:11  error    Class Property name `workflowService` must have one leading underscore(s)                                    @typescript-eslint/naming-convention
-   85:11  error    Class Property name `workflowProgressSubject` must have one leading underscore(s)                            @typescript-eslint/naming-convention
-  133:3   warning  Constructor has too many parameters (10). Maximum allowed is 5                                               max-params
-  134:13  error    Parameter Property name `authService` must have one leading underscore(s)                                    @typescript-eslint/naming-convention
-  135:13  error    Parameter Property name `router` must have one leading underscore(s)                                         @typescript-eslint/naming-convention
-  136:13  error    Parameter Property name `styleService` must have one leading underscore(s)                                   @typescript-eslint/naming-convention
-  137:13  error    Parameter Property name `notificationService` must have one leading underscore(s)                            @typescript-eslint/naming-convention
-  140:13  error    Parameter Property name `config` must have one leading underscore(s)                                         @typescript-eslint/naming-convention
-  141:13  error    Parameter Property name `workflowStepService` must have one leading underscore(s)                            @typescript-eslint/naming-convention
-  142:13  error    Parameter Property name `injector` must have one leading underscore(s)                                       @typescript-eslint/naming-convention
-  143:13  error    Parameter Property name `cdr` must have one leading underscore(s)                                            @typescript-eslint/naming-convention
-  149:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
-  170:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
-  177:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
-  177:11  error    Class Method name `updateCurrentStep` must have one leading underscore(s)                                    @typescript-eslint/naming-convention
-  185:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
-  185:11  error    Class Method name `loadAvailableStyles` must have one leading underscore(s)                                  @typescript-eslint/naming-convention
-  204:14  error    'error' is defined but never used. Allowed unused args must match /^_/u                                      @typescript-eslint/no-unused-vars
-  213:11  error    Class Method name `getStylePreviewUrl` must have one leading underscore(s)                                   @typescript-eslint/naming-convention
-  218:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
-  218:21  error    'uploadedFiles' is defined but never used. Allowed unused args must match /^_/u                              @typescript-eslint/no-unused-vars
-  230:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
-  263:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
-  263:17  error    Class Method name `refreshUploadedImagesFromServer` must have one leading underscore(s)                      @typescript-eslint/naming-convention
-  267:14  error    'error' is defined but never used                                                                            @typescript-eslint/no-unused-vars
-  273:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
-  278:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
-  283:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
-  288:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
-  292:17  error    Class Method name `loadWorkflowService` must have one leading underscore(s)                                  @typescript-eslint/naming-convention
-  293:5   error    Unnecessary try/catch wrapper                                                                                no-useless-catch
-  295:15  error    Variable name `WorkflowOrchestrationService` must match one of the following formats: camelCase, UPPER_CASE  @typescript-eslint/naming-convention
-  312:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
-  327:14  error    'error' is defined but never used                                                                            @typescript-eslint/no-unused-vars
-  360:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
-  360:11  error    Class Method name `getCreditCalculation` must have one leading underscore(s)                                 @typescript-eslint/naming-convention
-  380:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
-  380:11  error    Class Method name `calculateCreditsLocally` must have one leading underscore(s)                              @typescript-eslint/naming-convention
-  405:11  error    Class Method name `calculateTrainingCreditsLocally` must have one leading underscore(s)                      @typescript-eslint/naming-convention
-  412:11  error    Class Method name `calculateGenerationCreditsLocally` must have one leading underscore(s)                    @typescript-eslint/naming-convention
-  422:11  error    Class Method name `getTotalAvailableCreditsLocally` must have one leading underscore(s)                      @typescript-eslint/naming-convention
-  456:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
-  468:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
-
-/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/guards/app.guard.ts
-  18:13  error  Parameter Property name `authService` must have one leading underscore(s)  @typescript-eslint/naming-convention
-  19:13  error  Parameter Property name `router` must have one leading underscore(s)       @typescript-eslint/naming-convention
-  36:11  error  Class Method name `checkAuth` must have one leading underscore(s)          @typescript-eslint/naming-convention
-
-/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/guards/guest.guard.ts
-  5:43  error  'route' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
-  5:50  error  'state' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+   85:11  error    Class Property name `workflowService` must have one leading underscore(s)                                    @typescript-eslint/naming-convention
+   86:11  error    Class Property name `workflowProgressSubject` must have one leading underscore(s)                            @typescript-eslint/naming-convention
+  134:3   warning  Constructor has too many parameters (10). Maximum allowed is 5                                               max-params
+  178:11  error    Class Method name `updateCurrentStep` must have one leading underscore(s)                                    @typescript-eslint/naming-convention
+  186:11  error    Class Method name `loadAvailableStyles` must have one leading underscore(s)                                  @typescript-eslint/naming-convention
+  205:14  error    'error' is defined but never used. Allowed unused args must match /^_/u                                      @typescript-eslint/no-unused-vars
+  214:11  error    Class Method name `getStylePreviewUrl` must have one leading underscore(s)                                   @typescript-eslint/naming-convention
+  219:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
+  219:21  error    'uploadedFiles' is defined but never used. Allowed unused args must match /^_/u                              @typescript-eslint/no-unused-vars
+  231:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
+  264:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
+  264:17  error    Class Method name `refreshUploadedImagesFromServer` must have one leading underscore(s)                      @typescript-eslint/naming-convention
+  268:14  error    'error' is defined but never used                                                                            @typescript-eslint/no-unused-vars
+  274:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
+  279:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
+  284:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
+  289:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
+  293:17  error    Class Method name `loadWorkflowService` must have one leading underscore(s)                                  @typescript-eslint/naming-convention
+  294:5   error    Unnecessary try/catch wrapper                                                                                no-useless-catch
+  296:15  error    Variable name `WorkflowOrchestrationService` must match one of the following formats: camelCase, UPPER_CASE  @typescript-eslint/naming-convention
+  313:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
+  328:14  error    'error' is defined but never used                                                                            @typescript-eslint/no-unused-vars
+  361:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
+  361:11  error    Class Method name `getCreditCalculation` must have one leading underscore(s)                                 @typescript-eslint/naming-convention
+  381:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
+  381:11  error    Class Method name `calculateCreditsLocally` must have one leading underscore(s)                              @typescript-eslint/naming-convention
+  406:11  error    Class Method name `calculateTrainingCreditsLocally` must have one leading underscore(s)                      @typescript-eslint/naming-convention
+  413:11  error    Class Method name `calculateGenerationCreditsLocally` must have one leading underscore(s)                    @typescript-eslint/naming-convention
+  423:11  error    Class Method name `getTotalAvailableCreditsLocally` must have one leading underscore(s)                      @typescript-eslint/naming-convention
+  457:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
+  469:3   warning  Missing return type on function                                                                              @typescript-eslint/explicit-function-return-type
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/integration-tests/auth-flow.integration.spec.ts
     8:10  error    'of' is defined but never used                                                                                                                        @typescript-eslint/no-unused-vars
@@ -644,14 +391,7 @@ Prefer explicitly defining any function parameters and return type  @typescript-
   203:19  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/pages/gallery/gallery.component.ts
-   11:8   error    Import name `JSZip` must match one of the following formats: camelCase                                        @typescript-eslint/naming-convention
    13:1   warning  The component's `changeDetection` value should be set to `ChangeDetectionStrategy.OnPush`                     @angular-eslint/prefer-on-push-component-change-detection
-   27:11  error    Class Property name `hasRunInitialRepair` must have one leading underscore(s)                                 @typescript-eslint/naming-convention
-   30:13  error    Parameter Property name `authService` must have one leading underscore(s)                                     @typescript-eslint/naming-convention
-   31:13  error    Parameter Property name `router` must have one leading underscore(s)                                          @typescript-eslint/naming-convention
-   32:13  error    Parameter Property name `route` must have one leading underscore(s)                                           @typescript-eslint/naming-convention
-   33:13  error    Parameter Property name `fileUploadService` must have one leading underscore(s)                               @typescript-eslint/naming-convention
-   34:13  error    Parameter Property name `cdr` must have one leading underscore(s)                                             @typescript-eslint/naming-convention
    37:3   warning  Missing return type on function                                                                               @typescript-eslint/explicit-function-return-type
    46:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error                             no-console
    54:3   warning  Async method 'loadImages' has too many lines (90). Maximum allowed is 50                                      max-lines-per-function
@@ -899,16 +639,11 @@ Prefer explicitly defining any function parameters and return type  @typescript-
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/services/auth.service.ts
    42:20  error    Class Property name `TOKEN_KEY` must have one leading underscore(s)                         @typescript-eslint/naming-convention
-   44:11  error    Class Property name `isAuthenticatedSubject` must have one leading underscore(s)            @typescript-eslint/naming-convention
-   47:11  error    Class Property name `currentUserSubject` must have one leading underscore(s)                @typescript-eslint/naming-convention
-   51:13  error    Parameter Property name `http` must have one leading underscore(s)                          @typescript-eslint/naming-convention
-   52:13  error    Parameter Property name `config` must have one leading underscore(s)                        @typescript-eslint/naming-convention
-   53:13  error    Parameter Property name `router` must have one leading underscore(s)                        @typescript-eslint/naming-convention
    62:11  error    Class Method name `initializeSecureAuth` must have one leading underscore(s)                @typescript-eslint/naming-convention
    80:11  error    Class Method name `checkTokenValidity` must have one leading underscore(s)                  @typescript-eslint/naming-convention
   111:13  error    Prefer using an optional chain expression instead, as it's more concise and easier to read  @typescript-eslint/prefer-optional-chain
   130:11  error    Class Method name `fetchUserProfileForOAuth` must have one leading underscore(s)            @typescript-eslint/naming-convention
-  150:19  warning  Unexpected any. Specify a different type                                                    @typescript-eslint/no-explicit-any
+  150:1   error    This line has a length of 124. Maximum allowed is 120                                       max-len
   186:11  error    Class Method name `extractUserFromToken` must have one leading underscore(s)                @typescript-eslint/naming-convention
   186:31  warning  Method 'extractUserFromToken' has a complexity of 14. Maximum allowed is 10                 complexity
   213:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
@@ -1002,38 +737,21 @@ Prefer explicitly defining any function parameters and return type  @typescript-
   273:11  error    Class Method name `generateUniqueFileName` must have one leading underscore(s)                             @typescript-eslint/naming-convention
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/services/credit.service.ts
-   71:11  error    Class Property name `apiUrl` must have one leading underscore(s)                       @typescript-eslint/naming-convention
-   72:11  error    Class Property name `creditCosts` must have one leading underscore(s)                  @typescript-eslint/naming-convention
-   75:13  error    Parameter Property name `http` must have one leading underscore(s)                     @typescript-eslint/naming-convention
-   76:13  error    Parameter Property name `configService` must have one leading underscore(s)            @typescript-eslint/naming-convention
-  110:67  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
-  111:27  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
-  120:88  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
-  121:39  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  110:1   error    This line has a length of 144. Maximum allowed is 120                                  max-len
+  120:1   error    This line has a length of 127. Maximum allowed is 120                                  max-len
   148:22  warning  Async method 'getCreditCost' has a complexity of 15. Maximum allowed is 10             complexity
   199:28  warning  Async method 'canUseWeeklyCredits' has a complexity of 15. Maximum allowed is 10       complexity
   263:11  error    Class Method name `getFallbackCreditCost` must have one leading underscore(s)          @typescript-eslint/naming-convention
   280:11  error    Class Method name `getFallbackWeeklyCreditsUsage` must have one leading underscore(s)  @typescript-eslint/naming-convention
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/services/dashboard-coordinator.service.ts
-   22:20  error    Class Property name `CACHE_KEY` must have one leading underscore(s)                @typescript-eslint/naming-convention
-   28:25  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
-   40:3   warning  Constructor has too many parameters (8). Maximum allowed is 5                      max-params
-   41:13  error    Parameter Property name `profileService` must have one leading underscore(s)       @typescript-eslint/naming-convention
-   42:13  error    Parameter Property name `modelState` must have one leading underscore(s)           @typescript-eslint/naming-convention
-   43:13  error    Parameter Property name `fallbackOps` must have one leading underscore(s)          @typescript-eslint/naming-convention
-   44:13  error    Parameter Property name `cacheManager` must have one leading underscore(s)         @typescript-eslint/naming-convention
-   45:13  error    Parameter Property name `notificationService` must have one leading underscore(s)  @typescript-eslint/naming-convention
-   46:13  error    Parameter Property name `imageState` must have one leading underscore(s)           @typescript-eslint/naming-convention
-   47:13  error    Parameter Property name `subscriptionState` must have one leading underscore(s)    @typescript-eslint/naming-convention
-   48:13  error    Parameter Property name `fileUploadService` must have one leading underscore(s)    @typescript-eslint/naming-convention
-  140:14  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
-  158:14  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
-  197:13  error    'loadTime' is assigned a value but never used                                      @typescript-eslint/no-unused-vars
-  237:17  error    Class Method name `loadProfileData` must have one leading underscore(s)            @typescript-eslint/naming-convention
-  264:3   warning  Method 'loadRemainingDataAsync' has too many lines (64). Maximum allowed is 50     max-lines-per-function
-  264:11  error    Class Method name `loadRemainingDataAsync` must have one leading underscore(s)     @typescript-eslint/naming-convention
-  342:11  error    Class Method name `setCoordinatorLoading` must have one leading underscore(s)      @typescript-eslint/naming-convention
+   22:20  error    Class Property name `CACHE_KEY` must have one leading underscore(s)             @typescript-eslint/naming-convention
+   40:3   warning  Constructor has too many parameters (8). Maximum allowed is 5                   max-params
+  197:13  error    'loadTime' is assigned a value but never used                                   @typescript-eslint/no-unused-vars
+  237:17  error    Class Method name `loadProfileData` must have one leading underscore(s)         @typescript-eslint/naming-convention
+  264:3   warning  Method 'loadRemainingDataAsync' has too many lines (64). Maximum allowed is 50  max-lines-per-function
+  264:11  error    Class Method name `loadRemainingDataAsync` must have one leading underscore(s)  @typescript-eslint/naming-convention
+  342:11  error    Class Method name `setCoordinatorLoading` must have one leading underscore(s)   @typescript-eslint/naming-convention
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/services/dashboard-state.service.spec.ts
    70:10  error    Class Property name `DASHBOARD_CACHE_DURATION_MS` must match one of the following formats: camelCase  @typescript-eslint/naming-convention
@@ -1323,9 +1041,6 @@ Prefer explicitly defining any function parameters and return type  @typescript-
     3:10  error    'catchError' is defined but never used                                                    @typescript-eslint/no-unused-vars
    35:20  error    Class Property name `CACHE_KEY` must have one leading underscore(s)                       @typescript-eslint/naming-convention
    36:20  error    Class Property name `VALIDATION_TTL` must have one leading underscore(s)                  @typescript-eslint/naming-convention
-   50:13  error    Parameter Property name `fileUploadService` must have one leading underscore(s)           @typescript-eslint/naming-convention
-   51:13  error    Parameter Property name `imageValidation` must have one leading underscore(s)             @typescript-eslint/naming-convention
-   52:13  error    Parameter Property name `configService` must have one leading underscore(s)               @typescript-eslint/naming-convention
    71:23  warning  Async method 'loadUserImages' has a complexity of 13. Maximum allowed is 10               complexity
   135:11  error    Class Method name `processUserImagesData` must have one leading underscore(s)             @typescript-eslint/naming-convention
   135:32  warning  Method 'processUserImagesData' has a complexity of 11. Maximum allowed is 10              complexity
@@ -1431,46 +1146,44 @@ Prefer explicitly defining any function parameters and return type  @typescript-
   26:11  error  Class Method name `addNotification` must have one leading underscore(s)         @typescript-eslint/naming-convention
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/services/profile.service.ts
-   43:13  error    Parameter Property name `http` must have one leading underscore(s)    @typescript-eslint/naming-convention
-   44:13  error    Parameter Property name `config` must have one leading underscore(s)  @typescript-eslint/naming-convention
-   47:85  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-   50:62  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-   56:63  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-   59:62  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-   65:63  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-   68:62  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-   81:12  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-   86:14  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-   91:56  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-   91:68  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-   92:52  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-   92:64  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-   97:61  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-   97:73  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-   98:55  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-   98:67  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  103:57  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  103:69  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  104:55  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  104:67  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  109:61  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  109:73  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  110:55  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  110:67  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  115:61  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  115:73  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  116:55  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  116:67  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  128:58  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  128:89  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  129:53  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  129:84  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  135:62  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  135:75  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  136:52  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  136:65  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  144:63  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
-  145:73  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
+   47:85  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   50:62  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   56:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   59:62  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   65:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   68:62  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   81:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   86:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   91:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   91:68  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   92:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   92:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   97:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   97:73  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   98:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   98:68  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  103:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  103:69  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  104:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  104:68  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  109:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  109:73  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  110:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  110:68  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  115:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  115:73  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  116:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  116:68  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  128:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  128:89  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  129:54  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  129:85  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  135:62  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  135:75  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  136:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  136:66  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  144:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  145:74  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/services/replicate.service.ts
    43:3    error    Type Property name `created_at` must match one of the following formats: camelCase    @typescript-eslint/naming-convention
@@ -1563,15 +1276,17 @@ Prefer explicitly defining any function parameters and return type  @typescript-
   525:14  warning  Unexpected console statement. Only these console methods are allowed: warn, error              no-console
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/services/state-base.service.ts
-   14:22  error    Class Property name `_state` must match one of the following formats: camelCase  @typescript-eslint/naming-convention
-   95:35  warning  Unexpected any. Specify a different type                                         @typescript-eslint/no-explicit-any
-  140:28  error    'operation' is defined but never used. Allowed unused args must match /^_/u      @typescript-eslint/no-unused-vars
-  140:47  error    'startTime' is defined but never used. Allowed unused args must match /^_/u      @typescript-eslint/no-unused-vars
+   14:22  error    Class Property name `_state` must match one of the following formats: camelCase                    @typescript-eslint/naming-convention
+   18:15  error    Parameter Property name `_initialState` must match one of the following formats: camelCase         @typescript-eslint/naming-convention
+   19:15  error    Parameter Property name `_cacheManager` must match one of the following formats: camelCase         @typescript-eslint/naming-convention
+   20:15  error    Parameter Property name `_notificationService` must match one of the following formats: camelCase  @typescript-eslint/naming-convention
+   95:35  warning  Unexpected any. Specify a different type                                                           @typescript-eslint/no-explicit-any
+  140:28  error    'operation' is defined but never used. Allowed unused args must match /^_/u                        @typescript-eslint/no-unused-vars
+  140:47  error    'startTime' is defined but never used. Allowed unused args must match /^_/u                        @typescript-eslint/no-unused-vars
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/services/stripe.service.ts
    9:11  error    Class Property name `stripePromise` must have one leading underscore(s)            @typescript-eslint/naming-convention
   10:11  error    Class Property name `paymentConfigLoaded` must have one leading underscore(s)      @typescript-eslint/naming-convention
-  12:23  error    Parameter Property name `creditService` must have one leading underscore(s)        @typescript-eslint/naming-convention
   14:17  error    Class Method name `loadStripe` must have one leading underscore(s)                 @typescript-eslint/naming-convention
   20:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
 
@@ -1590,20 +1305,16 @@ Prefer explicitly defining any function parameters and return type  @typescript-
   44:71  warning  Unexpected any. Specify a different type                              @typescript-eslint/no-explicit-any
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/services/subscription-state.service.ts
-    2:20  error    'Observable' is defined but never used                                                    @typescript-eslint/no-unused-vars
-   27:20  error    Class Property name `CACHE_KEY` must have one leading underscore(s)                       @typescript-eslint/naming-convention
-   28:20  error    Class Property name `CREDITS_CACHE_KEY` must have one leading underscore(s)               @typescript-eslint/naming-convention
-   41:13  error    Parameter Property name `creditService` must have one leading underscore(s)               @typescript-eslint/naming-convention
-   42:13  error    Parameter Property name `replicateService` must have one leading underscore(s)            @typescript-eslint/naming-convention
-   43:13  error    Parameter Property name `configService` must have one leading underscore(s)               @typescript-eslint/naming-convention
-   61:3   warning  Async method 'loadFullSubscriptionData' has too many lines (58). Maximum allowed is 50    max-lines-per-function
-   61:33  warning  Async method 'loadFullSubscriptionData' has a complexity of 18. Maximum allowed is 10     complexity
-   80:23  warning  Unexpected any. Specify a different type                                                  @typescript-eslint/no-explicit-any
-   99:21  warning  Unexpected any. Specify a different type                                                  @typescript-eslint/no-explicit-any
-  132:9   error    Empty block statement                                                                     no-empty
-  145:3   warning  Async method 'loadCreditsOnly' has too many lines (54). Maximum allowed is 50             max-lines-per-function
-  145:24  warning  Async method 'loadCreditsOnly' has a complexity of 12. Maximum allowed is 10              complexity
-  288:24  error    'maxAgeMinutes' is assigned a value but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+    2:20  error    'Observable' is defined but never used                                                  @typescript-eslint/no-unused-vars
+   27:20  error    Class Property name `CACHE_KEY` must have one leading underscore(s)                     @typescript-eslint/naming-convention
+   28:20  error    Class Property name `CREDITS_CACHE_KEY` must have one leading underscore(s)             @typescript-eslint/naming-convention
+   61:3   warning  Async method 'loadFullSubscriptionData' has too many lines (58). Maximum allowed is 50  max-lines-per-function
+   61:33  warning  Async method 'loadFullSubscriptionData' has a complexity of 18. Maximum allowed is 10   complexity
+   80:23  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+   99:21  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+  132:9   error    Empty block statement                                                                   no-empty
+  145:3   warning  Async method 'loadCreditsOnly' has too many lines (54). Maximum allowed is 50           max-lines-per-function
+  145:24  warning  Async method 'loadCreditsOnly' has a complexity of 12. Maximum allowed is 10            complexity
 
 /home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/services/theme.service.ts
   10:11  error  Class Property name `currentTheme` must have one leading underscore(s)  @typescript-eslint/naming-convention
@@ -1687,101 +1398,7 @@ Prefer explicitly defining any function parameters and return type  @typescript-
   23:1  error  click must be accompanied by either keyup, keydown or keypress event for accessibility  @angular-eslint/template/click-events-have-key-events
   23:1  error  Elements with interaction handlers must be focusable                                    @angular-eslint/template/interactive-supports-focus
 
-/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/shared/header-navigation/header-navigation.component.ts
-   9:1   warning  The component's `changeDetection` value should be set to `ChangeDetectionStrategy.OnPush`  @angular-eslint/prefer-on-push-component-change-detection
-  21:11  error    Class Property name `userSubscription` must have one leading underscore(s)                 @typescript-eslint/naming-convention
-  22:11  error    Class Property name `creditSubscription` must have one leading underscore(s)               @typescript-eslint/naming-convention
-  25:13  error    Parameter Property name `authService` must have one leading underscore(s)                  @typescript-eslint/naming-convention
-  26:13  error    Parameter Property name `router` must have one leading underscore(s)                       @typescript-eslint/naming-convention
-  28:13  error    Parameter Property name `creditService` must have one leading underscore(s)                @typescript-eslint/naming-convention
-  29:13  error    Parameter Property name `cdr` must have one leading underscore(s)                          @typescript-eslint/naming-convention
-  32:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  50:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  59:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  79:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  83:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  88:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-  94:3   warning  Missing return type on function                                                            @typescript-eslint/explicit-function-return-type
-
-/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/app/testing/testing-utils.ts
-    9:10  error    'DebugElement' is defined but never used                                                       @typescript-eslint/no-unused-vars
-   11:10  error    'Router' is defined but never used                                                             @typescript-eslint/no-unused-vars
-   12:10  error    'Location' is defined but never used                                                           @typescript-eslint/no-unused-vars
-   13:1   error    '@angular/core' import is duplicated                                                           no-duplicate-imports
-   14:27  error    'Observable' is defined but never used                                                         @typescript-eslint/no-unused-vars
-   18:11  error    Class Property name `isAuthenticatedSubject` must have one leading underscore(s)               @typescript-eslint/naming-convention
-   21:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-   21:24  error    'password' is defined but never used. Allowed unused args must match /^_/u                     @typescript-eslint/no-unused-vars
-   26:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-   30:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-   34:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-   40:11  error    Class Property name `stateSubject` must have one leading underscore(s)                         @typescript-eslint/naming-convention
-   51:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-   56:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-   61:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-   66:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-   71:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-   78:11  error    Class Property name `notifications` must have one leading underscore(s)                        @typescript-eslint/naming-convention
-   78:26  warning  Unexpected any. Specify a different type                                                       @typescript-eslint/no-explicit-any
-   80:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-   84:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-   88:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-   92:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-   96:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-  102:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-  114:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-  126:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-  126:15  error    'imageId' is defined but never used. Allowed unused args must match /^_/u                      @typescript-eslint/no-unused-vars
-  132:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-  132:14  error    'request' is defined but never used. Allowed unused args must match /^_/u                      @typescript-eslint/no-unused-vars
-  132:23  warning  Unexpected any. Specify a different type                                                       @typescript-eslint/no-explicit-any
-  143:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-  143:18  error    'request' is defined but never used. Allowed unused args must match /^_/u                      @typescript-eslint/no-unused-vars
-  143:27  warning  Unexpected any. Specify a different type                                                       @typescript-eslint/no-explicit-any
-  154:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-  154:16  error    'request' is defined but never used. Allowed unused args must match /^_/u                      @typescript-eslint/no-unused-vars
-  154:25  warning  Unexpected any. Specify a different type                                                       @typescript-eslint/no-explicit-any
-  165:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-  176:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-  192:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-  203:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-  213:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-  213:19  error    'packageId' is defined but never used. Allowed unused args must match /^_/u                    @typescript-eslint/no-unused-vars
-  225:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-  229:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-  229:24  error    'file' is defined but never used. Allowed unused args must match /^_/u                         @typescript-eslint/no-unused-vars
-  239:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-  239:15  error    'imageUrl' is defined but never used. Allowed unused args must match /^_/u                     @typescript-eslint/no-unused-vars
-  255:44  error    'size' is assigned a value but never used. Allowed unused args must match /^_/u                @typescript-eslint/no-unused-vars
-  272:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-  272:59  warning  Unexpected any. Specify a different type                                                       @typescript-eslint/no-explicit-any
-  288:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-  288:48  warning  Unexpected any. Specify a different type                                                       @typescript-eslint/no-explicit-any
-  299:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-  299:55  warning  Unexpected any. Specify a different type                                                       @typescript-eslint/no-explicit-any
-  307:3   warning  Missing return type on function                                                                @typescript-eslint/explicit-function-return-type
-  307:43  warning  Unexpected any. Specify a different type                                                       @typescript-eslint/no-explicit-any
-  307:59  warning  Unexpected any. Specify a different type                                                       @typescript-eslint/no-explicit-any
-  307:80  warning  Unexpected any. Specify a different type                                                       @typescript-eslint/no-explicit-any
-  325:1   warning  The component's `changeDetection` value should be set to `ChangeDetectionStrategy.OnPush`      @angular-eslint/prefer-on-push-component-change-detection
-  339:14  error    Variable name `TestConstants` must match one of the following formats: camelCase, UPPER_CASE   @typescript-eslint/naming-convention
-  340:3   error    Object Literal Property name `MOCK_USER` must match one of the following formats: camelCase    @typescript-eslint/naming-convention
-  346:3   error    Object Literal Property name `MOCK_STYLES` must match one of the following formats: camelCase  @typescript-eslint/naming-convention
-  351:3   error    Object Literal Property name `MOCK_IMAGES` must match one of the following formats: camelCase  @typescript-eslint/naming-convention
-  355:3   error    Object Literal Property name `TIMEOUTS` must match one of the following formats: camelCase     @typescript-eslint/naming-convention
-  356:5   error    Object Literal Property name `SHORT` must match one of the following formats: camelCase        @typescript-eslint/naming-convention
-  357:5   error    Object Literal Property name `MEDIUM` must match one of the following formats: camelCase       @typescript-eslint/naming-convention
-  358:5   error    Object Literal Property name `LONG` must match one of the following formats: camelCase         @typescript-eslint/naming-convention
-
-/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.UI/src/polyfills.ts
-  10:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
-  14:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
-  17:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
-  22:29  warning  Missing return type on function           @typescript-eslint/explicit-function-return-type
-  22:71  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
-  22:87  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
-
-✖ 1589 problems (761 errors, 828 warnings)
+✖ 1234 problems (615 errors, 619 warnings)
 
 Lint warnings found in the listed files.
 

@@ -2,7 +2,7 @@ import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } fro
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
-import { animate, state, style, transition, trigger } from '@angular/animations';
+import { animate, style, transition, trigger } from '@angular/animations';
 import { Observable, Subscription } from 'rxjs';
 import { NavigationService } from '../../services/navigation.service';
 import { ThemeService } from '../../services/theme.service';
@@ -193,15 +193,15 @@ export class LandingComponent implements OnInit, OnDestroy {
   ];
 
   constructor(
-    private meta: Meta,
-    private title: Title,
+    private _meta: Meta,
+    private _title: Title,
     public router: Router,
-    private route: ActivatedRoute,
+    private _route: ActivatedRoute,
     public navigation: NavigationService,
     public themeService: ThemeService,
-    private creditService: CreditService,
-    private styleService: StyleService,
-    private config: ConfigService
+    private _creditService: CreditService,
+    private _styleService: StyleService,
+    private _config: ConfigService
   ) {
     this.currentTheme$ = this.themeService.theme$;
   }
@@ -225,7 +225,7 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   loadPackagesFromDatabase(): void {
     this.isLoadingPackages = true;
-    this.creditService.getCreditPackages().subscribe({
+    this._creditService.getCreditPackages().subscribe({
       next: response => {
         if (response && response.success && response.data) {
           // Map database packages to landing page format
@@ -319,66 +319,66 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   setupSEO(): void {
     // Set page title
-    this.title.setTitle(
+    this._title.setTitle(
       'AI Profile Photo Maker - Transform Your Photos into Professional Headshots | Instant AI Enhancement'
     );
 
     // Meta tags
-    this.meta.updateTag({
+    this._meta.updateTag({
       name: 'description',
       content:
         'Create stunning professional profile photos with AI in seconds. Perfect for LinkedIn, dating apps, resumes, and social media. Transform casual selfies into polished headshots. Try free - no credit card required.',
     });
-    this.meta.updateTag({
+    this._meta.updateTag({
       name: 'keywords',
       content:
         'AI profile photo maker, professional headshot generator, LinkedIn photo AI, AI photo enhancement, profile picture creator, headshot AI tool, professional photo maker, AI portrait generator, business photo creator, social media profile photo',
     });
-    this.meta.updateTag({ name: 'author', content: 'AI Profile Photo Maker' });
-    this.meta.updateTag({ name: 'robots', content: 'index, follow' });
-    this.meta.updateTag({ name: 'viewport', content: 'width=device-width, initial-scale=1' });
+    this._meta.updateTag({ name: 'author', content: 'AI Profile Photo Maker' });
+    this._meta.updateTag({ name: 'robots', content: 'index, follow' });
+    this._meta.updateTag({ name: 'viewport', content: 'width=device-width, initial-scale=1' });
 
     // Open Graph tags
-    this.meta.updateTag({
+    this._meta.updateTag({
       property: 'og:title',
       content: 'AI Profile Photo Maker - Professional Headshots in Minutes',
     });
-    this.meta.updateTag({
+    this._meta.updateTag({
       property: 'og:description',
       content:
         'Transform your casual photos into professional headshots with AI. Perfect for LinkedIn, resumes, and social media. Try free today!',
     });
-    this.meta.updateTag({ property: 'og:type', content: 'website' });
-    this.meta.updateTag({ property: 'og:url', content: 'https://aiprofilephotomaker.com' });
-    this.meta.updateTag({
+    this._meta.updateTag({ property: 'og:type', content: 'website' });
+    this._meta.updateTag({ property: 'og:url', content: 'https://aiprofilephotomaker.com' });
+    this._meta.updateTag({
       property: 'og:image',
       content: 'https://aiprofilephotomaker.com/assets/og-image.jpg',
     });
-    this.meta.updateTag({ property: 'og:image:width', content: '1200' });
-    this.meta.updateTag({ property: 'og:image:height', content: '630' });
-    this.meta.updateTag({ property: 'og:site_name', content: 'AI Profile Photo Maker' });
+    this._meta.updateTag({ property: 'og:image:width', content: '1200' });
+    this._meta.updateTag({ property: 'og:image:height', content: '630' });
+    this._meta.updateTag({ property: 'og:site_name', content: 'AI Profile Photo Maker' });
 
     // Twitter Card tags
-    this.meta.updateTag({ name: 'twitter:card', content: 'summary_large_image' });
-    this.meta.updateTag({
+    this._meta.updateTag({ name: 'twitter:card', content: 'summary_large_image' });
+    this._meta.updateTag({
       name: 'twitter:title',
       content: 'AI Profile Photo Maker - Create Professional Headshots with AI',
     });
-    this.meta.updateTag({
+    this._meta.updateTag({
       name: 'twitter:description',
       content:
         'Transform casual photos into professional headshots in seconds. Perfect for LinkedIn, dating apps & social media.',
     });
-    this.meta.updateTag({
+    this._meta.updateTag({
       name: 'twitter:image',
       content: 'https://aiprofilephotomaker.com/assets/twitter-card.jpg',
     });
-    this.meta.updateTag({ name: 'twitter:creator', content: '@aiprofilephoto' });
+    this._meta.updateTag({ name: 'twitter:creator', content: '@aiprofilephoto' });
 
     // Additional SEO tags
-    this.meta.updateTag({ name: 'theme-color', content: '#4F46E5' });
-    this.meta.updateTag({ name: 'apple-mobile-web-app-capable', content: 'yes' });
-    this.meta.updateTag({ name: 'apple-mobile-web-app-status-bar-style', content: 'default' });
+    this._meta.updateTag({ name: 'theme-color', content: '#4F46E5' });
+    this._meta.updateTag({ name: 'apple-mobile-web-app-capable', content: 'yes' });
+    this._meta.updateTag({ name: 'apple-mobile-web-app-status-bar-style', content: 'default' });
 
     // Structured data for SEO
     const structuredData = {
@@ -473,7 +473,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     this.isLoadingStyles = true;
     this.stylesLoadError = false;
 
-    this.styleService.getActiveStyles().subscribe({
+    this._styleService.getActiveStyles().subscribe({
       next: response => {
         if (response.success && response.data && response.data.length > 0) {
           console.log(`Successfully loaded ${response.data.length} styles from database`);
@@ -499,9 +499,9 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   createStyledPhotosFromStyles(): void {
     // Create styled photos array from actual styles
-    this.styledPhotos = this.availableStyles.slice(0, 20).map((style, index) => ({
+    this.styledPhotos = this.availableStyles.slice(0, 20).map((style) => ({
       id: style.id,
-      imageUrl: this.config.buildStylePreviewUrl(style.name),
+      imageUrl: this._config.buildStylePreviewUrl(style.name),
       style: style.name,
       category: this.getCategoryFromStyleName(style.name),
       description: style.description,
@@ -636,7 +636,7 @@ export class LandingComponent implements OnInit, OnDestroy {
 
     this.styledPhotos = fallbackStyles.map((style, index) => ({
       id: index + 1,
-      imageUrl: this.config.buildStylePreviewUrl(style.name),
+      imageUrl: this._config.buildStylePreviewUrl(style.name),
       style: style.name,
       category: style.category,
       description: style.description,
@@ -739,7 +739,7 @@ export class LandingComponent implements OnInit, OnDestroy {
   }
 
   // Style card interaction for new grid layout
-  onStyleCardClick(photo: StyledPhoto, index: number): void {
+  onStyleCardClick(_photo: StyledPhoto, _index: number): void {
     // Trigger get started flow with style context
     this.getStarted();
   }
@@ -819,7 +819,7 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   handleRouteData(): void {
     // Handle route data for scrolling and special views
-    this.route.data.subscribe(data => {
+    this._route.data.subscribe(data => {
       if (data['scrollTo']) {
         setTimeout(() => {
           this.scrollToSection(data['scrollTo']);
@@ -833,10 +833,10 @@ export class LandingComponent implements OnInit, OnDestroy {
       // Update meta tags if provided
       if (data['meta']) {
         if (data['meta']['description']) {
-          this.meta.updateTag({ name: 'description', content: data['meta']['description'] });
+          this._meta.updateTag({ name: 'description', content: data['meta']['description'] });
         }
         if (data['meta']['keywords']) {
-          this.meta.updateTag({ name: 'keywords', content: data['meta']['keywords'] });
+          this._meta.updateTag({ name: 'keywords', content: data['meta']['keywords'] });
         }
       }
     });

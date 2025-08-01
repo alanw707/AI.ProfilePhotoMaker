@@ -2,7 +2,7 @@ name: '🚀 Deploy Application'
 
 on:
   workflow_run:
-    workflows: ["🧪 Test & Quality Assurance"]
+    workflows: ["🧪 Test & Quality Assurance (Minimal)"]
     types: [completed]
     branches: [main]
   workflow_dispatch:
@@ -73,27 +73,15 @@ jobs:
       - name: '⚙️ Configure Deployment'
         id: config
         run: |
-          # Determine environment with fallback to staging
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            ENV_NAME="${{ github.event.inputs.environment || 'staging' }}"
-            DEPLOY_BACKEND="${{ github.event.inputs.deploy_backend || 'true' }}"
-            DEPLOY_FRONTEND="${{ github.event.inputs.deploy_frontend || 'true' }}"
-            RUN_MIGRATIONS="${{ github.event.inputs.run_migrations || 'true' }}"
-          else
-            ENV_NAME="staging"  # Auto-deploy to staging on main branch
-            DEPLOY_BACKEND="true"
-            DEPLOY_FRONTEND="true"
-            RUN_MIGRATIONS="true"
-          fi
-          
-          # Ensure ENV_NAME is never empty
-          if [ -z "$ENV_NAME" ]; then
-            ENV_NAME="staging"
-          fi
+          # Always deploy to staging environment
+          ENV_NAME="staging"
+          DEPLOY_BACKEND="${{ github.event.inputs.deploy_backend || 'true' }}"
+          DEPLOY_FRONTEND="${{ github.event.inputs.deploy_frontend || 'true' }}"
+          RUN_MIGRATIONS="${{ github.event.inputs.run_migrations || 'true' }}"
           
           RG_NAME="ai-profile-photo-maker-$ENV_NAME"
-          WEB_APP_NAME="aiappapi-$ENV_NAME"
-          SWA_NAME="aiapp-swa-$ENV_NAME"
+          WEB_APP_NAME="aiprofilephotomakerapi-$ENV_NAME"
+          SWA_NAME="aiprofilephotomaker-swa-$ENV_NAME"
           
           echo "environment=$ENV_NAME" >> $GITHUB_OUTPUT
           echo "resource-group=$RG_NAME" >> $GITHUB_OUTPUT

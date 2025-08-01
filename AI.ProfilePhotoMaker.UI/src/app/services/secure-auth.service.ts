@@ -1,6 +1,6 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { BehaviorSubject, EMPTY, Observable, of, throwError, timer } from 'rxjs';
+import { BehaviorSubject, Observable, of, throwError, timer } from 'rxjs';
 import { catchError, filter, finalize, switchMap, take, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { ConfigService } from './config.service';
@@ -29,37 +29,37 @@ export interface SecureSession {
   providedIn: 'root',
 })
 export class SecureAuthService implements OnDestroy {
-  private readonly TOKEN_KEY = 'auth_token';
-  private readonly REFRESH_TOKEN_KEY = 'refresh_token';
-  private readonly SESSION_KEY = 'secure_session';
-  private readonly TOKEN_REFRESH_THRESHOLD = 5 * 60 * 1000; // 5 minutes before expiry
-  private readonly SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes inactivity
-  private readonly MAX_RETRY_ATTEMPTS = 3;
+  private readonly _tokenKey = 'auth_token';
+  private readonly _refreshTokenKey = 'refresh_token';
+  private readonly _sessionKey = 'secure_session';
+  private readonly _tokenRefreshThreshold = 5 * 60 * 1000; // 5 minutes before expiry
+  private readonly _sessionTimeout = 30 * 60 * 1000; // 30 minutes inactivity
+  private readonly _maxRetryAttempts = 3;
 
-  private refreshTokenInProgress = false;
-  private refreshTokenSubject = new BehaviorSubject<string | null>(null);
-  private sessionCheckInterval?: number;
+  private _refreshTokenInProgress = false;
+  private _refreshTokenSubject = new BehaviorSubject<string | null>(null);
+  private _sessionCheckInterval?: number;
 
   constructor(
-    private http: HttpClient,
-    private config: ConfigService,
-    private router: Router,
-    private authService: AuthService
+    private _http: HttpClient,
+    private _config: ConfigService,
+    private _router: Router,
+    private _authService: AuthService
   ) {
-    this.initializeSecureSession();
-    this.startSessionMonitoring();
+    this._initializeSecureSession();
+    this._startSessionMonitoring();
   }
 
   /**
    * Initialize secure session management
    */
-  private initializeSecureSession(): void {
-    const session = this.getSecureSession();
+  private _initializeSecureSession(): void {
+    const session = this._getSecureSession();
     if (session) {
       // Check if session is still valid
-      if (this.isSessionValid(session)) {
+      if (this._isSessionValid(session)) {
         this.updateLastActivity();
-        this.scheduleTokenRefresh(session.token);
+        this._scheduleTokenRefresh(session.token);
       } else {
         console.warn('🔒 Session expired, clearing auth data');
         this.clearSecureSession();
@@ -70,23 +70,23 @@ export class SecureAuthService implements OnDestroy {
   /**
    * Start monitoring session activity and automatic token refresh
    */
-  private startSessionMonitoring(): void {
+  private _startSessionMonitoring(): void {
     // Check session validity every minute
-    this.sessionCheckInterval = window.setInterval(() => {
-      const session = this.getSecureSession();
+    this._sessionCheckInterval = window.setInterval(() => {
+      const session = this._getSecureSession();
       if (session) {
         // Check for inactivity timeout
         const inactiveTime = Date.now() - session.lastActivity;
-        if (inactiveTime > this.SESSION_TIMEOUT) {
+        if (inactiveTime > this._sessionTimeout) {
           console.warn('🔒 Session timed out due to inactivity');
-          this.handleSessionTimeout();
+          this._handleSessionTimeout();
         }
 
         // Check if token needs refresh
         const timeUntilExpiry = session.expiresAt - Date.now();
-        if (timeUntilExpiry <= this.TOKEN_REFRESH_THRESHOLD && timeUntilExpiry > 0) {
+        if (timeUntilExpiry <= this._tokenRefreshThreshold && timeUntilExpiry > 0) {
           console.log('🔄 Token approaching expiry, initiating refresh...');
-          this.refreshToken().subscribe({
+          this._refreshToken().subscribe({
             error: error => console.error('🔒 Token refresh failed:', error),
           });
         }
@@ -98,7 +98,7 @@ export class SecureAuthService implements OnDestroy {
    * Enhanced request handler with automatic token refresh and retry logic
    */
   handleRequest(originalRequest: any, next: any): Observable<any> {
-    const session = this.getSecureSession();
+    const session = this._getSecureSession();
 
     if (!session) {
       // Fallback to traditional localStorage auth token for compatibility
@@ -133,7 +133,7 @@ export class SecureAuthService implements OnDestroy {
       catchError((error: HttpErrorResponse) => {
         // Handle 401 Unauthorized with token refresh
         if (error.status === 401 && !originalRequest.url.includes('auth/')) {
-          return this.handle401Error(originalRequest, next);
+          return this._handle401Error(originalRequest, next);
         }
 
         // Handle other authentication errors
@@ -150,15 +150,15 @@ export class SecureAuthService implements OnDestroy {
   /**
    * Handle 401 errors with automatic token refresh and retry
    */
-  private handle401Error(request: any, next: any): Observable<any> {
-    if (!this.refreshTokenInProgress) {
-      this.refreshTokenInProgress = true;
-      this.refreshTokenSubject.next(null);
+  private _handle401Error(request: any, next: any): Observable<any> {
+    if (!this._refreshTokenInProgress) {
+      this._refreshTokenInProgress = true;
+      this._refreshTokenSubject.next(null);
 
-      return this.refreshToken().pipe(
+      return this._refreshToken().pipe(
         switchMap((refreshResponse: TokenRefreshResponse) => {
           if (refreshResponse.success && refreshResponse.token) {
-            this.refreshTokenSubject.next(refreshResponse.token);
+            this._refreshTokenSubject.next(refreshResponse.token);
 
             // Retry original request with new token
             const retryRequest = request.clone({
@@ -170,21 +170,21 @@ export class SecureAuthService implements OnDestroy {
             return next(retryRequest);
           } else {
             // Refresh failed, redirect to login
-            this.handleAuthenticationFailure();
+            this._handleAuthenticationFailure();
             return throwError(() => new Error('Token refresh failed'));
           }
         }),
         catchError(error => {
-          this.handleAuthenticationFailure();
+          this._handleAuthenticationFailure();
           return throwError(() => error);
         }),
         finalize(() => {
-          this.refreshTokenInProgress = false;
+          this._refreshTokenInProgress = false;
         })
       );
     } else {
       // Token refresh in progress, wait for it to complete
-      return this.refreshTokenSubject.pipe(
+      return this._refreshTokenSubject.pipe(
         filter(token => token !== null),
         take(1),
         switchMap(token => {
@@ -202,8 +202,8 @@ export class SecureAuthService implements OnDestroy {
   /**
    * Refresh JWT token securely
    */
-  private refreshToken(): Observable<TokenRefreshResponse> {
-    const session = this.getSecureSession();
+  private _refreshToken(): Observable<TokenRefreshResponse> {
+    const session = this._getSecureSession();
     if (!session) {
       return throwError(() => new Error('No active session'));
     }
@@ -213,11 +213,11 @@ export class SecureAuthService implements OnDestroy {
       sessionId: session.sessionId,
     };
 
-    return this.http.post<ApiAuthResponseDto>('/auth/refresh-token', refreshData).pipe(
+    return this._http.post<ApiAuthResponseDto>('/auth/refresh-token', refreshData).pipe(
       tap(response => {
         if (response.isSuccess && response.token) {
           console.log('🔄 Token refreshed successfully');
-          this.updateSecureSession(response.token, response.expiration);
+          this._updateSecureSession(response.token, response.expiration);
         }
       }),
       catchError((error: HttpErrorResponse) => {
@@ -225,7 +225,7 @@ export class SecureAuthService implements OnDestroy {
 
         // If refresh fails, try to get a new token using existing session
         if (error.status === 401 || error.status === 403) {
-          return this.handleRefreshFailure();
+          return this._handleRefreshFailure();
         }
 
         return throwError(() => ({
@@ -252,22 +252,22 @@ export class SecureAuthService implements OnDestroy {
   /**
    * Handle token refresh failure with fallback strategies
    */
-  private handleRefreshFailure(): Observable<TokenRefreshResponse> {
+  private _handleRefreshFailure(): Observable<TokenRefreshResponse> {
     console.warn('🔒 Token refresh failed, attempting session recovery...');
 
     // Try to validate current session with server
-    return this.validateSession().pipe(
+    return this._validateSession().pipe(
       switchMap(isValid => {
         if (isValid) {
           // Session is still valid, maybe just a network issue
-          return timer(2000).pipe(switchMap(() => this.refreshToken()));
+          return timer(2000).pipe(switchMap(() => this._refreshToken()));
         } else {
           // Session invalid, force re-authentication
           return throwError(() => ({ success: false, error: 'Session invalid' }));
         }
       }),
       catchError(() => {
-        this.handleAuthenticationFailure();
+        this._handleAuthenticationFailure();
         return throwError(() => ({ success: false, error: 'Session recovery failed' }));
       })
     );
@@ -276,13 +276,13 @@ export class SecureAuthService implements OnDestroy {
   /**
    * Validate current session with server
    */
-  private validateSession(): Observable<boolean> {
-    const session = this.getSecureSession();
+  private _validateSession(): Observable<boolean> {
+    const session = this._getSecureSession();
     if (!session) {
       return of(false);
     }
 
-    return this.http
+    return this._http
       .post<{ valid: boolean }>('/auth/validate-session', {
         sessionId: session.sessionId,
       })
@@ -296,8 +296,8 @@ export class SecureAuthService implements OnDestroy {
    * Create secure session with enhanced security
    */
   createSecureSession(authResponse: AuthResponseDto, refreshToken?: string): void {
-    const expiresAt = this.extractTokenExpiry(authResponse.token);
-    const sessionId = this.generateSecureSessionId();
+    const expiresAt = this._extractTokenExpiry(authResponse.token);
+    const sessionId = this._generateSecureSessionId();
 
     const secureSession: SecureSession = {
       token: authResponse.token,
@@ -308,13 +308,13 @@ export class SecureAuthService implements OnDestroy {
     };
 
     // Store session data securely
-    this.storeSecureSession(secureSession);
+    this._storeSecureSession(secureSession);
 
     // Update auth service state
-    this.authService.handleOAuthCallback(authResponse.token);
+    this._authService.handleOAuthCallback(authResponse.token);
 
     // Schedule token refresh
-    this.scheduleTokenRefresh(authResponse.token);
+    this._scheduleTokenRefresh(authResponse.token);
 
     console.log('🔒 Secure session created successfully');
   }
@@ -323,20 +323,20 @@ export class SecureAuthService implements OnDestroy {
    * Update last activity timestamp
    */
   updateLastActivity(): void {
-    const session = this.getSecureSession();
+    const session = this._getSecureSession();
     if (session) {
       session.lastActivity = Date.now();
-      this.storeSecureSession(session);
+      this._storeSecureSession(session);
     }
   }
 
   /**
    * Handle session timeout
    */
-  private handleSessionTimeout(): void {
+  private _handleSessionTimeout(): void {
     console.warn('🔒 Session timeout - redirecting to login');
     this.clearSecureSession();
-    this.router.navigate(['/auth/login'], {
+    this._router.navigate(['/auth/login'], {
       queryParams: { reason: 'session_timeout' },
     });
   }
@@ -344,25 +344,25 @@ export class SecureAuthService implements OnDestroy {
   /**
    * Handle authentication failure
    */
-  private handleAuthenticationFailure(): void {
+  private _handleAuthenticationFailure(): void {
     console.error('🔒 Authentication failure - clearing session');
     this.clearSecureSession();
-    this.authService.logout();
+    this._authService.logout();
   }
 
   /**
    * Schedule automatic token refresh
    */
-  private scheduleTokenRefresh(token: string): void {
-    const expiryTime = this.extractTokenExpiry(token);
-    const refreshTime = expiryTime - this.TOKEN_REFRESH_THRESHOLD;
+  private _scheduleTokenRefresh(token: string): void {
+    const expiryTime = this._extractTokenExpiry(token);
+    const refreshTime = expiryTime - this._tokenRefreshThreshold;
     const delay = refreshTime - Date.now();
 
     if (delay > 0) {
       timer(delay).subscribe(() => {
-        if (this.getSecureSession()) {
+        if (this._getSecureSession()) {
           console.log('🔄 Scheduled token refresh triggered');
-          this.refreshToken().subscribe({
+          this._refreshToken().subscribe({
             error: error => console.error('🔒 Scheduled refresh failed:', error),
           });
         }
@@ -373,7 +373,7 @@ export class SecureAuthService implements OnDestroy {
   /**
    * Extract token expiry time
    */
-  private extractTokenExpiry(token: string): number {
+  private _extractTokenExpiry(token: string): number {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       return payload.exp * 1000; // Convert to milliseconds
@@ -386,7 +386,7 @@ export class SecureAuthService implements OnDestroy {
   /**
    * Generate secure session ID
    */
-  private generateSecureSessionId(): string {
+  private _generateSecureSessionId(): string {
     const array = new Uint8Array(32);
     crypto.getRandomValues(array);
     return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
@@ -395,7 +395,7 @@ export class SecureAuthService implements OnDestroy {
   /**
    * Check if session is valid
    */
-  private isSessionValid(session: SecureSession): boolean {
+  private _isSessionValid(session: SecureSession): boolean {
     const now = Date.now();
 
     // Check token expiry
@@ -404,7 +404,7 @@ export class SecureAuthService implements OnDestroy {
     }
 
     // Check inactivity timeout
-    if (now - session.lastActivity > this.SESSION_TIMEOUT) {
+    if (now - session.lastActivity > this._sessionTimeout) {
       return false;
     }
 
@@ -414,13 +414,13 @@ export class SecureAuthService implements OnDestroy {
   /**
    * Store session securely
    */
-  private storeSecureSession(session: SecureSession): void {
+  private _storeSecureSession(session: SecureSession): void {
     try {
-      const encryptedSession = this.encryptSessionData(session);
-      localStorage.setItem(this.SESSION_KEY, encryptedSession);
+      const encryptedSession = this._encryptSessionData(session);
+      localStorage.setItem(this._sessionKey, encryptedSession);
 
       // Also store token for backward compatibility with existing auth service
-      localStorage.setItem(this.TOKEN_KEY, session.token);
+      localStorage.setItem(this._tokenKey, session.token);
     } catch (error) {
       console.error('🔒 Failed to store secure session:', error);
     }
@@ -429,14 +429,14 @@ export class SecureAuthService implements OnDestroy {
   /**
    * Get secure session
    */
-  private getSecureSession(): SecureSession | null {
+  private _getSecureSession(): SecureSession | null {
     try {
-      const encryptedSession = localStorage.getItem(this.SESSION_KEY);
+      const encryptedSession = localStorage.getItem(this._sessionKey);
       if (!encryptedSession) {
         return null;
       }
 
-      return this.decryptSessionData(encryptedSession);
+      return this._decryptSessionData(encryptedSession);
     } catch (error) {
       console.error('🔒 Failed to retrieve secure session:', error);
       this.clearSecureSession();
@@ -447,17 +447,17 @@ export class SecureAuthService implements OnDestroy {
   /**
    * Update secure session with new token
    */
-  private updateSecureSession(newToken: string, expiration?: string): void {
-    const session = this.getSecureSession();
+  private _updateSecureSession(newToken: string, expiration?: string): void {
+    const session = this._getSecureSession();
     if (session) {
       session.token = newToken;
       session.expiresAt = expiration
         ? new Date(expiration).getTime()
-        : this.extractTokenExpiry(newToken);
+        : this._extractTokenExpiry(newToken);
       session.lastActivity = Date.now();
 
-      this.storeSecureSession(session);
-      this.scheduleTokenRefresh(newToken);
+      this._storeSecureSession(session);
+      this._scheduleTokenRefresh(newToken);
     }
   }
 
@@ -465,12 +465,12 @@ export class SecureAuthService implements OnDestroy {
    * Clear secure session
    */
   clearSecureSession(): void {
-    localStorage.removeItem(this.SESSION_KEY);
-    localStorage.removeItem(this.TOKEN_KEY);
-    localStorage.removeItem(this.REFRESH_TOKEN_KEY);
+    localStorage.removeItem(this._sessionKey);
+    localStorage.removeItem(this._tokenKey);
+    localStorage.removeItem(this._refreshTokenKey);
 
-    if (this.sessionCheckInterval) {
-      clearInterval(this.sessionCheckInterval);
+    if (this._sessionCheckInterval) {
+      clearInterval(this._sessionCheckInterval);
     }
 
     console.log('🔒 Secure session cleared');
@@ -480,7 +480,7 @@ export class SecureAuthService implements OnDestroy {
    * Simple encryption for session data (not cryptographically secure, but better than plain storage)
    * In production, consider using Web Crypto API or server-side session management
    */
-  private encryptSessionData(session: SecureSession): string {
+  private _encryptSessionData(session: SecureSession): string {
     // Simple base64 encoding with basic obfuscation
     // In production, use proper encryption
     const sessionJson = JSON.stringify(session);
@@ -490,13 +490,13 @@ export class SecureAuthService implements OnDestroy {
   /**
    * Decrypt session data
    */
-  private decryptSessionData(encryptedData: string): SecureSession {
+  private _decryptSessionData(encryptedData: string): SecureSession {
     try {
       const decoded = atob(encryptedData);
       const sessionJson = decoded.replace('::secure_session', '');
       return JSON.parse(sessionJson);
     } catch (error) {
-      throw new Error('Failed to decrypt session data');
+      throw new Error(`Failed to decrypt session data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -509,7 +509,7 @@ export class SecureAuthService implements OnDestroy {
     inactiveTime?: number;
     sessionId?: string;
   } {
-    const session = this.getSecureSession();
+    const session = this._getSecureSession();
     if (!session) {
       return { hasSession: false };
     }
@@ -526,15 +526,15 @@ export class SecureAuthService implements OnDestroy {
    * Force session refresh for testing
    */
   forceTokenRefresh(): Observable<TokenRefreshResponse> {
-    return this.refreshToken();
+    return this._refreshToken();
   }
 
   /**
    * Cleanup on service destruction
    */
   ngOnDestroy(): void {
-    if (this.sessionCheckInterval) {
-      clearInterval(this.sessionCheckInterval);
+    if (this._sessionCheckInterval) {
+      clearInterval(this._sessionCheckInterval);
     }
   }
 }

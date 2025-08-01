@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
-import { forkJoin, Observable } from 'rxjs';
+import { forkJoin } from 'rxjs';
 import { ProfileService } from './profile.service';
 import { FileUploadService } from './file-upload.service';
-import { IModelStateService, ModelStatusInfo } from '../interfaces/service.interfaces';
+import { IModelStateService } from '../interfaces/service.interfaces';
 
 @Injectable({
   providedIn: 'root',
@@ -39,7 +39,7 @@ export class ModelStateService implements IModelStateService {
       trainingStatus: this.fileUploadService.getTrainingStatus(),
       modelRequests: this.fileUploadService.getUserModelRequests(),
     }).subscribe({
-      next: ({ trainingStatus, modelRequests }) => {
+      next: ({ modelRequests }) => {
         const modelRequestsData = modelRequests.success ? modelRequests.data : null;
 
         let modelStatus = 'Not Started';
@@ -157,7 +157,7 @@ export class ModelStateService implements IModelStateService {
    * Notify dashboard state service of model status updates
    * This would be implemented to communicate with DashboardStateService
    */
-  private notifyModelStatusUpdate(modelStatus: string, latestTrainedModel: any): void {
+  private notifyModelStatusUpdate(_modelStatus: string, _latestTrainedModel: any): void {
     // This could emit an event or call a callback
     // For now, just log the update
   }
