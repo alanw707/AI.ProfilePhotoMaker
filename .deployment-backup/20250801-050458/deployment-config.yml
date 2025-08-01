@@ -1,0 +1,228 @@
+# Azure Deployment Configuration for AI Profile Photo Maker
+# This file contains environment-specific configuration for production-ready deployments
+
+environments:
+  dev:
+    displayName: "Development"
+    resourceGroup: "ai-profile-photo-maker-dev"
+    location: "East US 2"
+    parameters:
+      appServicePlanSku: "F1"
+      redisCacheSku: "Basic"
+      redisCacheCapacity: 0
+      enableContainerRegistry: false
+      containerRegistrySku: "Basic"
+    monitoring:
+      retentionDays: 7
+      alertingEnabled: false
+      availabilityTestEnabled: false
+    security:
+      enableAdvancedThreatProtection: false
+      requireManagedIdentity: false
+      enablePrivateEndpoints: false
+
+  staging:
+    displayName: "Staging"
+    resourceGroup: "ai-profile-photo-maker-staging"
+    location: "East US 2"
+    parameters:
+      appServicePlanSku: "B1"
+      redisCacheSku: "Basic"
+      redisCacheCapacity: 0
+      enableContainerRegistry: false
+      containerRegistrySku: "Basic"
+    monitoring:
+      retentionDays: 30
+      alertingEnabled: true
+      availabilityTestEnabled: true
+    security:
+      enableAdvancedThreatProtection: false
+      requireManagedIdentity: true
+      enablePrivateEndpoints: false
+
+  prod:
+    displayName: "Production"
+    resourceGroup: "ai-profile-photo-maker-prod"
+    location: "East US 2"
+    parameters:
+      appServicePlanSku: "S1"
+      redisCacheSku: "Standard"
+      redisCacheCapacity: 1
+      enableContainerRegistry: true
+      containerRegistrySku: "Standard"
+    monitoring:
+      retentionDays: 90
+      alertingEnabled: true
+      availabilityTestEnabled: true
+    security:
+      enableAdvancedThreatProtection: true
+      requireManagedIdentity: true
+      enablePrivateEndpoints: false
+
+# Global configuration
+global:
+  namePrefix: "aiprofilephotomaker"
+  bicepTemplate: "main.bicep"
+  requiredSecrets:
+    - "JwtSecret"
+    - "ReplicateApiToken"
+    - "ReplicateWebhookSecret"
+    - "DatabaseConnectionString"
+    - "RedisCacheConnectionString"
+
+# Deployment strategies
+deploymentStrategies:
+  canary:
+    displayName: "Canary Deployment"
+    description: "Gradual rollout with traffic splitting"
+    increments: [25, 50, 100]
+    healthCheckRequired: true
+    rollbackOnFailure: true
+    
+  bluegreen:
+    displayName: "Blue-Green Deployment"
+    description: "Zero-downtime deployment with slot swapping"
+    requiresSlots: true
+    healthCheckRequired: true
+    rollbackOnFailure: true
+    
+  runonce:
+    displayName: "Standard Deployment"
+    description: "Direct deployment to production"
+    healthCheckRequired: true
+    rollbackOnFailure: false
+
+# Health check configuration
+healthChecks:
+  endpoints:
+    - path: "/health"
+      expectedStatus: 200
+      timeout: 30
+      critical: true
+    - path: "/api/health"
+      expectedStatus: 200
+      timeout: 10
+      critical: false
+    - path: "/swagger"
+      expectedStatus: 200
+      timeout: 15
+      critical: false
+      
+  thresholds:
+    responseTime: 5000  # milliseconds
+    errorRate: 0.01     # 1%
+    availability: 0.99  # 99%
+
+# Monitoring and alerting
+monitoring:
+  metrics:
+    webApp:
+      - name: "ResponseTime"
+        threshold: 5000
+        severity: 2
+        aggregation: "Average"
+      - name: "Http5xx"
+        threshold: 10
+        severity: 1
+        aggregation: "Total"
+        
+    database:
+      - name: "dtu_consumption_percent"
+        threshold: 80
+        severity: 1
+        aggregation: "Average"
+      - name: "connection_failed"
+        threshold: 5
+        severity: 2
+        aggregation: "Total"
+        
+    redis:
+      - name: "usedmemorypercentage"
+        threshold: 85
+        severity: 2
+        aggregation: "Average"
+      - name: "connectedclients"
+        threshold: 100
+        severity: 3
+        aggregation: "Maximum"
+
+  actionGroups:
+    - name: "CriticalAlerts"
+      email: "admin@example.com"  # Replace with actual email
+      sms: ""  # Add SMS number if needed
+      webhook: ""  # Add webhook URL if needed
+
+# Security configuration
+security:
+  keyVault:
+    enableSoftDelete: true
+    softDeleteRetentionDays: 90
+    enablePurgeProtection: true
+    enableRbacAuthorization: false
+    
+  sql:
+    enableAdvancedDataSecurity: true
+    vulnerabilityAssessment: true
+    threatDetection: true
+    auditingEnabled: true
+    
+  storage:
+    enableHttpsTrafficOnly: true
+    minimumTlsVersion: "TLS1_2"
+    allowBlobPublicAccess: false
+    
+  webApp:
+    httpsOnly: true
+    minTlsVersion: "1.2"
+    ftpsState: "Disabled"
+    clientAffinityEnabled: false
+
+# Backup and disaster recovery
+backup:
+  database:
+    geoRedundantBackup: true
+    retentionPeriod: 35  # days
+    pointInTimeRestore: true
+    
+  storage:
+    enableVersioning: true
+    deleteRetentionDays: 30
+    
+  webApp:
+    enableBackup: false  # Handled by source control
+    
+# Scaling configuration
+scaling:
+  webApp:
+    minInstances: 1
+    maxInstances: 10
+    cpuThreshold: 70
+    memoryThreshold: 80
+    
+  database:
+    autoScaleEnabled: false  # Manual scaling for cost control
+    
+  redis:
+    autoScaleEnabled: false  # Manual scaling for cost control
+
+# Cost optimization
+costOptimization:
+  dev:
+    shutdownSchedule:
+      enabled: true
+      timezone: "Eastern Standard Time"
+      shutdownTime: "18:00"
+      startupTime: "08:00"
+      weekendsOff: true
+      
+  staging:
+    shutdownSchedule:
+      enabled: false
+      
+  prod:
+    shutdownSchedule:
+      enabled: false
+    reservedInstances: true
+    costAlerts:
+      threshold: 1000  # USD
+      frequency: "Monthly"

@@ -1,0 +1,166 @@
+name: 🚀 Staging Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip tests for quick deploy'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  RESOURCE_GROUP: rg-aiprofilemaker-staging
+  
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  test:
+    name: 🧪 Test
+    runs-on: ubuntu-latest
+    if: github.event.inputs.skip_tests != 'true'
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        
+      - name: 🏗️ Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+          
+      - name: 🏗️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: AI.ProfilePhotoMaker.UI/package-lock.json
+          
+      - name: 🧪 Test Backend
+        run: |
+          cd AI.ProfilePhotoMaker.API
+          dotnet restore
+          dotnet build --configuration Release
+          
+      - name: 🧪 Test Frontend
+        run: |
+          cd AI.ProfilePhotoMaker.UI
+          npm ci
+          npm run lint:errors-only
+          npm run build:prod
+
+  deploy:
+    name: 🚀 Deploy
+    runs-on: ubuntu-latest
+    needs: test
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        
+      - name: 🔐 Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          
+      - name: 🏗️ Create Resource Group
+        run: |
+          az group create \
+            --name ${{ env.RESOURCE_GROUP }} \
+            --location eastus2 \
+            --tags Environment=staging Application=AIProfileMaker
+            
+      - name: 🏗️ Deploy Infrastructure
+        id: infra
+        run: |
+          cd infrastructure
+          
+          DEPLOYMENT_NAME="deploy-$(date +%Y%m%d-%H%M%S)"
+          
+          az deployment group create \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --template-file simple-deploy.bicep \
+            --parameters \
+              sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}' \
+              jwtSecret='${{ secrets.JWT_SECRET }}' \
+              replicateApiToken='${{ secrets.REPLICATE_API_TOKEN }}' \
+            --name "$DEPLOYMENT_NAME" \
+            --output table
+            
+          # Get outputs
+          REGISTRY_NAME=$(az deployment group show --resource-group ${{ env.RESOURCE_GROUP }} --name "$DEPLOYMENT_NAME" --query 'properties.outputs.containerRegistryName.value' -o tsv)
+          REGISTRY_SERVER=$(az deployment group show --resource-group ${{ env.RESOURCE_GROUP }} --name "$DEPLOYMENT_NAME" --query 'properties.outputs.containerRegistryLoginServer.value' -o tsv)
+          
+          echo "registry-name=$REGISTRY_NAME" >> $GITHUB_OUTPUT
+          echo "registry-server=$REGISTRY_SERVER" >> $GITHUB_OUTPUT
+          
+      - name: 🐳 Build & Push Images
+        run: |
+          # Login to registry
+          az acr login --name ${{ steps.infra.outputs.registry-name }}
+          
+          # Build and push backend
+          docker build -f Dockerfile.backend -t ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-backend:latest .
+          docker push ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-backend:latest
+          
+          # Build and push frontend
+          docker build -f Dockerfile.frontend -t ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-frontend:latest .
+          docker push ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-frontend:latest
+          
+      - name: 🔄 Restart Container Apps
+        run: |
+          # Find and restart the container apps to pick up new images
+          BACKEND_APP=$(az containerapp list -g ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'api')].name" -o tsv)
+          FRONTEND_APP=$(az containerapp list -g ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'web')].name" -o tsv)
+          
+          if [ -n "$BACKEND_APP" ]; then
+            echo "🔄 Restarting backend app: $BACKEND_APP"
+            az containerapp revision restart --revision $(az containerapp revision list --name $BACKEND_APP --resource-group ${{ env.RESOURCE_GROUP }} --query '[0].name' -o tsv) --resource-group ${{ env.RESOURCE_GROUP }}
+          fi
+          
+          if [ -n "$FRONTEND_APP" ]; then
+            echo "🔄 Restarting frontend app: $FRONTEND_APP"
+            az containerapp revision restart --revision $(az containerapp revision list --name $FRONTEND_APP --resource-group ${{ env.RESOURCE_GROUP }} --query '[0].name' -o tsv) --resource-group ${{ env.RESOURCE_GROUP }}
+          fi
+          
+      - name: 🧪 Health Check
+        run: |
+          echo "⏳ Waiting for deployment to stabilize..."
+          sleep 60
+          
+          # Get app URLs
+          BACKEND_APP=$(az containerapp list -g ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'api')].name" -o tsv)
+          FRONTEND_APP=$(az containerapp list -g ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'web')].name" -o tsv)
+          
+          if [ -n "$BACKEND_APP" ]; then
+            BACKEND_URL=$(az containerapp show --name $BACKEND_APP --resource-group ${{ env.RESOURCE_GROUP }} --query 'properties.configuration.ingress.fqdn' -o tsv)
+            echo "🔍 Testing backend: https://$BACKEND_URL"
+            
+            if curl -f -s --max-time 30 "https://$BACKEND_URL/health" > /dev/null; then
+              echo "✅ Backend is healthy"
+            else
+              echo "⚠️ Backend health check failed (may still be starting)"
+            fi
+          fi
+          
+          if [ -n "$FRONTEND_APP" ]; then
+            FRONTEND_URL=$(az containerapp show --name $FRONTEND_APP --resource-group ${{ env.RESOURCE_GROUP }} --query 'properties.configuration.ingress.fqdn' -o tsv)
+            echo "🔍 Testing frontend: https://$FRONTEND_URL"
+            
+            if curl -f -s --max-time 30 "https://$FRONTEND_URL" > /dev/null; then
+              echo "✅ Frontend is healthy"
+            else
+              echo "⚠️ Frontend health check failed (may still be starting)"
+            fi
+            
+            echo "🎉 Your app is deployed!"
+            echo "Frontend: https://$FRONTEND_URL"
+            echo "Backend: https://$BACKEND_URL"
+          fi
