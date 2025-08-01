@@ -35,7 +35,7 @@ try {
     $containerRegistryName = "${AppName}cr${uniqueSuffix}"
     $sqlServerName = "${AppName}-sql-${uniqueSuffix}"
     $storageAccountName = "${AppName}st${uniqueSuffix}"
-    $keyVaultName = "${AppName}kv${uniqueSuffix}"
+    $keyVaultName = "apmkv${uniqueSuffix}"
     $containerEnvName = "${AppName}-env-${Environment}"
     $backendAppName = "${AppName}-api-${Environment}"
     $frontendAppName = "${AppName}-web-${Environment}"
