@@ -31,13 +31,7 @@ param jwtSecret string
 @secure()
 param replicateWebhookSecret string
 
-@description('The Redis Cache SKU')
-@allowed(['Basic', 'Standard', 'Premium'])
-param redisCacheSku string = 'Standard'
-
-@description('The Redis Cache capacity')
-@allowed([0, 1, 2, 3, 4, 5, 6])
-param redisCacheCapacity int = 1
+// Redis Cache parameters removed - not needed for current deployment
 
 @description('Enable Container Registry for Docker images')
 param enableContainerRegistry bool = false
@@ -57,7 +51,7 @@ var storageAccountName = '${take(namePrefix, 14)}st${take(uniqueSuffix, 8)}'
 var keyVaultName = '${take(namePrefix, 8)}-kv-${take(uniqueSuffix, 8)}'
 var applicationInsightsName = '${namePrefix}-ai-${environmentName}'
 var logAnalyticsName = '${namePrefix}-la-${environmentName}'
-var redisCacheName = '${namePrefix}-redis-${environmentName}-${uniqueSuffix}'
+// Redis Cache variable removed
 var containerRegistryName = '${take(namePrefix, 14)}cr${take(uniqueSuffix, 8)}'
 
 // App Service Plan
@@ -347,7 +341,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enableSoftDelete: true
     softDeleteRetentionInDays: 90
     enableRbacAuthorization: false
-    vaultUri: 'https://${keyVaultName}.${environment().suffixes.keyvaultDns}/'
+    vaultUri: 'https://${keyVaultName}.vault.azure.net/'
     provisioningState: 'Succeeded'
     publicNetworkAccess: 'Enabled'
   }
@@ -406,7 +400,7 @@ resource webAppConfig 'Microsoft.Web/sites/config@2023-01-01' = {
     Replicate__WebhookSecret: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/ReplicateWebhookSecret/)'
     AzureStorage__ConnectionString: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
     AzureStorage__ContainerName: 'profile-images'
-    Redis__ConnectionString: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/RedisCacheConnectionString/)'
+    // Redis connection string removed - Redis Cache not deployed
     ApplicationInsights__InstrumentationKey: applicationInsights.properties.InstrumentationKey
     ApplicationInsights__ConnectionString: applicationInsights.properties.ConnectionString
     ASPNETCORE_ENVIRONMENT: environmentName == 'prod' ? 'Production' : 'Development'
@@ -415,34 +409,10 @@ resource webAppConfig 'Microsoft.Web/sites/config@2023-01-01' = {
     jwtSecretKV
     replicateTokenKV
     sqlConnectionStringKV
-    redisCacheConnectionStringKV
   ]
 }
 
-// Redis Cache for Azure
-resource redisCache 'Microsoft.Cache/redis@2023-08-01' = {
-  name: redisCacheName
-  location: location
-  properties: {
-    sku: {
-      name: redisCacheSku
-      family: redisCacheSku == 'Premium' ? 'P' : 'C'
-      capacity: redisCacheCapacity
-    }
-    enableNonSslPort: false
-    minimumTlsVersion: '1.2'
-    publicNetworkAccess: 'Enabled'
-    redisConfiguration: {
-      'maxmemory-reserved': '50'
-      'maxfragmentationmemory-reserved': '50'
-      'maxmemory-delta': '50'
-    }
-  }
-  tags: {
-    Environment: environmentName
-    Application: 'AI Profile Photo Maker'
-  }
-}
+// Redis Cache removed - not needed for current deployment
 
 // Container Registry (optional)
 resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-11-01-preview' = if (enableContainerRegistry) {
@@ -480,14 +450,7 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-11-01-pr
   }
 }
 
-// Redis Cache Connection String in Key Vault
-resource redisCacheConnectionStringKV 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  parent: keyVault
-  name: 'RedisCacheConnectionString'
-  properties: {
-    value: '${redisCache.properties.hostName}:${redisCache.properties.sslPort},password=${redisCache.listKeys().primaryKey},ssl=True,abortConnect=False'
-  }
-}
+// Redis Cache connection string removed - Redis Cache not deployed
 
 // Container Registry credentials in Key Vault (if enabled)
 resource containerRegistryUsernameKV 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (enableContainerRegistry) {
@@ -590,7 +553,7 @@ resource webAppResponseTimeAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = 
       allOf: [
         {
           name: 'ResponseTime'
-          metricName: 'ResponseTime'
+          metricName: 'AverageResponseTime'
           operator: 'GreaterThan'
           threshold: 5000 // 5 seconds
           timeAggregation: 'Average'
@@ -647,42 +610,7 @@ resource sqlDtuAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
   }
 }
 
-resource redisMemoryAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
-  name: '${namePrefix}-redis-memory-${environmentName}'
-  location: 'Global'
-  properties: {
-    description: 'Alert when Redis Cache memory usage is high'
-    severity: 2
-    enabled: true
-    scopes: [
-      redisCache.id
-    ]
-    evaluationFrequency: 'PT5M'
-    windowSize: 'PT15M'
-    criteria: {
-      'odata.type': 'Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria'
-      allOf: [
-        {
-          name: 'UsedMemoryPercentage'
-          metricName: 'usedmemorypercentage'
-          operator: 'GreaterThan'
-          threshold: 85
-          timeAggregation: 'Average'
-          criterionType: 'StaticThresholdCriterion'
-        }
-      ]
-    }
-    actions: [
-      {
-        actionGroupId: actionGroup.id
-      }
-    ]
-  }
-  tags: {
-    Environment: environmentName
-    Application: 'AI Profile Photo Maker'
-  }
-}
+// Redis memory alert removed - Redis Cache not deployed
 
 // Diagnostic Settings for Web App
 resource webAppDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
@@ -726,26 +654,7 @@ resource sqlDatabaseDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-0
   }
 }
 
-// Diagnostic Settings for Redis Cache
-resource redisCacheDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-  name: 'redisCache-diagnostics'
-  scope: redisCache
-  properties: {
-    workspaceId: logAnalyticsWorkspace.id
-    logs: [
-      {
-        categoryGroup: 'allLogs'
-        enabled: true
-      }
-    ]
-    metrics: [
-      {
-        category: 'AllMetrics'
-        enabled: true
-      }
-    ]
-  }
-}
+// Redis Cache diagnostics removed - Redis Cache not deployed
 
 // Outputs
 output webAppName string = webApp.name
@@ -757,7 +666,6 @@ output sqlDatabaseName string = sqlDatabase.name
 output storageAccountName string = storageAccount.name
 output keyVaultName string = keyVault.name
 output applicationInsightsName string = applicationInsights.name
-output redisCacheName string = redisCache.name
-output redisCacheHostName string = redisCache.properties.hostName
+// Redis Cache outputs removed - Redis Cache not deployed
 output containerRegistryName string = enableContainerRegistry ? containerRegistry.name : ''
 output containerRegistryLoginServer string = enableContainerRegistry ? containerRegistry.properties.loginServer : ''
