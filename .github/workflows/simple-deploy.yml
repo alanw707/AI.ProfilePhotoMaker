@@ -12,7 +12,7 @@ on:
         type: boolean
 
 env:
-  RESOURCE_GROUP: rg-aiprofilemaker-staging
+  RESOURCE_GROUP: rg-aiprofilemaker-staging-v2
   
 permissions:
   id-token: write
@@ -83,7 +83,7 @@ jobs:
           echo "🔍 Checking for existing core resources..."
           
           # Check for existing Container Registry (consistent staging naming)
-          REGISTRY_NAME="aiprofilemaker-cr-staging"
+          REGISTRY_NAME="aiprofilemakercrstaging"
           if az acr show --name "$REGISTRY_NAME" --resource-group "${{ env.RESOURCE_GROUP }}" --output none 2>/dev/null; then
             echo "✅ Found existing Container Registry: $REGISTRY_NAME"
             echo "registry-exists=true" >> $GITHUB_OUTPUT
@@ -95,7 +95,7 @@ jobs:
           
           # Check for duplicate registries (cleanup old random suffix ones)
           echo "🔍 Checking for duplicate Container Registries..."
-          DUPLICATE_REGISTRIES=$(az acr list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?starts_with(name, 'aiprofilemaker') && name != 'aiprofilemaker-cr-staging'].name" -o tsv || true)
+          DUPLICATE_REGISTRIES=$(az acr list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?starts_with(name, 'aiprofilemaker') && name != 'aiprofilemakercrstaging'].name" -o tsv || true)
           if [ -n "$DUPLICATE_REGISTRIES" ]; then
             echo "⚠️ Found old registries with inconsistent naming:"
             echo "$DUPLICATE_REGISTRIES"

@@ -168,8 +168,8 @@ function Get-OrCreateResource {
 }
 
 try {
-    # Use consistent "-staging" suffix naming convention
-    $containerRegistryName = "${AppName}-cr-${Environment}"
+    # Use consistent staging naming convention (no dashes for ACR)
+    $containerRegistryName = "${AppName}cr${Environment}"
     $sqlServerName = "${AppName}-sql-${Environment}"
     $storageAccountName = "${AppName}st${Environment}"  # Storage accounts don't support dashes
     $keyVaultName = "${AppName}-kv-${Environment}"
@@ -180,7 +180,7 @@ try {
     $workspaceName = "${AppName}-workspace-${Environment}"
     
     Write-Host "🏗️ Resource Names (Consistent Staging Suffix):" -ForegroundColor Green
-    Write-Host "  Container Registry: $containerRegistryName" -ForegroundColor Gray
+    Write-Host "  Container Registry: $containerRegistryName (no dashes - ACR requirement)" -ForegroundColor Gray
     Write-Host "  SQL Server: $sqlServerName" -ForegroundColor Gray
     Write-Host "  Storage Account: $storageAccountName" -ForegroundColor Gray
     Write-Host "  Key Vault: $keyVaultName" -ForegroundColor Gray
