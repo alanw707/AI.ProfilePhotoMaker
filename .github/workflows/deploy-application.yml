@@ -418,7 +418,7 @@ jobs:
         working-directory: AI.ProfilePhotoMaker.UI
         run: |
           echo "🔧 Installing npm dependencies..."
-          npm ci --prefer-offline --no-audit
+          npm ci --prefer-offline --no-audit --legacy-peer-deps
           echo "✅ Dependencies installed"
       
       - name: '⚙️ Configure Environment'
