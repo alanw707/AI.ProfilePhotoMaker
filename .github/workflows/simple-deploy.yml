@@ -77,34 +77,83 @@ jobs:
             --location eastus2 \
             --tags Environment=staging Application=AIProfileMaker
             
-      - name: 🏗️ Deploy Infrastructure (PowerShell)
+      - name: 🔍 Check for Existing Resources
+        id: resource_check
+        run: |
+          echo "🔍 Checking for existing core resources..."
+          
+          # Check for existing Container Registry
+          REGISTRY_NAME="aiprofilemakercrz3bawc74"
+          if az acr show --name "$REGISTRY_NAME" --resource-group "${{ env.RESOURCE_GROUP }}" --output none 2>/dev/null; then
+            echo "✅ Found existing Container Registry: $REGISTRY_NAME"
+            echo "registry-exists=true" >> $GITHUB_OUTPUT
+            echo "registry-name=$REGISTRY_NAME" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Container Registry not found - will create with idempotent script"
+            echo "registry-exists=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check for duplicate registries (with random suffixes)
+          echo "🔍 Checking for duplicate Container Registries..."
+          DUPLICATE_REGISTRIES=$(az acr list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?starts_with(name, 'aiprofilemaker')].name" -o tsv | grep -v "aiprofilemakercrz3bawc74" || true)
+          if [ -n "$DUPLICATE_REGISTRIES" ]; then
+            echo "⚠️ Found duplicate registries with random suffixes:"
+            echo "$DUPLICATE_REGISTRIES"
+            echo "duplicate-registries<<EOF" >> $GITHUB_OUTPUT
+            echo "$DUPLICATE_REGISTRIES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "✅ No duplicate registries found"
+          fi
+
+      - name: 🏗️ Deploy Infrastructure (Idempotent)
         id: infra
         shell: pwsh
         run: |
-          # Run PowerShell deployment script to avoid ARM API consumption issues
+          # Run IDEMPOTENT PowerShell deployment script - prevents duplicates
           cd scripts
           
-          ./deploy-infrastructure.ps1 `
+          # Use consistent deterministic naming - no random suffixes
+          ./deploy-infrastructure-idempotent.ps1 `
             -ResourceGroupName "${{ env.RESOURCE_GROUP }}" `
             -Location "eastus2" `
             -SqlAdminPassword "${{ secrets.SQL_ADMIN_PASSWORD }}" `
             -JwtSecret "${{ secrets.JWT_SECRET }}" `
             -ReplicateApiToken "${{ secrets.REPLICATE_API_TOKEN }}" `
             -AppName "aiprofilemaker" `
-            -Environment "staging"
+            -Environment "z3bawc74" `
+            -BuildImages
           
+      - name: ⚠️ Duplicate Resources Warning
+        if: steps.resource_check.outputs.duplicate-registries != ''
+        run: |
+          echo "⚠️ WARNING: Found duplicate Container Registries with random suffixes!"
+          echo "These should be cleaned up to avoid unnecessary costs:"
+          echo "${{ steps.resource_check.outputs.duplicate-registries }}"
+          echo ""
+          echo "💡 The deployment will use the correct deterministic registry: aiprofilemakercrz3bawc74"
+          echo "💰 Cleanup these duplicates to save \$150-250/month"
+
       - name: 🐳 Build & Push Images
         run: |
-          # Login to registry
-          az acr login --name ${{ steps.infra.outputs.registry-name }}
+          # Use the correct registry name (deterministic)
+          REGISTRY_NAME="${{ steps.infra.outputs.registry-name }}"
           
-          # Build and push backend
+          # Login to registry
+          echo "🔐 Logging into Container Registry: $REGISTRY_NAME"
+          az acr login --name "$REGISTRY_NAME"
+          
+          # Build and push backend with proper tagging
+          echo "🔧 Building backend API image..."
           docker build -f Dockerfile.backend -t ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-backend:latest .
           docker push ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-backend:latest
           
-          # Build and push frontend
+          # Build and push frontend with proper tagging
+          echo "🎨 Building frontend UI image..."
           docker build -f Dockerfile.frontend -t ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-frontend:latest .
           docker push ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-frontend:latest
+          
+          echo "✅ Container images built and pushed successfully"
           
       - name: 🔄 Update Container Apps (PowerShell)
         shell: pwsh

@@ -88,6 +88,18 @@
                 }
               ]
             },
+            "staging": {
+              "optimization": true,
+              "extractLicenses": true,
+              "sourceMap": false,
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.staging.ts"
+                }
+              ]
+            },
             "ngrok": {
               "optimization": false,
               "extractLicenses": false,

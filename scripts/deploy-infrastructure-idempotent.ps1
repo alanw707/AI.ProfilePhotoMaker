@@ -168,7 +168,8 @@ function Get-OrCreateResource {
 }
 
 try {
-    # Use deterministic naming (no random suffixes)
+    # Use deterministic naming (no random suffixes) - consistent with existing resources
+    # Environment parameter should be the deterministic suffix (e.g., "z3bawc74")
     $containerRegistryName = "${AppName}cr${Environment}"
     $sqlServerName = "${AppName}-sql-${Environment}"
     $storageAccountName = "${AppName}st${Environment}"
@@ -179,11 +180,25 @@ try {
     $applicationInsightsName = "${AppName}-ai-${Environment}"
     $workspaceName = "${AppName}-workspace-${Environment}"
     
-    Write-Host "🏗️ Resource Names (Deterministic):" -ForegroundColor Green
+    Write-Host "🏗️ Resource Names (Deterministic - No Random Suffixes):" -ForegroundColor Green
     Write-Host "  Container Registry: $containerRegistryName" -ForegroundColor Gray
     Write-Host "  SQL Server: $sqlServerName" -ForegroundColor Gray
     Write-Host "  Storage Account: $storageAccountName" -ForegroundColor Gray
     Write-Host "  Key Vault: $keyVaultName" -ForegroundColor Gray
+    Write-Host "  Container Environment: $containerEnvName" -ForegroundColor Gray
+    Write-Host "  Backend App: $backendAppName" -ForegroundColor Gray
+    Write-Host "  Frontend App: $frontendAppName" -ForegroundColor Gray
+    
+    # Validate that we're not creating random suffixes
+    if ($containerRegistryName -match "cr[a-z0-9]{8}$" -and $Environment -ne "staging") {
+        Write-Host "✅ Using deterministic naming pattern with suffix: $Environment" -ForegroundColor Green
+    } elseif ($Environment -eq "staging") {
+        Write-Host "⚠️  WARNING: Using 'staging' as suffix - this might not be deterministic!" -ForegroundColor Yellow
+        Write-Host "   Consider using a fixed deterministic suffix like 'z3bawc74' to match existing resources" -ForegroundColor Yellow
+    } else {
+        Write-Host "⚠️  WARNING: Resource naming pattern may not be deterministic!" -ForegroundColor Yellow
+        Write-Host "   Current pattern: $containerRegistryName" -ForegroundColor Yellow
+    }
     
     # Step 1: Create Resource Group (idempotent)
     Write-Host "📦 Ensuring Resource Group exists..." -ForegroundColor Green
