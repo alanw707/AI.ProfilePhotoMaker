@@ -1,5 +1,5 @@
-// Simple AI Profile Photo Maker Infrastructure
-// Perfect for single developer deployment
+// Simple AI Profile Photo Maker Infrastructure - Fixed Version
+// Using admin credentials to avoid API consumption errors
 
 param appName string = 'aiprofilemaker'
 param environment string = 'staging'
@@ -23,9 +23,7 @@ var backendAppName = '${appName}-api-${environment}'
 var frontendAppName = '${appName}-web-${environment}'
 var applicationInsightsName = '${appName}-ai-${environment}'
 
-// Removed problematic listKeys() caching - use inline calls instead
-
-// Container Registry
+// Container Registry with admin user enabled
 resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
   name: containerRegistryName
   location: location
@@ -180,12 +178,6 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
         targetPort: 80
         allowInsecure: false
       }
-      registries: [
-        {
-          server: containerRegistry.properties.loginServer
-          identity: resourceId('Microsoft.App/containerApps', backendAppName)
-        }
-      ]
       secrets: [
         {
           name: 'jwt-secret'
@@ -198,10 +190,6 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
         {
           name: 'connection-string'
           value: 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${sqlDatabase.name};Authentication=Active Directory Default;Encrypt=True;'
-        }
-        {
-          name: 'storage-connection-string'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
         }
       ]
     }
@@ -232,10 +220,6 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               secretRef: 'replicate-token'
             }
             {
-              name: 'AzureStorage__ConnectionString'
-              secretRef: 'storage-connection-string'
-            }
-            {
               name: 'ApplicationInsights__ConnectionString'
               value: applicationInsights.properties.ConnectionString
             }
@@ -258,18 +242,12 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
       }
     }
   }
-  dependsOn: [
-    backendAcrPullRole
-  ]
 }
 
 // Frontend Container App
 resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: frontendAppName
   location: location
-  identity: {
-    type: 'SystemAssigned'
-  }
   properties: {
     managedEnvironmentId: containerAppsEnvironment.id
     configuration: {
@@ -279,14 +257,7 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
         targetPort: 80
         allowInsecure: false
       }
-      registries: [
-        {
-          server: containerRegistry.properties.loginServer
-          identity: resourceId('Microsoft.App/containerApps', frontendAppName)
-        }
-      ]
-      secrets: [
-      ]
+      secrets: []
     }
     template: {
       containers: [
@@ -311,9 +282,6 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
       }
     }
   }
-  dependsOn: [
-    frontendAcrPullRole
-  ]
 }
 
 // Give backend app access to Key Vault
@@ -323,28 +291,6 @@ resource keyVaultAccessPolicy 'Microsoft.Authorization/roleAssignments@2022-04-0
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6') // Key Vault Secrets User
     principalId: backendApp.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// Give backend app access to Container Registry
-resource backendAcrPullRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(containerRegistry.id, backendApp.id, 'AcrPull')
-  scope: containerRegistry
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull
-    principalId: backendApp.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// Give frontend app access to Container Registry  
-resource frontendAcrPullRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(containerRegistry.id, frontendApp.id, 'AcrPull')
-  scope: containerRegistry
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull
-    principalId: frontendApp.identity.principalId
     principalType: 'ServicePrincipal'
   }
 }
