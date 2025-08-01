@@ -1478,4 +1478,17 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   get showUploadedImages(): boolean {
     return this.uploadedImageThumbnails.length > 0;
   }
+
+  // TrackBy functions for ngFor performance
+  trackByThumbnailId(index: number, item: { id: string; url: string; name: string }): string {
+    return item.id;
+  }
+
+  trackByFileIndex(index: number, item: SelectedFileWithQuality): string {
+    return `${item.file.name}-${item.file.size}-${index}`;
+  }
+
+  trackByErrorMessage(index: number, item: string): string {
+    return `${index}-${item}`;
+  }
 }

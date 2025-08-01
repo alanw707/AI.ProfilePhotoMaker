@@ -1,6 +1,4 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
 import { StateBaseService } from './state-base.service';
 import { FileUploadService } from './file-upload.service';
 import { ImageValidationService } from './image-validation.service';
@@ -200,7 +198,7 @@ export class ImageStateService extends StateBaseService<ImageState> {
    */
   async validateAndCleanupImages(
     images: UploadedImageThumbnail[],
-    isFromCache: boolean
+    _isFromCache: boolean
   ): Promise<ImageValidationResult> {
     // Check if image validation is disabled via environment configuration
     if (!this._configService.isImageValidationEnabled) {

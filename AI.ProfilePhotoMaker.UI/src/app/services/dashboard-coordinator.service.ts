@@ -193,8 +193,6 @@ export class DashboardCoordinatorService implements IDashboardStateService {
 
       // Load remaining data asynchronously (non-blocking)
       this.loadRemainingDataAsync();
-
-      const loadTime = performance.now() - startTime;
     } catch (error) {
       console.error('❌ Dashboard coordination failed:', error);
       this._notificationService.error(

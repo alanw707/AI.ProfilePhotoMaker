@@ -45,7 +45,7 @@ export interface GalleryImage {
       >
       </app-gallery-filter-controls>
 
-      <div class="gallery-content" [class]="viewMode">
+      <div [class]="'gallery-content ' + viewMode">
         <!-- Empty State -->
         <div class="empty-state" *ngIf="filteredImages.length === 0">
           <div class="empty-icon">📸</div>
@@ -98,7 +98,7 @@ export interface GalleryImage {
               </div>
 
               <!-- Type Badge -->
-              <div class="type-badge" [class]="image.type">
+              <div [class]="'type-badge ' + image.type">
                 {{ getTypeBadgeText(image.type) }}
               </div>
 
@@ -153,7 +153,7 @@ export interface GalleryImage {
             <div class="list-content">
               <div class="list-header">
                 <h4 class="list-title">{{ image.title }}</h4>
-                <div class="type-badge small" [class]="image.type">
+                <div [class]="'type-badge small ' + image.type">
                   {{ getTypeBadgeText(image.type) }}
                 </div>
               </div>
@@ -163,7 +163,7 @@ export interface GalleryImage {
                   >Style: {{ formatStyleName(image.style) }}</span
                 >
                 <span class="meta-item">{{ formatDate(image.createdAt) }}</span>
-                <span class="meta-item status-text" [class]="image.status">
+                <span [class]="'meta-item status-text ' + image.status">
                   {{ getStatusText(image.status) }}
                 </span>
               </div>
@@ -320,7 +320,7 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
     this.toggleSelection(image);
   }
 
-  onImageLoad(event: unknown): void {
+  onImageLoad(_event: unknown): void {
     // Handle successful image load
   }
 

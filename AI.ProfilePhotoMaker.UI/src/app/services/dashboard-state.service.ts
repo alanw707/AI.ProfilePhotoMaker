@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { ProfileService, UserProfile } from './profile.service';
-import { CreditsInfo, ReplicateService } from './replicate.service';
-import { CreditService, UserCreditStatus } from './credit.service';
+import { ProfileService } from './profile.service';
+import { ReplicateService } from './replicate.service';
+import { CreditService } from './credit.service';
 import { FileUploadService } from './file-upload.service';
 import { StyleService } from './style.service';
 import { NotificationService } from './notification.service';
@@ -23,7 +23,7 @@ import {
   providedIn: 'root',
 })
 export class DashboardStateService implements IDashboardStateService {
-  private readonly initialState: DashboardState = {
+  private readonly _initialState: DashboardState = {
     userProfile: null,
     creditsInfo: null,
     userCreditStatus: null,
@@ -38,22 +38,22 @@ export class DashboardStateService implements IDashboardStateService {
     lastValidationTime: 0,
   };
 
-  private readonly _state = new BehaviorSubject<DashboardState>(this.initialState);
+  private readonly _state = new BehaviorSubject<DashboardState>(this._initialState);
   readonly state$ = this._state.asObservable();
 
   constructor(
-    private profileService: ProfileService,
-    private replicateService: ReplicateService,
-    private creditService: CreditService,
-    private fileUploadService: FileUploadService,
-    private styleService: StyleService,
-    private notificationService: NotificationService,
-    private cacheManager: CacheManagerService,
-    private modelState: ModelStateService,
-    private fallbackOps: FallbackOperationsService,
-    private imageValidation: ImageValidationService,
-    private configService: ConfigService,
-    private subscriptionState: SubscriptionStateService
+    private _profileService: ProfileService,
+    private _replicateService: ReplicateService,
+    private _creditService: CreditService,
+    private _fileUploadService: FileUploadService,
+    private _styleService: StyleService,
+    private _notificationService: NotificationService,
+    private _cacheManager: CacheManagerService,
+    private _modelState: ModelStateService,
+    private _fallbackOps: FallbackOperationsService,
+    private _imageValidation: ImageValidationService,
+    private _configService: ConfigService,
+    private _subscriptionState: SubscriptionStateService
   ) {}
 
   getState(): DashboardState {
@@ -72,7 +72,7 @@ export class DashboardStateService implements IDashboardStateService {
     const CACHE_KEY = 'settings_data';
 
     // Check cache first
-    const cachedData = this.cacheManager.getCachedData<{
+    const cachedData = this._cacheManager.getCachedData<{
       userProfile: any;
       userCreditStatus: any;
       uploadedImages: number;
@@ -91,7 +91,7 @@ export class DashboardStateService implements IDashboardStateService {
 
     // Debounce rapid reloads
     if (
-      this.cacheManager.shouldDebounceRequest('settings_load', CacheManagerService.LOAD_DEBOUNCE_MS)
+      this._cacheManager.shouldDebounceRequest('settings_load', CacheManagerService.LOAD_DEBOUNCE_MS)
     ) {
       return;
     }
@@ -100,18 +100,18 @@ export class DashboardStateService implements IDashboardStateService {
 
     // Load only essential data for settings page
     forkJoin({
-      profile: this.profileService.getCurrentUserProfile().pipe(
-        catchError(error => {
+      profile: this._profileService.getCurrentUserProfile().pipe(
+        catchError(_error => {
           return of({ success: false, data: null, error });
         })
       ),
-      creditStatus: this.creditService.getCreditStatus().pipe(
-        catchError(error => {
+      creditStatus: this._creditService.getCreditStatus().pipe(
+        catchError(_error => {
           return of({ success: false, data: null, error });
         })
       ),
-      userImages: this.fileUploadService.getUserImages().pipe(
-        catchError(error => {
+      userImages: this._fileUploadService.getUserImages().pipe(
+        catchError(_error => {
           return of({ success: false, data: null, error });
         })
       ),
@@ -144,13 +144,13 @@ export class DashboardStateService implements IDashboardStateService {
         this.setState(newState);
 
         // Cache the settings data
-        this.cacheManager.setCachedData(
+        this._cacheManager.setCachedData(
           CACHE_KEY,
           newState,
           CacheManagerService.DASHBOARD_CACHE_DURATION_MS
         );
       },
-      error: error => {
+      error: _error => {
         this.setState({ isLoading: false });
       },
     });
@@ -161,7 +161,7 @@ export class DashboardStateService implements IDashboardStateService {
     const CACHE_KEY = 'credits_data';
 
     // Check cache first for internal credits
-    const cachedData = this.cacheManager.getCachedData<{
+    const cachedData = this._cacheManager.getCachedData<{
       userCreditStatus: any;
       totalCredits: number;
     }>(CACHE_KEY);
@@ -176,7 +176,7 @@ export class DashboardStateService implements IDashboardStateService {
 
     // Debounce rapid reloads
     if (
-      this.cacheManager.shouldDebounceRequest('credits_load', CacheManagerService.LOAD_DEBOUNCE_MS)
+      this._cacheManager.shouldDebounceRequest('credits_load', CacheManagerService.LOAD_DEBOUNCE_MS)
     ) {
       return;
     }
@@ -184,10 +184,10 @@ export class DashboardStateService implements IDashboardStateService {
     this.setState({ isLoading: true });
 
     // Load ONLY internal credit status - no Replicate credits
-    this.creditService
+    this._creditService
       .getCreditStatus()
       .pipe(
-        catchError(error => {
+        catchError(_error => {
           return of({ success: false, data: null, error });
         })
       )
@@ -196,7 +196,7 @@ export class DashboardStateService implements IDashboardStateService {
           const userCreditStatus = creditStatus?.success ? creditStatus.data : null;
 
           // Calculate total credits from internal sources only
-          const totalCredits = this.creditService.getTotalAvailableCredits(
+          const totalCredits = this._creditService.getTotalAvailableCredits(
             userCreditStatus,
             null // No Replicate credits
           );
@@ -212,14 +212,14 @@ export class DashboardStateService implements IDashboardStateService {
 
           // Cache the internal credits data
           if (userCreditStatus) {
-            this.cacheManager.setCachedData(
+            this._cacheManager.setCachedData(
               CACHE_KEY,
               { userCreditStatus, totalCredits },
               CacheManagerService.DASHBOARD_CACHE_DURATION_MS
             );
           }
         },
-        error: error => {
+        error: _error => {
           this.setState({ isLoading: false });
         },
       });
@@ -229,13 +229,13 @@ export class DashboardStateService implements IDashboardStateService {
     const CACHE_KEY = 'dashboard_data';
 
     // 🔧 FIX: Load subscription data using dedicated service first
-    await this.subscriptionState.loadFullSubscriptionData();
+    await this._subscriptionState.loadFullSubscriptionData();
 
     // Get the loaded subscription state
-    const subscriptionData = this.subscriptionState.getState();
+    const subscriptionData = this._subscriptionState.getState();
 
     // Check cache first for non-credit data
-    const cachedData = this.cacheManager.getCachedData<DashboardState>(CACHE_KEY);
+    const cachedData = this._cacheManager.getCachedData<DashboardState>(CACHE_KEY);
     if (cachedData?.userProfile) {
       // Merge cached data with fresh subscription data
       const mergedState = {
@@ -250,14 +250,14 @@ export class DashboardStateService implements IDashboardStateService {
 
       // Always validate images even from cache to ensure broken images are cleaned up
       if (cachedData.uploadedImageThumbnails && cachedData.uploadedImageThumbnails.length > 0) {
-        this.validateCachedImages(cachedData.uploadedImageThumbnails);
+        this._validateCachedImages(cachedData.uploadedImageThumbnails);
       }
       return;
     }
 
     // Debounce rapid reloads
     if (
-      this.cacheManager.shouldDebounceRequest(
+      this._cacheManager.shouldDebounceRequest(
         'dashboard_load',
         CacheManagerService.LOAD_DEBOUNCE_MS
       )
@@ -266,17 +266,18 @@ export class DashboardStateService implements IDashboardStateService {
     }
 
     this.setState({ isLoading: true });
-    const loadStartTime = performance.now();
+    // Performance tracking disabled
+    // const loadStartTime = performance.now();
 
     // 🔧 FIX: Load only non-credit data since subscription data is already loaded
     const apiCalls: any = {
-      profile: this.profileService.getCurrentUserProfile().pipe(
-        catchError(error => {
+      profile: this._profileService.getCurrentUserProfile().pipe(
+        catchError(_error => {
           return of({ success: false, data: null, error });
         })
       ),
-      userImages: this.fileUploadService.getUserImages().pipe(
-        catchError(error => {
+      userImages: this._fileUploadService.getUserImages().pipe(
+        catchError(_error => {
           return of({ success: false, data: null, error });
         })
       ),
@@ -334,14 +335,14 @@ export class DashboardStateService implements IDashboardStateService {
         // Clean URLs immediately to prevent browser caching issues
         const uploadedImageThumbnails = rawImageThumbnails.map(thumb => ({
           ...thumb,
-          url: this.cleanImageUrl(thumb.url),
+          url: this._cleanImageUrl(thumb.url),
         }));
 
         // Validate images asynchronously after state is set with clean URLs
         if (uploadedImageThumbnails.length > 0) {
-          this.validateAndCleanupImages(uploadedImageThumbnails, false).then(result => {
+          this._validateAndCleanupImages(uploadedImageThumbnails, false).then(result => {
             if (result.removedCount > 0) {
-              this.updateStateWithValidatedImages(
+              this._updateStateWithValidatedImages(
                 result.validImages,
                 result.removedCount,
                 result.repairTriggered
@@ -358,6 +359,7 @@ export class DashboardStateService implements IDashboardStateService {
 
         // Check if we need immediate filesystem repair
         if (generatedPhotosCount === 0 && uploadedImageThumbnails.length > 0) {
+          // TODO: Add filesystem repair logic if needed
         }
 
         // 🔧 FIX: Use total credits from subscription service
@@ -380,15 +382,16 @@ export class DashboardStateService implements IDashboardStateService {
         this.setState(newState);
 
         // Cache the loaded data
-        this.cacheManager.setCachedData(
+        this._cacheManager.setCachedData(
           'dashboard_data',
           this.getState(),
           CacheManagerService.DASHBOARD_CACHE_DURATION_MS
         );
-        const loadTime = performance.now() - loadStartTime;
+        // Load time tracking for performance monitoring
+        // const loadTime = performance.now() - loadStartTime;
 
         // Load remaining data asynchronously (non-blocking)
-        this.loadRemainingDataAsync();
+        this._loadRemainingDataAsync();
 
         // Set a timeout to avoid infinite "Loading..." state
         setTimeout(() => {
@@ -398,12 +401,12 @@ export class DashboardStateService implements IDashboardStateService {
           }
         }, 10000);
       },
-      error: error => {
+      error: _error => {
         // Log only critical errors (500+ status codes)
         if (error?.status >= 500 || !error?.status) {
           console.error('❌ Dashboard API call failed:', error);
         }
-        this.notificationService.error(
+        this._notificationService.error(
           'Dashboard Load Failed',
           'Could not load dashboard data. Please try again.'
         );
@@ -417,15 +420,15 @@ export class DashboardStateService implements IDashboardStateService {
 
   resetState() {
     this._state.next(this.initialState);
-    this.cacheManager.invalidateCache('dashboard_data');
+    this._cacheManager.invalidateCache('dashboard_data');
   }
 
   // Force refresh by clearing cache and reloading
   forceRefresh() {
-    this.cacheManager.forceRefresh('dashboard_data');
-    this.fallbackOps.resetFallbackTracking();
-    this.fileUploadService.invalidateUserImagesCache();
-    this.imageValidation.clearCache(); // Clear image validation cache too
+    this._cacheManager.forceRefresh('dashboard_data');
+    this._fallbackOps.resetFallbackTracking();
+    this._fileUploadService.invalidateUserImagesCache();
+    this._imageValidation.clearCache(); // Clear image validation cache too
 
     // Reset validation state to force re-validation
     this.setState({
@@ -437,15 +440,15 @@ export class DashboardStateService implements IDashboardStateService {
   }
 
   // Force refresh after repair to sync counts with server reality
-  private async forceRefreshAfterRepair(): Promise<void> {
+  private async _forceRefreshAfterRepair(): Promise<void> {
     try {
       // Clear all caches to ensure fresh data
-      this.cacheManager.forceRefresh('dashboard_data');
-      this.fileUploadService.invalidateUserImagesCache();
-      this.imageValidation.clearCache();
+      this._cacheManager.forceRefresh('dashboard_data');
+      this._fileUploadService.invalidateUserImagesCache();
+      this._imageValidation.clearCache();
 
       // Get fresh data from server
-      const userImages = await this.fileUploadService.getUserImages(true).toPromise();
+      const userImages = await this._fileUploadService.getUserImages(true).toPromise();
 
       if (userImages?.success && userImages.data) {
         const userImagesData = userImages.data;
@@ -474,28 +477,28 @@ export class DashboardStateService implements IDashboardStateService {
           lastValidationTime: 0,
         });
       }
-    } catch (error) {
+    } catch {
       // Silent failure - repair issues are handled by parent caller
     }
   }
 
   // Sync user images cache with current state
   invalidateAndRefreshImages() {
-    this.fileUploadService.invalidateUserImagesCache();
+    this._fileUploadService.invalidateUserImagesCache();
     this.refreshGeneratedPhotosCount();
   }
 
   // Load remaining data asynchronously after initial render
-  private loadRemainingDataAsync() {
+  private _loadRemainingDataAsync() {
     // Load non-critical data in parallel but don't block rendering
     forkJoin({
-      trainingStatus: this.fileUploadService.getTrainingStatus().pipe(
-        catchError(error => {
+      trainingStatus: this._fileUploadService.getTrainingStatus().pipe(
+        catchError(_error => {
           return of(null); // Return null for failed training status
         })
       ),
-      modelRequests: this.fileUploadService.getUserModelRequests().pipe(
-        catchError(error => {
+      modelRequests: this._fileUploadService.getUserModelRequests().pipe(
+        catchError(_error => {
           return of({ success: false, data: null, error });
         })
       ),
@@ -508,11 +511,11 @@ export class DashboardStateService implements IDashboardStateService {
         const trainingStatusData = trainingStatus; // Use directly since it's not wrapped
 
         // Get model status using ModelStateService
-        const modelInfo = this.modelState.getModelStatusFromData(
+        const modelInfo = this._modelState.getModelStatusFromData(
           modelRequestsData,
           trainingStatusData
         );
-        const { modelStatus, hasTrainedModel, latestTrainedModel } = modelInfo;
+        const { modelStatus, latestTrainedModel } = modelInfo;
 
         // Update state with additional data
         this.setState({
@@ -522,10 +525,10 @@ export class DashboardStateService implements IDashboardStateService {
         });
 
         // Reset fallback tracking periodically
-        this.fallbackOps.resetFallbackTracking();
+        this._fallbackOps.resetFallbackTracking();
 
         // Check if fallback operations are needed
-        const fallbackCheck = this.fallbackOps.checkIfFallbackNeeded({
+        const fallbackCheck = this._fallbackOps.checkIfFallbackNeeded({
           generatedPhotosCount: currentState.generatedPhotosCount,
           modelStatus,
           hasLatestTrainedModel: !!latestTrainedModel,
@@ -536,21 +539,23 @@ export class DashboardStateService implements IDashboardStateService {
 
         // Execute fallback operations if needed
         if (fallbackCheck.shouldCheckFilesystem) {
-          this.fallbackOps.checkGeneratedImagesFromFilesystem().subscribe({
+          this._fallbackOps.checkGeneratedImagesFromFilesystem().subscribe({
             next: result => {
               if (result.actualGeneratedCount) {
                 this.setState({ generatedPhotosCount: result.actualGeneratedCount });
               }
             },
-            error: error => {}, // Silent failure for filesystem check
+            error: _error => {
+              // Silent failure for filesystem check - intentionally empty
+            }, 
           });
         }
 
         if (fallbackCheck.shouldDiscoverModels) {
-          this.modelState.runAsyncModelDiscovery();
+          this._modelState.runAsyncModelDiscovery();
         }
       },
-      error: error => {
+      error: _error => {
         // Set fallback model status on async load failure
         const currentState = this.getState();
         if (currentState.modelStatus === 'Loading...') {
@@ -565,10 +570,10 @@ export class DashboardStateService implements IDashboardStateService {
 
   // Refresh only the photos count after generation completion
   refreshGeneratedPhotosCount() {
-    this.fileUploadService
+    this._fileUploadService
       .getUserImages()
       .pipe(
-        catchError(error => {
+        catchError(_error => {
           return of({ success: false, data: null, error });
         })
       )
@@ -582,14 +587,14 @@ export class DashboardStateService implements IDashboardStateService {
 
           this.setState({ generatedPhotosCount });
         },
-        error: error => {
+        error: _error => {
           // Silent failure for photo count refresh
         },
       });
   }
 
   // Validate cached images and update state if needed
-  private async validateCachedImages(images: UploadedImageThumbnail[]): Promise<void> {
+  private async _validateCachedImages(images: UploadedImageThumbnail[]): Promise<void> {
     // Check if validation is recent enough (5 minutes)
     const currentState = this.getState();
     const validationAge = Date.now() - (currentState.lastValidationTime || 0);
@@ -599,10 +604,10 @@ export class DashboardStateService implements IDashboardStateService {
       return;
     }
 
-    const result = await this.validateAndCleanupImages(images, true);
+    const result = await this._validateAndCleanupImages(images, true);
 
     if (result.removedCount > 0) {
-      this.updateStateWithValidatedImages(
+      this._updateStateWithValidatedImages(
         result.validImages,
         result.removedCount,
         result.repairTriggered
@@ -617,16 +622,16 @@ export class DashboardStateService implements IDashboardStateService {
   }
 
   // Validate and cleanup broken images
-  private async validateAndCleanupImages(
+  private async _validateAndCleanupImages(
     images: UploadedImageThumbnail[],
-    isFromCache: boolean
+    _isFromCache: boolean
   ): Promise<{
     validImages: UploadedImageThumbnail[];
     removedCount: number;
     repairTriggered?: boolean;
   }> {
     // Check if image validation is disabled via environment configuration
-    if (!this.configService.isImageValidationEnabled) {
+    if (!this._configService.isImageValidationEnabled) {
       return {
         validImages: images, // Return all images as valid
         removedCount: 0,
@@ -634,16 +639,16 @@ export class DashboardStateService implements IDashboardStateService {
       };
     }
 
-    const validation = await this.imageValidation.filterValidImages(images);
+    const validation = await this._imageValidation.filterValidImages(images);
 
     if (validation.removedCount > 0) {
       // Trigger repair if 404s were found (orphaned database records)
       if (validation.repairSuggested && validation.notFoundCount > 0) {
         try {
-          const repairResult = await this.fileUploadService.repairImageDatabase().toPromise();
+          const repairResult = await this._fileUploadService.repairImageDatabase().toPromise();
           if (repairResult?.success) {
             // Force refresh from server to get accurate counts after repair
-            await this.forceRefreshAfterRepair();
+            await this._forceRefreshAfterRepair();
 
             return {
               validImages: validation.validImages,
@@ -651,7 +656,7 @@ export class DashboardStateService implements IDashboardStateService {
               repairTriggered: true,
             };
           }
-        } catch (repairError) {
+        } catch {
           // Silent failure - repair error is handled by caller
         }
       }
@@ -665,7 +670,7 @@ export class DashboardStateService implements IDashboardStateService {
   }
 
   // Update state with validated images and invalidate cache if needed
-  private updateStateWithValidatedImages(
+  private _updateStateWithValidatedImages(
     validImages: UploadedImageThumbnail[],
     removedCount: number,
     repairTriggered?: boolean
@@ -678,7 +683,7 @@ export class DashboardStateService implements IDashboardStateService {
     });
 
     // Invalidate cache since we have new data
-    this.cacheManager.invalidateCache('dashboard_data');
+    this._cacheManager.invalidateCache('dashboard_data');
 
     // Show notification if images were removed
     if (removedCount > 0) {
@@ -686,7 +691,7 @@ export class DashboardStateService implements IDashboardStateService {
         ? `Removed ${removedCount} broken image reference(s) and repaired database inconsistencies.`
         : `Removed ${removedCount} broken image reference(s) that could no longer be loaded.`;
 
-      this.notificationService.info(
+      this._notificationService.info(
         repairTriggered ? 'Cleaned up & Repaired' : 'Cleaned up broken images',
         message
       );
@@ -694,7 +699,7 @@ export class DashboardStateService implements IDashboardStateService {
   }
 
   // Clean image URL to remove fragments and cache-busting artifacts
-  private cleanImageUrl(url: string): string {
+  private _cleanImageUrl(url: string): string {
     try {
       // Remove URL fragments (#) and normalize
       const cleanUrl = url.split('#')[0].split('?')[0];
@@ -705,7 +710,7 @@ export class DashboardStateService implements IDashboardStateService {
       }
 
       return cleanUrl;
-    } catch (error) {
+    } catch {
       return url;
     }
   }
@@ -719,10 +724,10 @@ export class DashboardStateService implements IDashboardStateService {
       return;
     }
 
-    const result = await this.validateAndCleanupImages(images, false);
+    const result = await this._validateAndCleanupImages(images, false);
 
     if (result.removedCount > 0) {
-      this.updateStateWithValidatedImages(
+      this._updateStateWithValidatedImages(
         result.validImages,
         result.removedCount,
         result.repairTriggered
@@ -732,7 +737,7 @@ export class DashboardStateService implements IDashboardStateService {
         ? `Validated ${images.length} images. Removed ${result.removedCount} broken references and repaired database.`
         : `Validated ${images.length} images. Removed ${result.removedCount} broken references.`;
 
-      this.notificationService.info(
+      this._notificationService.info(
         result.repairTriggered ? 'Validation & Repair Complete' : 'Image Validation Complete',
         message
       );
@@ -743,7 +748,7 @@ export class DashboardStateService implements IDashboardStateService {
         lastValidationTime: Date.now(),
       });
 
-      this.notificationService.success(
+      this._notificationService.success(
         'All Images Valid',
         'All uploaded images are accessible and valid.'
       );

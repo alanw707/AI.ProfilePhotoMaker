@@ -178,7 +178,7 @@ export class GalleryComponent implements OnInit {
       });
 
       return response.ok;
-    } catch (error) {
+    } catch {
       // Try with img element to test basic accessibility
       return new Promise(resolve => {
         const img = new Image();
@@ -337,7 +337,7 @@ export class GalleryComponent implements OnInit {
       alert(
         `Download initiated via fallback method. If the image opens in a new tab instead of downloading, please right-click and select "Save image as..." to save as ${filename}`
       );
-    } catch (fallbackError) {
+    } catch {
       alert(
         'Download failed completely. Please right-click the image and select "Save image as..." or check if the image URL is accessible.'
       );
@@ -511,7 +511,7 @@ export class GalleryComponent implements OnInit {
           } else {
             zip.file(filename, blob);
           }
-        } catch (error) {
+        } catch {
           // Continue with other images instead of failing completely
         }
       }
@@ -543,7 +543,7 @@ export class GalleryComponent implements OnInit {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(zipUrl);
       }, 100);
-    } catch (error) {
+    } catch {
       alert('Failed to create zip file. Please try downloading images individually.');
     } finally {
       this.isDownloading = false;

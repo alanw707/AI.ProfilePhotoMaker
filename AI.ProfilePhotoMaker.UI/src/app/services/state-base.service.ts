@@ -137,7 +137,7 @@ export abstract class StateBaseService<T> {
   /**
    * Log performance timing (disabled for production)
    */
-  protected logPerformance(operation: string, startTime: number): void {
+  protected logPerformance(_operation: string, _startTime: number): void {
     // Performance logging disabled for production build
     // const duration = performance.now() - startTime;
     // console.log(`⚡ ${operation} completed in ${duration.toFixed(2)}ms`);

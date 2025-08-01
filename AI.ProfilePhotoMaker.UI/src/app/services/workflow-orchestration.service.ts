@@ -1,4 +1,4 @@
-import { Injectable, Injector, NgZone } from '@angular/core';
+import { Injectable, Injector, NgZone, inject } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { AuthService } from './auth.service';
 import { NotificationService } from './notification.service';
@@ -8,17 +8,43 @@ import { ConfigService } from './config.service';
 import { StyleOption } from '../components/dashboard/style-selector/style-selector.component';
 
 // Lazy-loaded service types
+interface TrainingZipResponse {
+  url: string;
+  fileName: string;
+  size?: number;
+}
+
+interface TrainingStatusResponse {
+  id: string;
+  status: 'starting' | 'processing' | 'succeeded' | 'failed' | 'canceled';
+  version?: string;
+  error?: string;
+  logs?: string[];
+}
+
+interface BatchGenerationResponse {
+  predictions: PredictionResult[];
+  failures?: GenerationFailure[];
+}
+
+interface PredictionStatusResponse {
+  id: string;
+  status: 'starting' | 'processing' | 'succeeded' | 'failed' | 'canceled';
+  output?: string[];
+  error?: string;
+}
+
 interface FileUploadService {
-  createTrainingZip(): Observable<any>;
-  getLatestTrainingZip(): Observable<any>;
+  createTrainingZip(): Observable<TrainingZipResponse>;
+  getLatestTrainingZip(): Observable<TrainingZipResponse>;
   invalidateUserImagesCache(): void;
 }
 
 interface ReplicateService {
-  trainModel(request: TrainModelRequest): Observable<any>;
-  getTrainingStatus(trainingId: string): Observable<any>;
-  generateBatchImages(request: GenerateBatchImagesRequest): Observable<any>;
-  getPredictionStatus(predictionId: string): Observable<any>;
+  trainModel(request: TrainModelRequest): Observable<TrainingStatusResponse>;
+  getTrainingStatus(trainingId: string): Observable<TrainingStatusResponse>;
+  generateBatchImages(request: GenerateBatchImagesRequest): Observable<BatchGenerationResponse>;
+  getPredictionStatus(predictionId: string): Observable<PredictionStatusResponse>;
 }
 
 interface TrainModelRequest {
@@ -74,9 +100,18 @@ export interface CreditCalculation {
   remainingCredits: number;
 }
 
+interface WorkflowOrchestrationDependencies {
+  authService: AuthService;
+  notificationService: NotificationService;
+  stateService: DashboardStateService;
+  subscriptionState: SubscriptionStateService;
+  config: ConfigService;
+}
+
 @Injectable({
   providedIn: 'root',
 })
+
 export class WorkflowOrchestrationService {
   private readonly _initialProgress: WorkflowProgress = {
     isTraining: false,
@@ -95,23 +130,36 @@ export class WorkflowOrchestrationService {
   private readonly _progress = new BehaviorSubject<WorkflowProgress>(this._initialProgress);
   readonly progress$ = this._progress.asObservable();
 
-  private _pollingInterval?: any;
-  private _photoCompletionPollingInterval?: any;
-  private _timeBasedProgressInterval?: any;
+  private _pollingInterval?: NodeJS.Timeout;
+  private _photoCompletionPollingInterval?: NodeJS.Timeout;
+  private _timeBasedProgressInterval?: NodeJS.Timeout;
 
   // Lazy-loaded services
   private _fileUploadService: FileUploadService | null = null;
   private _replicateService: ReplicateService | null = null;
 
+  // Core dependencies
+  private readonly _deps: WorkflowOrchestrationDependencies;
+
+  // Use inject pattern to reduce constructor parameters
+  private readonly _ngZone = inject(NgZone);
+  private readonly _injector = inject(Injector);
+
   constructor(
-    private _authService: AuthService,
-    private _notificationService: NotificationService,
-    private _stateService: DashboardStateService,
-    private _subscriptionState: SubscriptionStateService,
-    private _config: ConfigService,
-    private _ngZone: NgZone,
-    private _injector: Injector
-  ) {}
+    authService: AuthService,
+    notificationService: NotificationService,
+    stateService: DashboardStateService,
+    subscriptionState: SubscriptionStateService,
+    config: ConfigService
+  ) {
+    this._deps = {
+      authService,
+      notificationService,
+      stateService,
+      subscriptionState,
+      config,
+    };
+  }
 
   getProgress(): WorkflowProgress {
     return this._progress.getValue();
@@ -186,13 +234,13 @@ export class WorkflowOrchestrationService {
 
   private _getTotalAvailableCredits(): number {
     // Primary: Check subscription service first (same source as UI)
-    const subscriptionState = this._subscriptionState.getState();
+    const subscriptionState = this._deps.subscriptionState.getState();
     if (subscriptionState.totalCredits !== undefined && subscriptionState.totalCredits > 0) {
       return subscriptionState.totalCredits;
     }
 
     // Secondary: Dashboard state service
-    const state = this._stateService.getState();
+    const state = this._deps.stateService.getState();
     if (state.totalCredits !== undefined && state.totalCredits > 0) {
       return state.totalCredits;
     }
@@ -204,6 +252,10 @@ export class WorkflowOrchestrationService {
     }
 
     // Last resort: Manual calculation from dashboard state
+    return this._calculateCreditsFromState(state);
+  }
+
+  private _calculateCreditsFromState(state: any): number {
     const userCreditStatus = state.userCreditStatus;
     const creditsInfo = state.creditsInfo;
 
@@ -219,18 +271,18 @@ export class WorkflowOrchestrationService {
     imagesPerStyle: number
   ): Promise<void> {
     if (selectedStyles.length === 0) {
-      this._notificationService.error('Training Error', 'Please select at least one style');
+      this._deps.notificationService.error('Training Error', 'Please select at least one style');
       return;
     }
 
     // Ensure we have the latest credit data before validation
-    await this._stateService.loadInitialDashboardData();
+    await this._deps.stateService.loadInitialDashboardData();
 
     // Wait a moment for state to fully propagate
     await new Promise(resolve => setTimeout(resolve, 500));
 
     // Get current state after loading
-    const currentState = this._stateService.getState();
+    const currentState = this._deps.stateService.getState();
 
     // Check if user has enough credits
     const creditCalc = this.calculateCredits(
@@ -243,12 +295,12 @@ export class WorkflowOrchestrationService {
       const availableCredits = this._getTotalAvailableCredits();
 
       if (availableCredits === 0) {
-        this._notificationService.error(
+        this._deps.notificationService.error(
           'Credits Not Loaded',
           `Unable to load current credit balance. Please refresh the page and try again.`
         );
       } else {
-        this._notificationService.error(
+        this._deps.notificationService.error(
           'Insufficient Credits',
           `You need ${creditCalc.totalCredits} credits but only have ${availableCredits}. Please purchase more credits.`
         );
@@ -266,19 +318,19 @@ export class WorkflowOrchestrationService {
         const modelId = latestTrainedModel?.replicateModelId || latestTrainedModel?.modelId;
 
         if (modelVersion) {
-          this._notificationService.info(
+          this._deps.notificationService.info(
             'Using Existing Model',
             'Using your previously trained model for generation'
           );
           await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, modelVersion);
         } else if (modelId) {
-          this._notificationService.info(
+          this._deps.notificationService.info(
             'Using Existing Model',
             'Using your previously trained model for generation'
           );
           await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, modelId);
         } else {
-          this._notificationService.error(
+          this._deps.notificationService.error(
             'Model Error',
             'Model data not found. Please refresh and try again.'
           );
@@ -289,7 +341,7 @@ export class WorkflowOrchestrationService {
       }
     } catch (error) {
       console.error('Error in training workflow:', error);
-      this._notificationService.error(
+      this._deps.notificationService.error(
         'Training Error',
         'Failed to start training. Please try again.'
       );
@@ -325,10 +377,12 @@ export class WorkflowOrchestrationService {
       const trainingId = await this._startReplicateTraining(zipUrl);
       this._finalizeTrainingSetup(trainingId);
       this._startTrainingStatusPolling(selectedStyles, imagesPerStyle);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Training startup error:', error);
       this._setProgress({ isTraining: false });
-      throw new Error(error.message || 'Failed to start training');
+      throw new Error(
+        error instanceof Error ? error.message : 'Failed to start training'
+      );
     }
   }
 
@@ -340,7 +394,7 @@ export class WorkflowOrchestrationService {
       estimatedCompletion: '15-20 minutes',
     });
 
-    this._notificationService.info(
+    this._deps.notificationService.info(
       'Starting Training',
       'Creating training ZIP and starting model training...'
     );
@@ -377,10 +431,10 @@ export class WorkflowOrchestrationService {
   }
 
   private async _startReplicateTraining(zipUrl: string): Promise<string> {
-    const userId = this._authService.getCurrentUserId();
+    const userId = this._deps.authService.getCurrentUserId();
     if (!userId) {
-      console.warn('Failed to get user ID. Token exists:', !!this._authService.getToken());
-      console.warn('Authentication status:', this._authService.isAuthenticated());
+      console.warn('Failed to get user ID. Token exists:', !!this._deps.authService.getToken());
+      console.warn('Authentication status:', this._deps.authService.isAuthenticated());
       throw new Error('User not authenticated - unable to extract user ID from token');
     }
     console.warn('Starting training for user ID:', userId);
@@ -408,7 +462,7 @@ export class WorkflowOrchestrationService {
       progressMessage: 'AI model is learning your features...',
     });
 
-    this._notificationService.success(
+    this._deps.notificationService.success(
       'Training Started',
       'Model training has begun. This will take 15-20 minutes.'
     );
@@ -476,7 +530,7 @@ export class WorkflowOrchestrationService {
                 isTraining: false,
               });
 
-              this._notificationService.success(
+              this._deps.notificationService.success(
                 'Training Complete',
                 'Model training finished! Starting image generation...'
               );
@@ -486,7 +540,7 @@ export class WorkflowOrchestrationService {
               await new Promise(resolve =>
                 this._ngZone.runOutsideAngular(() => setTimeout(resolve, 3000))
               );
-              await this._stateService.loadInitialDashboardData();
+              await this._deps.stateService.loadInitialDashboardData();
 
               // Wait for state to update
               await new Promise(resolve =>
@@ -494,7 +548,7 @@ export class WorkflowOrchestrationService {
               );
 
               // Start generation with the new model
-              const userProfile = this._stateService.getState().userProfile;
+              const userProfile = this._deps.stateService.getState().userProfile;
               if (userProfile?.trainedModelVersionId) {
                 await this._generateImagesWithStyles(
                   selectedStyles,
@@ -507,7 +561,7 @@ export class WorkflowOrchestrationService {
                 if (versionId) {
                   await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, versionId);
                 } else {
-                  this._notificationService.error(
+                  this._deps.notificationService.error(
                     'Generation Error',
                     'Could not find trained model version. Please refresh and try again.'
                   );
@@ -520,7 +574,7 @@ export class WorkflowOrchestrationService {
                 progressPercentage: 0,
                 progressMessage: '',
               });
-              this._notificationService.error(
+              this._deps.notificationService.error(
                 'Training Failed',
                 'Model training failed. Please try again.'
               );
@@ -540,7 +594,7 @@ export class WorkflowOrchestrationService {
     modelVersion: string
   ): Promise<void> {
     try {
-      const userId = this._authService.getCurrentUserId();
+      const userId = this._deps.authService.getCurrentUserId();
       if (!userId) {
         throw new Error('User not authenticated - unable to extract user ID from token');
       }
@@ -560,7 +614,7 @@ export class WorkflowOrchestrationService {
       const fileUploadService = await this._loadFileUploadService();
       fileUploadService.invalidateUserImagesCache();
 
-      this._notificationService.info(
+      this._deps.notificationService.info(
         'Generating Images',
         `Starting batch generation for ${selectedStyles.length} style(s)...`
       );
@@ -571,8 +625,8 @@ export class WorkflowOrchestrationService {
         userId,
         styles: selectedStyles.map(style => style.name),
         userInfo: {
-          gender: this._stateService.getState().userProfile?.gender,
-          ethnicity: this._stateService.getState().userProfile?.ethnicity,
+          gender: this._deps.stateService.getState().userProfile?.gender,
+          ethnicity: this._deps.stateService.getState().userProfile?.ethnicity,
         },
         numOutputsPerStyle: imagesPerStyle, // Use the selected number of images per style
       };
@@ -603,7 +657,7 @@ export class WorkflowOrchestrationService {
 
       // Report results to user
       if (successfulStyles > 0) {
-        this._notificationService.success(
+        this._deps.notificationService.success(
           'Generation Started',
           `Successfully started generation for ${successfulStyles} style(s). ` +
             `Images will appear in your gallery when ready.`
@@ -614,7 +668,7 @@ export class WorkflowOrchestrationService {
         const failedStyleNames = (failures as GenerationFailure[])
           .map((f: GenerationFailure) => f.style)
           .join(', ');
-        this._notificationService.warning(
+        this._deps.notificationService.warning(
           'Partial Success',
           `Failed to start generation for ${failedStyles} style(s): ${failedStyleNames}`
         );
@@ -645,7 +699,7 @@ export class WorkflowOrchestrationService {
         minute: '2-digit',
       });
 
-      this._notificationService.info(
+      this._deps.notificationService.info(
         'Generation Progress',
         `Generating ${successfulStyles} style(s) with ${imagesPerStyle} images each. ` +
           `Estimated completion: ${timeString}. Cost: ${creditsCost} credits.`
@@ -655,17 +709,17 @@ export class WorkflowOrchestrationService {
       await this._startPredictionCompletionPolling();
 
       // Refresh dashboard state to update model status
-      await this._stateService.loadInitialDashboardData();
-    } catch (error: any) {
+      await this._deps.stateService.loadInitialDashboardData();
+    } catch (error: unknown) {
       console.error('Error in batch image generation:', error);
       this._setProgress({
         isGenerating: false,
         progressPercentage: 0,
         progressMessage: '',
       });
-      this._notificationService.error(
+      this._deps.notificationService.error(
         'Generation Error',
-        error.message || 'Failed to generate images'
+        error instanceof Error ? error.message : 'Failed to generate images'
       );
     }
   }
@@ -759,13 +813,13 @@ export class WorkflowOrchestrationService {
               if (completedPredictions.length > 0) {
                 // Some succeeded
                 this._onPhotoGenerationComplete(completedPredictions.length);
-                this._notificationService.warning(
+                this._deps.notificationService.warning(
                   'Partial Success',
                   `${completedPredictions.length} photos generated successfully, ${failedPredictions.length} failed.`
                 );
               } else {
                 // All failed
-                this._notificationService.error(
+                this._deps.notificationService.error(
                   'Generation Failed',
                   'All photo generations failed. Please try again.'
                 );
@@ -843,7 +897,7 @@ export class WorkflowOrchestrationService {
       showLastGenerationMessage: true,
     });
 
-    this._notificationService.success(
+    this._deps.notificationService.success(
       'Photos Ready!',
       `${photoCount} professional photos are ready to view in your gallery.`
     );
@@ -852,8 +906,8 @@ export class WorkflowOrchestrationService {
     this._ngZone.runOutsideAngular(() => {
       setTimeout(() => {
         this._ngZone.run(() => {
-          this._stateService.refreshGeneratedPhotosCount();
-          this._stateService.invalidateAndRefreshImages();
+          this._deps.stateService.refreshGeneratedPhotosCount();
+          this._deps.stateService.invalidateAndRefreshImages();
         });
       }, 500);
     });

@@ -92,6 +92,22 @@ module.exports = tseslint.config(
         {
           "selector": "enumMember",
           "format": ["UPPER_CASE"]
+        },
+        {
+          "selector": "objectLiteralProperty",
+          "filter": {
+            "regex": "^(Authorization|X-[A-Z][a-zA-Z-]*|ngrok-skip-browser-warning|Content-Type|Accept|User-Agent|image\\/[a-z]+)$",
+            "match": true
+          },
+          "format": null
+        },
+        {
+          "selector": "objectLiteralProperty",
+          "filter": {
+            "regex": "^[a-zA-Z0-9-]+(-[a-zA-Z0-9-]*)*$|^[a-zA-Z0-9 ]+( [a-zA-Z0-9 ]*)*$",
+            "match": true
+          },
+          "format": null
         }
       ],
       

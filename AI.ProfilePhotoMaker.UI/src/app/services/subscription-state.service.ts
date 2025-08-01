@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { forkJoin, Observable, of } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { StateBaseService } from './state-base.service';
 import { CreditService, UserCreditStatus } from './credit.service';
@@ -24,8 +24,8 @@ export interface SubscriptionState {
   providedIn: 'root',
 })
 export class SubscriptionStateService extends StateBaseService<SubscriptionState> {
-  private readonly CACHE_KEY = 'subscription_state_data';
-  private readonly CREDITS_CACHE_KEY = 'credits_data';
+  private readonly _CACHE_KEY = 'subscription_state_data';
+  private readonly _CREDITS_CACHE_KEY = 'credits_data';
 
 
   constructor(
@@ -55,7 +55,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
     const startTime = performance.now();
 
     // Check cache first
-    const cachedData = this.getCachedData<SubscriptionState>(this.CACHE_KEY);
+    const cachedData = this.getCachedData<SubscriptionState>(this._CACHE_KEY);
 
     if (cachedData?.userCreditStatus) {
       this.setState(cachedData);
@@ -70,7 +70,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
     this.setLoading(true);
 
     try {
-      const apiCalls: any = {
+      const apiCalls: Record<string, any> = {
         creditStatus: this._creditService.getCreditStatus().pipe(
           catchError(error => {
             return of({ success: false, data: null, error });
@@ -89,7 +89,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
         apiCalls.credits = of({ success: false, data: null, error: 'disabled' });
       }
 
-      const result: any = await forkJoin(apiCalls).toPromise();
+      const result: Record<string, any> = await forkJoin(apiCalls).toPromise();
       const { creditStatus, credits } = result;
 
       const userCreditStatus = creditStatus?.success ? creditStatus.data : null;
@@ -115,7 +115,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
       this.setState(newState);
 
       // Cache the subscription data
-      this.setCachedData(this.CACHE_KEY, newState);
+      this.setCachedData(this._CACHE_KEY, newState);
 
       // Show info if credits API failed but internal credits loaded
       if (
@@ -123,6 +123,8 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
         this._configService.isReplicateCreditsEnabled &&
         creditStatus?.success
       ) {
+        // Could add notification about external credits not available
+        console.info('External credits API not available, using internal credits only');
       }
 
       this.logPerformance('Subscription data loaded', startTime);
@@ -142,7 +144,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
     const cachedData = this.getCachedData<{
       userCreditStatus: UserCreditStatus;
       totalCredits: number;
-    }>(this.CREDITS_CACHE_KEY);
+    }>(this._CREDITS_CACHE_KEY);
 
     if (cachedData?.userCreditStatus) {
       this.setState({

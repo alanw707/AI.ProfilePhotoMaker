@@ -2,7 +2,7 @@ import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } fro
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
-import { animate, state, style, transition, trigger } from '@angular/animations';
+import { animate, style, transition, trigger } from '@angular/animations';
 import { Observable, Subscription } from 'rxjs';
 import { NavigationService } from '../../services/navigation.service';
 import { ThemeService } from '../../services/theme.service';
@@ -499,7 +499,7 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   createStyledPhotosFromStyles(): void {
     // Create styled photos array from actual styles
-    this.styledPhotos = this.availableStyles.slice(0, 20).map((style, index) => ({
+    this.styledPhotos = this.availableStyles.slice(0, 20).map((style) => ({
       id: style.id,
       imageUrl: this._config.buildStylePreviewUrl(style.name),
       style: style.name,
@@ -739,7 +739,7 @@ export class LandingComponent implements OnInit, OnDestroy {
   }
 
   // Style card interaction for new grid layout
-  onStyleCardClick(photo: StyledPhoto, index: number): void {
+  onStyleCardClick(_photo: StyledPhoto, _index: number): void {
     // Trigger get started flow with style context
     this.getStarted();
   }

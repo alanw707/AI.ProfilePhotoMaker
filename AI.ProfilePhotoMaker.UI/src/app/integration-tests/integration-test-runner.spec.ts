@@ -135,14 +135,14 @@ export class IntegrationTestConfig {
    */
   static createMockFileReader(result = 'data:image/jpeg;base64,mock-data'): FileReader {
     const reader = {
-      readAsDataURL: jasmine.createSpy('readAsDataURL').and.callFake(function(file: File) {
+      readAsDataURL: jasmine.createSpy('readAsDataURL').and.callFake(function(_file: File) {
         setTimeout(() => {
           if (this.onload) {
             this.onload({ target: { result } });
           }
         }, 0);
       }),
-      readAsText: jasmine.createSpy('readAsText').and.callFake(function(file: File) {
+      readAsText: jasmine.createSpy('readAsText').and.callFake(function(_file: File) {
         setTimeout(() => {
           if (this.onload) {
             this.onload({ target: { result } });

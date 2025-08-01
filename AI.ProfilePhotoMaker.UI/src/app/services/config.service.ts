@@ -16,68 +16,27 @@ export class ConfigService {
     return environment.baseUrl || '';
   }
 
-  get authLoginUrl(): string {
-    return '/api/auth/login';
-  }
-
-  get authRegisterUrl(): string {
-    return '/api/auth/register';
-  }
-
-  get authProfileCompletionUrl(): string {
-    return '/api/auth/profile-completion-status';
-  }
-
-  get profileUrl(): string {
-    return '/api/profile';
-  }
-
-  get uploadPhotoUrl(): string {
-    return '/api/image/upload-photo';
-  }
-
-  get generateImageUrl(): string {
-    return '/api/image/generate-profile-picture';
-  }
-
-  get generateSamplesUrl(): string {
-    return '/api/image/generate-samples';
-  }
-
-  get userImagesUrl(): string {
-    return '/api/image/user-images';
-  }
-
-  get activeStylesUrl(): string {
-    return '/api/style';
-  }
-
-  get generateBasicUrl(): string {
-    return '/api/replicate/generate/basic';
-  }
-
-  get replicateCreditsUrl(): string {
-    return '/api/test/basic-tier-status';
-  }
-
-  get imageStylesUrl(): string {
-    return '/api/image/styles';
-  }
-
-  get imageListUrl(): string {
-    return '/api/image/images';
-  }
-
-  get profileTrainingStatusUrl(): string {
-    return '/api/profile/training-status';
-  }
+  readonly authLoginUrl = '/api/auth/login';
+  readonly authRegisterUrl = '/api/auth/register';
+  readonly authProfileCompletionUrl = '/api/auth/profile-completion-status';
+  readonly profileUrl = '/api/profile';
+  readonly uploadPhotoUrl = '/api/image/upload-photo';
+  readonly generateImageUrl = '/api/image/generate-profile-picture';
+  readonly generateSamplesUrl = '/api/image/generate-samples';
+  readonly userImagesUrl = '/api/image/user-images';
+  readonly activeStylesUrl = '/api/style';
+  readonly generateBasicUrl = '/api/replicate/generate/basic';
+  readonly replicateCreditsUrl = '/api/test/basic-tier-status';
+  readonly imageStylesUrl = '/api/image/styles';
+  readonly imageListUrl = '/api/image/images';
+  readonly profileTrainingStatusUrl = '/api/profile/training-status';
 
   /**
    * Get the OAuth base URL for external login
    */
   getOAuthBaseUrl(): string {
     // For ngrok configuration, use the backend API URL
-    if (environment.apiUrl && environment.apiUrl.startsWith('https://')) {
+    if (environment.apiUrl?.startsWith('https://')) {
       // Extract base URL from full API URL (remove /api suffix)
       return environment.apiUrl.replace('/api', '');
     }
@@ -188,7 +147,7 @@ export class ConfigService {
    * @param thumbnail - Whether to request thumbnail size (if supported)
    * @returns Complete upload URL
    */
-  buildUploadUrl(imagePath: string, thumbnail = false): string {
+  buildUploadUrl(imagePath: string, _thumbnail = false): string {
     const url = this.buildStaticFileUrl(imagePath, 'uploads');
     // Future: Add thumbnail parameter when backend supports it
     // if (thumbnail) url += '?size=thumbnail';
@@ -260,7 +219,7 @@ export class ConfigService {
     };
 
     const lowerStyleName = styleName.toLowerCase();
-    const fileName = styleFileMap[lowerStyleName] || this.generateUniqueFileName(styleName);
+    const fileName = styleFileMap[lowerStyleName] || this._generateUniqueFileName(styleName);
 
     return `/style-previews/${fileName}.jpg`;
   }
@@ -270,7 +229,7 @@ export class ConfigService {
    * @param styleName - The original style name
    * @returns A unique filename based on the style name
    */
-  private generateUniqueFileName(styleName: string): string {
+  private _generateUniqueFileName(styleName: string): string {
     return styleName
       .toLowerCase()
       .replace(/[^a-z0-9\s]/g, '') // Remove special characters
