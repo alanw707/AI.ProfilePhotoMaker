@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.177.2456",
-      "templateHash": "8616359116702452864"
+      "templateHash": "3418388034700191782"
     }
   },
   "parameters": {
@@ -81,34 +81,6 @@
         "description": "The Replicate webhook secret for signature validation"
       }
     },
-    "redisCacheSku": {
-      "type": "string",
-      "defaultValue": "Standard",
-      "allowedValues": [
-        "Basic",
-        "Standard",
-        "Premium"
-      ],
-      "metadata": {
-        "description": "The Redis Cache SKU"
-      }
-    },
-    "redisCacheCapacity": {
-      "type": "int",
-      "defaultValue": 1,
-      "allowedValues": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6
-      ],
-      "metadata": {
-        "description": "The Redis Cache capacity"
-      }
-    },
     "enableContainerRegistry": {
       "type": "bool",
       "defaultValue": false,
@@ -137,10 +109,9 @@
     "sqlServerName": "[format('{0}-sql-{1}-{2}', parameters('namePrefix'), parameters('environmentName'), variables('uniqueSuffix'))]",
     "sqlDatabaseName": "[format('{0}db', parameters('namePrefix'))]",
     "storageAccountName": "[format('{0}st{1}', take(parameters('namePrefix'), 14), take(variables('uniqueSuffix'), 8))]",
-    "keyVaultName": "[format('{0}-kv-{1}', take(parameters('namePrefix'), 8), take(variables('uniqueSuffix'), 8))]",
+    "keyVaultName": "[format('{0}kv{1}', take(parameters('namePrefix'), 10), take(variables('uniqueSuffix'), 6))]",
     "applicationInsightsName": "[format('{0}-ai-{1}', parameters('namePrefix'), parameters('environmentName'))]",
     "logAnalyticsName": "[format('{0}-la-{1}', parameters('namePrefix'), parameters('environmentName'))]",
-    "redisCacheName": "[format('{0}-redis-{1}-{2}', parameters('namePrefix'), parameters('environmentName'), variables('uniqueSuffix'))]",
     "containerRegistryName": "[format('{0}cr{1}', take(parameters('namePrefix'), 14), take(variables('uniqueSuffix'), 8))]"
   },
   "resources": [
@@ -446,8 +417,6 @@
         "enableSoftDelete": true,
         "softDeleteRetentionInDays": 90,
         "enableRbacAuthorization": false,
-        "vaultUri": "[format('https://{0}.{1}/', variables('keyVaultName'), environment().suffixes.keyvaultDns)]",
-        "provisioningState": "Succeeded",
         "publicNetworkAccess": "Enabled"
       },
       "tags": {
@@ -516,7 +485,6 @@
         "Replicate__WebhookSecret": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/ReplicateWebhookSecret/)', reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), '2023-07-01').vaultUri)]",
         "AzureStorage__ConnectionString": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2023-01-01').keys[0].value)]",
         "AzureStorage__ContainerName": "profile-images",
-        "Redis__ConnectionString": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/RedisCacheConnectionString/)', reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), '2023-07-01').vaultUri)]",
         "ApplicationInsights__InstrumentationKey": "[reference(resourceId('Microsoft.Insights/components', variables('applicationInsightsName')), '2020-02-02').InstrumentationKey]",
         "ApplicationInsights__ConnectionString": "[reference(resourceId('Microsoft.Insights/components', variables('applicationInsightsName')), '2020-02-02').ConnectionString]",
         "ASPNETCORE_ENVIRONMENT": "[if(equals(parameters('environmentName'), 'prod'), 'Production', 'Development')]"
@@ -525,37 +493,11 @@
         "[resourceId('Microsoft.Insights/components', variables('applicationInsightsName'))]",
         "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), 'JwtSecret')]",
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
-        "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), 'RedisCacheConnectionString')]",
         "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), 'ReplicateApiToken')]",
         "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), 'DatabaseConnectionString')]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
         "[resourceId('Microsoft.Web/sites', variables('webAppName'))]"
       ]
-    },
-    {
-      "type": "Microsoft.Cache/redis",
-      "apiVersion": "2023-08-01",
-      "name": "[variables('redisCacheName')]",
-      "location": "[parameters('location')]",
-      "properties": {
-        "sku": {
-          "name": "[parameters('redisCacheSku')]",
-          "family": "[if(equals(parameters('redisCacheSku'), 'Premium'), 'P', 'C')]",
-          "capacity": "[parameters('redisCacheCapacity')]"
-        },
-        "enableNonSslPort": false,
-        "minimumTlsVersion": "1.2",
-        "publicNetworkAccess": "Enabled",
-        "redisConfiguration": {
-          "maxmemory-reserved": "50",
-          "maxfragmentationmemory-reserved": "50",
-          "maxmemory-delta": "50"
-        }
-      },
-      "tags": {
-        "Environment": "[parameters('environmentName')]",
-        "Application": "AI Profile Photo Maker"
-      }
     },
     {
       "condition": "[parameters('enableContainerRegistry')]",
@@ -593,18 +535,6 @@
         "Environment": "[parameters('environmentName')]",
         "Application": "AI Profile Photo Maker"
       }
-    },
-    {
-      "type": "Microsoft.KeyVault/vaults/secrets",
-      "apiVersion": "2023-07-01",
-      "name": "[format('{0}/{1}', variables('keyVaultName'), 'RedisCacheConnectionString')]",
-      "properties": {
-        "value": "[format('{0}:{1},password={2},ssl=True,abortConnect=False', reference(resourceId('Microsoft.Cache/redis', variables('redisCacheName')), '2023-08-01').hostName, reference(resourceId('Microsoft.Cache/redis', variables('redisCacheName')), '2023-08-01').sslPort, listKeys(resourceId('Microsoft.Cache/redis', variables('redisCacheName')), '2023-08-01').primaryKey)]"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
-        "[resourceId('Microsoft.Cache/redis', variables('redisCacheName'))]"
-      ]
     },
     {
       "condition": "[parameters('enableContainerRegistry')]",
@@ -719,10 +649,10 @@
           "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
           "allOf": [
             {
-              "name": "ResponseTime",
-              "metricName": "ResponseTime",
+              "name": "HttpResponseTime",
+              "metricName": "HttpResponseTime",
               "operator": "GreaterThan",
-              "threshold": 5000,
+              "threshold": 5,
               "timeAggregation": "Average",
               "criterionType": "StaticThresholdCriterion"
             }
@@ -786,48 +716,6 @@
       ]
     },
     {
-      "type": "Microsoft.Insights/metricAlerts",
-      "apiVersion": "2018-03-01",
-      "name": "[format('{0}-redis-memory-{1}', parameters('namePrefix'), parameters('environmentName'))]",
-      "location": "Global",
-      "properties": {
-        "description": "Alert when Redis Cache memory usage is high",
-        "severity": 2,
-        "enabled": true,
-        "scopes": [
-          "[resourceId('Microsoft.Cache/redis', variables('redisCacheName'))]"
-        ],
-        "evaluationFrequency": "PT5M",
-        "windowSize": "PT15M",
-        "criteria": {
-          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
-          "allOf": [
-            {
-              "name": "UsedMemoryPercentage",
-              "metricName": "usedmemorypercentage",
-              "operator": "GreaterThan",
-              "threshold": 85,
-              "timeAggregation": "Average",
-              "criterionType": "StaticThresholdCriterion"
-            }
-          ]
-        },
-        "actions": [
-          {
-            "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', format('{0}-alerts-{1}', parameters('namePrefix'), parameters('environmentName')))]"
-          }
-        ]
-      },
-      "tags": {
-        "Environment": "[parameters('environmentName')]",
-        "Application": "AI Profile Photo Maker"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Insights/actionGroups', format('{0}-alerts-{1}', parameters('namePrefix'), parameters('environmentName')))]",
-        "[resourceId('Microsoft.Cache/redis', variables('redisCacheName'))]"
-      ]
-    },
-    {
       "type": "Microsoft.Insights/diagnosticSettings",
       "apiVersion": "2021-05-01-preview",
       "scope": "[format('Microsoft.Web/sites/{0}', variables('webAppName'))]",
@@ -876,31 +764,6 @@
         "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]",
         "[resourceId('Microsoft.Sql/servers/databases', variables('sqlServerName'), variables('sqlDatabaseName'))]"
       ]
-    },
-    {
-      "type": "Microsoft.Insights/diagnosticSettings",
-      "apiVersion": "2021-05-01-preview",
-      "scope": "[format('Microsoft.Cache/redis/{0}', variables('redisCacheName'))]",
-      "name": "redisCache-diagnostics",
-      "properties": {
-        "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]",
-        "logs": [
-          {
-            "categoryGroup": "allLogs",
-            "enabled": true
-          }
-        ],
-        "metrics": [
-          {
-            "category": "AllMetrics",
-            "enabled": true
-          }
-        ]
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]",
-        "[resourceId('Microsoft.Cache/redis', variables('redisCacheName'))]"
-      ]
     }
   ],
   "outputs": {
@@ -939,14 +802,6 @@
     "applicationInsightsName": {
       "type": "string",
       "value": "[variables('applicationInsightsName')]"
-    },
-    "redisCacheName": {
-      "type": "string",
-      "value": "[variables('redisCacheName')]"
-    },
-    "redisCacheHostName": {
-      "type": "string",
-      "value": "[reference(resourceId('Microsoft.Cache/redis', variables('redisCacheName')), '2023-08-01').hostName]"
     },
     "containerRegistryName": {
       "type": "string",

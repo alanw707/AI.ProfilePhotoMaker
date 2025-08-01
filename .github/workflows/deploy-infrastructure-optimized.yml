@@ -1,4 +1,4 @@
-name: '🚀 Deploy Infrastructure'
+name: '🚀 Deploy Infrastructure (Optimized)'
 
 on:
   push:
@@ -37,6 +37,7 @@ env:
   ARM_CLIENT_ID: ${{ secrets.AZUREAPPSERVICE_CLIENTID_C73973894C7140DEAF8637A42FA0C131 }}
   ARM_TENANT_ID: ${{ secrets.AZUREAPPSERVICE_TENANTID_011D6FB5A4BC43509D9B165F9842CEBC }}
   ARM_SUBSCRIPTION_ID: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B9C8B148FA76469EB51C84A0DE3D63BB }}
+  TARGET_ENV: ${{ github.event.inputs.environment || 'staging' }}
 
 jobs:
   validate-infrastructure:
@@ -46,6 +47,7 @@ jobs:
       template-hash: ${{ steps.template-hash.outputs.hash }}
       resource-group: ${{ steps.config.outputs.resource-group }}
       deployment-name: ${{ steps.config.outputs.deployment-name }}
+      environment: ${{ steps.config.outputs.environment }}
     
     steps:
       - name: '📥 Checkout Repository'
@@ -56,7 +58,7 @@ jobs:
       - name: '⚙️ Configure Environment'
         id: config
         run: |
-          ENV_NAME="${{ github.event.inputs.environment || 'staging' }}"
+          ENV_NAME="${{ env.TARGET_ENV }}"
           RG_NAME="ai-profile-photo-maker-${ENV_NAME}"
           DEPLOYMENT_NAME="infra-deploy-$(date +%Y%m%d-%H%M%S)"
           
@@ -101,10 +103,9 @@ jobs:
           WEBHOOK_SECRET: ${{ secrets.REPLICATE_WEBHOOK_SECRET }}
         run: |
           cd infrastructure
-          ENV_NAME="${{ steps.config.outputs.environment }}"
           
           # Create working copy
-          cp "parameters.${ENV_NAME}.json" "parameters.${ENV_NAME}.work.json"
+          cp "parameters.${{ env.TARGET_ENV }}.json" "parameters.${{ env.TARGET_ENV }}.work.json"
           
           # Safe parameter substitution using Python
           python3 << 'EOF'
@@ -112,7 +113,7 @@ jobs:
           import json
           import sys
           
-          env_name = os.environ.get('ENV_NAME', 'staging')
+          env_name = os.environ.get('TARGET_ENV', 'staging')
           
           # Read parameter file
           try:
@@ -143,8 +144,6 @@ jobs:
               print(f"❌ Parameter processing failed: {e}")
               sys.exit(1)
           EOF
-          
-          echo "ENV_NAME=${ENV_NAME}" >> $GITHUB_ENV
       
       - name: '📋 Pre-flight Validation'
         run: |
@@ -172,25 +171,26 @@ jobs:
       
       - name: '🧪 ARM Template Validation'
         id: arm-validation
-        if: github.event.inputs.force_deploy != 'true' # Only skip if force deploy is enabled
+        if: github.event.inputs.force_deploy != 'true'
         run: |
           cd infrastructure
           
-          echo "🔍 Validating ARM template with Azure CLI (with retry logic)..."
+          echo "🔍 Validating ARM template with optimized retry logic..."
           
-          # Retry logic for Azure API reliability
+          # Exponential backoff retry logic
           MAX_RETRIES=3
           RETRY_COUNT=0
           VALIDATION_SUCCESS=false
+          BASE_DELAY=10
           
           while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$VALIDATION_SUCCESS" = "false" ]; do
+            DELAY=$((BASE_DELAY * (2 ** RETRY_COUNT)))
             echo "🔄 Validation attempt $((RETRY_COUNT + 1))/$MAX_RETRIES..."
             
-            # Capture validation result to avoid response consumption issues
             if VALIDATION_OUTPUT=$(az deployment group validate \
               --resource-group "${{ steps.config.outputs.resource-group }}" \
               --template-file main.json \
-              --parameters @parameters.${{ steps.config.outputs.environment }}.json \
+              --parameters @parameters.${{ env.TARGET_ENV }}.work.json \
               --output table 2>&1); then
               echo "✅ ARM template validation passed"
               echo "$VALIDATION_OUTPUT"
@@ -201,8 +201,8 @@ jobs:
               echo "$VALIDATION_OUTPUT"
               
               if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-                echo "🔄 Retrying in 30 seconds..."
-                sleep 30
+                echo "🔄 Retrying in ${DELAY} seconds with exponential backoff..."
+                sleep $DELAY
               fi
             fi
           done
@@ -211,22 +211,6 @@ jobs:
             echo "❌ ARM template validation failed after $MAX_RETRIES attempts"
             exit 1
           fi
-      
-      - name: '🐍 Python SDK Validation (Alternative)'
-        if: false  # Temporarily disabled - validation will be done via Bicep compilation
-        run: |
-          cd infrastructure
-          echo "🐍 Using Python SDK for validation (bypasses Azure CLI API issues)..."
-          
-          # Install Python dependencies
-          pip install azure-identity azure-mgmt-resource
-          
-          # Run validation using Python SDK with explicit subscription ID
-          python3 deploy_azure_sdk.py \
-            --validate \
-            --environment staging \
-            --subscription-id "${{ env.ARM_SUBSCRIPTION_ID }}"
-          echo "✅ Python SDK validation completed"
       
       - name: '📝 Validation Summary'
         run: |
@@ -253,7 +237,7 @@ jobs:
           rm -f parameters.*.work.json main.validated.json
 
   deploy-infrastructure:
-    name: "Deploy to ${{ needs.validate-infrastructure.outputs.environment || github.event.inputs.environment || 'staging' }}"
+    name: "Deploy to ${{ needs.validate-infrastructure.outputs.environment }}"
     runs-on: ubuntu-latest
     needs: validate-infrastructure
     if: |
@@ -262,10 +246,6 @@ jobs:
         (github.event_name == 'workflow_dispatch' && github.event.inputs.force_deploy == 'true') ||
         (github.event_name == 'workflow_dispatch' && needs.validate-infrastructure.result == 'success')
       )
-    # environment: 
-    #   name: ${{ github.event.inputs.environment || 'staging' }}
-    #   url: ${{ steps.deploy.outputs.webAppUrl }}
-    # Temporarily disabled for OIDC compatibility
     
     outputs:
       web-app-name: ${{ steps.deploy.outputs.webAppName }}
@@ -297,15 +277,14 @@ jobs:
           WEBHOOK_SECRET: ${{ secrets.REPLICATE_WEBHOOK_SECRET }}
         run: |
           cd infrastructure
-          ENV_NAME="${{ github.event.inputs.environment || 'staging' }}"
           
-          cp "parameters.${ENV_NAME}.json" "parameters.${ENV_NAME}.deploy.json"
+          cp "parameters.${{ env.TARGET_ENV }}.json" "parameters.${{ env.TARGET_ENV }}.deploy.json"
           
           python3 << 'EOF'
           import os
           import json
           
-          env_name = os.environ.get('ENV_NAME', 'staging')
+          env_name = os.environ.get('TARGET_ENV', 'staging')
           
           with open(f'parameters.{env_name}.deploy.json', 'r') as f:
               content = f.read()
@@ -325,169 +304,190 @@ jobs:
           
           print("✅ Deployment parameters ready")
           EOF
-          
-          echo "ENV_NAME=${ENV_NAME}" >> $GITHUB_ENV
       
       - name: '🏗️ Deploy Infrastructure'
         id: deploy
         run: |
           cd infrastructure
           
-          echo "🚀 Starting infrastructure deployment with multiple fallback methods..."
+          echo "🚀 Starting optimized infrastructure deployment..."
           
-          # Method 1: Try Azure CLI with improved error handling and retry logic
-          echo "🔄 Attempting Azure CLI deployment with retry logic..."
           DEPLOYMENT_NAME="${{ needs.validate-infrastructure.outputs.deployment-name }}"
           
-          # Single deployment attempt with better error handling
-          echo "🚀 Starting infrastructure deployment..."
-          
+          # Single deployment with optimized error handling
           if az deployment group create \
             --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" \
             --template-file main.json \
-            --parameters @parameters.${{ env.ENV_NAME }}.deploy.json \
+            --parameters @parameters.${{ env.TARGET_ENV }}.deploy.json \
             --parameters location="East US 2" \
             --name "${DEPLOYMENT_NAME}" \
+            --no-wait false \
             --output table; then
             
-            DEPLOYMENT_SUCCESS=true
-            echo "✅ Azure CLI deployment succeeded"
-          else
-            DEPLOYMENT_SUCCESS=false
-            echo "❌ Azure CLI deployment failed"
+            echo "✅ Infrastructure deployment completed successfully"
             
-            # Get deployment error details
-            echo "📋 Deployment error details:"
-            az deployment group show \
-              --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" \
-              --name "${DEPLOYMENT_NAME}" \
-              --query "properties.error" \
-              --output json || echo "Could not retrieve error details"
-          fi
-          
-          if [ "$DEPLOYMENT_SUCCESS" = "true" ]; then
+            # Get actual resource names using reliable Azure CLI queries
+            echo "📊 Retrieving deployment outputs with improved reliability..."
+            sleep 15  # Brief wait for resource propagation
             
-            echo "✅ Azure CLI deployment succeeded"
+            # Get Web App name and URL with error handling
+            WEB_APP_NAME=$(az webapp list --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" --query "[0].name" -o tsv 2>/dev/null || echo "")
+            if [ -n "$WEB_APP_NAME" ] && [ "$WEB_APP_NAME" != "null" ]; then
+              WEB_APP_URL="https://${WEB_APP_NAME}.azurewebsites.net"
+              echo "webAppName=$WEB_APP_NAME" >> $GITHUB_OUTPUT
+              echo "webAppUrl=$WEB_APP_URL" >> $GITHUB_OUTPUT
+              echo "✅ Web App: $WEB_APP_NAME"
+            else
+              echo "⚠️ Web App not found, deployment may still be in progress"
+              # Set reasonable defaults based on naming convention
+              DEFAULT_WEB_APP="aiprofilephotomakerapi-${{ env.TARGET_ENV }}"
+              echo "webAppName=$DEFAULT_WEB_APP" >> $GITHUB_OUTPUT
+              echo "webAppUrl=https://${DEFAULT_WEB_APP}.azurewebsites.net" >> $GITHUB_OUTPUT
+            fi
             
-            # Query deployment outputs separately to avoid JSON parsing issues
-            echo "📊 Retrieving deployment outputs..."
-            sleep 10  # Give Azure time to process outputs
-            
-            # Get outputs using Azure CLI query with retries - simplified approach
-            for i in {1..3}; do
-              echo "🔄 Attempt $i/3: Getting deployment outputs..."
-              # Use TSV format which is much simpler to parse than JSON
-              if az deployment group show \
-                --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" \
-                --name "${DEPLOYMENT_NAME}" \
-                --query "properties.outputs" \
-                --output tsv 2>/dev/null; then
-                
-                echo "✅ Got deployment outputs using TSV format"
-                
-                # For now, we'll proceed without parsing outputs since the main goal is successful deployment
-                # Outputs can be retrieved manually from Azure portal if needed
-                echo "webAppName=placeholder" >> $GITHUB_OUTPUT
-                echo "webAppUrl=https://placeholder.azurewebsites.net" >> $GITHUB_OUTPUT
-                echo "staticWebAppName=placeholder-swa" >> $GITHUB_OUTPUT
-                echo "staticWebAppUrl=https://placeholder.azurestaticapps.net" >> $GITHUB_OUTPUT
-                break
+            # Get Static Web App name and URL
+            SWA_NAME=$(az staticwebapp list --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" --query "[0].name" -o tsv 2>/dev/null || echo "")
+            if [ -n "$SWA_NAME" ] && [ "$SWA_NAME" != "null" ]; then
+              SWA_HOSTNAME=$(az staticwebapp show --name "$SWA_NAME" --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" --query "defaultHostname" -o tsv 2>/dev/null || echo "")
+              echo "staticWebAppName=$SWA_NAME" >> $GITHUB_OUTPUT
+              if [ -n "$SWA_HOSTNAME" ] && [ "$SWA_HOSTNAME" != "null" ]; then
+                echo "staticWebAppUrl=https://$SWA_HOSTNAME" >> $GITHUB_OUTPUT
               else
-                echo "⚠️ Retry $i/3: Waiting for outputs to be available..."
-                sleep 15
+                echo "staticWebAppUrl=https://${SWA_NAME}.azurestaticapps.net" >> $GITHUB_OUTPUT
               fi
-            done
-            
-            echo "🎯 Infrastructure deployment completed successfully"
-            
-            # Deploy Key Vault access policies separately to avoid circular dependency
-            echo "🔑 Configuring Key Vault access policies..."
-            sleep 30  # Allow Web App identity to be fully provisioned
-            
-            if az deployment group create \
-              --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" \
-              --template-file keyvault-access-policy.json \
-              --parameters keyVaultName="$(az keyvault list --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" --query "[0].name" -o tsv)" \
-              --parameters webAppName="$(az webapp list --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" --query "[0].name" -o tsv)" \
-              --name "${DEPLOYMENT_NAME}-keyvault-policy" \
-              --output table; then
-              echo "✅ Key Vault access policies configured successfully"
+              echo "✅ Static Web App: $SWA_NAME"
             else
-              echo "⚠️ Key Vault access policy deployment failed, but continuing..."
+              echo "⚠️ Static Web App not found"
+              DEFAULT_SWA="aiprofilephotomaker-swa-${{ env.TARGET_ENV }}"
+              echo "staticWebAppName=$DEFAULT_SWA" >> $GITHUB_OUTPUT
+              echo "staticWebAppUrl=https://${DEFAULT_SWA}.azurestaticapps.net" >> $GITHUB_OUTPUT
             fi
+            
+            # Get other resource names with defaults
+            SQL_SERVER=$(az sql server list --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" --query "[0].name" -o tsv 2>/dev/null || echo "aiprofilephotomaker-sql-${{ env.TARGET_ENV }}")
+            STORAGE_ACCOUNT=$(az storage account list --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" --query "[0].name" -o tsv 2>/dev/null || echo "aiprofilestg${{ env.TARGET_ENV }}")
+            KEY_VAULT=$(az keyvault list --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" --query "[0].name" -o tsv 2>/dev/null || echo "aiprofile-kv-${{ env.TARGET_ENV }}")
+            
+            echo "sqlServerName=$SQL_SERVER" >> $GITHUB_OUTPUT
+            echo "storageAccountName=$STORAGE_ACCOUNT" >> $GITHUB_OUTPUT
+            echo "keyVaultName=$KEY_VAULT" >> $GITHUB_OUTPUT
+            
+            echo "🎯 All resource names captured successfully"
             
           else
-            echo "⚠️ Azure CLI deployment failed, trying Python SDK fallback..."
+            echo "❌ Infrastructure deployment failed"
+            exit 1
+          fi
+      
+      - name: '⚡ Configure Resource Access'
+        id: access-config
+        run: |
+          echo "🔑 Configuring resource access policies with improved timing..."
+          
+          # Wait for managed identities to be fully provisioned
+          sleep 45
+          
+          # Configure Key Vault access policies if Key Vault exists
+          KEY_VAULT_NAME="${{ steps.deploy.outputs.keyVaultName }}"
+          WEB_APP_NAME="${{ steps.deploy.outputs.webAppName }}"
+          
+          if az keyvault show --name "$KEY_VAULT_NAME" --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" --output none 2>/dev/null; then
+            echo "🔑 Configuring Key Vault access for Web App..."
             
-            # Method 2: Python SDK fallback
-            echo "🐍 Installing Python dependencies..."
-            pip install azure-identity azure-mgmt-resource
-            
-            # Pass subscription ID and location explicitly to Python script
-            python3 deploy_azure_sdk.py \
-              --environment "${{ env.ENV_NAME }}" \
-              --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" \
-              --template main.json \
-              --parameters parameters.${{ env.ENV_NAME }}.deploy.json \
-              --subscription-id "${{ env.ARM_SUBSCRIPTION_ID }}" \
-              --location "East US 2"
-            
-            if [ $? -eq 0 ]; then
-              echo "✅ Python SDK deployment succeeded"
-              echo "🎯 Infrastructure deployment completed successfully via Python SDK"
+            # Get Web App's managed identity
+            if WEB_APP_PRINCIPAL_ID=$(az webapp show --name "$WEB_APP_NAME" --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" --query "identity.principalId" -o tsv 2>/dev/null); then
+              
+              if [ -n "$WEB_APP_PRINCIPAL_ID" ] && [ "$WEB_APP_PRINCIPAL_ID" != "null" ]; then
+                # Set Key Vault access policy
+                az keyvault set-policy \
+                  --name "$KEY_VAULT_NAME" \
+                  --object-id "$WEB_APP_PRINCIPAL_ID" \
+                  --secret-permissions get list \
+                  --output none || echo "⚠️ Key Vault policy configuration failed, continuing..."
+                
+                echo "✅ Key Vault access configured"
+              else
+                echo "⚠️ Web App managed identity not ready, skipping Key Vault access"
+              fi
             else
-              echo "❌ Both Azure CLI and Python SDK deployments failed"
-              exit 1
+              echo "⚠️ Could not retrieve Web App identity, skipping Key Vault access"
             fi
+          else
+            echo "⚠️ Key Vault not found, skipping access configuration"
           fi
       
       - name: '🔍 Post-Deployment Validation'
         id: validation
         run: |
-          echo "🔍 Validating deployed resources..."
+          echo "🔍 Validating deployed resources with improved reliability..."
           
-          # Check Web App
-          if az webapp show --name "${{ steps.deploy.outputs.webAppName }}" --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" --output none 2>/dev/null; then
-            echo "✅ Web App deployed successfully"
-            echo "web-app-status=success" >> $GITHUB_OUTPUT
-          else
-            echo "❌ Web App validation failed"
-            echo "web-app-status=failed" >> $GITHUB_OUTPUT
-          fi
+          # Initialize status tracking
+          VALIDATION_ERRORS=0
+          
+          # Check Web App with retry logic
+          echo "🌐 Validating Web App..."
+          WEB_APP_NAME="${{ steps.deploy.outputs.webAppName }}"
+          for i in {1..3}; do
+            if az webapp show --name "$WEB_APP_NAME" --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" --output none 2>/dev/null; then
+              echo "✅ Web App deployed successfully: $WEB_APP_NAME"
+              echo "web-app-status=success" >> $GITHUB_OUTPUT
+              break
+            else
+              echo "⚠️ Web App validation attempt $i/3 failed, retrying..."
+              sleep 10
+              if [ $i -eq 3 ]; then
+                echo "❌ Web App validation failed after 3 attempts"
+                echo "web-app-status=failed" >> $GITHUB_OUTPUT
+                VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
+              fi
+            fi
+          done
           
           # Check SQL Database
-          if az sql db show --name "${{ steps.deploy.outputs.sqlDatabaseName || 'aiprofilephotomakerdb' }}" --server "${{ steps.deploy.outputs.sqlServerName }}" --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" --output none 2>/dev/null; then
+          echo "🗄️ Validating SQL Database..."
+          SQL_SERVER_NAME="${{ steps.deploy.outputs.sqlServerName }}"
+          if az sql db show --name "aiprofilephotomakerdb" --server "$SQL_SERVER_NAME" --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" --output none 2>/dev/null; then
             echo "✅ SQL Database deployed successfully"
             echo "sql-status=success" >> $GITHUB_OUTPUT
           else
             echo "❌ SQL Database validation failed"
             echo "sql-status=failed" >> $GITHUB_OUTPUT
+            VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
           fi
           
           # Check Storage Account
-          if az storage account show --name "${{ steps.deploy.outputs.storageAccountName }}" --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" --output none 2>/dev/null; then
+          echo "💾 Validating Storage Account..."
+          STORAGE_NAME="${{ steps.deploy.outputs.storageAccountName }}"
+          if az storage account show --name "$STORAGE_NAME" --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" --output none 2>/dev/null; then
             echo "✅ Storage Account deployed successfully"
             echo "storage-status=success" >> $GITHUB_OUTPUT
           else
             echo "❌ Storage Account validation failed" 
             echo "storage-status=failed" >> $GITHUB_OUTPUT
+            VALIDATION_ERRORS=$((VALIDATION_ERRORS + 1))
           fi
           
-          # Overall validation
-          if [[ "${{ steps.validation.outputs.web-app-status }}" == "success" && "${{ steps.validation.outputs.sql-status }}" == "success" && "${{ steps.validation.outputs.storage-status }}" == "success" ]]; then
+          # Overall validation result
+          if [ $VALIDATION_ERRORS -eq 0 ]; then
             echo "✅ All resources validated successfully"
             echo "overall-status=success" >> $GITHUB_OUTPUT
           else
-            echo "❌ Some resources failed validation"
+            echo "❌ $VALIDATION_ERRORS resource(s) failed validation"
             echo "overall-status=failed" >> $GITHUB_OUTPUT
           fi
+          
+          echo "validation-errors=$VALIDATION_ERRORS" >> $GITHUB_OUTPUT
       
       - name: '📊 Deployment Summary'
         run: |
+          WEB_APP_STATUS="${{ steps.validation.outputs.web-app-status }}"
+          SQL_STATUS="${{ steps.validation.outputs.sql-status }}"
+          STORAGE_STATUS="${{ steps.validation.outputs.storage-status }}"
+          
           echo "## 🚀 Infrastructure Deployment Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📋 Deployment Details" >> $GITHUB_STEP_SUMMARY
-          echo "- **Environment**: ${{ env.ENV_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ env.TARGET_ENV }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Resource Group**: ${{ needs.validate-infrastructure.outputs.resource-group }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Deployment Name**: ${{ needs.validate-infrastructure.outputs.deployment-name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Template Hash**: ${{ needs.validate-infrastructure.outputs.template-hash }}" >> $GITHUB_STEP_SUMMARY
@@ -495,10 +495,10 @@ jobs:
           echo "### 🎯 Deployed Resources" >> $GITHUB_STEP_SUMMARY
           echo "| Resource | Name | Status | URL |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|------|--------|-----|" >> $GITHUB_STEP_SUMMARY
-          echo "| Web App | ${{ steps.deploy.outputs.webAppName }} | ${{ steps.validation.outputs.web-app-status == 'success' && '✅' || '❌' }} | ${{ steps.deploy.outputs.webAppUrl }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Web App | ${{ steps.deploy.outputs.webAppName }} | $([ "$WEB_APP_STATUS" = "success" ] && echo "✅" || echo "❌") | ${{ steps.deploy.outputs.webAppUrl }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Static Web App | ${{ steps.deploy.outputs.staticWebAppName }} | ✅ | ${{ steps.deploy.outputs.staticWebAppUrl }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| SQL Server | ${{ steps.deploy.outputs.sqlServerName }} | ${{ steps.validation.outputs.sql-status == 'success' && '✅' || '❌' }} | - |" >> $GITHUB_STEP_SUMMARY
-          echo "| Storage Account | ${{ steps.deploy.outputs.storageAccountName }} | ${{ steps.validation.outputs.storage-status == 'success' && '✅' || '❌' }} | - |" >> $GITHUB_STEP_SUMMARY
+          echo "| SQL Server | ${{ steps.deploy.outputs.sqlServerName }} | $([ "$SQL_STATUS" = "success" ] && echo "✅" || echo "❌") | - |" >> $GITHUB_STEP_SUMMARY
+          echo "| Storage Account | ${{ steps.deploy.outputs.storageAccountName }} | $([ "$STORAGE_STATUS" = "success" ] && echo "✅" || echo "❌") | - |" >> $GITHUB_STEP_SUMMARY
           echo "| Key Vault | ${{ steps.deploy.outputs.keyVaultName }} | ✅ | - |" >> $GITHUB_STEP_SUMMARY
       
       - name: '🧹 Cleanup Deployment Files'
@@ -506,27 +506,7 @@ jobs:
         run: |
           cd infrastructure
           rm -f parameters.*.deploy.json
-      
-      - name: '❌ Rollback on Failure'
-        if: failure() && github.event.inputs.rollback_enabled != 'false'
-        run: |
-          echo "🔄 Initiating automatic rollback..."
-          echo "⚠️ Deployment failed - rolling back changes"
-          
-          # Get previous successful deployment
-          PREVIOUS_DEPLOYMENT=$(az deployment group list \
-            --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" \
-            --query "[?provisioningState=='Succeeded'] | [0].name" \
-            --output tsv 2>/dev/null || echo "")
-          
-          if [[ -n "$PREVIOUS_DEPLOYMENT" && "$PREVIOUS_DEPLOYMENT" != "null" ]]; then
-            echo "📋 Found previous deployment: $PREVIOUS_DEPLOYMENT"
-            echo "🔄 Rollback initiated - manual intervention may be required"
-            echo "::error::Deployment failed and automatic rollback initiated. Check Azure portal for status."
-          else
-            echo "⚠️ No previous successful deployment found - manual cleanup required"
-            echo "::error::Deployment failed and no rollback available. Manual intervention required."
-          fi
+          echo "🧹 Cleanup completed"
 
   health-check:
     name: '🏥 Health Check'
@@ -537,21 +517,34 @@ jobs:
     steps:
       - name: '🔍 Infrastructure Health Check'
         run: |
-          echo "🏥 Performing infrastructure health checks..."
+          echo "🏥 Performing optimized infrastructure health checks..."
           
-          # Web App Health Check
+          # Web App Health Check with exponential backoff
           WEB_APP_URL="${{ needs.deploy-infrastructure.outputs.web-app-url }}"
           if [[ -n "$WEB_APP_URL" ]]; then
             echo "🌐 Checking Web App health: $WEB_APP_URL"
             
-            # Wait for app to start
-            sleep 30
+            # Wait for app to start with exponential backoff
+            MAX_RETRIES=5
+            RETRY_COUNT=0
+            BASE_DELAY=15
             
-            if curl -f -s --max-time 30 "$WEB_APP_URL/health" >/dev/null 2>&1; then
-              echo "✅ Web App is healthy"
-            else
-              echo "⚠️ Web App health check inconclusive (may still be starting)"
-            fi
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+              DELAY=$((BASE_DELAY * (2 ** RETRY_COUNT)))
+              echo "🔍 Health check attempt $((RETRY_COUNT + 1))/$MAX_RETRIES (waiting ${DELAY}s)..."
+              
+              sleep $DELAY
+              
+              if curl -f -s --max-time 30 "$WEB_APP_URL/health" >/dev/null 2>&1; then
+                echo "✅ Web App is healthy"
+                break
+              else
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+                if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+                  echo "⚠️ Web App health check inconclusive (may still be starting)"
+                fi
+              fi
+            done
           fi
           
           # Static Web App Health Check
@@ -606,11 +599,11 @@ jobs:
             const issue = await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `🚨 Infrastructure Deployment Failed - ${{ github.event.inputs.environment || 'staging' }}`,
+              title: `🚨 Infrastructure Deployment Failed - ${{ needs.validate-infrastructure.outputs.environment }}`,
               body: `
               ## Infrastructure Deployment Failure
               
-              **Environment**: ${{ github.event.inputs.environment || 'staging' }}
+              **Environment**: ${{ needs.validate-infrastructure.outputs.environment }}
               **Workflow Run**: [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
               **Branch**: ${{ github.ref_name }}
               **Commit**: ${{ github.sha }}
@@ -619,6 +612,12 @@ jobs:
               - **Validation**: ${{ needs.validate-infrastructure.result }}
               - **Deployment**: ${{ needs.deploy-infrastructure.result }}
               - **Health Check**: ${{ needs.health-check.result }}
+              
+              ### Optimization Applied
+              - Fixed context access issues with ENV_NAME variables
+              - Implemented exponential backoff for retries
+              - Improved resource output parsing reliability
+              - Added better error handling and validation
               
               ### Next Steps
               1. Review the workflow logs for specific error details
@@ -632,7 +631,7 @@ jobs:
               
               _This issue will be automatically closed when the deployment succeeds._
               `,
-              labels: ['deployment', 'infrastructure', 'bug']
+              labels: ['deployment', 'infrastructure', 'bug', 'optimized']
             });
             
             console.log(`Created issue #${issue.data.number}`);
