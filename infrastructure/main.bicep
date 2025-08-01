@@ -511,7 +511,7 @@ resource actionGroup 'Microsoft.Insights/actionGroups@2023-01-01' = {
   name: '${namePrefix}-alerts-${environmentName}'
   location: 'Global'
   properties: {
-    groupShortName: 'AIProfileAlerts'
+    groupShortName: 'AIProfile'
     enabled: true
     emailReceivers: [
       {
@@ -694,20 +694,12 @@ resource webAppDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-pre
       {
         categoryGroup: 'allLogs'
         enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
       }
     ]
     metrics: [
       {
         category: 'AllMetrics'
         enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
       }
     ]
   }
@@ -723,20 +715,12 @@ resource sqlDatabaseDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-0
       {
         categoryGroup: 'allLogs'
         enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
       }
     ]
     metrics: [
       {
         category: 'AllMetrics'
         enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
       }
     ]
   }
@@ -752,20 +736,12 @@ resource redisCacheDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01
       {
         categoryGroup: 'allLogs'
         enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
       }
     ]
     metrics: [
       {
         category: 'AllMetrics'
         enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
       }
     ]
   }
