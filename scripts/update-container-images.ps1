@@ -21,8 +21,8 @@ if ($DryRun) {
     Write-Host "🔍 DRY RUN MODE - No changes will be made" -ForegroundColor Cyan
 }
 
-# Resource names (deterministic)
-$containerRegistryName = "${AppName}cr${Environment}"
+# Resource names (consistent staging suffix)
+$containerRegistryName = "${AppName}-cr-${Environment}"
 $backendAppName = "${AppName}-api-${Environment}"
 $frontendAppName = "${AppName}-web-${Environment}"
 

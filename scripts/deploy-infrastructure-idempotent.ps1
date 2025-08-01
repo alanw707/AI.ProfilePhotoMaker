@@ -168,19 +168,18 @@ function Get-OrCreateResource {
 }
 
 try {
-    # Use deterministic naming (no random suffixes) - consistent with existing resources
-    # Environment parameter should be the deterministic suffix (e.g., "z3bawc74")
-    $containerRegistryName = "${AppName}cr${Environment}"
+    # Use consistent "-staging" suffix naming convention
+    $containerRegistryName = "${AppName}-cr-${Environment}"
     $sqlServerName = "${AppName}-sql-${Environment}"
-    $storageAccountName = "${AppName}st${Environment}"
-    $keyVaultName = "${AppName}kv${Environment}"
+    $storageAccountName = "${AppName}st${Environment}"  # Storage accounts don't support dashes
+    $keyVaultName = "${AppName}-kv-${Environment}"
     $containerEnvName = "${AppName}-env-${Environment}"
     $backendAppName = "${AppName}-api-${Environment}"
     $frontendAppName = "${AppName}-web-${Environment}"
     $applicationInsightsName = "${AppName}-ai-${Environment}"
     $workspaceName = "${AppName}-workspace-${Environment}"
     
-    Write-Host "🏗️ Resource Names (Deterministic - No Random Suffixes):" -ForegroundColor Green
+    Write-Host "🏗️ Resource Names (Consistent Staging Suffix):" -ForegroundColor Green
     Write-Host "  Container Registry: $containerRegistryName" -ForegroundColor Gray
     Write-Host "  SQL Server: $sqlServerName" -ForegroundColor Gray
     Write-Host "  Storage Account: $storageAccountName" -ForegroundColor Gray
@@ -189,15 +188,13 @@ try {
     Write-Host "  Backend App: $backendAppName" -ForegroundColor Gray
     Write-Host "  Frontend App: $frontendAppName" -ForegroundColor Gray
     
-    # Validate that we're not creating random suffixes
-    if ($containerRegistryName -match "cr[a-z0-9]{8}$" -and $Environment -ne "staging") {
-        Write-Host "✅ Using deterministic naming pattern with suffix: $Environment" -ForegroundColor Green
-    } elseif ($Environment -eq "staging") {
-        Write-Host "⚠️  WARNING: Using 'staging' as suffix - this might not be deterministic!" -ForegroundColor Yellow
-        Write-Host "   Consider using a fixed deterministic suffix like 'z3bawc74' to match existing resources" -ForegroundColor Yellow
+    # Validate consistent naming pattern
+    if ($Environment -eq "staging") {
+        Write-Host "✅ Using consistent '-staging' suffix naming convention" -ForegroundColor Green
+        Write-Host "   All resources will use predictable, maintainable names" -ForegroundColor Green
     } else {
-        Write-Host "⚠️  WARNING: Resource naming pattern may not be deterministic!" -ForegroundColor Yellow
-        Write-Host "   Current pattern: $containerRegistryName" -ForegroundColor Yellow
+        Write-Host "⚠️  WARNING: Environment is '$Environment' - expected 'staging'" -ForegroundColor Yellow
+        Write-Host "   Resources will use '-$Environment' suffix instead of '-staging'" -ForegroundColor Yellow
     }
     
     # Step 1: Create Resource Group (idempotent)

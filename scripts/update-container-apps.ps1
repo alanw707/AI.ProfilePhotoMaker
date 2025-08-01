@@ -36,7 +36,7 @@ try {
     if ($backendApp) {
         Write-Host "🔄 Updating backend container app..." -ForegroundColor Green
         
-        $backendImage = "$RegistryServer/aiprofilemaker-backend:$BackendImageTag"
+        $backendImage = "$RegistryServer/aiprofilemaker-api:$BackendImageTag"
         Write-Host "📦 Backend image: $backendImage" -ForegroundColor Gray
         
         az containerapp update `
@@ -56,7 +56,7 @@ try {
     if ($frontendApp) {
         Write-Host "🔄 Updating frontend container app..." -ForegroundColor Green
         
-        $frontendImage = "$RegistryServer/aiprofilemaker-frontend:$FrontendImageTag"
+        $frontendImage = "$RegistryServer/aiprofilemaker-ui:$FrontendImageTag"
         Write-Host "📦 Frontend image: $frontendImage" -ForegroundColor Gray
         
         az containerapp update `
