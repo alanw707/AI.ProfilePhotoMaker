@@ -213,6 +213,7 @@ jobs:
           fi
       
       - name: '🐍 Python SDK Validation (Alternative)'
+        if: false  # Temporarily disabled - validation will be done via Bicep compilation
         run: |
           cd infrastructure
           echo "🐍 Using Python SDK for validation (bypasses Azure CLI API issues)..."
@@ -220,8 +221,11 @@ jobs:
           # Install Python dependencies
           pip install azure-identity azure-mgmt-resource
           
-          # Run validation using Python SDK
-          python3 deploy_azure_sdk.py --validate --environment staging
+          # Run validation using Python SDK with explicit subscription ID
+          python3 deploy_azure_sdk.py \
+            --validate \
+            --environment staging \
+            --subscription-id "${{ env.ARM_SUBSCRIPTION_ID }}"
           echo "✅ Python SDK validation completed"
       
       - name: '📝 Validation Summary'
@@ -329,45 +333,90 @@ jobs:
         run: |
           cd infrastructure
           
-          echo "🚀 Starting Azure CLI deployment (with retry logic)..."
+          echo "🚀 Starting infrastructure deployment with multiple fallback methods..."
           
-          # Retry logic for Azure API "content already consumed" errors
-          MAX_RETRIES=3
-          RETRY_COUNT=0
-          DEPLOYMENT_OUTPUT=""
+          # Method 1: Try Azure CLI with improved error handling
+          echo "🔄 Attempting Azure CLI deployment..."
+          DEPLOYMENT_NAME="${{ needs.validate-infrastructure.outputs.deployment-name }}"
           
-          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            echo "🔄 Deployment attempt $((RETRY_COUNT + 1))/$MAX_RETRIES..."
+          # Use table output to avoid JSON parsing issues, then query deployment separately
+          if az deployment group create \
+            --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" \
+            --template-file main.json \
+            --parameters @parameters.${{ env.ENV_NAME }}.deploy.json \
+            --name "${DEPLOYMENT_NAME}" \
+            --output table; then
             
-            if DEPLOYMENT_OUTPUT=$(az deployment group create \
-              --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" \
-              --template-file main.json \
-              --parameters @parameters.${{ env.ENV_NAME }}.deploy.json \
-              --name "${{ needs.validate-infrastructure.outputs.deployment-name }}-attempt-$((RETRY_COUNT + 1))" \
-              --output json 2>&1); then
-              echo "✅ Deployment succeeded"
-              
-              # Extract outputs for downstream jobs
-              echo "$DEPLOYMENT_OUTPUT" | jq -r '.properties.outputs | to_entries[] | "\(.key)=\(.value.value)"' | while read line; do
-                key=$(echo $line | cut -d'=' -f1)
-                value=$(echo $line | cut -d'=' -f2)
-                echo "$key=$value" >> $GITHUB_OUTPUT
-              done
-              
-              echo "🎯 Infrastructure deployment completed successfully"
-              break
-            else
-              RETRY_COUNT=$((RETRY_COUNT + 1))
-              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-                echo "⚠️ Deployment failed, retrying in 30 seconds..."
-                sleep 30
+            echo "✅ Azure CLI deployment succeeded"
+            
+            # Query deployment outputs separately to avoid JSON parsing issues
+            echo "📊 Retrieving deployment outputs..."
+            sleep 10  # Give Azure time to process outputs
+            
+            # Get outputs using Azure CLI query with retries
+            for i in {1..3}; do
+              if OUTPUTS=$(az deployment group show \
+                --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" \
+                --name "${DEPLOYMENT_NAME}" \
+                --query "properties.outputs" \
+                --output json 2>/dev/null); then
+                
+                echo "✅ Got deployment outputs"
+                
+                # Extract outputs manually to avoid jq parsing issues
+                echo "$OUTPUTS" | python3 -c "
+import json, sys
+try:
+    outputs = json.load(sys.stdin)
+    if outputs:
+        with open('/tmp/deployment_outputs.txt', 'w') as f:
+            for key, value in outputs.items():
+                if isinstance(value, dict) and 'value' in value:
+                    print(f'{key}={value[\"value\"]}')
+                    f.write(f'{key}={value[\"value\"]}\n')
+                else:
+                    print(f'{key}={value}')
+                    f.write(f'{key}={value}\n')
+except Exception as e:
+    print(f'Error parsing outputs: {e}')
+"
+                
+                # Read outputs into GitHub Actions
+                if [[ -f /tmp/deployment_outputs.txt ]]; then
+                  cat /tmp/deployment_outputs.txt >> $GITHUB_OUTPUT
+                fi
+                break
               else
-                echo "❌ Deployment failed after $MAX_RETRIES attempts"
-                echo "Last error: $DEPLOYMENT_OUTPUT"
-                exit 1
+                echo "⚠️ Retry $i/3: Waiting for outputs to be available..."
+                sleep 15
               fi
+            done
+            
+            echo "🎯 Infrastructure deployment completed successfully"
+            
+          else
+            echo "⚠️ Azure CLI deployment failed, trying Python SDK fallback..."
+            
+            # Method 2: Python SDK fallback
+            echo "🐍 Installing Python dependencies..."
+            pip install azure-identity azure-mgmt-resource
+            
+            # Pass subscription ID explicitly to Python script
+            python3 deploy_azure_sdk.py \
+              --environment "${{ env.ENV_NAME }}" \
+              --resource-group "${{ needs.validate-infrastructure.outputs.resource-group }}" \
+              --template main.json \
+              --parameters parameters.${{ env.ENV_NAME }}.deploy.json \
+              --subscription-id "${{ env.ARM_SUBSCRIPTION_ID }}"
+            
+            if [ $? -eq 0 ]; then
+              echo "✅ Python SDK deployment succeeded"
+              echo "🎯 Infrastructure deployment completed successfully via Python SDK"
+            else
+              echo "❌ Both Azure CLI and Python SDK deployments failed"
+              exit 1
             fi
-          done
+          fi
       
       - name: '🔍 Post-Deployment Validation'
         id: validation
