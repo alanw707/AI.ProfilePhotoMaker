@@ -289,7 +289,8 @@ builder.Services.AddCors(options =>
         {
             corsBuilder.WithOrigins(
                     "https://aiprofilephotomaker.com",
-                    "https://test.profilephotomaker.com"
+                    "https://test.profilephotomaker.com",
+                    "https://aiprofilemaker-web-staging.thankfulriver-68674ea3.eastus2.azurecontainerapps.io"
                 )
                 .AllowAnyMethod()
                 .AllowAnyHeader()
