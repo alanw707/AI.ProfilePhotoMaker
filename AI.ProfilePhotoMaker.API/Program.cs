@@ -282,16 +282,29 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 
+// Environment-aware CORS configuration for better maintainability  
+var stagingFrontendUrl = builder.Configuration["AppBaseUrl"] ?? 
+                       "https://aiprofilemaker-web-staging.thankfulriver-68674ea3.eastus2.azurecontainerapps.io";
+
 builder.Services.AddCors(options =>
 {
+    
     options.AddPolicy("AllowSpecificOrigins",
         corsBuilder =>
         {
-            corsBuilder.WithOrigins(
-                    "https://aiprofilephotomaker.com",
-                    "https://test.profilephotomaker.com",
-                    "https://aiprofilemaker-web-staging.thankfulriver-68674ea3.eastus2.azurecontainerapps.io"
-                )
+            var allowedOrigins = new List<string>
+            {
+                "https://aiprofilephotomaker.com",
+                "https://test.profilephotomaker.com"
+            };
+            
+            // Add staging URL from configuration or fallback to current domain
+            if (!string.IsNullOrEmpty(stagingFrontendUrl))
+            {
+                allowedOrigins.Add(stagingFrontendUrl);
+            }
+            
+            corsBuilder.WithOrigins(allowedOrigins.ToArray())
                 .AllowAnyMethod()
                 .AllowAnyHeader()
                 .AllowCredentials();
@@ -322,43 +335,119 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Run database migrations on startup for non-development environments
-if (!app.Environment.IsDevelopment())
+// EMERGENCY FIX: Always run database migrations and validation
+// Enhanced logging to debug migration failures
+Console.WriteLine($"=== MIGRATION DEBUG INFO ===");
+Console.WriteLine($"Environment: {app.Environment.EnvironmentName}");
+Console.WriteLine($"IsDevelopment: {app.Environment.IsDevelopment()}");
+Console.WriteLine($"IsStaging: {app.Environment.IsStaging()}");
+Console.WriteLine($"IsProduction: {app.Environment.IsProduction()}");
+
+// Force migration for all environments to resolve CreditPackages table issue
+using (var scope = app.Services.CreateScope())
 {
-    using (var scope = app.Services.CreateScope())
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    
+    try
     {
-        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        try
+        Console.WriteLine($"=== DATABASE CONNECTION DEBUG ===");
+        Console.WriteLine($"Connection String (masked): Server={connectionString?.Split(';')[0]?.Split('=')[1]};...");
+        
+        Console.WriteLine("Attempting database connection...");
+        
+        // Check if database is accessible
+        if (await dbContext.Database.CanConnectAsync())
         {
-            Console.WriteLine("Running database migrations...");
+            Console.WriteLine("✅ Database connection established successfully.");
             
-            // Check if database is accessible
-            if (await dbContext.Database.CanConnectAsync())
+            // Check if CreditPackages table exists
+            var creditPackagesTableExists = false;
+            try
             {
-                Console.WriteLine("Database connection established successfully.");
+                await dbContext.CreditPackages.Take(1).ToListAsync();
+                creditPackagesTableExists = true;
+                Console.WriteLine("✅ CreditPackages table found and accessible");
+            }
+            catch (Exception tableCheckEx)
+            {
+                Console.WriteLine($"❌ CreditPackages table check failed: {tableCheckEx.Message}");
+                creditPackagesTableExists = false;
+            }
+            
+            Console.WriteLine($"CreditPackages table exists: {creditPackagesTableExists}");
+            
+            if (!creditPackagesTableExists)
+            {
+                Console.WriteLine("⚠️ CreditPackages table missing - forcing migration...");
                 dbContext.Database.Migrate();
-                Console.WriteLine("Database migrations completed successfully.");
+                Console.WriteLine("✅ Database migrations completed successfully.");
                 
-                // Verify styles exist after migration
-                var styleCount = await dbContext.Styles.CountAsync(s => s.IsActive);
-                Console.WriteLine($"Active styles count: {styleCount}");
-                
-                if (styleCount == 0)
+                // Verify CreditPackages table was created
+                var tableCreated = false;
+                try
                 {
-                    Console.WriteLine("Warning: No active styles found after migration. This may cause 'demo styles' fallback.");
+                    await dbContext.CreditPackages.Take(1).ToListAsync();
+                    tableCreated = true;
+                }
+                catch
+                {
+                    tableCreated = false;
+                }
+                Console.WriteLine($"CreditPackages table created: {tableCreated}");
+                
+                if (tableCreated)
+                {
+                    // Verify credit packages data exists
+                    var creditPackageCount = await dbContext.CreditPackages.CountAsync();
+                    Console.WriteLine($"Credit packages count: {creditPackageCount}");
+                    
+                    if (creditPackageCount == 0)
+                    {
+                        Console.WriteLine("⚠️ No credit packages found - they should have been seeded during migration");
+                    }
                 }
             }
             else
             {
-                Console.WriteLine("Warning: Cannot connect to database. Database operations will fail.");
+                Console.WriteLine("✅ CreditPackages table already exists - running standard migration check...");
+                dbContext.Database.Migrate();
+                Console.WriteLine("✅ Database migrations completed successfully.");
+            }
+            
+            // Verify styles exist after migration
+            var styleCount = await dbContext.Styles.CountAsync(s => s.IsActive);
+            Console.WriteLine($"Active styles count: {styleCount}");
+            
+            if (styleCount == 0)
+            {
+                Console.WriteLine("⚠️ Warning: No active styles found after migration. This may cause 'demo styles' fallback.");
             }
         }
-        catch (Exception ex)
+        else
         {
-            Console.WriteLine($"Database migration failed: {ex.Message}");
-            Console.WriteLine($"Stack trace: {ex.StackTrace}");
-            // Don't fail the app startup, just log the error
+            Console.WriteLine("❌ ERROR: Cannot connect to database. Database operations will fail.");
+            Console.WriteLine("This will cause HTTP 500 errors for all database-dependent endpoints.");
         }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ CRITICAL: Database migration failed!");
+        Console.WriteLine($"Error: {ex.Message}");
+        Console.WriteLine($"Inner Exception: {ex.InnerException?.Message}");
+        Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        
+        // Additional debugging for SQL connection issues
+        if (ex.Message.Contains("Login failed") || ex.Message.Contains("authentication"))
+        {
+            Console.WriteLine("🔑 Authentication issue detected - check managed identity permissions:");
+            Console.WriteLine("- Ensure Container App has managed identity enabled");
+            Console.WriteLine("- Verify managed identity has db_datareader, db_datawriter, db_ddladmin roles");
+            Console.WriteLine("- Check SQL Server firewall allows Azure services");
+        }
+        
+        // Don't fail the app startup, but make the error very visible
+        Console.WriteLine("🚨 APPLICATION WILL START BUT DATABASE OPERATIONS WILL FAIL!");
     }
 }
 
@@ -375,16 +464,17 @@ if (app.Environment.IsDevelopment())
 }
 
 // In middleware pipeline - use appropriate CORS policy based on environment
+var corsPolicy = app.Environment.IsDevelopment() ? "AllowDevelopment" : "AllowSpecificOrigins";
+Console.WriteLine($"🔧 CORS Policy: Using '{corsPolicy}' for environment '{app.Environment.EnvironmentName}'");
+
 if (app.Environment.IsDevelopment())
 {
+    Console.WriteLine("🔧 CORS: Development mode - allowing local origins and ngrok tunnels");
     app.UseCors("AllowDevelopment");
-}
-else if (app.Environment.EnvironmentName == "Test")
-{
-    app.UseCors("AllowSpecificOrigins");
 }
 else
 {
+    Console.WriteLine($"🔧 CORS: Production/Staging mode - allowing specific origins including: {stagingFrontendUrl}");
     app.UseCors("AllowSpecificOrigins");
 }
 
