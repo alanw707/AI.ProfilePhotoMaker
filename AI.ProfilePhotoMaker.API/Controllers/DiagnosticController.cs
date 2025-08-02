@@ -67,6 +67,60 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
         }
 
+        [HttpPost("reset-database")]
+        public async Task<IActionResult> ResetDatabase()
+        {
+            try
+            {
+                _logger.LogCritical("🚨 DATABASE RESET: Starting database reset (drop and recreate)");
+                
+                // Check database connection
+                var canConnect = await _context.Database.CanConnectAsync();
+                _logger.LogCritical("Database connection status: {CanConnect}", canConnect);
+                
+                if (!canConnect)
+                {
+                    return BadRequest("Cannot connect to database");
+                }
+
+                // Drop and recreate database
+                _logger.LogCritical("🚨 DATABASE RESET: Dropping existing database...");
+                await _context.Database.EnsureDeletedAsync();
+                _logger.LogCritical("✅ DATABASE RESET: Database dropped successfully");
+
+                _logger.LogCritical("🚨 DATABASE RESET: Creating fresh database with all tables...");
+                await _context.Database.EnsureCreatedAsync();
+                _logger.LogCritical("✅ DATABASE RESET: Database created successfully");
+
+                // Verify tables exist
+                var creditPackageCount = await _context.CreditPackages.CountAsync();
+                var userProfileCount = await _context.UserProfiles.CountAsync();
+                var styleCount = await _context.Styles.CountAsync();
+
+                var result = new
+                {
+                    success = true,
+                    message = "Database reset completed successfully",
+                    tables = new
+                    {
+                        creditPackages = creditPackageCount,
+                        userProfiles = userProfileCount,
+                        styles = styleCount
+                    }
+                };
+
+                _logger.LogCritical("Database reset result: {@Result}", result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical("❌ DATABASE RESET FAILED: {Message}", ex.Message);
+                _logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
+                
+                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+            }
+        }
+
         [HttpGet("database-status")]
         public async Task<IActionResult> GetDatabaseStatus()
         {
