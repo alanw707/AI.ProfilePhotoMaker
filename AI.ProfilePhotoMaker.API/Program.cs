@@ -347,7 +347,7 @@ Console.WriteLine($"IsProduction: {app.Environment.IsProduction()}");
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
     
     try
     {
