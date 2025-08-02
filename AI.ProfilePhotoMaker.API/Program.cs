@@ -196,8 +196,20 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IModelDiscoveryServ
 builder.Services.AddHttpClient<IImageDownloadService, ImageDownloadService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository, AI.ProfilePhotoMaker.API.Data.UserProfileRepository>();
 
-// Register Storage Services
-builder.Services.AddScoped<IStorageService, LocalStorageService>();
+// Register Storage Services - choose between Local or Azure Blob Storage
+var azureStorageConnectionString = builder.Configuration.GetConnectionString("AzureStorage") ?? 
+                                  builder.Configuration["AzureStorage:ConnectionString"];
+
+if (!string.IsNullOrEmpty(azureStorageConnectionString))
+{
+    builder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
+    Console.WriteLine("Using Azure Blob Storage for image storage");
+}
+else
+{
+    builder.Services.AddScoped<IStorageService, LocalStorageService>();
+    Console.WriteLine("Using Local Storage for image storage");
+}
 
 // Premium Package Services removed - using unified credit system
 
@@ -295,6 +307,46 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Run database migrations on startup for non-development environments
+if (!app.Environment.IsDevelopment())
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        try
+        {
+            Console.WriteLine("Running database migrations...");
+            
+            // Check if database is accessible
+            if (await dbContext.Database.CanConnectAsync())
+            {
+                Console.WriteLine("Database connection established successfully.");
+                dbContext.Database.Migrate();
+                Console.WriteLine("Database migrations completed successfully.");
+                
+                // Verify styles exist after migration
+                var styleCount = await dbContext.Styles.CountAsync(s => s.IsActive);
+                Console.WriteLine($"Active styles count: {styleCount}");
+                
+                if (styleCount == 0)
+                {
+                    Console.WriteLine("Warning: No active styles found after migration. This may cause 'demo styles' fallback.");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Warning: Cannot connect to database. Database operations will fail.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Database migration failed: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            // Don't fail the app startup, just log the error
+        }
+    }
+}
 
 // Use forwarded headers for ngrok proxy
 app.UseForwardedHeaders();

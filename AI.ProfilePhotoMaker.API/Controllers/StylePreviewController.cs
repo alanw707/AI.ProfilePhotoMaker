@@ -1,4 +1,5 @@
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,21 +15,24 @@ public class StylePreviewController : ControllerBase
     private readonly ApplicationDbContext _dbContext;
     private readonly IWebHostEnvironment _env;
     private readonly IConfiguration _configuration;
+    private readonly IStorageService _storageService;
     private readonly string _previewsPath;
 
     public StylePreviewController(
         ILogger<StylePreviewController> logger,
         ApplicationDbContext dbContext,
         IWebHostEnvironment env,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IStorageService storageService)
     {
         _logger = logger;
         _dbContext = dbContext;
         _env = env;
         _configuration = configuration;
+        _storageService = storageService;
         _previewsPath = Path.Combine(_env.ContentRootPath, "style-previews");
 
-        // Ensure directory exists
+        // Ensure directory exists (for local storage fallback)
         Directory.CreateDirectory(_previewsPath);
     }
 
@@ -271,24 +275,62 @@ public class StylePreviewController : ControllerBase
     /// </summary>
     [HttpGet("list")]
     [AllowAnonymous]
-    public IActionResult ListStylePreviews()
+    public async Task<IActionResult> ListStylePreviews()
     {
         var previews = new List<object>();
 
-        if (Directory.Exists(_previewsPath))
+        // First try to get previews from storage service (Azure Blob or Local)
+        try
         {
-            var files = Directory.GetFiles(_previewsPath, "*-preview.jpg");
-            foreach (var file in files)
+            // For Azure Blob Storage, we need to list all style-preview blobs
+            // For Local Storage, we check the local directory
+            
+            // Get all active styles from database and check if previews exist
+            var styles = await _dbContext.Styles.Where(s => s.IsActive).ToListAsync();
+            
+            foreach (var style in styles)
             {
-                var fileName = Path.GetFileName(file);
-                var styleName = fileName.Replace("-preview.jpg", "").Replace("-", " ");
-                previews.Add(new
+                var fileName = $"{style.Name.ToLower().Replace("/", "-").Replace(" ", "-")}-preview.jpg";
+                var storagePath = $"style-previews/{fileName}";
+                
+                var exists = await _storageService.ExistsAsync(storagePath);
+                if (exists)
                 {
-                    style = styleName,
-                    fileName = fileName,
-                    path = $"/style-previews/{fileName}",
-                    size = new FileInfo(file).Length
-                });
+                    var fileInfo = await _storageService.GetFileInfoAsync(storagePath);
+                    var publicUrl = _storageService.GetImageUrl(storagePath);
+                    
+                    previews.Add(new
+                    {
+                        style = style.Name,
+                        fileName = fileName,
+                        path = storagePath,
+                        url = publicUrl,
+                        size = fileInfo?.Size ?? 0
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error listing style previews from storage service");
+            
+            // Fallback to local directory check
+            if (Directory.Exists(_previewsPath))
+            {
+                var files = Directory.GetFiles(_previewsPath, "*-preview.jpg");
+                foreach (var file in files)
+                {
+                    var fileName = Path.GetFileName(file);
+                    var styleName = fileName.Replace("-preview.jpg", "").Replace("-", " ");
+                    previews.Add(new
+                    {
+                        style = styleName,
+                        fileName = fileName,
+                        path = $"/style-previews/{fileName}",
+                        url = $"/style-previews/{fileName}",
+                        size = new FileInfo(file).Length
+                    });
+                }
             }
         }
 
@@ -298,5 +340,48 @@ public class StylePreviewController : ControllerBase
             count = previews.Count,
             previews = previews
         });
+    }
+
+    /// <summary>
+    /// Get the URL for a specific style preview image
+    /// </summary>
+    [HttpGet("url/{styleName}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetStylePreviewUrl(string styleName)
+    {
+        try
+        {
+            var style = await _dbContext.Styles
+                .FirstOrDefaultAsync(s => s.Name.ToLower() == styleName.ToLower() && s.IsActive);
+
+            if (style == null)
+            {
+                return NotFound(new { error = $"Style '{styleName}' not found" });
+            }
+
+            var fileName = $"{style.Name.ToLower().Replace("/", "-").Replace(" ", "-")}-preview.jpg";
+            var storagePath = $"style-previews/{fileName}";
+            
+            var exists = await _storageService.ExistsAsync(storagePath);
+            if (!exists)
+            {
+                return NotFound(new { error = $"Preview image for style '{styleName}' not found" });
+            }
+
+            var publicUrl = _storageService.GetImageUrl(storagePath);
+            
+            return Ok(new
+            {
+                success = true,
+                styleName = style.Name,
+                url = publicUrl,
+                fileName = fileName
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting style preview URL for {StyleName}", styleName);
+            return StatusCode(500, new { error = "Internal server error" });
+        }
     }
 }
