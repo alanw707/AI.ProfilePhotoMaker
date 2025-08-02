@@ -111,8 +111,12 @@ builder.Services.Configure<IdentityOptions>(options =>
     options.User.RequireUniqueEmail = true;
 });
 
+// Only add Google OAuth if properly configured
+var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
+var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+
 // Add JWT Authentication with Cookie support for OAuth
-builder.Services.AddAuthentication(options =>
+var authBuilder = builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
         // IMPORTANT: Do not set DefaultChallengeScheme or DefaultScheme - this allows 
@@ -142,17 +146,26 @@ builder.Services.AddAuthentication(options =>
             ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"]))
         };
-    })
-    .AddGoogle(options =>
+    });
+
+if (!string.IsNullOrEmpty(googleClientId) && !string.IsNullOrEmpty(googleClientSecret))
+{
+    authBuilder.AddGoogle(options =>
     {
-        options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "";
-        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "";
+        options.ClientId = googleClientId;
+        options.ClientSecret = googleClientSecret;
         options.CallbackPath = "/signin-google";
         options.SaveTokens = true;
         options.Scope.Add("email");
         options.Scope.Add("profile");
-    })
-;
+    });
+    
+    Console.WriteLine("✅ Google OAuth configured successfully");
+}
+else
+{
+    Console.WriteLine("⚠️  Google OAuth not configured - skipping (ClientId or ClientSecret missing)");
+}
 
 // Validate JWT Secret
 var jwtSecret = builder.Configuration["JWT:Secret"];
