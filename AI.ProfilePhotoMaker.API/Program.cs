@@ -357,7 +357,7 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine("Attempting database connection...");
         
         // Check if database is accessible
-        if (await dbContext.Database.CanConnectAsync())
+        if (dbContext.Database.CanConnectAsync().GetAwaiter().GetResult())
         {
             Console.WriteLine("✅ Database connection established successfully.");
             
@@ -365,7 +365,7 @@ using (var scope = app.Services.CreateScope())
             var creditPackagesTableExists = false;
             try
             {
-                await dbContext.CreditPackages.Take(1).ToListAsync();
+                dbContext.CreditPackages.Take(1).ToListAsync().GetAwaiter().GetResult();
                 creditPackagesTableExists = true;
                 Console.WriteLine("✅ CreditPackages table found and accessible");
             }
@@ -387,7 +387,7 @@ using (var scope = app.Services.CreateScope())
                 var tableCreated = false;
                 try
                 {
-                    await dbContext.CreditPackages.Take(1).ToListAsync();
+                    dbContext.CreditPackages.Take(1).ToListAsync().GetAwaiter().GetResult();
                     tableCreated = true;
                 }
                 catch
@@ -399,7 +399,7 @@ using (var scope = app.Services.CreateScope())
                 if (tableCreated)
                 {
                     // Verify credit packages data exists
-                    var creditPackageCount = await dbContext.CreditPackages.CountAsync();
+                    var creditPackageCount = dbContext.CreditPackages.CountAsync().GetAwaiter().GetResult();
                     Console.WriteLine($"Credit packages count: {creditPackageCount}");
                     
                     if (creditPackageCount == 0)
@@ -416,7 +416,7 @@ using (var scope = app.Services.CreateScope())
             }
             
             // Verify styles exist after migration
-            var styleCount = await dbContext.Styles.CountAsync(s => s.IsActive);
+            var styleCount = dbContext.Styles.CountAsync(s => s.IsActive).GetAwaiter().GetResult();
             Console.WriteLine($"Active styles count: {styleCount}");
             
             if (styleCount == 0)
