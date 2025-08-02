@@ -26,6 +26,7 @@ import { NotificationService } from '../services/notification.service';
 import { CreditService } from '../services/credit.service';
 import { DashboardCoordinatorService } from '../services/dashboard-coordinator.service';
 import { ConfigService } from '../services/config.service';
+import { StylePreviewService } from '../services/style-preview.service';
 import { WorkflowStepService, ImageThumbnail } from '../services/workflow-step.service';
 import { DashboardState } from '../interfaces/service.interfaces';
 // Lazy-loaded service types
@@ -146,6 +147,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     public readonly creditService: CreditService,
     public readonly stateService: DashboardCoordinatorService,
     private readonly _config: ConfigService,
+    private readonly _stylePreviewService: StylePreviewService,
     private readonly _workflowStepService: WorkflowStepService,
     private readonly _injector: Injector,
     private readonly _cdr: ChangeDetectorRef
@@ -160,7 +162,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return thumbnails.map(thumb => ({
       id: thumb.id.toString(),
       url: thumb.url,
-      name: thumb.fileName
+      name: thumb.fileName,
     }));
   }
 
@@ -197,7 +199,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const convertedThumbnails: ImageThumbnail[] = state.uploadedImageThumbnails.map(thumb => ({
       id: thumb.id.toString(),
       name: thumb.fileName,
-      url: thumb.url
+      url: thumb.url,
     }));
     this.currentStep = this._workflowStepService.updateCurrentStep(
       state.uploadedImages,
@@ -240,7 +242,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private _getStylePreviewUrl(styleName: string): string {
-    return this._config.buildStylePreviewUrl(styleName);
+    return this._stylePreviewService.getCachedUrl(styleName);
   }
 
   // UI Event Handlers
@@ -375,7 +377,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const convertedThumbnails: ImageThumbnail[] = state.uploadedImageThumbnails.map(thumb => ({
       id: thumb.id.toString(),
       name: thumb.fileName,
-      url: thumb.url
+      url: thumb.url,
     }));
     return this._workflowStepService.getStepStatus(
       step,
@@ -391,7 +393,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const convertedThumbnails: ImageThumbnail[] = state.uploadedImageThumbnails.map(thumb => ({
       id: thumb.id.toString(),
       name: thumb.fileName,
-      url: thumb.url
+      url: thumb.url,
     }));
     return this._workflowStepService.getStepStatusText(
       step,
