@@ -349,6 +349,83 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
         }
 
+        [HttpPost("add-missing-columns")]
+        public async Task<IActionResult> AddMissingColumns()
+        {
+            try
+            {
+                _logger.LogCritical("🚨 COLUMN FIX: Adding missing columns to CreditPackages table");
+                
+                // Check database connection
+                var canConnect = await _context.Database.CanConnectAsync();
+                _logger.LogCritical("Database connection status: {CanConnect}", canConnect);
+                
+                if (!canConnect)
+                {
+                    return BadRequest("Cannot connect to database");
+                }
+
+                // Add missing columns one by one with individual error handling
+                var commands = new[]
+                {
+                    "IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'CreditPackages' AND COLUMN_NAME = 'Description') ALTER TABLE CreditPackages ADD Description nvarchar(500) NOT NULL DEFAULT ''",
+                    "IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'CreditPackages' AND COLUMN_NAME = 'DisplayOrder') ALTER TABLE CreditPackages ADD DisplayOrder int NOT NULL DEFAULT 0",
+                    "IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'CreditPackages' AND COLUMN_NAME = 'BonusCredits') ALTER TABLE CreditPackages ADD BonusCredits int NOT NULL DEFAULT 0",
+                    "IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'CreditPackages' AND COLUMN_NAME = 'StripeProductId') ALTER TABLE CreditPackages ADD StripeProductId nvarchar(max) NULL",
+                    "IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'CreditPackages' AND COLUMN_NAME = 'StripePriceId') ALTER TABLE CreditPackages ADD StripePriceId nvarchar(max) NULL",
+                    "IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'CreditPackages' AND COLUMN_NAME = 'UpdatedAt') ALTER TABLE CreditPackages ADD UpdatedAt datetime2 NULL"
+                };
+
+                var results = new List<string>();
+                foreach (var command in commands)
+                {
+                    try
+                    {
+                        await _context.Database.ExecuteSqlRawAsync(command);
+                        results.Add($"SUCCESS: {command.Substring(command.IndexOf("'") + 1, command.IndexOf("'", command.IndexOf("'") + 1) - command.IndexOf("'") - 1)}");
+                    }
+                    catch (Exception ex)
+                    {
+                        results.Add($"ERROR: {ex.Message}");
+                        _logger.LogCritical("Failed to execute: {Command}, Error: {Error}", command, ex.Message);
+                    }
+                }
+
+                // Test the fix by trying to query CreditPackages
+                try
+                {
+                    var creditPackageCount = await _context.CreditPackages.CountAsync();
+                    _logger.LogCritical("✅ COLUMN FIX: CreditPackages query successful, count: {Count}", creditPackageCount);
+                    
+                    return Ok(new
+                    {
+                        success = true,
+                        message = "Column addition attempts completed",
+                        results = results,
+                        creditPackagesCount = creditPackageCount
+                    });
+                }
+                catch (Exception queryEx)
+                {
+                    _logger.LogCritical("❌ COLUMN FIX: Query test failed: {Message}", queryEx.Message);
+                    return Ok(new
+                    {
+                        success = false,
+                        message = "Columns added but query still fails",
+                        results = results,
+                        error = queryEx.Message
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical("❌ COLUMN FIX FAILED: {Message}", ex.Message);
+                _logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
+                
+                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+            }
+        }
+
         [HttpGet("database-status")]
         public async Task<IActionResult> GetDatabaseStatus()
         {
