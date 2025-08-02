@@ -335,31 +335,38 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// EMERGENCY FIX: Always run database migrations and validation
-// Enhanced logging to debug migration failures
-Console.WriteLine($"=== MIGRATION DEBUG INFO ===");
-Console.WriteLine($"Environment: {app.Environment.EnvironmentName}");
-Console.WriteLine($"IsDevelopment: {app.Environment.IsDevelopment()}");
-Console.WriteLine($"IsStaging: {app.Environment.IsStaging()}");
-Console.WriteLine($"IsProduction: {app.Environment.IsProduction()}");
+// TEST: Verify logging works after app.Build()
+Console.WriteLine("🚨 CRITICAL TEST: App built successfully - checking if migration code executes");
 
-// Force migration for all environments to resolve CreditPackages table issue
-using (var scope = app.Services.CreateScope())
+// EMERGENCY FIX: Always run database migrations and validation
+// Enhanced logging to debug migration failures using .NET logging infrastructure
+try 
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    Console.WriteLine("🚨 TEST: About to create service scope");
+    using (var scope = app.Services.CreateScope())
+    {
+        Console.WriteLine("🚨 TEST: Service scope created successfully");
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    
+    logger.LogCritical("=== MIGRATION DEBUG INFO ===");
+    logger.LogCritical("Environment: {Environment}", app.Environment.EnvironmentName);
+    logger.LogCritical("IsDevelopment: {IsDevelopment}", app.Environment.IsDevelopment());
+    logger.LogCritical("IsStaging: {IsStaging}", app.Environment.IsStaging());
+    logger.LogCritical("IsProduction: {IsProduction}", app.Environment.IsProduction());
     
     try
     {
-        Console.WriteLine($"=== DATABASE CONNECTION DEBUG ===");
-        Console.WriteLine($"Connection String (masked): Server={connectionString?.Split(';')[0]?.Split('=')[1]};...");
+        logger.LogCritical("=== DATABASE CONNECTION DEBUG ===");
+        logger.LogCritical("Connection String (masked): Server={Server};...", connectionString?.Split(';')[0]?.Split('=')[1]);
         
-        Console.WriteLine("Attempting database connection...");
+        logger.LogCritical("Attempting database connection...");
         
         // Check if database is accessible
         if (dbContext.Database.CanConnectAsync().GetAwaiter().GetResult())
         {
-            Console.WriteLine("✅ Database connection established successfully.");
+            logger.LogCritical("✅ Database connection established successfully.");
             
             // Check if CreditPackages table exists
             var creditPackagesTableExists = false;
@@ -367,21 +374,21 @@ using (var scope = app.Services.CreateScope())
             {
                 dbContext.CreditPackages.Take(1).ToListAsync().GetAwaiter().GetResult();
                 creditPackagesTableExists = true;
-                Console.WriteLine("✅ CreditPackages table found and accessible");
+                logger.LogCritical("✅ CreditPackages table found and accessible");
             }
             catch (Exception tableCheckEx)
             {
-                Console.WriteLine($"❌ CreditPackages table check failed: {tableCheckEx.Message}");
+                logger.LogCritical("❌ CreditPackages table check failed: {Message}", tableCheckEx.Message);
                 creditPackagesTableExists = false;
             }
             
-            Console.WriteLine($"CreditPackages table exists: {creditPackagesTableExists}");
+            logger.LogCritical("CreditPackages table exists: {TableExists}", creditPackagesTableExists);
             
             if (!creditPackagesTableExists)
             {
-                Console.WriteLine("⚠️ CreditPackages table missing - forcing migration...");
+                logger.LogCritical("⚠️ CreditPackages table missing - forcing migration...");
                 dbContext.Database.Migrate();
-                Console.WriteLine("✅ Database migrations completed successfully.");
+                logger.LogCritical("✅ Database migrations completed successfully.");
                 
                 // Verify CreditPackages table was created
                 var tableCreated = false;
@@ -394,61 +401,67 @@ using (var scope = app.Services.CreateScope())
                 {
                     tableCreated = false;
                 }
-                Console.WriteLine($"CreditPackages table created: {tableCreated}");
+                logger.LogCritical("CreditPackages table created: {TableCreated}", tableCreated);
                 
                 if (tableCreated)
                 {
                     // Verify credit packages data exists
                     var creditPackageCount = dbContext.CreditPackages.CountAsync().GetAwaiter().GetResult();
-                    Console.WriteLine($"Credit packages count: {creditPackageCount}");
+                    logger.LogCritical("Credit packages count: {Count}", creditPackageCount);
                     
                     if (creditPackageCount == 0)
                     {
-                        Console.WriteLine("⚠️ No credit packages found - they should have been seeded during migration");
+                        logger.LogCritical("⚠️ No credit packages found - they should have been seeded during migration");
                     }
                 }
             }
             else
             {
-                Console.WriteLine("✅ CreditPackages table already exists - running standard migration check...");
+                logger.LogCritical("✅ CreditPackages table already exists - running standard migration check...");
                 dbContext.Database.Migrate();
-                Console.WriteLine("✅ Database migrations completed successfully.");
+                logger.LogCritical("✅ Database migrations completed successfully.");
             }
             
             // Verify styles exist after migration
             var styleCount = dbContext.Styles.CountAsync(s => s.IsActive).GetAwaiter().GetResult();
-            Console.WriteLine($"Active styles count: {styleCount}");
+            logger.LogCritical("Active styles count: {Count}", styleCount);
             
             if (styleCount == 0)
             {
-                Console.WriteLine("⚠️ Warning: No active styles found after migration. This may cause 'demo styles' fallback.");
+                logger.LogCritical("⚠️ Warning: No active styles found after migration. This may cause 'demo styles' fallback.");
             }
         }
         else
         {
-            Console.WriteLine("❌ ERROR: Cannot connect to database. Database operations will fail.");
-            Console.WriteLine("This will cause HTTP 500 errors for all database-dependent endpoints.");
+            logger.LogCritical("❌ ERROR: Cannot connect to database. Database operations will fail.");
+            logger.LogCritical("This will cause HTTP 500 errors for all database-dependent endpoints.");
         }
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"❌ CRITICAL: Database migration failed!");
-        Console.WriteLine($"Error: {ex.Message}");
-        Console.WriteLine($"Inner Exception: {ex.InnerException?.Message}");
-        Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        logger.LogCritical("❌ CRITICAL: Database migration failed!");
+        logger.LogCritical("Error: {Message}", ex.Message);
+        logger.LogCritical("Inner Exception: {InnerMessage}", ex.InnerException?.Message);
+        logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
         
         // Additional debugging for SQL connection issues
         if (ex.Message.Contains("Login failed") || ex.Message.Contains("authentication"))
         {
-            Console.WriteLine("🔑 Authentication issue detected - check managed identity permissions:");
-            Console.WriteLine("- Ensure Container App has managed identity enabled");
-            Console.WriteLine("- Verify managed identity has db_datareader, db_datawriter, db_ddladmin roles");
-            Console.WriteLine("- Check SQL Server firewall allows Azure services");
+            logger.LogCritical("🔑 Authentication issue detected - check managed identity permissions:");
+            logger.LogCritical("- Ensure Container App has managed identity enabled");
+            logger.LogCritical("- Verify managed identity has db_datareader, db_datawriter, db_ddladmin roles");
+            logger.LogCritical("- Check SQL Server firewall allows Azure services");
         }
         
         // Don't fail the app startup, but make the error very visible
-        Console.WriteLine("🚨 APPLICATION WILL START BUT DATABASE OPERATIONS WILL FAIL!");
+        logger.LogCritical("🚨 APPLICATION WILL START BUT DATABASE OPERATIONS WILL FAIL!");
     }
+    }
+}
+catch (Exception outerEx)
+{
+    Console.WriteLine($"🚨 OUTER CATCH: Failed to create service scope or get services: {outerEx.Message}");
+    Console.WriteLine($"🚨 OUTER CATCH: Stack trace: {outerEx.StackTrace}");
 }
 
 // Use forwarded headers for ngrok proxy
