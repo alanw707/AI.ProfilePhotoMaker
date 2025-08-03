@@ -230,7 +230,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                       ('Standard Pack', 25, 19.99, 1),
                       ('Premium Pack', 50, 34.99, 1)",
                     
-                    // Seed comprehensive styles
+                    // Force populate all 21 styles (clear and repopulate)
                     @"DELETE FROM Styles; 
                       INSERT INTO Styles (Name, Category, Description, IsActive) VALUES 
                       ('professional', 'Business', 'Professional business headshot style', 1),
@@ -965,6 +965,71 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogCritical("❌ STYLE POPULATION FAILED: {Message}", ex.Message);
+                _logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
+                
+                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+            }
+        }
+
+        [HttpPost("populate-all-styles")]
+        public async Task<IActionResult> PopulateAllStyles()
+        {
+            try
+            {
+                _logger.LogCritical("🚨 STYLES POPULATION: Populating all 21 styles");
+                
+                // Check database connection
+                var canConnect = await _context.Database.CanConnectAsync();
+                _logger.LogCritical("Database connection status: {CanConnect}", canConnect);
+                
+                if (!canConnect)
+                {
+                    return BadRequest("Cannot connect to database");
+                }
+
+                // Clear existing styles and insert all 21
+                var sql = @"DELETE FROM Styles; 
+                      INSERT INTO Styles (Name, Category, Description, IsActive) VALUES 
+                      ('professional', 'Business', 'Professional business headshot style', 1),
+                      ('casual', 'Lifestyle', 'Casual everyday portrait style', 1),
+                      ('artistic', 'Creative', 'Artistic and creative portrait style', 1),
+                      ('corporate', 'Business', 'Corporate executive professional style', 1),
+                      ('executive', 'Business', 'Senior executive leadership style', 1),
+                      ('consultant', 'Business', 'Professional consultant style', 1),
+                      ('linkedin', 'Business', 'LinkedIn profile optimized style', 1),
+                      ('legal', 'Business', 'Legal professional style', 1),
+                      ('medical', 'Business', 'Healthcare professional style', 1),
+                      ('academic', 'Business', 'Academic and educational style', 1),
+                      ('entrepreneur', 'Business', 'Startup entrepreneur style', 1),
+                      ('startup', 'Business', 'Startup culture style', 1),
+                      ('tech-professional', 'Business', 'Technology professional style', 1),
+                      ('influencer', 'Creative', 'Social media influencer style', 1),
+                      ('digital-nomad', 'Lifestyle', 'Remote worker style', 1),
+                      ('creative', 'Creative', 'Creative professional style', 1),
+                      ('edgy-urban', 'Creative', 'Modern urban style', 1),
+                      ('glamour', 'Creative', 'Glamorous style', 1),
+                      ('fitness', 'Lifestyle', 'Health and fitness style', 1),
+                      ('spiritual', 'Lifestyle', 'Spiritual and wellness style', 1),
+                      ('author', 'Creative', 'Literary author style', 1)";
+
+                _logger.LogCritical("Executing styles population SQL");
+                await _context.Database.ExecuteSqlRawAsync(sql);
+                _logger.LogCritical("✅ Styles population completed");
+
+                // Verify population
+                var styleCount = await _context.Styles.CountAsync();
+                _logger.LogCritical("✅ STYLES POPULATION: Created {Count} styles", styleCount);
+                
+                return Ok(new
+                {
+                    success = true,
+                    message = "All 21 styles populated successfully",
+                    stylesCount = styleCount
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical("❌ STYLES POPULATION FAILED: {Message}", ex.Message);
                 _logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
                 
                 return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
