@@ -34,12 +34,41 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         base.OnModelCreating(builder);
 
         // Configure relationships
+        ConfigureUserProfileRelationships(builder);
+        ConfigureProcessedImageRelationships(builder);
+        ConfigureUsageLogRelationships(builder);
+        ConfigureStyleRelationships(builder);
+        ConfigureUserStyleSelectionRelationships(builder);
+        ConfigureSubscriptionRelationships(builder);
+        ConfigurePaymentTransactionRelationships(builder);
+        ConfigureCreditPackageRelationships(builder);
+        
+        // Configure indexes for performance
+        ConfigurePerformanceIndexes(builder);
+        
+        // Configure decimal precision
+        ConfigureDecimalPrecision(builder);
+
+        // Seed data
+        SeedCreditPackages(builder);
+    }
+
+    private void ConfigureUserProfileRelationships(ModelBuilder builder)
+    {
         builder.Entity<UserProfile>()
             .HasOne(p => p.User)
             .WithOne()
             .HasForeignKey<UserProfile>(p => p.UserId);
 
-        // Configure ProcessedImage relationships and constraints
+        builder.Entity<UserProfile>()
+            .HasMany(p => p.UsageLogs)
+            .WithOne()
+            .HasForeignKey(l => l.UserId)
+            .HasPrincipalKey(p => p.UserId);
+    }
+
+    private void ConfigureProcessedImageRelationships(ModelBuilder builder)
+    {
         builder.Entity<ProcessedImage>()
             .HasOne(i => i.UserProfile)
             .WithMany(p => p.ProcessedImages)
@@ -48,26 +77,28 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         // Add unique constraint on ProcessedImageUrl to prevent duplicates
         builder.Entity<ProcessedImage>()
             .HasIndex(i => i.ProcessedImageUrl)
-            .IsUnique();
+            .IsUnique()
+            .HasDatabaseName("IX_ProcessedImages_ProcessedImageUrl_Unique");
+    }
 
-        // Configure UsageLog relationships
+    private void ConfigureUsageLogRelationships(ModelBuilder builder)
+    {
         builder.Entity<UsageLog>()
             .HasOne(l => l.User)
             .WithMany()
             .HasForeignKey(l => l.UserId);
+    }
 
-        builder.Entity<UserProfile>()
-            .HasMany(p => p.UsageLogs)
-            .WithOne()
-            .HasForeignKey(l => l.UserId)
-            .HasPrincipalKey(p => p.UserId);
-
-        // Configure Style entity
+    private void ConfigureStyleRelationships(ModelBuilder builder)
+    {
         builder.Entity<Style>()
             .HasIndex(s => s.Name)
-            .IsUnique();
+            .IsUnique()
+            .HasDatabaseName("IX_Styles_Name_Unique");
+    }
 
-        // Configure UserStyleSelection relationships
+    private void ConfigureUserStyleSelectionRelationships(ModelBuilder builder)
+    {
         builder.Entity<UserStyleSelection>()
             .HasOne(uss => uss.UserProfile)
             .WithMany()
@@ -81,9 +112,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         // Create unique constraint to prevent duplicate style selections per user
         builder.Entity<UserStyleSelection>()
             .HasIndex(uss => new { uss.UserProfileId, uss.StyleId })
-            .IsUnique();
+            .IsUnique()
+            .HasDatabaseName("IX_UserStyleSelections_UserProfile_Style_Unique");
+    }
 
-        // Configure Subscription relationships
+    private void ConfigureSubscriptionRelationships(ModelBuilder builder)
+    {
         builder.Entity<Subscription>()
             .HasOne(s => s.User)
             .WithMany()
@@ -93,8 +127,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasOne(s => s.Plan)
             .WithMany(p => p.Subscriptions)
             .HasForeignKey(s => s.PlanId);
+    }
 
-        // Configure PaymentTransaction relationships
+    private void ConfigurePaymentTransactionRelationships(ModelBuilder builder)
+    {
         builder.Entity<PaymentTransaction>()
             .HasOne(t => t.User)
             .WithMany()
@@ -104,26 +140,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasOne(t => t.Subscription)
             .WithMany()
             .HasForeignKey(t => t.SubscriptionId);
+    }
 
-        // Configure precision for decimal values
-        builder.Entity<SubscriptionPlan>()
-            .Property(p => p.Price)
-            .HasPrecision(18, 2);
-
-        builder.Entity<PaymentTransaction>()
-            .Property(t => t.Amount)
-            .HasPrecision(18, 2);
-
-        // PremiumPackage and UserPackagePurchase configuration removed - replaced by CreditPackage system
-
-        // Configure CreditPackage relationships and constraints
-        builder.Entity<CreditPackage>()
-            .Property(p => p.Price)
-            .HasPrecision(10, 2);
-
+    private void ConfigureCreditPackageRelationships(ModelBuilder builder)
+    {
         builder.Entity<CreditPackage>()
             .HasIndex(p => p.Name)
-            .IsUnique();
+            .IsUnique()
+            .HasDatabaseName("IX_CreditPackages_Name_Unique");
 
         // Configure CreditPurchase relationships
         builder.Entity<CreditPurchase>()
@@ -135,11 +159,114 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasOne(p => p.User)
             .WithMany()
             .HasForeignKey(p => p.UserId);
+    }
+
+    private void ConfigurePerformanceIndexes(ModelBuilder builder)
+    {
+        // User lookup indexes
+        builder.Entity<UserProfile>()
+            .HasIndex(up => up.UserId)
+            .HasDatabaseName("IX_UserProfiles_UserId");
+
+        // ProcessedImage performance indexes
+        builder.Entity<ProcessedImage>()
+            .HasIndex(pi => pi.UserProfileId)
+            .HasDatabaseName("IX_ProcessedImages_UserProfileId");
+
+        builder.Entity<ProcessedImage>()
+            .HasIndex(pi => pi.CreatedAt)
+            .HasDatabaseName("IX_ProcessedImages_CreatedAt");
+
+        // UsageLog performance indexes
+        builder.Entity<UsageLog>()
+            .HasIndex(ul => ul.UserId)
+            .HasDatabaseName("IX_UsageLogs_UserId");
+
+        builder.Entity<UsageLog>()
+            .HasIndex(ul => ul.Timestamp)
+            .HasDatabaseName("IX_UsageLogs_Timestamp");
+
+        // Style lookup indexes
+        builder.Entity<Style>()
+            .HasIndex(s => s.IsActive)
+            .HasDatabaseName("IX_Styles_IsActive");
+
+        builder.Entity<Style>()
+            .HasIndex(s => new { s.IsActive, s.Name })
+            .HasDatabaseName("IX_Styles_IsActive_Name");
+
+        // UserStyleSelection performance indexes
+        builder.Entity<UserStyleSelection>()
+            .HasIndex(uss => uss.UserProfileId)
+            .HasDatabaseName("IX_UserStyleSelections_UserProfileId");
+
+        builder.Entity<UserStyleSelection>()
+            .HasIndex(uss => uss.StyleId)
+            .HasDatabaseName("IX_UserStyleSelections_StyleId");
+
+        // Subscription performance indexes
+        builder.Entity<Subscription>()
+            .HasIndex(s => s.UserId)
+            .HasDatabaseName("IX_Subscriptions_UserId");
+
+        builder.Entity<Subscription>()
+            .HasIndex(s => new { s.StartDate, s.EndDate })
+            .HasDatabaseName("IX_Subscriptions_DateRange");
+
+        // Payment transaction indexes
+        builder.Entity<PaymentTransaction>()
+            .HasIndex(pt => pt.UserId)
+            .HasDatabaseName("IX_PaymentTransactions_UserId");
+
+        builder.Entity<PaymentTransaction>()
+            .HasIndex(pt => pt.CreatedAt)
+            .HasDatabaseName("IX_PaymentTransactions_CreatedAt");
+
+        // Credit package and purchase indexes
+        builder.Entity<CreditPackage>()
+            .HasIndex(cp => new { cp.IsActive, cp.DisplayOrder })
+            .HasDatabaseName("IX_CreditPackages_IsActive_DisplayOrder");
+
+        builder.Entity<CreditPurchase>()
+            .HasIndex(cp => cp.UserId)
+            .HasDatabaseName("IX_CreditPurchases_UserId");
+
+        builder.Entity<CreditPurchase>()
+            .HasIndex(cp => cp.PurchasedAt)
+            .HasDatabaseName("IX_CreditPurchases_PurchasedAt");
+
+        // ModelCreationRequest indexes for background service performance
+        builder.Entity<ModelCreationRequest>()
+            .HasIndex(mcr => mcr.Status)
+            .HasDatabaseName("IX_ModelCreationRequests_Status");
+
+        builder.Entity<ModelCreationRequest>()
+            .HasIndex(mcr => mcr.CreatedAt)
+            .HasDatabaseName("IX_ModelCreationRequests_CreatedAt");
+    }
+
+    private void ConfigureDecimalPrecision(ModelBuilder builder)
+    {
+        // Configure precision for decimal values
+        builder.Entity<SubscriptionPlan>()
+            .Property(p => p.Price)
+            .HasPrecision(18, 2);
+
+        builder.Entity<PaymentTransaction>()
+            .Property(t => t.Amount)
+            .HasPrecision(18, 2);
+
+        builder.Entity<CreditPackage>()
+            .Property(p => p.Price)
+            .HasPrecision(10, 2);
 
         builder.Entity<CreditPurchase>()
             .Property(p => p.AmountPaid)
             .HasPrecision(10, 2);
+    }
 
+    private void SeedCreditPackages(ModelBuilder builder)
+    {
         // Seed credit packages (3 packages with Studio Pack)
         builder.Entity<CreditPackage>().HasData(
             new CreditPackage

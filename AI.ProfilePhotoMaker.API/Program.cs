@@ -1,8 +1,10 @@
 using System.Text;
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Extensions;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services.Authentication;
 using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
+using AI.ProfilePhotoMaker.API.Services.Database;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Payment;
 using AI.ProfilePhotoMaker.API.Services.Storage;
@@ -14,6 +16,22 @@ using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.DataProtection;
 using System.Security.Claims;
+
+// Handle command-line arguments for migration operations
+if (args.Length > 0)
+{
+    var builder = WebApplication.CreateBuilder(args);
+    
+    // Configure services for command-line operations
+    builder.Services.AddDatabaseServices(builder.Configuration, builder.Environment);
+    builder.Services.AddLogging();
+    
+    var app = builder.Build();
+    
+    // Handle migration commands and exit
+    var exitCode = await MigrationCommandService.HandleMigrationCommand(args, app.Services);
+    Environment.Exit(exitCode);
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,32 +71,10 @@ if (builder.Environment.IsDevelopment())
 }
 
 // Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-// Determine database provider based on connection string
-bool isAzureSqlServer = !string.IsNullOrEmpty(connectionString) && 
-                       (connectionString.Contains("azure") || 
-                        connectionString.Contains("database.windows.net") || 
-                        connectionString.Contains("SqlServer") ||
-                        connectionString.Contains("Authentication=Active Directory"));
-
-if (isAzureSqlServer)
-{
-    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlServer(connectionString, sqlServerOptionsAction: sqlOptions =>
-        {
-            sqlOptions.EnableRetryOnFailure(
-                maxRetryCount: 5,
-                maxRetryDelay: TimeSpan.FromSeconds(30),
-                errorNumbersToAdd: null);
-        }));
-}
-else
-{
-    // Use SQLite for local development
-    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlite(connectionString ?? "Data Source=ProfilePhotoMaker.db"));
-}
+// Configure database services with new architecture
+builder.Services.AddDatabaseServices(builder.Configuration, builder.Environment);
+builder.Services.AddDatabaseConfiguration(builder.Configuration);
 
 // Add Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
@@ -235,6 +231,12 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Payment.IPaymentSer
 // Register Retention Policy Services
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IRetentionPolicyService, AI.ProfilePhotoMaker.API.Services.RetentionPolicyService>();
 
+// Register Health Check Services
+builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IHealthCheckService, AI.ProfilePhotoMaker.API.Services.Health.HealthCheckService>();
+builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IDatabaseHealthService, AI.ProfilePhotoMaker.API.Services.Health.DatabaseHealthService>();
+builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IStorageHealthService, AI.ProfilePhotoMaker.API.Services.Health.StorageHealthService>();
+builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IDependencyHealthService, AI.ProfilePhotoMaker.API.Services.Health.DependencyHealthService>();
+
 // Register background services
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelCreationPollingService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.BasicTierBackgroundService>();
@@ -335,134 +337,8 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// TEST: Verify logging works after app.Build()
-Console.WriteLine("🚨 CRITICAL TEST: App built successfully - checking if migration code executes");
-
-// EMERGENCY FIX: Always run database migrations and validation
-// Enhanced logging to debug migration failures using .NET logging infrastructure
-try 
-{
-    Console.WriteLine("🚨 TEST: About to create service scope");
-    using (var scope = app.Services.CreateScope())
-    {
-        Console.WriteLine("🚨 TEST: Service scope created successfully");
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-    
-    logger.LogCritical("=== MIGRATION DEBUG INFO ===");
-    logger.LogCritical("Environment: {Environment}", app.Environment.EnvironmentName);
-    logger.LogCritical("IsDevelopment: {IsDevelopment}", app.Environment.IsDevelopment());
-    logger.LogCritical("IsStaging: {IsStaging}", app.Environment.IsStaging());
-    logger.LogCritical("IsProduction: {IsProduction}", app.Environment.IsProduction());
-    
-    try
-    {
-        logger.LogCritical("=== DATABASE CONNECTION DEBUG ===");
-        logger.LogCritical("Connection String (masked): Server={Server};...", connectionString?.Split(';')[0]?.Split('=')[1]);
-        
-        logger.LogCritical("Attempting database connection...");
-        
-        // Check if database is accessible
-        if (dbContext.Database.CanConnectAsync().GetAwaiter().GetResult())
-        {
-            logger.LogCritical("✅ Database connection established successfully.");
-            
-            // Check if CreditPackages table exists
-            var creditPackagesTableExists = false;
-            try
-            {
-                dbContext.CreditPackages.Take(1).ToListAsync().GetAwaiter().GetResult();
-                creditPackagesTableExists = true;
-                logger.LogCritical("✅ CreditPackages table found and accessible");
-            }
-            catch (Exception tableCheckEx)
-            {
-                logger.LogCritical("❌ CreditPackages table check failed: {Message}", tableCheckEx.Message);
-                creditPackagesTableExists = false;
-            }
-            
-            logger.LogCritical("CreditPackages table exists: {TableExists}", creditPackagesTableExists);
-            
-            if (!creditPackagesTableExists)
-            {
-                logger.LogCritical("⚠️ CreditPackages table missing - forcing migration...");
-                dbContext.Database.Migrate();
-                logger.LogCritical("✅ Database migrations completed successfully.");
-                
-                // Verify CreditPackages table was created
-                var tableCreated = false;
-                try
-                {
-                    dbContext.CreditPackages.Take(1).ToListAsync().GetAwaiter().GetResult();
-                    tableCreated = true;
-                }
-                catch
-                {
-                    tableCreated = false;
-                }
-                logger.LogCritical("CreditPackages table created: {TableCreated}", tableCreated);
-                
-                if (tableCreated)
-                {
-                    // Verify credit packages data exists
-                    var creditPackageCount = dbContext.CreditPackages.CountAsync().GetAwaiter().GetResult();
-                    logger.LogCritical("Credit packages count: {Count}", creditPackageCount);
-                    
-                    if (creditPackageCount == 0)
-                    {
-                        logger.LogCritical("⚠️ No credit packages found - they should have been seeded during migration");
-                    }
-                }
-            }
-            else
-            {
-                logger.LogCritical("✅ CreditPackages table already exists - running standard migration check...");
-                dbContext.Database.Migrate();
-                logger.LogCritical("✅ Database migrations completed successfully.");
-            }
-            
-            // Verify styles exist after migration
-            var styleCount = dbContext.Styles.CountAsync(s => s.IsActive).GetAwaiter().GetResult();
-            logger.LogCritical("Active styles count: {Count}", styleCount);
-            
-            if (styleCount == 0)
-            {
-                logger.LogCritical("⚠️ Warning: No active styles found after migration. This may cause 'demo styles' fallback.");
-            }
-        }
-        else
-        {
-            logger.LogCritical("❌ ERROR: Cannot connect to database. Database operations will fail.");
-            logger.LogCritical("This will cause HTTP 500 errors for all database-dependent endpoints.");
-        }
-    }
-    catch (Exception ex)
-    {
-        logger.LogCritical("❌ CRITICAL: Database migration failed!");
-        logger.LogCritical("Error: {Message}", ex.Message);
-        logger.LogCritical("Inner Exception: {InnerMessage}", ex.InnerException?.Message);
-        logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
-        
-        // Additional debugging for SQL connection issues
-        if (ex.Message.Contains("Login failed") || ex.Message.Contains("authentication"))
-        {
-            logger.LogCritical("🔑 Authentication issue detected - check managed identity permissions:");
-            logger.LogCritical("- Ensure Container App has managed identity enabled");
-            logger.LogCritical("- Verify managed identity has db_datareader, db_datawriter, db_ddladmin roles");
-            logger.LogCritical("- Check SQL Server firewall allows Azure services");
-        }
-        
-        // Don't fail the app startup, but make the error very visible
-        logger.LogCritical("🚨 APPLICATION WILL START BUT DATABASE OPERATIONS WILL FAIL!");
-    }
-    }
-}
-catch (Exception outerEx)
-{
-    Console.WriteLine($"🚨 OUTER CATCH: Failed to create service scope or get services: {outerEx.Message}");
-    Console.WriteLine($"🚨 OUTER CATCH: Stack trace: {outerEx.StackTrace}");
-}
+// Apply database migrations using new architecture
+await app.UseDatabaseMigrationAsync();
 
 // Use forwarded headers for ngrok proxy
 app.UseForwardedHeaders();
@@ -674,9 +550,11 @@ if (Directory.Exists(angularPath))
     });
 }
 
+// Health check endpoints are now handled by HealthController
+// Legacy health check middleware disabled in favor of controller-based endpoints
+
 // OAuth callbacks are now handled by the standard middleware
 // No custom debug routes needed
-
 
 app.MapControllers();
 

@@ -1,0 +1,323 @@
+using System.Diagnostics;
+using AI.ProfilePhotoMaker.API.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace AI.ProfilePhotoMaker.API.Services.Database;
+
+/// <summary>
+/// Service for managing database migrations and schema validation
+/// </summary>
+public class MigrationService : IMigrationService
+{
+    private readonly ApplicationDbContext _context;
+    private readonly IDatabaseProviderService _databaseProvider;
+    private readonly ILogger<MigrationService> _logger;
+    private readonly IWebHostEnvironment _environment;
+
+    public MigrationService(
+        ApplicationDbContext context,
+        IDatabaseProviderService databaseProvider,
+        ILogger<MigrationService> logger,
+        IWebHostEnvironment environment)
+    {
+        _context = context;
+        _databaseProvider = databaseProvider;
+        _logger = logger;
+        _environment = environment;
+    }
+
+    public async Task<MigrationResult> ApplyMigrationsAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var result = new MigrationResult();
+        
+        try
+        {
+            _logger.LogInformation("Starting database migration process");
+            
+            // Check database connectivity
+            if (!await _databaseProvider.CanConnectAsync())
+            {
+                result.Errors.Add("Cannot connect to database");
+                return result;
+            }
+
+            // Get pending migrations before applying
+            var pendingMigrations = await _context.Database.GetPendingMigrationsAsync();
+            result.AppliedMigrations.AddRange(pendingMigrations);
+            
+            if (!pendingMigrations.Any())
+            {
+                _logger.LogInformation("No pending migrations found");
+                result.Success = true;
+                result.Message = "Database is up to date";
+                return result;
+            }
+
+            _logger.LogInformation("Applying {Count} pending migrations: {Migrations}", 
+                pendingMigrations.Count(), string.Join(", ", pendingMigrations));
+
+            // Apply migrations
+            await _context.Database.MigrateAsync();
+            
+            _logger.LogInformation("Successfully applied all migrations");
+            result.Success = true;
+            result.Message = $"Applied {pendingMigrations.Count()} migrations successfully";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Migration failed: {Message}", ex.Message);
+            result.Errors.Add($"Migration failed: {ex.Message}");
+            
+            // Add inner exception details
+            if (ex.InnerException != null)
+            {
+                result.Errors.Add($"Inner exception: {ex.InnerException.Message}");
+            }
+        }
+        finally
+        {
+            stopwatch.Stop();
+            result.Duration = stopwatch.Elapsed;
+            _logger.LogInformation("Migration process completed in {Duration:c}", result.Duration);
+        }
+
+        return result;
+    }
+
+    public async Task<MigrationStatus> GetMigrationStatusAsync()
+    {
+        var status = new MigrationStatus();
+        
+        try
+        {
+            status.CanConnect = await _databaseProvider.CanConnectAsync();
+            
+            if (!status.CanConnect)
+            {
+                return status;
+            }
+
+            status.DatabaseExists = await _context.Database.CanConnectAsync();
+            
+            if (status.DatabaseExists)
+            {
+                var appliedMigrations = await _context.Database.GetAppliedMigrationsAsync();
+                var pendingMigrations = await _context.Database.GetPendingMigrationsAsync();
+                
+                status.AppliedMigrations.AddRange(appliedMigrations);
+                status.PendingMigrations.AddRange(pendingMigrations);
+                status.AppliedCount = appliedMigrations.Count();
+                status.PendingCount = pendingMigrations.Count();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get migration status: {Message}", ex.Message);
+        }
+
+        return status;
+    }
+
+    public async Task<ValidationResult> ValidateDatabaseAsync()
+    {
+        var result = new ValidationResult();
+        
+        try
+        {
+            if (!await _databaseProvider.CanConnectAsync())
+            {
+                result.Issues.Add("Cannot connect to database");
+                return result;
+            }
+
+            // Validate core tables exist and have data
+            await ValidateTable("Styles", result, minExpectedCount: 20);
+            await ValidateTable("CreditPackages", result, minExpectedCount: 3);
+            await ValidateTable("AspNetRoles", result, minExpectedCount: 0);
+            await ValidateTable("AspNetUsers", result, minExpectedCount: 0);
+            
+            // Check for required seed data
+            var activeStylesCount = await _context.Styles.CountAsync(s => s.IsActive);
+            if (activeStylesCount < 20)
+            {
+                result.Issues.Add($"Expected at least 20 active styles, found {activeStylesCount}");
+                result.MissingSeedData.Add("Styles");
+            }
+
+            var creditPackagesCount = await _context.CreditPackages.CountAsync(cp => cp.IsActive);
+            if (creditPackagesCount < 3)
+            {
+                result.Issues.Add($"Expected at least 3 active credit packages, found {creditPackagesCount}");
+                result.MissingSeedData.Add("CreditPackages");
+            }
+
+            result.HasRequiredSeedData = result.MissingSeedData.Count == 0;
+            result.IsValid = result.Issues.Count == 0;
+            
+            _logger.LogInformation("Database validation completed. Valid: {IsValid}, Issues: {IssueCount}", 
+                result.IsValid, result.Issues.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Database validation failed: {Message}", ex.Message);
+            result.Issues.Add($"Validation error: {ex.Message}");
+        }
+
+        return result;
+    }
+
+    public async Task<IEnumerable<string>> GetAppliedMigrationsAsync()
+    {
+        try
+        {
+            return await _context.Database.GetAppliedMigrationsAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get applied migrations");
+            return Enumerable.Empty<string>();
+        }
+    }
+
+    public async Task<IEnumerable<string>> GetPendingMigrationsAsync()
+    {
+        try
+        {
+            return await _context.Database.GetPendingMigrationsAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get pending migrations");
+            return Enumerable.Empty<string>();
+        }
+    }
+
+    public async Task<bool> EnsureDatabaseCreatedAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Ensuring database is created");
+            return await _context.Database.EnsureCreatedAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to ensure database creation");
+            return false;
+        }
+    }
+
+    public async Task<DatabaseHealth> GetDatabaseHealthAsync()
+    {
+        var health = new DatabaseHealth();
+        var issues = new List<string>();
+        var warnings = new List<string>();
+
+        try
+        {
+            // Test connectivity
+            health.CanConnect = await _databaseProvider.CanConnectAsync();
+            if (!health.CanConnect)
+            {
+                issues.Add("Cannot connect to database");
+                health.Errors.AddRange(issues);
+                return health;
+            }
+
+            // Get migration status
+            health.MigrationStatus = await GetMigrationStatusAsync();
+            if (health.MigrationStatus.PendingCount > 0)
+            {
+                warnings.Add($"{health.MigrationStatus.PendingCount} pending migrations found");
+            }
+
+            // Validate database
+            health.ValidationResult = await ValidateDatabaseAsync();
+            if (!health.ValidationResult.IsValid)
+            {
+                issues.AddRange(health.ValidationResult.Issues);
+            }
+
+            // Collect metrics
+            health.Metrics["DatabaseProvider"] = _databaseProvider.GetDatabaseProvider().ToString();
+            health.Metrics["ConnectionString"] = MaskConnectionString(_databaseProvider.GetConnectionString());
+            health.Metrics["Environment"] = _environment.EnvironmentName;
+            
+            if (health.ValidationResult.TableCounts.Any())
+            {
+                foreach (var tableCount in health.ValidationResult.TableCounts)
+                {
+                    health.Metrics[$"Table_{tableCount.Key}_Count"] = tableCount.Value;
+                }
+            }
+
+            health.Warnings.AddRange(warnings);
+            health.Errors.AddRange(issues);
+            health.IsHealthy = issues.Count == 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to assess database health");
+            health.Errors.Add($"Health check failed: {ex.Message}");
+        }
+
+        return health;
+    }
+
+    private async Task ValidateTable(string tableName, ValidationResult result, int minExpectedCount = 0)
+    {
+        try
+        {
+            var count = tableName switch
+            {
+                "Styles" => await _context.Styles.CountAsync(),
+                "CreditPackages" => await _context.CreditPackages.CountAsync(),
+                "AspNetRoles" => await _context.Roles.CountAsync(),
+                "AspNetUsers" => await _context.Users.CountAsync(),
+                "UserProfiles" => await _context.UserProfiles.CountAsync(),
+                "ProcessedImages" => await _context.ProcessedImages.CountAsync(),
+                _ => -1
+            };
+
+            if (count >= 0)
+            {
+                result.TableCounts[tableName] = count;
+                
+                if (count < minExpectedCount)
+                {
+                    result.Issues.Add($"Table {tableName} has {count} records, expected at least {minExpectedCount}");
+                }
+            }
+            else
+            {
+                result.Issues.Add($"Could not validate table {tableName}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to validate table {TableName}", tableName);
+            result.Issues.Add($"Failed to access table {tableName}: {ex.Message}");
+        }
+    }
+
+    private static string MaskConnectionString(string connectionString)
+    {
+        if (string.IsNullOrEmpty(connectionString))
+            return "Not configured";
+
+        // Mask sensitive parts of connection string
+        var parts = connectionString.Split(';');
+        var maskedParts = parts.Select(part =>
+        {
+            if (part.Contains("Password", StringComparison.OrdinalIgnoreCase) ||
+                part.Contains("Pwd", StringComparison.OrdinalIgnoreCase))
+            {
+                var keyValue = part.Split('=');
+                return keyValue.Length == 2 ? $"{keyValue[0]}=***" : part;
+            }
+            return part;
+        });
+
+        return string.Join(";", maskedParts);
+    }
+}

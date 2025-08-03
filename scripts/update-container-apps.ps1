@@ -107,6 +107,48 @@ try {
         }
     }
     
+    # Run EF Core migrations on the updated backend
+    if ($backendApp) {
+        Write-Host "🔄 Running EF Core migrations..." -ForegroundColor Green
+        
+        try {
+            # Wait a bit more for the backend to be fully ready
+            Start-Sleep -Seconds 15
+            
+            # Run migration command in the container
+            $migrationResult = az containerapp exec --name $backendApp --resource-group $ResourceGroupName --command "dotnet ef database update --no-build" 2>&1
+            
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "✅ EF Core migrations completed successfully!" -ForegroundColor Green
+            } else {
+                Write-Warning "⚠️ EF Core migrations may have failed. Result: $migrationResult"
+                Write-Host "💡 You may need to run migrations manually using the run-staging-migrations.ps1 script" -ForegroundColor Yellow
+            }
+            
+            # Test the problematic API endpoint
+            if ($backendUrl) {
+                Write-Host "🧪 Testing credit packages endpoint..." -ForegroundColor Green
+                try {
+                    $testResult = Invoke-RestMethod -Uri "https://$backendUrl/api/credit/packages" -Method Get -Headers @{ "Accept" = "application/json" } -TimeoutSec 30 -ErrorAction Stop
+                    
+                    if ($testResult -and $testResult.success) {
+                        Write-Host "✅ Credit packages API is working correctly!" -ForegroundColor Green
+                        Write-Host "📊 Found $($testResult.data.Count) credit packages" -ForegroundColor Green
+                    } else {
+                        Write-Warning "⚠️ Credit packages API returned unexpected response"
+                    }
+                } catch {
+                    Write-Warning "⚠️ Credit packages API test failed: $_"
+                    Write-Host "💡 This may indicate database schema issues - check migration logs" -ForegroundColor Yellow
+                }
+            }
+            
+        } catch {
+            Write-Warning "⚠️ Failed to run EF Core migrations: $_"
+            Write-Host "💡 Manual migration may be required using the run-staging-migrations.ps1 script" -ForegroundColor Yellow
+        }
+    }
+    
     Write-Host "🎉 Container Apps update completed!" -ForegroundColor Green
     
 } catch {

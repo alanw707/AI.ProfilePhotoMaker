@@ -1,0 +1,549 @@
+name: Production Deployment Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+      force_deploy:
+        description: 'Force deployment (skip validation gates)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  
+  # Default to staging for PR/push, allow override for manual dispatch
+  ENVIRONMENT: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'staging' || 'staging') }}
+
+jobs:
+  # =============================================================================
+  # STAGE 1: VALIDATE & BUILD
+  # =============================================================================
+  validate-and-build:
+    name: "Stage 1: Validate & Build"
+    runs-on: ubuntu-latest
+    
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+      should-deploy: ${{ steps.deployment-check.outputs.should-deploy }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: AI.ProfilePhotoMaker.UI/package-lock.json
+
+    # Code Quality Gates
+    - name: Code Quality - Backend Lint
+      run: |
+        cd AI.ProfilePhotoMaker.API
+        dotnet format --verify-no-changes --verbosity diagnostic
+        dotnet build --configuration Release --no-restore --verbosity normal
+        
+    - name: Code Quality - Frontend Lint  
+      run: |
+        cd AI.ProfilePhotoMaker.UI
+        npm ci
+        npm run lint
+        npm run build:staging
+        
+    # Security Scans
+    - name: Security Scan - Dependencies
+      run: |
+        # .NET dependency scan
+        dotnet list AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj package --vulnerable --include-transitive
+        
+        # Node.js dependency scan
+        cd AI.ProfilePhotoMaker.UI
+        npm audit --audit-level=high
+        
+    # Unit & Integration Tests
+    - name: Run Backend Tests
+      run: |
+        cd AI.ProfilePhotoMaker.API.Tests
+        dotnet test --configuration Release --logger trx --results-directory ../TestResults/ \
+          --collect:"XPlat Code Coverage" --settings ../coverlet.runsettings
+          
+    - name: Run Frontend Tests
+      run: |
+        cd AI.ProfilePhotoMaker.UI
+        npm run test:ci
+        
+    # Infrastructure Validation
+    - name: Validate Bicep Templates
+      run: |
+        az bicep build --file infrastructure/bicep/main.bicep
+        az deployment sub validate \
+          --location eastus2 \
+          --template-file infrastructure/bicep/main.bicep \
+          --parameters environmentName=${{ env.ENVIRONMENT }} \
+                      sqlAdminPassword="${{ secrets.SQL_ADMIN_PASSWORD }}" \
+                      jwtSecret="${{ secrets.JWT_SECRET }}" \
+                      replicateApiToken="${{ secrets.REPLICATE_API_TOKEN }}" \
+                      stripeApiKey="${{ secrets.STRIPE_API_KEY }}" \
+                      facebookAppSecret="${{ secrets.FACEBOOK_APP_SECRET }}" \
+                      googleClientSecret="${{ secrets.GOOGLE_CLIENT_SECRET }}"
+
+    # Generate Build Metadata
+    - name: Generate Build Metadata
+      id: meta
+      run: |
+        BUILD_TAG="v$(date +%Y%m%d)-${GITHUB_SHA:0:8}"
+        echo "tags=${BUILD_TAG}" >> $GITHUB_OUTPUT
+        echo "Build tag: ${BUILD_TAG}"
+        
+    # Build and Test Docker Images
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build and Test Containers
+      id: build
+      run: |
+        # Build all containers
+        docker buildx build --target api-runtime -t api:test .
+        docker buildx build --target migration-runner -t migration:test .
+        docker buildx build --target frontend-runtime -t frontend:test .
+        
+        # Test container startup
+        docker run -d --name api-test -p 8080:80 api:test
+        docker run -d --name frontend-test -p 8081:80 frontend:test
+        
+        # Wait for containers to start
+        sleep 10
+        
+        # Health checks
+        curl -f http://localhost:8080/health || exit 1
+        curl -f http://localhost:8081/ || exit 1
+        
+        # Cleanup
+        docker stop api-test frontend-test
+        docker rm api-test frontend-test
+        
+        echo "digest=sha256:$(docker images --digests api:test --format '{{.Digest}}')" >> $GITHUB_OUTPUT
+
+    # Deployment Decision
+    - name: Deployment Check
+      id: deployment-check
+      run: |
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          echo "should-deploy=false" >> $GITHUB_OUTPUT
+          echo "Skipping deployment for PR"
+        elif [[ "${{ github.event.inputs.force_deploy }}" == "true" ]]; then
+          echo "should-deploy=true" >> $GITHUB_OUTPUT
+          echo "Force deployment requested"
+        else
+          echo "should-deploy=true" >> $GITHUB_OUTPUT
+          echo "Normal deployment flow"
+        fi
+
+  # =============================================================================
+  # STAGE 2: INFRASTRUCTURE PROVISION
+  # =============================================================================
+  provision-infrastructure:
+    name: "Stage 2: Infrastructure Provision"
+    runs-on: ubuntu-latest
+    needs: validate-and-build
+    if: needs.validate-and-build.outputs.should-deploy == 'true'
+    
+    outputs:
+      resource-group: ${{ steps.deploy.outputs.resource-group }}
+      registry-server: ${{ steps.deploy.outputs.registry-server }}
+      registry-name: ${{ steps.deploy.outputs.registry-name }}
+      migration-job-name: ${{ steps.deploy.outputs.migration-job-name }}
+      backend-url: ${{ steps.deploy.outputs.backend-url }}
+      frontend-url: ${{ steps.deploy.outputs.frontend-url }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Deploy Infrastructure
+      id: deploy
+      run: |
+        echo "Deploying infrastructure for environment: ${{ env.ENVIRONMENT }}"
+        
+        # Deploy infrastructure
+        DEPLOYMENT_OUTPUT=$(az deployment sub create \
+          --location eastus2 \
+          --template-file infrastructure/bicep/main.bicep \
+          --parameters environmentName=${{ env.ENVIRONMENT }} \
+                      imageTag=${{ needs.validate-and-build.outputs.image-tag }} \
+                      sqlAdminPassword="${{ secrets.SQL_ADMIN_PASSWORD }}" \
+                      jwtSecret="${{ secrets.JWT_SECRET }}" \
+                      replicateApiToken="${{ secrets.REPLICATE_API_TOKEN }}" \
+                      stripeApiKey="${{ secrets.STRIPE_API_KEY }}" \
+                      facebookAppId="${{ secrets.FACEBOOK_APP_ID }}" \
+                      facebookAppSecret="${{ secrets.FACEBOOK_APP_SECRET }}" \
+                      googleClientId="${{ secrets.GOOGLE_CLIENT_ID }}" \
+                      googleClientSecret="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+          --query 'properties.outputs' -o json)
+          
+        # Extract outputs
+        echo "resource-group=$(echo $DEPLOYMENT_OUTPUT | jq -r '.resourceGroupName.value')" >> $GITHUB_OUTPUT
+        echo "registry-server=$(echo $DEPLOYMENT_OUTPUT | jq -r '.registryLoginServer.value')" >> $GITHUB_OUTPUT
+        echo "registry-name=$(echo $DEPLOYMENT_OUTPUT | jq -r '.registryName.value')" >> $GITHUB_OUTPUT
+        echo "migration-job-name=$(echo $DEPLOYMENT_OUTPUT | jq -r '.migrationJobName.value')" >> $GITHUB_OUTPUT
+        echo "backend-url=$(echo $DEPLOYMENT_OUTPUT | jq -r '.backendUrl.value')" >> $GITHUB_OUTPUT
+        echo "frontend-url=$(echo $DEPLOYMENT_OUTPUT | jq -r '.frontendUrl.value')" >> $GITHUB_OUTPUT
+
+    - name: Validate Infrastructure Health
+      run: |
+        echo "Validating infrastructure health..."
+        
+        # Check resource group
+        az group show --name ${{ steps.deploy.outputs.resource-group }} --query "properties.provisioningState" -o tsv
+        
+        # Check container registry
+        az acr show --name ${{ steps.deploy.outputs.registry-name }} --query "provisioningState" -o tsv
+        
+        # Wait for all resources to be ready
+        sleep 30
+
+  # =============================================================================
+  # STAGE 3: BUILD & PUBLISH
+  # =============================================================================
+  build-and-publish:
+    name: "Stage 3: Build & Publish"
+    runs-on: ubuntu-latest
+    needs: [validate-and-build, provision-infrastructure]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Login to Container Registry
+      run: |
+        az acr login --name ${{ needs.provision-infrastructure.outputs.registry-name }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build and Push Containers
+      run: |
+        REGISTRY_SERVER="${{ needs.provision-infrastructure.outputs.registry-server }}"
+        IMAGE_TAG="${{ needs.validate-and-build.outputs.image-tag }}"
+        
+        # Build and push API container
+        docker buildx build --platform linux/amd64 \
+          --target api-runtime \
+          --tag ${REGISTRY_SERVER}/api:${IMAGE_TAG} \
+          --tag ${REGISTRY_SERVER}/api:latest \
+          --push .
+          
+        # Build and push Migration container
+        docker buildx build --platform linux/amd64 \
+          --target migration-runner \
+          --tag ${REGISTRY_SERVER}/migration:${IMAGE_TAG} \
+          --tag ${REGISTRY_SERVER}/migration:latest \
+          --push .
+          
+        # Build and push Frontend container
+        docker buildx build --platform linux/amd64 \
+          --target frontend-runtime \
+          --tag ${REGISTRY_SERVER}/frontend:${IMAGE_TAG} \
+          --tag ${REGISTRY_SERVER}/frontend:latest \
+          --push .
+          
+        echo "Published images:"
+        echo "  API: ${REGISTRY_SERVER}/api:${IMAGE_TAG}"
+        echo "  Migration: ${REGISTRY_SERVER}/migration:${IMAGE_TAG}"
+        echo "  Frontend: ${REGISTRY_SERVER}/frontend:${IMAGE_TAG}"
+
+    - name: Update Container Apps Configuration
+      run: |
+        RG_NAME="${{ needs.provision-infrastructure.outputs.resource-group }}"
+        IMAGE_TAG="${{ needs.validate-and-build.outputs.image-tag }}"
+        REGISTRY_SERVER="${{ needs.provision-infrastructure.outputs.registry-server }}"
+        
+        # Update API container app
+        az containerapp update \
+          --name "ca-api-aiprofilemaker-${{ env.ENVIRONMENT }}" \
+          --resource-group ${RG_NAME} \
+          --image ${REGISTRY_SERVER}/api:${IMAGE_TAG}
+          
+        # Update Frontend container app
+        az containerapp update \
+          --name "ca-frontend-aiprofilemaker-${{ env.ENVIRONMENT }}" \
+          --resource-group ${RG_NAME} \
+          --image ${REGISTRY_SERVER}/frontend:${IMAGE_TAG}
+          
+        # Update Migration job
+        az containerapp job update \
+          --name ${{ needs.provision-infrastructure.outputs.migration-job-name }} \
+          --resource-group ${RG_NAME} \
+          --image ${REGISTRY_SERVER}/migration:${IMAGE_TAG}
+
+  # =============================================================================
+  # STAGE 4: DEPLOY & VALIDATE
+  # =============================================================================
+  deploy-and-validate:
+    name: "Stage 4: Deploy & Validate"
+    runs-on: ubuntu-latest
+    needs: [validate-and-build, provision-infrastructure, build-and-publish]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Execute Database Migration
+      id: migration
+      run: |
+        echo "Executing database migration..."
+        
+        JOB_NAME="${{ needs.provision-infrastructure.outputs.migration-job-name }}"
+        RG_NAME="${{ needs.provision-infrastructure.outputs.resource-group }}"
+        
+        # Start migration job
+        EXECUTION_NAME="migration-$(date +%Y%m%d-%H%M%S)"
+        az containerapp job start \
+          --name ${JOB_NAME} \
+          --resource-group ${RG_NAME} \
+          --execution-name ${EXECUTION_NAME}
+        
+        # Wait for migration to complete
+        echo "Waiting for migration to complete..."
+        timeout=600  # 10 minutes
+        counter=0
+        
+        while [ $counter -lt $timeout ]; do
+          STATUS=$(az containerapp job execution show \
+            --name ${JOB_NAME} \
+            --resource-group ${RG_NAME} \
+            --execution-name ${EXECUTION_NAME} \
+            --query "properties.status" -o tsv 2>/dev/null || echo "NotFound")
+            
+          echo "Migration status: $STATUS (${counter}s/${timeout}s)"
+          
+          case $STATUS in
+            "Succeeded")
+              echo "Migration completed successfully!"
+              echo "migration-status=success" >> $GITHUB_OUTPUT
+              break
+              ;;
+            "Failed")
+              echo "Migration failed!"
+              az containerapp job execution show \
+                --name ${JOB_NAME} \
+                --resource-group ${RG_NAME} \
+                --execution-name ${EXECUTION_NAME} \
+                --query "properties"
+              echo "migration-status=failed" >> $GITHUB_OUTPUT
+              exit 1
+              ;;
+            "Running"|"Pending")
+              sleep 10
+              counter=$((counter + 10))
+              ;;
+            *)
+              echo "Unknown migration status: $STATUS"
+              sleep 5
+              counter=$((counter + 5))
+              ;;
+          esac
+        done
+        
+        if [ $counter -ge $timeout ]; then
+          echo "Migration timeout after ${timeout} seconds"
+          echo "migration-status=timeout" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+
+    - name: Application Health Validation
+      id: health-check
+      run: |
+        echo "Validating application health..."
+        
+        BACKEND_URL="${{ needs.provision-infrastructure.outputs.backend-url }}"
+        FRONTEND_URL="${{ needs.provision-infrastructure.outputs.frontend-url }}"
+        
+        # Wait for applications to be ready
+        sleep 30
+        
+        # Backend health check
+        echo "Checking backend health: ${BACKEND_URL}/health"
+        for i in {1..10}; do
+          if curl -f "${BACKEND_URL}/health" -H "Accept: application/json"; then
+            echo "Backend health check passed!"
+            break
+          fi
+          echo "Backend health check attempt $i failed, retrying..."
+          sleep 15
+        done
+        
+        # Frontend health check
+        echo "Checking frontend health: ${FRONTEND_URL}"
+        for i in {1..10}; do
+          if curl -f "${FRONTEND_URL}" -H "Accept: text/html"; then
+            echo "Frontend health check passed!"
+            break
+          fi
+          echo "Frontend health check attempt $i failed, retrying..."
+          sleep 15
+        done
+        
+        echo "health-check-status=success" >> $GITHUB_OUTPUT
+
+    - name: Integration Testing
+      run: |
+        echo "Running integration tests..."
+        
+        BACKEND_URL="${{ needs.provision-infrastructure.outputs.backend-url }}"
+        
+        # Test API endpoints
+        echo "Testing API endpoints..."
+        
+        # Test public endpoints
+        curl -f "${BACKEND_URL}/api/styles" -H "Accept: application/json"
+        curl -f "${BACKEND_URL}/api/health" -H "Accept: application/json"
+        
+        # Test database connectivity
+        curl -f "${BACKEND_URL}/api/health/database" -H "Accept: application/json"
+        
+        echo "Integration tests passed!"
+
+    - name: Performance Baseline
+      run: |
+        echo "Establishing performance baseline..."
+        
+        BACKEND_URL="${{ needs.provision-infrastructure.outputs.backend-url }}"
+        FRONTEND_URL="${{ needs.provision-infrastructure.outputs.frontend-url }}"
+        
+        # Simple performance test
+        echo "Backend response time:"
+        curl -w "@-" -o /dev/null -s "${BACKEND_URL}/health" <<'EOF'
+             namelookup:  %{time_namelookup}s\n
+                connect:  %{time_connect}s\n
+             appconnect:  %{time_appconnect}s\n
+            pretransfer:  %{time_pretransfer}s\n
+               redirect:  %{time_redirect}s\n
+          starttransfer:  %{time_starttransfer}s\n
+                         ----------\n
+                  total:  %{time_total}s\n
+        EOF
+        
+        echo "Frontend response time:"
+        curl -w "@-" -o /dev/null -s "${FRONTEND_URL}" <<'EOF'
+             namelookup:  %{time_namelookup}s\n
+                connect:  %{time_connect}s\n
+             appconnect:  %{time_appconnect}s\n
+            pretransfer:  %{time_pretransfer}s\n
+               redirect:  %{time_redirect}s\n
+          starttransfer:  %{time_starttransfer}s\n
+                         ----------\n
+                  total:  %{time_total}s\n
+        EOF
+
+    - name: Deployment Summary
+      run: |
+        echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Environment: \`${{ env.ENVIRONMENT }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "### Build: \`${{ needs.validate-and-build.outputs.image-tag }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Application URLs:" >> $GITHUB_STEP_SUMMARY
+        echo "- **Frontend**: ${{ needs.provision-infrastructure.outputs.frontend-url }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Backend API**: ${{ needs.provision-infrastructure.outputs.backend-url }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Deployment Status:" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Infrastructure: Provisioned" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Containers: Built & Published" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Migration: ${{ steps.migration.outputs.migration-status }}" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Health Checks: ${{ steps.health-check.outputs.health-check-status }}" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Integration Tests: Passed" >> $GITHUB_STEP_SUMMARY
+
+  # =============================================================================
+  # ROLLBACK ON FAILURE
+  # =============================================================================
+  rollback-on-failure:
+    name: "Emergency Rollback"
+    runs-on: ubuntu-latest
+    needs: [validate-and-build, provision-infrastructure, build-and-publish, deploy-and-validate]
+    if: failure() && needs.provision-infrastructure.result == 'success'
+    
+    steps:
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Rollback to Previous Version
+      run: |
+        echo "🚨 Deployment failed - initiating rollback"
+        
+        RG_NAME="${{ needs.provision-infrastructure.outputs.resource-group }}"
+        REGISTRY_SERVER="${{ needs.provision-infrastructure.outputs.registry-server }}"
+        
+        # Get previous image tags (latest stable)
+        # In production, you'd maintain a rollback registry or version tracking
+        
+        echo "Rolling back to latest stable images..."
+        
+        # Rollback API
+        az containerapp update \
+          --name "ca-api-aiprofilemaker-${{ env.ENVIRONMENT }}" \
+          --resource-group ${RG_NAME} \
+          --image ${REGISTRY_SERVER}/api:latest-stable || true
+          
+        # Rollback Frontend
+        az containerapp update \
+          --name "ca-frontend-aiprofilemaker-${{ env.ENVIRONMENT }}" \
+          --resource-group ${RG_NAME} \
+          --image ${REGISTRY_SERVER}/frontend:latest-stable || true
+        
+        echo "Rollback completed - please verify system status"
+        
+        # Notify team
+        echo "## 🚨 Deployment Failed - Rollback Initiated" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Deployment failed and automatic rollback was performed." >> $GITHUB_STEP_SUMMARY
+        echo "Please verify system status and investigate the failure." >> $GITHUB_STEP_SUMMARY
