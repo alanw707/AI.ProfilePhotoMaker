@@ -20,16 +20,16 @@ using System.Security.Claims;
 // Handle command-line arguments for migration operations
 if (args.Length > 0)
 {
-    var builder = WebApplication.CreateBuilder(args);
+    var migrationBuilder = WebApplication.CreateBuilder(args);
     
     // Configure services for command-line operations
-    builder.Services.AddDatabaseServices(builder.Configuration, builder.Environment);
-    builder.Services.AddLogging();
+    migrationBuilder.Services.AddDatabaseServices(migrationBuilder.Configuration, migrationBuilder.Environment);
+    migrationBuilder.Services.AddLogging();
     
-    var app = builder.Build();
+    var migrationApp = migrationBuilder.Build();
     
     // Handle migration commands and exit
-    var exitCode = await MigrationCommandService.HandleMigrationCommand(args, app.Services);
+    var exitCode = await MigrationCommandService.HandleMigrationCommand(args, migrationApp.Services);
     Environment.Exit(exitCode);
 }
 

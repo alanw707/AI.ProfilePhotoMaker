@@ -183,8 +183,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasDatabaseName("IX_UsageLogs_UserId");
 
         builder.Entity<UsageLog>()
-            .HasIndex(ul => ul.Timestamp)
-            .HasDatabaseName("IX_UsageLogs_Timestamp");
+            .HasIndex(ul => ul.CreatedAt)
+            .HasDatabaseName("IX_UsageLogs_CreatedAt");
 
         // Style lookup indexes
         builder.Entity<Style>()
@@ -232,8 +232,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasDatabaseName("IX_CreditPurchases_UserId");
 
         builder.Entity<CreditPurchase>()
-            .HasIndex(cp => cp.PurchasedAt)
-            .HasDatabaseName("IX_CreditPurchases_PurchasedAt");
+            .HasIndex(cp => cp.PurchaseDate)
+            .HasDatabaseName("IX_CreditPurchases_PurchaseDate");
 
         // ModelCreationRequest indexes for background service performance
         builder.Entity<ModelCreationRequest>()
