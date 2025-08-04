@@ -25,11 +25,11 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Server=db;Database=aiprofilephotomaker;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=true;
-      - Jwt__Secret=your-super-secret-jwt-key-here-change-in-production
+      - ConnectionStrings__DefaultConnection=Server=db;Database=aiprofilephotomaker;User Id=sa;Password=${DB_PASSWORD:-DefaultDevPassword123!};TrustServerCertificate=true;
+      - Jwt__Secret=${JWT_SECRET:-default-dev-jwt-secret-change-in-production-use-32-chars-minimum}
       - Jwt__ValidAudience=http://localhost:80
       - Jwt__ValidIssuer=http://localhost:5000
-      - Replicate__ApiToken=your-replicate-api-token
+      - Replicate__ApiToken=${REPLICATE_API_TOKEN:-placeholder-replicate-token}
       - AzureStorage__ConnectionString=UseDevelopmentStorage=true
     depends_on:
       - db
@@ -44,7 +44,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=YourStrong@Passw0rd
+      - SA_PASSWORD=${DB_PASSWORD:-DefaultDevPassword123!}
       - MSSQL_PID=Express
     ports:
       - "1433:1433"

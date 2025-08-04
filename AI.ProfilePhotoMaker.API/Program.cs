@@ -286,7 +286,7 @@ builder.Services.AddSwaggerGen(c =>
 
 // Environment-aware CORS configuration for better maintainability  
 var stagingFrontendUrl = builder.Configuration["AppBaseUrl"] ?? 
-                       "https://aiprofilemaker-web-staging.thankfulriver-68674ea3.eastus2.azurecontainerapps.io";
+                       "https://ui-apm-simple.nicestone-1ec028d4.eastus.azurecontainerapps.io";
 
 builder.Services.AddCors(options =>
 {
@@ -356,16 +356,9 @@ if (app.Environment.IsDevelopment())
 var corsPolicy = app.Environment.IsDevelopment() ? "AllowDevelopment" : "AllowSpecificOrigins";
 Console.WriteLine($"🔧 CORS Policy: Using '{corsPolicy}' for environment '{app.Environment.EnvironmentName}'");
 
-if (app.Environment.IsDevelopment())
-{
-    Console.WriteLine("🔧 CORS: Development mode - allowing local origins and ngrok tunnels");
-    app.UseCors("AllowDevelopment");
-}
-else
-{
-    Console.WriteLine($"🔧 CORS: Production/Staging mode - allowing specific origins including: {stagingFrontendUrl}");
-    app.UseCors("AllowSpecificOrigins");
-}
+// TEMPORARY FIX: Force AllowAll policy to bypass environment detection issues
+Console.WriteLine("🔧 CORS: TEMPORARY - Using AllowAll policy to fix UI-API communication");
+app.UseCors("AllowAll");
 
 // Configure middleware
 if (app.Environment.IsDevelopment())
@@ -408,13 +401,15 @@ app.Use(async (context, next) =>
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Serve static files from uploads directory
-app.UseStaticFiles(new StaticFileOptions
+// Serve static files from uploads directory - only if directory exists
+var uploadsPath = Path.Combine(builder.Environment.ContentRootPath, "uploads");
+if (Directory.Exists(uploadsPath))
 {
-    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
-        Path.Combine(builder.Environment.ContentRootPath, "uploads")),
-    RequestPath = "/uploads",
-    OnPrepareResponse = ctx =>
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsPath),
+        RequestPath = "/uploads",
+        OnPrepareResponse = ctx =>
     {
         // Add CORS headers to allow cross-origin requests for image downloads
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
@@ -432,21 +427,27 @@ app.UseStaticFiles(new StaticFileOptions
         ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=86400, immutable");
         ctx.Context.Response.Headers.Append("ETag", $"\"{ctx.File.LastModified:yyyy-MM-dd-HH-mm-ss}\"");
     }
-});
+    });
+}
 
-// Serve static files from training-zips directory
-app.UseStaticFiles(new StaticFileOptions
+// Serve static files from training-zips directory - only if directory exists
+var trainingZipsPath = Path.Combine(builder.Environment.ContentRootPath, "training-zips");
+if (Directory.Exists(trainingZipsPath))
 {
-    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
-        Path.Combine(builder.Environment.ContentRootPath, "training-zips")),
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(trainingZipsPath),
     RequestPath = "/training-zips"
-});
+    });
+}
 
-// Serve static files from style-previews directory
-app.UseStaticFiles(new StaticFileOptions
+// Serve static files from style-previews directory - only if directory exists
+var stylePreviewsPath = Path.Combine(builder.Environment.ContentRootPath, "style-previews");
+if (Directory.Exists(stylePreviewsPath))
 {
-    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
-        Path.Combine(builder.Environment.ContentRootPath, "style-previews")),
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(stylePreviewsPath),
     RequestPath = "/style-previews",
     OnPrepareResponse = ctx =>
     {
@@ -466,13 +467,16 @@ app.UseStaticFiles(new StaticFileOptions
         ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=604800, immutable");
         ctx.Context.Response.Headers.Append("ETag", $"\"{ctx.File.LastModified:yyyy-MM-dd-HH-mm-ss}\"");
     }
-});
+    });
+}
 
-// Serve static files from enhanced images directory
-app.UseStaticFiles(new StaticFileOptions
+// Serve static files from enhanced images directory - only if directory exists
+var enhancedPath = Path.Combine(builder.Environment.ContentRootPath, "enhanced");
+if (Directory.Exists(enhancedPath))
 {
-    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
-        Path.Combine(builder.Environment.ContentRootPath, "enhanced")),
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(enhancedPath),
     RequestPath = "/enhanced",
     OnPrepareResponse = ctx =>
     {
@@ -492,13 +496,16 @@ app.UseStaticFiles(new StaticFileOptions
         ctx.Context.Response.Headers.Append("Cache-Control", "private, max-age=3600");
         ctx.Context.Response.Headers.Append("ETag", $"\"{ctx.File.LastModified:yyyy-MM-dd-HH-mm-ss}\"");
     }
-});
+    });
+}
 
-// Serve static files from generated images directory
-app.UseStaticFiles(new StaticFileOptions
+// Serve static files from generated images directory - only if directory exists
+var generatedPath = Path.Combine(builder.Environment.ContentRootPath, "generated");
+if (Directory.Exists(generatedPath))
 {
-    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
-        Path.Combine(builder.Environment.ContentRootPath, "generated")),
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(generatedPath),
     RequestPath = "/generated",
     OnPrepareResponse = ctx =>
     {
@@ -514,7 +521,8 @@ app.UseStaticFiles(new StaticFileOptions
         else if (extension == ".gif") ctx.Context.Response.ContentType = "image/gif";
         else if (extension == ".webp") ctx.Context.Response.ContentType = "image/webp";
     }
-});
+    });
+}
 
 // Serve Angular static files
 var angularPath = Path.Combine(builder.Environment.ContentRootPath, "../AI.ProfilePhotoMaker.UI/dist/ai.profile-photo-maker.ui");

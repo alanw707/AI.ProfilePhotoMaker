@@ -10,19 +10,119 @@ on:
         required: false
         default: false
         type: boolean
+      deploy_components:
+        description: 'Components to deploy'
+        required: false
+        default: 'both'
+        type: choice
+        options:
+        - 'both'
+        - 'api-only'
+        - 'ui-only'
 
 env:
-  RESOURCE_GROUP: rg-aiprofilemaker-staging
+  RESOURCE_GROUP: aiprofilemaker-staging
+  REGISTRY_NAME: acrapmsimple78215
+  ENVIRONMENT: staging
+  APP_NAME: aiprofilemaker
+  # Existing resource names to prevent duplicates
+  SQL_SERVER_NAME: sql-apm-175427827
+  SQL_DB_NAME: aiprofilemaker
+  CONTAINER_ENV_NAME: aiprofilemaker-staging
+  API_APP_NAME: api-apm-simple
+  UI_APP_NAME: ui-apm-simple
   
 permissions:
   id-token: write
   contents: read
 
 jobs:
+  # Determine what components to build/deploy
+  determine-components:
+    name: 🎯 Component Detection
+    runs-on: ubuntu-latest
+    outputs:
+      build-api: ${{ steps.detect.outputs.build-api }}
+      build-ui: ${{ steps.detect.outputs.build-ui }}
+      deploy-api: ${{ steps.detect.outputs.deploy-api }}
+      deploy-ui: ${{ steps.detect.outputs.deploy-ui }}
+      build-version: ${{ steps.version.outputs.build-version }}
+    
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+    
+    - name: 🔍 Detect Changes & Components
+      id: detect
+      run: |
+        DEPLOY_CHOICE="${{ github.event.inputs.deploy_components || 'both' }}"
+        echo "Deploy choice: $DEPLOY_CHOICE"
+        
+        # For manual workflow dispatch, use input selection
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          case "$DEPLOY_CHOICE" in
+            "api-only")
+              echo "build-api=true" >> $GITHUB_OUTPUT
+              echo "build-ui=false" >> $GITHUB_OUTPUT
+              echo "deploy-api=true" >> $GITHUB_OUTPUT
+              echo "deploy-ui=false" >> $GITHUB_OUTPUT
+              ;;
+            "ui-only")
+              echo "build-api=false" >> $GITHUB_OUTPUT
+              echo "build-ui=true" >> $GITHUB_OUTPUT
+              echo "deploy-api=false" >> $GITHUB_OUTPUT
+              echo "deploy-ui=true" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "build-api=true" >> $GITHUB_OUTPUT
+              echo "build-ui=true" >> $GITHUB_OUTPUT
+              echo "deploy-api=true" >> $GITHUB_OUTPUT
+              echo "deploy-ui=true" >> $GITHUB_OUTPUT
+              ;;
+          esac
+        else
+          # For push events, detect changed files
+          API_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E '^AI\.ProfilePhotoMaker\.API/' || echo "")
+          UI_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E '^AI\.ProfilePhotoMaker\.UI/' || echo "")
+          DOCKER_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E '^Dockerfile' || echo "")
+          
+          # Build API if API files or Dockerfile changed, or if no specific changes detected
+          if [[ -n "$API_CHANGED" || -n "$DOCKER_CHANGED" || ( -z "$API_CHANGED" && -z "$UI_CHANGED" ) ]]; then
+            echo "build-api=true" >> $GITHUB_OUTPUT
+            echo "deploy-api=true" >> $GITHUB_OUTPUT
+          else
+            echo "build-api=false" >> $GITHUB_OUTPUT
+            echo "deploy-api=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Build UI if UI files or Dockerfile changed, or if no specific changes detected
+          if [[ -n "$UI_CHANGED" || -n "$DOCKER_CHANGED" || ( -z "$API_CHANGED" && -z "$UI_CHANGED" ) ]]; then
+            echo "build-ui=true" >> $GITHUB_OUTPUT
+            echo "deploy-ui=true" >> $GITHUB_OUTPUT
+          else
+            echo "build-ui=false" >> $GITHUB_OUTPUT
+            echo "deploy-ui=false" >> $GITHUB_OUTPUT
+          fi
+        fi
+        
+        echo "🎯 Component Detection Results:"
+        echo "  Build API: $(echo $GITHUB_OUTPUT | grep build-api | cut -d'=' -f2)"
+        echo "  Build UI: $(echo $GITHUB_OUTPUT | grep build-ui | cut -d'=' -f2)"
+    
+    - name: 🏷️ Generate Build Version
+      id: version
+      run: |
+        BUILD_VERSION="v$(date +%Y%m%d)-${GITHUB_SHA:0:8}"
+        echo "build-version=$BUILD_VERSION" >> $GITHUB_OUTPUT
+        echo "Build version: $BUILD_VERSION"
+
   test:
     name: 🧪 Test
     runs-on: ubuntu-latest
-    if: github.event.inputs.skip_tests != 'true'
+    needs: determine-components
+    if: github.event.inputs.skip_tests != 'true' && (needs.determine-components.outputs.build-api == 'true' || needs.determine-components.outputs.build-ui == 'true')
     
     steps:
       - name: 📥 Checkout
@@ -41,12 +141,14 @@ jobs:
           cache-dependency-path: AI.ProfilePhotoMaker.UI/package-lock.json
           
       - name: 🧪 Test Backend
+        if: needs.determine-components.outputs.build-api == 'true'
         run: |
           cd AI.ProfilePhotoMaker.API
           dotnet restore
           dotnet build --configuration Release
           
       - name: 🧪 Test Frontend
+        if: needs.determine-components.outputs.build-ui == 'true'
         run: |
           cd AI.ProfilePhotoMaker.UI
           npm ci
@@ -56,8 +158,8 @@ jobs:
   deploy:
     name: 🚀 Deploy
     runs-on: ubuntu-latest
-    needs: test
-    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    needs: [determine-components, test]
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped') && (needs.determine-components.outputs.deploy-api == 'true' || needs.determine-components.outputs.deploy-ui == 'true')
     
     steps:
       - name: 📥 Checkout
@@ -70,112 +172,170 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           
-      - name: 🏗️ Create Resource Group
+      - name: 🏗️ Create Resource Group (Idempotent)
         run: |
+          echo "🏗️ Creating resource group (idempotent)..."
           az group create \
             --name ${{ env.RESOURCE_GROUP }} \
             --location eastus2 \
-            --tags Environment=staging Application=AIProfileMaker
+            --tags Environment=${{ env.ENVIRONMENT }} Application=AIProfileMaker || true
             
-      - name: 🔍 Check for Existing Resources
-        id: resource_check
+      - name: 🏗️ Verify Container Registry (Existing)
+        id: registry
         run: |
-          echo "🔍 Checking for existing core resources..."
+          echo "🔍 Using existing Container Registry: ${{ env.REGISTRY_NAME }}"
           
-          # Check for existing Container Registry (consistent staging naming)
-          REGISTRY_NAME="aiprofilemakercrstaging"
-          if az acr show --name "$REGISTRY_NAME" --resource-group "${{ env.RESOURCE_GROUP }}" --output none 2>/dev/null; then
-            echo "✅ Found existing Container Registry: $REGISTRY_NAME"
-            echo "registry-exists=true" >> $GITHUB_OUTPUT
-            echo "registry-name=$REGISTRY_NAME" >> $GITHUB_OUTPUT
+          # Verify registry exists
+          if az acr show --name ${{ env.REGISTRY_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --output none 2>/dev/null; then
+            echo "✅ Container Registry found: ${{ env.REGISTRY_NAME }}"
           else
-            echo "❌ Container Registry not found - will create with idempotent script"
-            echo "registry-exists=false" >> $GITHUB_OUTPUT
+            echo "❌ Container Registry not found: ${{ env.REGISTRY_NAME }}"
+            exit 1
           fi
           
-          # Check for duplicate registries (cleanup old random suffix ones)
-          echo "🔍 Checking for duplicate Container Registries..."
-          DUPLICATE_REGISTRIES=$(az acr list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?starts_with(name, 'aiprofilemaker') && name != 'aiprofilemakercrstaging'].name" -o tsv || true)
-          if [ -n "$DUPLICATE_REGISTRIES" ]; then
-            echo "⚠️ Found old registries with inconsistent naming:"
-            echo "$DUPLICATE_REGISTRIES"
-            echo "duplicate-registries<<EOF" >> $GITHUB_OUTPUT
-            echo "$DUPLICATE_REGISTRIES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
+          # Get registry server
+          REGISTRY_SERVER=$(az acr show --name ${{ env.REGISTRY_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query "loginServer" -o tsv)
+          echo "registry-server=$REGISTRY_SERVER" >> $GITHUB_OUTPUT
+          echo "registry-name=${{ env.REGISTRY_NAME }}" >> $GITHUB_OUTPUT
+          
+      - name: 🏗️ Verify Container Apps Environment (Existing)
+        id: environment
+        run: |
+          echo "🔍 Using existing Container Apps Environment: ${{ env.CONTAINER_ENV_NAME }}"
+          
+          # Verify environment exists
+          if az containerapp env show --name ${{ env.CONTAINER_ENV_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --output none 2>/dev/null; then
+            echo "✅ Container Apps Environment found: ${{ env.CONTAINER_ENV_NAME }}"
           else
-            echo "✅ No duplicate registries found"
+            echo "❌ Container Apps Environment not found: ${{ env.CONTAINER_ENV_NAME }}"
+            exit 1
           fi
-
-      - name: 🏗️ Deploy Infrastructure (Idempotent)
-        id: infra
-        shell: pwsh
-        run: |
-          # Run IDEMPOTENT PowerShell deployment script - prevents duplicates
-          cd scripts
           
-          # Use consistent deterministic naming - no random suffixes
-          ./deploy-infrastructure-idempotent.ps1 `
-            -ResourceGroupName "${{ env.RESOURCE_GROUP }}" `
-            -Location "eastus2" `
-            -SqlAdminPassword "${{ secrets.SQL_ADMIN_PASSWORD }}" `
-            -JwtSecret "${{ secrets.JWT_SECRET }}" `
-            -ReplicateApiToken "${{ secrets.REPLICATE_API_TOKEN }}" `
-            -AppName "aiprofilemaker" `
-            -Environment "staging" `
-            -BuildImages
+          echo "environment-name=${{ env.CONTAINER_ENV_NAME }}" >> $GITHUB_OUTPUT
           
-      - name: ⚠️ Duplicate Resources Warning
-        if: steps.resource_check.outputs.duplicate-registries != ''
+      - name: 🏗️ Verify SQL Database (Existing)
+        id: database
         run: |
-          echo "⚠️ WARNING: Found old Container Registries with inconsistent naming!"
-          echo "These should be cleaned up to avoid unnecessary costs:"
-          echo "${{ steps.resource_check.outputs.duplicate-registries }}"
-          echo ""
-          echo "💡 The deployment will use the correct consistent registry: aiprofilemaker-cr-staging"
-          echo "💰 Cleanup these duplicates to save \$150-250/month"
+          echo "🔍 Using existing SQL Server: ${{ env.SQL_SERVER_NAME }}"
+          echo "🔍 Using existing SQL Database: ${{ env.SQL_DB_NAME }}"
+          
+          # Verify SQL Server exists
+          if az sql server show --name ${{ env.SQL_SERVER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --output none 2>/dev/null; then
+            echo "✅ SQL Server found: ${{ env.SQL_SERVER_NAME }}"
+          else
+            echo "❌ SQL Server not found: ${{ env.SQL_SERVER_NAME }}"
+            exit 1
+          fi
+          
+          # Verify SQL Database exists
+          if az sql db show --name ${{ env.SQL_DB_NAME }} --server ${{ env.SQL_SERVER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --output none 2>/dev/null; then
+            echo "✅ SQL Database found: ${{ env.SQL_DB_NAME }}"
+          else
+            echo "❌ SQL Database not found: ${{ env.SQL_DB_NAME }}"
+            exit 1
+          fi
+          
+          echo "sql-server=${{ env.SQL_SERVER_NAME }}" >> $GITHUB_OUTPUT
+          echo "sql-database=${{ env.SQL_DB_NAME }}" >> $GITHUB_OUTPUT
 
       - name: 🐳 Build & Push Images
         run: |
-          # Use the correct registry name (deterministic)
-          REGISTRY_NAME="${{ steps.infra.outputs.registry-name }}"
+          REGISTRY_SERVER="${{ steps.registry.outputs.registry-server }}"
+          BUILD_VERSION="${{ needs.determine-components.outputs.build-version }}"
           
           # Login to registry
-          echo "🔐 Logging into Container Registry: $REGISTRY_NAME"
-          az acr login --name "$REGISTRY_NAME"
+          echo "🔐 Logging into Container Registry..."
+          az acr login --name ${{ steps.registry.outputs.registry-name }}
           
-          # Build and push backend with proper tagging (PowerShell script expects 'api')
-          echo "🔧 Building backend API image..."
-          docker build -f Dockerfile.backend -t ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-api:latest .
-          docker push ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-api:latest
+          # Build API if needed
+          if [[ "${{ needs.determine-components.outputs.build-api }}" == "true" ]]; then
+            echo "🔧 Building backend API image..."
+            docker build --target api-runtime \
+              -t $REGISTRY_SERVER/aiprofilemaker-api:$BUILD_VERSION \
+              -t $REGISTRY_SERVER/aiprofilemaker-api:latest .
+            docker push $REGISTRY_SERVER/aiprofilemaker-api:$BUILD_VERSION
+            docker push $REGISTRY_SERVER/aiprofilemaker-api:latest
+            echo "✅ API image built and pushed"
+          else
+            echo "⏭️ Skipping API build (no changes detected)"
+          fi
           
-          # Build and push frontend with proper tagging (PowerShell script expects 'ui')
-          echo "🎨 Building frontend UI image..."
-          docker build -f Dockerfile.frontend -t ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-ui:latest .
-          docker push ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-ui:latest
+          # Build UI if needed
+          if [[ "${{ needs.determine-components.outputs.build-ui }}" == "true" ]]; then
+            echo "🎨 Building frontend UI image..."
+            docker build --target frontend-runtime \
+              -t $REGISTRY_SERVER/aiprofilemaker-ui:$BUILD_VERSION \
+              -t $REGISTRY_SERVER/aiprofilemaker-ui:latest .
+            docker push $REGISTRY_SERVER/aiprofilemaker-ui:$BUILD_VERSION
+            docker push $REGISTRY_SERVER/aiprofilemaker-ui:latest
+            echo "✅ UI image built and pushed"
+          else
+            echo "⏭️ Skipping UI build (no changes detected)"
+          fi
           
-          echo "✅ Container images built and pushed successfully"
-          
-      - name: 🔄 Update Container Apps (PowerShell)
-        shell: pwsh
+      - name: 🚀 Deploy Container Apps (Selective)
         run: |
-          # Update container apps with new images using PowerShell script
-          cd scripts
+          REGISTRY_SERVER="${{ steps.registry.outputs.registry-server }}"
+          BUILD_VERSION="${{ needs.determine-components.outputs.build-version }}"
+          ENVIRONMENT_NAME="${{ steps.environment.outputs.environment-name }}"
+          SQL_SERVER="${{ steps.database.outputs.sql-server }}"
+          SQL_CONNECTION_STRING="Server=tcp:$SQL_SERVER.database.windows.net,1433;Initial Catalog=${{ steps.database.outputs.sql-database }};Persist Security Info=False;User ID=sqladmin;Password=${{ secrets.SQL_ADMIN_PASSWORD }};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
           
-          ./update-container-apps.ps1 `
-            -ResourceGroupName "${{ env.RESOURCE_GROUP }}" `
-            -RegistryServer "${{ steps.infra.outputs.registry-server }}" `
-            -BackendImageTag "latest" `
-            -FrontendImageTag "latest"
+          # Deploy/Update API Container App
+          if [[ "${{ needs.determine-components.outputs.deploy-api }}" == "true" ]]; then
+            echo "🚀 Updating existing API Container App: ${{ env.API_APP_NAME }}"
+            
+            # Update existing API Container App with new image
+            az containerapp update \
+              --name ${{ env.API_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --image $REGISTRY_SERVER/aiprofilemaker-api:$BUILD_VERSION
+            
+            # Get API URL
+            API_URL=$(az containerapp show --name ${{ env.API_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query "properties.configuration.ingress.fqdn" -o tsv)
+            echo "backend-url=https://$API_URL" >> $GITHUB_OUTPUT
+            echo "✅ API Container App updated successfully"
+          fi
+          
+          # Deploy/Update UI Container App  
+          if [[ "${{ needs.determine-components.outputs.deploy-ui }}" == "true" ]]; then
+            echo "🚀 Updating existing UI Container App: ${{ env.UI_APP_NAME }}"
+            
+            # Update existing UI Container App with new image
+            az containerapp update \
+              --name ${{ env.UI_APP_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --image $REGISTRY_SERVER/aiprofilemaker-ui:$BUILD_VERSION
+            
+            # Get UI URL
+            UI_URL=$(az containerapp show --name ${{ env.UI_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query "properties.configuration.ingress.fqdn" -o tsv)
+            echo "frontend-url=https://$UI_URL" >> $GITHUB_OUTPUT
+            echo "✅ UI Container App updated successfully"
+          fi
           
       - name: 🎉 Deployment Summary
+        id: summary
         run: |
-          echo "🎉 Deployment completed successfully!"
-          echo "📋 Application URLs:"
-          echo "  Frontend: ${{ steps.infra.outputs.frontend-url }}"
-          echo "  Backend: ${{ steps.infra.outputs.backend-url }}"
+          echo "🎉 Selective deployment completed successfully!"
           echo ""
-          echo "🔧 Infrastructure:"
-          echo "  Container Registry: ${{ steps.infra.outputs.registry-server }}"
-          echo "  SQL Server: ${{ steps.infra.outputs.sql-server }}"
-          echo "  Storage Account: ${{ steps.infra.outputs.storage-account }}"
-          echo "  Key Vault: ${{ steps.infra.outputs.key-vault }}"
+          echo "🎯 Deployed Components:"
+          echo "  API: ${{ needs.determine-components.outputs.deploy-api }}"
+          echo "  UI: ${{ needs.determine-components.outputs.deploy-ui }}"
+          echo "  Build Version: ${{ needs.determine-components.outputs.build-version }}"
+          echo ""
+          echo "📋 Application URLs:"
+          if [[ "${{ needs.determine-components.outputs.deploy-api }}" == "true" ]]; then
+            echo "  Backend API: Available after deployment"
+          fi
+          if [[ "${{ needs.determine-components.outputs.deploy-ui }}" == "true" ]]; then
+            echo "  Frontend UI: Available after deployment"  
+          fi
+          echo ""
+          echo "🔧 Infrastructure (Existing Resources):"
+          echo "  Resource Group: ${{ env.RESOURCE_GROUP }}"
+          echo "  Container Registry: ${{ env.REGISTRY_NAME }}"
+          echo "  SQL Server: ${{ env.SQL_SERVER_NAME }}"
+          echo "  SQL Database: ${{ env.SQL_DB_NAME }}"
+          echo "  Container Environment: ${{ env.CONTAINER_ENV_NAME }}"
+          echo "  API Container App: ${{ env.API_APP_NAME }}"
+          echo "  UI Container App: ${{ env.UI_APP_NAME }}"
