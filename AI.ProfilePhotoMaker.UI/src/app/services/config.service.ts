@@ -16,20 +16,81 @@ export class ConfigService {
     return environment.baseUrl || '';
   }
 
-  readonly authLoginUrl = '/api/auth/login';
-  readonly authRegisterUrl = '/api/auth/register';
-  readonly authProfileCompletionUrl = '/api/auth/profile-completion-status';
-  readonly profileUrl = '/api/profile';
-  readonly uploadPhotoUrl = '/api/image/upload-photo';
-  readonly generateImageUrl = '/api/image/generate-profile-picture';
-  readonly generateSamplesUrl = '/api/image/generate-samples';
-  readonly userImagesUrl = '/api/image/user-images';
-  readonly activeStylesUrl = '/api/style';
-  readonly generateBasicUrl = '/api/replicate/generate/basic';
-  readonly replicateCreditsUrl = '/api/test/basic-tier-status';
-  readonly imageStylesUrl = '/api/image/styles';
-  readonly imageListUrl = '/api/image/images';
-  readonly profileTrainingStatusUrl = '/api/profile/training-status';
+  get authLoginUrl(): string {
+    return this.buildEndpointUrl('/auth/login');
+  }
+
+  get authRegisterUrl(): string {
+    return this.buildEndpointUrl('/auth/register');
+  }
+
+  get authProfileCompletionUrl(): string {
+    return this.buildEndpointUrl('/auth/profile-completion-status');
+  }
+
+  get profileUrl(): string {
+    return this.buildEndpointUrl('/profile');
+  }
+
+  get uploadPhotoUrl(): string {
+    return this.buildEndpointUrl('/image/upload-photo');
+  }
+
+  get generateImageUrl(): string {
+    return this.buildEndpointUrl('/image/generate-profile-picture');
+  }
+
+  get generateSamplesUrl(): string {
+    return this.buildEndpointUrl('/image/generate-samples');
+  }
+
+  get userImagesUrl(): string {
+    return this.buildEndpointUrl('/image/user-images');
+  }
+
+  get activeStylesUrl(): string {
+    return this.buildEndpointUrl('/style');
+  }
+
+  get generateBasicUrl(): string {
+    return this.buildEndpointUrl('/replicate/generate/basic');
+  }
+
+  get replicateCreditsUrl(): string {
+    return this.buildEndpointUrl('/test/basic-tier-status');
+  }
+
+  get imageStylesUrl(): string {
+    return this.buildEndpointUrl('/image/styles');
+  }
+
+  get imageListUrl(): string {
+    return this.buildEndpointUrl('/image/images');
+  }
+
+  get profileTrainingStatusUrl(): string {
+    return this.buildEndpointUrl('/profile/training-status');
+  }
+
+  /**
+   * Build a complete endpoint URL based on environment configuration
+   * @param endpoint - API endpoint path (e.g., '/auth/login')
+   * @returns Complete URL for the endpoint
+   */
+  private buildEndpointUrl(endpoint: string): string {
+    const apiUrl = environment.apiUrl || '/api';
+
+    // Remove leading slash from endpoint for consistent joining
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+
+    // If apiUrl is a full URL (starts with http), use it directly
+    if (apiUrl.startsWith('http')) {
+      return `${apiUrl}/${cleanEndpoint}`;
+    }
+
+    // Otherwise, use relative path (development with proxy)
+    return `/api/${cleanEndpoint}`;
+  }
 
   /**
    * Get the OAuth base URL for external login
