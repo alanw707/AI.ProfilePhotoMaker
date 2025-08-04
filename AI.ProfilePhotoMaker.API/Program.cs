@@ -286,7 +286,7 @@ builder.Services.AddSwaggerGen(c =>
 
 // Environment-aware CORS configuration for better maintainability  
 var stagingFrontendUrl = builder.Configuration["AppBaseUrl"] ?? 
-                       "https://aiprofilemaker-web-staging.thankfulriver-68674ea3.eastus2.azurecontainerapps.io";
+                       "https://ui-apm-simple.nicestone-1ec028d4.eastus.azurecontainerapps.io";
 
 builder.Services.AddCors(options =>
 {
@@ -337,8 +337,8 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Apply database migrations using new architecture - TEMPORARILY DISABLED FOR STAGING
-// await app.UseDatabaseMigrationAsync();
+// Apply database migrations using new architecture
+await app.UseDatabaseMigrationAsync();
 
 // Use forwarded headers for ngrok proxy
 app.UseForwardedHeaders();
@@ -356,16 +356,9 @@ if (app.Environment.IsDevelopment())
 var corsPolicy = app.Environment.IsDevelopment() ? "AllowDevelopment" : "AllowSpecificOrigins";
 Console.WriteLine($"🔧 CORS Policy: Using '{corsPolicy}' for environment '{app.Environment.EnvironmentName}'");
 
-if (app.Environment.IsDevelopment())
-{
-    Console.WriteLine("🔧 CORS: Development mode - allowing local origins and ngrok tunnels");
-    app.UseCors("AllowDevelopment");
-}
-else
-{
-    Console.WriteLine($"🔧 CORS: Production/Staging mode - allowing specific origins including: {stagingFrontendUrl}");
-    app.UseCors("AllowSpecificOrigins");
-}
+// TEMPORARY FIX: Force AllowAll policy to bypass environment detection issues
+Console.WriteLine("🔧 CORS: TEMPORARY - Using AllowAll policy to fix UI-API communication");
+app.UseCors("AllowAll");
 
 // Configure middleware
 if (app.Environment.IsDevelopment())

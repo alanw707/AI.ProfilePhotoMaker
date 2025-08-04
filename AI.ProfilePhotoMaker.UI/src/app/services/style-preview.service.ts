@@ -218,9 +218,8 @@ export class StylePreviewService {
     // Examples: "edgy/urban" -> "edgy-urban.jpg", "tech professional" -> "tech-professional.jpg"
     const fileName = `${styleName.toLowerCase().replace(/[/\s]/g, '-')}.jpg`;
 
-    // Direct Azure Blob Storage URL
-    const azureBlobBaseUrl =
-      'https://aiprofilemakerststaging.blob.core.windows.net/profile-images-staging/style-previews';
+    // Direct Azure Blob Storage URL - use correct storage account
+    const azureBlobBaseUrl = 'https://apmstorage81948.blob.core.windows.net/style-previews';
     return `${azureBlobBaseUrl}/${fileName}`;
   }
 }
