@@ -304,6 +304,48 @@ jobs:
               exit 1
           }
           
+      - name: 🔐 Update ACR Credentials (Option A)
+        shell: powershell
+        run: |
+          Write-Host "[OPTION-A] Updating ACR credentials in Container Apps..." -ForegroundColor Green
+          
+          try {
+              # Get registry name and app names
+              $registryName = "${{ steps.infra.outputs.registry-name }}"
+              
+              # Find container apps dynamically
+              $containerApps = Get-AzContainerApp -ResourceGroupName "${{ env.RESOURCE_GROUP }}"
+              $backendApp = ($containerApps | Where-Object { $_.Name -like "*api*" }).Name
+              $frontendApp = ($containerApps | Where-Object { $_.Name -like "*web*" }).Name
+              
+              if (-not $backendApp -or -not $frontendApp) {
+                  Write-Host "[ERROR] Could not find backend or frontend apps" -ForegroundColor Red
+                  Write-Host "  Backend: '$backendApp'" -ForegroundColor White
+                  Write-Host "  Frontend: '$frontendApp'" -ForegroundColor White
+                  exit 1
+              }
+              
+              Write-Host "[INFO] Found apps - Backend: $backendApp, Frontend: $frontendApp" -ForegroundColor Cyan
+              
+              # Run the credential update script
+              & "infrastructure/update-acr-credentials.ps1" `
+                  -ResourceGroupName "${{ env.RESOURCE_GROUP }}" `
+                  -ContainerRegistryName $registryName `
+                  -BackendAppName $backendApp `
+                  -FrontendAppName $frontendApp
+              
+              if ($LASTEXITCODE -ne 0) {
+                  throw "ACR credential update script failed"
+              }
+              
+              Write-Host "[SUCCESS] ACR credentials updated successfully!" -ForegroundColor Green
+              
+          } catch {
+              Write-Host "[ERROR] Failed to update ACR credentials" -ForegroundColor Red
+              Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Red
+              exit 1
+          }
+          
       - name: 🔄 Restart Container Apps
         shell: powershell
         run: |

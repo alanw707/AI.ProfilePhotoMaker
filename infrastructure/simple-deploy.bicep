@@ -36,7 +36,7 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' =
 }
 
 // SQL Database
-resource sqlServer 'Microsoft.Sql/servers@2023-05-01-preview' = {
+resource sqlServer 'Microsoft.Sql/servers@2023-05-01' = {
   name: sqlServerName
   location: location
   properties: {
@@ -47,7 +47,7 @@ resource sqlServer 'Microsoft.Sql/servers@2023-05-01-preview' = {
   }
 }
 
-resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-05-01-preview' = {
+resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-05-01' = {
   parent: sqlServer
   name: '${appName}db'
   location: location
@@ -60,7 +60,7 @@ resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-05-01-preview' = {
   }
 }
 
-resource sqlFirewallRule 'Microsoft.Sql/servers/firewallRules@2023-05-01-preview' = {
+resource sqlFirewallRule 'Microsoft.Sql/servers/firewallRules@2023-05-01' = {
   parent: sqlServer
   name: 'AllowAzureServices'
   properties: {
@@ -162,7 +162,7 @@ resource connectionStringKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
 }
 
 // Container Apps Environment
-resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-02-preview' = {
+resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' = {
   name: containerEnvName
   location: location
   properties: {
@@ -177,9 +177,17 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-02-
 }
 
 // Backend API Container App
-resource backendApp 'Microsoft.App/containerApps@2023-05-02-preview' = {
+resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: backendAppName
   location: location
+  dependsOn: [
+    containerRegistry
+    containerAppsEnvironment
+    sqlServer
+    sqlDatabase
+    storageAccount
+    applicationInsights
+  ]
   identity: {
     type: 'SystemAssigned'
   }
@@ -214,7 +222,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-02-preview' = {
         }
         {
           name: 'acr-password'
-          value: containerRegistry.listCredentials().passwords[0].value
+          value: 'placeholder-will-be-updated-post-deployment'
         }
       ]
     }
@@ -274,9 +282,14 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-02-preview' = {
 }
 
 // Frontend Container App
-resource frontendApp 'Microsoft.App/containerApps@2023-05-02-preview' = {
+resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: frontendAppName
   location: location
+  dependsOn: [
+    containerRegistry
+    containerAppsEnvironment
+    backendApp
+  ]
   identity: {
     type: 'SystemAssigned'
   }
@@ -299,7 +312,7 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-02-preview' = {
       secrets: [
         {
           name: 'acr-password'
-          value: containerRegistry.listCredentials().passwords[0].value
+          value: 'placeholder-will-be-updated-post-deployment'
         }
       ]
     }
