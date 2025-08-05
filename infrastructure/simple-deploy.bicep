@@ -36,7 +36,7 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' =
 }
 
 // SQL Database
-resource sqlServer 'Microsoft.Sql/servers@2023-05-01' = {
+resource sqlServer 'Microsoft.Sql/servers@2022-05-01-preview' = {
   name: sqlServerName
   location: location
   properties: {
@@ -47,7 +47,7 @@ resource sqlServer 'Microsoft.Sql/servers@2023-05-01' = {
   }
 }
 
-resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-05-01' = {
+resource sqlDatabase 'Microsoft.Sql/servers/databases@2022-05-01-preview' = {
   parent: sqlServer
   name: '${appName}db'
   location: location
@@ -60,7 +60,7 @@ resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-05-01' = {
   }
 }
 
-resource sqlFirewallRule 'Microsoft.Sql/servers/firewallRules@2023-05-01' = {
+resource sqlFirewallRule 'Microsoft.Sql/servers/firewallRules@2021-11-01' = {
   parent: sqlServer
   name: 'AllowAzureServices'
   properties: {
@@ -162,7 +162,7 @@ resource connectionStringKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
 }
 
 // Container Apps Environment
-resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' = {
+resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2022-10-01' = {
   name: containerEnvName
   location: location
   properties: {
@@ -177,17 +177,9 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01'
 }
 
 // Backend API Container App
-resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
+resource backendApp 'Microsoft.App/containerApps@2022-10-01' = {
   name: backendAppName
   location: location
-  dependsOn: [
-    containerRegistry
-    containerAppsEnvironment
-    sqlServer
-    sqlDatabase
-    storageAccount
-    applicationInsights
-  ]
   identity: {
     type: 'SystemAssigned'
   }
@@ -282,14 +274,9 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
 }
 
 // Frontend Container App
-resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
+resource frontendApp 'Microsoft.App/containerApps@2022-10-01' = {
   name: frontendAppName
   location: location
-  dependsOn: [
-    containerRegistry
-    containerAppsEnvironment
-    backendApp
-  ]
   identity: {
     type: 'SystemAssigned'
   }
