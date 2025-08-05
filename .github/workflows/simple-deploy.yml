@@ -77,105 +77,90 @@ jobs:
             --location eastus2 \
             --tags Environment=staging Application=AIProfileMaker
             
-      - name: 🔍 Check for Existing Resources
-        id: resource_check
-        run: |
-          echo "🔍 Checking for existing core resources..."
-          
-          # Check for existing Container Registry (consistent staging naming)
-          REGISTRY_NAME="aiprofilemakercrstaging"
-          if az acr show --name "$REGISTRY_NAME" --resource-group "${{ env.RESOURCE_GROUP }}" --output none 2>/dev/null; then
-            echo "✅ Found existing Container Registry: $REGISTRY_NAME"
-            echo "registry-exists=true" >> $GITHUB_OUTPUT
-            echo "registry-name=$REGISTRY_NAME" >> $GITHUB_OUTPUT
-          else
-            echo "❌ Container Registry not found - will create with idempotent script"
-            echo "registry-exists=false" >> $GITHUB_OUTPUT
-          fi
-          
-          # Check for duplicate registries (cleanup old random suffix ones)
-          echo "🔍 Checking for duplicate Container Registries..."
-          DUPLICATE_REGISTRIES=$(az acr list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?starts_with(name, 'aiprofilemaker') && name != 'aiprofilemakercrstaging'].name" -o tsv || true)
-          if [ -n "$DUPLICATE_REGISTRIES" ]; then
-            echo "⚠️ Found old registries with inconsistent naming:"
-            echo "$DUPLICATE_REGISTRIES"
-            echo "duplicate-registries<<EOF" >> $GITHUB_OUTPUT
-            echo "$DUPLICATE_REGISTRIES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-          else
-            echo "✅ No duplicate registries found"
-          fi
-
-      - name: 🏗️ Deploy Infrastructure (Idempotent)
+      - name: 🏗️ Deploy Infrastructure
         id: infra
-        shell: pwsh
         run: |
-          # Run IDEMPOTENT PowerShell deployment script - prevents duplicates
-          cd scripts
+          cd infrastructure
           
-          # Use consistent deterministic naming - no random suffixes
-          ./deploy-infrastructure-idempotent.ps1 `
-            -ResourceGroupName "${{ env.RESOURCE_GROUP }}" `
-            -Location "eastus2" `
-            -SqlAdminPassword "${{ secrets.SQL_ADMIN_PASSWORD }}" `
-            -JwtSecret "${{ secrets.JWT_SECRET }}" `
-            -ReplicateApiToken "${{ secrets.REPLICATE_API_TOKEN }}" `
-            -AppName "aiprofilemaker" `
-            -Environment "staging" `
-            -BuildImages
+          DEPLOYMENT_NAME="deploy-$(date +%Y%m%d-%H%M%S)"
           
-      - name: ⚠️ Duplicate Resources Warning
-        if: steps.resource_check.outputs.duplicate-registries != ''
-        run: |
-          echo "⚠️ WARNING: Found old Container Registries with inconsistent naming!"
-          echo "These should be cleaned up to avoid unnecessary costs:"
-          echo "${{ steps.resource_check.outputs.duplicate-registries }}"
-          echo ""
-          echo "💡 The deployment will use the correct consistent registry: aiprofilemaker-cr-staging"
-          echo "💰 Cleanup these duplicates to save \$150-250/month"
-
+          az deployment group create \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --template-file simple-deploy.bicep \
+            --parameters \
+              sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}' \
+              jwtSecret='${{ secrets.JWT_SECRET }}' \
+              replicateApiToken='${{ secrets.REPLICATE_API_TOKEN }}' \
+            --name "$DEPLOYMENT_NAME" \
+            --output table
+            
+          # Get outputs
+          REGISTRY_NAME=$(az deployment group show --resource-group ${{ env.RESOURCE_GROUP }} --name "$DEPLOYMENT_NAME" --query 'properties.outputs.containerRegistryName.value' -o tsv)
+          REGISTRY_SERVER=$(az deployment group show --resource-group ${{ env.RESOURCE_GROUP }} --name "$DEPLOYMENT_NAME" --query 'properties.outputs.containerRegistryLoginServer.value' -o tsv)
+          
+          echo "registry-name=$REGISTRY_NAME" >> $GITHUB_OUTPUT
+          echo "registry-server=$REGISTRY_SERVER" >> $GITHUB_OUTPUT
+          
       - name: 🐳 Build & Push Images
         run: |
-          # Use the correct registry name (deterministic)
-          REGISTRY_NAME="${{ steps.infra.outputs.registry-name }}"
-          
           # Login to registry
-          echo "🔐 Logging into Container Registry: $REGISTRY_NAME"
-          az acr login --name "$REGISTRY_NAME"
+          az acr login --name ${{ steps.infra.outputs.registry-name }}
           
-          # Build and push backend with proper tagging (PowerShell script expects 'api')
-          echo "🔧 Building backend API image..."
-          docker build -f Dockerfile.backend -t ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-api:latest .
-          docker push ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-api:latest
+          # Build and push backend
+          docker build -f Dockerfile.backend -t ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-backend:latest .
+          docker push ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-backend:latest
           
-          # Build and push frontend with proper tagging (PowerShell script expects 'ui')
-          echo "🎨 Building frontend UI image..."
-          docker build -f Dockerfile.frontend -t ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-ui:latest .
-          docker push ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-ui:latest
+          # Build and push frontend
+          docker build -f Dockerfile.frontend -t ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-frontend:latest .
+          docker push ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-frontend:latest
           
-          echo "✅ Container images built and pushed successfully"
-          
-      - name: 🔄 Update Container Apps (PowerShell)
-        shell: pwsh
+      - name: 🔄 Restart Container Apps
         run: |
-          # Update container apps with new images using PowerShell script
-          cd scripts
+          # Find and restart the container apps to pick up new images
+          BACKEND_APP=$(az containerapp list -g ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'api')].name" -o tsv)
+          FRONTEND_APP=$(az containerapp list -g ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'web')].name" -o tsv)
           
-          ./update-container-apps.ps1 `
-            -ResourceGroupName "${{ env.RESOURCE_GROUP }}" `
-            -RegistryServer "${{ steps.infra.outputs.registry-server }}" `
-            -BackendImageTag "latest" `
-            -FrontendImageTag "latest"
+          if [ -n "$BACKEND_APP" ]; then
+            echo "🔄 Restarting backend app: $BACKEND_APP"
+            az containerapp revision restart --revision $(az containerapp revision list --name $BACKEND_APP --resource-group ${{ env.RESOURCE_GROUP }} --query '[0].name' -o tsv) --resource-group ${{ env.RESOURCE_GROUP }}
+          fi
           
-      - name: 🎉 Deployment Summary
+          if [ -n "$FRONTEND_APP" ]; then
+            echo "🔄 Restarting frontend app: $FRONTEND_APP"
+            az containerapp revision restart --revision $(az containerapp revision list --name $FRONTEND_APP --resource-group ${{ env.RESOURCE_GROUP }} --query '[0].name' -o tsv) --resource-group ${{ env.RESOURCE_GROUP }}
+          fi
+          
+      - name: 🧪 Health Check
         run: |
-          echo "🎉 Deployment completed successfully!"
-          echo "📋 Application URLs:"
-          echo "  Frontend: ${{ steps.infra.outputs.frontend-url }}"
-          echo "  Backend: ${{ steps.infra.outputs.backend-url }}"
-          echo ""
-          echo "🔧 Infrastructure:"
-          echo "  Container Registry: ${{ steps.infra.outputs.registry-server }}"
-          echo "  SQL Server: ${{ steps.infra.outputs.sql-server }}"
-          echo "  Storage Account: ${{ steps.infra.outputs.storage-account }}"
-          echo "  Key Vault: ${{ steps.infra.outputs.key-vault }}"
+          echo "⏳ Waiting for deployment to stabilize..."
+          sleep 60
+          
+          # Get app URLs
+          BACKEND_APP=$(az containerapp list -g ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'api')].name" -o tsv)
+          FRONTEND_APP=$(az containerapp list -g ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'web')].name" -o tsv)
+          
+          if [ -n "$BACKEND_APP" ]; then
+            BACKEND_URL=$(az containerapp show --name $BACKEND_APP --resource-group ${{ env.RESOURCE_GROUP }} --query 'properties.configuration.ingress.fqdn' -o tsv)
+            echo "🔍 Testing backend: https://$BACKEND_URL"
+            
+            if curl -f -s --max-time 30 "https://$BACKEND_URL/health" > /dev/null; then
+              echo "✅ Backend is healthy"
+            else
+              echo "⚠️ Backend health check failed (may still be starting)"
+            fi
+          fi
+          
+          if [ -n "$FRONTEND_APP" ]; then
+            FRONTEND_URL=$(az containerapp show --name $FRONTEND_APP --resource-group ${{ env.RESOURCE_GROUP }} --query 'properties.configuration.ingress.fqdn' -o tsv)
+            echo "🔍 Testing frontend: https://$FRONTEND_URL"
+            
+            if curl -f -s --max-time 30 "https://$FRONTEND_URL" > /dev/null; then
+              echo "✅ Frontend is healthy"
+            else
+              echo "⚠️ Frontend health check failed (may still be starting)"
+            fi
+            
+            echo "🎉 Your app is deployed!"
+            echo "Frontend: https://$FRONTEND_URL"
+            echo "Backend: https://$BACKEND_URL"
+          fi

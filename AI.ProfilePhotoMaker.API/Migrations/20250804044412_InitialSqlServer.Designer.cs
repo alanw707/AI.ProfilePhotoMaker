@@ -4,6 +4,7 @@ using AI.ProfilePhotoMaker.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AI.ProfilePhotoMaker.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250804044412_InitialSqlServer")]
+    partial class InitialSqlServer
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -160,7 +163,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 1,
                             BonusCredits = 0,
-                            CreatedAt = new DateTime(2025, 8, 4, 5, 26, 52, 534, DateTimeKind.Utc).AddTicks(2396),
+                            CreatedAt = new DateTime(2025, 8, 4, 4, 44, 12, 79, DateTimeKind.Utc).AddTicks(2760),
                             Credits = 50,
                             Description = "Perfect for trying out custom training and styled generations",
                             DisplayOrder = 1,
@@ -172,7 +175,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 2,
                             BonusCredits = 30,
-                            CreatedAt = new DateTime(2025, 8, 4, 5, 26, 52, 534, DateTimeKind.Utc).AddTicks(2398),
+                            CreatedAt = new DateTime(2025, 8, 4, 4, 44, 12, 79, DateTimeKind.Utc).AddTicks(2763),
                             Credits = 120,
                             Description = "Most popular - great for professionals",
                             DisplayOrder = 2,
@@ -184,7 +187,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 3,
                             BonusCredits = 100,
-                            CreatedAt = new DateTime(2025, 8, 4, 5, 26, 52, 534, DateTimeKind.Utc).AddTicks(2400),
+                            CreatedAt = new DateTime(2025, 8, 4, 4, 44, 12, 79, DateTimeKind.Utc).AddTicks(2765),
                             Credits = 300,
                             Description = "Best value for content creators and businesses",
                             DisplayOrder = 3,
