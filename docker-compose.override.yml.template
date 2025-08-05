@@ -1,0 +1,25 @@
+# Docker Compose Override Template
+# Copy this file to docker-compose.override.yml and fill in your actual values
+# NEVER commit docker-compose.override.yml to version control
+
+version: '3.8'
+
+services:
+  backend:
+    environment:
+      # Database connection (replace with your actual password)
+      - ConnectionStrings__DefaultConnection=Server=db;Database=aiprofilephotomaker;User Id=sa;Password=${DB_PASSWORD};TrustServerCertificate=true;
+      # JWT Secret (generate a strong random secret)
+      - Jwt__Secret=${JWT_SECRET}
+      # Replicate API Token (get from https://replicate.com/account/api-tokens)
+      - Replicate__ApiToken=${REPLICATE_API_TOKEN}
+
+  db:
+    environment:
+      # SQL Server SA password (must match ConnectionStrings__DefaultConnection)
+      - SA_PASSWORD=${DB_PASSWORD}
+
+# Example environment variables you need to set:
+# DB_PASSWORD=YourSecurePassword123!
+# JWT_SECRET=YourSuperSecretJWTKeyAtLeast32Characters
+# REPLICATE_API_TOKEN=r8_your_actual_replicate_token_here

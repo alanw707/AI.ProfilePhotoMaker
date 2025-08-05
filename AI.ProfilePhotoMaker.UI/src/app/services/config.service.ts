@@ -16,20 +16,81 @@ export class ConfigService {
     return environment.baseUrl || '';
   }
 
-  readonly authLoginUrl = '/api/auth/login';
-  readonly authRegisterUrl = '/api/auth/register';
-  readonly authProfileCompletionUrl = '/api/auth/profile-completion-status';
-  readonly profileUrl = '/api/profile';
-  readonly uploadPhotoUrl = '/api/image/upload-photo';
-  readonly generateImageUrl = '/api/image/generate-profile-picture';
-  readonly generateSamplesUrl = '/api/image/generate-samples';
-  readonly userImagesUrl = '/api/image/user-images';
-  readonly activeStylesUrl = '/api/style';
-  readonly generateBasicUrl = '/api/replicate/generate/basic';
-  readonly replicateCreditsUrl = '/api/test/basic-tier-status';
-  readonly imageStylesUrl = '/api/image/styles';
-  readonly imageListUrl = '/api/image/images';
-  readonly profileTrainingStatusUrl = '/api/profile/training-status';
+  get authLoginUrl(): string {
+    return this.buildEndpointUrl('/auth/login');
+  }
+
+  get authRegisterUrl(): string {
+    return this.buildEndpointUrl('/auth/register');
+  }
+
+  get authProfileCompletionUrl(): string {
+    return this.buildEndpointUrl('/auth/profile-completion-status');
+  }
+
+  get profileUrl(): string {
+    return this.buildEndpointUrl('/profile');
+  }
+
+  get uploadPhotoUrl(): string {
+    return this.buildEndpointUrl('/image/upload-photo');
+  }
+
+  get generateImageUrl(): string {
+    return this.buildEndpointUrl('/image/generate-profile-picture');
+  }
+
+  get generateSamplesUrl(): string {
+    return this.buildEndpointUrl('/image/generate-samples');
+  }
+
+  get userImagesUrl(): string {
+    return this.buildEndpointUrl('/image/user-images');
+  }
+
+  get activeStylesUrl(): string {
+    return this.buildEndpointUrl('/style');
+  }
+
+  get generateBasicUrl(): string {
+    return this.buildEndpointUrl('/replicate/generate/basic');
+  }
+
+  get replicateCreditsUrl(): string {
+    return this.buildEndpointUrl('/test/basic-tier-status');
+  }
+
+  get imageStylesUrl(): string {
+    return this.buildEndpointUrl('/image/styles');
+  }
+
+  get imageListUrl(): string {
+    return this.buildEndpointUrl('/image/images');
+  }
+
+  get profileTrainingStatusUrl(): string {
+    return this.buildEndpointUrl('/profile/training-status');
+  }
+
+  /**
+   * Build a complete endpoint URL based on environment configuration
+   * @param endpoint - API endpoint path (e.g., '/auth/login')
+   * @returns Complete URL for the endpoint
+   */
+  private buildEndpointUrl(endpoint: string): string {
+    const apiUrl = environment.apiUrl || '/api';
+
+    // Remove leading slash from endpoint for consistent joining
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+
+    // If apiUrl is a full URL (starts with http), use it directly
+    if (apiUrl.startsWith('http')) {
+      return `${apiUrl}/${cleanEndpoint}`;
+    }
+
+    // Otherwise, use relative path (development with proxy)
+    return `/api/${cleanEndpoint}`;
+  }
 
   /**
    * Get the OAuth base URL for external login
@@ -166,62 +227,13 @@ export class ConfigService {
   /**
    * Build URL for style preview images
    * @param styleName - The style name
-   * @returns Complete style preview URL
+   * @returns Complete style preview URL (deprecated - use StylePreviewService instead)
+   * @deprecated Use StylePreviewService.getStylePreviewUrl() for proper Azure Storage URLs
    */
   buildStylePreviewUrl(styleName: string): string {
-    // Map style names to unique filenames that exist on the backend
-    // Each style should have its own unique preview image
-    const styleFileMap: Record<string, string> = {
-      // Database style names (with hyphens - exact matches)
-      academic: 'academic',
-      artistic: 'artistic',
-      author: 'author',
-      casual: 'casual',
-      consultant: 'consultant',
-      corporate: 'corporate',
-      creative: 'creative',
-      'digital-nomad': 'digital-nomad',
-      'edgy-urban': 'edgy-urban',
-      entrepreneur: 'entrepreneur',
-      executive: 'executive',
-      fitness: 'fitness',
-      glamour: 'glamour',
-      influencer: 'influencer',
-      legal: 'legal',
-      linkedin: 'linkedin',
-      medical: 'medical',
-      spiritual: 'spiritual',
-      startup: 'startup',
-      'tech-professional': 'tech-professional',
-
-      // Legacy fallback mappings (with spaces - for backwards compatibility)
-      'professional linkedin': 'linkedin',
-      'creative professional': 'creative',
-      'corporate executive': 'corporate',
-      'casual professional': 'casual',
-      'classic headshot': 'corporate',
-      'modern professional': 'linkedin',
-      'elegant portrait': 'executive',
-      'friendly professional': 'consultant',
-      'confident leader': 'executive',
-      'artistic expression': 'artistic',
-      'business casual': 'casual',
-      'tech professional': 'tech-professional',
-      'senior executive': 'executive',
-      'professional consultant': 'consultant',
-      'academic professional': 'academic',
-      'sales professional': 'consultant',
-      'marketing expert': 'creative',
-      'finance professional': 'corporate',
-      'healthcare professional': 'medical',
-      'digital nomad': 'digital-nomad',
-      'edgy urban': 'edgy-urban',
-    };
-
-    const lowerStyleName = styleName.toLowerCase();
-    const fileName = styleFileMap[lowerStyleName] || this._generateUniqueFileName(styleName);
-
-    return `/style-previews/${fileName}.jpg`;
+    // Deprecated method - kept for backward compatibility
+    // Use StylePreviewService for proper Azure Storage URLs
+    return `/api/placeholder/style-preview`;
   }
 
   /**

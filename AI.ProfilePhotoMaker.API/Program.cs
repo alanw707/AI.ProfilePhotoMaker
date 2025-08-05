@@ -1,8 +1,10 @@
 using System.Text;
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Extensions;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services.Authentication;
 using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
+using AI.ProfilePhotoMaker.API.Services.Database;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Payment;
 using AI.ProfilePhotoMaker.API.Services.Storage;
@@ -14,6 +16,22 @@ using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.DataProtection;
 using System.Security.Claims;
+
+// Handle command-line arguments for migration operations
+if (args.Length > 0)
+{
+    var migrationBuilder = WebApplication.CreateBuilder(args);
+    
+    // Configure services for command-line operations
+    migrationBuilder.Services.AddDatabaseServices(migrationBuilder.Configuration, migrationBuilder.Environment);
+    migrationBuilder.Services.AddLogging();
+    
+    var migrationApp = migrationBuilder.Build();
+    
+    // Handle migration commands and exit
+    var exitCode = await MigrationCommandService.HandleMigrationCommand(args, migrationApp.Services);
+    Environment.Exit(exitCode);
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,32 +71,10 @@ if (builder.Environment.IsDevelopment())
 }
 
 // Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-// Determine database provider based on connection string
-bool isAzureSqlServer = !string.IsNullOrEmpty(connectionString) && 
-                       (connectionString.Contains("azure") || 
-                        connectionString.Contains("database.windows.net") || 
-                        connectionString.Contains("SqlServer") ||
-                        connectionString.Contains("Authentication=Active Directory"));
-
-if (isAzureSqlServer)
-{
-    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlServer(connectionString, sqlServerOptionsAction: sqlOptions =>
-        {
-            sqlOptions.EnableRetryOnFailure(
-                maxRetryCount: 5,
-                maxRetryDelay: TimeSpan.FromSeconds(30),
-                errorNumbersToAdd: null);
-        }));
-}
-else
-{
-    // Use SQLite for local development
-    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlite(connectionString ?? "Data Source=ProfilePhotoMaker.db"));
-}
+// Configure database services with new architecture
+builder.Services.AddDatabaseServices(builder.Configuration, builder.Environment);
+builder.Services.AddDatabaseConfiguration(builder.Configuration);
 
 // Add Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
@@ -111,8 +107,12 @@ builder.Services.Configure<IdentityOptions>(options =>
     options.User.RequireUniqueEmail = true;
 });
 
+// Only add Google OAuth if properly configured
+var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
+var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+
 // Add JWT Authentication with Cookie support for OAuth
-builder.Services.AddAuthentication(options =>
+var authBuilder = builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
         // IMPORTANT: Do not set DefaultChallengeScheme or DefaultScheme - this allows 
@@ -142,17 +142,26 @@ builder.Services.AddAuthentication(options =>
             ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"]))
         };
-    })
-    .AddGoogle(options =>
+    });
+
+if (!string.IsNullOrEmpty(googleClientId) && !string.IsNullOrEmpty(googleClientSecret))
+{
+    authBuilder.AddGoogle(options =>
     {
-        options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "";
-        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "";
+        options.ClientId = googleClientId;
+        options.ClientSecret = googleClientSecret;
         options.CallbackPath = "/signin-google";
         options.SaveTokens = true;
         options.Scope.Add("email");
         options.Scope.Add("profile");
-    })
-;
+    });
+    
+    Console.WriteLine("✅ Google OAuth configured successfully");
+}
+else
+{
+    Console.WriteLine("⚠️  Google OAuth not configured - skipping (ClientId or ClientSecret missing)");
+}
 
 // Validate JWT Secret
 var jwtSecret = builder.Configuration["JWT:Secret"];
@@ -196,8 +205,20 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IModelDiscoveryServ
 builder.Services.AddHttpClient<IImageDownloadService, ImageDownloadService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository, AI.ProfilePhotoMaker.API.Data.UserProfileRepository>();
 
-// Register Storage Services
-builder.Services.AddScoped<IStorageService, LocalStorageService>();
+// Register Storage Services - choose between Local or Azure Blob Storage
+var azureStorageConnectionString = builder.Configuration.GetConnectionString("AzureStorage") ?? 
+                                  builder.Configuration["AzureStorage:ConnectionString"];
+
+if (!string.IsNullOrEmpty(azureStorageConnectionString))
+{
+    builder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
+    Console.WriteLine("Using Azure Blob Storage for image storage");
+}
+else
+{
+    builder.Services.AddScoped<IStorageService, LocalStorageService>();
+    Console.WriteLine("Using Local Storage for image storage");
+}
 
 // Premium Package Services removed - using unified credit system
 
@@ -209,6 +230,12 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Payment.IPaymentSer
 
 // Register Retention Policy Services
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IRetentionPolicyService, AI.ProfilePhotoMaker.API.Services.RetentionPolicyService>();
+
+// Register Health Check Services
+builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IHealthCheckService, AI.ProfilePhotoMaker.API.Services.Health.HealthCheckService>();
+builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IDatabaseHealthService, AI.ProfilePhotoMaker.API.Services.Health.DatabaseHealthService>();
+builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IStorageHealthService, AI.ProfilePhotoMaker.API.Services.Health.StorageHealthService>();
+builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IDependencyHealthService, AI.ProfilePhotoMaker.API.Services.Health.DependencyHealthService>();
 
 // Register background services
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelCreationPollingService>();
@@ -257,15 +284,29 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 
+// Environment-aware CORS configuration for better maintainability  
+var stagingFrontendUrl = builder.Configuration["AppBaseUrl"] ?? 
+                       "https://ui-apm-simple.nicestone-1ec028d4.eastus.azurecontainerapps.io";
+
 builder.Services.AddCors(options =>
 {
+    
     options.AddPolicy("AllowSpecificOrigins",
         corsBuilder =>
         {
-            corsBuilder.WithOrigins(
-                    "https://aiprofilephotomaker.com",
-                    "https://test.profilephotomaker.com"
-                )
+            var allowedOrigins = new List<string>
+            {
+                "https://aiprofilephotomaker.com",
+                "https://test.profilephotomaker.com"
+            };
+            
+            // Add staging URL from configuration or fallback to current domain
+            if (!string.IsNullOrEmpty(stagingFrontendUrl))
+            {
+                allowedOrigins.Add(stagingFrontendUrl);
+            }
+            
+            corsBuilder.WithOrigins(allowedOrigins.ToArray())
                 .AllowAnyMethod()
                 .AllowAnyHeader()
                 .AllowCredentials();
@@ -296,6 +337,9 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Apply database migrations using new architecture - TEMPORARILY DISABLED FOR STAGING
+// await app.UseDatabaseMigrationAsync();
+
 // Use forwarded headers for ngrok proxy
 app.UseForwardedHeaders();
 
@@ -309,18 +353,12 @@ if (app.Environment.IsDevelopment())
 }
 
 // In middleware pipeline - use appropriate CORS policy based on environment
-if (app.Environment.IsDevelopment())
-{
-    app.UseCors("AllowDevelopment");
-}
-else if (app.Environment.EnvironmentName == "Test")
-{
-    app.UseCors("AllowSpecificOrigins");
-}
-else
-{
-    app.UseCors("AllowSpecificOrigins");
-}
+var corsPolicy = app.Environment.IsDevelopment() ? "AllowDevelopment" : "AllowSpecificOrigins";
+Console.WriteLine($"🔧 CORS Policy: Using '{corsPolicy}' for environment '{app.Environment.EnvironmentName}'");
+
+// TEMPORARY FIX: Force AllowAll policy to bypass environment detection issues
+Console.WriteLine("🔧 CORS: TEMPORARY - Using AllowAll policy to fix UI-API communication");
+app.UseCors("AllowAll");
 
 // Configure middleware
 if (app.Environment.IsDevelopment())
@@ -363,13 +401,15 @@ app.Use(async (context, next) =>
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Serve static files from uploads directory
-app.UseStaticFiles(new StaticFileOptions
+// Serve static files from uploads directory - only if directory exists
+var uploadsPath = Path.Combine(builder.Environment.ContentRootPath, "uploads");
+if (Directory.Exists(uploadsPath))
 {
-    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
-        Path.Combine(builder.Environment.ContentRootPath, "uploads")),
-    RequestPath = "/uploads",
-    OnPrepareResponse = ctx =>
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsPath),
+        RequestPath = "/uploads",
+        OnPrepareResponse = ctx =>
     {
         // Add CORS headers to allow cross-origin requests for image downloads
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
@@ -387,21 +427,27 @@ app.UseStaticFiles(new StaticFileOptions
         ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=86400, immutable");
         ctx.Context.Response.Headers.Append("ETag", $"\"{ctx.File.LastModified:yyyy-MM-dd-HH-mm-ss}\"");
     }
-});
+    });
+}
 
-// Serve static files from training-zips directory
-app.UseStaticFiles(new StaticFileOptions
+// Serve static files from training-zips directory - only if directory exists
+var trainingZipsPath = Path.Combine(builder.Environment.ContentRootPath, "training-zips");
+if (Directory.Exists(trainingZipsPath))
 {
-    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
-        Path.Combine(builder.Environment.ContentRootPath, "training-zips")),
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(trainingZipsPath),
     RequestPath = "/training-zips"
-});
+    });
+}
 
-// Serve static files from style-previews directory
-app.UseStaticFiles(new StaticFileOptions
+// Serve static files from style-previews directory - only if directory exists
+var stylePreviewsPath = Path.Combine(builder.Environment.ContentRootPath, "style-previews");
+if (Directory.Exists(stylePreviewsPath))
 {
-    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
-        Path.Combine(builder.Environment.ContentRootPath, "style-previews")),
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(stylePreviewsPath),
     RequestPath = "/style-previews",
     OnPrepareResponse = ctx =>
     {
@@ -421,13 +467,16 @@ app.UseStaticFiles(new StaticFileOptions
         ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=604800, immutable");
         ctx.Context.Response.Headers.Append("ETag", $"\"{ctx.File.LastModified:yyyy-MM-dd-HH-mm-ss}\"");
     }
-});
+    });
+}
 
-// Serve static files from enhanced images directory
-app.UseStaticFiles(new StaticFileOptions
+// Serve static files from enhanced images directory - only if directory exists
+var enhancedPath = Path.Combine(builder.Environment.ContentRootPath, "enhanced");
+if (Directory.Exists(enhancedPath))
 {
-    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
-        Path.Combine(builder.Environment.ContentRootPath, "enhanced")),
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(enhancedPath),
     RequestPath = "/enhanced",
     OnPrepareResponse = ctx =>
     {
@@ -447,13 +496,16 @@ app.UseStaticFiles(new StaticFileOptions
         ctx.Context.Response.Headers.Append("Cache-Control", "private, max-age=3600");
         ctx.Context.Response.Headers.Append("ETag", $"\"{ctx.File.LastModified:yyyy-MM-dd-HH-mm-ss}\"");
     }
-});
+    });
+}
 
-// Serve static files from generated images directory
-app.UseStaticFiles(new StaticFileOptions
+// Serve static files from generated images directory - only if directory exists
+var generatedPath = Path.Combine(builder.Environment.ContentRootPath, "generated");
+if (Directory.Exists(generatedPath))
 {
-    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
-        Path.Combine(builder.Environment.ContentRootPath, "generated")),
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(generatedPath),
     RequestPath = "/generated",
     OnPrepareResponse = ctx =>
     {
@@ -469,7 +521,8 @@ app.UseStaticFiles(new StaticFileOptions
         else if (extension == ".gif") ctx.Context.Response.ContentType = "image/gif";
         else if (extension == ".webp") ctx.Context.Response.ContentType = "image/webp";
     }
-});
+    });
+}
 
 // Serve Angular static files
 var angularPath = Path.Combine(builder.Environment.ContentRootPath, "../AI.ProfilePhotoMaker.UI/dist/ai.profile-photo-maker.ui");
@@ -505,9 +558,11 @@ if (Directory.Exists(angularPath))
     });
 }
 
+// Health check endpoints are now handled by HealthController
+// Legacy health check middleware disabled in favor of controller-based endpoints
+
 // OAuth callbacks are now handled by the standard middleware
 // No custom debug routes needed
-
 
 app.MapControllers();
 
