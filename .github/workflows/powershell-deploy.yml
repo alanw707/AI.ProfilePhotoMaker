@@ -74,7 +74,7 @@ jobs:
           Install-Module -Name Az.ContainerRegistry -Force -AllowClobber -Scope CurrentUser
           Install-Module -Name Az.App -Force -AllowClobber -Scope CurrentUser
           
-          Write-Host "✅ Azure PowerShell modules installed successfully" -ForegroundColor Green
+          Write-Host "Azure PowerShell modules installed successfully" -ForegroundColor Green
           
       - name: 🔐 Azure Login
         uses: azure/login@v1
