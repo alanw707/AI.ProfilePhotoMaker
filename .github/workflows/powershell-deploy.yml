@@ -1,0 +1,435 @@
+name: 🚀 V1 PowerShell Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip tests for quick deploy'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  RESOURCE_GROUP: aiprofilemaker-v1
+  
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  test:
+    name: 🧪 Test
+    runs-on: ubuntu-latest
+    if: github.event.inputs.skip_tests != 'true'
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        
+      - name: 🏗️ Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+          
+      - name: 🏗️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: AI.ProfilePhotoMaker.UI/package-lock.json
+          
+      - name: 🧪 Test Backend
+        run: |
+          cd AI.ProfilePhotoMaker.API
+          dotnet restore
+          dotnet build --configuration Release
+          
+      - name: 🧪 Test Frontend
+        run: |
+          cd AI.ProfilePhotoMaker.UI
+          npm ci
+          npm run lint:errors-only
+          npm run build:prod
+
+  deploy:
+    name: 🚀 PowerShell Deploy
+    runs-on: windows-latest
+    needs: test
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        
+      - name: 🔧 Install Azure PowerShell
+        shell: powershell
+        run: |
+          Write-Host "📦 Installing latest Azure PowerShell modules..." -ForegroundColor Green
+          
+          # Install required Azure modules
+          Install-Module -Name Az.Accounts -Force -AllowClobber -Scope CurrentUser
+          Install-Module -Name Az.Resources -Force -AllowClobber -Scope CurrentUser
+          Install-Module -Name Az.ContainerRegistry -Force -AllowClobber -Scope CurrentUser
+          Install-Module -Name Az.App -Force -AllowClobber -Scope CurrentUser
+          
+          Write-Host "✅ Azure PowerShell modules installed successfully" -ForegroundColor Green
+          
+      - name: 🔐 Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          enable-AzPSSession: true
+          
+      - name: 🏗️ Ensure Resource Group
+        shell: powershell
+        run: |
+          Write-Host "🏗️ Creating resource group if it doesn't exist..." -ForegroundColor Green
+          
+          try {
+              $resourceGroup = Get-AzResourceGroup -Name "${{ env.RESOURCE_GROUP }}" -ErrorAction SilentlyContinue
+              
+              if (-not $resourceGroup) {
+                  Write-Host "Creating new resource group: ${{ env.RESOURCE_GROUP }}" -ForegroundColor Yellow
+                  $resourceGroup = New-AzResourceGroup `
+                      -Name "${{ env.RESOURCE_GROUP }}" `
+                      -Location "East US" `
+                      -Tag @{
+                          Environment = "v1"
+                          Application = "AIProfileMaker"
+                      }
+                  Write-Host "✅ Resource group created successfully" -ForegroundColor Green
+              } else {
+                  Write-Host "✅ Resource group already exists" -ForegroundColor Green
+              }
+              
+              Write-Host "📋 Resource Group Details:" -ForegroundColor Cyan
+              Write-Host "  Name: $($resourceGroup.ResourceGroupName)" -ForegroundColor White
+              Write-Host "  Location: $($resourceGroup.Location)" -ForegroundColor White
+              Write-Host "  Status: $($resourceGroup.ProvisioningState)" -ForegroundColor White
+              
+          } catch {
+              Write-Host "❌ Error creating resource group: $($_.Exception.Message)" -ForegroundColor Red
+              exit 1
+          }
+          
+      - name: 🏗️ Deploy Infrastructure
+        id: infra
+        shell: powershell
+        run: |
+          Write-Host "🚀 Starting PowerShell-based infrastructure deployment..." -ForegroundColor Green
+          
+          try {
+              $deploymentName = "powershell-deploy-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+              Write-Host "📋 Deployment name: $deploymentName" -ForegroundColor Cyan
+              
+              # Set deployment parameters
+              $deploymentParams = @{
+                  ResourceGroupName     = "${{ env.RESOURCE_GROUP }}"
+                  TemplateFile         = "infrastructure/simple-deploy.bicep"
+                  Name                 = $deploymentName
+                  Mode                 = "Incremental"
+                  sqlAdminPassword     = (ConvertTo-SecureString "${{ secrets.SQL_ADMIN_PASSWORD }}" -AsPlainText -Force)
+                  jwtSecret           = (ConvertTo-SecureString "${{ secrets.JWT_SECRET }}" -AsPlainText -Force)
+                  replicateApiToken   = (ConvertTo-SecureString "${{ secrets.REPLICATE_API_TOKEN }}" -AsPlainText -Force)
+              }
+              
+              Write-Host "🚀 Starting deployment with PowerShell retry logic..." -ForegroundColor Green
+              
+              # Deploy with PowerShell retry logic
+              $maxRetries = 3
+              $retryCount = 0
+              $deploymentResult = $null
+              
+              do {
+                  $retryCount++
+                  Write-Host "📋 Attempt $retryCount of $maxRetries" -ForegroundColor Yellow
+                  
+                  try {
+                      # Start deployment (async)
+                      $deployment = New-AzResourceGroupDeployment @deploymentParams -AsJob
+                      Write-Host "✅ Deployment job started successfully" -ForegroundColor Green
+                      
+                      # Wait for completion with progress updates
+                      Write-Host "⏳ Waiting for deployment completion..." -ForegroundColor Yellow
+                      $deploymentResult = $deployment | Wait-Job | Receive-Job
+                      
+                      if ($deploymentResult.ProvisioningState -eq "Succeeded") {
+                          Write-Host "✅ Deployment completed successfully!" -ForegroundColor Green
+                          break
+                      } else {
+                          throw "Deployment failed with state: $($deploymentResult.ProvisioningState)"
+                      }
+                      
+                  } catch {
+                      Write-Host "⚠️ Deployment attempt $retryCount failed: $($_.Exception.Message)" -ForegroundColor Red
+                      
+                      if ($retryCount -lt $maxRetries) {
+                          Write-Host "⏳ Waiting 30 seconds before retry..." -ForegroundColor Yellow
+                          Start-Sleep -Seconds 30
+                      } else {
+                          Write-Host "❌ Deployment failed after $maxRetries attempts" -ForegroundColor Red
+                          throw "Deployment failed after maximum retries"
+                      }
+                  }
+              } while ($retryCount -lt $maxRetries -and -not $deploymentResult)
+              
+              # Get deployment details and outputs
+              Write-Host "📄 Retrieving deployment outputs..." -ForegroundColor Green
+              $deployment = Get-AzResourceGroupDeployment -ResourceGroupName "${{ env.RESOURCE_GROUP }}" -Name $deploymentName
+              
+              Write-Host "📋 Deployment Status:" -ForegroundColor Cyan
+              Write-Host "  State: $($deployment.ProvisioningState)" -ForegroundColor White
+              Write-Host "  Timestamp: $($deployment.Timestamp)" -ForegroundColor White
+              Write-Host "  Duration: $($deployment.Duration)" -ForegroundColor White
+              
+              # Extract and validate outputs using PowerShell's native JSON handling
+              $outputs = $deployment.Outputs
+              
+              if (-not $outputs) {
+                  throw "No outputs found in deployment"
+              }
+              
+              $registryName = $outputs.containerRegistryName.Value
+              $registryServer = $outputs.containerRegistryLoginServer.Value
+              $frontendUrl = $outputs.frontendUrl.Value
+              $backendUrl = $outputs.backendUrl.Value
+              
+              # Validate required outputs
+              if (-not $registryName -or -not $registryServer -or -not $frontendUrl -or -not $backendUrl) {
+                  Write-Host "❌ Missing required outputs from deployment:" -ForegroundColor Red
+                  Write-Host "  Registry Name: '$registryName'" -ForegroundColor White
+                  Write-Host "  Registry Server: '$registryServer'" -ForegroundColor White
+                  Write-Host "  Frontend URL: '$frontendUrl'" -ForegroundColor White
+                  Write-Host "  Backend URL: '$backendUrl'" -ForegroundColor White
+                  throw "Missing required deployment outputs"
+              }
+              
+              # Set GitHub outputs using PowerShell
+              Add-Content -Path $env:GITHUB_OUTPUT -Value "registry-name=$registryName"
+              Add-Content -Path $env:GITHUB_OUTPUT -Value "registry-server=$registryServer"
+              Add-Content -Path $env:GITHUB_OUTPUT -Value "frontend-url=$frontendUrl"
+              Add-Content -Path $env:GITHUB_OUTPUT -Value "backend-url=$backendUrl"
+              
+              Write-Host "📋 Infrastructure outputs:" -ForegroundColor Green
+              Write-Host "  🏪 Registry: $registryServer" -ForegroundColor White
+              Write-Host "  🌐 Frontend: $frontendUrl" -ForegroundColor White
+              Write-Host "  🔧 Backend: $backendUrl" -ForegroundColor White
+              
+          } catch {
+              Write-Host "❌ Infrastructure deployment failed: $($_.Exception.Message)" -ForegroundColor Red
+              Write-Host "📊 Error Details:" -ForegroundColor Red
+              Write-Host $_.Exception.ToString() -ForegroundColor Red
+              exit 1
+          }
+          
+      - name: 🐳 Build & Push Images
+        shell: powershell
+        run: |
+          Write-Host "🐳 Starting container build and push process..." -ForegroundColor Green
+          
+          try {
+              # Validate required outputs
+              $registryName = "${{ steps.infra.outputs.registry-name }}"
+              $registryServer = "${{ steps.infra.outputs.registry-server }}"
+              
+              if (-not $registryName -or -not $registryServer) {
+                  Write-Host "❌ Missing registry information from infrastructure deployment" -ForegroundColor Red
+                  Write-Host "  Registry Name: '$registryName'" -ForegroundColor White
+                  Write-Host "  Registry Server: '$registryServer'" -ForegroundColor White
+                  exit 1
+              }
+              
+              Write-Host "🔐 Logging into container registry: $registryName" -ForegroundColor Yellow
+              
+              # Connect to Container Registry using PowerShell
+              $registryCredential = Get-AzContainerRegistryCredential -ResourceGroupName "${{ env.RESOURCE_GROUP }}" -RegistryName $registryName
+              
+              # Login to Docker registry
+              $password = $registryCredential.Password | ConvertTo-SecureString -AsPlainText -Force
+              $credential = New-Object System.Management.Automation.PSCredential($registryCredential.Username, $password)
+              
+              # Use docker login with PowerShell credential handling
+              $passwordPlain = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($password))
+              echo $passwordPlain | docker login $registryServer --username $registryCredential.Username --password-stdin
+              
+              if ($LASTEXITCODE -ne 0) {
+                  throw "Docker login failed"
+              }
+              
+              Write-Host "✅ Successfully logged into container registry" -ForegroundColor Green
+              
+              # Build and push backend image
+              Write-Host "🐳 Building and pushing backend image..." -ForegroundColor Yellow
+              docker build -f Dockerfile.backend -t "$registryServer/aiprofilemaker-backend:latest" .
+              
+              if ($LASTEXITCODE -ne 0) {
+                  throw "Backend image build failed"
+              }
+              
+              docker push "$registryServer/aiprofilemaker-backend:latest"
+              
+              if ($LASTEXITCODE -ne 0) {
+                  throw "Backend image push failed"
+              }
+              
+              Write-Host "✅ Backend image built and pushed successfully" -ForegroundColor Green
+              
+              # Build and push frontend image
+              Write-Host "🐳 Building and pushing frontend image..." -ForegroundColor Yellow
+              docker build -f Dockerfile.frontend -t "$registryServer/aiprofilemaker-frontend:latest" .
+              
+              if ($LASTEXITCODE -ne 0) {
+                  throw "Frontend image build failed"
+              }
+              
+              docker push "$registryServer/aiprofilemaker-frontend:latest"
+              
+              if ($LASTEXITCODE -ne 0) {
+                  throw "Frontend image push failed"
+              }
+              
+              Write-Host "✅ Frontend image built and pushed successfully" -ForegroundColor Green
+              Write-Host "🎉 All images built and pushed successfully!" -ForegroundColor Green
+              
+          } catch {
+              Write-Host "❌ Container build/push failed: $($_.Exception.Message)" -ForegroundColor Red
+              exit 1
+          }
+          
+      - name: 🔄 Restart Container Apps
+        shell: powershell
+        run: |
+          Write-Host "🔄 Restarting container apps to pick up new images..." -ForegroundColor Green
+          
+          try {
+              # Find container apps using PowerShell
+              Write-Host "🔍 Finding container apps in resource group: ${{ env.RESOURCE_GROUP }}" -ForegroundColor Yellow
+              
+              $containerApps = Get-AzContainerApp -ResourceGroupName "${{ env.RESOURCE_GROUP }}"
+              
+              if (-not $containerApps) {
+                  Write-Host "⚠️ No container apps found in resource group" -ForegroundColor Red
+                  return
+              }
+              
+              Write-Host "📋 Found $($containerApps.Count) container app(s):" -ForegroundColor Cyan
+              foreach ($app in $containerApps) {
+                  Write-Host "  - $($app.Name)" -ForegroundColor White
+              }
+              
+              # Find backend and frontend apps
+              $backendApp = $containerApps | Where-Object { $_.Name -like "*api*" } | Select-Object -First 1
+              $frontendApp = $containerApps | Where-Object { $_.Name -like "*web*" } | Select-Object -First 1
+              
+              # Restart backend app
+              if ($backendApp) {
+                  Write-Host "🔄 Restarting backend app: $($backendApp.Name)" -ForegroundColor Yellow
+                  
+                  try {
+                      # Get the latest revision
+                      $revisions = Get-AzContainerAppRevision -ContainerAppName $backendApp.Name -ResourceGroupName "${{ env.RESOURCE_GROUP }}"
+                      $activeRevision = $revisions | Where-Object { $_.Properties.Active -eq $true } | Select-Object -First 1
+                      
+                      if ($activeRevision) {
+                          Restart-AzContainerAppRevision -Name $activeRevision.Name -ResourceGroupName "${{ env.RESOURCE_GROUP }}"
+                          Write-Host "✅ Backend app restarted successfully" -ForegroundColor Green
+                      } else {
+                          Write-Host "⚠️ No active revision found for backend app" -ForegroundColor Yellow
+                      }
+                  } catch {
+                      Write-Host "⚠️ Failed to restart backend app: $($_.Exception.Message)" -ForegroundColor Yellow
+                  }
+              } else {
+                  Write-Host "⚠️ Backend container app not found" -ForegroundColor Yellow
+              }
+              
+              # Restart frontend app
+              if ($frontendApp) {
+                  Write-Host "🔄 Restarting frontend app: $($frontendApp.Name)" -ForegroundColor Yellow
+                  
+                  try {
+                      # Get the latest revision
+                      $revisions = Get-AzContainerAppRevision -ContainerAppName $frontendApp.Name -ResourceGroupName "${{ env.RESOURCE_GROUP }}"
+                      $activeRevision = $revisions | Where-Object { $_.Properties.Active -eq $true } | Select-Object -First 1
+                      
+                      if ($activeRevision) {
+                          Restart-AzContainerAppRevision -Name $activeRevision.Name -ResourceGroupName "${{ env.RESOURCE_GROUP }}"
+                          Write-Host "✅ Frontend app restarted successfully" -ForegroundColor Green
+                      } else {
+                          Write-Host "⚠️ No active revision found for frontend app" -ForegroundColor Yellow
+                      }
+                  } catch {
+                      Write-Host "⚠️ Failed to restart frontend app: $($_.Exception.Message)" -ForegroundColor Yellow
+                  }
+              } else {
+                  Write-Host "⚠️ Frontend container app not found" -ForegroundColor Yellow
+              }
+              
+          } catch {
+              Write-Host "❌ Error during container app restart: $($_.Exception.Message)" -ForegroundColor Red
+              # Don't exit here as restart issues shouldn't fail the deployment
+          }
+          
+      - name: 🧪 Health Check
+        shell: powershell
+        run: |
+          Write-Host "🧪 Performing health checks..." -ForegroundColor Green
+          
+          try {
+              Write-Host "⏳ Waiting for deployment to stabilize..." -ForegroundColor Yellow
+              Start-Sleep -Seconds 30
+              
+              # Get URLs from deployment outputs
+              $backendUrl = "${{ steps.infra.outputs.backend-url }}"
+              $frontendUrl = "${{ steps.infra.outputs.frontend-url }}"
+              
+              if (-not $backendUrl -or -not $frontendUrl) {
+                  Write-Host "⚠️ Missing application URLs from deployment:" -ForegroundColor Yellow
+                  Write-Host "  Backend URL: '$backendUrl'" -ForegroundColor White
+                  Write-Host "  Frontend URL: '$frontendUrl'" -ForegroundColor White
+                  Write-Host "Deployment may have succeeded but URLs are not available yet." -ForegroundColor Yellow
+              } else {
+                  # Test backend health using PowerShell's native HTTP client
+                  Write-Host "🔍 Testing backend health: $backendUrl/health" -ForegroundColor Yellow
+                  try {
+                      $backendResponse = Invoke-WebRequest -Uri "$backendUrl/health" -TimeoutSec 30 -ErrorAction Stop
+                      if ($backendResponse.StatusCode -eq 200) {
+                          Write-Host "✅ Backend is healthy (Status: $($backendResponse.StatusCode))" -ForegroundColor Green
+                      } else {
+                          Write-Host "⚠️ Backend returned status: $($backendResponse.StatusCode)" -ForegroundColor Yellow
+                      }
+                  } catch {
+                      Write-Host "⚠️ Backend health check failed: $($_.Exception.Message)" -ForegroundColor Yellow
+                      Write-Host "   (Application may still be starting up)" -ForegroundColor Gray
+                  }
+                  
+                  # Test frontend using PowerShell's native HTTP client
+                  Write-Host "🔍 Testing frontend: $frontendUrl" -ForegroundColor Yellow
+                  try {
+                      $frontendResponse = Invoke-WebRequest -Uri $frontendUrl -TimeoutSec 30 -ErrorAction Stop
+                      if ($frontendResponse.StatusCode -eq 200) {
+                          Write-Host "✅ Frontend is healthy (Status: $($frontendResponse.StatusCode))" -ForegroundColor Green
+                      } else {
+                          Write-Host "⚠️ Frontend returned status: $($frontendResponse.StatusCode)" -ForegroundColor Yellow
+                      }
+                  } catch {
+                      Write-Host "⚠️ Frontend health check failed: $($_.Exception.Message)" -ForegroundColor Yellow
+                      Write-Host "   (Application may still be starting up)" -ForegroundColor Gray
+                  }
+              }
+              
+              Write-Host ""
+              Write-Host "🎉 PowerShell deployment completed successfully!" -ForegroundColor Green
+              Write-Host "📋 Application URLs:" -ForegroundColor Cyan
+              Write-Host "  🌐 Frontend: $($frontendUrl -or 'Not available')" -ForegroundColor White
+              Write-Host "  🔧 Backend API: $($backendUrl -or 'Not available')" -ForegroundColor White
+              Write-Host "  📊 Registry: ${{ steps.infra.outputs.registry-server }}" -ForegroundColor White
+              
+          } catch {
+              Write-Host "❌ Health check failed: $($_.Exception.Message)" -ForegroundColor Red
+              # Don't exit here as health check failures shouldn't fail the deployment
+          }
