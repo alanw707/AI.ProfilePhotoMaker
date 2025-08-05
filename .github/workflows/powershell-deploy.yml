@@ -382,10 +382,10 @@ jobs:
               exit 1
           }
           
-      - name: 🔐 Update ACR Credentials (Option A)
+      - name: 🔄 Update Container Images & Credentials
         shell: powershell
         run: |
-          Write-Host "[OPTION-A] Updating ACR credentials in Container Apps..." -ForegroundColor Green
+          Write-Host "[UPDATE] Updating container images and ACR credentials..." -ForegroundColor Green
           
           try {
               # Get registry name and app names
@@ -405,7 +405,8 @@ jobs:
               
               Write-Host "[INFO] Found apps - Backend: $backendApp, Frontend: $frontendApp" -ForegroundColor Cyan
               
-              # Run the credential update script
+              # First update ACR credentials
+              Write-Host "[STEP 1] Updating ACR credentials..." -ForegroundColor Yellow
               & "infrastructure/update-acr-credentials.ps1" `
                   -ResourceGroupName "${{ env.RESOURCE_GROUP }}" `
                   -ContainerRegistryName $registryName `
@@ -418,8 +419,22 @@ jobs:
               
               Write-Host "[SUCCESS] ACR credentials updated successfully!" -ForegroundColor Green
               
+              # Then update container images
+              Write-Host "[STEP 2] Updating container images..." -ForegroundColor Yellow
+              & "infrastructure/update-container-images.ps1" `
+                  -ResourceGroupName "${{ env.RESOURCE_GROUP }}" `
+                  -ContainerRegistryName $registryName `
+                  -BackendAppName $backendApp `
+                  -FrontendAppName $frontendApp
+              
+              if ($LASTEXITCODE -ne 0) {
+                  throw "Container image update script failed"
+              }
+              
+              Write-Host "[SUCCESS] Container images updated successfully!" -ForegroundColor Green
+              
           } catch {
-              Write-Host "[ERROR] Failed to update ACR credentials" -ForegroundColor Red
+              Write-Host "[ERROR] Failed to update container images and credentials" -ForegroundColor Red
               Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Red
               exit 1
           }

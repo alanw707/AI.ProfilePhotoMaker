@@ -4,6 +4,7 @@
 param appName string = 'aipm'
 param environment string = 'v1'
 param location string = resourceGroup().location
+param deploymentTimestamp string = utcNow()
 
 @secure()
 param sqlAdminPassword string
@@ -14,10 +15,11 @@ param replicateApiToken string
 
 // Generate unique names
 var uniqueSuffix = uniqueString(resourceGroup().id)
+var timestampSuffix = substring(replace(replace(deploymentTimestamp, ':', ''), '-', ''), 0, 8)
 var containerRegistryName = '${appName}cr${environment}${uniqueSuffix}'
 var sqlServerName = '${appName}-sql-${environment}-${uniqueSuffix}'
 var storageAccountName = '${appName}st${environment}${uniqueSuffix}'
-var keyVaultName = '${appName}-kv-${environment}-${uniqueSuffix}'
+var keyVaultName = '${appName}-kv-${environment}-${timestampSuffix}'
 var containerEnvName = '${appName}-env-${environment}-${uniqueSuffix}'
 var backendAppName = '${appName}-api-${environment}'
 var frontendAppName = '${appName}-web-${environment}'
@@ -222,7 +224,7 @@ resource backendApp 'Microsoft.App/containerApps@2022-10-01' = {
       containers: [
         {
           name: 'api'
-          image: '${containerRegistry.properties.loginServer}/aiprofilemaker-backend:latest'
+          image: 'nginx:alpine'
           resources: {
             cpu: json('0.5')
             memory: '1Gi'
@@ -307,7 +309,7 @@ resource frontendApp 'Microsoft.App/containerApps@2022-10-01' = {
       containers: [
         {
           name: 'web'
-          image: '${containerRegistry.properties.loginServer}/aiprofilemaker-frontend:latest'
+          image: 'nginx:alpine'
           resources: {
             cpu: json('0.25')
             memory: '0.5Gi'
