@@ -181,15 +181,10 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
       registries: [
         {
           server: containerRegistry.properties.loginServer
-          username: listCredentials(containerRegistry.id, containerRegistry.apiVersion).username
-          passwordSecretRef: 'registry-password'
+          identity: 'system'
         }
       ]
       secrets: [
-        {
-          name: 'registry-password'
-          value: listCredentials(containerRegistry.id, containerRegistry.apiVersion).passwords[0].value
-        }
         {
           name: 'jwt-secret'
           value: jwtSecret
@@ -232,7 +227,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             }
             {
               name: 'AzureStorage__ConnectionString'
-              value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${listKeys(storageAccount.id, storageAccount.apiVersion).keys[0].value};EndpointSuffix=core.windows.net'
+              value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
             }
             {
               name: 'ApplicationInsights__ConnectionString'
@@ -263,6 +258,9 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
 resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: frontendAppName
   location: location
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     managedEnvironmentId: containerAppsEnvironment.id
     configuration: {
@@ -275,14 +273,7 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
       registries: [
         {
           server: containerRegistry.properties.loginServer
-          username: listCredentials(containerRegistry.id, containerRegistry.apiVersion).username
-          passwordSecretRef: 'registry-password'
-        }
-      ]
-      secrets: [
-        {
-          name: 'registry-password'
-          value: listCredentials(containerRegistry.id, containerRegistry.apiVersion).passwords[0].value
+          identity: 'system'
         }
       ]
     }
@@ -318,6 +309,28 @@ resource keyVaultAccessPolicy 'Microsoft.Authorization/roleAssignments@2022-04-0
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6') // Key Vault Secrets User
     principalId: backendApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Give backend app access to Container Registry
+resource backendAcrPullRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(containerRegistry.id, backendApp.id, 'AcrPull')
+  scope: containerRegistry
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull
+    principalId: backendApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Give frontend app access to Container Registry
+resource frontendAcrPullRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(containerRegistry.id, frontendApp.id, 'AcrPull')
+  scope: containerRegistry
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull
+    principalId: frontendApp.identity.principalId
     principalType: 'ServicePrincipal'
   }
 }
