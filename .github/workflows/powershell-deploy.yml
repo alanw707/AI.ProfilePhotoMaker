@@ -117,6 +117,52 @@ jobs:
               exit 1
           }
           
+      - name: 🔍 Validate Bicep Template
+        shell: powershell
+        run: |
+          Write-Host "[VALIDATE] Validating Bicep template..." -ForegroundColor Green
+          
+          try {
+              # Validate template compilation using PowerShell approach
+              Write-Host "[INFO] Compiling Bicep template..." -ForegroundColor Yellow
+              az bicep build --file infrastructure/simple-deploy.bicep
+              
+              if ($LASTEXITCODE -ne 0) {
+                  throw "Bicep template compilation failed"
+              }
+              
+              Write-Host "[SUCCESS] Bicep template compiled successfully" -ForegroundColor Green
+              
+              # Use PowerShell Azure modules for validation instead of Azure CLI
+              Write-Host "[INFO] Validating deployment using PowerShell Azure modules..." -ForegroundColor Yellow
+              
+              $deploymentParams = @{
+                  ResourceGroupName = "${{ env.RESOURCE_GROUP }}"
+                  TemplateFile = "infrastructure/simple-deploy.bicep"
+                  sqlAdminPassword = (ConvertTo-SecureString "${{ secrets.SQL_ADMIN_PASSWORD }}" -AsPlainText -Force)
+                  jwtSecret = (ConvertTo-SecureString "${{ secrets.JWT_SECRET }}" -AsPlainText -Force)
+                  replicateApiToken = (ConvertTo-SecureString "${{ secrets.REPLICATE_API_TOKEN }}" -AsPlainText -Force)
+              }
+              
+              # Test deployment validation with PowerShell
+              $validationResult = Test-AzResourceGroupDeployment @deploymentParams
+              
+              if ($validationResult) {
+                  Write-Host "[ERROR] Template validation failed with errors:" -ForegroundColor Red
+                  foreach ($error in $validationResult) {
+                      Write-Host "  - $($error.Message)" -ForegroundColor Red
+                  }
+                  throw "Template validation failed"
+              }
+              
+              Write-Host "[SUCCESS] Template validation completed successfully" -ForegroundColor Green
+              
+          } catch {
+              Write-Host "[ERROR] Template validation failed" -ForegroundColor Red
+              Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Red
+              exit 1
+          }
+          
       - name: 🏗️ Deploy Infrastructure
         id: infra
         shell: powershell
@@ -300,6 +346,48 @@ jobs:
               
           } catch {
               Write-Host "[ERROR] Container build/push failed" -ForegroundColor Red
+              Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Red
+              exit 1
+          }
+          
+      - name: 🔐 Update ACR Credentials (Option A)
+        shell: powershell
+        run: |
+          Write-Host "[OPTION-A] Updating ACR credentials in Container Apps..." -ForegroundColor Green
+          
+          try {
+              # Get registry name and app names
+              $registryName = "${{ steps.infra.outputs.registry-name }}"
+              
+              # Find container apps dynamically
+              $containerApps = Get-AzContainerApp -ResourceGroupName "${{ env.RESOURCE_GROUP }}"
+              $backendApp = ($containerApps | Where-Object { $_.Name -like "*api*" }).Name
+              $frontendApp = ($containerApps | Where-Object { $_.Name -like "*web*" }).Name
+              
+              if (-not $backendApp -or -not $frontendApp) {
+                  Write-Host "[ERROR] Could not find backend or frontend apps" -ForegroundColor Red
+                  Write-Host "  Backend: '$backendApp'" -ForegroundColor White
+                  Write-Host "  Frontend: '$frontendApp'" -ForegroundColor White
+                  exit 1
+              }
+              
+              Write-Host "[INFO] Found apps - Backend: $backendApp, Frontend: $frontendApp" -ForegroundColor Cyan
+              
+              # Run the credential update script
+              & "infrastructure/update-acr-credentials.ps1" `
+                  -ResourceGroupName "${{ env.RESOURCE_GROUP }}" `
+                  -ContainerRegistryName $registryName `
+                  -BackendAppName $backendApp `
+                  -FrontendAppName $frontendApp
+              
+              if ($LASTEXITCODE -ne 0) {
+                  throw "ACR credential update script failed"
+              }
+              
+              Write-Host "[SUCCESS] ACR credentials updated successfully!" -ForegroundColor Green
+              
+          } catch {
+              Write-Host "[ERROR] Failed to update ACR credentials" -ForegroundColor Red
               Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Red
               exit 1
           }
