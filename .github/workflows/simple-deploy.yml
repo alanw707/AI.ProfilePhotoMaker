@@ -122,7 +122,6 @@ jobs:
                 replicateApiToken='${{ secrets.REPLICATE_API_TOKEN }}' \
               --name "$DEPLOYMENT_NAME" \
               --mode Incremental \
-              --timeout 1800 \
               --no-wait; then
               echo "✅ Deployment started successfully"
               break
@@ -138,12 +137,11 @@ jobs:
             fi
           done
           
-          echo "⏳ Waiting for deployment completion with extended timeout..."
+          echo "⏳ Waiting for deployment completion..."
           az deployment group wait \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --name "$DEPLOYMENT_NAME" \
-            --created \
-            --timeout 1800
+            --created
           
           echo "📄 Getting deployment results with table output to avoid HTTP issues..."
           az deployment group show \
