@@ -87,7 +87,9 @@ jobs:
           echo "🚀 Deploying infrastructure with Bicep..."
           echo "Deployment name: $DEPLOYMENT_NAME"
           
-          # Use what-if first to validate template, then deploy
+          # Use separate deployment names to avoid Azure CLI content consumption bug
+          WHATIF_NAME="whatif-$(date +%Y%m%d-%H%M%S)"
+          
           echo "🧪 Validating deployment with what-if..."
           az deployment group what-if \
             --resource-group ${{ env.RESOURCE_GROUP }} \
@@ -96,10 +98,10 @@ jobs:
               sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}' \
               jwtSecret='${{ secrets.JWT_SECRET }}' \
               replicateApiToken='${{ secrets.REPLICATE_API_TOKEN }}' \
-            --name "$DEPLOYMENT_NAME"
+            --name "$WHATIF_NAME"
           
-          echo "🚀 Starting actual deployment..."
-          # Try with --no-wait and then wait for completion
+          echo "🚀 Starting actual deployment with new deployment name..."
+          # Use different deployment name to avoid content consumption error
           az deployment group create \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --template-file simple-deploy.bicep \
