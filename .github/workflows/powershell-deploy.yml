@@ -56,7 +56,7 @@ jobs:
 
   deploy:
     name: 🚀 PowerShell Deploy
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     needs: test
     if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
     
@@ -64,18 +64,10 @@ jobs:
       - name: 📥 Checkout
         uses: actions/checkout@v4
         
-      - name: 🔧 Install Azure PowerShell
-        shell: powershell
+      - name: 🔧 Install Azure CLI
         run: |
-          Write-Host "[SETUP] Installing latest Azure PowerShell modules..." -ForegroundColor Green
-          
-          # Install required Azure modules
-          Install-Module -Name Az.Accounts -Force -AllowClobber -Scope CurrentUser
-          Install-Module -Name Az.Resources -Force -AllowClobber -Scope CurrentUser
-          Install-Module -Name Az.ContainerRegistry -Force -AllowClobber -Scope CurrentUser
-          Install-Module -Name Az.App -Force -AllowClobber -Scope CurrentUser
-          
-          Write-Host "[SUCCESS] Azure PowerShell modules installed successfully" -ForegroundColor Green
+          echo "🔧 [SETUP] Azure CLI is pre-installed on Ubuntu runners"
+          az version
           
       - name: 🔐 Azure Login
         uses: azure/login@v1
@@ -83,624 +75,339 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          enable-AzPSSession: true
           
       - name: 🏗️ Ensure Resource Group
-        shell: powershell
         run: |
-          Write-Host "[SETUP] Creating resource group if it doesn't exist..." -ForegroundColor Green
+          echo "🏗️ [SETUP] Creating resource group if it doesn't exist..."
           
-          try {
-              $resourceGroup = Get-AzResourceGroup -Name "${{ env.RESOURCE_GROUP }}" -ErrorAction SilentlyContinue
-              
-              if (-not $resourceGroup) {
-                  Write-Host "[INFO] Creating new resource group: ${{ env.RESOURCE_GROUP }}" -ForegroundColor Yellow
-                  $resourceGroup = New-AzResourceGroup `
-                      -Name "${{ env.RESOURCE_GROUP }}" `
-                      -Location "East US 2" `
-                      -Tag @{
-                          Environment = "v1"
-                          Application = "AIProfileMaker"
-                      }
-                  Write-Host "[SUCCESS] Resource group created successfully" -ForegroundColor Green
-              } else {
-                  Write-Host "[SUCCESS] Resource group already exists" -ForegroundColor Green
-              }
-              
-              Write-Host "[INFO] Resource Group Details:" -ForegroundColor Cyan
-              Write-Host "  Name: $($resourceGroup.ResourceGroupName)" -ForegroundColor White
-              Write-Host "  Location: $($resourceGroup.Location)" -ForegroundColor White
-              Write-Host "  Status: $($resourceGroup.ProvisioningState)" -ForegroundColor White
-              
-          } catch {
-              Write-Host "[ERROR] Error creating resource group" -ForegroundColor Red
-              Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Red
-              exit 1
-          }
+          # Check if resource group exists
+          if az group show --name "${{ env.RESOURCE_GROUP }}" --output none 2>/dev/null; then
+            echo "✅ [SUCCESS] Resource group already exists"
+          else
+            echo "📝 [INFO] Creating new resource group: ${{ env.RESOURCE_GROUP }}"
+            az group create \
+              --name "${{ env.RESOURCE_GROUP }}" \
+              --location "East US 2" \
+              --tags Environment=v1 Application=AIProfileMaker
+            echo "✅ [SUCCESS] Resource group created successfully"
+          fi
+          
+          # Show resource group details
+          echo "📊 [INFO] Resource Group Details:"
+          az group show --name "${{ env.RESOURCE_GROUP }}" --query "{Name:name, Location:location, Status:properties.provisioningState}" --output table
           
       - name: 🔍 Validate Bicep Template
-        shell: powershell
         run: |
-          Write-Host "[VALIDATE] Validating Bicep template..." -ForegroundColor Green
+          echo "🔍 [VALIDATE] Validating Bicep template..."
           
-          try {
-              # Validate template compilation using PowerShell approach
-              Write-Host "[INFO] Compiling Bicep template..." -ForegroundColor Yellow
-              az bicep build --file infrastructure/simple-deploy.bicep
-              
-              if ($LASTEXITCODE -ne 0) {
-                  throw "Bicep template compilation failed"
-              }
-              
-              Write-Host "[SUCCESS] Bicep template compiled successfully" -ForegroundColor Green
-              
-              # Use PowerShell Azure modules for validation instead of Azure CLI
-              Write-Host "[INFO] Validating deployment using PowerShell Azure modules..." -ForegroundColor Yellow
-              
-              $deploymentParams = @{
-                  ResourceGroupName = "${{ env.RESOURCE_GROUP }}"
-                  TemplateFile = "infrastructure/simple-deploy.bicep"
-                  sqlAdminPassword = (ConvertTo-SecureString "${{ secrets.SQL_ADMIN_PASSWORD }}" -AsPlainText -Force)
-                  jwtSecret = (ConvertTo-SecureString "${{ secrets.JWT_SECRET }}" -AsPlainText -Force)
-                  replicateApiToken = (ConvertTo-SecureString "${{ secrets.REPLICATE_API_TOKEN }}" -AsPlainText -Force)
-              }
-              
-              # Test deployment validation with PowerShell
-              $validationResult = Test-AzResourceGroupDeployment @deploymentParams
-              
-              if ($validationResult -and $validationResult.Count -gt 0) {
-                  Write-Host "[ERROR] Template validation failed with errors:" -ForegroundColor Red
-                  foreach ($validationError in $validationResult) {
-                      Write-Host "  - Error Code: $($validationError.Code)" -ForegroundColor Red
-                      Write-Host "  - Message: $($validationError.Message)" -ForegroundColor Red
-                      if ($validationError.Details) {
-                          Write-Host "  - Details: $($validationError.Details | ConvertTo-Json -Depth 3)" -ForegroundColor Red
-                      }
-                  }
-                  throw "Template validation failed with $($validationResult.Count) error(s)"
-              }
-              
-              Write-Host "[SUCCESS] Template validation completed successfully" -ForegroundColor Green
-              
-          } catch {
-              Write-Host "[ERROR] Template validation failed" -ForegroundColor Red
-              Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Red
-              if ($_.ErrorDetails) {
-                  Write-Host "Azure Error Details: $($_.ErrorDetails.Message)" -ForegroundColor Red
-              }
-              Write-Host "Full Exception: $($_.Exception.ToString())" -ForegroundColor Red
-              exit 1
-          }
+          # Compile Bicep template
+          echo "📝 [INFO] Compiling Bicep template..."
+          az bicep build --file infrastructure/simple-deploy.bicep
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ [ERROR] Bicep template compilation failed"
+            exit 1
+          fi
+          
+          echo "✅ [SUCCESS] Bicep template compiled successfully"
+          
+          # Validate deployment
+          echo "🧪 [INFO] Validating deployment..."
+          az deployment group validate \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --template-file infrastructure/simple-deploy.bicep \
+            --parameters sqlAdminPassword="${{ secrets.SQL_ADMIN_PASSWORD }}" \
+                        jwtSecret="${{ secrets.JWT_SECRET }}" \
+                        replicateApiToken="${{ secrets.REPLICATE_API_TOKEN }}"
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ [ERROR] Template validation failed"
+            exit 1
+          fi
+          
+          echo "✅ [SUCCESS] Template validation completed successfully"
           
       - name: 🏗️ Deploy Infrastructure
         id: infra
-        shell: powershell
         run: |
-          Write-Host "[DEPLOY] Starting PowerShell-based infrastructure deployment..." -ForegroundColor Green
+          echo "🚀 [DEPLOY] Starting infrastructure deployment..."
           
-          try {
-              # Cancel any running deployments first
-              Write-Host "[CLEANUP] Checking for and canceling running deployments..." -ForegroundColor Yellow
-              try {
-                  $runningDeployments = Get-AzResourceGroupDeployment -ResourceGroupName "${{ env.RESOURCE_GROUP }}" | Where-Object { $_.ProvisioningState -eq "Running" }
-                  foreach ($deployment in $runningDeployments) {
-                      Write-Host "[CANCEL] Canceling running deployment: $($deployment.DeploymentName)" -ForegroundColor Yellow
-                      Stop-AzResourceGroupDeployment -ResourceGroupName "${{ env.RESOURCE_GROUP }}" -Name $deployment.DeploymentName -Force
-                  }
-              } catch {
-                  Write-Host "[INFO] No running deployments to cancel or cleanup failed: $($_.Exception.Message)" -ForegroundColor Gray
-              }
+          # Cancel any running deployments first
+          echo "🧹 [CLEANUP] Checking for and canceling running deployments..."
+          RUNNING_DEPLOYMENTS=$(az deployment group list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?properties.provisioningState=='Running'].name" --output tsv 2>/dev/null || true)
+          
+          if [ -n "$RUNNING_DEPLOYMENTS" ]; then
+            echo "⏹️ [CANCEL] Found running deployments, canceling them..."
+            echo "$RUNNING_DEPLOYMENTS" | while read deployment; do
+              echo "⏹️ [CANCEL] Canceling deployment: $deployment"
+              az deployment group cancel --resource-group "${{ env.RESOURCE_GROUP }}" --name "$deployment" || true
+            done
+          else
+            echo "✅ [INFO] No running deployments to cancel"
+          fi
+          
+          # Generate unique deployment name
+          DEPLOYMENT_NAME="deploy-$RANDOM-$(date +%Y%m%d-%H%M%S)"
+          echo "📝 [INFO] Deployment name: $DEPLOYMENT_NAME"
+          
+          # Deploy with retry logic
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "🔄 [INFO] Attempt $RETRY_COUNT of $MAX_RETRIES"
+            
+            # Start deployment
+            if az deployment group create \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --template-file infrastructure/simple-deploy.bicep \
+              --name "$DEPLOYMENT_NAME" \
+              --mode Incremental \
+              --parameters sqlAdminPassword="${{ secrets.SQL_ADMIN_PASSWORD }}" \
+                          jwtSecret="${{ secrets.JWT_SECRET }}" \
+                          replicateApiToken="${{ secrets.REPLICATE_API_TOKEN }}" \
+              --output json > deployment_result.json; then
               
-              $deploymentName = "deploy-$(Get-Random)-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-              Write-Host "[INFO] Deployment name: $deploymentName" -ForegroundColor Cyan
+              echo "✅ [SUCCESS] Deployment completed successfully!"
+              break
+            else
+              echo "⚠️ [WARNING] Deployment attempt $RETRY_COUNT failed"
               
-              # Set deployment parameters
-              $deploymentParams = @{
-                  ResourceGroupName     = "${{ env.RESOURCE_GROUP }}"
-                  TemplateFile         = "infrastructure/simple-deploy.bicep"
-                  Name                 = $deploymentName
-                  Mode                 = "Incremental"
-                  sqlAdminPassword     = (ConvertTo-SecureString "${{ secrets.SQL_ADMIN_PASSWORD }}" -AsPlainText -Force)
-                  jwtSecret           = (ConvertTo-SecureString "${{ secrets.JWT_SECRET }}" -AsPlainText -Force)
-                  replicateApiToken   = (ConvertTo-SecureString "${{ secrets.REPLICATE_API_TOKEN }}" -AsPlainText -Force)
-              }
-              
-              Write-Host "[DEPLOY] Starting deployment with PowerShell retry logic..." -ForegroundColor Green
-              
-              # Deploy with PowerShell retry logic
-              $maxRetries = 3
-              $retryCount = 0
-              $deploymentResult = $null
-              
-              do {
-                  $retryCount++
-                  Write-Host "[INFO] Attempt $retryCount of $maxRetries" -ForegroundColor Yellow
-                  
-                  try {
-                      # Start deployment (async)
-                      $deployment = New-AzResourceGroupDeployment @deploymentParams -AsJob
-                      Write-Host "[SUCCESS] Deployment job started successfully" -ForegroundColor Green
-                      
-                      # Wait for completion with progress updates
-                      Write-Host "[INFO] Waiting for deployment completion..." -ForegroundColor Yellow
-                      $deploymentResult = $deployment | Wait-Job | Receive-Job
-                      
-                      if ($deploymentResult.ProvisioningState -eq "Succeeded") {
-                          Write-Host "[SUCCESS] Deployment completed successfully!" -ForegroundColor Green
-                          break
-                      } else {
-                          # Get deployment errors for detailed reporting
-                          $deploymentErrors = Get-AzResourceGroupDeployment -ResourceGroupName "${{ env.RESOURCE_GROUP }}" -Name $deploymentName | Select-Object -ExpandProperty Properties | Select-Object -ExpandProperty Error
-                          if ($deploymentErrors) {
-                              Write-Host "[ERROR] Deployment errors:" -ForegroundColor Red
-                              Write-Host ($deploymentErrors | ConvertTo-Json -Depth 5) -ForegroundColor Red
-                          }
-                          throw "Deployment failed with state: $($deploymentResult.ProvisioningState)"
-                      }
-                      
-                  } catch {
-                      Write-Host "[WARNING] Deployment attempt $retryCount failed" -ForegroundColor Red
-                      Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Yellow
-                      
-                      if ($retryCount -lt $maxRetries) {
-                          Write-Host "[INFO] Waiting 30 seconds before retry..." -ForegroundColor Yellow
-                          Start-Sleep -Seconds 30
-                      } else {
-                          Write-Host "[ERROR] Deployment failed after $maxRetries attempts" -ForegroundColor Red
-                          throw "Deployment failed after maximum retries"
-                      }
-                  }
-              } while ($retryCount -lt $maxRetries -and -not $deploymentResult)
-              
-              # Get deployment details and outputs
-              Write-Host "[INFO] Retrieving deployment outputs..." -ForegroundColor Green
-              $deployment = Get-AzResourceGroupDeployment -ResourceGroupName "${{ env.RESOURCE_GROUP }}" -Name $deploymentName
-              
-              Write-Host "[INFO] Deployment Status:" -ForegroundColor Cyan
-              Write-Host "  State: $($deployment.ProvisioningState)" -ForegroundColor White
-              Write-Host "  Timestamp: $($deployment.Timestamp)" -ForegroundColor White
-              Write-Host "  Duration: $($deployment.Duration)" -ForegroundColor White
-              
-              # Extract and validate outputs using PowerShell's native JSON handling
-              $outputs = $deployment.Outputs
-              
-              if (-not $outputs) {
-                  throw "No outputs found in deployment"
-              }
-              
-              $registryName = $outputs.containerRegistryName.Value
-              $registryServer = $outputs.containerRegistryLoginServer.Value
-              $frontendUrl = $outputs.frontendUrl.Value
-              $backendUrl = $outputs.backendUrl.Value
-              
-              # Validate required outputs
-              if (-not $registryName -or -not $registryServer -or -not $frontendUrl -or -not $backendUrl) {
-                  Write-Host "[ERROR] Missing required outputs from deployment:" -ForegroundColor Red
-                  Write-Host "  Registry Name: '$registryName'" -ForegroundColor White
-                  Write-Host "  Registry Server: '$registryServer'" -ForegroundColor White
-                  Write-Host "  Frontend URL: '$frontendUrl'" -ForegroundColor White
-                  Write-Host "  Backend URL: '$backendUrl'" -ForegroundColor White
-                  throw "Missing required deployment outputs"
-              }
-              
-              # Set GitHub outputs using PowerShell
-              Add-Content -Path $env:GITHUB_OUTPUT -Value "registry-name=$registryName"
-              Add-Content -Path $env:GITHUB_OUTPUT -Value "registry-server=$registryServer"
-              Add-Content -Path $env:GITHUB_OUTPUT -Value "frontend-url=$frontendUrl"
-              Add-Content -Path $env:GITHUB_OUTPUT -Value "backend-url=$backendUrl"
-              
-              Write-Host "[INFO] Infrastructure outputs:" -ForegroundColor Green
-              Write-Host "  Registry: $registryServer" -ForegroundColor White
-              Write-Host "  Frontend: $frontendUrl" -ForegroundColor White
-              Write-Host "  Backend: $backendUrl" -ForegroundColor White
-              
-          } catch {
-              Write-Host "[ERROR] Infrastructure deployment failed" -ForegroundColor Red
-              Write-Host "Error message: $($_.Exception.Message)" -ForegroundColor Red
-              if ($_.ErrorDetails) {
-                  Write-Host "Azure Error Details: $($_.ErrorDetails.Message)" -ForegroundColor Red
-              }
-              Write-Host "[ERROR] Full Exception Details:" -ForegroundColor Red
-              Write-Host $_.Exception.ToString() -ForegroundColor Red
-              
-              # Try to get the last deployment status for additional context
-              try {
-                  $lastDeployment = Get-AzResourceGroupDeployment -ResourceGroupName "${{ env.RESOURCE_GROUP }}" | Select-Object -First 1
-                  if ($lastDeployment) {
-                      Write-Host "[INFO] Last deployment status: $($lastDeployment.ProvisioningState)" -ForegroundColor Yellow
-                      if ($lastDeployment.Properties.Error) {
-                          Write-Host "[INFO] Last deployment error: $($lastDeployment.Properties.Error | ConvertTo-Json -Depth 3)" -ForegroundColor Yellow
-                      }
-                  }
-              } catch {
-                  Write-Host "[WARNING] Could not retrieve last deployment status" -ForegroundColor Yellow
-              }
-              
-              exit 1
-          }
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "⏳ [INFO] Waiting 30 seconds before retry..."
+                sleep 30
+              else
+                echo "❌ [ERROR] Deployment failed after $MAX_RETRIES attempts"
+                cat deployment_result.json 2>/dev/null || echo "No deployment result available"
+                exit 1
+              fi
+            fi
+          done
+          
+          # Get deployment outputs
+          echo "📤 [INFO] Retrieving deployment outputs..."
+          DEPLOYMENT_OUTPUTS=$(az deployment group show --resource-group "${{ env.RESOURCE_GROUP }}" --name "$DEPLOYMENT_NAME" --query "properties.outputs" --output json)
+          
+          if [ -z "$DEPLOYMENT_OUTPUTS" ] || [ "$DEPLOYMENT_OUTPUTS" = "null" ]; then
+            echo "❌ [ERROR] No outputs found in deployment"
+            exit 1
+          fi
+          
+          # Extract outputs using jq
+          REGISTRY_NAME=$(echo "$DEPLOYMENT_OUTPUTS" | jq -r '.containerRegistryName.value // empty')
+          REGISTRY_SERVER=$(echo "$DEPLOYMENT_OUTPUTS" | jq -r '.containerRegistryLoginServer.value // empty')
+          FRONTEND_URL=$(echo "$DEPLOYMENT_OUTPUTS" | jq -r '.frontendUrl.value // empty')
+          BACKEND_URL=$(echo "$DEPLOYMENT_OUTPUTS" | jq -r '.backendUrl.value // empty')
+          
+          # Validate required outputs
+          if [ -z "$REGISTRY_NAME" ] || [ -z "$REGISTRY_SERVER" ] || [ -z "$FRONTEND_URL" ] || [ -z "$BACKEND_URL" ]; then
+            echo "❌ [ERROR] Missing required outputs from deployment:"
+            echo "  Registry Name: '$REGISTRY_NAME'"
+            echo "  Registry Server: '$REGISTRY_SERVER'"
+            echo "  Frontend URL: '$FRONTEND_URL'"
+            echo "  Backend URL: '$BACKEND_URL'"
+            exit 1
+          fi
+          
+          # Set GitHub outputs
+          echo "registry-name=$REGISTRY_NAME" >> $GITHUB_OUTPUT
+          echo "registry-server=$REGISTRY_SERVER" >> $GITHUB_OUTPUT
+          echo "frontend-url=$FRONTEND_URL" >> $GITHUB_OUTPUT
+          echo "backend-url=$BACKEND_URL" >> $GITHUB_OUTPUT
+          
+          echo "📊 [INFO] Infrastructure outputs:"
+          echo "  Registry: $REGISTRY_SERVER"
+          echo "  Frontend: $FRONTEND_URL"
+          echo "  Backend: $BACKEND_URL"
           
       - name: 🐳 Build & Push Images
-        shell: powershell
         run: |
-          Write-Host "[BUILD] Starting container build and push process..." -ForegroundColor Green
+          echo "🐳 [BUILD] Starting container build and push process..."
           
-          try {
-              # Validate required outputs
-              $registryName = "${{ steps.infra.outputs.registry-name }}"
-              $registryServer = "${{ steps.infra.outputs.registry-server }}"
-              
-              if (-not $registryName -or -not $registryServer) {
-                  Write-Host "[ERROR] Missing registry information from infrastructure deployment" -ForegroundColor Red
-                  Write-Host "  Registry Name: '$registryName'" -ForegroundColor White
-                  Write-Host "  Registry Server: '$registryServer'" -ForegroundColor White
-                  exit 1
-              }
-              
-              Write-Host "[LOGIN] Logging into container registry: $registryName" -ForegroundColor Yellow
-              
-              # Connect to Container Registry using PowerShell - SECURE METHOD
-              Write-Host "[AUTH] Retrieving ACR credentials..." -ForegroundColor Cyan
-              $registryCredential = Get-AzContainerRegistryCredential -ResourceGroupName "${{ env.RESOURCE_GROUP }}" -RegistryName $registryName
-              
-              if (-not $registryCredential -or -not $registryCredential.Username -or -not $registryCredential.Password) {
-                  throw "Failed to retrieve ACR credentials. Ensure admin user is enabled on Container Registry."
-              }
-              
-              # Extract credentials securely
-              $acrUsername = $registryCredential.Username
-              $acrPassword = $registryCredential.Password
-              
-              Write-Host "[AUTH] ACR Username: $acrUsername" -ForegroundColor Cyan
-              Write-Host "[AUTH] ACR Password: [REDACTED - Length: $($acrPassword.Length)]" -ForegroundColor Cyan
-              
-              # FIXED: Use Write-Output instead of echo for cross-platform compatibility
-              # Docker login using secure credential passing
-              Write-Host "[LOGIN] Attempting Docker login to $registryServer..." -ForegroundColor Yellow
-              
-              # Method 1: Try direct credential passing (most reliable)
-              try {
-                  $env:DOCKER_PASSWORD = $acrPassword
-                  $loginResult = cmd /c "echo %DOCKER_PASSWORD% | docker login $registryServer --username $acrUsername --password-stdin 2>&1"
-                  $env:DOCKER_PASSWORD = $null  # Clear environment variable
-                  
-                  if ($LASTEXITCODE -eq 0) {
-                      Write-Host "[SUCCESS] Docker login successful via direct method" -ForegroundColor Green
-                  } else {
-                      throw "Direct login failed: $loginResult"
-                  }
-              } catch {
-                  Write-Host "[RETRY] Direct login failed, trying PowerShell method..." -ForegroundColor Yellow
-                  
-                  # Method 2: PowerShell-native approach
-                  try {
-                      # Use PowerShell's native string handling
-                      $acrPassword | Out-String -Stream | docker login $registryServer --username $acrUsername --password-stdin
-                      
-                      if ($LASTEXITCODE -ne 0) {
-                          throw "PowerShell method failed"
-                      }
-                      
-                      Write-Host "[SUCCESS] Docker login successful via PowerShell method" -ForegroundColor Green
-                  } catch {
-                      # Method 3: Fallback using temporary file (secure)
-                      Write-Host "[RETRY] PowerShell method failed, using secure fallback..." -ForegroundColor Yellow
-                      
-                      $tempFile = [System.IO.Path]::GetTempFileName()
-                      try {
-                          # Write password to secure temp file
-                          $acrPassword | Out-File -FilePath $tempFile -Encoding ASCII -NoNewline
-                          
-                          # Use temp file for docker login
-                          Get-Content $tempFile | docker login $registryServer --username $acrUsername --password-stdin
-                          
-                          if ($LASTEXITCODE -ne 0) {
-                              throw "All login methods failed"
-                          }
-                          
-                          Write-Host "[SUCCESS] Docker login successful via fallback method" -ForegroundColor Green
-                      } finally {
-                          # Always clean up temp file
-                          if (Test-Path $tempFile) {
-                              Remove-Item $tempFile -Force
-                          }
-                      }
-                  }
-              }
-              
-              if ($LASTEXITCODE -ne 0) {
-                  throw "Docker login failed"
-              }
-              
-              Write-Host "[SUCCESS] Successfully logged into container registry" -ForegroundColor Green
-              
-              # Validate Docker build context and required files
-              Write-Host "[VALIDATE] Checking Docker build context..." -ForegroundColor Yellow
-              
-              $requiredFiles = @(
-                  "Dockerfile.backend",
-                  "Dockerfile.frontend", 
-                  "nginx.conf",
-                  "docker-entrypoint.sh",
-                  "AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj",
-                  "AI.ProfilePhotoMaker.UI/package.json"
-              )
-              
-              $missingFiles = @()
-              foreach ($file in $requiredFiles) {
-                  if (-not (Test-Path $file)) {
-                      $missingFiles += $file
-                  }
-              }
-              
-              if ($missingFiles.Count -gt 0) {
-                  Write-Host "[ERROR] Missing required files for Docker build:" -ForegroundColor Red
-                  foreach ($missing in $missingFiles) {
-                      Write-Host "  - $missing" -ForegroundColor White
-                  }
-                  throw "Missing required Docker build files"
-              }
-              
-              Write-Host "[SUCCESS] All required Docker build files present" -ForegroundColor Green
-              
-              # Build and push backend image with enhanced error handling
-              Write-Host "[BUILD] Building backend image..." -ForegroundColor Yellow
-              Write-Host "[INFO] Build context: $(Get-Location)" -ForegroundColor Cyan
-              Write-Host "[INFO] Backend image tag: $registryServer/aiprofilemaker-backend:latest" -ForegroundColor Cyan
-              
-              $buildOutput = docker build -f Dockerfile.backend -t "$registryServer/aiprofilemaker-backend:latest" . 2>&1
-              
-              if ($LASTEXITCODE -ne 0) {
-                  Write-Host "[ERROR] Backend image build failed with exit code: $LASTEXITCODE" -ForegroundColor Red
-                  Write-Host "[ERROR] Build output:" -ForegroundColor Red
-                  Write-Host $buildOutput -ForegroundColor White
-                  throw "Backend Docker build failed"
-              }
-              
-              Write-Host "[SUCCESS] Backend image built successfully" -ForegroundColor Green
-              
-              Write-Host "[PUSH] Pushing backend image..." -ForegroundColor Yellow
-              $pushOutput = docker push "$registryServer/aiprofilemaker-backend:latest" 2>&1
-              
-              if ($LASTEXITCODE -ne 0) {
-                  Write-Host "[ERROR] Backend image push failed with exit code: $LASTEXITCODE" -ForegroundColor Red
-                  Write-Host "[ERROR] Push output:" -ForegroundColor Red
-                  Write-Host $pushOutput -ForegroundColor White
-                  
-                  # Additional diagnostics
-                  Write-Host "[DIAG] Checking Docker login status..." -ForegroundColor Yellow
-                  docker info
-                  throw "Backend Docker push failed"
-              }
-              
-              Write-Host "[SUCCESS] Backend image pushed successfully" -ForegroundColor Green
-              
-              # Build and push frontend image with enhanced error handling
-              Write-Host "[BUILD] Building frontend image..." -ForegroundColor Yellow
-              Write-Host "[INFO] Frontend image tag: $registryServer/aiprofilemaker-frontend:latest" -ForegroundColor Cyan
-              
-              $buildOutput = docker build -f Dockerfile.frontend -t "$registryServer/aiprofilemaker-frontend:latest" . 2>&1
-              
-              if ($LASTEXITCODE -ne 0) {
-                  Write-Host "[ERROR] Frontend image build failed with exit code: $LASTEXITCODE" -ForegroundColor Red
-                  Write-Host "[ERROR] Build output:" -ForegroundColor Red
-                  Write-Host $buildOutput -ForegroundColor White
-                  throw "Frontend Docker build failed"
-              }
-              
-              Write-Host "[SUCCESS] Frontend image built successfully" -ForegroundColor Green
-              
-              Write-Host "[PUSH] Pushing frontend image..." -ForegroundColor Yellow
-              $pushOutput = docker push "$registryServer/aiprofilemaker-frontend:latest" 2>&1
-              
-              if ($LASTEXITCODE -ne 0) {
-                  Write-Host "[ERROR] Frontend image push failed with exit code: $LASTEXITCODE" -ForegroundColor Red
-                  Write-Host "[ERROR] Push output:" -ForegroundColor Red
-                  Write-Host $pushOutput -ForegroundColor White
-                  throw "Frontend Docker push failed"
-              }
-              
-              Write-Host "[SUCCESS] Frontend image pushed successfully" -ForegroundColor Green
-              Write-Host "[SUCCESS] All images built and pushed successfully!" -ForegroundColor Green
-              
-          } catch {
-              Write-Host "[ERROR] Container build/push failed" -ForegroundColor Red
-              Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Red
-              exit 1
-          }
+          # Validate required outputs
+          REGISTRY_NAME="${{ steps.infra.outputs.registry-name }}"
+          REGISTRY_SERVER="${{ steps.infra.outputs.registry-server }}"
           
-      - name: 🔄 Update Container Images & Credentials
-        shell: powershell
+          if [ -z "$REGISTRY_NAME" ] || [ -z "$REGISTRY_SERVER" ]; then
+            echo "❌ [ERROR] Missing registry information from infrastructure deployment"
+            echo "  Registry Name: '$REGISTRY_NAME'"
+            echo "  Registry Server: '$REGISTRY_SERVER'"
+            exit 1
+          fi
+          
+          echo "🔐 [LOGIN] Logging into container registry: $REGISTRY_NAME"
+          
+          # Login to Azure Container Registry using Azure CLI (much simpler)
+          az acr login --name "$REGISTRY_NAME"
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ [ERROR] Failed to login to Azure Container Registry"
+            exit 1
+          fi
+          
+          echo "✅ [SUCCESS] Successfully logged into container registry"
+          
+          # Validate Docker build files
+          echo "🔍 [VALIDATE] Checking Docker build context..."
+          
+          REQUIRED_FILES=("Dockerfile.backend" "Dockerfile.frontend" "nginx.conf" "docker-entrypoint.sh" "AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj" "AI.ProfilePhotoMaker.UI/package.json")
+          
+          MISSING_FILES=()
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "$file" ]; then
+              MISSING_FILES+=("$file")
+            fi
+          done
+          
+          if [ ${#MISSING_FILES[@]} -gt 0 ]; then
+            echo "❌ [ERROR] Missing required files for Docker build:"
+            for missing in "${MISSING_FILES[@]}"; do
+              echo "  - $missing"
+            done
+            exit 1
+          fi
+          
+          echo "✅ [SUCCESS] All required Docker build files present"
+          
+          # Build and push backend image
+          echo "🔨 [BUILD] Building backend image..."
+          echo "📍 [INFO] Build context: $(pwd)"
+          echo "📍 [INFO] Backend image tag: $REGISTRY_SERVER/aiprofilemaker-backend:latest"
+          
+          docker build -f Dockerfile.backend -t "$REGISTRY_SERVER/aiprofilemaker-backend:latest" .
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ [ERROR] Backend image build failed"
+            exit 1
+          fi
+          
+          echo "✅ [SUCCESS] Backend image built successfully"
+          
+          echo "📤 [PUSH] Pushing backend image..."
+          docker push "$REGISTRY_SERVER/aiprofilemaker-backend:latest"
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ [ERROR] Backend image push failed"
+            exit 1
+          fi
+          
+          echo "✅ [SUCCESS] Backend image pushed successfully"
+          
+          # Build and push frontend image
+          echo "🔨 [BUILD] Building frontend image..."
+          echo "📍 [INFO] Frontend image tag: $REGISTRY_SERVER/aiprofilemaker-frontend:latest"
+          
+          docker build -f Dockerfile.frontend -t "$REGISTRY_SERVER/aiprofilemaker-frontend:latest" .
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ [ERROR] Frontend image build failed"
+            exit 1
+          fi
+          
+          echo "✅ [SUCCESS] Frontend image built successfully"
+          
+          echo "📤 [PUSH] Pushing frontend image..."
+          docker push "$REGISTRY_SERVER/aiprofilemaker-frontend:latest"
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ [ERROR] Frontend image push failed"
+            exit 1
+          fi
+          
+          echo "✅ [SUCCESS] Frontend image pushed successfully"
+          echo "🎉 [SUCCESS] All images built and pushed successfully!"
+          
+      - name: 🔄 Update Container Apps
         run: |
-          Write-Host "[UPDATE] Updating container images and ACR credentials..." -ForegroundColor Green
+          echo "🔄 [UPDATE] Updating container apps with new images..."
           
-          try {
-              # Get registry name and app names
-              $registryName = "${{ steps.infra.outputs.registry-name }}"
-              
-              # Find container apps dynamically
-              $containerApps = Get-AzContainerApp -ResourceGroupName "${{ env.RESOURCE_GROUP }}"
-              $backendApp = ($containerApps | Where-Object { $_.Name -like "*api*" }).Name
-              $frontendApp = ($containerApps | Where-Object { $_.Name -like "*web*" }).Name
-              
-              if (-not $backendApp -or -not $frontendApp) {
-                  Write-Host "[ERROR] Could not find backend or frontend apps" -ForegroundColor Red
-                  Write-Host "  Backend: '$backendApp'" -ForegroundColor White
-                  Write-Host "  Frontend: '$frontendApp'" -ForegroundColor White
-                  exit 1
-              }
-              
-              Write-Host "[INFO] Found apps - Backend: $backendApp, Frontend: $frontendApp" -ForegroundColor Cyan
-              
-              # First update ACR credentials
-              Write-Host "[STEP 1] Updating ACR credentials..." -ForegroundColor Yellow
-              & "infrastructure/update-acr-credentials.ps1" `
-                  -ResourceGroupName "${{ env.RESOURCE_GROUP }}" `
-                  -ContainerRegistryName $registryName `
-                  -BackendAppName $backendApp `
-                  -FrontendAppName $frontendApp
-              
-              if ($LASTEXITCODE -ne 0) {
-                  throw "ACR credential update script failed"
-              }
-              
-              Write-Host "[SUCCESS] ACR credentials updated successfully!" -ForegroundColor Green
-              
-              # Then update container images
-              Write-Host "[STEP 2] Updating container images..." -ForegroundColor Yellow
-              & "infrastructure/update-container-images.ps1" `
-                  -ResourceGroupName "${{ env.RESOURCE_GROUP }}" `
-                  -ContainerRegistryName $registryName `
-                  -BackendAppName $backendApp `
-                  -FrontendAppName $frontendApp
-              
-              if ($LASTEXITCODE -ne 0) {
-                  throw "Container image update script failed"
-              }
-              
-              Write-Host "[SUCCESS] Container images updated successfully!" -ForegroundColor Green
-              
-          } catch {
-              Write-Host "[ERROR] Failed to update container images and credentials" -ForegroundColor Red
-              Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Red
-              exit 1
-          }
+          REGISTRY_NAME="${{ steps.infra.outputs.registry-name }}"
+          REGISTRY_SERVER="${{ steps.infra.outputs.registry-server }}"
           
-      - name: 🔄 Restart Container Apps
-        shell: powershell
-        run: |
-          Write-Host "[RESTART] Restarting container apps to pick up new images..." -ForegroundColor Green
+          # Find container apps
+          echo "🔍 [SEARCH] Finding container apps in resource group: ${{ env.RESOURCE_GROUP }}"
           
-          try {
-              # Find container apps using PowerShell
-              Write-Host "[SEARCH] Finding container apps in resource group: ${{ env.RESOURCE_GROUP }}" -ForegroundColor Yellow
-              
-              $containerApps = Get-AzContainerApp -ResourceGroupName "${{ env.RESOURCE_GROUP }}"
-              
-              if (-not $containerApps) {
-                  Write-Host "[WARNING] No container apps found in resource group" -ForegroundColor Red
-                  return
-              }
-              
-              Write-Host "[INFO] Found $($containerApps.Count) container app(s):" -ForegroundColor Cyan
-              foreach ($app in $containerApps) {
-                  Write-Host "  - $($app.Name)" -ForegroundColor White
-              }
-              
-              # Find backend and frontend apps
-              $backendApp = $containerApps | Where-Object { $_.Name -like "*api*" } | Select-Object -First 1
-              $frontendApp = $containerApps | Where-Object { $_.Name -like "*web*" } | Select-Object -First 1
-              
-              # Restart backend app
-              if ($backendApp) {
-                  Write-Host "[RESTART] Restarting backend app: $($backendApp.Name)" -ForegroundColor Yellow
-                  
-                  try {
-                      # Get the latest revision
-                      $revisions = Get-AzContainerAppRevision -ContainerAppName $backendApp.Name -ResourceGroupName "${{ env.RESOURCE_GROUP }}"
-                      $activeRevision = $revisions | Where-Object { $_.Properties.Active -eq $true } | Select-Object -First 1
-                      
-                      if ($activeRevision) {
-                          Restart-AzContainerAppRevision -Name $activeRevision.Name -ResourceGroupName "${{ env.RESOURCE_GROUP }}"
-                          Write-Host "[SUCCESS] Backend app restarted successfully" -ForegroundColor Green
-                      } else {
-                          Write-Host "[WARNING] No active revision found for backend app" -ForegroundColor Yellow
-                      }
-                  } catch {
-                      Write-Host "[WARNING] Failed to restart backend app" -ForegroundColor Yellow
-                      Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Gray
-                  }
-              } else {
-                  Write-Host "[WARNING] Backend container app not found" -ForegroundColor Yellow
-              }
-              
-              # Restart frontend app
-              if ($frontendApp) {
-                  Write-Host "[RESTART] Restarting frontend app: $($frontendApp.Name)" -ForegroundColor Yellow
-                  
-                  try {
-                      # Get the latest revision
-                      $revisions = Get-AzContainerAppRevision -ContainerAppName $frontendApp.Name -ResourceGroupName "${{ env.RESOURCE_GROUP }}"
-                      $activeRevision = $revisions | Where-Object { $_.Properties.Active -eq $true } | Select-Object -First 1
-                      
-                      if ($activeRevision) {
-                          Restart-AzContainerAppRevision -Name $activeRevision.Name -ResourceGroupName "${{ env.RESOURCE_GROUP }}"
-                          Write-Host "[SUCCESS] Frontend app restarted successfully" -ForegroundColor Green
-                      } else {
-                          Write-Host "[WARNING] No active revision found for frontend app" -ForegroundColor Yellow
-                      }
-                  } catch {
-                      Write-Host "[WARNING] Failed to restart frontend app" -ForegroundColor Yellow
-                      Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Gray
-                  }
-              } else {
-                  Write-Host "[WARNING] Frontend container app not found" -ForegroundColor Yellow
-              }
-              
-          } catch {
-              Write-Host "[ERROR] Error during container app restart" -ForegroundColor Red
-              Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Red
-              # Don't exit here as restart issues shouldn't fail the deployment
-          }
+          BACKEND_APP=$(az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?contains(name, 'api')].name" --output tsv | head -1)
+          FRONTEND_APP=$(az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?contains(name, 'web')].name" --output tsv | head -1)
+          
+          if [ -z "$BACKEND_APP" ] || [ -z "$FRONTEND_APP" ]; then
+            echo "❌ [ERROR] Could not find backend or frontend apps"
+            echo "  Backend: '$BACKEND_APP'"
+            echo "  Frontend: '$FRONTEND_APP'"
+            az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[].name" --output table
+            exit 1
+          fi
+          
+          echo "📱 [INFO] Found apps - Backend: $BACKEND_APP, Frontend: $FRONTEND_APP"
+          
+          # Update backend app
+          echo "🔄 [UPDATE] Updating backend app: $BACKEND_APP"
+          az containerapp update \
+            --name "$BACKEND_APP" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --image "$REGISTRY_SERVER/aiprofilemaker-backend:latest"
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ [ERROR] Failed to update backend app"
+            exit 1
+          fi
+          
+          echo "✅ [SUCCESS] Backend app updated successfully"
+          
+          # Update frontend app
+          echo "🔄 [UPDATE] Updating frontend app: $FRONTEND_APP"
+          az containerapp update \
+            --name "$FRONTEND_APP" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --image "$REGISTRY_SERVER/aiprofilemaker-frontend:latest"
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ [ERROR] Failed to update frontend app"
+            exit 1
+          fi
+          
+          echo "✅ [SUCCESS] Frontend app updated successfully"
+          echo "🎉 [SUCCESS] All container apps updated!"
           
       - name: 🧪 Health Check
-        shell: powershell
         run: |
-          Write-Host "[HEALTH] Performing health checks..." -ForegroundColor Green
+          echo "🧪 [HEALTH] Performing health checks..."
           
-          try {
-              Write-Host "[INFO] Waiting for deployment to stabilize..." -ForegroundColor Yellow
-              Start-Sleep -Seconds 30
-              
-              # Get URLs from deployment outputs
-              $backendUrl = "${{ steps.infra.outputs.backend-url }}"
-              $frontendUrl = "${{ steps.infra.outputs.frontend-url }}"
-              
-              if (-not $backendUrl -or -not $frontendUrl) {
-                  Write-Host "[WARNING] Missing application URLs from deployment:" -ForegroundColor Yellow
-                  Write-Host "  Backend URL: '$backendUrl'" -ForegroundColor White
-                  Write-Host "  Frontend URL: '$frontendUrl'" -ForegroundColor White
-                  Write-Host "Deployment may have succeeded but URLs are not available yet." -ForegroundColor Yellow
-              } else {
-                  # Test backend health using PowerShell's native HTTP client
-                  Write-Host "[TEST] Testing backend health: $backendUrl/health" -ForegroundColor Yellow
-                  try {
-                      $backendResponse = Invoke-WebRequest -Uri "$backendUrl/health" -TimeoutSec 30 -ErrorAction Stop
-                      if ($backendResponse.StatusCode -eq 200) {
-                          Write-Host "[SUCCESS] Backend is healthy (Status: $($backendResponse.StatusCode))" -ForegroundColor Green
-                      } else {
-                          Write-Host "[WARNING] Backend returned status: $($backendResponse.StatusCode)" -ForegroundColor Yellow
-                      }
-                  } catch {
-                      Write-Host "[WARNING] Backend health check failed" -ForegroundColor Yellow
-                      Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Gray
-                      Write-Host "(Application may still be starting up)" -ForegroundColor Gray
-                  }
-                  
-                  # Test frontend using PowerShell's native HTTP client
-                  Write-Host "[TEST] Testing frontend: $frontendUrl" -ForegroundColor Yellow
-                  try {
-                      $frontendResponse = Invoke-WebRequest -Uri $frontendUrl -TimeoutSec 30 -ErrorAction Stop
-                      if ($frontendResponse.StatusCode -eq 200) {
-                          Write-Host "[SUCCESS] Frontend is healthy (Status: $($frontendResponse.StatusCode))" -ForegroundColor Green
-                      } else {
-                          Write-Host "[WARNING] Frontend returned status: $($frontendResponse.StatusCode)" -ForegroundColor Yellow
-                      }
-                  } catch {
-                      Write-Host "[WARNING] Frontend health check failed" -ForegroundColor Yellow
-                      Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Gray
-                      Write-Host "(Application may still be starting up)" -ForegroundColor Gray
-                  }
-              }
-              
-              Write-Host ""
-              Write-Host "[SUCCESS] PowerShell deployment completed successfully!" -ForegroundColor Green
-              Write-Host "[INFO] Application URLs:" -ForegroundColor Cyan
-              Write-Host "  Frontend: $($frontendUrl -or 'Not available')" -ForegroundColor White
-              Write-Host "  Backend API: $($backendUrl -or 'Not available')" -ForegroundColor White
-              Write-Host "  Registry: ${{ steps.infra.outputs.registry-server }}" -ForegroundColor White
-              
-          } catch {
-              Write-Host "[ERROR] Health check failed" -ForegroundColor Red
-              Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Red
-              # Don't exit here as health check failures shouldn't fail the deployment
-          }
+          # Wait for deployment to stabilize
+          echo "⏳ [INFO] Waiting for deployment to stabilize..."
+          sleep 30
+          
+          # Get URLs from deployment outputs
+          BACKEND_URL="${{ steps.infra.outputs.backend-url }}"
+          FRONTEND_URL="${{ steps.infra.outputs.frontend-url }}"
+          
+          if [ -z "$BACKEND_URL" ] || [ -z "$FRONTEND_URL" ]; then
+            echo "⚠️ [WARNING] Missing application URLs from deployment:"
+            echo "  Backend URL: '$BACKEND_URL'"
+            echo "  Frontend URL: '$FRONTEND_URL'"
+            echo "Deployment may have succeeded but URLs are not available yet."
+          else
+            # Test backend health
+            echo "🔍 [TEST] Testing backend health: $BACKEND_URL/health"
+            if curl -f -s --max-time 30 "$BACKEND_URL/health" > /dev/null; then
+              echo "✅ [SUCCESS] Backend is healthy"
+            else
+              echo "⚠️ [WARNING] Backend health check failed (application may still be starting up)"
+            fi
+            
+            # Test frontend
+            echo "🔍 [TEST] Testing frontend: $FRONTEND_URL"
+            if curl -f -s --max-time 30 "$FRONTEND_URL" > /dev/null; then
+              echo "✅ [SUCCESS] Frontend is healthy"
+            else
+              echo "⚠️ [WARNING] Frontend health check failed (application may still be starting up)"
+            fi
+          fi
+          
+          echo ""
+          echo "🎉 [SUCCESS] Deployment completed successfully!"
+          echo "📊 [INFO] Application URLs:"
+          echo "  Frontend: ${FRONTEND_URL:-'Not available'}"
+          echo "  Backend API: ${BACKEND_URL:-'Not available'}"
+          echo "  Registry: ${{ steps.infra.outputs.registry-server }}"
