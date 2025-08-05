@@ -179,7 +179,19 @@ jobs:
           Write-Host "[DEPLOY] Starting PowerShell-based infrastructure deployment..." -ForegroundColor Green
           
           try {
-              $deploymentName = "powershell-deploy-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+              # Cancel any running deployments first
+              Write-Host "[CLEANUP] Checking for and canceling running deployments..." -ForegroundColor Yellow
+              try {
+                  $runningDeployments = Get-AzResourceGroupDeployment -ResourceGroupName "${{ env.RESOURCE_GROUP }}" | Where-Object { $_.ProvisioningState -eq "Running" }
+                  foreach ($deployment in $runningDeployments) {
+                      Write-Host "[CANCEL] Canceling running deployment: $($deployment.DeploymentName)" -ForegroundColor Yellow
+                      Stop-AzResourceGroupDeployment -ResourceGroupName "${{ env.RESOURCE_GROUP }}" -Name $deployment.DeploymentName -Force
+                  }
+              } catch {
+                  Write-Host "[INFO] No running deployments to cancel or cleanup failed: $($_.Exception.Message)" -ForegroundColor Gray
+              }
+              
+              $deploymentName = "deploy-$(Get-Random)-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
               Write-Host "[INFO] Deployment name: $deploymentName" -ForegroundColor Cyan
               
               # Set deployment parameters
