@@ -181,14 +181,14 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
       registries: [
         {
           server: containerRegistry.properties.loginServer
-          username: containerRegistry.listCredentials().username
+          username: listCredentials(containerRegistry.id, containerRegistry.apiVersion).username
           passwordSecretRef: 'registry-password'
         }
       ]
       secrets: [
         {
           name: 'registry-password'
-          value: containerRegistry.listCredentials().passwords[0].value
+          value: listCredentials(containerRegistry.id, containerRegistry.apiVersion).passwords[0].value
         }
         {
           name: 'jwt-secret'
@@ -232,7 +232,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             }
             {
               name: 'AzureStorage__ConnectionString'
-              value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
+              value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${listKeys(storageAccount.id, storageAccount.apiVersion).keys[0].value};EndpointSuffix=core.windows.net'
             }
             {
               name: 'ApplicationInsights__ConnectionString'
@@ -275,14 +275,14 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
       registries: [
         {
           server: containerRegistry.properties.loginServer
-          username: containerRegistry.listCredentials().username
+          username: listCredentials(containerRegistry.id, containerRegistry.apiVersion).username
           passwordSecretRef: 'registry-password'
         }
       ]
       secrets: [
         {
           name: 'registry-password'
-          value: containerRegistry.listCredentials().passwords[0].value
+          value: listCredentials(containerRegistry.id, containerRegistry.apiVersion).passwords[0].value
         }
       ]
     }
