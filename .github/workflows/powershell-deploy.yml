@@ -123,23 +123,39 @@ jobs:
           Write-Host "[VALIDATE] Validating Bicep template..." -ForegroundColor Green
           
           try {
-              # Validate template compilation
+              # Validate template compilation using PowerShell approach
+              Write-Host "[INFO] Compiling Bicep template..." -ForegroundColor Yellow
               az bicep build --file infrastructure/simple-deploy.bicep
-              Write-Host "[SUCCESS] Bicep template compiled successfully" -ForegroundColor Green
-              
-              # Validate deployment
-              az deployment group validate `
-                  --resource-group "${{ env.RESOURCE_GROUP }}" `
-                  --template-file infrastructure/simple-deploy.bicep `
-                  --parameters sqlAdminPassword="${{ secrets.SQL_ADMIN_PASSWORD }}" `
-                              jwtSecret="${{ secrets.JWT_SECRET }}" `
-                              replicateApiToken="${{ secrets.REPLICATE_API_TOKEN }}"
               
               if ($LASTEXITCODE -ne 0) {
+                  throw "Bicep template compilation failed"
+              }
+              
+              Write-Host "[SUCCESS] Bicep template compiled successfully" -ForegroundColor Green
+              
+              # Use PowerShell Azure modules for validation instead of Azure CLI
+              Write-Host "[INFO] Validating deployment using PowerShell Azure modules..." -ForegroundColor Yellow
+              
+              $deploymentParams = @{
+                  ResourceGroupName = "${{ env.RESOURCE_GROUP }}"
+                  TemplateFile = "infrastructure/simple-deploy.bicep"
+                  sqlAdminPassword = (ConvertTo-SecureString "${{ secrets.SQL_ADMIN_PASSWORD }}" -AsPlainText -Force)
+                  jwtSecret = (ConvertTo-SecureString "${{ secrets.JWT_SECRET }}" -AsPlainText -Force)
+                  replicateApiToken = (ConvertTo-SecureString "${{ secrets.REPLICATE_API_TOKEN }}" -AsPlainText -Force)
+              }
+              
+              # Test deployment validation with PowerShell
+              $validationResult = Test-AzResourceGroupDeployment @deploymentParams
+              
+              if ($validationResult) {
+                  Write-Host "[ERROR] Template validation failed with errors:" -ForegroundColor Red
+                  foreach ($error in $validationResult) {
+                      Write-Host "  - $($error.Message)" -ForegroundColor Red
+                  }
                   throw "Template validation failed"
               }
               
-              Write-Host "[SUCCESS] Template validation completed" -ForegroundColor Green
+              Write-Host "[SUCCESS] Template validation completed successfully" -ForegroundColor Green
               
           } catch {
               Write-Host "[ERROR] Template validation failed" -ForegroundColor Red
