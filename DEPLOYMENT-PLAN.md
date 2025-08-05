@@ -49,7 +49,7 @@ az storage account show-connection-string --name $STORAGE_NAME --resource-group 
 ```bash
 # Run EF migrations to create schema
 cd AI.ProfilePhotoMaker.API
-dotnet ef database update --connection "Server=tcp:sql-apm-1754278427.database.windows.net,1433;Initial Catalog=aiprofilemaker;User ID=sqladmin;Password=TempPassword123!;Encrypt=True;"
+dotnet ef database update --connection "Server=tcp:sql-apm-1754278427.database.windows.net,1433;Initial Catalog=aiprofilemaker;User ID=sqladmin;Password=[REPLACE_WITH_ACTUAL_PASSWORD];Encrypt=True;"
 ```
 
 ### 3️⃣ UI Container Build & Deploy
@@ -93,7 +93,7 @@ curl https://ui-apm-simple.[URL]/
 ### Environment Variables
 ```bash
 # API Container
-ConnectionStrings__DefaultConnection="Server=tcp:sql-apm-1754278427.database.windows.net,1433;Initial Catalog=aiprofilemaker;User ID=sqladmin;Password=TempPassword123!;Encrypt=True;"
+ConnectionStrings__DefaultConnection="Server=tcp:sql-apm-1754278427.database.windows.net,1433;Initial Catalog=aiprofilemaker;User ID=sqladmin;Password=[REPLACE_WITH_ACTUAL_PASSWORD];Encrypt=True;"
 
 # UI Container  
 API_BASE_URL="https://api-apm-simple.nicestone-1ec028d4.eastus.azurecontainerapps.io"
