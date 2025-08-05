@@ -337,8 +337,8 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Apply database migrations using new architecture
-await app.UseDatabaseMigrationAsync();
+// Apply database migrations using new architecture - TEMPORARILY DISABLED FOR STAGING
+// await app.UseDatabaseMigrationAsync();
 
 // Use forwarded headers for ngrok proxy
 app.UseForwardedHeaders();
