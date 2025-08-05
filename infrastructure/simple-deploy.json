@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.177.2456",
-      "templateHash": "16639808265573138979"
+      "templateHash": "17214653560134801918"
     }
   },
   "parameters": {
@@ -15,7 +15,7 @@
     },
     "environment": {
       "type": "string",
-      "defaultValue": "staging"
+      "defaultValue": "v1"
     },
     "location": {
       "type": "string",
@@ -33,10 +33,10 @@
   },
   "variables": {
     "uniqueSuffix": "[uniqueString(resourceGroup().id)]",
-    "containerRegistryName": "[format('{0}cr{1}', parameters('appName'), variables('uniqueSuffix'))]",
-    "sqlServerName": "[format('{0}-sql-{1}', parameters('appName'), variables('uniqueSuffix'))]",
-    "storageAccountName": "[format('{0}st{1}', parameters('appName'), variables('uniqueSuffix'))]",
-    "keyVaultName": "[format('{0}-kv-{1}', parameters('appName'), variables('uniqueSuffix'))]",
+    "containerRegistryName": "[format('{0}cr{1}{2}', parameters('appName'), parameters('environment'), variables('uniqueSuffix'))]",
+    "sqlServerName": "[format('{0}-sql-{1}-{2}', parameters('appName'), parameters('environment'), variables('uniqueSuffix'))]",
+    "storageAccountName": "[format('{0}st{1}{2}', parameters('appName'), parameters('environment'), variables('uniqueSuffix'))]",
+    "keyVaultName": "[format('{0}-kv-{1}-{2}', parameters('appName'), parameters('environment'), variables('uniqueSuffix'))]",
     "containerEnvName": "[format('{0}-env-{1}', parameters('appName'), parameters('environment'))]",
     "backendAppName": "[format('{0}-api-{1}', parameters('appName'), parameters('environment'))]",
     "frontendAppName": "[format('{0}-web-{1}', parameters('appName'), parameters('environment'))]",
@@ -45,7 +45,7 @@
   "resources": [
     {
       "type": "Microsoft.ContainerRegistry/registries",
-      "apiVersion": "2023-01-01-preview",
+      "apiVersion": "2023-07-01",
       "name": "[variables('containerRegistryName')]",
       "location": "[parameters('location')]",
       "sku": {
@@ -57,7 +57,7 @@
     },
     {
       "type": "Microsoft.Sql/servers",
-      "apiVersion": "2023-02-01-preview",
+      "apiVersion": "2023-05-01-preview",
       "name": "[variables('sqlServerName')]",
       "location": "[parameters('location')]",
       "properties": {
@@ -69,7 +69,7 @@
     },
     {
       "type": "Microsoft.Sql/servers/databases",
-      "apiVersion": "2023-02-01-preview",
+      "apiVersion": "2023-05-01-preview",
       "name": "[format('{0}/{1}', variables('sqlServerName'), format('{0}db', parameters('appName')))]",
       "location": "[parameters('location')]",
       "sku": {
@@ -85,7 +85,7 @@
     },
     {
       "type": "Microsoft.Sql/servers/firewallRules",
-      "apiVersion": "2023-02-01-preview",
+      "apiVersion": "2023-05-01-preview",
       "name": "[format('{0}/{1}', variables('sqlServerName'), 'AllowAzureServices')]",
       "properties": {
         "startIpAddress": "0.0.0.0",
@@ -130,14 +130,30 @@
       ]
     },
     {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2022-10-01",
+      "name": "[format('{0}-logs-{1}', parameters('appName'), parameters('environment'))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": 30
+      }
+    },
+    {
       "type": "Microsoft.Insights/components",
       "apiVersion": "2020-02-02",
       "name": "[variables('applicationInsightsName')]",
       "location": "[parameters('location')]",
       "kind": "web",
       "properties": {
-        "Application_Type": "web"
-      }
+        "Application_Type": "web",
+        "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs-{1}', parameters('appName'), parameters('environment')))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs-{1}', parameters('appName'), parameters('environment')))]"
+      ]
     },
     {
       "type": "Microsoft.KeyVault/vaults",
@@ -182,7 +198,7 @@
       "apiVersion": "2023-02-01",
       "name": "[format('{0}/{1}', variables('keyVaultName'), 'ConnectionString')]",
       "properties": {
-        "value": "[format('Server=tcp:{0},1433;Initial Catalog={1};Authentication=Active Directory Default;Encrypt=True;', reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName')), '2023-02-01-preview').fullyQualifiedDomainName, format('{0}db', parameters('appName')))]"
+        "value": "[format('Server=tcp:{0},1433;Initial Catalog={1};Authentication=Active Directory Default;Encrypt=True;', reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName')), '2023-05-01-preview').fullyQualifiedDomainName, format('{0}db', parameters('appName')))]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
@@ -192,24 +208,25 @@
     },
     {
       "type": "Microsoft.App/managedEnvironments",
-      "apiVersion": "2023-05-01",
+      "apiVersion": "2023-05-02-preview",
       "name": "[variables('containerEnvName')]",
       "location": "[parameters('location')]",
       "properties": {
         "appLogsConfiguration": {
           "destination": "log-analytics",
           "logAnalyticsConfiguration": {
-            "customerId": "[reference(resourceId('Microsoft.Insights/components', variables('applicationInsightsName')), '2020-02-02').ApplicationId]"
+            "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs-{1}', parameters('appName'), parameters('environment'))), '2022-10-01').customerId]",
+            "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs-{1}', parameters('appName'), parameters('environment'))), '2022-10-01').primarySharedKey]"
           }
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Insights/components', variables('applicationInsightsName'))]"
+        "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs-{1}', parameters('appName'), parameters('environment')))]"
       ]
     },
     {
       "type": "Microsoft.App/containerApps",
-      "apiVersion": "2023-05-01",
+      "apiVersion": "2023-05-02-preview",
       "name": "[variables('backendAppName')]",
       "location": "[parameters('location')]",
       "identity": {
@@ -226,16 +243,12 @@
           },
           "registries": [
             {
-              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-01-01-preview').loginServer]",
-              "username": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-01-01-preview').username]",
-              "passwordSecretRef": "registry-password"
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').loginServer]",
+              "username": "[variables('containerRegistryName')]",
+              "passwordSecretRef": "acr-password"
             }
           ],
           "secrets": [
-            {
-              "name": "registry-password",
-              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-01-01-preview').passwords[0].value]"
-            },
             {
               "name": "jwt-secret",
               "value": "[parameters('jwtSecret')]"
@@ -246,7 +259,11 @@
             },
             {
               "name": "connection-string",
-              "value": "[format('Server=tcp:{0},1433;Initial Catalog={1};Authentication=Active Directory Default;Encrypt=True;', reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName')), '2023-02-01-preview').fullyQualifiedDomainName, format('{0}db', parameters('appName')))]"
+              "value": "[format('Server=tcp:{0},1433;Initial Catalog={1};Authentication=Active Directory Default;Encrypt=True;', reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName')), '2023-05-01-preview').fullyQualifiedDomainName, format('{0}db', parameters('appName')))]"
+            },
+            {
+              "name": "acr-password",
+              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').passwords[0].value]"
             }
           ]
         },
@@ -254,7 +271,7 @@
           "containers": [
             {
               "name": "api",
-              "image": "[format('{0}/aiprofilemaker-backend:latest', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-01-01-preview').loginServer)]",
+              "image": "[format('{0}/aiprofilemaker-backend:latest', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').loginServer)]",
               "resources": {
                 "cpu": "[json('0.5')]",
                 "memory": "1Gi"
@@ -262,7 +279,7 @@
               "env": [
                 {
                   "name": "ASPNETCORE_ENVIRONMENT",
-                  "value": "Staging"
+                  "value": "Production"
                 },
                 {
                   "name": "ConnectionStrings__DefaultConnection",
@@ -314,9 +331,12 @@
     },
     {
       "type": "Microsoft.App/containerApps",
-      "apiVersion": "2023-05-01",
+      "apiVersion": "2023-05-02-preview",
       "name": "[variables('frontendAppName')]",
       "location": "[parameters('location')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
       "properties": {
         "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('containerEnvName'))]",
         "configuration": {
@@ -328,15 +348,15 @@
           },
           "registries": [
             {
-              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-01-01-preview').loginServer]",
-              "username": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-01-01-preview').username]",
-              "passwordSecretRef": "registry-password"
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').loginServer]",
+              "username": "[variables('containerRegistryName')]",
+              "passwordSecretRef": "acr-password"
             }
           ],
           "secrets": [
             {
-              "name": "registry-password",
-              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-01-01-preview').passwords[0].value]"
+              "name": "acr-password",
+              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').passwords[0].value]"
             }
           ]
         },
@@ -344,7 +364,7 @@
           "containers": [
             {
               "name": "web",
-              "image": "[format('{0}/aiprofilemaker-frontend:latest', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-01-01-preview').loginServer)]",
+              "image": "[format('{0}/aiprofilemaker-frontend:latest', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').loginServer)]",
               "resources": {
                 "cpu": "[json('0.25')]",
                 "memory": "0.5Gi"
@@ -352,7 +372,7 @@
               "env": [
                 {
                   "name": "API_URL",
-                  "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('backendAppName')), '2023-05-01').configuration.ingress.fqdn)]"
+                  "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('backendAppName')), '2023-05-02-preview').configuration.ingress.fqdn)]"
                 }
               ]
             }
@@ -368,31 +388,16 @@
         "[resourceId('Microsoft.App/managedEnvironments', variables('containerEnvName'))]",
         "[resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName'))]"
       ]
-    },
-    {
-      "type": "Microsoft.Authorization/roleAssignments",
-      "apiVersion": "2022-04-01",
-      "scope": "[format('Microsoft.KeyVault/vaults/{0}', variables('keyVaultName'))]",
-      "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), resourceId('Microsoft.App/containerApps', variables('backendAppName')), 'KeyVaultSecretsUser')]",
-      "properties": {
-        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
-        "principalId": "[reference(resourceId('Microsoft.App/containerApps', variables('backendAppName')), '2023-05-01', 'full').identity.principalId]",
-        "principalType": "ServicePrincipal"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.App/containerApps', variables('backendAppName'))]",
-        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
-      ]
     }
   ],
   "outputs": {
     "frontendUrl": {
       "type": "string",
-      "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('frontendAppName')), '2023-05-01').configuration.ingress.fqdn)]"
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('frontendAppName')), '2023-05-02-preview').configuration.ingress.fqdn)]"
     },
     "backendUrl": {
       "type": "string",
-      "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('backendAppName')), '2023-05-01').configuration.ingress.fqdn)]"
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('backendAppName')), '2023-05-02-preview').configuration.ingress.fqdn)]"
     },
     "containerRegistryName": {
       "type": "string",
@@ -400,7 +405,7 @@
     },
     "containerRegistryLoginServer": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-01-01-preview').loginServer]"
+      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').loginServer]"
     },
     "sqlServerName": {
       "type": "string",
