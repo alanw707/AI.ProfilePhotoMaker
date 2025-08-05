@@ -1,8 +1,9 @@
 name: 🚀 V1 Deploy
 
 on:
-  push:
-    branches: [main]
+  # Temporarily disabled - using PowerShell deployment as primary
+  # push:
+  #   branches: [main]
   workflow_dispatch:
     inputs:
       skip_tests:
