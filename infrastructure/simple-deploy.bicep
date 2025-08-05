@@ -1,7 +1,7 @@
 // Simple AI Profile Photo Maker Infrastructure
 // Perfect for single developer deployment
 
-param appName string = 'aiprofilemaker'
+param appName string = 'aipm'
 param environment string = 'v1'
 param location string = resourceGroup().location
 
