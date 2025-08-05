@@ -67,32 +67,19 @@ jobs:
       - name: 📥 Checkout
         uses: actions/checkout@v4
         
-      - name: 🔧 Install Stable Azure CLI
+      - name: 🔧 Configure Azure CLI HTTP Client
         run: |
-          # Remove any existing Azure CLI to avoid conflicts
-          sudo apt-get remove -y azure-cli || true
-          sudo rm -rf /etc/apt/sources.list.d/azure-cli.list* || true
+          echo "📦 Configuring Azure CLI with HTTP client optimizations..."
           
-          # Install specific stable Azure CLI version (2.49.0 - proven stable for Bicep)
-          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-          sudo apt-get update
-          
-          # Try to install specific version, fallback to 2.50.0 if needed
-          if ! sudo apt-get install -y azure-cli=2.49.0-1~jammy; then
-            echo "⚠️ Version 2.49.0 not available, trying 2.50.0..."
-            sudo apt-get install -y azure-cli=2.50.0-1~jammy
-          fi
-          
-          # Pin the version to prevent automatic updates
-          sudo apt-mark hold azure-cli
-          
-          # Configure Azure CLI for better HTTP handling
+          # Configure Azure CLI for better HTTP handling (critical fixes)
           az config set core.enable_broker_on_windows=false
           az config set core.collect_telemetry=false
+          az config set core.output=table
           
-          # Verify installation
-          az version
-          echo "✅ Stable Azure CLI installed successfully with HTTP optimizations"
+          # Verify current version and configuration
+          echo "✅ Using Azure CLI version:"
+          az version --output table
+          echo "✅ Azure CLI configured with HTTP client optimizations"
           
       - name: 🔐 Azure Login
         uses: azure/login@v1
