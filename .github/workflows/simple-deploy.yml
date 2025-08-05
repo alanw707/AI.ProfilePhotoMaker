@@ -87,8 +87,19 @@ jobs:
           echo "🚀 Deploying infrastructure with Bicep..."
           echo "Deployment name: $DEPLOYMENT_NAME"
           
-          # Deploy with incremental mode - avoid capturing output to prevent content consumed error
-          echo "🚀 Starting deployment..."
+          # Use what-if first to validate template, then deploy
+          echo "🧪 Validating deployment with what-if..."
+          az deployment group what-if \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --template-file simple-deploy.bicep \
+            --parameters \
+              sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}' \
+              jwtSecret='${{ secrets.JWT_SECRET }}' \
+              replicateApiToken='${{ secrets.REPLICATE_API_TOKEN }}' \
+            --name "$DEPLOYMENT_NAME"
+          
+          echo "🚀 Starting actual deployment..."
+          # Try with --no-wait and then wait for completion
           az deployment group create \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --template-file simple-deploy.bicep \
@@ -98,6 +109,15 @@ jobs:
               replicateApiToken='${{ secrets.REPLICATE_API_TOKEN }}' \
             --name "$DEPLOYMENT_NAME" \
             --mode Incremental \
+            --no-wait
+          
+          echo "⏳ Waiting for deployment completion..."
+          az deployment group wait --resource-group ${{ env.RESOURCE_GROUP }} --name "$DEPLOYMENT_NAME" --created
+          
+          echo "📄 Getting deployment results..."
+          az deployment group show \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name "$DEPLOYMENT_NAME" \
             --output json > deployment_result.json
           
           echo "✅ Deployment completed successfully, extracting outputs..."
