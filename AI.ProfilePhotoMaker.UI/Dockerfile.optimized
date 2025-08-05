@@ -1,0 +1,65 @@
+# Optimized Angular UI Dockerfile with proper layer caching
+FROM node:20-alpine AS dependencies
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files only (for better layer caching)
+COPY package*.json ./
+
+# Install dependencies with optimizations
+RUN npm ci --only=production --no-audit --no-fund --ignore-scripts && \
+    npm cache clean --force
+
+# Development dependencies for build
+FROM node:20-alpine AS build-deps
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --include=dev --no-audit --no-fund --ignore-scripts && \
+    npm cache clean --force
+
+# Build stage
+FROM build-deps AS build
+WORKDIR /app
+
+# Copy source files (this layer will be invalidated when source changes)
+COPY src/ ./src/
+COPY public/ ./public/
+COPY angular.json tsconfig.*.json ./
+
+# Build the application
+RUN npm run build:staging
+
+# Runtime stage
+FROM nginx:alpine AS runtime
+
+# Copy built application
+COPY --from=build /app/dist/ai.profile-photo-maker.ui/browser /usr/share/nginx/html
+
+# Optimized nginx config for SPA
+COPY <<EOF /etc/nginx/conf.d/default.conf
+server {
+    listen 80;
+    server_name localhost;
+    root /usr/share/nginx/html;
+    index index.html;
+    
+    # Enable gzip compression
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript;
+    
+    # Cache static assets
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    # SPA routing
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+}
+EOF
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

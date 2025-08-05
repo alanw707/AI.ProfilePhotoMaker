@@ -9,6 +9,7 @@ import { ThemeService } from '../../services/theme.service';
 import { CreditPackage, CreditService } from '../../services/credit.service';
 import { Style, StyleService } from '../../services/style.service';
 import { ConfigService } from '../../services/config.service';
+import { StylePreviewService } from '../../services/style-preview.service';
 
 interface Plan {
   name: string;
@@ -201,7 +202,8 @@ export class LandingComponent implements OnInit, OnDestroy {
     public themeService: ThemeService,
     private _creditService: CreditService,
     private _styleService: StyleService,
-    private _config: ConfigService
+    private _config: ConfigService,
+    private _stylePreviewService: StylePreviewService
   ) {
     this.currentTheme$ = this.themeService.theme$;
   }
@@ -499,14 +501,25 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   createStyledPhotosFromStyles(): void {
     // Create styled photos array from actual styles
-    this.styledPhotos = this.availableStyles.slice(0, 20).map((style) => ({
+    this.styledPhotos = this.availableStyles.slice(0, 20).map(style => ({
       id: style.id,
-      imageUrl: this._config.buildStylePreviewUrl(style.name),
+      imageUrl: this._stylePreviewService.getCachedUrl(style.name),
       style: style.name,
       category: this.getCategoryFromStyleName(style.name),
       description: style.description,
       persona: this.getPersonaFromStyleName(style.name),
     }));
+
+    // Subscribe to preview URL updates
+    this._stylePreviewService.getAllPreviewUrls().subscribe(urlMap => {
+      // Update the image URLs when they become available
+      this.styledPhotos.forEach(photo => {
+        const updatedUrl = urlMap.get(photo.style);
+        if (updatedUrl && updatedUrl !== photo.imageUrl) {
+          photo.imageUrl = updatedUrl;
+        }
+      });
+    });
   }
 
   createFallbackStyledPhotos(): void {
@@ -636,7 +649,7 @@ export class LandingComponent implements OnInit, OnDestroy {
 
     this.styledPhotos = fallbackStyles.map((style, index) => ({
       id: index + 1,
-      imageUrl: this._config.buildStylePreviewUrl(style.name),
+      imageUrl: this._stylePreviewService.getCachedUrl(style.name),
       style: style.name,
       category: style.category,
       description: style.description,
@@ -745,7 +758,9 @@ export class LandingComponent implements OnInit, OnDestroy {
   }
 
   formatStyleName(styleName: string): string {
-    if (!styleName) {return '';}
+    if (!styleName) {
+      return '';
+    }
     return styleName
       .split(/[-\s]+/)
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
