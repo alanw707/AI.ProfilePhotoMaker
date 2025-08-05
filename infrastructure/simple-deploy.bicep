@@ -14,10 +14,10 @@ param replicateApiToken string
 
 // Generate unique names
 var uniqueSuffix = uniqueString(resourceGroup().id)
-var containerRegistryName = '${appName}cr${uniqueSuffix}'
-var sqlServerName = '${appName}-sql-${uniqueSuffix}'
-var storageAccountName = '${appName}st${uniqueSuffix}'
-var keyVaultName = '${appName}-kv-${uniqueSuffix}'
+var containerRegistryName = '${appName}cr${environment}${uniqueSuffix}'
+var sqlServerName = '${appName}-sql-${environment}-${uniqueSuffix}'
+var storageAccountName = '${appName}st${environment}${uniqueSuffix}'
+var keyVaultName = '${appName}-kv-${environment}-${uniqueSuffix}'
 var containerEnvName = '${appName}-env-${environment}'
 var backendAppName = '${appName}-api-${environment}'
 var frontendAppName = '${appName}-web-${environment}'
