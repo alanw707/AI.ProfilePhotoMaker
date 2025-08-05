@@ -54,7 +54,7 @@ public class StylePreviewController : ControllerBase
             }
 
             // Check if preview already exists
-            var fileName = $"{style.Name.ToLower().Replace("/", "-").Replace(" ", "-")}-preview.jpg";
+            var fileName = $"{style.Name.ToLower().Replace("/", "-").Replace(" ", "-")}.jpg";
             var filePath = Path.Combine(_previewsPath, fileName);
 
             if (System.IO.File.Exists(filePath))
@@ -152,7 +152,7 @@ public class StylePreviewController : ControllerBase
         {
             try
             {
-                var fileName = $"{style.Name.ToLower().Replace("/", "-").Replace(" ", "-")}-preview.jpg";
+                var fileName = $"{style.Name.ToLower().Replace("/", "-").Replace(" ", "-")}.jpg";
                 var filePath = Path.Combine(_previewsPath, fileName);
 
                 if (System.IO.File.Exists(filePath))
@@ -235,7 +235,7 @@ public class StylePreviewController : ControllerBase
 
                 // Download and save the image
                 var imageUrl = output[0].GetString();
-                var fileName = $"{styleName.ToLower().Replace("/", "-").Replace(" ", "-")}-preview.jpg";
+                var fileName = $"{styleName.ToLower().Replace("/", "-").Replace(" ", "-")}.jpg";
 
                 if (!string.IsNullOrEmpty(imageUrl))
                 {
@@ -290,7 +290,7 @@ public class StylePreviewController : ControllerBase
             
             foreach (var style in styles)
             {
-                var fileName = $"{style.Name.ToLower().Replace("/", "-").Replace(" ", "-")}-preview.jpg";
+                var fileName = $"{style.Name.ToLower().Replace("/", "-").Replace(" ", "-")}.jpg";
                 var storagePath = $"style-previews/{fileName}";
                 
                 var exists = await _storageService.ExistsAsync(storagePath);
@@ -317,11 +317,11 @@ public class StylePreviewController : ControllerBase
             // Fallback to local directory check
             if (Directory.Exists(_previewsPath))
             {
-                var files = Directory.GetFiles(_previewsPath, "*-preview.jpg");
+                var files = Directory.GetFiles(_previewsPath, "*.jpg");
                 foreach (var file in files)
                 {
                     var fileName = Path.GetFileName(file);
-                    var styleName = fileName.Replace("-preview.jpg", "").Replace("-", " ");
+                    var styleName = fileName.Replace(".jpg", "").Replace("-", " ");
                     previews.Add(new
                     {
                         style = styleName,
@@ -359,7 +359,7 @@ public class StylePreviewController : ControllerBase
                 return NotFound(new { error = $"Style '{styleName}' not found" });
             }
 
-            var fileName = $"{style.Name.ToLower().Replace("/", "-").Replace(" ", "-")}-preview.jpg";
+            var fileName = $"{style.Name.ToLower().Replace("/", "-").Replace(" ", "-")}.jpg";
             var storagePath = $"style-previews/{fileName}";
             
             var exists = await _storageService.ExistsAsync(storagePath);

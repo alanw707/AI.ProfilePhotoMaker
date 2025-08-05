@@ -140,8 +140,23 @@ public class AzureBlobStorageService : IStorageService
     {
         try
         {
-            var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
-            var blobClient = containerClient.GetBlobClient(storagePath);
+            // Handle style-previews paths by using correct container
+            string containerName;
+            string blobPath;
+            
+            if (storagePath.StartsWith("style-previews/"))
+            {
+                containerName = "style-previews";
+                blobPath = storagePath.Substring("style-previews/".Length);
+            }
+            else
+            {
+                containerName = _containerName;
+                blobPath = storagePath;
+            }
+
+            var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+            var blobClient = containerClient.GetBlobClient(blobPath);
 
             var response = await blobClient.ExistsAsync();
             return response.Value;
@@ -155,9 +170,24 @@ public class AzureBlobStorageService : IStorageService
 
     public string GetImageUrl(string storagePath)
     {
+        // Handle style-previews paths by using correct container
+        string containerName;
+        string blobPath;
+        
+        if (storagePath.StartsWith("style-previews/"))
+        {
+            containerName = "style-previews";
+            blobPath = storagePath.Substring("style-previews/".Length);
+        }
+        else
+        {
+            containerName = _containerName;
+            blobPath = storagePath;
+        }
+
         // Return the public blob URL
-        var cleanPath = storagePath.TrimStart('/');
-        return $"{_storageAccountUrl}/{_containerName}/{cleanPath}";
+        var cleanPath = blobPath.TrimStart('/');
+        return $"{_storageAccountUrl}/{containerName}/{cleanPath}";
     }
 
     public async Task<List<string>> ListUserImagesAsync(string userId)
@@ -186,8 +216,23 @@ public class AzureBlobStorageService : IStorageService
     {
         try
         {
-            var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
-            var blobClient = containerClient.GetBlobClient(storagePath);
+            // Handle style-previews paths by using correct container
+            string containerName;
+            string blobPath;
+            
+            if (storagePath.StartsWith("style-previews/"))
+            {
+                containerName = "style-previews";
+                blobPath = storagePath.Substring("style-previews/".Length);
+            }
+            else
+            {
+                containerName = _containerName;
+                blobPath = storagePath;
+            }
+
+            var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+            var blobClient = containerClient.GetBlobClient(blobPath);
 
             if (!await blobClient.ExistsAsync())
             {

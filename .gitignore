@@ -18,6 +18,7 @@
 *.env.production
 appsettings.Production.json
 appsettings.*.Production.json
+docker-compose.override.yml
 
 # Secret documentation files (keep local, don't commit)
 FINAL_DEPLOYMENT_INSTRUCTIONS.md
@@ -37,6 +38,11 @@ UserSecrets/
 *.key
 *.pem
 *.crt
+
+# ASP.NET Core Data Protection Keys (CRITICAL: Never commit these)
+**/keys/*.xml
+**/keys/key-*.xml
+AI.ProfilePhotoMaker.API/keys/
 
 # Azure publish profiles
 PublishProfiles/
