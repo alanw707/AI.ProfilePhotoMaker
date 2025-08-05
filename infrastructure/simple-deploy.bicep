@@ -24,7 +24,7 @@ var frontendAppName = '${appName}-web-${environment}'
 var applicationInsightsName = '${appName}-ai-${environment}'
 
 // Container Registry
-resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   name: containerRegistryName
   location: location
   sku: {
@@ -36,7 +36,7 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-01-01-pr
 }
 
 // SQL Database
-resource sqlServer 'Microsoft.Sql/servers@2023-02-01-preview' = {
+resource sqlServer 'Microsoft.Sql/servers@2023-05-01-preview' = {
   name: sqlServerName
   location: location
   properties: {
@@ -47,7 +47,7 @@ resource sqlServer 'Microsoft.Sql/servers@2023-02-01-preview' = {
   }
 }
 
-resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-02-01-preview' = {
+resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-05-01-preview' = {
   parent: sqlServer
   name: '${appName}db'
   location: location
@@ -60,7 +60,7 @@ resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-02-01-preview' = {
   }
 }
 
-resource sqlFirewallRule 'Microsoft.Sql/servers/firewallRules@2023-02-01-preview' = {
+resource sqlFirewallRule 'Microsoft.Sql/servers/firewallRules@2023-05-01-preview' = {
   parent: sqlServer
   name: 'AllowAzureServices'
   properties: {
@@ -98,7 +98,7 @@ resource profileImagesContainer 'Microsoft.Storage/storageAccounts/blobServices/
 }
 
 // Log Analytics Workspace (required for Container Apps)
-resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: '${appName}-logs-${environment}'
   location: location
   properties: {
@@ -162,7 +162,7 @@ resource connectionStringKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
 }
 
 // Container Apps Environment
-resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' = {
+resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-02-preview' = {
   name: containerEnvName
   location: location
   properties: {
@@ -177,7 +177,7 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01'
 }
 
 // Backend API Container App
-resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
+resource backendApp 'Microsoft.App/containerApps@2023-05-02-preview' = {
   name: backendAppName
   location: location
   identity: {
@@ -195,7 +195,8 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
       registries: [
         {
           server: containerRegistry.properties.loginServer
-          identity: 'system'
+          username: containerRegistry.name
+          passwordSecretRef: 'acr-password'
         }
       ]
       secrets: [
@@ -210,6 +211,10 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
         {
           name: 'connection-string'
           value: 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${sqlDatabase.name};Authentication=Active Directory Default;Encrypt=True;'
+        }
+        {
+          name: 'acr-password'
+          value: containerRegistry.listCredentials().passwords[0].value
         }
       ]
     }
@@ -269,7 +274,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
 }
 
 // Frontend Container App
-resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
+resource frontendApp 'Microsoft.App/containerApps@2023-05-02-preview' = {
   name: frontendAppName
   location: location
   identity: {
@@ -287,7 +292,14 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
       registries: [
         {
           server: containerRegistry.properties.loginServer
-          identity: 'system'
+          username: containerRegistry.name
+          passwordSecretRef: 'acr-password'
+        }
+      ]
+      secrets: [
+        {
+          name: 'acr-password'
+          value: containerRegistry.listCredentials().passwords[0].value
         }
       ]
     }
@@ -316,38 +328,8 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
   }
 }
 
-// Give backend app access to Key Vault
-resource keyVaultAccessPolicy 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(keyVault.id, backendApp.id, 'KeyVaultSecretsUser')
-  scope: keyVault
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6') // Key Vault Secrets User
-    principalId: backendApp.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// Give backend app access to Container Registry
-resource backendAcrPullRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(containerRegistry.id, backendApp.id, 'AcrPull')
-  scope: containerRegistry
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull
-    principalId: backendApp.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// Give frontend app access to Container Registry
-resource frontendAcrPullRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(containerRegistry.id, frontendApp.id, 'AcrPull')
-  scope: containerRegistry
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull
-    principalId: frontendApp.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
+// Note: Using Container Registry admin credentials for simplicity
+// In production, consider using managed identity with proper role assignments
 
 // Outputs
 output frontendUrl string = 'https://${frontendApp.properties.configuration.ingress.fqdn}'
