@@ -97,6 +97,18 @@ resource profileImagesContainer 'Microsoft.Storage/storageAccounts/blobServices/
   }
 }
 
+// Log Analytics Workspace (required for Container Apps)
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
+  name: '${appName}-logs-${environment}'
+  location: location
+  properties: {
+    sku: {
+      name: 'PerGB2018'
+    }
+    retentionInDays: 30
+  }
+}
+
 // Application Insights
 resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
   name: applicationInsightsName
@@ -104,6 +116,7 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
   kind: 'web'
   properties: {
     Application_Type: 'web'
+    WorkspaceResourceId: logAnalyticsWorkspace.id
   }
 }
 
@@ -156,7 +169,8 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01'
     appLogsConfiguration: {
       destination: 'log-analytics'
       logAnalyticsConfiguration: {
-        customerId: applicationInsights.properties.ApplicationId
+        customerId: logAnalyticsWorkspace.properties.customerId
+        sharedKey: logAnalyticsWorkspace.listKeys().primarySharedKey
       }
     }
   }
