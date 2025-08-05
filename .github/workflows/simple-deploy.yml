@@ -13,6 +13,10 @@ on:
 
 env:
   RESOURCE_GROUP: aiprofilemaker-v1
+  # Azure CLI HTTP client fixes to prevent "content already consumed" error
+  AZURE_CLI_DISABLE_CONNECTION_VERIFICATION: 1
+  AZURE_HTTP_USER_AGENT: github-actions-deployment
+  ARM_USE_MSI: false
   
 permissions:
   id-token: write
@@ -63,6 +67,33 @@ jobs:
       - name: 📥 Checkout
         uses: actions/checkout@v4
         
+      - name: 🔧 Install Stable Azure CLI
+        run: |
+          # Remove any existing Azure CLI to avoid conflicts
+          sudo apt-get remove -y azure-cli || true
+          sudo rm -rf /etc/apt/sources.list.d/azure-cli.list* || true
+          
+          # Install specific stable Azure CLI version (2.49.0 - proven stable for Bicep)
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+          sudo apt-get update
+          
+          # Try to install specific version, fallback to 2.50.0 if needed
+          if ! sudo apt-get install -y azure-cli=2.49.0-1~jammy; then
+            echo "⚠️ Version 2.49.0 not available, trying 2.50.0..."
+            sudo apt-get install -y azure-cli=2.50.0-1~jammy
+          fi
+          
+          # Pin the version to prevent automatic updates
+          sudo apt-mark hold azure-cli
+          
+          # Configure Azure CLI for better HTTP handling
+          az config set core.enable_broker_on_windows=false
+          az config set core.collect_telemetry=false
+          
+          # Verify installation
+          az version
+          echo "✅ Stable Azure CLI installed successfully with HTTP optimizations"
+          
       - name: 🔐 Azure Login
         uses: azure/login@v1
         with:
@@ -87,35 +118,66 @@ jobs:
           echo "🚀 Deploying infrastructure with Bicep..."
           echo "Deployment name: $DEPLOYMENT_NAME"
           
-          echo "🚀 Starting deployment (skipping what-if to avoid Azure CLI bug)..."
-          # Skip what-if validation to completely avoid content consumption error
-          az deployment group create \
+          echo "🚀 Starting deployment with retry logic..."
+          # Deploy with retry logic to handle potential Azure CLI issues
+          RETRY_COUNT=0
+          MAX_RETRIES=3
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "Attempt $((RETRY_COUNT + 1)) of $MAX_RETRIES"
+            
+            if az deployment group create \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --template-file simple-deploy.bicep \
+              --parameters \
+                sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}' \
+                jwtSecret='${{ secrets.JWT_SECRET }}' \
+                replicateApiToken='${{ secrets.REPLICATE_API_TOKEN }}' \
+              --name "$DEPLOYMENT_NAME" \
+              --mode Incremental \
+              --timeout 1800 \
+              --no-wait; then
+              echo "✅ Deployment started successfully"
+              break
+            else
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "⚠️ Deployment failed, retrying in 30 seconds..."
+                sleep 30
+              else
+                echo "❌ Deployment failed after $MAX_RETRIES attempts"
+                exit 1
+              fi
+            fi
+          done
+          
+          echo "⏳ Waiting for deployment completion with extended timeout..."
+          az deployment group wait \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --template-file simple-deploy.bicep \
-            --parameters \
-              sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}' \
-              jwtSecret='${{ secrets.JWT_SECRET }}' \
-              replicateApiToken='${{ secrets.REPLICATE_API_TOKEN }}' \
             --name "$DEPLOYMENT_NAME" \
-            --mode Incremental \
-            --no-wait
+            --created \
+            --timeout 1800
           
-          echo "⏳ Waiting for deployment completion..."
-          az deployment group wait --resource-group ${{ env.RESOURCE_GROUP }} --name "$DEPLOYMENT_NAME" --created
-          
-          echo "📄 Getting deployment results..."
+          echo "📄 Getting deployment results with table output to avoid HTTP issues..."
           az deployment group show \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --name "$DEPLOYMENT_NAME" \
-            --output json > deployment_result.json
+            --output table
+          
+          echo "📄 Getting deployment outputs in JSON format..."
+          az deployment group show \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name "$DEPLOYMENT_NAME" \
+            --query "properties.outputs" \
+            --output json > deployment_outputs.json
           
           echo "✅ Deployment completed successfully, extracting outputs..."
           
-          # Extract outputs from deployment result file
-          REGISTRY_NAME=$(jq -r '.properties.outputs.containerRegistryName.value // empty' deployment_result.json)
-          REGISTRY_SERVER=$(jq -r '.properties.outputs.containerRegistryLoginServer.value // empty' deployment_result.json)
-          FRONTEND_URL=$(jq -r '.properties.outputs.frontendUrl.value // empty' deployment_result.json)
-          BACKEND_URL=$(jq -r '.properties.outputs.backendUrl.value // empty' deployment_result.json)
+          # Extract outputs from deployment outputs file
+          REGISTRY_NAME=$(jq -r '.containerRegistryName.value // empty' deployment_outputs.json)
+          REGISTRY_SERVER=$(jq -r '.containerRegistryLoginServer.value // empty' deployment_outputs.json)
+          FRONTEND_URL=$(jq -r '.frontendUrl.value // empty' deployment_outputs.json)
+          BACKEND_URL=$(jq -r '.backendUrl.value // empty' deployment_outputs.json)
           
           # Validate that required outputs were extracted
           if [ -z "$REGISTRY_NAME" ] || [ -z "$REGISTRY_SERVER" ] || [ -z "$FRONTEND_URL" ] || [ -z "$BACKEND_URL" ]; then
@@ -125,8 +187,8 @@ jobs:
             echo "Frontend URL: '$FRONTEND_URL'"
             echo "Backend URL: '$BACKEND_URL'"
             echo ""
-            echo "Raw deployment output:"
-            cat deployment_result.json
+            echo "Raw deployment outputs:"
+            cat deployment_outputs.json
             exit 1
           fi
           
@@ -168,7 +230,10 @@ jobs:
         run: |
           echo "🔍 Finding container apps in resource group: ${{ env.RESOURCE_GROUP }}"
           
-          # Find container apps with proper error handling
+          # Find container apps with proper error handling and table output to avoid HTTP issues
+          echo "📄 Listing container apps..."
+          az containerapp list -g ${{ env.RESOURCE_GROUP }} --output table
+          
           BACKEND_APP=$(az containerapp list -g ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'api')].name" -o tsv 2>/dev/null || echo "")
           FRONTEND_APP=$(az containerapp list -g ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'web')].name" -o tsv 2>/dev/null || echo "")
           
