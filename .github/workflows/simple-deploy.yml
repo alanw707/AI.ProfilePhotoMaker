@@ -87,9 +87,9 @@ jobs:
           echo "🚀 Deploying infrastructure with Bicep..."
           echo "Deployment name: $DEPLOYMENT_NAME"
           
-          # Deploy with incremental mode and capture output properly
-          set +e  # Don't exit on error to handle deployment failures gracefully
-          DEPLOYMENT_RESULT=$(az deployment group create \
+          # Deploy with incremental mode - avoid capturing output to prevent content consumed error
+          echo "🚀 Starting deployment..."
+          az deployment group create \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --template-file simple-deploy.bicep \
             --parameters \
@@ -98,36 +98,15 @@ jobs:
               replicateApiToken='${{ secrets.REPLICATE_API_TOKEN }}' \
             --name "$DEPLOYMENT_NAME" \
             --mode Incremental \
-            --output json 2>&1)
-          DEPLOYMENT_EXIT_CODE=$?
-          set -e  # Re-enable exit on error
-          
-          # Check if deployment succeeded
-          if [ $DEPLOYMENT_EXIT_CODE -ne 0 ]; then
-            echo "❌ Deployment failed with exit code: $DEPLOYMENT_EXIT_CODE"
-            echo "Error output:"
-            echo "$DEPLOYMENT_RESULT"
-            exit 1
-          fi
-          
-          # Save deployment result to file for debugging
-          echo "$DEPLOYMENT_RESULT" > deployment_result.json
-          
-          # Validate JSON structure before parsing
-          if ! echo "$DEPLOYMENT_RESULT" | jq empty 2>/dev/null; then
-            echo "❌ Invalid JSON output from deployment"
-            echo "Raw output:"
-            echo "$DEPLOYMENT_RESULT"
-            exit 1
-          fi
+            --output json > deployment_result.json
           
           echo "✅ Deployment completed successfully, extracting outputs..."
           
-          # Extract outputs with error handling
-          REGISTRY_NAME=$(echo "$DEPLOYMENT_RESULT" | jq -r '.properties.outputs.containerRegistryName.value // empty')
-          REGISTRY_SERVER=$(echo "$DEPLOYMENT_RESULT" | jq -r '.properties.outputs.containerRegistryLoginServer.value // empty')
-          FRONTEND_URL=$(echo "$DEPLOYMENT_RESULT" | jq -r '.properties.outputs.frontendUrl.value // empty')
-          BACKEND_URL=$(echo "$DEPLOYMENT_RESULT" | jq -r '.properties.outputs.backendUrl.value // empty')
+          # Extract outputs from deployment result file
+          REGISTRY_NAME=$(jq -r '.properties.outputs.containerRegistryName.value // empty' deployment_result.json)
+          REGISTRY_SERVER=$(jq -r '.properties.outputs.containerRegistryLoginServer.value // empty' deployment_result.json)
+          FRONTEND_URL=$(jq -r '.properties.outputs.frontendUrl.value // empty' deployment_result.json)
+          BACKEND_URL=$(jq -r '.properties.outputs.backendUrl.value // empty' deployment_result.json)
           
           # Validate that required outputs were extracted
           if [ -z "$REGISTRY_NAME" ] || [ -z "$REGISTRY_SERVER" ] || [ -z "$FRONTEND_URL" ] || [ -z "$BACKEND_URL" ]; then
@@ -138,7 +117,7 @@ jobs:
             echo "Backend URL: '$BACKEND_URL'"
             echo ""
             echo "Raw deployment output:"
-            echo "$DEPLOYMENT_RESULT"
+            cat deployment_result.json
             exit 1
           fi
           
