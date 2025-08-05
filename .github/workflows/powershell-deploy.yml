@@ -12,7 +12,7 @@ on:
         type: boolean
 
 env:
-  RESOURCE_GROUP: aiprofilemaker-v1
+  RESOURCE_GROUP: aiprofilemaker-v2
   
 permissions:
   id-token: write
