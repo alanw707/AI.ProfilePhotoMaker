@@ -12,7 +12,7 @@ on:
         type: boolean
 
 env:
-  RESOURCE_GROUP: rg-aiprofilemaker-staging
+  RESOURCE_GROUP: aiprofilemaker-staging
   
 permissions:
   id-token: write
@@ -70,11 +70,11 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           
-      - name: 🏗️ Create Resource Group
+      - name: 🏗️ Ensure Resource Group
         run: |
           az group create \
             --name ${{ env.RESOURCE_GROUP }} \
-            --location eastus2 \
+            --location eastus \
             --tags Environment=staging Application=AIProfileMaker
             
       - name: 🏗️ Deploy Infrastructure
@@ -87,8 +87,9 @@ jobs:
           echo "🚀 Deploying infrastructure with Bicep..."
           echo "Deployment name: $DEPLOYMENT_NAME"
           
-          # Deploy with incremental mode and detailed output
-          az deployment group create \
+          # Deploy with incremental mode and capture output properly
+          set +e  # Don't exit on error to handle deployment failures gracefully
+          DEPLOYMENT_RESULT=$(az deployment group create \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --template-file simple-deploy.bicep \
             --parameters \
@@ -97,16 +98,51 @@ jobs:
               replicateApiToken='${{ secrets.REPLICATE_API_TOKEN }}' \
             --name "$DEPLOYMENT_NAME" \
             --mode Incremental \
-            --output json > deployment_result.json
-            
-          echo "✅ Deployment completed, extracting outputs..."
+            --output json 2>&1)
+          DEPLOYMENT_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
           
-          # Extract outputs from deployment result
-          REGISTRY_NAME=$(jq -r '.properties.outputs.containerRegistryName.value' deployment_result.json)
-          REGISTRY_SERVER=$(jq -r '.properties.outputs.containerRegistryLoginServer.value' deployment_result.json)
-          FRONTEND_URL=$(jq -r '.properties.outputs.frontendUrl.value' deployment_result.json)
-          BACKEND_URL=$(jq -r '.properties.outputs.backendUrl.value' deployment_result.json)
+          # Check if deployment succeeded
+          if [ $DEPLOYMENT_EXIT_CODE -ne 0 ]; then
+            echo "❌ Deployment failed with exit code: $DEPLOYMENT_EXIT_CODE"
+            echo "Error output:"
+            echo "$DEPLOYMENT_RESULT"
+            exit 1
+          fi
           
+          # Save deployment result to file for debugging
+          echo "$DEPLOYMENT_RESULT" > deployment_result.json
+          
+          # Validate JSON structure before parsing
+          if ! echo "$DEPLOYMENT_RESULT" | jq empty 2>/dev/null; then
+            echo "❌ Invalid JSON output from deployment"
+            echo "Raw output:"
+            echo "$DEPLOYMENT_RESULT"
+            exit 1
+          fi
+          
+          echo "✅ Deployment completed successfully, extracting outputs..."
+          
+          # Extract outputs with error handling
+          REGISTRY_NAME=$(echo "$DEPLOYMENT_RESULT" | jq -r '.properties.outputs.containerRegistryName.value // empty')
+          REGISTRY_SERVER=$(echo "$DEPLOYMENT_RESULT" | jq -r '.properties.outputs.containerRegistryLoginServer.value // empty')
+          FRONTEND_URL=$(echo "$DEPLOYMENT_RESULT" | jq -r '.properties.outputs.frontendUrl.value // empty')
+          BACKEND_URL=$(echo "$DEPLOYMENT_RESULT" | jq -r '.properties.outputs.backendUrl.value // empty')
+          
+          # Validate that required outputs were extracted
+          if [ -z "$REGISTRY_NAME" ] || [ -z "$REGISTRY_SERVER" ] || [ -z "$FRONTEND_URL" ] || [ -z "$BACKEND_URL" ]; then
+            echo "❌ Failed to extract required outputs from deployment"
+            echo "Registry Name: '$REGISTRY_NAME'"
+            echo "Registry Server: '$REGISTRY_SERVER'"
+            echo "Frontend URL: '$FRONTEND_URL'"
+            echo "Backend URL: '$BACKEND_URL'"
+            echo ""
+            echo "Raw deployment output:"
+            echo "$DEPLOYMENT_RESULT"
+            exit 1
+          fi
+          
+          # Set GitHub outputs
           echo "registry-name=$REGISTRY_NAME" >> $GITHUB_OUTPUT
           echo "registry-server=$REGISTRY_SERVER" >> $GITHUB_OUTPUT
           echo "frontend-url=$FRONTEND_URL" >> $GITHUB_OUTPUT
@@ -119,31 +155,63 @@ jobs:
           
       - name: 🐳 Build & Push Images
         run: |
-          # Login to registry
+          # Validate required outputs are available
+          if [ -z "${{ steps.infra.outputs.registry-name }}" ] || [ -z "${{ steps.infra.outputs.registry-server }}" ]; then
+            echo "❌ Missing registry information from infrastructure deployment"
+            echo "Registry Name: '${{ steps.infra.outputs.registry-name }}'"
+            echo "Registry Server: '${{ steps.infra.outputs.registry-server }}'"
+            exit 1
+          fi
+          
+          echo "🔐 Logging into container registry: ${{ steps.infra.outputs.registry-name }}"
           az acr login --name ${{ steps.infra.outputs.registry-name }}
           
-          # Build and push backend
+          echo "🐳 Building and pushing backend image..."
           docker build -f Dockerfile.backend -t ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-backend:latest .
           docker push ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-backend:latest
           
-          # Build and push frontend
+          echo "🐳 Building and pushing frontend image..."
           docker build -f Dockerfile.frontend -t ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-frontend:latest .
           docker push ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-frontend:latest
           
+          echo "✅ Images built and pushed successfully"
+          
       - name: 🔄 Restart Container Apps
         run: |
-          # Find and restart the container apps to pick up new images
-          BACKEND_APP=$(az containerapp list -g ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'api')].name" -o tsv)
-          FRONTEND_APP=$(az containerapp list -g ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'web')].name" -o tsv)
+          echo "🔍 Finding container apps in resource group: ${{ env.RESOURCE_GROUP }}"
           
+          # Find container apps with proper error handling
+          BACKEND_APP=$(az containerapp list -g ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'api')].name" -o tsv 2>/dev/null || echo "")
+          FRONTEND_APP=$(az containerapp list -g ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'web')].name" -o tsv 2>/dev/null || echo "")
+          
+          echo "Found apps - Backend: '$BACKEND_APP', Frontend: '$FRONTEND_APP'"
+          
+          # Restart backend app if found
           if [ -n "$BACKEND_APP" ]; then
             echo "🔄 Restarting backend app: $BACKEND_APP"
-            az containerapp revision restart --revision $(az containerapp revision list --name $BACKEND_APP --resource-group ${{ env.RESOURCE_GROUP }} --query '[0].name' -o tsv) --resource-group ${{ env.RESOURCE_GROUP }}
+            BACKEND_REVISION=$(az containerapp revision list --name "$BACKEND_APP" --resource-group ${{ env.RESOURCE_GROUP }} --query '[0].name' -o tsv 2>/dev/null)
+            if [ -n "$BACKEND_REVISION" ]; then
+              az containerapp revision restart --revision "$BACKEND_REVISION" --resource-group ${{ env.RESOURCE_GROUP }}
+              echo "✅ Backend app restarted successfully"
+            else
+              echo "⚠️ Could not find active revision for backend app"
+            fi
+          else
+            echo "⚠️ Backend container app not found"
           fi
           
+          # Restart frontend app if found
           if [ -n "$FRONTEND_APP" ]; then
             echo "🔄 Restarting frontend app: $FRONTEND_APP"
-            az containerapp revision restart --revision $(az containerapp revision list --name $FRONTEND_APP --resource-group ${{ env.RESOURCE_GROUP }} --query '[0].name' -o tsv) --resource-group ${{ env.RESOURCE_GROUP }}
+            FRONTEND_REVISION=$(az containerapp revision list --name "$FRONTEND_APP" --resource-group ${{ env.RESOURCE_GROUP }} --query '[0].name' -o tsv 2>/dev/null)
+            if [ -n "$FRONTEND_REVISION" ]; then
+              az containerapp revision restart --revision "$FRONTEND_REVISION" --resource-group ${{ env.RESOURCE_GROUP }}
+              echo "✅ Frontend app restarted successfully"
+            else
+              echo "⚠️ Could not find active revision for frontend app"
+            fi
+          else
+            echo "⚠️ Frontend container app not found"
           fi
           
       - name: 🧪 Health Check
@@ -155,23 +223,31 @@ jobs:
           BACKEND_URL="${{ steps.infra.outputs.backend-url }}"
           FRONTEND_URL="${{ steps.infra.outputs.frontend-url }}"
           
-          echo "🔍 Testing backend: $BACKEND_URL"
-          if curl -f -s --max-time 30 "$BACKEND_URL/health" > /dev/null; then
-            echo "✅ Backend is healthy"
+          # Validate URLs are available
+          if [ -z "$BACKEND_URL" ] || [ -z "$FRONTEND_URL" ]; then
+            echo "⚠️ Missing application URLs from deployment:"
+            echo "  Backend URL: '$BACKEND_URL'"
+            echo "  Frontend URL: '$FRONTEND_URL'"
+            echo "Deployment may have succeeded but URLs are not available yet."
           else
-            echo "⚠️ Backend health check failed (may still be starting up)"
-          fi
-          
-          echo "🔍 Testing frontend: $FRONTEND_URL"
-          if curl -f -s --max-time 30 "$FRONTEND_URL" > /dev/null; then
-            echo "✅ Frontend is healthy"
-          else
-            echo "⚠️ Frontend health check failed (may still be starting up)"
+            echo "🔍 Testing backend: $BACKEND_URL"
+            if curl -f -s --max-time 30 "$BACKEND_URL/health" > /dev/null 2>&1; then
+              echo "✅ Backend is healthy"
+            else
+              echo "⚠️ Backend health check failed (may still be starting up)"
+            fi
+            
+            echo "🔍 Testing frontend: $FRONTEND_URL"
+            if curl -f -s --max-time 30 "$FRONTEND_URL" > /dev/null 2>&1; then
+              echo "✅ Frontend is healthy"
+            else
+              echo "⚠️ Frontend health check failed (may still be starting up)"
+            fi
           fi
           
           echo ""
           echo "🎉 Deployment completed successfully!"
           echo "📋 Application URLs:"
-          echo "  🌐 Frontend: $FRONTEND_URL"
-          echo "  🔧 Backend API: $BACKEND_URL"
+          echo "  🌐 Frontend: ${FRONTEND_URL:-'Not available'}"
+          echo "  🔧 Backend API: ${BACKEND_URL:-'Not available'}"
           echo "  📊 Registry: ${{ steps.infra.outputs.registry-server }}"
