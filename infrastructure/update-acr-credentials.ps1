@@ -18,16 +18,44 @@ param(
 Write-Host "🔐 Updating ACR credentials for Container Apps..." -ForegroundColor Green
 
 try {
+    # Validate inputs
+    Write-Host "🔍 Validating input parameters..." -ForegroundColor Yellow
+    
+    if (-not $ResourceGroupName -or -not $ContainerRegistryName -or -not $BackendAppName -or -not $FrontendAppName) {
+        throw "Missing required parameters"
+    }
+    
+    Write-Host "[INFO] Resource Group: $ResourceGroupName" -ForegroundColor Cyan
+    Write-Host "[INFO] Container Registry: $ContainerRegistryName" -ForegroundColor Cyan
+    Write-Host "[INFO] Backend App: $BackendAppName" -ForegroundColor Cyan
+    Write-Host "[INFO] Frontend App: $FrontendAppName" -ForegroundColor Cyan
+    
+    # Verify ACR admin user is enabled
+    Write-Host "🔐 Checking ACR admin user status..." -ForegroundColor Yellow
+    $acrInfo = Get-AzContainerRegistry -ResourceGroupName $ResourceGroupName -Name $ContainerRegistryName
+    
+    if (-not $acrInfo.AdminUserEnabled) {
+        Write-Host "⚠️ ACR admin user is not enabled. Attempting to enable..." -ForegroundColor Yellow
+        Update-AzContainerRegistry -ResourceGroupName $ResourceGroupName -Name $ContainerRegistryName -EnableAdminUser
+        Write-Host "✅ ACR admin user enabled" -ForegroundColor Green
+    } else {
+        Write-Host "✅ ACR admin user is already enabled" -ForegroundColor Green
+    }
+    
     # Get ACR credentials using PowerShell Azure modules
     Write-Host "📋 Retrieving ACR credentials..." -ForegroundColor Yellow
     $acrCredentials = Get-AzContainerRegistryCredential -ResourceGroupName $ResourceGroupName -RegistryName $ContainerRegistryName
-    $acrPassword = $acrCredentials.Password
     
-    if (-not $acrPassword) {
-        throw "Failed to retrieve ACR password"
+    if (-not $acrCredentials -or -not $acrCredentials.Username -or -not $acrCredentials.Password) {
+        throw "Failed to retrieve ACR credentials. Ensure admin user is enabled on Container Registry."
     }
     
+    $acrUsername = $acrCredentials.Username
+    $acrPassword = $acrCredentials.Password
+    
     Write-Host "✅ ACR credentials retrieved successfully" -ForegroundColor Green
+    Write-Host "[INFO] ACR Username: $acrUsername" -ForegroundColor Cyan
+    Write-Host "[INFO] ACR Password: [REDACTED - Length: $($acrPassword.Length)]" -ForegroundColor Cyan
     
     # Update Backend App ACR password using PowerShell
     Write-Host "🔄 Updating backend app ACR password..." -ForegroundColor Yellow
