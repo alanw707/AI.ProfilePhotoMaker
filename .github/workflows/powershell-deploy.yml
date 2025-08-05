@@ -66,7 +66,7 @@ jobs:
       - name: 🔧 Install Azure PowerShell
         shell: powershell
         run: |
-          Write-Host "📦 Installing latest Azure PowerShell modules..." -ForegroundColor Green
+          Write-Host "Installing latest Azure PowerShell modules..." -ForegroundColor Green
           
           # Install required Azure modules
           Install-Module -Name Az.Accounts -Force -AllowClobber -Scope CurrentUser
