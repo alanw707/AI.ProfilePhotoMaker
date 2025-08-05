@@ -149,8 +149,8 @@ jobs:
               
               if ($validationResult) {
                   Write-Host "[ERROR] Template validation failed with errors:" -ForegroundColor Red
-                  foreach ($error in $validationResult) {
-                      Write-Host "  - $($error.Message)" -ForegroundColor Red
+                  foreach ($validationError in $validationResult) {
+                      Write-Host "  - $($validationError.Message)" -ForegroundColor Red
                   }
                   throw "Template validation failed"
               }
