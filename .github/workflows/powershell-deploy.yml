@@ -338,16 +338,74 @@ jobs:
               
               Write-Host "[LOGIN] Logging into container registry: $registryName" -ForegroundColor Yellow
               
-              # Connect to Container Registry using PowerShell
+              # Connect to Container Registry using PowerShell - SECURE METHOD
+              Write-Host "[AUTH] Retrieving ACR credentials..." -ForegroundColor Cyan
               $registryCredential = Get-AzContainerRegistryCredential -ResourceGroupName "${{ env.RESOURCE_GROUP }}" -RegistryName $registryName
               
-              # Login to Docker registry
-              $password = $registryCredential.Password | ConvertTo-SecureString -AsPlainText -Force
-              $credential = New-Object System.Management.Automation.PSCredential($registryCredential.Username, $password)
+              if (-not $registryCredential -or -not $registryCredential.Username -or -not $registryCredential.Password) {
+                  throw "Failed to retrieve ACR credentials. Ensure admin user is enabled on Container Registry."
+              }
               
-              # Use docker login with PowerShell credential handling
-              $passwordPlain = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($password))
-              echo $passwordPlain | docker login $registryServer --username $registryCredential.Username --password-stdin
+              # Extract credentials securely
+              $acrUsername = $registryCredential.Username
+              $acrPassword = $registryCredential.Password
+              
+              Write-Host "[AUTH] ACR Username: $acrUsername" -ForegroundColor Cyan
+              Write-Host "[AUTH] ACR Password: [REDACTED - Length: $($acrPassword.Length)]" -ForegroundColor Cyan
+              
+              # FIXED: Use Write-Output instead of echo for cross-platform compatibility
+              # Docker login using secure credential passing
+              Write-Host "[LOGIN] Attempting Docker login to $registryServer..." -ForegroundColor Yellow
+              
+              # Method 1: Try direct credential passing (most reliable)
+              try {
+                  $env:DOCKER_PASSWORD = $acrPassword
+                  $loginResult = cmd /c "echo %DOCKER_PASSWORD% | docker login $registryServer --username $acrUsername --password-stdin 2>&1"
+                  $env:DOCKER_PASSWORD = $null  # Clear environment variable
+                  
+                  if ($LASTEXITCODE -eq 0) {
+                      Write-Host "[SUCCESS] Docker login successful via direct method" -ForegroundColor Green
+                  } else {
+                      throw "Direct login failed: $loginResult"
+                  }
+              } catch {
+                  Write-Host "[RETRY] Direct login failed, trying PowerShell method..." -ForegroundColor Yellow
+                  
+                  # Method 2: PowerShell-native approach
+                  try {
+                      # Use PowerShell's native string handling
+                      $acrPassword | Out-String -Stream | docker login $registryServer --username $acrUsername --password-stdin
+                      
+                      if ($LASTEXITCODE -ne 0) {
+                          throw "PowerShell method failed"
+                      }
+                      
+                      Write-Host "[SUCCESS] Docker login successful via PowerShell method" -ForegroundColor Green
+                  } catch {
+                      # Method 3: Fallback using temporary file (secure)
+                      Write-Host "[RETRY] PowerShell method failed, using secure fallback..." -ForegroundColor Yellow
+                      
+                      $tempFile = [System.IO.Path]::GetTempFileName()
+                      try {
+                          # Write password to secure temp file
+                          $acrPassword | Out-File -FilePath $tempFile -Encoding ASCII -NoNewline
+                          
+                          # Use temp file for docker login
+                          Get-Content $tempFile | docker login $registryServer --username $acrUsername --password-stdin
+                          
+                          if ($LASTEXITCODE -ne 0) {
+                              throw "All login methods failed"
+                          }
+                          
+                          Write-Host "[SUCCESS] Docker login successful via fallback method" -ForegroundColor Green
+                      } finally {
+                          # Always clean up temp file
+                          if (Test-Path $tempFile) {
+                              Remove-Item $tempFile -Force
+                          }
+                      }
+                  }
+              }
               
               if ($LASTEXITCODE -ne 0) {
                   throw "Docker login failed"
@@ -355,37 +413,93 @@ jobs:
               
               Write-Host "[SUCCESS] Successfully logged into container registry" -ForegroundColor Green
               
-              # Build and push backend image
-              Write-Host "[BUILD] Building and pushing backend image..." -ForegroundColor Yellow
-              docker build -f Dockerfile.backend -t "$registryServer/aiprofilemaker-backend:latest" .
+              # Validate Docker build context and required files
+              Write-Host "[VALIDATE] Checking Docker build context..." -ForegroundColor Yellow
               
-              if ($LASTEXITCODE -ne 0) {
-                  throw "Backend image build failed"
+              $requiredFiles = @(
+                  "Dockerfile.backend",
+                  "Dockerfile.frontend", 
+                  "nginx.conf",
+                  "docker-entrypoint.sh",
+                  "AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj",
+                  "AI.ProfilePhotoMaker.UI/package.json"
+              )
+              
+              $missingFiles = @()
+              foreach ($file in $requiredFiles) {
+                  if (-not (Test-Path $file)) {
+                      $missingFiles += $file
+                  }
               }
               
-              docker push "$registryServer/aiprofilemaker-backend:latest"
-              
-              if ($LASTEXITCODE -ne 0) {
-                  throw "Backend image push failed"
+              if ($missingFiles.Count -gt 0) {
+                  Write-Host "[ERROR] Missing required files for Docker build:" -ForegroundColor Red
+                  foreach ($missing in $missingFiles) {
+                      Write-Host "  - $missing" -ForegroundColor White
+                  }
+                  throw "Missing required Docker build files"
               }
               
-              Write-Host "[SUCCESS] Backend image built and pushed successfully" -ForegroundColor Green
+              Write-Host "[SUCCESS] All required Docker build files present" -ForegroundColor Green
               
-              # Build and push frontend image
-              Write-Host "[BUILD] Building and pushing frontend image..." -ForegroundColor Yellow
-              docker build -f Dockerfile.frontend -t "$registryServer/aiprofilemaker-frontend:latest" .
+              # Build and push backend image with enhanced error handling
+              Write-Host "[BUILD] Building backend image..." -ForegroundColor Yellow
+              Write-Host "[INFO] Build context: $(Get-Location)" -ForegroundColor Cyan
+              Write-Host "[INFO] Backend image tag: $registryServer/aiprofilemaker-backend:latest" -ForegroundColor Cyan
               
-              if ($LASTEXITCODE -ne 0) {
-                  throw "Frontend image build failed"
-              }
-              
-              docker push "$registryServer/aiprofilemaker-frontend:latest"
+              $buildOutput = docker build -f Dockerfile.backend -t "$registryServer/aiprofilemaker-backend:latest" . 2>&1
               
               if ($LASTEXITCODE -ne 0) {
-                  throw "Frontend image push failed"
+                  Write-Host "[ERROR] Backend image build failed with exit code: $LASTEXITCODE" -ForegroundColor Red
+                  Write-Host "[ERROR] Build output:" -ForegroundColor Red
+                  Write-Host $buildOutput -ForegroundColor White
+                  throw "Backend Docker build failed"
               }
               
-              Write-Host "[SUCCESS] Frontend image built and pushed successfully" -ForegroundColor Green
+              Write-Host "[SUCCESS] Backend image built successfully" -ForegroundColor Green
+              
+              Write-Host "[PUSH] Pushing backend image..." -ForegroundColor Yellow
+              $pushOutput = docker push "$registryServer/aiprofilemaker-backend:latest" 2>&1
+              
+              if ($LASTEXITCODE -ne 0) {
+                  Write-Host "[ERROR] Backend image push failed with exit code: $LASTEXITCODE" -ForegroundColor Red
+                  Write-Host "[ERROR] Push output:" -ForegroundColor Red
+                  Write-Host $pushOutput -ForegroundColor White
+                  
+                  # Additional diagnostics
+                  Write-Host "[DIAG] Checking Docker login status..." -ForegroundColor Yellow
+                  docker info
+                  throw "Backend Docker push failed"
+              }
+              
+              Write-Host "[SUCCESS] Backend image pushed successfully" -ForegroundColor Green
+              
+              # Build and push frontend image with enhanced error handling
+              Write-Host "[BUILD] Building frontend image..." -ForegroundColor Yellow
+              Write-Host "[INFO] Frontend image tag: $registryServer/aiprofilemaker-frontend:latest" -ForegroundColor Cyan
+              
+              $buildOutput = docker build -f Dockerfile.frontend -t "$registryServer/aiprofilemaker-frontend:latest" . 2>&1
+              
+              if ($LASTEXITCODE -ne 0) {
+                  Write-Host "[ERROR] Frontend image build failed with exit code: $LASTEXITCODE" -ForegroundColor Red
+                  Write-Host "[ERROR] Build output:" -ForegroundColor Red
+                  Write-Host $buildOutput -ForegroundColor White
+                  throw "Frontend Docker build failed"
+              }
+              
+              Write-Host "[SUCCESS] Frontend image built successfully" -ForegroundColor Green
+              
+              Write-Host "[PUSH] Pushing frontend image..." -ForegroundColor Yellow
+              $pushOutput = docker push "$registryServer/aiprofilemaker-frontend:latest" 2>&1
+              
+              if ($LASTEXITCODE -ne 0) {
+                  Write-Host "[ERROR] Frontend image push failed with exit code: $LASTEXITCODE" -ForegroundColor Red
+                  Write-Host "[ERROR] Push output:" -ForegroundColor Red
+                  Write-Host $pushOutput -ForegroundColor White
+                  throw "Frontend Docker push failed"
+              }
+              
+              Write-Host "[SUCCESS] Frontend image pushed successfully" -ForegroundColor Green
               Write-Host "[SUCCESS] All images built and pushed successfully!" -ForegroundColor Green
               
           } catch {
