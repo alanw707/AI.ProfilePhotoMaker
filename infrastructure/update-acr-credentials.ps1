@@ -18,10 +18,10 @@ param(
 Write-Host "🔐 Updating ACR credentials for Container Apps..." -ForegroundColor Green
 
 try {
-    # Get ACR credentials
+    # Get ACR credentials using PowerShell Azure modules
     Write-Host "📋 Retrieving ACR credentials..." -ForegroundColor Yellow
-    $acrCredentials = az acr credential show --name $ContainerRegistryName --resource-group $ResourceGroupName | ConvertFrom-Json
-    $acrPassword = $acrCredentials.passwords[0].value
+    $acrCredentials = Get-AzContainerRegistryCredential -ResourceGroupName $ResourceGroupName -RegistryName $ContainerRegistryName
+    $acrPassword = $acrCredentials.Password
     
     if (-not $acrPassword) {
         throw "Failed to retrieve ACR password"
@@ -29,49 +29,75 @@ try {
     
     Write-Host "✅ ACR credentials retrieved successfully" -ForegroundColor Green
     
-    # Update Backend App ACR password
+    # Update Backend App ACR password using PowerShell
     Write-Host "🔄 Updating backend app ACR password..." -ForegroundColor Yellow
-    az containerapp secret set `
-        --name $BackendAppName `
-        --resource-group $ResourceGroupName `
-        --secrets "acr-password=$acrPassword"
-    
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to update backend app ACR password"
+    try {
+        $backendApp = Get-AzContainerApp -ResourceGroupName $ResourceGroupName -Name $BackendAppName
+        $secretName = "acr-password"
+        
+        # Update secret using PowerShell cmdlet
+        Update-AzContainerAppSecret -ResourceGroupName $ResourceGroupName -ContainerAppName $BackendAppName -SecretName $secretName -SecretValue $acrPassword
+        Write-Host "✅ Backend app ACR password updated" -ForegroundColor Green
+    } catch {
+        Write-Host "⚠️ Falling back to Azure CLI for backend app secret update..." -ForegroundColor Yellow
+        az containerapp secret set --name $BackendAppName --resource-group $ResourceGroupName --secrets "acr-password=$acrPassword"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to update backend app ACR password"
+        }
+        Write-Host "✅ Backend app ACR password updated via CLI fallback" -ForegroundColor Green
     }
     
-    Write-Host "✅ Backend app ACR password updated" -ForegroundColor Green
-    
-    # Update Frontend App ACR password
+    # Update Frontend App ACR password using PowerShell
     Write-Host "🔄 Updating frontend app ACR password..." -ForegroundColor Yellow
-    az containerapp secret set `
-        --name $FrontendAppName `
-        --resource-group $ResourceGroupName `
-        --secrets "acr-password=$acrPassword"
-    
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to update frontend app ACR password"
+    try {
+        $frontendApp = Get-AzContainerApp -ResourceGroupName $ResourceGroupName -Name $FrontendAppName
+        $secretName = "acr-password"
+        
+        # Update secret using PowerShell cmdlet
+        Update-AzContainerAppSecret -ResourceGroupName $ResourceGroupName -ContainerAppName $FrontendAppName -SecretName $secretName -SecretValue $acrPassword
+        Write-Host "✅ Frontend app ACR password updated" -ForegroundColor Green
+    } catch {
+        Write-Host "⚠️ Falling back to Azure CLI for frontend app secret update..." -ForegroundColor Yellow
+        az containerapp secret set --name $FrontendAppName --resource-group $ResourceGroupName --secrets "acr-password=$acrPassword"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to update frontend app ACR password"
+        }
+        Write-Host "✅ Frontend app ACR password updated via CLI fallback" -ForegroundColor Green
     }
     
-    Write-Host "✅ Frontend app ACR password updated" -ForegroundColor Green
-    
-    # Restart Container Apps to use new credentials
+    # Restart Container Apps using PowerShell modules
     Write-Host "🔄 Restarting container apps..." -ForegroundColor Yellow
     
     # Restart backend app
-    az containerapp revision restart --name $BackendAppName --resource-group $ResourceGroupName
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "⚠️ Warning: Failed to restart backend app" -ForegroundColor Yellow
-    } else {
-        Write-Host "✅ Backend app restarted" -ForegroundColor Green
+    try {
+        $backendRevisions = Get-AzContainerAppRevision -ContainerAppName $BackendAppName -ResourceGroupName $ResourceGroupName
+        $activeRevision = $backendRevisions | Where-Object { $_.Properties.Active -eq $true } | Select-Object -First 1
+        
+        if ($activeRevision) {
+            Restart-AzContainerAppRevision -Name $activeRevision.Name -ResourceGroupName $ResourceGroupName
+            Write-Host "✅ Backend app restarted" -ForegroundColor Green
+        } else {
+            Write-Host "⚠️ Warning: No active revision found for backend app" -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "⚠️ Warning: Failed to restart backend app via PowerShell" -ForegroundColor Yellow
+        Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Gray
     }
     
     # Restart frontend app
-    az containerapp revision restart --name $FrontendAppName --resource-group $ResourceGroupName
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "⚠️ Warning: Failed to restart frontend app" -ForegroundColor Yellow
-    } else {
-        Write-Host "✅ Frontend app restarted" -ForegroundColor Green
+    try {
+        $frontendRevisions = Get-AzContainerAppRevision -ContainerAppName $FrontendAppName -ResourceGroupName $ResourceGroupName
+        $activeRevision = $frontendRevisions | Where-Object { $_.Properties.Active -eq $true } | Select-Object -First 1
+        
+        if ($activeRevision) {
+            Restart-AzContainerAppRevision -Name $activeRevision.Name -ResourceGroupName $ResourceGroupName
+            Write-Host "✅ Frontend app restarted" -ForegroundColor Green
+        } else {
+            Write-Host "⚠️ Warning: No active revision found for frontend app" -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "⚠️ Warning: Failed to restart frontend app via PowerShell" -ForegroundColor Yellow
+        Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Gray
     }
     
     Write-Host ""

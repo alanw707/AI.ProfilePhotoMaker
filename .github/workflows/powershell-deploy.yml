@@ -117,6 +117,36 @@ jobs:
               exit 1
           }
           
+      - name: 🔍 Validate Bicep Template
+        shell: powershell
+        run: |
+          Write-Host "[VALIDATE] Validating Bicep template..." -ForegroundColor Green
+          
+          try {
+              # Validate template compilation
+              az bicep build --file infrastructure/simple-deploy.bicep
+              Write-Host "[SUCCESS] Bicep template compiled successfully" -ForegroundColor Green
+              
+              # Validate deployment
+              az deployment group validate `
+                  --resource-group "${{ env.RESOURCE_GROUP }}" `
+                  --template-file infrastructure/simple-deploy.bicep `
+                  --parameters sqlAdminPassword="${{ secrets.SQL_ADMIN_PASSWORD }}" `
+                              jwtSecret="${{ secrets.JWT_SECRET }}" `
+                              replicateApiToken="${{ secrets.REPLICATE_API_TOKEN }}"
+              
+              if ($LASTEXITCODE -ne 0) {
+                  throw "Template validation failed"
+              }
+              
+              Write-Host "[SUCCESS] Template validation completed" -ForegroundColor Green
+              
+          } catch {
+              Write-Host "[ERROR] Template validation failed" -ForegroundColor Red
+              Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Red
+              exit 1
+          }
+          
       - name: 🏗️ Deploy Infrastructure
         id: infra
         shell: powershell
