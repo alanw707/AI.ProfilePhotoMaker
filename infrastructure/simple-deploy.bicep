@@ -24,7 +24,7 @@ var frontendAppName = '${appName}-web-${environment}'
 var applicationInsightsName = '${appName}-ai-${environment}'
 
 // Container Registry
-resource containerRegistry 'Microsoft.ContainerRegistry/registries@2022-02-01' = {
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2022-02-01-preview' = {
   name: containerRegistryName
   location: location
   sku: {

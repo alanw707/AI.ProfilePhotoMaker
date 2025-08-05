@@ -5,13 +5,13 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.177.2456",
-      "templateHash": "17214653560134801918"
+      "templateHash": "2446222526676578606"
     }
   },
   "parameters": {
     "appName": {
       "type": "string",
-      "defaultValue": "aiprofilemaker"
+      "defaultValue": "aipm"
     },
     "environment": {
       "type": "string",
@@ -45,7 +45,7 @@
   "resources": [
     {
       "type": "Microsoft.ContainerRegistry/registries",
-      "apiVersion": "2023-07-01",
+      "apiVersion": "2022-02-01-preview",
       "name": "[variables('containerRegistryName')]",
       "location": "[parameters('location')]",
       "sku": {
@@ -57,7 +57,7 @@
     },
     {
       "type": "Microsoft.Sql/servers",
-      "apiVersion": "2022-05-01-preview",
+      "apiVersion": "2021-11-01",
       "name": "[variables('sqlServerName')]",
       "location": "[parameters('location')]",
       "properties": {
@@ -69,7 +69,7 @@
     },
     {
       "type": "Microsoft.Sql/servers/databases",
-      "apiVersion": "2022-05-01-preview",
+      "apiVersion": "2021-11-01",
       "name": "[format('{0}/{1}', variables('sqlServerName'), format('{0}db', parameters('appName')))]",
       "location": "[parameters('location')]",
       "sku": {
@@ -198,7 +198,7 @@
       "apiVersion": "2023-02-01",
       "name": "[format('{0}/{1}', variables('keyVaultName'), 'ConnectionString')]",
       "properties": {
-        "value": "[format('Server=tcp:{0},1433;Initial Catalog={1};Authentication=Active Directory Default;Encrypt=True;', reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName')), '2022-05-01-preview').fullyQualifiedDomainName, format('{0}db', parameters('appName')))]"
+        "value": "[format('Server=tcp:{0},1433;Initial Catalog={1};Authentication=Active Directory Default;Encrypt=True;', reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName')), '2021-11-01').fullyQualifiedDomainName, format('{0}db', parameters('appName')))]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
@@ -243,7 +243,7 @@
           },
           "registries": [
             {
-              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').loginServer]",
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2022-02-01-preview').loginServer]",
               "username": "[variables('containerRegistryName')]",
               "passwordSecretRef": "acr-password"
             }
@@ -259,7 +259,7 @@
             },
             {
               "name": "connection-string",
-              "value": "[format('Server=tcp:{0},1433;Initial Catalog={1};Authentication=Active Directory Default;Encrypt=True;', reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName')), '2022-05-01-preview').fullyQualifiedDomainName, format('{0}db', parameters('appName')))]"
+              "value": "[format('Server=tcp:{0},1433;Initial Catalog={1};Authentication=Active Directory Default;Encrypt=True;', reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName')), '2021-11-01').fullyQualifiedDomainName, format('{0}db', parameters('appName')))]"
             },
             {
               "name": "acr-password",
@@ -271,7 +271,7 @@
           "containers": [
             {
               "name": "api",
-              "image": "[format('{0}/aiprofilemaker-backend:latest', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').loginServer)]",
+              "image": "[format('{0}/aiprofilemaker-backend:latest', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2022-02-01-preview').loginServer)]",
               "resources": {
                 "cpu": "[json('0.5')]",
                 "memory": "1Gi"
@@ -348,7 +348,7 @@
           },
           "registries": [
             {
-              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').loginServer]",
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2022-02-01-preview').loginServer]",
               "username": "[variables('containerRegistryName')]",
               "passwordSecretRef": "acr-password"
             }
@@ -364,7 +364,7 @@
           "containers": [
             {
               "name": "web",
-              "image": "[format('{0}/aiprofilemaker-frontend:latest', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').loginServer)]",
+              "image": "[format('{0}/aiprofilemaker-frontend:latest', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2022-02-01-preview').loginServer)]",
               "resources": {
                 "cpu": "[json('0.25')]",
                 "memory": "0.5Gi"
@@ -405,7 +405,7 @@
     },
     "containerRegistryLoginServer": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').loginServer]"
+      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2022-02-01-preview').loginServer]"
     },
     "sqlServerName": {
       "type": "string",
