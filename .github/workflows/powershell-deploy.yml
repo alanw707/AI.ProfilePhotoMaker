@@ -97,7 +97,7 @@ jobs:
                   Write-Host "[INFO] Creating new resource group: ${{ env.RESOURCE_GROUP }}" -ForegroundColor Yellow
                   $resourceGroup = New-AzResourceGroup `
                       -Name "${{ env.RESOURCE_GROUP }}" `
-                      -Location "East US" `
+                      -Location "East US 2" `
                       -Tag @{
                           Environment = "v1"
                           Application = "AIProfileMaker"
