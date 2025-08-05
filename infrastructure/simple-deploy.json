@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.177.2456",
-      "templateHash": "2446222526676578606"
+      "templateHash": "14768937226743832023"
     }
   },
   "parameters": {
@@ -37,7 +37,7 @@
     "sqlServerName": "[format('{0}-sql-{1}-{2}', parameters('appName'), parameters('environment'), variables('uniqueSuffix'))]",
     "storageAccountName": "[format('{0}st{1}{2}', parameters('appName'), parameters('environment'), variables('uniqueSuffix'))]",
     "keyVaultName": "[format('{0}-kv-{1}-{2}', parameters('appName'), parameters('environment'), variables('uniqueSuffix'))]",
-    "containerEnvName": "[format('{0}-env-{1}', parameters('appName'), parameters('environment'))]",
+    "containerEnvName": "[format('{0}-env-{1}-{2}', parameters('appName'), parameters('environment'), variables('uniqueSuffix'))]",
     "backendAppName": "[format('{0}-api-{1}', parameters('appName'), parameters('environment'))]",
     "frontendAppName": "[format('{0}-web-{1}', parameters('appName'), parameters('environment'))]",
     "applicationInsightsName": "[format('{0}-ai-{1}', parameters('appName'), parameters('environment'))]"
