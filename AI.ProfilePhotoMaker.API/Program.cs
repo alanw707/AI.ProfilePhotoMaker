@@ -285,13 +285,12 @@ builder.Services.AddSwaggerGen(c =>
 
 
 // Environment-aware CORS configuration for better maintainability  
-var stagingFrontendUrl = builder.Configuration["AppBaseUrl"] ?? 
-                       "https://ui-apm-simple.nicestone-1ec028d4.eastus.azurecontainerapps.io";
+var v1FrontendUrl = builder.Configuration["AppBaseUrl"] ?? 
+                   "https://aiprofilemaker-web-v1.eastus.azurecontainerapps.io";
 
 builder.Services.AddCors(options =>
 {
-    
-    options.AddPolicy("AllowSpecificOrigins",
+    options.AddPolicy("V1Production",
         corsBuilder =>
         {
             var allowedOrigins = new List<string>
@@ -300,11 +299,14 @@ builder.Services.AddCors(options =>
                 "https://test.profilephotomaker.com"
             };
             
-            // Add staging URL from configuration or fallback to current domain
-            if (!string.IsNullOrEmpty(stagingFrontendUrl))
+            // Add V1 deployment URL from configuration
+            if (!string.IsNullOrEmpty(v1FrontendUrl))
             {
-                allowedOrigins.Add(stagingFrontendUrl);
+                allowedOrigins.Add(v1FrontendUrl);
             }
+            
+            // Add expected V1 Container Apps URL
+            allowedOrigins.Add("https://aiprofilemaker-web-v1.eastus.azurecontainerapps.io");
             
             corsBuilder.WithOrigins(allowedOrigins.ToArray())
                 .AllowAnyMethod()
@@ -326,13 +328,6 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader()
             .AllowCredentials();
     });
-
-    options.AddPolicy("AllowAll", corsBuilder =>
-    {
-        corsBuilder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader();
-    });
 });
 
 var app = builder.Build();
@@ -353,12 +348,11 @@ if (app.Environment.IsDevelopment())
 }
 
 // In middleware pipeline - use appropriate CORS policy based on environment
-var corsPolicy = app.Environment.IsDevelopment() ? "AllowDevelopment" : "AllowSpecificOrigins";
+var corsPolicy = app.Environment.IsDevelopment() ? "AllowDevelopment" : "V1Production";
 Console.WriteLine($"🔧 CORS Policy: Using '{corsPolicy}' for environment '{app.Environment.EnvironmentName}'");
 
-// TEMPORARY FIX: Force AllowAll policy to bypass environment detection issues
-Console.WriteLine("🔧 CORS: TEMPORARY - Using AllowAll policy to fix UI-API communication");
-app.UseCors("AllowAll");
+// Use production-ready CORS configuration
+app.UseCors(corsPolicy);
 
 // Configure middleware
 if (app.Environment.IsDevelopment())

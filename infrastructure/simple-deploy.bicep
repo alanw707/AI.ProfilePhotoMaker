@@ -2,7 +2,7 @@
 // Perfect for single developer deployment
 
 param appName string = 'aiprofilemaker'
-param environment string = 'staging'
+param environment string = 'v1'
 param location string = resourceGroup().location
 
 @secure()
@@ -216,7 +216,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
           env: [
             {
               name: 'ASPNETCORE_ENVIRONMENT'
-              value: 'Staging'
+              value: 'Production'
             }
             {
               name: 'ConnectionStrings__DefaultConnection'

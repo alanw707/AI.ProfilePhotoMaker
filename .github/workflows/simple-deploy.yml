@@ -1,4 +1,4 @@
-name: 🚀 Staging Deploy
+name: 🚀 V1 Deploy
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
         type: boolean
 
 env:
-  RESOURCE_GROUP: aiprofilemaker-staging
+  RESOURCE_GROUP: aiprofilemaker-v1
   
 permissions:
   id-token: write
@@ -75,7 +75,7 @@ jobs:
           az group create \
             --name ${{ env.RESOURCE_GROUP }} \
             --location eastus \
-            --tags Environment=staging Application=AIProfileMaker
+            --tags Environment=v1 Application=AIProfileMaker
             
       - name: 🏗️ Deploy Infrastructure
         id: infra
