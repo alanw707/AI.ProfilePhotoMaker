@@ -318,6 +318,73 @@ jobs:
           echo "✅ [SUCCESS] Frontend image pushed successfully"
           echo "🎉 [SUCCESS] All images built and pushed successfully!"
           
+      - name: 🔐 Update ACR Credentials
+        run: |
+          echo "🔐 [CREDENTIALS] Updating ACR credentials in Container Apps..."
+          
+          REGISTRY_NAME="${{ steps.infra.outputs.registry-name }}"
+          
+          if [ -z "$REGISTRY_NAME" ]; then
+            echo "❌ [ERROR] Missing registry name from infrastructure deployment"
+            exit 1
+          fi
+          
+          # Get ACR admin password
+          echo "🔍 [INFO] Retrieving ACR admin password..."
+          ACR_PASSWORD=$(az acr credential show --name "$REGISTRY_NAME" --query "passwords[0].value" --output tsv)
+          
+          if [ -z "$ACR_PASSWORD" ]; then
+            echo "❌ [ERROR] Failed to retrieve ACR admin password"
+            exit 1
+          fi
+          
+          echo "✅ [SUCCESS] Retrieved ACR admin password"
+          
+          # Find container apps
+          echo "🔍 [SEARCH] Finding container apps in resource group: ${{ env.RESOURCE_GROUP }}"
+          
+          BACKEND_APP=$(az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?contains(name, 'api')].name" --output tsv | head -1)
+          FRONTEND_APP=$(az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?contains(name, 'web')].name" --output tsv | head -1)
+          
+          if [ -z "$BACKEND_APP" ] || [ -z "$FRONTEND_APP" ]; then
+            echo "❌ [ERROR] Could not find backend or frontend apps"
+            echo "  Backend: '$BACKEND_APP'"
+            echo "  Frontend: '$FRONTEND_APP'"
+            az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[].name" --output table
+            exit 1
+          fi
+          
+          echo "📱 [INFO] Found apps - Backend: $BACKEND_APP, Frontend: $FRONTEND_APP"
+          
+          # Update backend ACR credentials
+          echo "🔐 [UPDATE] Updating backend ACR credentials..."
+          az containerapp secret set \
+            --name "$BACKEND_APP" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --secrets acr-password="$ACR_PASSWORD"
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ [ERROR] Failed to update backend ACR credentials"
+            exit 1
+          fi
+          
+          echo "✅ [SUCCESS] Backend ACR credentials updated"
+          
+          # Update frontend ACR credentials
+          echo "🔐 [UPDATE] Updating frontend ACR credentials..."
+          az containerapp secret set \
+            --name "$FRONTEND_APP" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --secrets acr-password="$ACR_PASSWORD"
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ [ERROR] Failed to update frontend ACR credentials"
+            exit 1
+          fi
+          
+          echo "✅ [SUCCESS] Frontend ACR credentials updated"
+          echo "🎉 [SUCCESS] All ACR credentials updated successfully!"
+          
       - name: 🔄 Update Container Apps
         run: |
           echo "🔄 [UPDATE] Updating container apps with new images..."
