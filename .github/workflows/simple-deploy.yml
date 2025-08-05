@@ -10,119 +10,19 @@ on:
         required: false
         default: false
         type: boolean
-      deploy_components:
-        description: 'Components to deploy'
-        required: false
-        default: 'both'
-        type: choice
-        options:
-        - 'both'
-        - 'api-only'
-        - 'ui-only'
 
 env:
-  RESOURCE_GROUP: aiprofilemaker-staging
-  REGISTRY_NAME: acrapmsimple78215
-  ENVIRONMENT: staging
-  APP_NAME: aiprofilemaker
-  # Existing resource names to prevent duplicates
-  SQL_SERVER_NAME: sql-apm-175427827
-  SQL_DB_NAME: aiprofilemaker
-  CONTAINER_ENV_NAME: aiprofilemaker-staging
-  API_APP_NAME: api-apm-simple
-  UI_APP_NAME: ui-apm-simple
+  RESOURCE_GROUP: rg-aiprofilemaker-staging
   
 permissions:
   id-token: write
   contents: read
 
 jobs:
-  # Determine what components to build/deploy
-  determine-components:
-    name: 🎯 Component Detection
-    runs-on: ubuntu-latest
-    outputs:
-      build-api: ${{ steps.detect.outputs.build-api }}
-      build-ui: ${{ steps.detect.outputs.build-ui }}
-      deploy-api: ${{ steps.detect.outputs.deploy-api }}
-      deploy-ui: ${{ steps.detect.outputs.deploy-ui }}
-      build-version: ${{ steps.version.outputs.build-version }}
-    
-    steps:
-    - name: 📥 Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 2
-    
-    - name: 🔍 Detect Changes & Components
-      id: detect
-      run: |
-        DEPLOY_CHOICE="${{ github.event.inputs.deploy_components || 'both' }}"
-        echo "Deploy choice: $DEPLOY_CHOICE"
-        
-        # For manual workflow dispatch, use input selection
-        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-          case "$DEPLOY_CHOICE" in
-            "api-only")
-              echo "build-api=true" >> $GITHUB_OUTPUT
-              echo "build-ui=false" >> $GITHUB_OUTPUT
-              echo "deploy-api=true" >> $GITHUB_OUTPUT
-              echo "deploy-ui=false" >> $GITHUB_OUTPUT
-              ;;
-            "ui-only")
-              echo "build-api=false" >> $GITHUB_OUTPUT
-              echo "build-ui=true" >> $GITHUB_OUTPUT
-              echo "deploy-api=false" >> $GITHUB_OUTPUT
-              echo "deploy-ui=true" >> $GITHUB_OUTPUT
-              ;;
-            *)
-              echo "build-api=true" >> $GITHUB_OUTPUT
-              echo "build-ui=true" >> $GITHUB_OUTPUT
-              echo "deploy-api=true" >> $GITHUB_OUTPUT
-              echo "deploy-ui=true" >> $GITHUB_OUTPUT
-              ;;
-          esac
-        else
-          # For push events, detect changed files
-          API_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E '^AI\.ProfilePhotoMaker\.API/' || echo "")
-          UI_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E '^AI\.ProfilePhotoMaker\.UI/' || echo "")
-          DOCKER_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E '^Dockerfile' || echo "")
-          
-          # Build API if API files or Dockerfile changed, or if no specific changes detected
-          if [[ -n "$API_CHANGED" || -n "$DOCKER_CHANGED" || ( -z "$API_CHANGED" && -z "$UI_CHANGED" ) ]]; then
-            echo "build-api=true" >> $GITHUB_OUTPUT
-            echo "deploy-api=true" >> $GITHUB_OUTPUT
-          else
-            echo "build-api=false" >> $GITHUB_OUTPUT
-            echo "deploy-api=false" >> $GITHUB_OUTPUT
-          fi
-          
-          # Build UI if UI files or Dockerfile changed, or if no specific changes detected
-          if [[ -n "$UI_CHANGED" || -n "$DOCKER_CHANGED" || ( -z "$API_CHANGED" && -z "$UI_CHANGED" ) ]]; then
-            echo "build-ui=true" >> $GITHUB_OUTPUT
-            echo "deploy-ui=true" >> $GITHUB_OUTPUT
-          else
-            echo "build-ui=false" >> $GITHUB_OUTPUT
-            echo "deploy-ui=false" >> $GITHUB_OUTPUT
-          fi
-        fi
-        
-        echo "🎯 Component Detection Results:"
-        echo "  Build API: $(echo $GITHUB_OUTPUT | grep build-api | cut -d'=' -f2)"
-        echo "  Build UI: $(echo $GITHUB_OUTPUT | grep build-ui | cut -d'=' -f2)"
-    
-    - name: 🏷️ Generate Build Version
-      id: version
-      run: |
-        BUILD_VERSION="v$(date +%Y%m%d)-${GITHUB_SHA:0:8}"
-        echo "build-version=$BUILD_VERSION" >> $GITHUB_OUTPUT
-        echo "Build version: $BUILD_VERSION"
-
   test:
     name: 🧪 Test
     runs-on: ubuntu-latest
-    needs: determine-components
-    if: github.event.inputs.skip_tests != 'true' && (needs.determine-components.outputs.build-api == 'true' || needs.determine-components.outputs.build-ui == 'true')
+    if: github.event.inputs.skip_tests != 'true'
     
     steps:
       - name: 📥 Checkout
@@ -141,14 +41,12 @@ jobs:
           cache-dependency-path: AI.ProfilePhotoMaker.UI/package-lock.json
           
       - name: 🧪 Test Backend
-        if: needs.determine-components.outputs.build-api == 'true'
         run: |
           cd AI.ProfilePhotoMaker.API
           dotnet restore
           dotnet build --configuration Release
           
       - name: 🧪 Test Frontend
-        if: needs.determine-components.outputs.build-ui == 'true'
         run: |
           cd AI.ProfilePhotoMaker.UI
           npm ci
@@ -158,8 +56,8 @@ jobs:
   deploy:
     name: 🚀 Deploy
     runs-on: ubuntu-latest
-    needs: [determine-components, test]
-    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped') && (needs.determine-components.outputs.deploy-api == 'true' || needs.determine-components.outputs.deploy-ui == 'true')
+    needs: test
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
     
     steps:
       - name: 📥 Checkout
@@ -172,368 +70,97 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           
-      - name: 🌍 Cross-Region Resource Discovery
-        id: discovery
+      - name: 🏗️ Create Resource Group
         run: |
-          echo "🌍 Performing cross-region resource group analysis..."
-          
-          # Verify resource group exists and get location
-          if RG_INFO=$(az group show --name ${{ env.RESOURCE_GROUP }} --output json 2>/dev/null); then
-            RG_LOCATION=$(echo "$RG_INFO" | jq -r '.location')
-            echo "✅ Resource Group found: ${{ env.RESOURCE_GROUP }} in region: $RG_LOCATION"
-          else
-            echo "🏗️ Creating resource group in eastus2..."
-            az group create \
-              --name ${{ env.RESOURCE_GROUP }} \
-              --location eastus2 \
-              --tags Environment=${{ env.ENVIRONMENT }} Application=AIProfileMaker
-            RG_LOCATION="eastus2"
-          fi
-          
-          # Discovery all resources in the group with location mapping
-          echo "🔍 Discovering all resources in resource group..."
-          RESOURCES=$(az resource list --resource-group ${{ env.RESOURCE_GROUP }} --output json 2>/dev/null || echo "[]")
-          
-          if [ "$RESOURCES" != "[]" ]; then
-            RESOURCE_COUNT=$(echo "$RESOURCES" | jq '. | length')
-            echo "   Found $RESOURCE_COUNT resources in resource group"
+          az group create \
+            --name ${{ env.RESOURCE_GROUP }} \
+            --location eastus2 \
+            --tags Environment=staging Application=AIProfileMaker
             
-            # Map resources by location
-            echo "📍 Resource location distribution:"
-            echo "$RESOURCES" | jq -r '
-              group_by(.location) | 
-              .[] | 
-              "\(.[ ].location): \(length) resources (\(.[].type | group_by(.) | map("\(.[0]) x\(length)") | join(", ")))"
-            ' | while read line; do
-              echo "   $line"
-            done
-            
-            # Check for target resources
-            TARGET_RESOURCES=("${{ env.SQL_SERVER_NAME }}" "${{ env.REGISTRY_NAME }}" "${{ env.CONTAINER_ENV_NAME }}")
-            echo ""
-            echo "🎯 Target resource pre-check:"
-            for target in "${TARGET_RESOURCES[@]}"; do
-              FOUND=$(echo "$RESOURCES" | jq --arg name "$target" '.[] | select(.name == $name) | .name' | wc -l)
-              if [ "$FOUND" -gt 0 ]; then
-                LOCATION=$(echo "$RESOURCES" | jq -r --arg name "$target" '.[] | select(.name == $name) | .location')
-                echo "   ✅ $target (Region: $LOCATION)"
-              else
-                echo "   ⚠️ $target (Not found - will attempt discovery)"
-              fi
-            done
-          else
-            echo "   No existing resources found - clean deployment"
-          fi
-          
-          echo "resource-group-location=$RG_LOCATION" >> $GITHUB_OUTPUT
-          
-      - name: 🏗️ Create Resource Group (Idempotent)
+      - name: 🏗️ Deploy Infrastructure
+        id: infra
         run: |
-          echo "🏗️ Resource Group verification completed by discovery step"
+          cd infrastructure
+          
+          DEPLOYMENT_NAME="deploy-$(date +%Y%m%d-%H%M%S)"
+          
+          az deployment group create \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --template-file simple-deploy.bicep \
+            --parameters \
+              sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}' \
+              jwtSecret='${{ secrets.JWT_SECRET }}' \
+              replicateApiToken='${{ secrets.REPLICATE_API_TOKEN }}' \
+            --name "$DEPLOYMENT_NAME" \
+            --output table
             
-      - name: 🏗️ Verify Container Registry (Cross-Region Aware)
-        id: registry
-        run: |
-          echo "🔍 Using existing Container Registry: ${{ env.REGISTRY_NAME }}"
+          # Get outputs
+          REGISTRY_NAME=$(az deployment group show --resource-group ${{ env.RESOURCE_GROUP }} --name "$DEPLOYMENT_NAME" --query 'properties.outputs.containerRegistryName.value' -o tsv)
+          REGISTRY_SERVER=$(az deployment group show --resource-group ${{ env.RESOURCE_GROUP }} --name "$DEPLOYMENT_NAME" --query 'properties.outputs.containerRegistryLoginServer.value' -o tsv)
           
-          # Verify registry exists with timeout and retry
-          REGISTRY_FOUND=false
-          REGISTRY_SERVER=""
-          REGISTRY_LOCATION=""
-          
-          for attempt in {1..3}; do
-            echo "🔍 Registry verification attempt $attempt/3..."
-            
-            if REGISTRY_INFO=$(timeout 45s az acr show \
-              --name ${{ env.REGISTRY_NAME }} \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
-              --output json 2>/dev/null); then
-              
-              REGISTRY_SERVER=$(echo "$REGISTRY_INFO" | jq -r '.loginServer')
-              REGISTRY_LOCATION=$(echo "$REGISTRY_INFO" | jq -r '.location')
-              REGISTRY_FOUND=true
-              echo "✅ Container Registry found: ${{ env.REGISTRY_NAME }} in region: $REGISTRY_LOCATION"
-              break
-            fi
-            
-            if [ $attempt -lt 3 ]; then
-              echo "   Registry check failed, retrying in 5 seconds..."
-              sleep 5
-            fi
-          done
-          
-          if [ "$REGISTRY_FOUND" = false ]; then
-            echo "❌ Container Registry not found after retries: ${{ env.REGISTRY_NAME }}"
-            echo "🔍 Available container registries in resource group:"
-            az acr list --resource-group ${{ env.RESOURCE_GROUP }} --output table 2>/dev/null || echo "   No registries found or access denied"
-            exit 1
-          fi
-          
+          echo "registry-name=$REGISTRY_NAME" >> $GITHUB_OUTPUT
           echo "registry-server=$REGISTRY_SERVER" >> $GITHUB_OUTPUT
-          echo "registry-name=${{ env.REGISTRY_NAME }}" >> $GITHUB_OUTPUT
-          echo "registry-location=$REGISTRY_LOCATION" >> $GITHUB_OUTPUT
           
-      - name: 🏗️ Verify Container Apps Environment (Cross-Region Aware)
-        id: environment
-        run: |
-          echo "🔍 Using existing Container Apps Environment: ${{ env.CONTAINER_ENV_NAME }}"
-          
-          # Verify environment exists with timeout and retry
-          ENVIRONMENT_FOUND=false
-          ENVIRONMENT_LOCATION=""
-          
-          for attempt in {1..3}; do
-            echo "🔍 Environment verification attempt $attempt/3..."
-            
-            if ENV_INFO=$(timeout 45s az containerapp env show \
-              --name ${{ env.CONTAINER_ENV_NAME }} \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
-              --output json 2>/dev/null); then
-              
-              ENVIRONMENT_LOCATION=$(echo "$ENV_INFO" | jq -r '.location')
-              ENVIRONMENT_FOUND=true
-              echo "✅ Container Apps Environment found: ${{ env.CONTAINER_ENV_NAME }} in region: $ENVIRONMENT_LOCATION"
-              break
-            fi
-            
-            if [ $attempt -lt 3 ]; then
-              echo "   Environment check failed, retrying in 5 seconds..."
-              sleep 5
-            fi
-          done
-          
-          if [ "$ENVIRONMENT_FOUND" = false ]; then
-            echo "❌ Container Apps Environment not found after retries: ${{ env.CONTAINER_ENV_NAME }}"
-            echo "🔍 Available container app environments in resource group:"
-            az containerapp env list --resource-group ${{ env.RESOURCE_GROUP }} --output table 2>/dev/null || echo "   No environments found or access denied"
-            exit 1
-          fi
-          
-          echo "environment-name=${{ env.CONTAINER_ENV_NAME }}" >> $GITHUB_OUTPUT
-          echo "environment-location=$ENVIRONMENT_LOCATION" >> $GITHUB_OUTPUT
-          
-      - name: 🏗️ Verify SQL Database (Cross-Region Aware)
-        id: database
-        run: |
-          echo "🔍 Using existing SQL Server: ${{ env.SQL_SERVER_NAME }}"
-          echo "🔍 Using existing SQL Database: ${{ env.SQL_DB_NAME }}"
-          
-          # Define potential regions for cross-region resource discovery
-          REGIONS=("eastus" "eastus2" "westus2" "centralus" "westus")
-          SQL_SERVER_FOUND=false
-          SQL_SERVER_LOCATION=""
-          
-          echo "🌍 Performing cross-region SQL Server discovery..."
-          
-          # Cross-region SQL Server discovery with timeout and retry
-          for region in "${REGIONS[@]}"; do
-            echo "🔍 Checking region: $region"
-            
-            # Use subscription-wide search with location filtering and timeout
-            if timeout 30s az sql server show \
-              --name ${{ env.SQL_SERVER_NAME }} \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
-              --output json 2>/dev/null | jq -r '.location' | grep -q "$region"; then
-              
-              echo "✅ SQL Server found in region: $region"
-              SQL_SERVER_FOUND=true
-              SQL_SERVER_LOCATION="$region"
-              break
-            fi
-          done
-          
-          # Fallback: Try resource group-wide search without region filter
-          if [ "$SQL_SERVER_FOUND" = false ]; then
-            echo "🔄 Fallback: Searching entire resource group..."
-            
-            if SERVER_INFO=$(timeout 45s az sql server show \
-              --name ${{ env.SQL_SERVER_NAME }} \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
-              --output json 2>/dev/null); then
-              
-              SQL_SERVER_LOCATION=$(echo "$SERVER_INFO" | jq -r '.location')
-              SQL_SERVER_FOUND=true
-              echo "✅ SQL Server found via fallback in region: $SQL_SERVER_LOCATION"
-            fi
-          fi
-          
-          # Final verification with retry mechanism
-          if [ "$SQL_SERVER_FOUND" = false ]; then
-            echo "🔄 Final attempt: Cross-subscription resource discovery..."
-            
-            # Try subscription-wide search as last resort
-            for attempt in {1..3}; do
-              echo "   Attempt $attempt/3..."
-              
-              if SERVERS=$(timeout 60s az sql server list \
-                --resource-group ${{ env.RESOURCE_GROUP }} \
-                --output json 2>/dev/null); then
-                
-                if echo "$SERVERS" | jq -r '.[].name' | grep -q "^${{ env.SQL_SERVER_NAME }}$"; then
-                  SQL_SERVER_LOCATION=$(echo "$SERVERS" | jq -r '.[] | select(.name=="${{ env.SQL_SERVER_NAME }}") | .location')
-                  SQL_SERVER_FOUND=true
-                  echo "✅ SQL Server found via subscription search in region: $SQL_SERVER_LOCATION"
-                  break
-                fi
-              fi
-              
-              if [ $attempt -lt 3 ]; then
-                echo "   Retrying in 10 seconds..."
-                sleep 10
-              fi
-            done
-          fi
-          
-          # Fail if SQL Server not found after all attempts
-          if [ "$SQL_SERVER_FOUND" = false ]; then
-            echo "❌ SQL Server not found after cross-region discovery: ${{ env.SQL_SERVER_NAME }}"
-            echo "🔍 Available SQL servers in resource group:"
-            az sql server list --resource-group ${{ env.RESOURCE_GROUP }} --output table 2>/dev/null || echo "   No servers found or access denied"
-            exit 1
-          fi
-          
-          echo "📍 SQL Server location: $SQL_SERVER_LOCATION"
-          
-          # Verify SQL Database exists with location-aware retry
-          echo "🔍 Verifying SQL Database with location awareness..."
-          DATABASE_FOUND=false
-          
-          for attempt in {1..3}; do
-            echo "   Database verification attempt $attempt/3..."
-            
-            if timeout 45s az sql db show \
-              --name ${{ env.SQL_DB_NAME }} \
-              --server ${{ env.SQL_SERVER_NAME }} \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
-              --output none 2>/dev/null; then
-              
-              DATABASE_FOUND=true
-              echo "✅ SQL Database found: ${{ env.SQL_DB_NAME }}"
-              break
-            fi
-            
-            if [ $attempt -lt 3 ]; then
-              echo "   Database check failed, retrying in 5 seconds..."
-              sleep 5
-            fi
-          done
-          
-          if [ "$DATABASE_FOUND" = false ]; then
-            echo "❌ SQL Database not found after retries: ${{ env.SQL_DB_NAME }}"
-            echo "🔍 Available databases on server ${{ env.SQL_SERVER_NAME }}:"
-            az sql db list --server ${{ env.SQL_SERVER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --output table 2>/dev/null || echo "   No databases found or access denied"
-            exit 1
-          fi
-          
-          # Set outputs with location information
-          echo "sql-server=${{ env.SQL_SERVER_NAME }}" >> $GITHUB_OUTPUT
-          echo "sql-database=${{ env.SQL_DB_NAME }}" >> $GITHUB_OUTPUT
-          echo "sql-server-location=$SQL_SERVER_LOCATION" >> $GITHUB_OUTPUT
-          
-          echo "✅ Cross-region SQL resource verification completed successfully"
-
       - name: 🐳 Build & Push Images
         run: |
-          REGISTRY_SERVER="${{ steps.registry.outputs.registry-server }}"
-          BUILD_VERSION="${{ needs.determine-components.outputs.build-version }}"
-          
           # Login to registry
-          echo "🔐 Logging into Container Registry..."
-          az acr login --name ${{ steps.registry.outputs.registry-name }}
+          az acr login --name ${{ steps.infra.outputs.registry-name }}
           
-          # Build API if needed
-          if [[ "${{ needs.determine-components.outputs.build-api }}" == "true" ]]; then
-            echo "🔧 Building backend API image..."
-            docker build --target api-runtime \
-              -t $REGISTRY_SERVER/aiprofilemaker-api:$BUILD_VERSION \
-              -t $REGISTRY_SERVER/aiprofilemaker-api:latest .
-            docker push $REGISTRY_SERVER/aiprofilemaker-api:$BUILD_VERSION
-            docker push $REGISTRY_SERVER/aiprofilemaker-api:latest
-            echo "✅ API image built and pushed"
-          else
-            echo "⏭️ Skipping API build (no changes detected)"
-          fi
+          # Build and push backend
+          docker build -f Dockerfile.backend -t ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-backend:latest .
+          docker push ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-backend:latest
           
-          # Build UI if needed
-          if [[ "${{ needs.determine-components.outputs.build-ui }}" == "true" ]]; then
-            echo "🎨 Building frontend UI image..."
-            docker build --target frontend-runtime \
-              -t $REGISTRY_SERVER/aiprofilemaker-ui:$BUILD_VERSION \
-              -t $REGISTRY_SERVER/aiprofilemaker-ui:latest .
-            docker push $REGISTRY_SERVER/aiprofilemaker-ui:$BUILD_VERSION
-            docker push $REGISTRY_SERVER/aiprofilemaker-ui:latest
-            echo "✅ UI image built and pushed"
-          else
-            echo "⏭️ Skipping UI build (no changes detected)"
-          fi
+          # Build and push frontend
+          docker build -f Dockerfile.frontend -t ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-frontend:latest .
+          docker push ${{ steps.infra.outputs.registry-server }}/aiprofilemaker-frontend:latest
           
-      - name: 🚀 Deploy Container Apps (Selective)
+      - name: 🔄 Restart Container Apps
         run: |
-          REGISTRY_SERVER="${{ steps.registry.outputs.registry-server }}"
-          BUILD_VERSION="${{ needs.determine-components.outputs.build-version }}"
-          ENVIRONMENT_NAME="${{ steps.environment.outputs.environment-name }}"
-          SQL_SERVER="${{ steps.database.outputs.sql-server }}"
-          SQL_CONNECTION_STRING="Server=tcp:$SQL_SERVER.database.windows.net,1433;Initial Catalog=${{ steps.database.outputs.sql-database }};Persist Security Info=False;User ID=sqladmin;Password=${{ secrets.SQL_ADMIN_PASSWORD }};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+          # Find and restart the container apps to pick up new images
+          BACKEND_APP=$(az containerapp list -g ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'api')].name" -o tsv)
+          FRONTEND_APP=$(az containerapp list -g ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'web')].name" -o tsv)
           
-          # Deploy/Update API Container App
-          if [[ "${{ needs.determine-components.outputs.deploy-api }}" == "true" ]]; then
-            echo "🚀 Updating existing API Container App: ${{ env.API_APP_NAME }}"
-            
-            # Update existing API Container App with new image
-            az containerapp update \
-              --name ${{ env.API_APP_NAME }} \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
-              --image $REGISTRY_SERVER/aiprofilemaker-api:$BUILD_VERSION
-            
-            # Get API URL
-            API_URL=$(az containerapp show --name ${{ env.API_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query "properties.configuration.ingress.fqdn" -o tsv)
-            echo "backend-url=https://$API_URL" >> $GITHUB_OUTPUT
-            echo "✅ API Container App updated successfully"
+          if [ -n "$BACKEND_APP" ]; then
+            echo "🔄 Restarting backend app: $BACKEND_APP"
+            az containerapp revision restart --revision $(az containerapp revision list --name $BACKEND_APP --resource-group ${{ env.RESOURCE_GROUP }} --query '[0].name' -o tsv) --resource-group ${{ env.RESOURCE_GROUP }}
           fi
           
-          # Deploy/Update UI Container App  
-          if [[ "${{ needs.determine-components.outputs.deploy-ui }}" == "true" ]]; then
-            echo "🚀 Updating existing UI Container App: ${{ env.UI_APP_NAME }}"
-            
-            # Update existing UI Container App with new image
-            az containerapp update \
-              --name ${{ env.UI_APP_NAME }} \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
-              --image $REGISTRY_SERVER/aiprofilemaker-ui:$BUILD_VERSION
-            
-            # Get UI URL
-            UI_URL=$(az containerapp show --name ${{ env.UI_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query "properties.configuration.ingress.fqdn" -o tsv)
-            echo "frontend-url=https://$UI_URL" >> $GITHUB_OUTPUT
-            echo "✅ UI Container App updated successfully"
+          if [ -n "$FRONTEND_APP" ]; then
+            echo "🔄 Restarting frontend app: $FRONTEND_APP"
+            az containerapp revision restart --revision $(az containerapp revision list --name $FRONTEND_APP --resource-group ${{ env.RESOURCE_GROUP }} --query '[0].name' -o tsv) --resource-group ${{ env.RESOURCE_GROUP }}
           fi
           
-      - name: 🎉 Deployment Summary
-        id: summary
+      - name: 🧪 Health Check
         run: |
-          echo "🎉 Cross-region deployment completed successfully!"
-          echo ""
-          echo "🎯 Deployed Components:"
-          echo "  API: ${{ needs.determine-components.outputs.deploy-api }}"
-          echo "  UI: ${{ needs.determine-components.outputs.deploy-ui }}"
-          echo "  Build Version: ${{ needs.determine-components.outputs.build-version }}"
-          echo ""
-          echo "📋 Application URLs:"
-          if [[ "${{ needs.determine-components.outputs.deploy-api }}" == "true" ]]; then
-            echo "  Backend API: Available after deployment"
+          echo "⏳ Waiting for deployment to stabilize..."
+          sleep 60
+          
+          # Get app URLs
+          BACKEND_APP=$(az containerapp list -g ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'api')].name" -o tsv)
+          FRONTEND_APP=$(az containerapp list -g ${{ env.RESOURCE_GROUP }} --query "[?contains(name, 'web')].name" -o tsv)
+          
+          if [ -n "$BACKEND_APP" ]; then
+            BACKEND_URL=$(az containerapp show --name $BACKEND_APP --resource-group ${{ env.RESOURCE_GROUP }} --query 'properties.configuration.ingress.fqdn' -o tsv)
+            echo "🔍 Testing backend: https://$BACKEND_URL"
+            
+            if curl -f -s --max-time 30 "https://$BACKEND_URL/health" > /dev/null; then
+              echo "✅ Backend is healthy"
+            else
+              echo "⚠️ Backend health check failed (may still be starting)"
+            fi
           fi
-          if [[ "${{ needs.determine-components.outputs.deploy-ui }}" == "true" ]]; then
-            echo "  Frontend UI: Available after deployment"  
+          
+          if [ -n "$FRONTEND_APP" ]; then
+            FRONTEND_URL=$(az containerapp show --name $FRONTEND_APP --resource-group ${{ env.RESOURCE_GROUP }} --query 'properties.configuration.ingress.fqdn' -o tsv)
+            echo "🔍 Testing frontend: https://$FRONTEND_URL"
+            
+            if curl -f -s --max-time 30 "https://$FRONTEND_URL" > /dev/null; then
+              echo "✅ Frontend is healthy"
+            else
+              echo "⚠️ Frontend health check failed (may still be starting)"
+            fi
+            
+            echo "🎉 Your app is deployed!"
+            echo "Frontend: https://$FRONTEND_URL"
+            echo "Backend: https://$BACKEND_URL"
           fi
-          echo ""
-          echo "🌍 Cross-Region Infrastructure (Existing Resources):"
-          echo "  Resource Group: ${{ env.RESOURCE_GROUP }} (Primary: eastus2)"
-          echo "  Container Registry: ${{ env.REGISTRY_NAME }} (Region: ${{ steps.registry.outputs.registry-location }})"
-          echo "  SQL Server: ${{ env.SQL_SERVER_NAME }} (Region: ${{ steps.database.outputs.sql-server-location }})"
-          echo "  SQL Database: ${{ env.SQL_DB_NAME }}"
-          echo "  Container Environment: ${{ env.CONTAINER_ENV_NAME }} (Region: ${{ steps.environment.outputs.environment-location }})"
-          echo "  API Container App: ${{ env.API_APP_NAME }}"
-          echo "  UI Container App: ${{ env.UI_APP_NAME }}"
-          echo ""
-          echo "⏱️ Cross-Region Performance:"
-          echo "  Resource discovery completed with robust timeout and retry mechanisms"
-          echo "  All resources verified across multiple Azure regions"
