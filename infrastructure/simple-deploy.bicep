@@ -24,7 +24,7 @@ var frontendAppName = '${appName}-web-${environment}'
 var applicationInsightsName = '${appName}-ai-${environment}'
 
 // Container Registry
-resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2022-02-01' = {
   name: containerRegistryName
   location: location
   sku: {
@@ -36,7 +36,7 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' =
 }
 
 // SQL Database
-resource sqlServer 'Microsoft.Sql/servers@2022-05-01-preview' = {
+resource sqlServer 'Microsoft.Sql/servers@2021-11-01' = {
   name: sqlServerName
   location: location
   properties: {
@@ -47,7 +47,7 @@ resource sqlServer 'Microsoft.Sql/servers@2022-05-01-preview' = {
   }
 }
 
-resource sqlDatabase 'Microsoft.Sql/servers/databases@2022-05-01-preview' = {
+resource sqlDatabase 'Microsoft.Sql/servers/databases@2021-11-01' = {
   parent: sqlServer
   name: '${appName}db'
   location: location
@@ -87,9 +87,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
   parent: storageAccount
   name: 'default'
-  dependsOn: [
-    storageAccount
-  ]
 }
 
 resource profileImagesContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
@@ -98,9 +95,6 @@ resource profileImagesContainer 'Microsoft.Storage/storageAccounts/blobServices/
   properties: {
     publicAccess: 'Blob'
   }
-  dependsOn: [
-    blobService
-  ]
 }
 
 // Log Analytics Workspace (required for Container Apps)
@@ -149,9 +143,6 @@ resource jwtSecretKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
   properties: {
     value: jwtSecret
   }
-  dependsOn: [
-    keyVault
-  ]
 }
 
 resource replicateTokenKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
@@ -160,9 +151,6 @@ resource replicateTokenKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
   properties: {
     value: replicateApiToken
   }
-  dependsOn: [
-    keyVault
-  ]
 }
 
 resource connectionStringKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
@@ -171,11 +159,6 @@ resource connectionStringKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
   properties: {
     value: 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${sqlDatabase.name};Authentication=Active Directory Default;Encrypt=True;'
   }
-  dependsOn: [
-    keyVault
-    sqlServer
-    sqlDatabase
-  ]
 }
 
 // Container Apps Environment
@@ -288,9 +271,6 @@ resource backendApp 'Microsoft.App/containerApps@2022-10-01' = {
       }
     }
   }
-  dependsOn: [
-    containerAppsEnvironment
-  ]
 }
 
 // Frontend Container App
@@ -346,9 +326,6 @@ resource frontendApp 'Microsoft.App/containerApps@2022-10-01' = {
       }
     }
   }
-  dependsOn: [
-    containerAppsEnvironment
-  ]
 }
 
 // Note: Using Container Registry admin credentials for simplicity
