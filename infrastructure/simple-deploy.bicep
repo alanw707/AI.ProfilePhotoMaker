@@ -191,7 +191,7 @@ resource backendApp 'Microsoft.App/containerApps@2022-10-01' = {
       activeRevisionsMode: 'Single'
       ingress: {
         external: true
-        targetPort: 80
+        targetPort: 8080
         allowInsecure: false
       }
       registries: [
@@ -224,7 +224,7 @@ resource backendApp 'Microsoft.App/containerApps@2022-10-01' = {
       containers: [
         {
           name: 'api'
-          image: 'nginx:alpine'
+          image: '${containerRegistry.properties.loginServer}/aiprofilemaker-api:latest'
           resources: {
             cpu: json('0.5')
             memory: '1Gi'
