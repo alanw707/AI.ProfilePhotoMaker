@@ -225,7 +225,8 @@ resource backendApp 'Microsoft.App/containerApps@2022-10-01' = {
       containers: [
         {
           name: 'api'
-          image: '${containerRegistry.properties.loginServer}/aiprofilemaker-api:latest'
+          // Using a placeholder image initially - will be updated after image migration
+          image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
           resources: {
             cpu: json('0.5')
             memory: '1Gi'
@@ -311,7 +312,8 @@ resource frontendApp 'Microsoft.App/containerApps@2022-10-01' = {
       containers: [
         {
           name: 'web'
-          image: '${containerRegistry.properties.loginServer}/aiprofilemaker-web:latest'
+          // Using a placeholder image initially - will be updated after image migration
+          image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
           resources: {
             cpu: json('0.25')
             memory: '0.5Gi'
