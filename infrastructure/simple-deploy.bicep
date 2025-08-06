@@ -224,8 +224,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
         }
         {
           name: 'acr-password'
-          #disable-next-line use-secure-value-for-secure-inputs
-          value: 'placeholder-will-be-updated-post-deployment'
+          value: containerRegistry.listCredentials().passwords[0].value
         }
       ]
     }
@@ -345,8 +344,7 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
       secrets: [
         {
           name: 'acr-password'
-          #disable-next-line use-secure-value-for-secure-inputs
-          value: 'placeholder-will-be-updated-post-deployment'
+          value: containerRegistry.listCredentials().passwords[0].value
         }
       ]
     }
