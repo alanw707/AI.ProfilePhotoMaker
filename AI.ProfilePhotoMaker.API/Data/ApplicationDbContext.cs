@@ -51,6 +51,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         // Seed data
         SeedCreditPackages(builder);
+        SeedStyles(builder);
     }
 
     private void ConfigureUserProfileRelationships(ModelBuilder builder)
@@ -306,5 +307,34 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 CreatedAt = DateTime.UtcNow
             }
         );
+    }
+
+    private void SeedStyles(ModelBuilder builder)
+    {
+        var styles = new[]
+        {
+            new Style { Id = 1, Name = "corporate", Description = "Professional corporate headshot style", PromptTemplate = "professional corporate headshot, business attire, clean background, confident expression, high-quality photography", NegativePromptTemplate = "casual clothes, blurred, low quality, unprofessional", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Style { Id = 2, Name = "executive", Description = "Executive leadership portrait", PromptTemplate = "executive portrait, professional leadership style, formal business attire, authoritative presence, studio lighting", NegativePromptTemplate = "casual, informal, poor lighting, unprofessional", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Style { Id = 3, Name = "consultant", Description = "Professional consultant style", PromptTemplate = "professional consultant portrait, business consulting style, smart casual attire, approachable yet professional", NegativePromptTemplate = "too casual, unprofessional, blurred", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Style { Id = 4, Name = "linkedin", Description = "LinkedIn professional networking", PromptTemplate = "linkedin profile photo, professional networking style, business attire, friendly professional expression, clean background", NegativePromptTemplate = "casual clothes, distracting background, unprofessional", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Style { Id = 5, Name = "legal", Description = "Legal professional portrait", PromptTemplate = "legal professional portrait, formal business attire, trustworthy appearance, professional law office style", NegativePromptTemplate = "casual, informal, unprofessional", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Style { Id = 6, Name = "medical", Description = "Healthcare professional style", PromptTemplate = "medical professional portrait, healthcare style, professional medical attire, trustworthy healthcare provider appearance", NegativePromptTemplate = "casual clothes, unprofessional, poor quality", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Style { Id = 7, Name = "author", Description = "Author and writer portrait", PromptTemplate = "author portrait, writer style, creative professional appearance, literary aesthetic, thoughtful expression", NegativePromptTemplate = "unprofessional, distracting elements, poor composition", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Style { Id = 8, Name = "entrepreneur", Description = "Entrepreneurial business style", PromptTemplate = "entrepreneur portrait, innovative business leader style, modern professional attire, dynamic confident expression", NegativePromptTemplate = "formal corporate look, traditional, static pose", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Style { Id = 9, Name = "startup", Description = "Startup professional style", PromptTemplate = "startup professional portrait, innovative tech style, modern casual business attire, entrepreneurial spirit", NegativePromptTemplate = "overly formal, traditional corporate, stiff pose", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Style { Id = 10, Name = "tech-professional", Description = "Technology professional style", PromptTemplate = "tech professional portrait, modern technology industry style, smart casual tech attire, innovative professional look", NegativePromptTemplate = "overly formal, outdated style, unprofessional", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Style { Id = 11, Name = "influencer", Description = "Social media influencer style", PromptTemplate = "social media influencer portrait, engaging personality style, trendy professional appearance, charismatic expression", NegativePromptTemplate = "overly formal, corporate look, boring expression", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Style { Id = 12, Name = "digital-nomad", Description = "Digital nomad professional", PromptTemplate = "digital nomad portrait, remote work professional style, casual modern attire, location-independent professional", NegativePromptTemplate = "formal office attire, traditional corporate, static background", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Style { Id = 13, Name = "creative", Description = "Creative professional style", PromptTemplate = "creative professional portrait, artistic style, expressive creative look, innovative artistic appearance", NegativePromptTemplate = "corporate formal, traditional business, boring conventional look", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Style { Id = 14, Name = "casual", Description = "Casual professional style", PromptTemplate = "casual professional portrait, relaxed business style, smart casual attire, approachable friendly appearance", NegativePromptTemplate = "overly formal, stiff corporate, too dressy", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Style { Id = 15, Name = "artistic", Description = "Artistic creative portrait", PromptTemplate = "artistic portrait, creative artistic style, expressive artistic look, bohemian creative appearance", NegativePromptTemplate = "corporate business, formal attire, conventional look", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Style { Id = 16, Name = "edgy-urban", Description = "Edgy urban style", PromptTemplate = "edgy urban portrait, modern urban style, contemporary city fashion, bold confident expression", NegativePromptTemplate = "conservative formal, traditional business, bland conventional", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Style { Id = 17, Name = "glamour", Description = "Glamour portrait style", PromptTemplate = "glamour portrait, elegant sophisticated style, polished glamorous appearance, high-end fashion aesthetic", NegativePromptTemplate = "casual simple, plain appearance, understated look", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Style { Id = 18, Name = "academic", Description = "Academic professional style", PromptTemplate = "academic portrait, scholarly professional style, intellectual appearance, educational professional look", NegativePromptTemplate = "casual informal, unprofessional, non-academic", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Style { Id = 19, Name = "fitness", Description = "Fitness professional style", PromptTemplate = "fitness professional portrait, athletic style, health and wellness appearance, energetic confident look", NegativePromptTemplate = "sedentary look, unhealthy appearance, low energy", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Style { Id = 20, Name = "spiritual", Description = "Spiritual wellness style", PromptTemplate = "spiritual portrait, wellness style, mindful peaceful appearance, holistic health aesthetic", NegativePromptTemplate = "materialistic look, stressed appearance, conventional business", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+        };
+
+        builder.Entity<Style>().HasData(styles);
     }
 }

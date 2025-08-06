@@ -219,7 +219,7 @@ export class StylePreviewService {
     const fileName = `${styleName.toLowerCase().replace(/[/\s]/g, '-')}.jpg`;
 
     // Direct Azure Blob Storage URL - use correct storage account
-    const azureBlobBaseUrl = 'https://apmstorage81948.blob.core.windows.net/style-previews';
+    const azureBlobBaseUrl = 'https://aipmstv16j74jubocuukg.blob.core.windows.net/style-previews';
     return `${azureBlobBaseUrl}/${fileName}`;
   }
 }

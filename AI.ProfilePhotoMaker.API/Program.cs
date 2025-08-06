@@ -308,6 +308,9 @@ builder.Services.AddCors(options =>
             // Add expected V1 Container Apps URL
             allowedOrigins.Add("https://aiprofilemaker-web-v1.eastus.azurecontainerapps.io");
             
+            // Add actual V1 deployment URL for current infrastructure
+            allowedOrigins.Add("https://aipm-web-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io");
+            
             corsBuilder.WithOrigins(allowedOrigins.ToArray())
                 .AllowAnyMethod()
                 .AllowAnyHeader()
@@ -332,7 +335,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Apply database migrations using new architecture - TEMPORARILY DISABLED FOR STAGING
+// Apply database migrations using new architecture - DISABLED TEMPORARILY FOR SCHEMA FIX v2.1.2
 // await app.UseDatabaseMigrationAsync();
 
 // Use forwarded headers for ngrok proxy
