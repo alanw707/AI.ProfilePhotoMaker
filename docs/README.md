@@ -18,6 +18,8 @@ Infrastructure deployment, CI/CD pipelines, and deployment strategies.
 - **[DEPLOYMENT_STRATEGY.md](./deployment/DEPLOYMENT_STRATEGY.md)** - Overall deployment strategy and approach
 - **[OPTION_A_IMPLEMENTATION.md](./deployment/OPTION_A_IMPLEMENTATION.md)** - Two-phase deployment implementation details
 - **[WORKFLOW_VALIDATION.md](./deployment/WORKFLOW_VALIDATION.md)** - CI/CD workflow validation and testing results
+- **[SECRETS_CONFIGURATION.md](./deployment/SECRETS_CONFIGURATION.md)** - Azure deployment secrets configuration guide
+- **[AZURE_CLI_SETUP.md](./deployment/AZURE_CLI_SETUP.md)** - Azure CLI installation and service principal setup
 
 ### 🛡️ [Security](./security/)
 Security implementation, authentication, and compliance documentation.
@@ -39,6 +41,7 @@ Operational procedures, API documentation, and system management.
 
 - **[MILESTONE_ACHIEVEMENT_SUMMARY.md](./operations/MILESTONE_ACHIEVEMENT_SUMMARY.md)** - ⭐ Major milestone achievements and success metrics
 - **[API_REFERENCE.md](./operations/API_REFERENCE.md)** - Complete API documentation and endpoints
+- **[OPERATIONAL_RUNBOOK.md](./operations/OPERATIONAL_RUNBOOK.md)** - Production operations, monitoring, and incident response
 - **[CREDIT_SYSTEM.md](./operations/CREDIT_SYSTEM.md)** - Credit system implementation and management
 - **[GALLERY_MANAGEMENT.md](./operations/GALLERY_MANAGEMENT.md)** - Gallery features and management procedures
 - **[PHOTO_PROCESSING.md](./operations/PHOTO_PROCESSING.md)** - Photo processing pipeline and AI integration

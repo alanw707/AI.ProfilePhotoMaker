@@ -22,8 +22,6 @@ jobs:
   test:
     name: 🧪 Test
     runs-on: ubuntu-latest
-    # Temporarily skip tests for faster deployment
-    if: false
     
     steps:
       - name: 📥 Checkout
