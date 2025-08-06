@@ -1,0 +1,293 @@
+name: 🚀 Simple Deploy (Local Build)
+# Simplified deployment workflow for local build approach
+# Prerequisites: Images must be built locally and pushed to ACR first
+# 1. Build images locally: ./scripts/build-local.sh
+# 2. Push to ACR: ./scripts/push-to-acr.sh  
+# 3. Deploy infrastructure: This workflow (triggered by git push)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip tests for quick deploy'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  RESOURCE_GROUP: aiprofilemaker-v1
+  
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  test:
+    name: 🧪 Test
+    runs-on: ubuntu-latest
+    if: false  # Disabled for local build workflow - tests run locally
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        
+      - name: 🏗️ Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+          
+      - name: 🏗️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: AI.ProfilePhotoMaker.UI/package-lock.json
+          
+      - name: 🧪 Test Backend
+        run: |
+          cd AI.ProfilePhotoMaker.API
+          dotnet restore
+          dotnet build --configuration Release
+          
+      - name: 🧪 Test Frontend
+        run: |
+          cd AI.ProfilePhotoMaker.UI
+          npm ci
+          npm run lint:errors-only
+          npm run build:prod
+
+  deploy:
+    name: 🚀 Simple Deploy
+    runs-on: ubuntu-latest
+    needs: test
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        
+      - name: 🔧 Install Azure CLI
+        run: |
+          echo "🔧 [SETUP] Azure CLI is pre-installed on Ubuntu runners"
+          az version
+          
+      - name: 🔐 Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          
+      - name: 🏗️ Ensure Resource Group
+        run: |
+          echo "🏗️ [SETUP] Creating resource group if it doesn't exist..."
+          
+          # Check if resource group exists
+          if az group show --name "${{ env.RESOURCE_GROUP }}" --output none 2>/dev/null; then
+            echo "✅ [SUCCESS] Resource group already exists"
+          else
+            echo "📝 [INFO] Creating new resource group: ${{ env.RESOURCE_GROUP }}"
+            az group create \
+              --name "${{ env.RESOURCE_GROUP }}" \
+              --location "East US 2" \
+              --tags Environment=v1 Application=AIProfileMaker
+            echo "✅ [SUCCESS] Resource group created successfully"
+          fi
+          
+          # Show resource group details
+          echo "📊 [INFO] Resource Group Details:"
+          az group show --name "${{ env.RESOURCE_GROUP }}" --query "{Name:name, Location:location, Status:properties.provisioningState}" --output table
+          
+      - name: 🔍 Validate Bicep Template
+        run: |
+          echo "🔍 [VALIDATE] Validating Bicep template..."
+          
+          # Compile Bicep template
+          echo "📝 [INFO] Compiling Bicep template..."
+          az bicep build --file infrastructure/simple-deploy.bicep
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ [ERROR] Bicep template compilation failed"
+            exit 1
+          fi
+          
+          echo "✅ [SUCCESS] Bicep template compiled successfully"
+          
+          # Validate deployment
+          echo "🧪 [INFO] Validating deployment..."
+          az deployment group validate \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --template-file infrastructure/simple-deploy.bicep \
+            --parameters sqlAdminPassword="${{ secrets.SQL_ADMIN_PASSWORD }}" \
+                        jwtSecret="${{ secrets.JWT_SECRET }}" \
+                        replicateApiToken="${{ secrets.REPLICATE_API_TOKEN }}"
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ [ERROR] Template validation failed"
+            exit 1
+          fi
+          
+          echo "✅ [SUCCESS] Template validation completed successfully"
+          
+      - name: 🏗️ Deploy Infrastructure
+        id: infra
+        run: |
+          echo "🚀 [DEPLOY] Starting infrastructure deployment..."
+          echo "📝 [INFO] This deployment expects images to already exist in ACR"
+          echo "📝 [INFO] If images are missing, run: ./scripts/build-local.sh && ./scripts/push-to-acr.sh"
+          echo ""
+          
+          # Cancel any running deployments first
+          echo "🧹 [CLEANUP] Checking for and canceling running deployments..."
+          RUNNING_DEPLOYMENTS=$(az deployment group list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?properties.provisioningState=='Running'].name" --output tsv 2>/dev/null || true)
+          
+          if [ -n "$RUNNING_DEPLOYMENTS" ]; then
+            echo "⏹️ [CANCEL] Found running deployments, canceling them..."
+            echo "$RUNNING_DEPLOYMENTS" | while read deployment; do
+              echo "⏹️ [CANCEL] Canceling deployment: $deployment"
+              az deployment group cancel --resource-group "${{ env.RESOURCE_GROUP }}" --name "$deployment" || true
+            done
+          else
+            echo "✅ [INFO] No running deployments to cancel"
+          fi
+          
+          # Generate unique deployment name
+          DEPLOYMENT_NAME="simple-deploy-$RANDOM-$(date +%Y%m%d-%H%M%S)"
+          echo "📝 [INFO] Deployment name: $DEPLOYMENT_NAME"
+          
+          # Deploy with retry logic
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "🔄 [INFO] Attempt $RETRY_COUNT of $MAX_RETRIES"
+            
+            # Start deployment
+            if az deployment group create \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --template-file infrastructure/simple-deploy.bicep \
+              --name "$DEPLOYMENT_NAME" \
+              --mode Incremental \
+              --parameters sqlAdminPassword="${{ secrets.SQL_ADMIN_PASSWORD }}" \
+                          jwtSecret="${{ secrets.JWT_SECRET }}" \
+                          replicateApiToken="${{ secrets.REPLICATE_API_TOKEN }}" \
+              --output json > deployment_result.json; then
+              
+              echo "✅ [SUCCESS] Deployment completed successfully!"
+              break
+            else
+              echo "⚠️ [WARNING] Deployment attempt $RETRY_COUNT failed"
+              
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "⏳ [INFO] Waiting 30 seconds before retry..."
+                sleep 30
+              else
+                echo "❌ [ERROR] Deployment failed after $MAX_RETRIES attempts"
+                echo ""
+                echo "🔍 [DEBUG] Common issues:"
+                echo "  1. Images missing from ACR - run: ./scripts/build-local.sh && ./scripts/push-to-acr.sh"
+                echo "  2. ACR authentication issues - check ACR admin credentials"
+                echo "  3. Resource quota limits - check Azure quotas"
+                echo ""
+                cat deployment_result.json 2>/dev/null || echo "No deployment result available"
+                exit 1
+              fi
+            fi
+          done
+          
+          # Get deployment outputs
+          echo "📤 [INFO] Retrieving deployment outputs..."
+          DEPLOYMENT_OUTPUTS=$(az deployment group show --resource-group "${{ env.RESOURCE_GROUP }}" --name "$DEPLOYMENT_NAME" --query "properties.outputs" --output json)
+          
+          if [ -z "$DEPLOYMENT_OUTPUTS" ] || [ "$DEPLOYMENT_OUTPUTS" = "null" ]; then
+            echo "❌ [ERROR] No outputs found in deployment"
+            exit 1
+          fi
+          
+          # Extract outputs using jq
+          REGISTRY_NAME=$(echo "$DEPLOYMENT_OUTPUTS" | jq -r '.containerRegistryName.value // empty')
+          REGISTRY_SERVER=$(echo "$DEPLOYMENT_OUTPUTS" | jq -r '.containerRegistryLoginServer.value // empty')
+          FRONTEND_URL=$(echo "$DEPLOYMENT_OUTPUTS" | jq -r '.frontendUrl.value // empty')
+          BACKEND_URL=$(echo "$DEPLOYMENT_OUTPUTS" | jq -r '.backendUrl.value // empty')
+          
+          # Validate required outputs
+          if [ -z "$REGISTRY_NAME" ] || [ -z "$REGISTRY_SERVER" ] || [ -z "$FRONTEND_URL" ] || [ -z "$BACKEND_URL" ]; then
+            echo "❌ [ERROR] Missing required outputs from deployment:"
+            echo "  Registry Name: '$REGISTRY_NAME'"
+            echo "  Registry Server: '$REGISTRY_SERVER'"
+            echo "  Frontend URL: '$FRONTEND_URL'"
+            echo "  Backend URL: '$BACKEND_URL'"
+            exit 1
+          fi
+          
+          # Set GitHub outputs
+          echo "registry-name=$REGISTRY_NAME" >> $GITHUB_OUTPUT
+          echo "registry-server=$REGISTRY_SERVER" >> $GITHUB_OUTPUT
+          echo "frontend-url=$FRONTEND_URL" >> $GITHUB_OUTPUT
+          echo "backend-url=$BACKEND_URL" >> $GITHUB_OUTPUT
+          
+          echo "📊 [INFO] Infrastructure outputs:"
+          echo "  Registry: $REGISTRY_SERVER"
+          echo "  Frontend: $FRONTEND_URL"
+          echo "  Backend: $BACKEND_URL"
+          echo "✅ [SUCCESS] Infrastructure deployment completed successfully!"
+          
+      - name: 🧪 Health Check
+        run: |
+          echo "🧪 [HEALTH] Performing health checks..."
+          
+          # Wait for deployment to stabilize
+          echo "⏳ [INFO] Waiting for deployment to stabilize..."
+          sleep 30
+          
+          # Get URLs from deployment outputs
+          BACKEND_URL="${{ steps.infra.outputs.backend-url }}"
+          FRONTEND_URL="${{ steps.infra.outputs.frontend-url }}"
+          
+          if [ -z "$BACKEND_URL" ] || [ -z "$FRONTEND_URL" ]; then
+            echo "⚠️ [WARNING] Missing application URLs from deployment:"
+            echo "  Backend URL: '$BACKEND_URL'"
+            echo "  Frontend URL: '$FRONTEND_URL'"
+            echo "Deployment may have succeeded but URLs are not available yet."
+          else
+            # Test backend health
+            echo "🔍 [TEST] Testing backend health: $BACKEND_URL/api/health"
+            if curl -f -s --max-time 30 "$BACKEND_URL/api/health" > /dev/null; then
+              echo "✅ [SUCCESS] Backend is healthy"
+            else
+              echo "⚠️ [WARNING] Backend health check failed (application may still be starting up)"
+              # Fallback to legacy health endpoint
+              echo "🔍 [FALLBACK] Trying legacy health endpoint: $BACKEND_URL/health"
+              if curl -f -s --max-time 30 "$BACKEND_URL/health" > /dev/null; then
+                echo "✅ [SUCCESS] Backend is healthy (via legacy endpoint)"
+              else
+                echo "❌ [WARNING] Both health endpoints failed"
+                echo "📝 [INFO] This may indicate missing images in ACR"
+                echo "📝 [INFO] Run: ./scripts/build-local.sh && ./scripts/push-to-acr.sh"
+              fi
+            fi
+            
+            # Test frontend
+            echo "🔍 [TEST] Testing frontend: $FRONTEND_URL"
+            if curl -f -s --max-time 30 "$FRONTEND_URL" > /dev/null; then
+              echo "✅ [SUCCESS] Frontend is healthy"
+            else
+              echo "⚠️ [WARNING] Frontend health check failed (application may still be starting up)"
+            fi
+          fi
+          
+          echo ""
+          echo "🎉 [SUCCESS] Deployment completed!"
+          echo "📊 [INFO] Application URLs:"
+          echo "  Frontend: ${FRONTEND_URL:-'Not available'}"
+          echo "  Backend API: ${BACKEND_URL:-'Not available'}"
+          echo "  Registry: ${{ steps.infra.outputs.registry-server }}"
+          echo ""
+          echo "📝 [INFO] Next steps:"
+          echo "  1. If health checks failed, ensure images exist in ACR:"
+          echo "     ./scripts/build-local.sh && ./scripts/push-to-acr.sh"
+          echo "  2. Re-run deployment if images were missing"
+          echo "  3. Monitor Container Apps logs for startup issues"

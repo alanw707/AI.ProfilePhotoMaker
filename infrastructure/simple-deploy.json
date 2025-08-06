@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.177.2456",
-      "templateHash": "18275583620656714366"
+      "templateHash": "2683884139713927306"
     }
   },
   "parameters": {
@@ -45,7 +45,7 @@
   "resources": [
     {
       "type": "Microsoft.ContainerRegistry/registries",
-      "apiVersion": "2022-02-01-preview",
+      "apiVersion": "2023-07-01",
       "name": "[variables('containerRegistryName')]",
       "location": "[parameters('location')]",
       "sku": {
@@ -208,7 +208,7 @@
     },
     {
       "type": "Microsoft.App/managedEnvironments",
-      "apiVersion": "2022-10-01",
+      "apiVersion": "2023-05-01",
       "name": "[variables('containerEnvName')]",
       "location": "[parameters('location')]",
       "properties": {
@@ -226,7 +226,7 @@
     },
     {
       "type": "Microsoft.App/containerApps",
-      "apiVersion": "2022-10-01",
+      "apiVersion": "2023-05-01",
       "name": "[variables('backendAppName')]",
       "location": "[parameters('location')]",
       "identity": {
@@ -243,7 +243,7 @@
           },
           "registries": [
             {
-              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2022-02-01-preview').loginServer]",
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').loginServer]",
               "username": "[variables('containerRegistryName')]",
               "passwordSecretRef": "acr-password"
             }
@@ -271,7 +271,7 @@
           "containers": [
             {
               "name": "api",
-              "image": "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest",
+              "image": "[format('{0}/aiprofilemaker-api:latest', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').loginServer)]",
               "resources": {
                 "cpu": "[json('0.5')]",
                 "memory": "1Gi"
@@ -352,6 +352,7 @@
         "[resourceId('Microsoft.Insights/components', variables('applicationInsightsName'))]",
         "[resourceId('Microsoft.App/managedEnvironments', variables('containerEnvName'))]",
         "[resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
         "[resourceId('Microsoft.Sql/servers/databases', variables('sqlServerName'), format('{0}db', parameters('appName')))]",
         "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
@@ -359,7 +360,7 @@
     },
     {
       "type": "Microsoft.App/containerApps",
-      "apiVersion": "2022-10-01",
+      "apiVersion": "2023-05-01",
       "name": "[variables('frontendAppName')]",
       "location": "[parameters('location')]",
       "identity": {
@@ -376,7 +377,7 @@
           },
           "registries": [
             {
-              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2022-02-01-preview').loginServer]",
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').loginServer]",
               "username": "[variables('containerRegistryName')]",
               "passwordSecretRef": "acr-password"
             }
@@ -392,7 +393,7 @@
           "containers": [
             {
               "name": "web",
-              "image": "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest",
+              "image": "[format('{0}/aiprofilemaker-web:latest', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').loginServer)]",
               "resources": {
                 "cpu": "[json('0.25')]",
                 "memory": "0.5Gi"
@@ -400,7 +401,7 @@
               "env": [
                 {
                   "name": "API_URL",
-                  "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('backendAppName')), '2022-10-01').configuration.ingress.fqdn)]"
+                  "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('backendAppName')), '2023-05-01').configuration.ingress.fqdn)]"
                 }
               ]
             }
@@ -421,11 +422,11 @@
   "outputs": {
     "frontendUrl": {
       "type": "string",
-      "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('frontendAppName')), '2022-10-01').configuration.ingress.fqdn)]"
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('frontendAppName')), '2023-05-01').configuration.ingress.fqdn)]"
     },
     "backendUrl": {
       "type": "string",
-      "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('backendAppName')), '2022-10-01').configuration.ingress.fqdn)]"
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('backendAppName')), '2023-05-01').configuration.ingress.fqdn)]"
     },
     "containerRegistryName": {
       "type": "string",
@@ -433,7 +434,7 @@
     },
     "containerRegistryLoginServer": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2022-02-01-preview').loginServer]"
+      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').loginServer]"
     },
     "sqlServerName": {
       "type": "string",

@@ -233,8 +233,8 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
       containers: [
         {
           name: 'api'
-          // Using a placeholder image initially - will be updated after image migration
-          image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+          // References locally built and pushed image - no placeholder needed
+          image: '${containerRegistry.properties.loginServer}/aiprofilemaker-api:latest'
           resources: {
             cpu: json('0.5')
             memory: '1Gi'
@@ -265,17 +265,35 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               value: applicationInsights.properties.ConnectionString
             }
           ]
-          // Health probes removed - will be added after deploying actual application image
-          // probes: [
-          //   {
-          //     type: 'Liveness'
-          //     httpGet: {
-          //       path: '/api/health/live'
-          //       port: 8080
-          //       scheme: 'HTTP'
-          //     }
-          //   }
-          // ]
+          // Health probes re-enabled since we're using real application images
+          probes: [
+            {
+              type: 'Liveness'
+              httpGet: {
+                path: '/api/health/live'
+                port: 8080
+                scheme: 'HTTP'
+              }
+              initialDelaySeconds: 10
+              periodSeconds: 10
+              timeoutSeconds: 5
+              failureThreshold: 3
+              successThreshold: 1
+            }
+            {
+              type: 'Readiness'
+              httpGet: {
+                path: '/api/health/ready'
+                port: 8080
+                scheme: 'HTTP'
+              }
+              initialDelaySeconds: 5
+              periodSeconds: 5
+              timeoutSeconds: 3
+              failureThreshold: 3
+              successThreshold: 1
+            }
+          ]
         }
       ]
       scale: {
@@ -336,8 +354,8 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
       containers: [
         {
           name: 'web'
-          // Using a placeholder image initially - will be updated after image migration
-          image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+          // References locally built and pushed image - no placeholder needed
+          image: '${containerRegistry.properties.loginServer}/aiprofilemaker-web:latest'
           resources: {
             cpu: json('0.25')
             memory: '0.5Gi'
@@ -345,7 +363,7 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
           env: [
             {
               name: 'API_URL'
-              value: 'https://placeholder-backend-url.azurecontainerapps.io'
+              value: 'https://${backendApp.properties.configuration.ingress.fqdn}'
             }
           ]
         }
