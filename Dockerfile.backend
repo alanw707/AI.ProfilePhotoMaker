@@ -1,8 +1,7 @@
 # Multi-stage build for .NET 8 API
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
-EXPOSE 80
-EXPOSE 443
+EXPOSE 8080
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
@@ -39,6 +38,6 @@ RUN mkdir -p uploads training-zips style-previews enhanced generated
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost/health || exit 1
+    CMD curl -f http://localhost:8080/api/health || exit 1
 
 ENTRYPOINT ["dotnet", "AI.ProfilePhotoMaker.API.dll"]
