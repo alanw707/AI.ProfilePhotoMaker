@@ -26,6 +26,7 @@
     "build:dev": "npm run lint && ng build --configuration development",
     "build:test": "npm run lint && ng build --configuration test",
     "build:ngrok": "npm run lint && ng build --configuration ngrok",
+    "build:v1": "npm run lint && ng build --configuration v1",
     "build:prod": "npm run lint && ng build --configuration production",
     "_comment_testing": "=== TESTING SCRIPTS ===",
     "test": "ng test",
