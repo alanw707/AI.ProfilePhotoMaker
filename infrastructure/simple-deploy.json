@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.177.2456",
-      "templateHash": "4007809990199504987"
+      "templateHash": "16769421074046228789"
     }
   },
   "parameters": {
@@ -271,7 +271,7 @@
           "containers": [
             {
               "name": "api",
-              "image": "[format('{0}/aiprofilemaker-api:latest', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2022-02-01-preview').loginServer)]",
+              "image": "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest",
               "resources": {
                 "cpu": "[json('0.5')]",
                 "memory": "1Gi"
@@ -300,6 +300,34 @@
                 {
                   "name": "ApplicationInsights__ConnectionString",
                   "value": "[reference(resourceId('Microsoft.Insights/components', variables('applicationInsightsName')), '2020-02-02').ConnectionString]"
+                }
+              ],
+              "probes": [
+                {
+                  "type": "Liveness",
+                  "httpGet": {
+                    "path": "/api/health/live",
+                    "port": 8080,
+                    "scheme": "HTTP"
+                  },
+                  "initialDelaySeconds": 10,
+                  "periodSeconds": 10,
+                  "timeoutSeconds": 5,
+                  "failureThreshold": 3,
+                  "successThreshold": 1
+                },
+                {
+                  "type": "Readiness",
+                  "httpGet": {
+                    "path": "/api/health/ready",
+                    "port": 8080,
+                    "scheme": "HTTP"
+                  },
+                  "initialDelaySeconds": 5,
+                  "periodSeconds": 5,
+                  "timeoutSeconds": 3,
+                  "failureThreshold": 3,
+                  "successThreshold": 1
                 }
               ]
             }
@@ -364,7 +392,7 @@
           "containers": [
             {
               "name": "web",
-              "image": "nginx:alpine",
+              "image": "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest",
               "resources": {
                 "cpu": "[json('0.25')]",
                 "memory": "0.5Gi"

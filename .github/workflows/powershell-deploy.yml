@@ -1,9 +1,8 @@
 name: 🚀 V1 PowerShell Deploy
-# Fixed deployment order: Build images BEFORE infrastructure deployment
-# 1. Build & Push Images (Pre-Infrastructure) → Creates container images first
-# 2. Deploy Infrastructure → References existing images
-# 3. Migrate Images to Production Registry → Moves images to final ACR
-# 4. Update Container Apps → Uses production registry images
+# Simplified deployment workflow: Direct push to production registry
+# 1. Deploy Infrastructure → Creates production ACR and all resources
+# 2. Build & Push Images → Builds and pushes directly to production ACR
+# 3. Update Container Apps → Uses production registry images directly
 
 on:
   push:
@@ -131,108 +130,6 @@ jobs:
           
           echo "✅ [SUCCESS] Template validation completed successfully"
           
-      - name: 🐳 Build & Push Images (Pre-Infrastructure)
-        id: build-images
-        run: |
-          echo "🐳 [BUILD] Building container images before infrastructure deployment..."
-          
-          # Create a temporary ACR for building images (or use existing one)
-          TEMP_REGISTRY_NAME="aiprofilemakerv1temp"
-          TEMP_LOCATION="eastus2"
-          
-          echo "🔍 [CHECK] Checking for existing temporary registry..."
-          if az acr show --name "$TEMP_REGISTRY_NAME" --output none 2>/dev/null; then
-            echo "✅ [INFO] Using existing temporary registry: $TEMP_REGISTRY_NAME"
-          else
-            echo "🏗️ [CREATE] Creating temporary registry for image builds..."
-            az acr create \
-              --name "$TEMP_REGISTRY_NAME" \
-              --resource-group "${{ env.RESOURCE_GROUP }}" \
-              --location "$TEMP_LOCATION" \
-              --sku Basic \
-              --admin-enabled true
-              
-            if [ $? -ne 0 ]; then
-              echo "❌ [ERROR] Failed to create temporary registry"
-              exit 1
-            fi
-            
-            echo "✅ [SUCCESS] Temporary registry created successfully"
-          fi
-          
-          # Get registry login server
-          TEMP_REGISTRY_SERVER=$(az acr show --name "$TEMP_REGISTRY_NAME" --query "loginServer" --output tsv)
-          
-          echo "🔐 [LOGIN] Logging into temporary registry: $TEMP_REGISTRY_NAME"
-          az acr login --name "$TEMP_REGISTRY_NAME"
-          
-          if [ $? -ne 0 ]; then
-            echo "❌ [ERROR] Failed to login to temporary registry"
-            exit 1
-          fi
-          
-          # Validate Docker build files
-          echo "🔍 [VALIDATE] Checking Docker build context..."
-          REQUIRED_FILES=("Dockerfile.backend" "Dockerfile.frontend" "nginx.conf" "docker-entrypoint.sh" "AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj" "AI.ProfilePhotoMaker.UI/package.json")
-          
-          MISSING_FILES=()
-          for file in "${REQUIRED_FILES[@]}"; do
-            if [ ! -f "$file" ]; then
-              MISSING_FILES+=("$file")
-            fi
-          done
-          
-          if [ ${#MISSING_FILES[@]} -gt 0 ]; then
-            echo "❌ [ERROR] Missing required files for Docker build:"
-            for missing in "${MISSING_FILES[@]}"; do
-              echo "  - $missing"
-            done
-            exit 1
-          fi
-          
-          echo "✅ [SUCCESS] All required Docker build files present"
-          
-          # Build and push backend image
-          echo "🔨 [BUILD] Building backend image..."
-          docker build -f Dockerfile.backend -t "$TEMP_REGISTRY_SERVER/aiprofilemaker-api:latest" .
-          
-          if [ $? -ne 0 ]; then
-            echo "❌ [ERROR] Backend image build failed"
-            exit 1
-          fi
-          
-          echo "📤 [PUSH] Pushing backend image to temporary registry..."
-          docker push "$TEMP_REGISTRY_SERVER/aiprofilemaker-api:latest"
-          
-          if [ $? -ne 0 ]; then
-            echo "❌ [ERROR] Backend image push failed"
-            exit 1
-          fi
-          
-          # Build and push frontend image
-          echo "🔨 [BUILD] Building frontend image..."
-          docker build -f Dockerfile.frontend -t "$TEMP_REGISTRY_SERVER/aiprofilemaker-web:latest" .
-          
-          if [ $? -ne 0 ]; then
-            echo "❌ [ERROR] Frontend image build failed"
-            exit 1
-          fi
-          
-          echo "📤 [PUSH] Pushing frontend image to temporary registry..."
-          docker push "$TEMP_REGISTRY_SERVER/aiprofilemaker-web:latest"
-          
-          if [ $? -ne 0 ]; then
-            echo "❌ [ERROR] Frontend image push failed"
-            exit 1
-          fi
-          
-          # Set outputs for next steps
-          echo "temp-registry-name=$TEMP_REGISTRY_NAME" >> $GITHUB_OUTPUT
-          echo "temp-registry-server=$TEMP_REGISTRY_SERVER" >> $GITHUB_OUTPUT
-          
-          echo "✅ [SUCCESS] Images built and pushed to temporary registry"
-          echo "🎉 [SUCCESS] Pre-infrastructure image build completed!"
-          
       - name: 🏗️ Deploy Infrastructure
         id: infra
         run: |
@@ -326,30 +223,20 @@ jobs:
           echo "  Registry: $REGISTRY_SERVER"
           echo "  Frontend: $FRONTEND_URL"
           echo "  Backend: $BACKEND_URL"
+          echo "✅ [SUCCESS] Infrastructure deployment completed successfully!"
           
-      - name: 🐳 Migrate Images to Production Registry
+      - name: 🐳 Build & Push Images (Direct to Production)
         run: |
-          echo "🐳 [MIGRATE] Migrating container images to production registry..."
+          echo "🐳 [BUILD] Building and pushing container images directly to production registry..."
           
           # Get registry information from infrastructure deployment
           REGISTRY_NAME="${{ steps.infra.outputs.registry-name }}"
           REGISTRY_SERVER="${{ steps.infra.outputs.registry-server }}"
           
-          # Get temporary registry information from previous step
-          TEMP_REGISTRY_NAME="${{ steps.build-images.outputs.temp-registry-name }}"
-          TEMP_REGISTRY_SERVER="${{ steps.build-images.outputs.temp-registry-server }}"
-          
           if [ -z "$REGISTRY_NAME" ] || [ -z "$REGISTRY_SERVER" ]; then
             echo "❌ [ERROR] Missing production registry information from infrastructure deployment"
             echo "  Registry Name: '$REGISTRY_NAME'"
             echo "  Registry Server: '$REGISTRY_SERVER'"
-            exit 1
-          fi
-          
-          if [ -z "$TEMP_REGISTRY_NAME" ] || [ -z "$TEMP_REGISTRY_SERVER" ]; then
-            echo "❌ [ERROR] Missing temporary registry information from build step"
-            echo "  Temp Registry Name: '$TEMP_REGISTRY_NAME'"
-            echo "  Temp Registry Server: '$TEMP_REGISTRY_SERVER'"
             exit 1
           fi
           
@@ -363,114 +250,77 @@ jobs:
           
           echo "✅ [SUCCESS] Successfully logged into production registry"
           
-          # Import images from temporary registry to production registry using ACR import
-          echo "📥 [IMPORT] Importing backend image from temporary to production registry..."
-          az acr import \
-            --name "$REGISTRY_NAME" \
-            --source "$TEMP_REGISTRY_SERVER/aiprofilemaker-api:latest" \
-            --image "aiprofilemaker-api:latest" \
-            --force
+          # Validate Docker build files
+          echo "🔍 [VALIDATE] Checking Docker build context..."
+          REQUIRED_FILES=("Dockerfile.backend" "Dockerfile.frontend" "nginx.conf" "docker-entrypoint.sh" "AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj" "AI.ProfilePhotoMaker.UI/package.json")
+          
+          MISSING_FILES=()
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "$file" ]; then
+              MISSING_FILES+=("$file")
+            fi
+          done
+          
+          if [ ${#MISSING_FILES[@]} -gt 0 ]; then
+            echo "❌ [ERROR] Missing required files for Docker build:"
+            for missing in "${MISSING_FILES[@]}"; do
+              echo "  - $missing"
+            done
+            exit 1
+          fi
+          
+          echo "✅ [SUCCESS] All required Docker build files present"
+          
+          # Build and push backend image directly to production registry
+          echo "🔨 [BUILD] Building backend image..."
+          docker build -f Dockerfile.backend -t "$REGISTRY_SERVER/aiprofilemaker-api:latest" .
           
           if [ $? -ne 0 ]; then
-            echo "❌ [ERROR] Failed to import backend image"
+            echo "❌ [ERROR] Backend image build failed"
             exit 1
           fi
           
-          echo "✅ [SUCCESS] Backend image imported successfully"
-          
-          echo "📥 [IMPORT] Importing frontend image from temporary to production registry..."
-          az acr import \
-            --name "$REGISTRY_NAME" \
-            --source "$TEMP_REGISTRY_SERVER/aiprofilemaker-web:latest" \
-            --image "aiprofilemaker-web:latest" \
-            --force
+          echo "📤 [PUSH] Pushing backend image to production registry..."
+          docker push "$REGISTRY_SERVER/aiprofilemaker-api:latest"
           
           if [ $? -ne 0 ]; then
-            echo "❌ [ERROR] Failed to import frontend image"
+            echo "❌ [ERROR] Backend image push failed"
             exit 1
           fi
           
-          echo "✅ [SUCCESS] Frontend image imported successfully"
+          echo "✅ [SUCCESS] Backend image built and pushed successfully"
           
-          # Optional: Clean up temporary registry (commented out to avoid issues)
-          # echo "🧹 [CLEANUP] Removing temporary registry..."
-          # az acr delete --name "$TEMP_REGISTRY_NAME" --yes --no-wait || echo "⚠️ [WARNING] Could not delete temporary registry"
-          
-          echo "🎉 [SUCCESS] All images migrated to production registry successfully!"
-          
-      - name: 🔐 Update ACR Credentials
-        run: |
-          echo "🔐 [CREDENTIALS] Updating ACR credentials in Container Apps..."
-          
-          REGISTRY_NAME="${{ steps.infra.outputs.registry-name }}"
-          
-          if [ -z "$REGISTRY_NAME" ]; then
-            echo "❌ [ERROR] Missing registry name from infrastructure deployment"
-            exit 1
-          fi
-          
-          # Get ACR admin password
-          echo "🔍 [INFO] Retrieving ACR admin password..."
-          ACR_PASSWORD=$(az acr credential show --name "$REGISTRY_NAME" --query "passwords[0].value" --output tsv)
-          
-          if [ -z "$ACR_PASSWORD" ]; then
-            echo "❌ [ERROR] Failed to retrieve ACR admin password"
-            exit 1
-          fi
-          
-          echo "✅ [SUCCESS] Retrieved ACR admin password"
-          
-          # Find container apps
-          echo "🔍 [SEARCH] Finding container apps in resource group: ${{ env.RESOURCE_GROUP }}"
-          
-          BACKEND_APP=$(az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?contains(name, 'api')].name" --output tsv | head -1)
-          FRONTEND_APP=$(az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?contains(name, 'web')].name" --output tsv | head -1)
-          
-          if [ -z "$BACKEND_APP" ] || [ -z "$FRONTEND_APP" ]; then
-            echo "❌ [ERROR] Could not find backend or frontend apps"
-            echo "  Backend: '$BACKEND_APP'"
-            echo "  Frontend: '$FRONTEND_APP'"
-            az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[].name" --output table
-            exit 1
-          fi
-          
-          echo "📱 [INFO] Found apps - Backend: $BACKEND_APP, Frontend: $FRONTEND_APP"
-          
-          # Update backend ACR credentials
-          echo "🔐 [UPDATE] Updating backend ACR credentials..."
-          az containerapp secret set \
-            --name "$BACKEND_APP" \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --secrets acr-password="$ACR_PASSWORD"
+          # Build and push frontend image directly to production registry
+          echo "🔨 [BUILD] Building frontend image..."
+          docker build -f Dockerfile.frontend -t "$REGISTRY_SERVER/aiprofilemaker-web:latest" .
           
           if [ $? -ne 0 ]; then
-            echo "❌ [ERROR] Failed to update backend ACR credentials"
+            echo "❌ [ERROR] Frontend image build failed"
             exit 1
           fi
           
-          echo "✅ [SUCCESS] Backend ACR credentials updated"
-          
-          # Update frontend ACR credentials
-          echo "🔐 [UPDATE] Updating frontend ACR credentials..."
-          az containerapp secret set \
-            --name "$FRONTEND_APP" \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --secrets acr-password="$ACR_PASSWORD"
+          echo "📤 [PUSH] Pushing frontend image to production registry..."
+          docker push "$REGISTRY_SERVER/aiprofilemaker-web:latest"
           
           if [ $? -ne 0 ]; then
-            echo "❌ [ERROR] Failed to update frontend ACR credentials"
+            echo "❌ [ERROR] Frontend image push failed"
             exit 1
           fi
           
-          echo "✅ [SUCCESS] Frontend ACR credentials updated"
-          echo "🎉 [SUCCESS] All ACR credentials updated successfully!"
+          echo "✅ [SUCCESS] Frontend image built and pushed successfully"
+          echo "🎉 [SUCCESS] All images built and pushed to production registry directly!"
+          
           
       - name: 🔄 Update Container Apps
         run: |
-          echo "🔄 [UPDATE] Updating container apps with new images..."
+          echo "🔄 [UPDATE] Updating container apps with production registry images..."
           
-          REGISTRY_NAME="${{ steps.infra.outputs.registry-name }}"
           REGISTRY_SERVER="${{ steps.infra.outputs.registry-server }}"
+          
+          if [ -z "$REGISTRY_SERVER" ]; then
+            echo "❌ [ERROR] Missing registry server from infrastructure deployment"
+            exit 1
+          fi
           
           # Find container apps
           echo "🔍 [SEARCH] Finding container apps in resource group: ${{ env.RESOURCE_GROUP }}"
@@ -488,7 +338,7 @@ jobs:
           
           echo "📱 [INFO] Found apps - Backend: $BACKEND_APP, Frontend: $FRONTEND_APP"
           
-          # Update backend app
+          # Update backend app with production registry image
           echo "🔄 [UPDATE] Updating backend app: $BACKEND_APP"
           az containerapp update \
             --name "$BACKEND_APP" \
@@ -502,7 +352,7 @@ jobs:
           
           echo "✅ [SUCCESS] Backend app updated successfully"
           
-          # Update frontend app
+          # Update frontend app with production registry image
           echo "🔄 [UPDATE] Updating frontend app: $FRONTEND_APP"
           az containerapp update \
             --name "$FRONTEND_APP" \
@@ -515,7 +365,7 @@ jobs:
           fi
           
           echo "✅ [SUCCESS] Frontend app updated successfully"
-          echo "🎉 [SUCCESS] All container apps updated!"
+          echo "🎉 [SUCCESS] All container apps updated with production registry images!"
           
       - name: 🧪 Health Check
         run: |
@@ -536,11 +386,18 @@ jobs:
             echo "Deployment may have succeeded but URLs are not available yet."
           else
             # Test backend health
-            echo "🔍 [TEST] Testing backend health: $BACKEND_URL/health"
-            if curl -f -s --max-time 30 "$BACKEND_URL/health" > /dev/null; then
+            echo "🔍 [TEST] Testing backend health: $BACKEND_URL/api/health"
+            if curl -f -s --max-time 30 "$BACKEND_URL/api/health" > /dev/null; then
               echo "✅ [SUCCESS] Backend is healthy"
             else
               echo "⚠️ [WARNING] Backend health check failed (application may still be starting up)"
+              # Fallback to legacy health endpoint
+              echo "🔍 [FALLBACK] Trying legacy health endpoint: $BACKEND_URL/health"
+              if curl -f -s --max-time 30 "$BACKEND_URL/health" > /dev/null; then
+                echo "✅ [SUCCESS] Backend is healthy (via legacy endpoint)"
+              else
+                echo "❌ [WARNING] Both health endpoints failed (application may still be starting up)"
+              fi
             fi
             
             # Test frontend
