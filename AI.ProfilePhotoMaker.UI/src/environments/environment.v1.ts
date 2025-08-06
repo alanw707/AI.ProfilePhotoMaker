@@ -1,7 +1,7 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://aiprofilemaker-api-v1.eastus.azurecontainerapps.io/api',
-  baseUrl: 'https://aiprofilemaker-api-v1.eastus.azurecontainerapps.io',
+  apiUrl: 'https://aipm-api-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io/api',
+  baseUrl: 'https://aipm-api-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io',
   name: 'v1',
   features: {
     debugMode: false,
@@ -12,8 +12,8 @@ export const environment = {
   },
   azure: {
     enabled: true,
-    frontendUrl: 'https://aiprofilemaker-web-v1.eastus.azurecontainerapps.io',
-    backendUrl: 'https://aiprofilemaker-api-v1.eastus.azurecontainerapps.io',
+    frontendUrl: 'https://aipm-web-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io',
+    backendUrl: 'https://aipm-api-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io',
     storageUrl: 'https://[storage-account-name].blob.core.windows.net',
   },
 };
