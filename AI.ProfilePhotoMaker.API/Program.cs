@@ -350,13 +350,6 @@ if (app.Environment.IsDevelopment())
     app.UseSession();
 }
 
-// In middleware pipeline - use appropriate CORS policy based on environment
-var corsPolicy = app.Environment.IsDevelopment() ? "AllowDevelopment" : "V1Production";
-Console.WriteLine($"🔧 CORS Policy: Using '{corsPolicy}' for environment '{app.Environment.EnvironmentName}'");
-
-// Use production-ready CORS configuration
-app.UseCors(corsPolicy);
-
 // Configure middleware
 if (app.Environment.IsDevelopment())
 {
@@ -367,6 +360,13 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
+// CORS must come early in the middleware pipeline, before authentication
+var corsPolicy = app.Environment.IsDevelopment() ? "AllowDevelopment" : "V1Production";
+Console.WriteLine($"🔧 CORS Policy: Using '{corsPolicy}' for environment '{app.Environment.EnvironmentName}'");
+
+// Use production-ready CORS configuration
+app.UseCors(corsPolicy);
 
 // Add debug middleware to log all requests
 app.Use(async (context, next) =>
