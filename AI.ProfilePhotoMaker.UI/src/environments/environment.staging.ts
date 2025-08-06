@@ -14,6 +14,6 @@ export const environment = {
     enabled: true,
     frontendUrl: 'https://ui-apm-simple.nicestone-1ec028d4.eastus.azurecontainerapps.io',
     backendUrl: 'https://api-apm-simple.nicestone-1ec028d4.eastus.azurecontainerapps.io',
-    storageUrl: 'https://apmstorage81948.blob.core.windows.net',
+    storageUrl: 'https://aipmstv16j74jubocuukg.blob.core.windows.net',
   },
 };

@@ -14,6 +14,6 @@ export const environment = {
     enabled: true,
     frontendUrl: 'https://aipm-web-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io',
     backendUrl: 'https://aipm-api-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io',
-    storageUrl: 'https://[storage-account-name].blob.core.windows.net',
+    storageUrl: 'https://aipmstv16j74jubocuukg.blob.core.windows.net',
   },
 };
