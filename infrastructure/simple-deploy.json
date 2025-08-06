@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.177.2456",
-      "templateHash": "16769421074046228789"
+      "templateHash": "18275583620656714366"
     }
   },
   "parameters": {
@@ -198,7 +198,7 @@
       "apiVersion": "2023-02-01",
       "name": "[format('{0}/{1}', variables('keyVaultName'), 'ConnectionString')]",
       "properties": {
-        "value": "[format('Server=tcp:{0},1433;Initial Catalog={1};Authentication=Active Directory Default;Encrypt=True;', reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName')), '2021-11-01').fullyQualifiedDomainName, format('{0}db', parameters('appName')))]"
+        "value": "[format('Server=tcp:{0},1433;Initial Catalog={1};User ID=sqladmin;Password={2};Encrypt=True;', reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName')), '2021-11-01').fullyQualifiedDomainName, format('{0}db', parameters('appName')), parameters('sqlAdminPassword'))]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
@@ -259,7 +259,7 @@
             },
             {
               "name": "connection-string",
-              "value": "[format('Server=tcp:{0},1433;Initial Catalog={1};Authentication=Active Directory Default;Encrypt=True;', reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName')), '2021-11-01').fullyQualifiedDomainName, format('{0}db', parameters('appName')))]"
+              "value": "[format('Server=tcp:{0},1433;Initial Catalog={1};User ID=sqladmin;Password={2};Encrypt=True;', reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName')), '2021-11-01').fullyQualifiedDomainName, format('{0}db', parameters('appName')), parameters('sqlAdminPassword'))]"
             },
             {
               "name": "acr-password",

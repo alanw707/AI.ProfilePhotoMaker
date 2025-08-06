@@ -26,7 +26,7 @@ var frontendAppName = '${appName}-web-${environment}'
 var applicationInsightsName = '${appName}-ai-${environment}'
 
 // Container Registry
-resource containerRegistry 'Microsoft.ContainerRegistry/registries@2022-02-01-preview' = {
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   name: containerRegistryName
   location: location
   sku: {
@@ -164,7 +164,7 @@ resource connectionStringKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
 }
 
 // Container Apps Environment
-resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2022-10-01' = {
+resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' = {
   name: containerEnvName
   location: location
   properties: {
@@ -179,9 +179,17 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2022-10-01'
 }
 
 // Backend API Container App
-resource backendApp 'Microsoft.App/containerApps@2022-10-01' = {
+resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: backendAppName
   location: location
+  dependsOn: [
+    containerAppsEnvironment
+    containerRegistry
+    sqlServer
+    sqlDatabase
+    storageAccount
+    keyVault
+  ]
   identity: {
     type: 'SystemAssigned'
   }
@@ -257,34 +265,17 @@ resource backendApp 'Microsoft.App/containerApps@2022-10-01' = {
               value: applicationInsights.properties.ConnectionString
             }
           ]
-          probes: [
-            {
-              type: 'Liveness'
-              httpGet: {
-                path: '/api/health/live'
-                port: 8080
-                scheme: 'HTTP'
-              }
-              initialDelaySeconds: 10
-              periodSeconds: 10
-              timeoutSeconds: 5
-              failureThreshold: 3
-              successThreshold: 1
-            }
-            {
-              type: 'Readiness'
-              httpGet: {
-                path: '/api/health/ready'
-                port: 8080
-                scheme: 'HTTP'
-              }
-              initialDelaySeconds: 5
-              periodSeconds: 5
-              timeoutSeconds: 3
-              failureThreshold: 3
-              successThreshold: 1
-            }
-          ]
+          // Health probes removed - will be added after deploying actual application image
+          // probes: [
+          //   {
+          //     type: 'Liveness'
+          //     httpGet: {
+          //       path: '/api/health/live'
+          //       port: 8080
+          //       scheme: 'HTTP'
+          //     }
+          //   }
+          // ]
         }
       ]
       scale: {
@@ -306,9 +297,14 @@ resource backendApp 'Microsoft.App/containerApps@2022-10-01' = {
 }
 
 // Frontend Container App
-resource frontendApp 'Microsoft.App/containerApps@2022-10-01' = {
+resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: frontendAppName
   location: location
+  dependsOn: [
+    containerAppsEnvironment
+    containerRegistry
+    backendApp  // Deploy after backend to avoid circular dependency during updates
+  ]
   identity: {
     type: 'SystemAssigned'
   }
@@ -349,7 +345,7 @@ resource frontendApp 'Microsoft.App/containerApps@2022-10-01' = {
           env: [
             {
               name: 'API_URL'
-              value: 'https://${backendApp.properties.configuration.ingress.fqdn}'
+              value: 'https://placeholder-backend-url.azurecontainerapps.io'
             }
           ]
         }
