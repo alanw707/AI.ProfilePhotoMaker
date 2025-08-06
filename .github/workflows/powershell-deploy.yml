@@ -369,7 +369,6 @@ jobs:
             --name "$REGISTRY_NAME" \
             --source "$TEMP_REGISTRY_SERVER/aiprofilemaker-api:latest" \
             --image "aiprofilemaker-api:latest" \
-            --source-registry "$TEMP_REGISTRY_SERVER" \
             --force
           
           if [ $? -ne 0 ]; then
@@ -384,7 +383,6 @@ jobs:
             --name "$REGISTRY_NAME" \
             --source "$TEMP_REGISTRY_SERVER/aiprofilemaker-web:latest" \
             --image "aiprofilemaker-web:latest" \
-            --source-registry "$TEMP_REGISTRY_SERVER" \
             --force
           
           if [ $? -ne 0 ]; then
