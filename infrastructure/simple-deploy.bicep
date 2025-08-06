@@ -216,6 +216,7 @@ resource backendApp 'Microsoft.App/containerApps@2022-10-01' = {
         }
         {
           name: 'acr-password'
+          #disable-next-line use-secure-value-for-secure-inputs
           value: 'placeholder-will-be-updated-post-deployment'
         }
       ]
@@ -301,6 +302,7 @@ resource frontendApp 'Microsoft.App/containerApps@2022-10-01' = {
       secrets: [
         {
           name: 'acr-password'
+          #disable-next-line use-secure-value-for-secure-inputs
           value: 'placeholder-will-be-updated-post-deployment'
         }
       ]
@@ -309,7 +311,7 @@ resource frontendApp 'Microsoft.App/containerApps@2022-10-01' = {
       containers: [
         {
           name: 'web'
-          image: 'nginx:alpine'
+          image: '${containerRegistry.properties.loginServer}/aiprofilemaker-web:latest'
           resources: {
             cpu: json('0.25')
             memory: '0.5Gi'
