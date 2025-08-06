@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.177.2456",
-      "templateHash": "14768937226743832023"
+      "templateHash": "4007809990199504987"
     }
   },
   "parameters": {
@@ -238,7 +238,7 @@
           "activeRevisionsMode": "Single",
           "ingress": {
             "external": true,
-            "targetPort": 80,
+            "targetPort": 8080,
             "allowInsecure": false
           },
           "registries": [
@@ -271,7 +271,7 @@
           "containers": [
             {
               "name": "api",
-              "image": "[format('{0}/aiprofilemaker-backend:latest', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2022-02-01-preview').loginServer)]",
+              "image": "[format('{0}/aiprofilemaker-api:latest', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2022-02-01-preview').loginServer)]",
               "resources": {
                 "cpu": "[json('0.5')]",
                 "memory": "1Gi"
@@ -364,7 +364,7 @@
           "containers": [
             {
               "name": "web",
-              "image": "[format('{0}/aiprofilemaker-frontend:latest', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2022-02-01-preview').loginServer)]",
+              "image": "nginx:alpine",
               "resources": {
                 "cpu": "[json('0.25')]",
                 "memory": "0.5Gi"
