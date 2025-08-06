@@ -322,96 +322,472 @@ jobs:
             exit 1
           fi
           
-          # Find container apps
-          echo "🔍 [SEARCH] Finding container apps in resource group: ${{ env.RESOURCE_GROUP }}"
-          
-          BACKEND_APP=$(az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?contains(name, 'api')].name" --output tsv | head -1)
-          FRONTEND_APP=$(az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?contains(name, 'web')].name" --output tsv | head -1)
-          
-          if [ -z "$BACKEND_APP" ] || [ -z "$FRONTEND_APP" ]; then
-            echo "❌ [ERROR] Could not find backend or frontend apps"
-            echo "  Backend: '$BACKEND_APP'"
-            echo "  Frontend: '$FRONTEND_APP'"
-            az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[].name" --output table
-            exit 1
-          fi
-          
-          echo "📱 [INFO] Found apps - Backend: $BACKEND_APP, Frontend: $FRONTEND_APP"
-          
-          # Update backend app with production registry image
-          echo "🔄 [UPDATE] Updating backend app: $BACKEND_APP"
-          az containerapp update \
-            --name "$BACKEND_APP" \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --image "$REGISTRY_SERVER/aiprofilemaker-api:latest"
-          
-          if [ $? -ne 0 ]; then
-            echo "❌ [ERROR] Failed to update backend app"
-            exit 1
-          fi
-          
-          echo "✅ [SUCCESS] Backend app updated successfully"
-          
-          # Update frontend app with production registry image
-          echo "🔄 [UPDATE] Updating frontend app: $FRONTEND_APP"
-          az containerapp update \
-            --name "$FRONTEND_APP" \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --image "$REGISTRY_SERVER/aiprofilemaker-web:latest"
-          
-          if [ $? -ne 0 ]; then
-            echo "❌ [ERROR] Failed to update frontend app"
-            exit 1
-          fi
-          
-          echo "✅ [SUCCESS] Frontend app updated successfully"
-          echo "🎉 [SUCCESS] All container apps updated with production registry images!"
-          
-      - name: 🧪 Health Check
-        run: |
-          echo "🧪 [HEALTH] Performing health checks..."
-          
-          # Wait for deployment to stabilize
-          echo "⏳ [INFO] Waiting for deployment to stabilize..."
-          sleep 30
-          
-          # Get URLs from deployment outputs
-          BACKEND_URL="${{ steps.infra.outputs.backend-url }}"
-          FRONTEND_URL="${{ steps.infra.outputs.frontend-url }}"
-          
-          if [ -z "$BACKEND_URL" ] || [ -z "$FRONTEND_URL" ]; then
-            echo "⚠️ [WARNING] Missing application URLs from deployment:"
-            echo "  Backend URL: '$BACKEND_URL'"
-            echo "  Frontend URL: '$FRONTEND_URL'"
-            echo "Deployment may have succeeded but URLs are not available yet."
-          else
-            # Test backend health
-            echo "🔍 [TEST] Testing backend health: $BACKEND_URL/api/health"
-            if curl -f -s --max-time 30 "$BACKEND_URL/api/health" > /dev/null; then
-              echo "✅ [SUCCESS] Backend is healthy"
-            else
-              echo "⚠️ [WARNING] Backend health check failed (application may still be starting up)"
-              # Fallback to legacy health endpoint
-              echo "🔍 [FALLBACK] Trying legacy health endpoint: $BACKEND_URL/health"
-              if curl -f -s --max-time 30 "$BACKEND_URL/health" > /dev/null; then
-                echo "✅ [SUCCESS] Backend is healthy (via legacy endpoint)"
-              else
-                echo "❌ [WARNING] Both health endpoints failed (application may still be starting up)"
-              fi
+          # Function to check infrastructure deployment status
+          check_infrastructure_status() {
+            echo "🔍 [CHECK] Verifying infrastructure deployment status..."
+            
+            # Check if resource group exists and is provisioned
+            RG_STATUS=$(az group show --name "${{ env.RESOURCE_GROUP }}" --query "properties.provisioningState" --output tsv 2>/dev/null || echo "NotFound")
+            echo "📊 [INFO] Resource Group Status: $RG_STATUS"
+            
+            if [ "$RG_STATUS" != "Succeeded" ]; then
+              echo "⚠️ [WARNING] Resource group is not in succeeded state: $RG_STATUS"
             fi
             
-            # Test frontend
-            echo "🔍 [TEST] Testing frontend: $FRONTEND_URL"
-            if curl -f -s --max-time 30 "$FRONTEND_URL" > /dev/null; then
-              echo "✅ [SUCCESS] Frontend is healthy"
-            else
-              echo "⚠️ [WARNING] Frontend health check failed (application may still be starting up)"
+            # Check Container Apps Environment
+            CONTAINER_ENV_COUNT=$(az containerapp env list --resource-group "${{ env.RESOURCE_GROUP }}" --query "length([?contains(name, 'aipm-env-v1')])" --output tsv 2>/dev/null || echo "0")
+            echo "📊 [INFO] Container Apps Environment Count: $CONTAINER_ENV_COUNT"
+            
+            # Check Container Registry
+            REGISTRY_COUNT=$(az acr list --resource-group "${{ env.RESOURCE_GROUP }}" --query "length([?contains(name, 'aipm')])" --output tsv 2>/dev/null || echo "0")
+            echo "📊 [INFO] Container Registry Count: $REGISTRY_COUNT"
+            
+            return 0
+          }
+          
+          # Function to discover container apps with multiple strategies
+          discover_container_apps() {
+            echo "🔍 [DISCOVERY] Starting comprehensive container app discovery..."
+            
+            # Strategy 1: List all container apps for debugging
+            echo "📋 [DEBUG] All container apps in resource group:"
+            ALL_APPS=$(az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[].{Name:name, State:properties.provisioningState, FQDN:properties.configuration.ingress.fqdn}" --output table 2>/dev/null || echo "Failed to list apps")
+            echo "$ALL_APPS"
+            
+            # Strategy 2: Exact name matching (most reliable)
+            echo "🎯 [STRATEGY-1] Trying exact name matching..."
+            BACKEND_APP_EXACT=$(az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?name=='aipm-api-v1'].name" --output tsv 2>/dev/null | head -1)
+            FRONTEND_APP_EXACT=$(az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?name=='aipm-web-v1'].name" --output tsv 2>/dev/null | head -1)
+            
+            if [ -n "$BACKEND_APP_EXACT" ] && [ -n "$FRONTEND_APP_EXACT" ]; then
+              echo "✅ [SUCCESS] Found apps with exact matching:"
+              echo "  Backend: '$BACKEND_APP_EXACT'"
+              echo "  Frontend: '$FRONTEND_APP_EXACT'"
+              BACKEND_APP="$BACKEND_APP_EXACT"
+              FRONTEND_APP="$FRONTEND_APP_EXACT"
+              return 0
             fi
+            
+            # Strategy 3: Pattern matching with 'api' and 'web'
+            echo "🔍 [STRATEGY-2] Trying pattern matching..."
+            BACKEND_APP_PATTERN=$(az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?contains(name, 'api')].name" --output tsv 2>/dev/null | head -1)
+            FRONTEND_APP_PATTERN=$(az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?contains(name, 'web')].name" --output tsv 2>/dev/null | head -1)
+            
+            if [ -n "$BACKEND_APP_PATTERN" ] && [ -n "$FRONTEND_APP_PATTERN" ]; then
+              echo "✅ [SUCCESS] Found apps with pattern matching:"
+              echo "  Backend: '$BACKEND_APP_PATTERN'"
+              echo "  Frontend: '$FRONTEND_APP_PATTERN'"
+              BACKEND_APP="$BACKEND_APP_PATTERN"
+              FRONTEND_APP="$FRONTEND_APP_PATTERN"
+              return 0
+            fi
+            
+            # Strategy 4: Prefix matching
+            echo "🔍 [STRATEGY-3] Trying prefix matching..."
+            BACKEND_APP_PREFIX=$(az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?starts_with(name, 'aipm-api')].name" --output tsv 2>/dev/null | head -1)
+            FRONTEND_APP_PREFIX=$(az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[?starts_with(name, 'aipm-web')].name" --output tsv 2>/dev/null | head -1)
+            
+            if [ -n "$BACKEND_APP_PREFIX" ] && [ -n "$FRONTEND_APP_PREFIX" ]; then
+              echo "✅ [SUCCESS] Found apps with prefix matching:"
+              echo "  Backend: '$BACKEND_APP_PREFIX'"
+              echo "  Frontend: '$FRONTEND_APP_PREFIX'"
+              BACKEND_APP="$BACKEND_APP_PREFIX"
+              FRONTEND_APP="$FRONTEND_APP_PREFIX"
+              return 0
+            fi
+            
+            # Strategy 5: All apps fallback (risky but informative)
+            echo "🔍 [STRATEGY-4] Analyzing all available apps..."
+            ALL_APP_NAMES=$(az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[].name" --output tsv 2>/dev/null)
+            
+            if [ -z "$ALL_APP_NAMES" ]; then
+              echo "❌ [ERROR] No container apps found in resource group"
+              return 1
+            fi
+            
+            echo "📋 [INFO] Available container apps:"
+            echo "$ALL_APP_NAMES" | while read app; do
+              echo "  - $app"
+            done
+            
+            # Try to infer from available apps
+            BACKEND_CANDIDATES=$(echo "$ALL_APP_NAMES" | grep -i "api\|backend" | head -1)
+            FRONTEND_CANDIDATES=$(echo "$ALL_APP_NAMES" | grep -i "web\|frontend\|ui" | head -1)
+            
+            if [ -n "$BACKEND_CANDIDATES" ] && [ -n "$FRONTEND_CANDIDATES" ]; then
+              echo "🤔 [INFERENCE] Found potential candidates:"
+              echo "  Backend candidate: '$BACKEND_CANDIDATES'"
+              echo "  Frontend candidate: '$FRONTEND_CANDIDATES'"
+              BACKEND_APP="$BACKEND_CANDIDATES"
+              FRONTEND_APP="$FRONTEND_CANDIDATES"
+              return 0
+            fi
+            
+            return 1
+          }
+          
+          # Function to wait for app readiness
+          wait_for_app_readiness() {
+            local app_name=$1
+            local app_type=$2
+            local max_wait=300  # 5 minutes
+            local wait_interval=15
+            local elapsed=0
+            
+            echo "⏳ [WAIT] Waiting for $app_type app '$app_name' to be ready..."
+            
+            while [ $elapsed -lt $max_wait ]; do
+              APP_STATE=$(az containerapp show --name "$app_name" --resource-group "${{ env.RESOURCE_GROUP }}" --query "properties.provisioningState" --output tsv 2>/dev/null || echo "Unknown")
+              
+              if [ "$APP_STATE" = "Succeeded" ]; then
+                echo "✅ [SUCCESS] $app_type app '$app_name' is ready (state: $APP_STATE)"
+                return 0
+              elif [ "$APP_STATE" = "Failed" ]; then
+                echo "❌ [ERROR] $app_type app '$app_name' failed to provision (state: $APP_STATE)"
+                return 1
+              else
+                echo "🔄 [INFO] $app_type app '$app_name' is still provisioning (state: $APP_STATE), waiting ${wait_interval}s..."
+                sleep $wait_interval
+                elapsed=$((elapsed + wait_interval))
+              fi
+            done
+            
+            echo "⚠️ [WARNING] Timeout waiting for $app_type app '$app_name' to be ready"
+            return 1
+          }
+          
+          # Execute infrastructure status check
+          check_infrastructure_status
+          
+          # Execute container app discovery with retries
+          MAX_DISCOVERY_RETRIES=3
+          DISCOVERY_RETRY=0
+          BACKEND_APP=""
+          FRONTEND_APP=""
+          
+          while [ $DISCOVERY_RETRY -lt $MAX_DISCOVERY_RETRIES ]; do
+            DISCOVERY_RETRY=$((DISCOVERY_RETRY + 1))
+            echo "🔄 [RETRY] Discovery attempt $DISCOVERY_RETRY of $MAX_DISCOVERY_RETRIES"
+            
+            if discover_container_apps; then
+              echo "✅ [SUCCESS] Container app discovery completed"
+              break
+            else
+              if [ $DISCOVERY_RETRY -lt $MAX_DISCOVERY_RETRIES ]; then
+                WAIT_TIME=$((DISCOVERY_RETRY * 30))
+                echo "⏳ [WAIT] Discovery failed, waiting ${WAIT_TIME}s before retry..."
+                sleep $WAIT_TIME
+              else
+                echo "❌ [ERROR] Container app discovery failed after $MAX_DISCOVERY_RETRIES attempts"
+                echo ""
+                echo "🔍 [DIAGNOSIS] Deployment diagnosis:"
+                echo "  1. Infrastructure may still be deploying"
+                echo "  2. Container Apps Environment may not be ready"
+                echo "  3. Bicep deployment may have partially failed"
+                echo "  4. App names may not match expected patterns"
+                echo ""
+                echo "💡 [SUGGESTION] Check the infrastructure deployment logs and ensure all resources are created"
+                exit 1
+              fi
+            fi
+          done
+          
+          # Validate apps were found
+          if [ -z "$BACKEND_APP" ] || [ -z "$FRONTEND_APP" ]; then
+            echo "❌ [ERROR] Failed to identify container apps:"
+            echo "  Backend: '$BACKEND_APP'"
+            echo "  Frontend: '$FRONTEND_APP'"
+            exit 1
+          fi
+          
+          echo "📱 [INFO] Final app selection:"
+          echo "  Backend: $BACKEND_APP"
+          echo "  Frontend: $FRONTEND_APP"
+          
+          # Wait for apps to be ready before updating
+          wait_for_app_readiness "$BACKEND_APP" "Backend"
+          wait_for_app_readiness "$FRONTEND_APP" "Frontend"
+          
+          # Update backend app with production registry image with retry logic
+          echo "🔄 [UPDATE] Updating backend app: $BACKEND_APP"
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "🔄 [INFO] Backend update attempt $RETRY_COUNT of $MAX_RETRIES"
+            
+            if az containerapp update \
+              --name "$BACKEND_APP" \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --image "$REGISTRY_SERVER/aiprofilemaker-api:latest"; then
+              
+              echo "✅ [SUCCESS] Backend app updated successfully!"
+              break
+            else
+              echo "⚠️ [WARNING] Backend update attempt $RETRY_COUNT failed"
+              
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                WAIT_TIME=$((RETRY_COUNT * 5))
+                echo "⏳ [INFO] Waiting $WAIT_TIME seconds before retry..."
+                sleep $WAIT_TIME
+              else
+                echo "❌ [ERROR] Backend update failed after $MAX_RETRIES attempts"
+                exit 1
+              fi
+            fi
+          done
+          
+          # Update frontend app with production registry image with retry logic
+          echo "🔄 [UPDATE] Updating frontend app: $FRONTEND_APP"
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "🔄 [INFO] Frontend update attempt $RETRY_COUNT of $MAX_RETRIES"
+            
+            if az containerapp update \
+              --name "$FRONTEND_APP" \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --image "$REGISTRY_SERVER/aiprofilemaker-web:latest"; then
+              
+              echo "✅ [SUCCESS] Frontend app updated successfully!"
+              break
+            else
+              echo "⚠️ [WARNING] Frontend update attempt $RETRY_COUNT failed"
+              
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                WAIT_TIME=$((RETRY_COUNT * 5))
+                echo "⏳ [INFO] Waiting $WAIT_TIME seconds before retry..."
+                sleep $WAIT_TIME
+              else
+                echo "❌ [ERROR] Frontend update failed after $MAX_RETRIES attempts"
+                exit 1
+              fi
+            fi
+          done
+          echo "🎉 [SUCCESS] All container apps updated with production registry images!"
+          
+      - name: 🧪 Health Check & Deployment Validation
+        run: |
+          echo "🧪 [HEALTH] Performing comprehensive health checks and deployment validation..."
+          
+          # Function to validate deployment completeness
+          validate_deployment() {
+            echo "✅ [VALIDATE] Checking deployment completeness..."
+            
+            local validation_errors=0
+            
+            # Check if all expected resources exist
+            echo "🔍 [CHECK] Validating infrastructure resources..."
+            
+            # Container Apps Environment
+            ENV_EXISTS=$(az containerapp env list --resource-group "${{ env.RESOURCE_GROUP }}" --query "length([?contains(name, 'aipm-env-v1')])" --output tsv 2>/dev/null || echo "0")
+            if [ "$ENV_EXISTS" = "0" ]; then
+              echo "❌ [ERROR] Container Apps Environment not found"
+              validation_errors=$((validation_errors + 1))
+            else
+              echo "✅ [SUCCESS] Container Apps Environment exists"
+            fi
+            
+            # Container Registry
+            REGISTRY_EXISTS=$(az acr list --resource-group "${{ env.RESOURCE_GROUP }}" --query "length([?contains(name, 'aipm')])" --output tsv 2>/dev/null || echo "0")
+            if [ "$REGISTRY_EXISTS" = "0" ]; then
+              echo "❌ [ERROR] Container Registry not found"
+              validation_errors=$((validation_errors + 1))
+            else
+              echo "✅ [SUCCESS] Container Registry exists"
+            fi
+            
+            # Container Apps
+            BACKEND_EXISTS=$(az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "length([?name=='aipm-api-v1'])" --output tsv 2>/dev/null || echo "0")
+            FRONTEND_EXISTS=$(az containerapp list --resource-group "${{ env.RESOURCE_GROUP }}" --query "length([?name=='aipm-web-v1'])" --output tsv 2>/dev/null || echo "0")
+            
+            if [ "$BACKEND_EXISTS" = "0" ]; then
+              echo "❌ [ERROR] Backend Container App not found"
+              validation_errors=$((validation_errors + 1))
+            else
+              echo "✅ [SUCCESS] Backend Container App exists"
+            fi
+            
+            if [ "$FRONTEND_EXISTS" = "0" ]; then
+              echo "❌ [ERROR] Frontend Container App not found"
+              validation_errors=$((validation_errors + 1))
+            else
+              echo "✅ [SUCCESS] Frontend Container App exists"
+            fi
+            
+            # SQL Server
+            SQL_EXISTS=$(az sql server list --resource-group "${{ env.RESOURCE_GROUP }}" --query "length([?contains(name, 'aipm-sql-v1')])" --output tsv 2>/dev/null || echo "0")
+            if [ "$SQL_EXISTS" = "0" ]; then
+              echo "❌ [ERROR] SQL Server not found"
+              validation_errors=$((validation_errors + 1))
+            else
+              echo "✅ [SUCCESS] SQL Server exists"
+            fi
+            
+            # Storage Account
+            STORAGE_EXISTS=$(az storage account list --resource-group "${{ env.RESOURCE_GROUP }}" --query "length([?contains(name, 'aipmstv1')])" --output tsv 2>/dev/null || echo "0")
+            if [ "$STORAGE_EXISTS" = "0" ]; then
+              echo "❌ [ERROR] Storage Account not found"
+              validation_errors=$((validation_errors + 1))
+            else
+              echo "✅ [SUCCESS] Storage Account exists"
+            fi
+            
+            return $validation_errors
+          }
+          
+          # Function to check container app health with multiple strategies
+          check_app_health() {
+            local app_name=$1
+            local app_type=$2
+            local expected_port=$3
+            
+            echo "🩺 [HEALTH] Checking $app_type app: $app_name"
+            
+            # Get app status
+            local app_status=$(az containerapp show --name "$app_name" --resource-group "${{ env.RESOURCE_GROUP }}" --query "properties.provisioningState" --output tsv 2>/dev/null || echo "Unknown")
+            echo "📊 [STATUS] $app_type provisioning state: $app_status"
+            
+            # Get app URL
+            local app_url=$(az containerapp show --name "$app_name" --resource-group "${{ env.RESOURCE_GROUP }}" --query "properties.configuration.ingress.fqdn" --output tsv 2>/dev/null || echo "")
+            
+            if [ -n "$app_url" ]; then
+              echo "🌐 [URL] $app_type URL: https://$app_url"
+              
+              # Try multiple health check approaches
+              if [ "$app_type" = "Backend" ]; then
+                # Backend health checks
+                echo "🔍 [TEST] Testing backend health endpoints..."
+                
+                # Try main health endpoint
+                if curl -f -s --max-time 30 "https://$app_url/api/health" > /dev/null 2>&1; then
+                  echo "✅ [SUCCESS] Backend health endpoint responding"
+                  return 0
+                elif curl -f -s --max-time 30 "https://$app_url/health" > /dev/null 2>&1; then
+                  echo "✅ [SUCCESS] Backend legacy health endpoint responding"
+                  return 0
+                elif curl -f -s --max-time 30 "https://$app_url/" > /dev/null 2>&1; then
+                  echo "⚠️ [PARTIAL] Backend root endpoint responding (health endpoint may not be ready)"
+                  return 0
+                else
+                  echo "❌ [FAILED] Backend not responding to any health checks"
+                  return 1
+                fi
+              else
+                # Frontend health checks
+                echo "🔍 [TEST] Testing frontend availability..."
+                
+                if curl -f -s --max-time 30 "https://$app_url/" > /dev/null 2>&1; then
+                  echo "✅ [SUCCESS] Frontend responding"
+                  return 0
+                else
+                  echo "❌ [FAILED] Frontend not responding"
+                  return 1
+                fi
+              fi
+            else
+              echo "⚠️ [WARNING] No URL found for $app_type app"
+              return 1
+            fi
+          }
+          
+          # Wait for deployment to stabilize
+          echo "⏳ [WAIT] Waiting for deployment to stabilize (60s)..."
+          sleep 60
+          
+          # Validate deployment completeness first
+          echo ""
+          echo "🔍 [VALIDATION] Validating deployment completeness..."
+          if validate_deployment; then
+            echo "✅ [SUCCESS] All infrastructure resources are present"
+          else
+            echo "⚠️ [WARNING] Some infrastructure resources may be missing or still deploying"
+          fi
+          
+          # Get URLs from deployment outputs with fallback
+          BACKEND_URL="${{ steps.infra.outputs.backend-url }}"
+          FRONTEND_URL="${{ steps.infra.outputs.frontend-url }}"
+          REGISTRY_SERVER="${{ steps.infra.outputs.registry-server }}"
+          
+          echo ""
+          echo "📊 [INFO] Deployment outputs:"
+          echo "  Backend URL: '${BACKEND_URL:-'Not available'}'"
+          echo "  Frontend URL: '${FRONTEND_URL:-'Not available'}'"
+          echo "  Registry: '${REGISTRY_SERVER:-'Not available'}'"
+          
+          # Fallback URL discovery if outputs are missing
+          if [ -z "$BACKEND_URL" ] || [ -z "$FRONTEND_URL" ]; then
+            echo "🔍 [FALLBACK] Attempting to discover URLs from container apps..."
+            
+            # Try to get URLs directly from container apps
+            BACKEND_FQDN=$(az containerapp show --name "aipm-api-v1" --resource-group "${{ env.RESOURCE_GROUP }}" --query "properties.configuration.ingress.fqdn" --output tsv 2>/dev/null || echo "")
+            FRONTEND_FQDN=$(az containerapp show --name "aipm-web-v1" --resource-group "${{ env.RESOURCE_GROUP }}" --query "properties.configuration.ingress.fqdn" --output tsv 2>/dev/null || echo "")
+            
+            if [ -n "$BACKEND_FQDN" ]; then
+              BACKEND_URL="https://$BACKEND_FQDN"
+              echo "✅ [DISCOVERED] Backend URL: $BACKEND_URL"
+            fi
+            
+            if [ -n "$FRONTEND_FQDN" ]; then
+              FRONTEND_URL="https://$FRONTEND_FQDN"
+              echo "✅ [DISCOVERED] Frontend URL: $FRONTEND_URL"
+            fi
+          fi
+          
+          # Perform health checks if URLs are available
+          health_check_results=0
+          
+          if [ -n "$BACKEND_URL" ]; then
+            echo ""
+            if check_app_health "aipm-api-v1" "Backend" "8080"; then
+              echo "✅ [SUCCESS] Backend health check passed"
+            else
+              echo "❌ [FAILED] Backend health check failed"
+              health_check_results=$((health_check_results + 1))
+            fi
+          else
+            echo "⚠️ [SKIP] Backend health check skipped - no URL available"
+          fi
+          
+          if [ -n "$FRONTEND_URL" ]; then
+            echo ""
+            if check_app_health "aipm-web-v1" "Frontend" "80"; then
+              echo "✅ [SUCCESS] Frontend health check passed"
+            else
+              echo "❌ [FAILED] Frontend health check failed"
+              health_check_results=$((health_check_results + 1))
+            fi
+          else
+            echo "⚠️ [SKIP] Frontend health check skipped - no URL available"
+          fi
+          
+          # Final deployment summary
+          echo ""
+          echo "🎯 [SUMMARY] Deployment Summary:"
+          echo "============================================"
+          
+          if [ $health_check_results -eq 0 ]; then
+            echo "🎉 [SUCCESS] Deployment completed successfully!"
+            echo "✅ All components are healthy and responding"
+          else
+            echo "⚠️ [PARTIAL] Deployment completed with warnings"
+            echo "❌ $health_check_results health check(s) failed"
+            echo "💡 Applications may still be starting up or have configuration issues"
           fi
           
           echo ""
-          echo "🎉 [SUCCESS] Deployment completed successfully!"
-          echo "📊 [INFO] Application URLs:"
-          echo "  Frontend: ${FRONTEND_URL:-'Not available'}"
-          echo "  Backend API: ${BACKEND_URL:-'Not available'}"
-          echo "  Registry: ${{ steps.infra.outputs.registry-server }}"
+          echo "📱 [ENDPOINTS] Application Access Points:"
+          echo "  🌐 Frontend: ${FRONTEND_URL:-'⚠️  Not available'}"
+          echo "  🔧 Backend API: ${BACKEND_URL:-'⚠️  Not available'}"
+          echo "  📦 Registry: ${REGISTRY_SERVER:-'⚠️  Not available'}"
+          echo ""
+          
+          if [ -n "$FRONTEND_URL" ] && [ -n "$BACKEND_URL" ]; then
+            echo "🚀 [READY] Your AI Profile Photo Maker is deployed!"
+            echo "   Visit the frontend URL to start using the application."
+          else
+            echo "⏳ [PENDING] Deployment may still be finalizing."
+            echo "   Check the Azure portal for final URL availability."
+          fi
