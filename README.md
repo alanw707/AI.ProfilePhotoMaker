@@ -1,15 +1,37 @@
-# AI.ProfilePhotoMaker
+# AI Profile Photo Maker
 
-An AI-powered profile photo generator with a .NET 8 Web API backend and Angular frontend.
+A modern web application for creating professional AI-generated profile photos using Replicate's AI models with a simplified local build workflow.
 
-## Project Documentation
+## 🚀 Quick Start (Local Build Workflow)
 
+This project uses a simplified local build approach for faster development and more reliable deployments.
+
+### Prerequisites
+- Docker Desktop installed and running
+- Azure CLI installed (`az --version`) 
+- Logged in to Azure (`az login`)
+- Node.js 18+ and .NET 8
+
+### Deploy in 3 Steps
+
+```bash
+# 1. Build images locally (30-60 seconds)
+./scripts/build-local.sh
+
+# 2. Push to Azure Container Registry
+./scripts/push-to-acr.sh
+
+# 3. Deploy infrastructure (triggers automatically)
+git push origin main
+```
+
+## 📖 Documentation
+
+- **[Local Build Workflow](docs/LOCAL-BUILD-WORKFLOW.md)** - Complete guide to the local build process
 - [Project Plan](docs/PROJECT_PLAN.md) - Overall plan and milestones
 - [Tasks](docs/TASKS.md) - Detailed task list and status
 - [Setup Guide](docs/SETUP.md) - Development environment setup
 - [Architecture](docs/ARCHITECTURE.md) - System architecture and design
-
-> **Note:** The project uses semantic search tools to assist with code navigation, onboarding, and automated documentation updates. This enables faster onboarding and more accurate code suggestions.
 
 ## Overview
 
@@ -34,14 +56,21 @@ AI.ProfilePhotoMaker is a web application that allows users to create profession
 - JWT Authentication
 
 ### Frontend
-- Angular 19
-- TypeScript
-- SASS
-- Reactive Forms
+- React 18 + TypeScript
+- Vite build system
+- Modern CSS with modules
+- Responsive design
+
+### Cloud Infrastructure
+- Azure Container Apps (hosting)
+- Azure Container Registry (images)
+- Azure SQL Database (data)
+- Azure Storage Account (files)
+- Azure Key Vault (secrets)
+- Application Insights (monitoring)
 
 ### External Services
 - Replicate.com FLUX AI
-- Azure Blob Storage (planned)
 - Stripe Payments (planned)
 
 ## Getting Started
