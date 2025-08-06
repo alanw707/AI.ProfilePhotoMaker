@@ -4,7 +4,7 @@
 param appName string = 'aipm'
 param environment string = 'v1'
 param location string = resourceGroup().location
-param deploymentTimestamp string = utcNow()
+
 
 @secure()
 param sqlAdminPassword string
@@ -15,11 +15,11 @@ param replicateApiToken string
 
 // Generate unique names
 var uniqueSuffix = uniqueString(resourceGroup().id)
-var timestampSuffix = substring(replace(replace(deploymentTimestamp, ':', ''), '-', ''), 0, 8)
+
 var containerRegistryName = '${appName}cr${environment}${uniqueSuffix}'
 var sqlServerName = '${appName}-sql-${environment}-${uniqueSuffix}'
 var storageAccountName = '${appName}st${environment}${uniqueSuffix}'
-var keyVaultName = '${appName}-kv-${environment}-${timestampSuffix}'
+var keyVaultName = '${appName}-kv-${environment}-${uniqueSuffix}'
 var containerEnvName = '${appName}-env-${environment}-${uniqueSuffix}'
 var backendAppName = '${appName}-api-${environment}'
 var frontendAppName = '${appName}-web-${environment}'
