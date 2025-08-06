@@ -14,7 +14,7 @@ RUN npm ci
 COPY AI.ProfilePhotoMaker.UI/ ./
 
 # Build the Angular application
-RUN npm run build:staging
+RUN npm run build:v1
 
 # Production stage with nginx
 FROM nginx:alpine
