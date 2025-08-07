@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 const STYLE_IMAGES = [
   'academic.jpg', 'artistic.jpg', 'author.jpg', 'casual.jpg', 'consultant.jpg',
   'corporate.jpg', 'creative.jpg', 'digital-nomad.jpg', 'edgy-urban.jpg',
-  'entrepreneur.jpg', 'executive.jpg', 'fashion.jpg', 'fitness.jpg',
+  'entrepreneur.jpg', 'executive.jpg', 'fitness.jpg',
   'glamour.jpg', 'influencer.jpg', 'legal.jpg', 'linkedin.jpg',
   'medical.jpg', 'spiritual.jpg', 'startup.jpg', 'tech-professional.jpg'
 ];

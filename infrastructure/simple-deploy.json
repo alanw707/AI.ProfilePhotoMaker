@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.177.2456",
-      "templateHash": "2683884139713927306"
+      "templateHash": "11531761244244510750"
     }
   },
   "parameters": {
@@ -263,7 +263,7 @@
             },
             {
               "name": "acr-password",
-              "value": "placeholder-will-be-updated-post-deployment"
+              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').passwords[0].value]"
             }
           ]
         },
@@ -385,7 +385,7 @@
           "secrets": [
             {
               "name": "acr-password",
-              "value": "placeholder-will-be-updated-post-deployment"
+              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').passwords[0].value]"
             }
           ]
         },

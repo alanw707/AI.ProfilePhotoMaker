@@ -26,8 +26,8 @@ These scripts are kept for manual intervention during production emergencies whe
 ### **simple-deploy.bicep** ✅ ACTIVE
 Primary infrastructure template used by production deployment pipeline.
 
-### **simple-deploy.json** ✅ ACTIVE  
-Compiled ARM template from Bicep source.
+### **simple-deploy.json** 🗑️ REMOVED  
+Auto-generated file - can be recreated with `az bicep build --file simple-deploy.bicep`
 
 ## 🔧 Development Tools
 
