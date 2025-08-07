@@ -1,0 +1,21 @@
+{
+  "name": "style-preview-tests",
+  "version": "1.0.0",
+  "description": "Comprehensive browser-based testing for style preview image accessibility and loading",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:current-state": "playwright test --grep 'Pre-Upload State'",
+    "test:post-upload": "playwright test --grep 'Post-Upload Verification'",
+    "test:integration": "playwright test --grep 'Integration'",
+    "test:performance": "playwright test --grep 'Performance'",
+    "show-report": "playwright show-report",
+    "install-browsers": "playwright install"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.40.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  }
+}
