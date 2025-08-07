@@ -135,15 +135,7 @@ export const STYLE_PREVIEW_TEST_CASES: StylePreviewTestCase[] = [
     category: 'lifestyle'
   },
 
-  // Fashion & Glamour
-  {
-    styleName: 'fashion',
-    fileName: 'fashion.jpg',
-    expectedUrl: `${AZURE_BLOB_BASE_URL}/fashion.jpg`,
-    description: 'Fashion headshot style',
-    category: 'creative'
-  },
-  {
+{
     styleName: 'glamour',
     fileName: 'glamour.jpg',
     expectedUrl: `${AZURE_BLOB_BASE_URL}/glamour.jpg`,

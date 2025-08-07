@@ -106,6 +106,10 @@ packages/
 TestResults/
 *.trx
 coverage/
+**/test-results/
+**/test-results/**
+playwright-report/
+**/junit.xml
 
 # Compiled binaries
 *.dll
@@ -125,3 +129,12 @@ current-lint-errors.json
 # Cache files
 **/.cache/
 infrastructure/venv-azure/
+
+# Build and publish artifacts (should not be in source control)
+**/publish/
+**/dist/
+**/build/
+
+# Generated ARM templates from Bicep (can be regenerated)
+infrastructure/*.json
+**/infrastructure/*.json
