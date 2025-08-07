@@ -5,6 +5,7 @@ using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services.Authentication;
 using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
 using AI.ProfilePhotoMaker.API.Services.Database;
+using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Payment;
 using AI.ProfilePhotoMaker.API.Services.Storage;
@@ -17,20 +18,48 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.DataProtection;
 using System.Security.Claims;
 
-// Handle command-line arguments for migration operations
+// Handle command-line arguments for migration and upload operations
 if (args.Length > 0)
 {
-    var migrationBuilder = WebApplication.CreateBuilder(args);
+    var commandBuilder = WebApplication.CreateBuilder(args);
     
     // Configure services for command-line operations
-    migrationBuilder.Services.AddDatabaseServices(migrationBuilder.Configuration, migrationBuilder.Environment);
-    migrationBuilder.Services.AddLogging();
+    commandBuilder.Services.AddDatabaseServices(commandBuilder.Configuration, commandBuilder.Environment);
+    commandBuilder.Services.AddLogging();
     
-    var migrationApp = migrationBuilder.Build();
+    // Add storage services for upload commands
+    var commandAzureStorageConnectionString = commandBuilder.Configuration.GetConnectionString("AzureStorage") ?? 
+                                      commandBuilder.Configuration["AzureStorage:ConnectionString"];
     
-    // Handle migration commands and exit
-    var exitCode = await MigrationCommandService.HandleMigrationCommand(args, migrationApp.Services);
-    Environment.Exit(exitCode);
+    if (!string.IsNullOrEmpty(commandAzureStorageConnectionString))
+    {
+        commandBuilder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
+    }
+    else
+    {
+        commandBuilder.Services.AddScoped<IStorageService, LocalStorageService>();
+    }
+    
+    // Add upload service
+    commandBuilder.Services.AddScoped<UploadStylePreviewsService>();
+    
+    var commandApp = commandBuilder.Build();
+    
+    // Try migration commands first
+    var migrationExitCode = await MigrationCommandService.HandleMigrationCommand(args, commandApp.Services);
+    if (migrationExitCode != 0 || IsMigrationCommand(args[0]))
+    {
+        Environment.Exit(migrationExitCode);
+    }
+    
+    // Try upload commands
+    var uploadExitCode = await UploadCommandService.HandleUploadCommand(args, commandApp.Services);
+    if (uploadExitCode != 0 || IsUploadCommand(args[0]))
+    {
+        Environment.Exit(uploadExitCode);
+    }
+    
+    // If we get here, it's not a recognized command, continue with normal startup
 }
 
 var builder = WebApplication.CreateBuilder(args);
@@ -564,3 +593,28 @@ if (Directory.Exists(angularPath))
 app.MapControllers();
 
 app.Run();
+
+// Helper methods for command detection
+static bool IsMigrationCommand(string command)
+{
+    return command switch
+    {
+        "--check-db-connection" => true,
+        "--verify-migrations" => true,
+        "--apply-migrations" => true,
+        "--validate-database" => true,
+        "--migration-status" => true,
+        "--database-health" => true,
+        _ => false
+    };
+}
+
+static bool IsUploadCommand(string command)
+{
+    return command switch
+    {
+        "upload-previews" => true,
+        "list-previews" => true,
+        _ => false
+    };
+}
