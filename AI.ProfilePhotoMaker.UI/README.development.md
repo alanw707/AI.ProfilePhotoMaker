@@ -36,7 +36,7 @@ cd ../AI.ProfilePhotoMaker.API && dotnet run
 
 ### **1. Local Development** 
 - **Frontend**: `http://localhost:4200`
-- **Backend**: `http://localhost:5035`
+- **Backend**: `http://localhost:5032`
 - **Proxy**: All API calls proxied to localhost backend
 - **Use for**: Daily development, fastest iteration
 
@@ -163,7 +163,7 @@ tail -f ../AI.ProfilePhotoMaker.API/api.log
 ## 🏗️ **Architecture Overview**
 
 ### **Proxy Configuration**
-- **Local**: `proxy.conf.json` → localhost:5035
+- **Local**: `proxy.conf.json` → localhost:5032
 - **ngrok**: `proxy.conf.ngrok.json` → awlocaldev-api.ngrok.app
 - **Test**: `proxy.conf.test.json` → test-api.yourcompany.com
 - **Prod**: `proxy.conf.prod.json` → api.yourcompany.com

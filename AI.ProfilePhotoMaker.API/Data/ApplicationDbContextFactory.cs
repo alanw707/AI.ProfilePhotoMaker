@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Configuration;
 
 namespace AI.ProfilePhotoMaker.API.Data;
 
@@ -12,11 +13,38 @@ public class ApplicationDbContextFactory : IDesignTimeDbContextFactory<Applicati
     {
         var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
         
-        // Use SQL Server connection string for design-time operations
-        var connectionString = "Server=tcp:sql-apm-1754278427.database.windows.net,1433;Initial Catalog=aiprofilemaker;User ID=sqladmin;Password=TempPassword123!;Encrypt=True;";
+        // Build configuration to read from appsettings files
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: false)
+            .AddJsonFile("appsettings.Development.json", optional: true)
+            .AddEnvironmentVariables()
+            .Build();
         
-        optionsBuilder.UseSqlServer(connectionString);
+        // Get connection string from configuration
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        
+        // Determine database provider based on connection string
+        if (IsAzureSqlServer(connectionString))
+        {
+            optionsBuilder.UseSqlServer(connectionString);
+        }
+        else
+        {
+            // Default to SQLite for development
+            optionsBuilder.UseSqlite(connectionString ?? "Data Source=aiprofilemaker.db");
+        }
         
         return new ApplicationDbContext(optionsBuilder.Options);
+    }
+    
+    private static bool IsAzureSqlServer(string? connectionString)
+    {
+        if (string.IsNullOrEmpty(connectionString))
+            return false;
+            
+        return connectionString.Contains("database.windows.net", StringComparison.OrdinalIgnoreCase) ||
+               connectionString.Contains("Server=tcp:", StringComparison.OrdinalIgnoreCase) ||
+               connectionString.Contains("Authentication=Active Directory", StringComparison.OrdinalIgnoreCase);
     }
 }

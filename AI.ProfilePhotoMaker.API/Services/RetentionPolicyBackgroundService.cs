@@ -21,27 +21,63 @@ public class RetentionPolicyBackgroundService : BackgroundService
     {
         _logger.LogInformation("Retention Policy Background Service started");
 
-        // Wait a bit before starting the first check to let the application start up
-        await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
-
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            try
+            // Wait a bit before starting the first check to let the application start up
+            await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+
+            while (!stoppingToken.IsCancellationRequested)
             {
-                await PerformRetentionPolicyCheck();
-                await Task.Delay(_checkInterval, stoppingToken);
+                try
+                {
+                    await PerformRetentionPolicyCheck();
+                    await Task.Delay(_checkInterval, stoppingToken);
+                }
+                catch (TaskCanceledException)
+                {
+                    // Expected when cancellation token is triggered during Task.Delay
+                    break;
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected when cancellation token is triggered
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error occurred during retention policy check");
+                    
+                    // Check if we should still continue
+                    if (!stoppingToken.IsCancellationRequested)
+                    {
+                        try
+                        {
+                            // Wait a shorter time before retrying if there was an error
+                            await Task.Delay(TimeSpan.FromMinutes(30), stoppingToken);
+                        }
+                        catch (TaskCanceledException)
+                        {
+                            // Expected during shutdown
+                            break;
+                        }
+                    }
+                }
             }
-            catch (OperationCanceledException)
-            {
-                // Expected when cancellation token is triggered
-                break;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error occurred during retention policy check");
-                // Wait a shorter time before retrying if there was an error
-                await Task.Delay(TimeSpan.FromMinutes(30), stoppingToken);
-            }
+        }
+        catch (TaskCanceledException)
+        {
+            // This is expected when the service is stopping
+            _logger.LogInformation("Retention Policy Background Service cancellation requested");
+        }
+        catch (OperationCanceledException)
+        {
+            // This is expected when the service is stopping
+            _logger.LogInformation("Retention Policy Background Service cancellation requested");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled exception in Retention Policy Background Service");
+            throw; // Re-throw to ensure the host knows about the failure
         }
 
         _logger.LogInformation("Retention Policy Background Service stopped");

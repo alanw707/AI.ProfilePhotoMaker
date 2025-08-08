@@ -128,10 +128,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 $"scope={Uri.EscapeDataString("openid profile email")}&" +
                 $"state={Uri.EscapeDataString(state ?? string.Empty)}";
 
-            Console.WriteLine($"🚀 Manual OAuth URL: {authUrl}");
-            Console.WriteLine($"   State: {state}");
-            Console.WriteLine($"   Redirect URI: {redirectUri}");
-
             return Redirect(authUrl);
         }
 
@@ -141,14 +137,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             var frontendBaseUrl = _configuration["AppBaseUrl"] ?? "http://localhost:4200";
             var returnUrl = HttpContext.Session.GetString("oauth_return_url") ?? "/app/dashboard";
 
-            Console.WriteLine($"🔄 OAuth Callback - Code: {code?.Substring(0, Math.Min(10, code?.Length ?? 0))}...");
-            Console.WriteLine($"   State: {state}");
-            Console.WriteLine($"   Error: {error}");
-
             // Handle OAuth errors
             if (!string.IsNullOrEmpty(error))
             {
-                Console.WriteLine($"❌ OAuth error: {error}");
                 return Redirect($"{frontendBaseUrl}/login?error=oauth_{error}");
             }
 
@@ -156,14 +147,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             var sessionState = HttpContext.Session.GetString("oauth_state");
             if (string.IsNullOrEmpty(state) || state != sessionState)
             {
-                Console.WriteLine($"❌ Invalid state - Session: {sessionState}, Received: {state}");
                 return Redirect($"{frontendBaseUrl}/login?error=invalid_state");
             }
 
             // Validate authorization code
             if (string.IsNullOrEmpty(code))
             {
-                Console.WriteLine("❌ Missing authorization code");
                 return Redirect($"{frontendBaseUrl}/login?error=missing_code");
             }
 
@@ -193,12 +182,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 // Generate JWT token
                 var tokenInfo = _authService.GenerateJwtToken(user);
 
-                Console.WriteLine($"✅ OAuth success - User: {user.Email}");
                 return Redirect($"{frontendBaseUrl}{returnUrl}?token={tokenInfo.Token}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ OAuth callback error: {ex.Message}");
                 return Redirect($"{frontendBaseUrl}/login?error=oauth_processing_failed");
             }
         }
@@ -224,8 +211,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             if (!response.IsSuccessStatusCode)
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"❌ Token exchange failed: {response.StatusCode} - {errorContent}");
                 return null;
             }
 
@@ -235,7 +220,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
             });
 
-            Console.WriteLine($"✅ Token exchange successful");
             return tokenResponse;
         }
 
@@ -247,7 +231,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             if (!response.IsSuccessStatusCode)
             {
-                Console.WriteLine($"❌ User info request failed: {response.StatusCode}");
                 return null;
             }
 
@@ -257,7 +240,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
             });
 
-            Console.WriteLine($"✅ User info retrieved: {userInfo?.Email}");
             return userInfo;
         }
 
@@ -279,44 +261,19 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 var createResult = await _userManager.CreateAsync(user);
                 if (!createResult.Succeeded)
                 {
-                    Console.WriteLine($"❌ User creation failed: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
                     return null;
                 }
 
-                // CRITICAL FIX: Create UserProfile for new OAuth users
-                var userProfile = new UserProfile
+                try
                 {
-                    UserId = user.Id,
-                    FirstName = userInfo.GivenName ?? "",
-                    LastName = userInfo.FamilyName ?? "",
-                    Gender = null,  // Will be set during profile completion if needed
-                    Ethnicity = null,  // Will be set during profile completion if needed
-                    SubscriptionTier = SubscriptionTier.Basic,
-                    Credits = 3,
-                    LastCreditReset = DateTime.UtcNow,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                };
-
-                _context.UserProfiles.Add(userProfile);
-                await _context.SaveChangesAsync();
-
-                Console.WriteLine($"✅ New user and profile created: {user.Email}");
-            }
-            else
-            {
-                // CRITICAL FIX: Check if existing user has a profile (for migration cases)
-                var hasProfile = await _context.UserProfiles.AnyAsync(p => p.UserId == user.Id);
-                if (!hasProfile)
-                {
-                    // Create profile for existing user who doesn't have one
+                    // CRITICAL FIX: Create UserProfile for new OAuth users
                     var userProfile = new UserProfile
                     {
                         UserId = user.Id,
-                        FirstName = user.FirstName ?? userInfo.GivenName ?? "",
-                        LastName = user.LastName ?? userInfo.FamilyName ?? "",
-                        Gender = null,
-                        Ethnicity = null,
+                        FirstName = userInfo.GivenName ?? "",
+                        LastName = userInfo.FamilyName ?? "",
+                        Gender = null,  // Will be set during profile completion if needed
+                        Ethnicity = null,  // Will be set during profile completion if needed
                         SubscriptionTier = SubscriptionTier.Basic,
                         Credits = 3,
                         LastCreditReset = DateTime.UtcNow,
@@ -326,10 +283,47 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                     _context.UserProfiles.Add(userProfile);
                     await _context.SaveChangesAsync();
-                    Console.WriteLine($"✅ Profile created for existing user: {user.Email}");
                 }
+                catch (Exception ex)
+                {
+                    // Log error appropriately in production (consider using ILogger)
+                    throw; // Re-throw to handle at higher level
+                }
+            }
+            else
+            {
+                // CRITICAL FIX: Check if existing user has a profile (for migration cases)
+                var hasProfile = await _context.UserProfiles.AnyAsync(p => p.UserId == user.Id);
+                
+                if (!hasProfile)
+                {
+                    try
+                    {
+                        // Create profile for existing user who doesn't have one
+                        var userProfile = new UserProfile
+                        {
+                            UserId = user.Id,
+                            FirstName = user.FirstName ?? userInfo.GivenName ?? "",
+                            LastName = user.LastName ?? userInfo.FamilyName ?? "",
+                            Gender = null,
+                            Ethnicity = null,
+                            SubscriptionTier = SubscriptionTier.Basic,
+                            Credits = 3,
+                            LastCreditReset = DateTime.UtcNow,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
 
-                Console.WriteLine($"✅ Existing user found: {user.Email}");
+                        _context.UserProfiles.Add(userProfile);
+                        await _context.SaveChangesAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log error appropriately in production (consider using ILogger)
+                        throw; // Re-throw to handle at higher level
+                    }
+                }
+                // Profile already exists, no action needed
             }
 
             return user;
@@ -487,8 +481,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     $"scope={Uri.EscapeDataString("email profile")}&" +
                     $"state={Uri.EscapeDataString(state ?? string.Empty)}";
 
-                Console.WriteLine($"🔧 Alternative OAuth URL: {authUrl}");
-
                 return Ok(new
                 {
                     authUrl = authUrl,
@@ -499,7 +491,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Alternative OAuth URL error: {ex.Message}");
                 return BadRequest(new { error = ex.Message });
             }
         }

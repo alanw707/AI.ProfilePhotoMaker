@@ -57,7 +57,7 @@ export class ConfigService {
   }
 
   get replicateCreditsUrl(): string {
-    return this.buildEndpointUrl('/test/basic-tier-status');
+    return this.buildEndpointUrl('/credit/status');
   }
 
   get imageStylesUrl(): string {
@@ -69,7 +69,7 @@ export class ConfigService {
   }
 
   get profileTrainingStatusUrl(): string {
-    return this.buildEndpointUrl('/profile/training-status');
+    return this.buildEndpointUrl('/model-creation/user/current');
   }
 
   /**

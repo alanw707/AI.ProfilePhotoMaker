@@ -1,36 +1,36 @@
 {
   "/api": {
-    "target": "http://localhost:5035",
+    "target": "http://localhost:5032",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
   },
   "/debug": {
-    "target": "http://localhost:5035",
+    "target": "http://localhost:5032",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
   },
   "/uploads": {
-    "target": "http://localhost:5035",
+    "target": "http://localhost:5032",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
   },
   "/training-zips": {
-    "target": "http://localhost:5035",
+    "target": "http://localhost:5032",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
   },
   "/style-previews": {
-    "target": "http://localhost:5035",
+    "target": "http://localhost:5032",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
   },
   "/generated": {
-    "target": "http://localhost:5035",
+    "target": "http://localhost:5032",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"

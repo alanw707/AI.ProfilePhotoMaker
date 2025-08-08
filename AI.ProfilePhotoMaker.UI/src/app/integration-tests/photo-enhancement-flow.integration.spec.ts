@@ -16,7 +16,7 @@ import { HeaderNavigationComponent } from '../shared/header-navigation/header-na
 
 // Mock components
 @Component({ template: '' })
-class MockHeaderNavigationComponent { }
+class MockHeaderNavigationComponent {}
 
 // Test utilities
 function createMockFile(name = 'test.jpg', type = 'image/jpeg', size: number = 1024 * 1024): File {
@@ -27,13 +27,13 @@ function createMockFile(name = 'test.jpg', type = 'image/jpeg', size: number = 1
 
 function createMockFileReader(result = 'data:image/jpeg;base64,mock-data'): FileReader {
   const reader = {
-    readAsDataURL: jasmine.createSpy('readAsDataURL').and.callFake(function(_file: File) {
+    readAsDataURL: jasmine.createSpy('readAsDataURL').and.callFake(function (_file: File) {
       setTimeout(() => {
         this.onload({ target: { result } });
       }, 0);
     }),
     onload: null as any,
-    onerror: null as any
+    onerror: null as any,
   };
   return reader as any;
 }
@@ -50,14 +50,21 @@ describe('Photo Enhancement Flow Integration Tests', () => {
 
   beforeEach(async () => {
     const authSpy = jasmine.createSpyObj('AuthService', ['isAuthenticated', 'getCurrentUserId']);
-    const replicateSpy = jasmine.createSpyObj('ReplicateService', ['enhancePhoto', 'getPredictionStatus']);
+    const replicateSpy = jasmine.createSpyObj('ReplicateService', [
+      'enhancePhoto',
+      'getPredictionStatus',
+    ]);
     const fileUploadSpy = jasmine.createSpyObj('FileUploadService', ['uploadSingleImage']);
-    const stateSpy = jasmine.createSpyObj('DashboardStateService', ['getState', 'setState', 'loadInitialDashboardData'], {
-      state$: of({
-        creditsInfo: { availableCredits: 5 },
-        isLoading: false
-      })
-    });
+    const stateSpy = jasmine.createSpyObj(
+      'DashboardStateService',
+      ['getState', 'setState', 'loadInitialDashboardData'],
+      {
+        state$: of({
+          creditsInfo: { availableCredits: 5 },
+          isLoading: false,
+        }),
+      }
+    );
     const configSpy = jasmine.createSpyObj('ConfigService', ['baseUrl']);
 
     await TestBed.configureTestingModule({
@@ -66,19 +73,21 @@ describe('Photo Enhancement Flow Integration Tests', () => {
         FormsModule,
         HttpClientTestingModule,
         RouterTestingModule,
-        PhotoEnhancementComponent
+        PhotoEnhancementComponent,
       ],
       providers: [
         { provide: AuthService, useValue: authSpy },
         { provide: ReplicateService, useValue: replicateSpy },
         { provide: FileUploadService, useValue: fileUploadSpy },
         { provide: DashboardStateService, useValue: stateSpy },
-        { provide: ConfigService, useValue: configSpy }
-      ]
-    }).overrideComponent(PhotoEnhancementComponent, {
-      remove: { imports: [HeaderNavigationComponent] },
-      add: { imports: [MockHeaderNavigationComponent] }
-    }).compileComponents();
+        { provide: ConfigService, useValue: configSpy },
+      ],
+    })
+      .overrideComponent(PhotoEnhancementComponent, {
+        remove: { imports: [HeaderNavigationComponent] },
+        add: { imports: [MockHeaderNavigationComponent] },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(PhotoEnhancementComponent);
     component = fixture.componentInstance;
@@ -93,9 +102,9 @@ describe('Photo Enhancement Flow Integration Tests', () => {
     authService.isAuthenticated.and.returnValue(true);
     stateService.getState.and.returnValue({
       creditsInfo: { availableCredits: 5 },
-      isLoading: false
+      isLoading: false,
     });
-    configService.baseUrl.and.returnValue('http://localhost:5035');
+    configService.baseUrl.and.returnValue('http://localhost:5032');
   });
 
   afterEach(() => {
@@ -105,7 +114,7 @@ describe('Photo Enhancement Flow Integration Tests', () => {
   describe('Component Initialization', () => {
     it('should initialize with default state', () => {
       fixture.detectChanges();
-      
+
       expect(component.selectedFile).toBe(null);
       expect(component.imagePreview).toBe(null);
       expect(component.enhancementType).toBe('background');
@@ -116,7 +125,7 @@ describe('Photo Enhancement Flow Integration Tests', () => {
 
     it('should load credits on initialization', () => {
       component.ngOnInit();
-      
+
       expect(stateService.getState).toHaveBeenCalled();
       expect(component.creditsInfo).toEqual({ availableCredits: 5 });
     });
@@ -124,11 +133,11 @@ describe('Photo Enhancement Flow Integration Tests', () => {
     it('should load dashboard data if credits not available', () => {
       stateService.getState.and.returnValue({
         creditsInfo: null,
-        isLoading: false
+        isLoading: false,
       });
-      
+
       component.ngOnInit();
-      
+
       expect(stateService.loadInitialDashboardData).toHaveBeenCalled();
     });
   });
@@ -150,9 +159,9 @@ describe('Photo Enhancement Flow Integration Tests', () => {
     it('should validate file type', () => {
       const invalidFile = createMockFile('test.txt', 'text/plain');
       const event = { target: { files: [invalidFile] } };
-      
+
       component.onFileSelected(event);
-      
+
       expect(component.selectedFile).toBe(null);
       expect(component.errorMessage).toBe('Please select a valid image file.');
     });
@@ -160,9 +169,9 @@ describe('Photo Enhancement Flow Integration Tests', () => {
     it('should validate file size', () => {
       const oversizedFile = createMockFile('large.jpg', 'image/jpeg', 8 * 1024 * 1024); // 8MB
       const event = { target: { files: [oversizedFile] } };
-      
+
       component.onFileSelected(event);
-      
+
       expect(component.selectedFile).toBe(null);
       expect(component.errorMessage).toBe('File size must be less than 7MB.');
     });
@@ -174,7 +183,7 @@ describe('Photo Enhancement Flow Integration Tests', () => {
 
       const dragEvent = {
         preventDefault: jasmine.createSpy('preventDefault'),
-        dataTransfer: { files: [mockFile] }
+        dataTransfer: { files: [mockFile] },
       } as any;
 
       component.onDrop(dragEvent);
@@ -184,7 +193,7 @@ describe('Photo Enhancement Flow Integration Tests', () => {
       expect(component.selectedFile).toBe(mockFile);
     });
 
-    it('should handle file preview creation', (done) => {
+    it('should handle file preview creation', done => {
       const mockFile = createMockFile();
       const mockFileReader = createMockFileReader('data:image/jpeg;base64,preview-data');
       spyOn(window, 'FileReader').and.returnValue(mockFileReader);
@@ -207,35 +216,41 @@ describe('Photo Enhancement Flow Integration Tests', () => {
 
     it('should complete full enhancement workflow successfully', async () => {
       // Mock successful upload
-      fileUploadService.uploadSingleImage.and.returnValue(of({
-        progress: 100,
-        response: {
-          success: true,
-          data: {
-            url: '/uploads/test-image.jpg',
-            fileName: 'test-image.jpg'
-          }
-        }
-      }));
+      fileUploadService.uploadSingleImage.and.returnValue(
+        of({
+          progress: 100,
+          response: {
+            success: true,
+            data: {
+              url: '/uploads/test-image.jpg',
+              fileName: 'test-image.jpg',
+            },
+          },
+        })
+      );
 
       // Mock successful enhancement
-      replicateService.enhancePhoto.and.returnValue(of({
-        success: true,
-        data: {
-          prediction: { id: 'pred-123' },
-          creditsRemaining: 4
-        }
-      }));
+      replicateService.enhancePhoto.and.returnValue(
+        of({
+          success: true,
+          data: {
+            prediction: { id: 'pred-123' },
+            creditsRemaining: 4,
+          },
+        })
+      );
 
       // Mock successful prediction polling
-      replicateService.getPredictionStatus.and.returnValue(of({
-        success: true,
-        data: {
-          status: 'succeeded',
-          output: ['https://enhanced-image.jpg'],
-          dataUrl: 'data:image/jpeg;base64,enhanced-data'
-        }
-      }));
+      replicateService.getPredictionStatus.and.returnValue(
+        of({
+          success: true,
+          data: {
+            status: 'succeeded',
+            output: ['https://enhanced-image.jpg'],
+            dataUrl: 'data:image/jpeg;base64,enhanced-data',
+          },
+        })
+      );
 
       await component.startEnhancement();
 
@@ -244,18 +259,20 @@ describe('Photo Enhancement Flow Integration Tests', () => {
       expect(component.processingStatus).toBe('Enhancement complete!');
       expect(component.enhancedImage).toEqual({
         url: 'data:image/jpeg;base64,enhanced-data',
-        type: 'enhanced'
+        type: 'enhanced',
       });
       expect(stateService.setState).toHaveBeenCalledWith({
         creditsInfo: {
           availableCredits: 5,
-          availableCredits: 4
-        }
+          availableCredits: 4,
+        },
       });
     });
 
     it('should handle upload failure gracefully', async () => {
-      fileUploadService.uploadSingleImage.and.returnValue(throwError(() => new Error('Upload failed')));
+      fileUploadService.uploadSingleImage.and.returnValue(
+        throwError(() => new Error('Upload failed'))
+      );
 
       await component.startEnhancement();
 
@@ -266,22 +283,26 @@ describe('Photo Enhancement Flow Integration Tests', () => {
 
     it('should handle enhancement API failure', async () => {
       // Mock successful upload
-      fileUploadService.uploadSingleImage.and.returnValue(of({
-        progress: 100,
-        response: {
-          success: true,
-          data: {
-            url: '/uploads/test-image.jpg',
-            fileName: 'test-image.jpg'
-          }
-        }
-      }));
+      fileUploadService.uploadSingleImage.and.returnValue(
+        of({
+          progress: 100,
+          response: {
+            success: true,
+            data: {
+              url: '/uploads/test-image.jpg',
+              fileName: 'test-image.jpg',
+            },
+          },
+        })
+      );
 
       // Mock failed enhancement
-      replicateService.enhancePhoto.and.returnValue(of({
-        success: false,
-        error: { message: 'Enhancement failed' }
-      }));
+      replicateService.enhancePhoto.and.returnValue(
+        of({
+          success: false,
+          error: { message: 'Enhancement failed' },
+        })
+      );
 
       await component.startEnhancement();
 
@@ -291,34 +312,40 @@ describe('Photo Enhancement Flow Integration Tests', () => {
 
     it('should handle prediction polling timeout', async () => {
       // Mock successful upload
-      fileUploadService.uploadSingleImage.and.returnValue(of({
-        progress: 100,
-        response: {
-          success: true,
-          data: {
-            url: '/uploads/test-image.jpg',
-            fileName: 'test-image.jpg'
-          }
-        }
-      }));
+      fileUploadService.uploadSingleImage.and.returnValue(
+        of({
+          progress: 100,
+          response: {
+            success: true,
+            data: {
+              url: '/uploads/test-image.jpg',
+              fileName: 'test-image.jpg',
+            },
+          },
+        })
+      );
 
       // Mock successful enhancement
-      replicateService.enhancePhoto.and.returnValue(of({
-        success: true,
-        data: {
-          prediction: { id: 'pred-123' },
-          creditsRemaining: 4
-        }
-      }));
+      replicateService.enhancePhoto.and.returnValue(
+        of({
+          success: true,
+          data: {
+            prediction: { id: 'pred-123' },
+            creditsRemaining: 4,
+          },
+        })
+      );
 
       // Mock prediction still processing (will timeout)
-      replicateService.getPredictionStatus.and.returnValue(of({
-        success: true,
-        data: {
-          status: 'processing',
-          output: null
-        }
-      }));
+      replicateService.getPredictionStatus.and.returnValue(
+        of({
+          success: true,
+          data: {
+            status: 'processing',
+            output: null,
+          },
+        })
+      );
 
       // Mock polling timeout by spying on setTimeout
       spyOn(window, 'setTimeout').and.callFake((_callback: Function) => {
@@ -350,40 +377,46 @@ describe('Photo Enhancement Flow Integration Tests', () => {
       component.creditsInfo = { availableCredits: 5 };
 
       // Mock successful workflow
-      fileUploadService.uploadSingleImage.and.returnValue(of({
-        progress: 100,
-        response: {
+      fileUploadService.uploadSingleImage.and.returnValue(
+        of({
+          progress: 100,
+          response: {
+            success: true,
+            data: {
+              url: '/uploads/test-image.jpg',
+              fileName: 'test-image.jpg',
+            },
+          },
+        })
+      );
+
+      replicateService.enhancePhoto.and.returnValue(
+        of({
           success: true,
           data: {
-            url: '/uploads/test-image.jpg',
-            fileName: 'test-image.jpg'
-          }
-        }
-      }));
+            prediction: { id: 'pred-123' },
+            creditsRemaining: 4,
+          },
+        })
+      );
 
-      replicateService.enhancePhoto.and.returnValue(of({
-        success: true,
-        data: {
-          prediction: { id: 'pred-123' },
-          creditsRemaining: 4
-        }
-      }));
-
-      replicateService.getPredictionStatus.and.returnValue(of({
-        success: true,
-        data: {
-          status: 'succeeded',
-          output: ['https://enhanced-image.jpg']
-        }
-      }));
+      replicateService.getPredictionStatus.and.returnValue(
+        of({
+          success: true,
+          data: {
+            status: 'succeeded',
+            output: ['https://enhanced-image.jpg'],
+          },
+        })
+      );
 
       await component.startEnhancement();
 
       expect(stateService.setState).toHaveBeenCalledWith({
         creditsInfo: {
           availableCredits: 5,
-          availableCredits: 4
-        }
+          availableCredits: 4,
+        },
       });
     });
   });
@@ -394,10 +427,12 @@ describe('Photo Enhancement Flow Integration Tests', () => {
       component.creditsInfo = { availableCredits: 5 };
 
       // Mock progressive upload
-      fileUploadService.uploadSingleImage.and.returnValue(of({
-        progress: 50,
-        response: null
-      }));
+      fileUploadService.uploadSingleImage.and.returnValue(
+        of({
+          progress: 50,
+          response: null,
+        })
+      );
 
       component['uploadImageForEnhancement']();
 
@@ -411,32 +446,38 @@ describe('Photo Enhancement Flow Integration Tests', () => {
       component.creditsInfo = { availableCredits: 5 };
 
       // Mock workflow phases
-      fileUploadService.uploadSingleImage.and.returnValue(of({
-        progress: 100,
-        response: {
+      fileUploadService.uploadSingleImage.and.returnValue(
+        of({
+          progress: 100,
+          response: {
+            success: true,
+            data: {
+              url: '/uploads/test-image.jpg',
+              fileName: 'test-image.jpg',
+            },
+          },
+        })
+      );
+
+      replicateService.enhancePhoto.and.returnValue(
+        of({
           success: true,
           data: {
-            url: '/uploads/test-image.jpg',
-            fileName: 'test-image.jpg'
-          }
-        }
-      }));
+            prediction: { id: 'pred-123' },
+            creditsRemaining: 4,
+          },
+        })
+      );
 
-      replicateService.enhancePhoto.and.returnValue(of({
-        success: true,
-        data: {
-          prediction: { id: 'pred-123' },
-          creditsRemaining: 4
-        }
-      }));
-
-      replicateService.getPredictionStatus.and.returnValue(of({
-        success: true,
-        data: {
-          status: 'succeeded',
-          output: ['https://enhanced-image.jpg']
-        }
-      }));
+      replicateService.getPredictionStatus.and.returnValue(
+        of({
+          success: true,
+          data: {
+            status: 'succeeded',
+            output: ['https://enhanced-image.jpg'],
+          },
+        })
+      );
 
       await component.startEnhancement();
 
@@ -450,10 +491,12 @@ describe('Photo Enhancement Flow Integration Tests', () => {
       component.selectedFile = createMockFile();
       component.creditsInfo = { availableCredits: 5 };
 
-      fileUploadService.uploadSingleImage.and.returnValue(throwError(() => ({
-        status: 0,
-        error: { message: 'Network error' }
-      })));
+      fileUploadService.uploadSingleImage.and.returnValue(
+        throwError(() => ({
+          status: 0,
+          error: { message: 'Network error' },
+        }))
+      );
 
       await component.startEnhancement();
 
@@ -465,32 +508,38 @@ describe('Photo Enhancement Flow Integration Tests', () => {
       component.selectedFile = createMockFile();
       component.creditsInfo = { availableCredits: 5 };
 
-      fileUploadService.uploadSingleImage.and.returnValue(of({
-        progress: 100,
-        response: {
+      fileUploadService.uploadSingleImage.and.returnValue(
+        of({
+          progress: 100,
+          response: {
+            success: true,
+            data: {
+              url: '/uploads/test-image.jpg',
+              fileName: 'test-image.jpg',
+            },
+          },
+        })
+      );
+
+      replicateService.enhancePhoto.and.returnValue(
+        of({
           success: true,
           data: {
-            url: '/uploads/test-image.jpg',
-            fileName: 'test-image.jpg'
-          }
-        }
-      }));
+            prediction: { id: 'pred-123' },
+            creditsRemaining: 4,
+          },
+        })
+      );
 
-      replicateService.enhancePhoto.and.returnValue(of({
-        success: true,
-        data: {
-          prediction: { id: 'pred-123' },
-          creditsRemaining: 4
-        }
-      }));
-
-      replicateService.getPredictionStatus.and.returnValue(of({
-        success: true,
-        data: {
-          status: 'failed',
-          error: 'Processing failed'
-        }
-      }));
+      replicateService.getPredictionStatus.and.returnValue(
+        of({
+          success: true,
+          data: {
+            status: 'failed',
+            error: 'Processing failed',
+          },
+        })
+      );
 
       await component.startEnhancement();
 
@@ -516,13 +565,13 @@ describe('Photo Enhancement Flow Integration Tests', () => {
       const mockLink = {
         href: '',
         download: '',
-        click: jasmine.createSpy('click')
+        click: jasmine.createSpy('click'),
       };
       spyOn(document, 'createElement').and.returnValue(mockLink as any);
 
       component.enhancedImage = {
         url: 'data:image/jpeg;base64,enhanced-data',
-        type: 'enhanced'
+        type: 'enhanced',
       };
 
       component.downloadEnhanced();
@@ -555,11 +604,11 @@ describe('Photo Enhancement Flow Integration Tests', () => {
     it('should sync with dashboard state service', () => {
       const mockState = {
         creditsInfo: { availableCredits: 3 },
-        isLoading: false
+        isLoading: false,
       };
 
       stateService.state$ = of(mockState);
-      
+
       component.ngOnInit();
 
       expect(component.creditsInfo).toEqual({ availableCredits: 3 });
@@ -569,11 +618,11 @@ describe('Photo Enhancement Flow Integration Tests', () => {
     it('should show loading state when credits unavailable', () => {
       const mockState = {
         creditsInfo: null,
-        isLoading: true
+        isLoading: true,
       };
 
       stateService.state$ = of(mockState);
-      
+
       component.ngOnInit();
 
       expect(component.isLoadingCredits).toBe(true);
@@ -583,10 +632,10 @@ describe('Photo Enhancement Flow Integration Tests', () => {
   describe('Enhancement Type Selection', () => {
     it('should handle enhancement type changes', () => {
       component.enhancementType = 'background';
-      
+
       // Simulate type change
       component.enhancementType = 'social';
-      
+
       expect(component.enhancementType).toBe('social');
     });
 
@@ -595,38 +644,44 @@ describe('Photo Enhancement Flow Integration Tests', () => {
       component.creditsInfo = { availableCredits: 5 };
       component.enhancementType = 'cartoon';
 
-      fileUploadService.uploadSingleImage.and.returnValue(of({
-        progress: 100,
-        response: {
+      fileUploadService.uploadSingleImage.and.returnValue(
+        of({
+          progress: 100,
+          response: {
+            success: true,
+            data: {
+              url: '/uploads/test-image.jpg',
+              fileName: 'test-image.jpg',
+            },
+          },
+        })
+      );
+
+      replicateService.enhancePhoto.and.returnValue(
+        of({
           success: true,
           data: {
-            url: '/uploads/test-image.jpg',
-            fileName: 'test-image.jpg'
-          }
-        }
-      }));
+            prediction: { id: 'pred-123' },
+            creditsRemaining: 4,
+          },
+        })
+      );
 
-      replicateService.enhancePhoto.and.returnValue(of({
-        success: true,
-        data: {
-          prediction: { id: 'pred-123' },
-          creditsRemaining: 4
-        }
-      }));
-
-      replicateService.getPredictionStatus.and.returnValue(of({
-        success: true,
-        data: {
-          status: 'succeeded',
-          output: ['https://enhanced-image.jpg']
-        }
-      }));
+      replicateService.getPredictionStatus.and.returnValue(
+        of({
+          success: true,
+          data: {
+            status: 'succeeded',
+            output: ['https://enhanced-image.jpg'],
+          },
+        })
+      );
 
       await component.startEnhancement();
 
       expect(replicateService.enhancePhoto).toHaveBeenCalledWith({
-        imageUrl: 'http://localhost:5035/uploads/test-image.jpg',
-        enhancementType: 'cartoon'
+        imageUrl: 'http://localhost:5032/uploads/test-image.jpg',
+        enhancementType: 'cartoon',
       });
     });
   });
