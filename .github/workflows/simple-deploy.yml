@@ -26,8 +26,7 @@ permissions:
 jobs:
   test:
     name: 🧪 Test
-    runs-on: ubuntu-latest
-    if: false  # Disabled for local build workflow - tests run locally
+    runs-on: ubuntu-latest    
     
     steps:
       - name: 📥 Checkout
