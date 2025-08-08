@@ -132,12 +132,15 @@ export class DashboardCoordinatorService implements IDashboardStateService {
       'imagesValidated',
       'lastValidationTime',
     ];
-    const imageUpdate = imageFields.reduce((acc, field) => {
-      if (field in newState) {
-        acc[field] = newState[field as keyof DashboardState];
-      }
-      return acc;
-    }, {} as Record<string, unknown>);
+    const imageUpdate = imageFields.reduce(
+      (acc, field) => {
+        if (field in newState) {
+          acc[field] = newState[field as keyof DashboardState];
+        }
+        return acc;
+      },
+      {} as Record<string, unknown>
+    );
 
     if (Object.keys(imageUpdate).length > 0) {
       this._imageState.setState(imageUpdate);
@@ -150,12 +153,15 @@ export class DashboardCoordinatorService implements IDashboardStateService {
       'totalCredits',
       'isPremiumWorkflow',
     ];
-    const subscriptionUpdate = subscriptionFields.reduce((acc, field) => {
-      if (field in newState) {
-        acc[field] = newState[field as keyof DashboardState];
-      }
-      return acc;
-    }, {} as Record<string, unknown>);
+    const subscriptionUpdate = subscriptionFields.reduce(
+      (acc, field) => {
+        if (field in newState) {
+          acc[field] = newState[field as keyof DashboardState];
+        }
+        return acc;
+      },
+      {} as Record<string, unknown>
+    );
 
     if (Object.keys(subscriptionUpdate).length > 0) {
       this._subscriptionState.setState(subscriptionUpdate);
@@ -188,16 +194,37 @@ export class DashboardCoordinatorService implements IDashboardStateService {
       const imagePromise = this._imageState.loadUserImages();
       const subscriptionPromise = this._subscriptionState.loadFullSubscriptionData();
 
-      // Wait for core data to load
-      await Promise.all([profilePromise, imagePromise, subscriptionPromise]);
+      // Wait for core data to load with better error handling
+      const results = await Promise.allSettled([profilePromise, imagePromise, subscriptionPromise]);
+
+      // Check results and handle partial failures gracefully
+      let failedLoads = 0;
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          const serviceNames = ['Profile', 'Images', 'Subscription'];
+          console.warn(`⚠️ ${serviceNames[index]} data load failed:`, result.reason);
+          failedLoads++;
+        }
+      });
+
+      // Only show error if all services failed
+      if (failedLoads === results.length) {
+        throw new Error('All dashboard services failed to load');
+      } else if (failedLoads > 0) {
+        console.log(
+          `✅ Dashboard loaded with ${results.length - failedLoads}/${results.length} services successful`
+        );
+      }
 
       // Load remaining data asynchronously (non-blocking)
       this.loadRemainingDataAsync();
     } catch (error) {
       console.error('❌ Dashboard coordination failed:', error);
+      // Try to load cached data as fallback
+      this.loadCachedDataAsFallback();
       this._notificationService.error(
         'Dashboard Load Failed',
-        'Could not load dashboard data. Please try again.'
+        'Could not load dashboard data. Please refresh the page or try again.'
       );
     } finally {
       this.setCoordinatorLoading(false);
@@ -234,17 +261,51 @@ export class DashboardCoordinatorService implements IDashboardStateService {
    */
   private async loadProfileData(): Promise<void> {
     try {
-      const profile = await this._profileService
+      const initial = await this._profileService
         .getCurrentUserProfile()
         .pipe(
           catchError(error => {
             console.warn('⚠️ Profile API failed:', error);
-            return of({ success: false, data: null, error });
+            return of({ success: false, data: null as any, error });
           })
         )
         .toPromise();
 
-      const userProfile = profile?.success ? profile.data : null;
+      let userProfile = initial?.success ? initial.data : null;
+
+      // Auto-create profile on first login if none exists (backend returns 404)
+      if (!userProfile) {
+        try {
+          const created = await this._profileService
+            .createProfile({})
+            .pipe(
+              catchError(error => {
+                // If another parallel call already created it, ignore 400s
+                console.warn('⚠️ Create profile failed:', error);
+                return of({ success: false, data: null as any, error });
+              })
+            )
+            .toPromise();
+
+          if (created?.success && created.data) {
+            userProfile = created.data;
+          } else {
+            // Retry fetch once in case profile was created by another request
+            const refetch = await this._profileService
+              .getCurrentUserProfile()
+              .pipe(
+                catchError(error => {
+                  console.warn('⚠️ Profile re-fetch failed:', error);
+                  return of({ success: false, data: null as any, error });
+                })
+              )
+              .toPromise();
+            userProfile = refetch?.success ? refetch.data : null;
+          }
+        } catch (creationError) {
+          console.warn('⚠️ Profile auto-create attempt threw:', creationError);
+        }
+      }
 
       const currentState = this._coordinatorState.getValue();
       this._coordinatorState.next({
@@ -253,6 +314,26 @@ export class DashboardCoordinatorService implements IDashboardStateService {
       });
     } catch (error) {
       console.error('Failed to load profile data:', error);
+    }
+  }
+
+  /**
+   * Load cached data as fallback when API calls fail
+   */
+  private loadCachedDataAsFallback(): void {
+    try {
+      const cachedData = this._cacheManager.getCachedData<any>(this.CACHE_KEY);
+      if (cachedData) {
+        console.log('🔄 Loading cached dashboard data as fallback');
+        // Apply cached data to current state if available
+        const currentState = this._coordinatorState.getValue();
+        this._coordinatorState.next({
+          ...currentState,
+          ...cachedData,
+        });
+      }
+    } catch (error) {
+      console.warn('⚠️ Could not load cached dashboard data:', error);
     }
   }
 

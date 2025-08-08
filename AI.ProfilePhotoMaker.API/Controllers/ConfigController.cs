@@ -31,7 +31,7 @@ public class ConfigController : ControllerBase
     {
         try
         {
-            var appBaseUrl = _configuration["AppBaseUrl"] ?? "http://localhost:5035";
+            var appBaseUrl = _configuration["AppBaseUrl"] ?? "http://localhost:5032";
             var environmentName = _environment.EnvironmentName;
 
             var clientConfig = new
@@ -82,7 +82,7 @@ public class ConfigController : ControllerBase
 
         try
         {
-            var appBaseUrl = _configuration["AppBaseUrl"] ?? "http://localhost:5035";
+            var appBaseUrl = _configuration["AppBaseUrl"] ?? "http://localhost:5032";
             var currentRequestUrl = $"{Request.Scheme}://{Request.Host}";
 
             var configStatus = new
@@ -122,14 +122,14 @@ public class ConfigController : ControllerBase
 
     private string GetFrontendBaseUrl()
     {
-        var appBaseUrl = _configuration["AppBaseUrl"] ?? "http://localhost:5035";
+        var appBaseUrl = _configuration["AppBaseUrl"] ?? "http://localhost:5032";
 
         // If backend is using external URL, try to determine frontend URL
         if (!appBaseUrl.Contains("localhost"))
         {
             // For tunnel services, frontend is typically on a different URL
             // This is a best guess - in practice, frontend will override this
-            return appBaseUrl.Replace("5035", "4200");
+            return appBaseUrl.Replace("5032", "4200");
         }
 
         // Default to localhost for local development

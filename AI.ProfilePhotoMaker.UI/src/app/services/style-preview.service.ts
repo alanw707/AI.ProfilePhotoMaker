@@ -58,9 +58,10 @@ export class StylePreviewService {
     // Fetch from API as fallback
     const apiUrl = `${this._config.getApiUrl()}/style-preview/url/${encodeURIComponent(styleName)}`;
 
-    return this._http.get<StylePreviewResponse>(apiUrl).pipe(
-      map(response => {
-        if (response.success && response.url) {
+    return this._http.get<StylePreviewResponse | null>(apiUrl).pipe(
+      map(res => {
+        const response = res as any;
+        if (response && response.success && response.url) {
           // Cache the URL
           this._urlCache.set(styleName, response.url);
           return response.url;
@@ -86,15 +87,19 @@ export class StylePreviewService {
     const apiUrl = `${this._config.getApiUrl()}/style-preview/list`;
 
     this._http
-      .get<StylePreviewListResponse>(apiUrl)
+      .get<StylePreviewListResponse | null>(apiUrl)
       .pipe(
+        map(
+          response =>
+            response ?? ({ success: false, count: 0, previews: [] } as StylePreviewListResponse)
+        ),
         catchError(error => {
           console.warn('Failed to load style previews from API, using direct Azure URLs:', error);
           return of({ success: false, count: 0, previews: [] } as StylePreviewListResponse);
         })
       )
       .subscribe(response => {
-        if (response.success && response.previews && response.previews.length > 0) {
+        if (response && response.success && response.previews && response.previews.length > 0) {
           const urlMap = new Map<string, string>();
 
           response.previews.forEach(preview => {

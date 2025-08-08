@@ -64,7 +64,7 @@ if (args.Length > 0)
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure forwarded headers for ngrok proxy
+// Configure forwarded headers for development proxy
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor |
@@ -73,11 +73,11 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
 
-    // Trust ngrok proxy
+    // Trust development proxy
     options.KnownProxies.Add(System.Net.IPAddress.Parse("127.0.0.1"));
 });
 
-// Configure data protection and session for OAuth state handling with ngrok
+// Configure data protection and session for OAuth state handling
 if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddDataProtection()
@@ -144,10 +144,9 @@ var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecr
 var authBuilder = builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        // IMPORTANT: Do not set DefaultChallengeScheme or DefaultScheme - this allows 
-        // OAuth providers (Google, Facebook, etc.) to handle their own challenges with proper redirects
-        // options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme; // REMOVED to fix OAuth
-        // options.DefaultScheme = Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme; // REMOVED to fix OAuth
+        // Set DefaultChallengeScheme to JWT Bearer for API endpoints to return 401 instead of 302 redirects
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        // Note: OAuth controllers will explicitly specify their authentication schemes to override this
         options.DefaultSignInScheme = Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme;
     })
     .AddCookie(options =>
@@ -171,6 +170,40 @@ var authBuilder = builder.Services.AddAuthentication(options =>
             ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"]))
         };
+        
+        // CRITICAL: Configure JWT Bearer to return 401 for API endpoints instead of redirecting
+        options.Events = new JwtBearerEvents
+        {
+            OnChallenge = context =>
+            {
+                // Skip the default challenge behavior which would redirect
+                context.HandleResponse();
+
+                // Return 401 Unauthorized with proper JSON response for API calls
+                context.Response.StatusCode = 401;
+                context.Response.ContentType = "application/json";
+                
+                var response = new
+                {
+                    success = false,
+                    error = new
+                    {
+                        code = "Unauthorized",
+                        message = "Authentication required. Please provide a valid JWT token."
+                    }
+                };
+                
+                return context.Response.WriteAsJsonAsync(response);
+            },
+            OnAuthenticationFailed = context =>
+            {
+                if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
+                {
+                    context.Response.Headers.Append("Token-Expired", "true");
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
 if (!string.IsNullOrEmpty(googleClientId) && !string.IsNullOrEmpty(googleClientSecret))
@@ -184,12 +217,10 @@ if (!string.IsNullOrEmpty(googleClientId) && !string.IsNullOrEmpty(googleClientS
         options.Scope.Add("email");
         options.Scope.Add("profile");
     });
-    
-    Console.WriteLine("✅ Google OAuth configured successfully");
 }
 else
 {
-    Console.WriteLine("⚠️  Google OAuth not configured - skipping (ClientId or ClientSecret missing)");
+    // Google OAuth not configured - skipping (ClientId or ClientSecret missing)
 }
 
 // Validate JWT Secret
@@ -350,12 +381,8 @@ builder.Services.AddCors(options =>
     {
         corsBuilder.WithOrigins(
                 "http://localhost:4200",
-                "https://localhost:4200",
-                "https://awlocaldev.ngrok.app",
-                "https://awlocaldev-api.ngrok.app"
+                "https://localhost:4200"
             )
-            .SetIsOriginAllowedToAllowWildcardSubdomains()
-            .WithOrigins("https://*.ngrok.app", "https://*.ngrok.io")
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();
@@ -364,8 +391,8 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Apply database migrations using new architecture - DISABLED TEMPORARILY FOR SCHEMA FIX v2.1.2
-// await app.UseDatabaseMigrationAsync();
+// Apply database migrations using new architecture
+await app.UseDatabaseMigrationAsync();
 
 // Use forwarded headers for ngrok proxy
 app.UseForwardedHeaders();
@@ -392,31 +419,20 @@ if (!app.Environment.IsDevelopment())
 
 // CORS must come early in the middleware pipeline, before authentication
 var corsPolicy = app.Environment.IsDevelopment() ? "AllowDevelopment" : "V1Production";
-Console.WriteLine($"🔧 CORS Policy: Using '{corsPolicy}' for environment '{app.Environment.EnvironmentName}'");
 
 // Use production-ready CORS configuration
 app.UseCors(corsPolicy);
 
-// Add debug middleware to log all requests
+// Remove debug middleware - production should use proper logging with ILogger
+// Consider adding request logging middleware with proper ILogger implementation if needed
+
+// Continue with the pipeline
 app.Use(async (context, next) =>
 {
-    var path = context.Request.Path.Value?.ToLower();
-    var method = context.Request.Method;
-
-    Console.WriteLine($"🔍 Request: {method} {path}");
-
-    // Special logging for OAuth-related paths
-    if (path?.Contains("signin") == true || path?.Contains("oauth") == true || path?.Contains("auth") == true)
-    {
-        Console.WriteLine($"🔐 OAuth-related request detected: {method} {context.Request.Path}");
-        Console.WriteLine($"   Query string: {context.Request.QueryString}");
-        Console.WriteLine($"   User-Agent: {context.Request.Headers.UserAgent}");
-        Console.WriteLine($"   Referer: {context.Request.Headers.Referer}");
-    }
-
     await next();
 
-    // Log response for OAuth paths
+    // Handle authentication-related responses if needed
+    var path = context.Request.Path.Value?.ToLower();
     if (path?.Contains("signin") == true || path?.Contains("oauth") == true || path?.Contains("auth") == true)
     {
         Console.WriteLine($"🔐 OAuth response: {context.Response.StatusCode}");
@@ -565,18 +581,13 @@ if (Directory.Exists(angularPath))
     {
         var path = context.Request.Path.Value?.ToLower();
 
-        Console.WriteLine($"🔍 FALLBACK: Checking path: {path}");
-
         // Don't handle API or OAuth callback paths
         if (path?.StartsWith("/api/") == true ||
             path?.StartsWith("/signin-") == true ||
             path?.StartsWith("/swagger") == true)
         {
-            Console.WriteLine($"🔍 FALLBACK: Skipping path: {path} (matches exclusion)");
             return Task.CompletedTask;
         }
-
-        Console.WriteLine($"🔍 FALLBACK: Serving Angular for path: {path}");
 
         // Serve index.html for Angular routing
         context.Response.ContentType = "text/html";

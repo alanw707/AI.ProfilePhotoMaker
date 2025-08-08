@@ -26,18 +26,31 @@ public class ModelCreationPollingService : BackgroundService
     {
         _logger.LogInformation("Model Creation Polling Service started");
 
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            try
+            while (!stoppingToken.IsCancellationRequested)
             {
-                await CheckPendingModels(stoppingToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in model creation polling service");
-            }
+                try
+                {
+                    await CheckPendingModels(stoppingToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error in model creation polling service");
+                }
 
-            await Task.Delay(_pollingInterval, stoppingToken);
+                await Task.Delay(_pollingInterval, stoppingToken);
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            // This is expected when the service is stopping
+            _logger.LogInformation("Model Creation Polling Service cancellation requested");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled exception in Model Creation Polling Service");
+            throw; // Re-throw to ensure the host knows about the failure
         }
 
         _logger.LogInformation("Model Creation Polling Service stopped");

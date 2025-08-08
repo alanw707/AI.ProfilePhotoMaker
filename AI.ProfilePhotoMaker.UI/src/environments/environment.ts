@@ -1,6 +1,6 @@
 export const environment = {
   production: false,
-  apiUrl: '/api',
+  apiUrl: '/api', // Use proxy for simplicity in development
   baseUrl: '',
   name: 'development',
   features: {
@@ -13,6 +13,6 @@ export const environment = {
   ngrok: {
     enabled: false,
     frontendUrl: 'http://localhost:4200',
-    backendUrl: 'http://localhost:5035',
+    backendUrl: 'http://localhost:5032', // Updated to match actual API port
   },
 };

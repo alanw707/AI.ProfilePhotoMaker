@@ -19,19 +19,19 @@ import { NotificationService } from '../services/notification.service';
 
 // Mock child components
 @Component({ selector: 'app-header-navigation', template: '' })
-class MockHeaderNavigationComponent { }
+class MockHeaderNavigationComponent {}
 
 @Component({ selector: 'app-stats-card', template: '' })
-class MockStatsCardComponent { }
+class MockStatsCardComponent {}
 
 @Component({ selector: 'app-style-selector', template: '' })
-class MockStyleSelectorComponent { }
+class MockStyleSelectorComponent {}
 
 @Component({ selector: 'app-file-upload-section', template: '' })
-class MockFileUploadSectionComponent { }
+class MockFileUploadSectionComponent {}
 
 @Component({ selector: 'app-credit-display', template: '' })
-class MockCreditDisplayComponent { }
+class MockCreditDisplayComponent {}
 
 // Test utilities
 function createMockFile(name = 'test.jpg', type = 'image/jpeg', size: number = 1024 * 1024): File {
@@ -61,7 +61,7 @@ describe('Photo Generation Flow Integration Tests', () => {
     uploadedImageThumbnails: [],
     generatedPhotosCount: 0,
     latestTrainedModel: null,
-    hasTrainedModel: false
+    hasTrainedModel: false,
   };
 
   beforeEach(async () => {
@@ -70,24 +70,37 @@ describe('Photo Generation Flow Integration Tests', () => {
 
     const authSpy = jasmine.createSpyObj('AuthService', ['isAuthenticated', 'getCurrentUserId']);
     const fileUploadSpy = jasmine.createSpyObj('FileUploadService', [
-      'uploadFiles', 'getUserImages', 'getTrainingStatus', 'getUserModelRequests',
-      'startTraining', 'generateImages', 'getGenerationStatus'
+      'uploadFiles',
+      'getUserImages',
+      'getTrainingStatus',
+      'getUserModelRequests',
+      'startTraining',
+      'generateImages',
+      'getGenerationStatus',
     ]);
     const styleSpy = jasmine.createSpyObj('StyleService', ['getStyles']);
     const replicateSpy = jasmine.createSpyObj('ReplicateService', ['trainModel', 'generateImages']);
     const creditSpy = jasmine.createSpyObj('CreditService', ['getCreditStatus']);
-    const stateSpy = jasmine.createSpyObj('DashboardStateService', [
-      'getState', 'setState', 'loadInitialDashboardData'
-    ], {
-      state$: stateSubject.asObservable()
-    });
-    const workflowSpy = jasmine.createSpyObj('WorkflowOrchestrationService', [
-      'startTrainingWorkflow', 'startGenerationWorkflow', 'getProgress'
-    ], {
-      progress$: workflowSubject.asObservable()
-    });
+    const stateSpy = jasmine.createSpyObj(
+      'DashboardStateService',
+      ['getState', 'setState', 'loadInitialDashboardData'],
+      {
+        state$: stateSubject.asObservable(),
+      }
+    );
+    const workflowSpy = jasmine.createSpyObj(
+      'WorkflowOrchestrationService',
+      ['startTrainingWorkflow', 'startGenerationWorkflow', 'getProgress'],
+      {
+        progress$: workflowSubject.asObservable(),
+      }
+    );
     const configSpy = jasmine.createSpyObj('ConfigService', ['baseUrl']);
-    const notificationSpy = jasmine.createSpyObj('NotificationService', ['success', 'error', 'info']);
+    const notificationSpy = jasmine.createSpyObj('NotificationService', [
+      'success',
+      'error',
+      'info',
+    ]);
 
     await TestBed.configureTestingModule({
       imports: [
@@ -95,7 +108,7 @@ describe('Photo Generation Flow Integration Tests', () => {
         FormsModule,
         HttpClientTestingModule,
         RouterTestingModule,
-        DashboardComponent
+        DashboardComponent,
       ],
       providers: [
         { provide: AuthService, useValue: authSpy },
@@ -106,28 +119,30 @@ describe('Photo Generation Flow Integration Tests', () => {
         { provide: DashboardStateService, useValue: stateSpy },
         { provide: WorkflowOrchestrationService, useValue: workflowSpy },
         { provide: ConfigService, useValue: configSpy },
-        { provide: NotificationService, useValue: notificationSpy }
-      ]
-    }).overrideComponent(DashboardComponent, {
-      remove: { 
-        imports: [
-          'HeaderNavigationComponent',
-          'StatsCardComponent', 
-          'StyleSelectorComponent',
-          'FileUploadSectionComponent',
-          'CreditDisplayComponent'
-        ]
-      },
-      add: { 
-        imports: [
-          MockHeaderNavigationComponent,
-          MockStatsCardComponent,
-          MockStyleSelectorComponent,
-          MockFileUploadSectionComponent,
-          MockCreditDisplayComponent
-        ]
-      }
-    }).compileComponents();
+        { provide: NotificationService, useValue: notificationSpy },
+      ],
+    })
+      .overrideComponent(DashboardComponent, {
+        remove: {
+          imports: [
+            'HeaderNavigationComponent',
+            'StatsCardComponent',
+            'StyleSelectorComponent',
+            'FileUploadSectionComponent',
+            'CreditDisplayComponent',
+          ],
+        },
+        add: {
+          imports: [
+            MockHeaderNavigationComponent,
+            MockStatsCardComponent,
+            MockStyleSelectorComponent,
+            MockFileUploadSectionComponent,
+            MockCreditDisplayComponent,
+          ],
+        },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(DashboardComponent);
     component = fixture.componentInstance;
@@ -138,21 +153,27 @@ describe('Photo Generation Flow Integration Tests', () => {
     replicateService = TestBed.inject(ReplicateService) as jasmine.SpyObj<ReplicateService>;
     creditService = TestBed.inject(CreditService) as jasmine.SpyObj<CreditService>;
     stateService = TestBed.inject(DashboardStateService) as jasmine.SpyObj<DashboardStateService>;
-    workflowService = TestBed.inject(WorkflowOrchestrationService) as jasmine.SpyObj<WorkflowOrchestrationService>;
+    workflowService = TestBed.inject(
+      WorkflowOrchestrationService
+    ) as jasmine.SpyObj<WorkflowOrchestrationService>;
     configService = TestBed.inject(ConfigService) as jasmine.SpyObj<ConfigService>;
-    notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
+    notificationService = TestBed.inject(
+      NotificationService
+    ) as jasmine.SpyObj<NotificationService>;
 
     // Setup default mocks
     authService.isAuthenticated.and.returnValue(true);
     authService.getCurrentUserId.and.returnValue('user-123');
     stateService.getState.and.returnValue(mockInitialState);
-    configService.baseUrl.and.returnValue('http://localhost:5035');
-    
-    styleService.getStyles.and.returnValue(of([
-      { id: 1, name: 'Professional', key: 'professional' },
-      { id: 2, name: 'Creative', key: 'creative' },
-      { id: 3, name: 'LinkedIn', key: 'linkedin' }
-    ]));
+    configService.baseUrl.and.returnValue('http://localhost:5032');
+
+    styleService.getStyles.and.returnValue(
+      of([
+        { id: 1, name: 'Professional', key: 'professional' },
+        { id: 2, name: 'Creative', key: 'creative' },
+        { id: 3, name: 'LinkedIn', key: 'linkedin' },
+      ])
+    );
   });
 
   afterEach(() => {
@@ -162,7 +183,7 @@ describe('Photo Generation Flow Integration Tests', () => {
   describe('Component Initialization', () => {
     it('should initialize with correct state', () => {
       fixture.detectChanges();
-      
+
       expect(component.currentStep).toBe(1);
       expect(component.isTrainingStarted).toBe(false);
       expect(component.selectedStyles).toBe(0);
@@ -172,44 +193,46 @@ describe('Photo Generation Flow Integration Tests', () => {
 
     it('should load initial dashboard data', () => {
       component.ngOnInit();
-      
+
       expect(stateService.loadInitialDashboardData).toHaveBeenCalled();
     });
 
     it('should subscribe to state changes', () => {
       component.ngOnInit();
-      
+
       expect(component.state$).toBeDefined();
       expect(component.workflowProgress$).toBeDefined();
     });
   });
 
   describe('File Upload Phase', () => {
-    it('should handle multiple file uploads successfully', (done) => {
+    it('should handle multiple file uploads successfully', done => {
       const mockFiles = [
         createMockFile('image1.jpg'),
         createMockFile('image2.jpg'),
-        createMockFile('image3.jpg')
+        createMockFile('image3.jpg'),
       ];
 
-      fileUploadService.uploadFiles.and.returnValue(of({
-        progress: 100,
-        response: {
-          success: true,
-          data: {
-            uploadedFiles: mockFiles.map((f, i) => ({
-              id: i + 1,
-              fileName: f.name,
-              originalImageUrl: `/uploads/user-123/${f.name}`,
-              thumbnailUrl: `/uploads/user-123/thumb_${f.name}`
-            }))
-          }
-        }
-      }));
+      fileUploadService.uploadFiles.and.returnValue(
+        of({
+          progress: 100,
+          response: {
+            success: true,
+            data: {
+              uploadedFiles: mockFiles.map((f, i) => ({
+                id: i + 1,
+                fileName: f.name,
+                originalImageUrl: `/uploads/user-123/${f.name}`,
+                thumbnailUrl: `/uploads/user-123/thumb_${f.name}`,
+              })),
+            },
+          },
+        })
+      );
 
       // Simulate file upload
       const fileUploadEvent = mockFiles;
-      
+
       // Mock the file upload handling
       component['handleFileUpload'](fileUploadEvent);
 
@@ -221,24 +244,26 @@ describe('Photo Generation Flow Integration Tests', () => {
     });
 
     it('should validate file count limits', () => {
-      const tooManyFiles = Array(21).fill(null).map((_, i) => createMockFile(`image${i}.jpg`));
-      
+      const tooManyFiles = Array(21)
+        .fill(null)
+        .map((_, i) => createMockFile(`image${i}.jpg`));
+
       // Mock file count validation
       const isValidCount = tooManyFiles.length <= 20;
-      
+
       expect(isValidCount).toBe(false);
     });
 
     it('should validate file types and sizes', () => {
       const invalidFiles = [
         createMockFile('document.pdf', 'application/pdf'),
-        createMockFile('large.jpg', 'image/jpeg', 8 * 1024 * 1024) // 8MB
+        createMockFile('large.jpg', 'image/jpeg', 8 * 1024 * 1024), // 8MB
       ];
 
       invalidFiles.forEach(file => {
         const isValidType = file.type.startsWith('image/');
         const isValidSize = file.size <= 7 * 1024 * 1024; // 7MB
-        
+
         expect(isValidType || isValidSize).toBe(false);
       });
     });
@@ -249,15 +274,17 @@ describe('Photo Generation Flow Integration Tests', () => {
         data: {
           uploadedFiles: [
             { id: 1, fileName: 'image1.jpg', originalImageUrl: '/uploads/user-123/image1.jpg' },
-            { id: 2, fileName: 'image2.jpg', originalImageUrl: '/uploads/user-123/image2.jpg' }
-          ]
-        }
+            { id: 2, fileName: 'image2.jpg', originalImageUrl: '/uploads/user-123/image2.jpg' },
+          ],
+        },
       };
 
-      fileUploadService.uploadFiles.and.returnValue(of({
-        progress: 100,
-        response: mockUploadResponse
-      }));
+      fileUploadService.uploadFiles.and.returnValue(
+        of({
+          progress: 100,
+          response: mockUploadResponse,
+        })
+      );
 
       // Should update state with uploaded images
       const expectedState = {
@@ -266,8 +293,8 @@ describe('Photo Generation Flow Integration Tests', () => {
         uploadedImageThumbnails: mockUploadResponse.data.uploadedFiles.map(f => ({
           id: f.id,
           url: f.originalImageUrl,
-          fileName: f.fileName
-        }))
+          fileName: f.fileName,
+        })),
       };
 
       expect(stateService.setState).toHaveBeenCalledWith(expectedState);
@@ -282,8 +309,8 @@ describe('Photo Generation Flow Integration Tests', () => {
         uploadedImages: 5,
         uploadedImageThumbnails: [
           { id: 1, url: '/uploads/user-123/image1.jpg', fileName: 'image1.jpg' },
-          { id: 2, url: '/uploads/user-123/image2.jpg', fileName: 'image2.jpg' }
-        ]
+          { id: 2, url: '/uploads/user-123/image2.jpg', fileName: 'image2.jpg' },
+        ],
       });
     });
 
@@ -293,8 +320,8 @@ describe('Photo Generation Flow Integration Tests', () => {
         data: {
           trainingId: 'training-123',
           status: 'training',
-          estimatedDuration: 900 // 15 minutes
-        }
+          estimatedDuration: 900, // 15 minutes
+        },
       };
 
       workflowService.startTrainingWorkflow.and.returnValue(of(mockTrainingResponse));
@@ -305,19 +332,19 @@ describe('Photo Generation Flow Integration Tests', () => {
       expect(component.isTrainingStarted).toBe(true);
     });
 
-    it('should track training progress', (done) => {
+    it('should track training progress', done => {
       const progressUpdates = [
         { phase: 'training', progress: 25, status: 'Preparing training data...' },
         { phase: 'training', progress: 50, status: 'Training in progress...' },
         { phase: 'training', progress: 75, status: 'Finalizing model...' },
-        { phase: 'training', progress: 100, status: 'Training complete!' }
+        { phase: 'training', progress: 100, status: 'Training complete!' },
       ];
 
       let updateIndex = 0;
       workflowService.progress$.subscribe(progress => {
         expect(progress).toEqual(progressUpdates[updateIndex]);
         updateIndex++;
-        
+
         if (updateIndex === progressUpdates.length) {
           expect(component.modelStatus).toBe('Training complete!');
           done();
@@ -344,11 +371,13 @@ describe('Photo Generation Flow Integration Tests', () => {
     });
 
     it('should check training status periodically', () => {
-      fileUploadService.getTrainingStatus.and.returnValue(of({
-        status: 'training',
-        progress: 50,
-        estimatedTimeRemaining: 450
-      }));
+      fileUploadService.getTrainingStatus.and.returnValue(
+        of({
+          status: 'training',
+          progress: 50,
+          estimatedTimeRemaining: 450,
+        })
+      );
 
       component['checkTrainingStatus']();
 
@@ -360,14 +389,16 @@ describe('Photo Generation Flow Integration Tests', () => {
         id: 'model-123',
         version: 'v1',
         status: 'succeeded',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       };
 
-      fileUploadService.getTrainingStatus.and.returnValue(of({
-        status: 'succeeded',
-        progress: 100,
-        model: mockCompletedModel
-      }));
+      fileUploadService.getTrainingStatus.and.returnValue(
+        of({
+          status: 'succeeded',
+          progress: 100,
+          model: mockCompletedModel,
+        })
+      );
 
       component['handleTrainingCompletion'](mockCompletedModel);
 
@@ -375,7 +406,7 @@ describe('Photo Generation Flow Integration Tests', () => {
         ...mockInitialState,
         modelStatus: 'Model Ready',
         hasTrainedModel: true,
-        latestTrainedModel: mockCompletedModel
+        latestTrainedModel: mockCompletedModel,
       });
     });
   });
@@ -387,26 +418,26 @@ describe('Photo Generation Flow Integration Tests', () => {
         ...mockInitialState,
         modelStatus: 'Model Ready',
         hasTrainedModel: true,
-        latestTrainedModel: { id: 'model-123', version: 'v1' }
+        latestTrainedModel: { id: 'model-123', version: 'v1' },
       });
     });
 
     it('should load available styles', () => {
       component.ngOnInit();
-      
+
       expect(styleService.getStyles).toHaveBeenCalled();
       expect(component.availableStyles).toEqual([
         { id: 1, name: 'Professional', key: 'professional' },
         { id: 2, name: 'Creative', key: 'creative' },
-        { id: 3, name: 'LinkedIn', key: 'linkedin' }
+        { id: 3, name: 'LinkedIn', key: 'linkedin' },
       ]);
     });
 
     it('should handle style selection', () => {
       const selectedStyleIds = [1, 3]; // Professional and LinkedIn
-      
+
       component['handleStyleSelection'](selectedStyleIds);
-      
+
       expect(component.selectedStyles).toBe(2);
     });
 
@@ -414,27 +445,27 @@ describe('Photo Generation Flow Integration Tests', () => {
       const selectedStyleIds = [1, 2, 3]; // 3 styles
       const imagesPerStyle = 2;
       const creditCostPerImage = 5;
-      
+
       const totalCreditsNeeded = selectedStyleIds.length * imagesPerStyle * creditCostPerImage;
-      
+
       expect(totalCreditsNeeded).toBe(30); // 3 * 2 * 5
     });
 
     it('should validate sufficient credits', () => {
       const requiredCredits = 30;
       const availableCredits = 50;
-      
+
       const hasSufficientCredits = availableCredits >= requiredCredits;
-      
+
       expect(hasSufficientCredits).toBe(true);
     });
 
     it('should prevent generation with insufficient credits', () => {
       const requiredCredits = 60;
       const availableCredits = 50;
-      
+
       const canGenerate = availableCredits >= requiredCredits;
-      
+
       expect(canGenerate).toBe(false);
     });
   });
@@ -447,13 +478,13 @@ describe('Photo Generation Flow Integration Tests', () => {
         modelStatus: 'Model Ready',
         hasTrainedModel: true,
         latestTrainedModel: { id: 'model-123', version: 'v1' },
-        creditsInfo: { availableCredits: 50 }
+        creditsInfo: { availableCredits: 50 },
       });
-      
+
       component.selectedStyles = 2;
       component.availableStyles = [
         { id: 1, name: 'Professional', key: 'professional', selected: true },
-        { id: 2, name: 'LinkedIn', key: 'linkedin', selected: true }
+        { id: 2, name: 'LinkedIn', key: 'linkedin', selected: true },
       ];
     });
 
@@ -463,8 +494,8 @@ describe('Photo Generation Flow Integration Tests', () => {
         data: {
           generationId: 'gen-123',
           status: 'processing',
-          estimatedDuration: 300 // 5 minutes
-        }
+          estimatedDuration: 300, // 5 minutes
+        },
       };
 
       workflowService.startGenerationWorkflow.and.returnValue(of(mockGenerationResponse));
@@ -474,22 +505,22 @@ describe('Photo Generation Flow Integration Tests', () => {
       expect(workflowService.startGenerationWorkflow).toHaveBeenCalledWith({
         modelId: 'model-123',
         styles: ['professional', 'linkedin'],
-        imagesPerStyle: 2
+        imagesPerStyle: 2,
       });
     });
 
-    it('should track generation progress', (done) => {
+    it('should track generation progress', done => {
       const progressUpdates = [
         { phase: 'generation', progress: 20, status: 'Generating Professional style...' },
         { phase: 'generation', progress: 60, status: 'Generating LinkedIn style...' },
-        { phase: 'generation', progress: 100, status: 'Generation complete!' }
+        { phase: 'generation', progress: 100, status: 'Generation complete!' },
       ];
 
       let updateIndex = 0;
       workflowService.progress$.subscribe(progress => {
         expect(progress).toEqual(progressUpdates[updateIndex]);
         updateIndex++;
-        
+
         if (updateIndex === progressUpdates.length) {
           done();
         }
@@ -506,7 +537,7 @@ describe('Photo Generation Flow Integration Tests', () => {
         { id: 1, style: 'professional', url: '/generated/prof1.jpg' },
         { id: 2, style: 'professional', url: '/generated/prof2.jpg' },
         { id: 3, style: 'linkedin', url: '/generated/link1.jpg' },
-        { id: 4, style: 'linkedin', url: '/generated/link2.jpg' }
+        { id: 4, style: 'linkedin', url: '/generated/link2.jpg' },
       ];
 
       component['handleGenerationCompletion'](mockGeneratedImages);
@@ -514,7 +545,7 @@ describe('Photo Generation Flow Integration Tests', () => {
       expect(stateService.setState).toHaveBeenCalledWith({
         ...mockInitialState,
         generatedPhotosCount: 4,
-        creditsInfo: { availableCredits: 30 } // 50 - 20 (4 images * 5 credits)
+        creditsInfo: { availableCredits: 30 }, // 50 - 20 (4 images * 5 credits)
       });
     });
 
@@ -535,25 +566,19 @@ describe('Photo Generation Flow Integration Tests', () => {
       const initialCredits = 50;
       const generatedImages = 4;
       const creditsPerImage = 5;
-      
-      const remainingCredits = initialCredits - (generatedImages * creditsPerImage);
-      
+
+      const remainingCredits = initialCredits - generatedImages * creditsPerImage;
+
       expect(remainingCredits).toBe(30);
     });
   });
 
   describe('Workflow Orchestration', () => {
     it('should coordinate full workflow phases', async () => {
-      const workflowPhases = [
-        'upload',
-        'training',
-        'style-selection',
-        'generation',
-        'completion'
-      ];
+      const workflowPhases = ['upload', 'training', 'style-selection', 'generation', 'completion'];
 
       let currentPhase = 0;
-      
+
       workflowService.progress$.subscribe(progress => {
         expect(progress.phase).toBe(workflowPhases[currentPhase]);
         currentPhase++;
@@ -584,7 +609,7 @@ describe('Photo Generation Flow Integration Tests', () => {
       stateService.getState.and.returnValue({
         ...mockInitialState,
         modelStatus: 'Training Interrupted',
-        uploadedImages: 5
+        uploadedImages: 5,
       });
 
       component['resumeWorkflow']();
@@ -595,9 +620,7 @@ describe('Photo Generation Flow Integration Tests', () => {
 
   describe('Error Handling and Recovery', () => {
     it('should handle upload errors gracefully', () => {
-      fileUploadService.uploadFiles.and.returnValue(
-        throwError(() => new Error('Upload failed'))
-      );
+      fileUploadService.uploadFiles.and.returnValue(throwError(() => new Error('Upload failed')));
 
       component['handleUploadError']('Upload failed');
 
@@ -618,7 +641,7 @@ describe('Photo Generation Flow Integration Tests', () => {
     it('should handle insufficient credits', () => {
       stateService.getState.and.returnValue({
         ...mockInitialState,
-        creditsInfo: { availableCredits: 5 }
+        creditsInfo: { availableCredits: 5 },
       });
 
       const requiredCredits = 20;
@@ -642,7 +665,7 @@ describe('Photo Generation Flow Integration Tests', () => {
       const testState = {
         ...mockInitialState,
         uploadedImages: 3,
-        modelStatus: 'Training'
+        modelStatus: 'Training',
       };
 
       stateService.getState.and.returnValue(testState);
@@ -661,7 +684,7 @@ describe('Photo Generation Flow Integration Tests', () => {
         uploadedImages: 5,
         modelStatus: 'Model Ready',
         hasTrainedModel: true,
-        generatedPhotosCount: 8
+        generatedPhotosCount: 8,
       };
 
       stateService.getState.and.returnValue(persistedState);
@@ -690,11 +713,13 @@ describe('Photo Generation Flow Integration Tests', () => {
     });
 
     it('should optimize image loading', () => {
-      const mockImages = Array(50).fill(null).map((_, i) => ({
-        id: i,
-        url: `/generated/image${i}.jpg`,
-        style: 'professional'
-      }));
+      const mockImages = Array(50)
+        .fill(null)
+        .map((_, i) => ({
+          id: i,
+          url: `/generated/image${i}.jpg`,
+          style: 'professional',
+        }));
 
       // Should implement lazy loading for large image sets
       const visibleImages = mockImages.slice(0, 10);

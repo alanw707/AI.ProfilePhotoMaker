@@ -3,12 +3,12 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 
 import { routes } from './app.routes';
-import { secureAuthInterceptor } from './interceptors/secure-auth.interceptor';
+import { simpleAuthInterceptor } from './interceptors/simple-auth.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([secureAuthInterceptor])),
+    provideHttpClient(withInterceptors([simpleAuthInterceptor])),
   ],
 };

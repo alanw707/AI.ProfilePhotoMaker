@@ -100,17 +100,6 @@
                 }
               ]
             },
-            "ngrok": {
-              "optimization": false,
-              "extractLicenses": false,
-              "sourceMap": true,
-              "fileReplacements": [
-                {
-                  "replace": "src/environments/environment.ts",
-                  "with": "src/environments/environment.ngrok.ts"
-                }
-              ]
-            },
             "v1": {
               "optimization": true,
               "extractLicenses": true,
@@ -129,7 +118,7 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "allowedHosts": ["awlocaldev.ngrok.app", "localhost", "127.0.0.1"],
+            "allowedHosts": ["localhost", "127.0.0.1"],
             "proxyConfig": "proxy.conf.json"
           },
           "configurations": {
@@ -139,25 +128,12 @@
             },
             "development": {
               "buildTarget": "AI.ProfilePhotoMaker.UI:build:development",
-              "proxyConfig": "proxy.conf.json"
+              "proxyConfig": "proxy.conf.json",
+              "port": 4200
             },
             "test": {
               "buildTarget": "AI.ProfilePhotoMaker.UI:build:test",
               "proxyConfig": "proxy.conf.test.json"
-            },
-            "ngrok": {
-              "buildTarget": "AI.ProfilePhotoMaker.UI:build:ngrok",
-              "host": "0.0.0.0",
-              "disableHostCheck": true,
-              "allowedHosts": ["awlocaldev.ngrok.app", "awlocaldev-api.ngrok.app"],
-              "proxyConfig": "proxy.conf.ngrok.json"
-            },
-            "hybrid": {
-              "buildTarget": "AI.ProfilePhotoMaker.UI:build:development",
-              "host": "0.0.0.0",
-              "disableHostCheck": true,
-              "allowedHosts": ["localhost", "127.0.0.1"],
-              "proxyConfig": "proxy.conf.hybrid.json"
             }
           },
           "defaultConfiguration": "development"

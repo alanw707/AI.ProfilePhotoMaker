@@ -310,30 +310,18 @@ export class ImageValidationService {
       return url;
     }
 
-    // Fix absolute frontend ngrok URLs to relative paths
-    if (url.includes('awlocaldev.ngrok.app/uploads/')) {
+    // Fix absolute frontend URLs to relative paths (legacy ngrok cleanup)
+    if (url.includes('awlocaldev.ngrok.app/uploads/') || url.includes('localhost:4200/uploads/')) {
       const path = url.substring(url.indexOf('/uploads/'));
-      console.log(`🔧 Correcting frontend URL to relative path: ${url} → ${path}`);
       return path;
     }
 
-    // Fix absolute frontend ngrok URLs for other static paths
-    if (url.includes('awlocaldev.ngrok.app/generated/')) {
+    // Fix absolute frontend URLs for other static paths (legacy ngrok cleanup)
+    if (
+      url.includes('awlocaldev.ngrok.app/generated/') ||
+      url.includes('localhost:4200/generated/')
+    ) {
       const path = url.substring(url.indexOf('/generated/'));
-      console.log(`🔧 Correcting frontend URL to relative path: ${url} → ${path}`);
-      return path;
-    }
-
-    // Fix localhost URLs to relative paths
-    if (url.includes('localhost:4200/uploads/')) {
-      const path = url.substring(url.indexOf('/uploads/'));
-      console.log(`🔧 Correcting localhost URL to relative path: ${url} → ${path}`);
-      return path;
-    }
-
-    if (url.includes('localhost:4200/generated/')) {
-      const path = url.substring(url.indexOf('/generated/'));
-      console.log(`🔧 Correcting localhost URL to relative path: ${url} → ${path}`);
       return path;
     }
 

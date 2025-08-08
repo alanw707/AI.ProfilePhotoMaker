@@ -173,7 +173,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     // Subscribe to state changes to update UI
-    this.state$.subscribe(_state => {
+    this.state$.subscribe(state => {
+      // Debug logging for troubleshooting
+      console.log('📊 Dashboard state updated:', {
+        userProfile: !!state.userProfile,
+        creditsInfo: !!state.creditsInfo,
+        userCreditStatus: !!state.userCreditStatus,
+        uploadedImages: state.uploadedImages,
+        generatedPhotosCount: state.generatedPhotosCount,
+        modelStatus: state.modelStatus,
+        isPremiumWorkflow: state.isPremiumWorkflow,
+        isLoading: state.isLoading,
+      });
+
       // Force change detection when state updates
       this.selectedStyles = this.getSelectedStylesCount();
 
@@ -369,7 +381,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Workflow methods
   isPremiumWorkflow(): boolean {
-    return true;
+    const state = this.stateService.getState();
+    // User has premium workflow if they have purchased credits, weekly credits, or are marked as premium
+    return (
+      state.isPremiumWorkflow ||
+      (state.userCreditStatus?.purchasedCredits || 0) > 0 ||
+      (state.userCreditStatus?.weeklyCredits || 0) > 0
+    );
   }
 
   getStepStatus(step: number): string {

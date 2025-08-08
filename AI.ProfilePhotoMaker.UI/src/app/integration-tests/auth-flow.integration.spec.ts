@@ -55,11 +55,11 @@ describe('Authentication Flow Integration Tests', () => {
     configService = TestBed.inject(ConfigService);
 
     // Mock ConfigService URLs
-    spyOn(configService, 'authLoginUrl').and.returnValue('http://localhost:5035/api/auth/login');
+    spyOn(configService, 'authLoginUrl').and.returnValue('http://localhost:5032/api/auth/login');
     spyOn(configService, 'authRegisterUrl').and.returnValue(
-      'http://localhost:5035/api/auth/register'
+      'http://localhost:5032/api/auth/register'
     );
-    spyOn(configService, 'baseUrl').and.returnValue('http://localhost:5035');
+    spyOn(configService, 'baseUrl').and.returnValue('http://localhost:5032');
   });
 
   afterEach(() => {
@@ -103,7 +103,7 @@ describe('Authentication Flow Integration Tests', () => {
         expect(response.lastName).toBe('Doe');
       });
 
-      const req = httpMock.expectOne('http://localhost:5035/api/auth/register');
+      const req = httpMock.expectOne('http://localhost:5032/api/auth/register');
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual(registerData);
       req.flush(mockResponse);
@@ -139,7 +139,7 @@ describe('Authentication Flow Integration Tests', () => {
         },
       });
 
-      const req = httpMock.expectOne('http://localhost:5035/api/auth/register');
+      const req = httpMock.expectOne('http://localhost:5032/api/auth/register');
       req.flush({ isSuccess: false, message: 'Registration failed' });
 
       expect(authService.isAuthenticated()).toBe(false);
@@ -177,7 +177,7 @@ describe('Authentication Flow Integration Tests', () => {
         expect(response.email).toBe('test@example.com');
       });
 
-      const req = httpMock.expectOne('http://localhost:5035/api/auth/login');
+      const req = httpMock.expectOne('http://localhost:5032/api/auth/login');
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual(loginData);
       req.flush(mockResponse);
@@ -202,7 +202,7 @@ describe('Authentication Flow Integration Tests', () => {
         },
       });
 
-      const req = httpMock.expectOne('http://localhost:5035/api/auth/login');
+      const req = httpMock.expectOne('http://localhost:5032/api/auth/login');
       req.flush({ isSuccess: false, message: 'Invalid credentials' });
 
       expect(authService.isAuthenticated()).toBe(false);
@@ -262,7 +262,7 @@ describe('Authentication Flow Integration Tests', () => {
       authService.handleOAuthCallback(mockJwt);
 
       // Should make profile API call
-      const req = httpMock.expectOne('http://localhost:5035/profile');
+      const req = httpMock.expectOne('http://localhost:5032/profile');
       expect(req.request.method).toBe('GET');
 
       req.flush({
@@ -486,7 +486,7 @@ describe('Authentication Flow Integration Tests', () => {
         },
       });
 
-      const req = httpMock.expectOne('http://localhost:5035/api/auth/login');
+      const req = httpMock.expectOne('http://localhost:5032/api/auth/login');
       req.error(new ErrorEvent('Network error'));
 
       expect(authService.isAuthenticated()).toBe(false);

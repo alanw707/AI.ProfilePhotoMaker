@@ -575,7 +575,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 // Priority 3: Fallback to request host (localhost development)
                 var scheme = Request?.Scheme ?? "https";
-                var host = Request?.Host.ToString() ?? "localhost:5035";
+                var host = Request?.Host.ToString() ?? "localhost:5032";
                 var fallbackResult = $"{scheme}://{host}{relativePath}";
                 Logger.LogDebug("GetAbsoluteUrl using request host fallback: {Result}", fallbackResult);
                 return fallbackResult;
@@ -584,7 +584,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 Logger.LogError(ex, "GetAbsoluteUrl failed for path: {RelativePath}", relativePath);
                 // Return a safe fallback that works with proxy
-                var safeBaseUrl = _configuration?["AppBaseUrl"] ?? "https://localhost:5035";
+                var safeBaseUrl = _configuration?["AppBaseUrl"] ?? "https://localhost:5032";
                 return $"{safeBaseUrl.TrimEnd('/')}{relativePath}";
             }
         }
