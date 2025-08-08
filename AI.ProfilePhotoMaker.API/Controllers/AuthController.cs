@@ -9,6 +9,7 @@ using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AI.ProfilePhotoMaker.API.Controllers
 {
@@ -115,9 +116,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             HttpContext.Session.SetString("oauth_state", state);
             HttpContext.Session.SetString("oauth_return_url", returnUrl);
 
-            // Get base URL (ngrok in development)
-            var baseUrl = _configuration["AppBaseUrl"] ?? Request.Scheme + "://" + Request.Host;
-            var redirectUri = $"{baseUrl}/api/auth/external-login-callback";
+            // Get backend base URL for OAuth callback
+            var backendBaseUrl = $"{Request.Scheme}://{Request.Host}";
+            var redirectUri = $"{backendBaseUrl}/api/auth/external-login-callback";
 
             // Construct Google OAuth URL manually
             var authUrl = $"https://accounts.google.com/o/oauth2/v2/auth?" +
@@ -206,8 +207,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         {
             var clientId = _configuration["Authentication:Google:ClientId"];
             var clientSecret = _configuration["Authentication:Google:ClientSecret"];
-            var baseUrl = _configuration["AppBaseUrl"] ?? Request.Scheme + "://" + Request.Host;
-            var redirectUri = $"{baseUrl}/api/auth/external-login-callback";
+            var backendBaseUrl = $"{Request.Scheme}://{Request.Host}";
+            var redirectUri = $"{backendBaseUrl}/api/auth/external-login-callback";
 
             var tokenRequest = new List<KeyValuePair<string, string>>
             {
@@ -282,10 +283,52 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     return null;
                 }
 
-                Console.WriteLine($"✅ New user created: {user.Email}");
+                // CRITICAL FIX: Create UserProfile for new OAuth users
+                var userProfile = new UserProfile
+                {
+                    UserId = user.Id,
+                    FirstName = userInfo.GivenName ?? "",
+                    LastName = userInfo.FamilyName ?? "",
+                    Gender = null,  // Will be set during profile completion if needed
+                    Ethnicity = null,  // Will be set during profile completion if needed
+                    SubscriptionTier = SubscriptionTier.Basic,
+                    Credits = 3,
+                    LastCreditReset = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                _context.UserProfiles.Add(userProfile);
+                await _context.SaveChangesAsync();
+
+                Console.WriteLine($"✅ New user and profile created: {user.Email}");
             }
             else
             {
+                // CRITICAL FIX: Check if existing user has a profile (for migration cases)
+                var hasProfile = await _context.UserProfiles.AnyAsync(p => p.UserId == user.Id);
+                if (!hasProfile)
+                {
+                    // Create profile for existing user who doesn't have one
+                    var userProfile = new UserProfile
+                    {
+                        UserId = user.Id,
+                        FirstName = user.FirstName ?? userInfo.GivenName ?? "",
+                        LastName = user.LastName ?? userInfo.FamilyName ?? "",
+                        Gender = null,
+                        Ethnicity = null,
+                        SubscriptionTier = SubscriptionTier.Basic,
+                        Credits = 3,
+                        LastCreditReset = DateTime.UtcNow,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    _context.UserProfiles.Add(userProfile);
+                    await _context.SaveChangesAsync();
+                    Console.WriteLine($"✅ Profile created for existing user: {user.Email}");
+                }
+
                 Console.WriteLine($"✅ Existing user found: {user.Email}");
             }
 
@@ -433,7 +476,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 // Try with explicit localhost redirect for testing
                 var clientId = "331984288023-lh1upthod06meoko58g7hn9d7h68l311.apps.googleusercontent.com";
-                var redirectUri = "https://awlocaldev.ngrok.app/signin-google";
+                var redirectUri = "http://localhost:4200/signin-google";
                 var state = Guid.NewGuid().ToString();
 
                 // Create OAuth URL with minimal parameters
