@@ -280,14 +280,13 @@ public class HealthCheckService : IHealthCheckService
         
         try
         {
-            // Readiness check: database is ready and migrations are applied
+            // Fast readiness check - only test basic database connectivity
+            // Avoid slow operations like migration checks and data validation
             var canConnect = await _databaseHealthService.CanConnectAsync();
-            var migrations = await _databaseHealthService.GetMigrationStatusAsync();
-            var validation = await _databaseHealthService.ValidateDataAsync();
             
             stopwatch.Stop();
             
-            var isReady = canConnect && migrations.PendingCount == 0 && validation.HasRequiredSeedData;
+            var isReady = canConnect;
             
             return new HealthCheckResponseDto
             {

@@ -26,7 +26,7 @@ public class DependencyHealthService : IDependencyHealthService
         _logger = logger;
 
         // Configure timeout for dependency checks
-        _httpClient.Timeout = TimeSpan.FromSeconds(10);
+        _httpClient.Timeout = TimeSpan.FromSeconds(3);
 
         // Initialize dependency configurations
         _dependencies = InitializeDependencies();
