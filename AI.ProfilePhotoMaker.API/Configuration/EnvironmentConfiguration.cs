@@ -79,11 +79,19 @@ public class EnvironmentConfiguration
 
     private async Task ValidateDatabaseConfigurationAsync(List<ValidationResult> results)
     {
+        // If a DefaultConnection is configured, prefer it and do not require MSSQL_SA_PASSWORD
+        var defaultConnection = _configuration.GetConnectionString("DefaultConnection");
+        if (!string.IsNullOrWhiteSpace(defaultConnection))
+        {
+            _logger.LogInformation("✅ Using configured DefaultConnection for database; skipping MSSQL_SA_PASSWORD requirement");
+            return;
+        }
+
+        // Otherwise validate MSSQL_SA_PASSWORD for local/dev SQL authentication
         var password = GetEnvironmentVariable(MSSQL_SA_PASSWORD);
-        
         if (string.IsNullOrEmpty(password))
         {
-            results.Add(new ValidationResult(false, MSSQL_SA_PASSWORD, "Database password is required"));
+            results.Add(new ValidationResult(false, MSSQL_SA_PASSWORD, "Database password is required when no ConnectionStrings:DefaultConnection is configured"));
             return;
         }
 
@@ -104,11 +112,12 @@ public class EnvironmentConfiguration
 
     private async Task ValidateJwtConfigurationAsync(List<ValidationResult> results)
     {
-        var jwtSecret = GetEnvironmentVariable(JWT_SECRET);
+        // Accept either environment variable JWT_SECRET or configuration key JWT:Secret
+        var jwtSecret = GetEnvironmentVariable(JWT_SECRET) ?? _configuration["JWT:Secret"] ?? _configuration["Jwt:Secret"];
         
         if (string.IsNullOrEmpty(jwtSecret))
         {
-            results.Add(new ValidationResult(false, JWT_SECRET, "JWT secret is required"));
+            results.Add(new ValidationResult(false, JWT_SECRET, "JWT secret is required (set env JWT_SECRET or config JWT:Secret)"));
             return;
         }
 
@@ -132,11 +141,12 @@ public class EnvironmentConfiguration
 
     private async Task ValidateReplicateConfigurationAsync(List<ValidationResult> results)
     {
-        var apiToken = GetEnvironmentVariable(REPLICATE_API_TOKEN);
+        // Accept either env REPLICATE_API_TOKEN or config Replicate:ApiToken
+        var apiToken = GetEnvironmentVariable(REPLICATE_API_TOKEN) ?? _configuration["Replicate:ApiToken"];
         
         if (string.IsNullOrEmpty(apiToken))
         {
-            results.Add(new ValidationResult(false, REPLICATE_API_TOKEN, "Replicate API token is required"));
+            results.Add(new ValidationResult(false, REPLICATE_API_TOKEN, "Replicate API token is required (set env REPLICATE_API_TOKEN or config Replicate:ApiToken)"));
             return;
         }
 
@@ -145,10 +155,11 @@ public class EnvironmentConfiguration
             results.Add(new ValidationResult(false, REPLICATE_API_TOKEN, "Replicate API token should start with 'r8_'"));
         }
 
-        var webhookSecret = GetEnvironmentVariable(REPLICATE_WEBHOOK_SECRET);
+        // Webhook secret is recommended but optional (signature validator tolerates missing secret in dev)
+        var webhookSecret = GetEnvironmentVariable(REPLICATE_WEBHOOK_SECRET) ?? _configuration["Replicate:WebhookSecret"];
         if (string.IsNullOrEmpty(webhookSecret))
         {
-            results.Add(new ValidationResult(false, REPLICATE_WEBHOOK_SECRET, "Replicate webhook secret is required"));
+            _logger.LogWarning("Replicate webhook secret is not configured - signature validation will be skipped");
         }
         else if (webhookSecret.Length < 32)
         {
