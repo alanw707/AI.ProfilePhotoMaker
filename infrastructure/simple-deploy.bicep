@@ -263,6 +263,14 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               name: 'ApplicationInsights__ConnectionString'
               value: applicationInsights.properties.ConnectionString
             }
+            {
+              name: 'Database__AutoMigrateOnStartup'
+              value: 'false'
+            }
+            {
+              name: 'Database__ValidateOnStartup'
+              value: 'false'
+            }
           ]
           // Health probes re-enabled since we're using real application images
           probes: [
