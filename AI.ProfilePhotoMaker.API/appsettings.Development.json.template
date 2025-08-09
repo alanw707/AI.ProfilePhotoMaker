@@ -1,10 +1,10 @@
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Data Source=aiprofilemaker.db"
+    "DefaultConnection": "Server=localhost,1433;Database=AIProfileMaker;User Id=sa;Password=Dev123456!;TrustServerCertificate=true;MultipleActiveResultSets=true;"
   },
   "JWT": {
-    "ValidAudience": "http://localhost:5035",
-    "ValidIssuer": "http://localhost:5035", 
+    "ValidAudience": "http://localhost:5032",
+    "ValidIssuer": "http://localhost:5032", 
     "Secret": "STORED_IN_USER_SECRETS"    
   },
   "Replicate": {
@@ -13,7 +13,7 @@
     "FluxGenerationModelId": "black-forest-labs/flux-dev",
     "WebhookSecret": "STORED_IN_USER_SECRETS"
   },
-  "AppBaseUrl": "http://localhost:5035",
+  "AppBaseUrl": "http://localhost:4200",
   "Logging": {
     "LogLevel": {
       "Default": "Information",

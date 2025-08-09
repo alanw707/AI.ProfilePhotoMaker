@@ -1,0 +1,100 @@
+# Cursor Rules — AI.ProfilePhotoMaker
+
+These rules guide AI edits and answers in this repo. Optimize for correctness, safety, and maintainability over speed.
+
+## MVP scope & simplicity
+- Do not over-engineer; keep solutions simple and straightforward.
+- Prioritize MVP scope; avoid enterprise-grade patterns/abstractions unless a concrete requirement demands them.
+- Prefer pragmatic, incremental improvements; YAGNI applies.
+- Minimize dependencies and abstractions to what is necessary for current features.
+
+## Project overview
+- Stack: **ASP.NET Core (C#) Web API** + **Angular** frontend
+- Data: **EF Core** with SQL Server; migrations under `AI.ProfilePhotoMaker.API/Migrations/`
+- Auth: OAuth/JWT; services under `AI.ProfilePhotoMaker.API/Services/Authentication/`
+- File storage: Azure Blob or local providers under `Services/Storage`
+- Payments: Stripe under `Services/Payment`
+- E2E/Integration tests: Angular (Cypress/Playwright) and API tests under `AI.ProfilePhotoMaker.API.Tests/`, `AI.ProfilePhotoMaker.API/tests/playwright/`
+
+## General principles
+- Prefer minimal, targeted edits; do not refactor unrelated code.
+- Follow existing patterns in `Services/`, `Controllers/`, and `Models/`.
+- Keep secrets out of source. Use `IConfiguration`/environment variables and `appsettings.*.json`.
+- Add telemetry/logs for meaningful events; avoid logging PII.
+- Explain non-trivial changes in PR descriptions/commit messages.
+
+## Coding conventions
+- Naming: Use clear, descriptive identifiers. Avoid abbreviations.
+- Control flow: Use guard clauses; avoid deep nesting (>2–3 levels).
+- Errors: Fail fast with actionable messages; return accurate HTTP status codes.
+- Comments: Only for complex rationale; avoid obvious comments and inline narration.
+- Formatting: Match local style; wrap long lines; avoid unrelated reformatting.
+
+### C#/.NET (API)
+- Async: Prefer `async/await`; do not block on async.
+- DI: Register services in `Extensions/DatabaseServiceExtensions.cs` or appropriate `ServiceExtensions`; avoid singletons with state.
+- Options/config: Use Options pattern for structured config; validate on startup.
+- EF Core: Use migrations; do not manually alter generated migration code unless fixing a migration bug. Place queries in repositories/services.
+- HTTP: Controllers remain thin; delegate to services. Return typed DTOs from `Models/DTOs`.
+- Logging: Use `ILogger<T>` with structured properties.
+- Security: Authorize sensitive endpoints; never expose raw stack traces.
+
+### Angular (UI)
+- State: Prefer local component state; avoid introducing global state unless necessary.
+- HTTP: Use `services/*` with `HttpClient`; leverage existing interceptors in `interceptors/` for auth.
+- Types: Strongly type responses and models; no `any`.
+- RxJS: Use `Observable` and operators; unsubscribe where needed (e.g., `takeUntil` in long-lived components).
+- Styling: Follow existing SASS structure in `src/app/**/styles/`.
+
+## Security & privacy guardrails
+- Do not log secrets, tokens, emails, or image contents.
+- Validate and limit uploaded file types/sizes; never trust client metadata.
+- Payments: Never handle raw card data; only use Stripe tokens/PaymentIntents.
+- Auth: Keep token handling in interceptors/services; use role/claims checks on server endpoints.
+- Diagnostics: Ensure any diagnostic/health endpoints are safe and non-verbose in production. Do not broaden access.
+
+## Testing expectations
+- Add/adjust unit/integration tests when changing behavior.
+- API tests: `AI.ProfilePhotoMaker.API.Tests/*`
+- Playwright/Cypress: `AI.ProfilePhotoMaker.API/tests/playwright/`, `AI.ProfilePhotoMaker.UI/cypress/` and `AI.ProfilePhotoMaker.UI/e2e/`
+- Keep tests deterministic; avoid external side-effects where possible.
+
+## Performance guidelines
+- Avoid N+1 queries; prefer projections and includes where warranted.
+- Stream files where possible; avoid loading large blobs into memory.
+- Use cancellation tokens on IO-bound operations.
+
+## Documentation
+- Update relevant docs when changing behavior:
+  - API: `docs/operations/API_REFERENCE.md`
+  - Credit system/storage/gallery: see `docs/operations/*`
+  - Deployment: `docs/deployment/*`, `infrastructure/*`
+
+## When to ask for clarification
+- Ambiguous requirements, security/PII implications, or payment flow changes.
+- Backward-incompatible API changes.
+
+## Safe-change checklist (pre-commit)
+- Compiles locally: API (`dotnet build`), UI (`npm run build` or `ng build`).
+- Tests pass: API and UI test suites relevant to your changes.
+- No secrets added; configs read from env/Options.
+- Lint/format ok where configured.
+
+## File/area-specific notes
+- `Controllers/DiagnosticController.cs`: Do not expand sensitive surface area; keep output minimal in non-development environments.
+- `Services/Authentication/*`: Follow existing token/claims patterns; do not change cookie/local storage semantics without updating interceptors and guards.
+- `Services/Storage/*`: Respect abstraction boundaries; avoid coupling controllers to concrete storage implementations.
+- `Migrations/*`: Add via EF tools; avoid reordering existing migrations in history.
+- `AI.ProfilePhotoMaker.UI/src/environments/*`: Do not hardcode secrets; use build-time env where applicable.
+
+## How to run locally (reference)
+- API: `dotnet restore` → `dotnet ef database update` → `dotnet run` in `AI.ProfilePhotoMaker.API/`
+- UI: `npm ci` → `npm start` in `AI.ProfilePhotoMaker.UI/`
+- See `DEV-ENVIRONMENT.md` and `docs/LOCAL-BUILD-WORKFLOW.md` for details.
+
+## Commit style
+- Conventional, concise subject; body explains rationale and risk.
+- Mention affected areas (API/UI), and whether tests/docs were updated.
+
+## What the AI should prioritize
+1) Preserve security and privacy. 2) Maintain API/UI contracts. 3) Add tests for changed paths. 4) Minimize scope of edits.

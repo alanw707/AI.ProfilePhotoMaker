@@ -1,221 +1,256 @@
-# Code Patterns - AI Profile Photo Maker
+# Code Patterns - AI.ProfilePhotoMaker
 
-## ASP.NET Core Authentication Patterns
+## Database Connection Patterns
 
-### JWT Bearer Authentication Setup
-**Pattern**: DefaultChallengeScheme configuration for API consistency
-**Location**: `Program.cs` authentication configuration
-**Implementation**:
+### Connection String Management (Updated 2025-08-08)
 ```csharp
-var authBuilder = builder.Services.AddAuthentication(options =>
+// Production Azure SQL Database
+"Server=tcp:aipm-sql-v1-6j74jubocuukg.database.windows.net,1433;Initial Catalog=aipmdb;User ID=sqladmin;Password={secure_password};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+
+// Local Development SQL Server  
+"Server=localhost,1433;Database=AIProfileMaker;User Id=sa;Password=Dev123456!;TrustServerCertificate=true;MultipleActiveResultSets=true;"
+```
+
+### Database Provider Configuration Pattern
+```csharp
+// Services/Database/DatabaseProviderService.cs
+public void ConfigureDbContextOptions<TContext>(DbContextOptionsBuilder<TContext> options, string? connectionString = null) 
+    where TContext : DbContext
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme; // Critical for API 401 responses
-    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme; // For OAuth
-})
-.AddJwtBearer(options => {
-    // JWT configuration with proper error handling
-    options.Events = new JwtBearerEvents
+    var connString = connectionString ?? GetConnectionString();
+    options.UseSqlServer(connString, sqlServerOptions =>
     {
-        OnChallenge = context => {
-            context.HandleResponse();
-            context.Response.StatusCode = 401;
-            context.Response.ContentType = "application/json";
-            return context.Response.WriteAsJsonAsync(standardErrorResponse);
-        }
-    };
-});
-```
-**Key Learning**: Missing DefaultChallengeScheme causes API endpoints to return 302 redirects instead of 401 JSON responses
-
-### Controller Authorization Pattern
-**Pattern**: Consistent [Authorize] attribute usage
-**Example**:
-```csharp
-[ApiController]
-[Route("api/[controller]")]
-[Authorize] // Uses DefaultChallengeScheme for consistent behavior
-public class ProfileController : ControllerBase
-{
-    // Protected endpoints automatically get proper 401 handling
+        sqlServerOptions.EnableRetryOnFailure(
+            maxRetryCount: config.MaxRetryCount,
+            maxRetryDelay: config.MaxRetryDelay,
+            errorNumbersToAdd: null);
+        sqlServerOptions.CommandTimeout(config.CommandTimeout);
+    });
 }
 ```
 
-### API Error Response Standardization
-**Pattern**: Consistent error response format across all endpoints
-**Format**:
+### Connection Testing Pattern  
 ```csharp
-public class ApiResponse<T>
+// Built-in database connectivity testing
+public async Task<bool> CanConnectAsync()
 {
-    public bool Success { get; set; }
-    public T Data { get; set; }
-    public object Error { get; set; }
-}
-
-// Error format
-{
-    "success": false,
-    "error": {
-        "code": "Unauthorized",
-        "message": "Authentication required. Please provide a valid JWT token."
-    }
-}
-```
-
-## Controller Implementation Patterns
-
-### Azure Storage Integration Pattern
-**Pattern**: Fallback strategy for missing resources
-**Example**: StylePreviewController implementation
-```csharp
-[HttpGet("list")]
-public async Task<IActionResult> GetStylePreviews()
-{
-    try 
+    try
     {
-        // Try local resources first
-        var localPreviews = GetLocalStylePreviews();
-        if (localPreviews.Any())
-            return Ok(new { success = true, data = localPreviews });
-            
-        // Fallback to Azure Blob Storage
-        var azurePreviews = await GetAzureStylePreviews();
-        return Ok(new { success = true, data = azurePreviews });
+        var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
+        ConfigureDbContextOptions(optionsBuilder);
+        
+        using var context = new ApplicationDbContext(optionsBuilder.Options);
+        return await context.Database.CanConnectAsync();
     }
     catch (Exception ex)
     {
-        return StatusCode(500, new { success = false, error = new { code = "StorageError", message = ex.Message } });
+        _logger.LogError(ex, "Database connectivity test failed");
+        return false;
     }
 }
 ```
 
-### Repository Pattern Usage
-**Pattern**: Consistent repository pattern for data access
-**Example**: UserProfileRepository integration
-```csharp
-public class ProfileController : ControllerBase
+## Configuration Management Patterns
+
+### Environment-Specific Configuration (Updated 2025-08-08)
+```json
+// appsettings.Development.json - Local development
 {
-    private readonly IUserProfileRepository _userProfileRepository;
-    
-    public ProfileController(IUserProfileRepository userProfileRepository)
-    {
-        _userProfileRepository = userProfileRepository;
-    }
-    
-    [HttpGet]
-    public async Task<IActionResult> GetProfile()
-    {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var profile = await _userProfileRepository.GetUserProfileWithImagesAsync(userId);
-        return Ok(new { success = true, data = profile });
-    }
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost,1433;Database=AIProfileMaker;User Id=sa;Password=Dev123456!;TrustServerCertificate=true;MultipleActiveResultSets=true;"
+  },
+  "Database": {
+    "AutoMigrateOnStartup": true,
+    "ValidateOnStartup": true,
+    "EnableSensitiveDataLogging": true
+  }
+}
+
+// appsettings.Production.json - Production environment
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=tcp:aipm-sql-v1-6j74jubocuukg.database.windows.net,1433;Initial Catalog=aipmdb;User ID=sqladmin;Password=REPLACE_WITH_SECURE_PASSWORD;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+  },
+  "Database": {
+    "AutoMigrateOnStartup": false,
+    "ValidateOnStartup": true,
+    "EnableSensitiveDataLogging": false
+  }
 }
 ```
 
-## Configuration Patterns
+### Secret Management Pattern (New 2025-08-08)
+```bash
+# .NET User Secrets for local development
+dotnet user-secrets set "ConnectionStrings:ProductionConnection" "Server=tcp:...;Password={secure_password};..."
 
-### Multi-Environment Configuration
-**Pattern**: Environment-specific configuration with fallbacks
-**Example**: CORS policy configuration
-```csharp
-var corsPolicy = app.Environment.IsDevelopment() ? "AllowDevelopment" : "V1Production";
-Console.WriteLine($"🔧 CORS Policy: Using '{corsPolicy}' for environment '{app.Environment.EnvironmentName}'");
-app.UseCors(corsPolicy);
+# GitHub Secrets for CI/CD
+gh secret set SQL_ADMIN_PASSWORD --body "{secure_password}"
+
+# Azure Key Vault for production
+az keyvault secret set --vault-name "{key-vault-name}" --name "SQL-ADMIN-PASSWORD" --value "{secure_password}"
 ```
 
-### Port Standardization Pattern
-**Pattern**: Consistent port allocation across environments
-**Standard**:
-- Frontend: Always port 4200 (Angular CLI default)
-- Backend API: Always port 5032 (custom, non-conflicting)
-**Configuration**: Enforced in multiple files (package.json, angular.json, launchSettings.json)
+## VS Code Configuration Patterns (New 2025-08-08)
 
-## Middleware Patterns
-
-### Request Logging Middleware
-**Pattern**: Comprehensive request logging with OAuth detection
-```csharp
-app.Use(async (context, next) =>
+### Clean MSSQL Extension Configuration
+```json
+// .vscode/settings.json
 {
-    var path = context.Request.Path.Value?.ToLower();
-    Console.WriteLine($"🔍 Request: {context.Request.Method} {path}");
-    
-    // Special handling for OAuth paths
-    if (path?.Contains("oauth") == true || path?.Contains("auth") == true)
-    {
-        Console.WriteLine($"🔐 OAuth-related request detected");
-        // Additional OAuth-specific logging
-    }
-    
-    await next();
-    Console.WriteLine($"🔐 Response: {context.Response.StatusCode}");
-});
-```
-
-## Database Patterns
-
-### Entity Framework Integration
-**Pattern**: DbContext with repository pattern
-**Usage**: Direct DbContext for simple operations, Repository for complex business logic
-**Example**: Mixed usage in controllers for optimal performance
-
-### Migration Pattern
-**Pattern**: Automated migration on startup
-**Implementation**: `await app.UseDatabaseMigrationAsync();`
-**Location**: Program.cs startup configuration
-
-## Storage Patterns
-
-### Dual Storage Strategy
-**Pattern**: Local storage for development, Azure Blob for production
-**Configuration**:
-```csharp
-var azureConnectionString = builder.Configuration.GetConnectionString("AzureStorage");
-if (!string.IsNullOrEmpty(azureConnectionString))
-{
-    builder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
-}
-else
-{
-    builder.Services.AddScoped<IStorageService, LocalStorageService>();
+    "mssql.connections": [
+        {
+            "server": "localhost,1433",
+            "database": "AIProfileMaker",
+            "authenticationType": "SqlLogin",
+            "user": "sa",
+            "password": "",
+            "profileName": "🐳 Local Development",
+            "savePassword": false,
+            "groupId": "local-dev"
+        },
+        {
+            "server": "aipm-sql-v1-6j74jubocuukg.database.windows.net,1433",
+            "database": "aipmdb", 
+            "authenticationType": "SqlLogin",
+            "user": "sqladmin",
+            "password": "",
+            "profileName": "☁️ Production Azure",
+            "savePassword": false,
+            "groupId": "production"
+        }
+    ],
+    "mssql.maxRecentConnections": 2,
+    "mssql.enableConnectionTimeout": true,
+    "mssql.connectionTimeout": 30
 }
 ```
+
+### Connection Prevention Pattern
+- **Profile Naming**: Use emojis (🐳, ☁️) for visual distinction
+- **Password Policy**: `savePassword: false` to prevent storage issues
+- **History Limits**: `maxRecentConnections: 2` to prevent accumulation
+- **Group Organization**: `groupId` for logical organization
+- **Method Selection**: Prefer "Connection String" over "Browse Azure" for reliability
+
+## Command-line Patterns
+
+### Database Connectivity Testing
+```bash
+# Test with environment variables
+export ConnectionStrings__DefaultConnection="Server=tcp:...;Password={password};..."
+export ASPNETCORE_ENVIRONMENT="Production"
+dotnet run --check-db-connection
+
+# Direct connection testing
+timeout 10 bash -c "</dev/tcp/{server}/1433" && echo "✅ Port 1433 reachable"
+```
+
+### Azure CLI Integration
+```bash
+# SQL Server management
+az sql server update --name {server-name} --resource-group {rg} --admin-password "{new_password}"
+az sql server firewall-rule create --server {server} --resource-group {rg} --name "ClientIP-$(date +%Y-%m-%d-%H-%M)" --start-ip-address {ip} --end-ip-address {ip}
+
+# Key Vault management
+az role assignment create --assignee {user-id} --role "Key Vault Secrets Officer" --scope {key-vault-scope}
+az keyvault secret set --vault-name {vault} --name "SQL-ADMIN-PASSWORD" --value "{password}"
+```
+
+## Authentication Patterns (Updated)
+
+### OAuth Integration Pattern (Existing)
+```csharp
+// Hybrid authentication supporting both cookie and JWT
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+})
+.AddCookie(options => { /* cookie configuration */ })
+.AddJwtBearer(options => { /* JWT configuration */ })
+.AddGoogle(options => { /* Google OAuth configuration */ });
+```
+
+### Database Authentication Pattern (Updated 2025-08-08)
+- **Local**: SQL Server authentication (`sa` user for development)
+- **Production**: SQL Server authentication (`sqladmin` user with secure password)
+- **Future**: Consider migrating to Managed Identity for enhanced security
 
 ## Error Handling Patterns
 
-### Global Exception Handling
-**Pattern**: Centralized error handling with environment-specific responses
-**Development**: Detailed error information with stack traces
-**Production**: Sanitized error responses with logging
+### Connection Retry Pattern
+```csharp
+// Built into DatabaseProviderService
+sqlServerOptions.EnableRetryOnFailure(
+    maxRetryCount: config.MaxRetryCount,      // Default: 5
+    maxRetryDelay: config.MaxRetryDelay,      // Default: 30 seconds  
+    errorNumbersToAdd: null);
+```
 
-### Validation Patterns
-**Pattern**: Model validation with consistent error responses
-**Implementation**: Data annotations with custom validation attributes
+### Connection Timeout Handling
+```csharp
+sqlServerOptions.CommandTimeout(config.CommandTimeout); // Default: 30 seconds
+```
+
+## Troubleshooting Patterns (New 2025-08-08)
+
+### Multi-Layer Validation Approach
+1. **Network**: Test port connectivity (`nc -z server 1433`)
+2. **Authentication**: Test with known credentials
+3. **Application**: Use built-in app testing (`dotnet run --check-db-connection`)
+4. **End-to-End**: Test full application flow
+
+### Configuration Cleanup Pattern
+1. **Nuclear Approach**: Complete reset when incremental fixes fail
+2. **Process Management**: Kill relevant processes before cleanup
+3. **Data Cleanup**: Clear extension data directories
+4. **Prevention Settings**: Apply settings to prevent recurrence
+5. **Validation**: Multi-system testing after changes
+
+### Secret Synchronization Pattern
+1. **Generate**: Create secure password meeting all requirements
+2. **Distribute**: Update all storage locations (secrets, Key Vault, etc.)
+3. **Apply**: Update actual target system (SQL Server password)
+4. **Validate**: Test authentication end-to-end
+5. **Document**: Record password location and update procedures
 
 ## Performance Patterns
 
-### Response Compression
-**Pattern**: GZIP compression for API responses
-**Configuration**: Enabled for JSON, SVG content types
-**Benefits**: Reduced bandwidth, improved performance over slow connections
+### Database Configuration Optimization
+```json
+{
+  "Database": {
+    "MaxRetryCount": 5,
+    "MaxRetryDelaySeconds": 30, 
+    "CommandTimeoutSeconds": 30,
+    "EnableSensitiveDataLogging": false, // Production
+    "EnableDetailedErrors": false        // Production
+  }
+}
+```
 
-### Caching Strategy
-**Pattern**: Aggressive caching for static assets (style previews, images)
-**Implementation**: Cache-Control headers with immutable flag
-**Duration**: 7 days for style previews, 1 day for user uploads
+### Connection Pooling (Implicit)
+- Entity Framework handles connection pooling automatically
+- MultipleActiveResultSets enabled for local development
+- Connection timeout configured for both local and production
 
-## Development Patterns
+## Security Patterns (Enhanced 2025-08-08)
 
-### Proxy Configuration
-**Pattern**: Angular CLI proxy for seamless development
-**Configuration**: All `/api/*` requests proxied to backend
-**Benefits**: Single origin, simplified authentication, no CORS issues in development
+### Password Complexity Requirements
+- **Minimum 12 characters**
+- **Mixed case letters, numbers, special characters**  
+- **Avoid similarity to username** (critical for Azure SQL)
+- **Example**: `Database!2024#Secure9$` (meets all requirements)
 
-### Hot Reload Integration
-**Pattern**: File watching and automatic restart capabilities
-**Tools**: Angular CLI dev server, dotnet watch for API changes
+### Multi-Location Secret Storage
+1. **Development**: .NET User Secrets (encrypted local storage)
+2. **CI/CD**: GitHub Repository Secrets (encrypted at rest)
+3. **Production**: Azure Key Vault (enterprise-grade secret management)
+4. **Target System**: Direct password on SQL Server instance
 
----
-
-*Patterns validated and working as of 2025-08-08*
-*All patterns follow ASP.NET Core and Angular best practices*
+### Access Control Pattern
+- **Principle of Least Privilege**: Grant minimal required permissions
+- **RBAC**: Use role-based access control (Key Vault Secrets Officer)
+- **IP Restrictions**: Azure SQL firewall rules for network-level security
+- **Encryption**: Mandatory TLS for all database connections

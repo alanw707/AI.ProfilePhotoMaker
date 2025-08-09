@@ -8,25 +8,15 @@ module.exports = function (config) {
   
   // Override specific settings for integration tests
   config.set({
+    // Include integration test files
     files: [
-      // Original service integration tests
-      'src/app/services/services-integration.spec.ts',
-      // New comprehensive integration tests
-      'src/app/integration-tests/integration-test-runner.spec.ts',
-      'src/app/integration-tests/auth-flow.integration.spec.ts',
-      'src/app/integration-tests/photo-enhancement-flow.integration.spec.ts',
-      'src/app/integration-tests/photo-generation-flow.integration.spec.ts',
-      'src/app/integration-tests/gallery-management-flow.integration.spec.ts'
+      'src/test.ts'
     ],
-    preprocessors: {
-      'src/app/services/services-integration.spec.ts': ['webpack', 'sourcemap'],
-      'src/app/integration-tests/**/*.spec.ts': ['webpack', 'sourcemap']
-    },
-    // Exclude all other test files
+    // Only run integration tests
     exclude: [
       'src/**/*.spec.ts',
       '!src/app/services/services-integration.spec.ts',
-      '!src/app/integration-tests/**/*.spec.ts'
+      '!src/app/integration-tests/**/*.integration.spec.ts'
     ],
     // Extended timeout for integration tests
     browserDisconnectTimeout: 10000,

@@ -1,5 +1,6 @@
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services.Health;
+using AI.ProfilePhotoMaker.API.Services.Monitoring;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 
@@ -15,13 +16,16 @@ namespace AI.ProfilePhotoMaker.API.Controllers;
 public class HealthController : ControllerBase
 {
     private readonly IHealthCheckService _healthCheckService;
+    private readonly IPerformanceMonitoringService _performanceMonitoring;
     private readonly ILogger<HealthController> _logger;
 
     public HealthController(
         IHealthCheckService healthCheckService,
+        IPerformanceMonitoringService performanceMonitoring,
         ILogger<HealthController> logger)
     {
         _healthCheckService = healthCheckService;
+        _performanceMonitoring = performanceMonitoring;
         _logger = logger;
     }
 
@@ -346,6 +350,217 @@ public class HealthController : ControllerBase
                 timestamp = DateTime.UtcNow
             });
         }
+    }
+
+    /// <summary>
+    /// Performance-enhanced health check
+    /// Includes system health with performance metrics and alerts
+    /// </summary>
+    /// <returns>Comprehensive health status with performance data</returns>
+    /// <response code="200">System is healthy with good performance</response>
+    /// <response code="503">System is unhealthy or has critical performance issues</response>
+    [HttpGet("performance")]
+    [ProducesResponseType(typeof(object), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(object), (int)HttpStatusCode.ServiceUnavailable)]
+    public async Task<ActionResult<object>> GetPerformanceHealthAsync()
+    {
+        _logger.LogDebug("Performance health check requested");
+        
+        try
+        {
+            // Get basic health status
+            var health = await _healthCheckService.GetComprehensiveHealthAsync();
+            
+            // Get performance metrics
+            var performanceMetrics = await _performanceMonitoring.GetCurrentMetricsAsync();
+            var resourceUtilization = await _performanceMonitoring.GetResourceUtilizationAsync();
+            var alerts = await _performanceMonitoring.CheckPerformanceAlertsAsync();
+
+            // Determine overall status considering both health and performance
+            var criticalAlerts = alerts.Count(a => a.Severity == "Critical");
+            var highAlerts = alerts.Count(a => a.Severity == "High");
+
+            var overallStatus = health.Status.ToLower() switch
+            {
+                "unhealthy" => "Unhealthy",
+                "degraded" when criticalAlerts > 0 => "Critical",
+                "degraded" when highAlerts > 0 => "Degraded",
+                "healthy" when criticalAlerts > 0 => "Critical",
+                "healthy" when highAlerts > 0 => "Warning",
+                "healthy" => "Healthy",
+                _ => "Unknown"
+            };
+
+            var httpStatusCode = overallStatus switch
+            {
+                "Healthy" or "Warning" => HttpStatusCode.OK,
+                "Degraded" => HttpStatusCode.OK,
+                _ => HttpStatusCode.ServiceUnavailable
+            };
+
+            var response = new
+            {
+                status = overallStatus,
+                timestamp = DateTime.UtcNow,
+                duration = health.Duration,
+                version = health.Version,
+                environment = health.Environment,
+                
+                // System health components
+                components = health.Components,
+                warnings = health.Warnings,
+                errors = health.Errors,
+
+                // Performance metrics summary
+                performance = new
+                {
+                    api = new
+                    {
+                        totalRequests = performanceMetrics.ApiMetrics.TotalRequests,
+                        errorRate = performanceMetrics.ApiMetrics.ErrorRate,
+                        averageResponseTime = performanceMetrics.ApiMetrics.AverageResponseTime,
+                        requestsPerSecond = performanceMetrics.ApiMetrics.RequestsPerSecond
+                    },
+                    system = new
+                    {
+                        memoryUsagePercentage = performanceMetrics.SystemMetrics.Memory.UsagePercentage,
+                        cpuUsagePercentage = performanceMetrics.SystemMetrics.Cpu.UsagePercentage,
+                        uptimeSeconds = performanceMetrics.SystemMetrics.UptimeSeconds
+                    },
+                    database = new
+                    {
+                        totalQueries = performanceMetrics.DatabaseMetrics.TotalQueries,
+                        averageQueryTime = performanceMetrics.DatabaseMetrics.AverageQueryTime,
+                        healthStatus = performanceMetrics.DatabaseMetrics.HealthStatus
+                    },
+                    externalServices = new
+                    {
+                        overallHealth = performanceMetrics.ExternalServicesMetrics.OverallHealth,
+                        serviceCount = performanceMetrics.ExternalServicesMetrics.Services.Count
+                    }
+                },
+
+                // Resource utilization
+                resources = new
+                {
+                    status = resourceUtilization.HealthStatus,
+                    summary = resourceUtilization.Resources.Select(r => new
+                    {
+                        name = r.Key,
+                        utilizationPercentage = r.Value.UtilizationPercentage,
+                        status = r.Value.Status
+                    }).ToList()
+                },
+
+                // Performance alerts
+                alerts = new
+                {
+                    total = alerts.Count,
+                    critical = criticalAlerts,
+                    high = alerts.Count(a => a.Severity == "High"),
+                    medium = alerts.Count(a => a.Severity == "Medium"),
+                    low = alerts.Count(a => a.Severity == "Low"),
+                    recent = alerts.OrderByDescending(a => a.Timestamp).Take(3).Select(a => new
+                    {
+                        severity = a.Severity,
+                        category = a.Category,
+                        message = a.Message,
+                        timestamp = a.Timestamp
+                    }).ToList()
+                },
+
+                // Quick performance indicators
+                indicators = new
+                {
+                    isResponseTimeHealthy = performanceMetrics.ApiMetrics.AverageResponseTime < 1000,
+                    isErrorRateHealthy = performanceMetrics.ApiMetrics.ErrorRate < 5.0,
+                    isMemoryHealthy = performanceMetrics.SystemMetrics.Memory.UsagePercentage < 80.0,
+                    isThroughputHealthy = performanceMetrics.ApiMetrics.RequestsPerSecond > 0,
+                    hasRecentActivity = performanceMetrics.ApiMetrics.TotalRequests > 0
+                },
+
+                // Recommendations
+                recommendations = GetHealthRecommendations(overallStatus, alerts, performanceMetrics)
+            };
+
+            _logger.LogInformation("Performance health check completed: {Status} with {AlertCount} alerts and {ComponentCount} components", 
+                overallStatus, alerts.Count, health.Components.Count);
+
+            return StatusCode((int)httpStatusCode, response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Performance health check failed");
+            
+            return StatusCode((int)HttpStatusCode.ServiceUnavailable, new
+            {
+                status = "Error",
+                message = "Performance health check failed",
+                error = ex.Message,
+                timestamp = DateTime.UtcNow,
+                recommendations = new[]
+                {
+                    "Check application logs for detailed error information",
+                    "Verify monitoring services are properly configured",
+                    "Ensure database connectivity is functional"
+                }
+            });
+        }
+    }
+
+    private static List<string> GetHealthRecommendations(string status, List<PerformanceAlertDto> alerts, PerformanceMetricsDto metrics)
+    {
+        var recommendations = new List<string>();
+
+        switch (status.ToLower())
+        {
+            case "critical":
+                recommendations.Add("Immediate attention required - critical performance issues detected");
+                recommendations.Add("Check system resources and scale if necessary");
+                recommendations.Add("Review recent deployments for potential issues");
+                break;
+                
+            case "degraded":
+                recommendations.Add("Monitor system closely - performance degradation detected");
+                recommendations.Add("Consider scaling resources proactively");
+                break;
+                
+            case "warning":
+                recommendations.Add("Performance issues detected but system is functional");
+                recommendations.Add("Monitor trends and prepare for potential scaling");
+                break;
+        }
+
+        // API-specific recommendations
+        if (metrics.ApiMetrics.ErrorRate > 10)
+        {
+            recommendations.Add($"High error rate ({metrics.ApiMetrics.ErrorRate:F1}%) - investigate failing endpoints");
+        }
+
+        if (metrics.ApiMetrics.AverageResponseTime > 2000)
+        {
+            recommendations.Add($"Slow response times ({metrics.ApiMetrics.AverageResponseTime:F0}ms) - optimize database queries and external service calls");
+        }
+
+        // Memory recommendations
+        if (metrics.SystemMetrics.Memory.UsagePercentage > 85)
+        {
+            recommendations.Add($"High memory usage ({metrics.SystemMetrics.Memory.UsagePercentage:F1}%) - consider increasing memory limits or optimizing memory usage");
+        }
+
+        // Database recommendations
+        if (metrics.DatabaseMetrics.AverageQueryTime > 500)
+        {
+            recommendations.Add($"Slow database queries ({metrics.DatabaseMetrics.AverageQueryTime:F0}ms average) - review query performance and indexing");
+        }
+
+        // Add alert-specific recommendations
+        foreach (var alert in alerts.Where(a => a.Severity == "Critical" || a.Severity == "High").Take(3))
+        {
+            recommendations.AddRange(alert.RecommendedActions.Take(1)); // Add top recommendation from each critical/high alert
+        }
+
+        return recommendations.Distinct().Take(8).ToList(); // Limit to 8 most relevant recommendations
     }
 }
 

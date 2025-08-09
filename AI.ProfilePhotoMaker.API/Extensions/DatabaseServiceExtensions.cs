@@ -24,14 +24,8 @@ public static class DatabaseServiceExtensions
             var databaseProvider = serviceProvider.GetRequiredService<IDatabaseProviderService>();
             var connectionString = databaseProvider.GetConnectionString();
             
-            if (databaseProvider.IsAzureSqlServer(connectionString))
-            {
-                options.UseSqlServer(connectionString);
-            }
-            else
-            {
-                options.UseSqlite(connectionString);
-            }
+            // Use SQL Server for all environments
+            options.UseSqlServer(connectionString);
         });
 
         // Register migration service

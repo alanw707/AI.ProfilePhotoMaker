@@ -1,0 +1,129 @@
+version: '3.8'
+
+services:
+  sql-server:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: aipm-sqlserver
+    environment:
+      ACCEPT_EULA: Y
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      MSSQL_PID: Developer
+    ports:
+      - "${CONTAINER_DB_PORT:-1433}:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P $MSSQL_SA_PASSWORD -Q 'SELECT 1'"]
+      interval: ${HEALTH_CHECK_INTERVAL_SECONDS:-10}s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - aipm-network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: aipm-api
+    environment:
+      # Database Configuration
+      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD}
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      
+      # JWT Configuration
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_VALID_AUDIENCE=${JWT_VALID_AUDIENCE:-http://localhost:4200}
+      - JWT_VALID_ISSUER=${JWT_VALID_ISSUER:-http://localhost:5032}
+      
+      # AI/ML Services
+      - REPLICATE_API_TOKEN=${REPLICATE_API_TOKEN}
+      - REPLICATE_WEBHOOK_SECRET=${REPLICATE_WEBHOOK_SECRET}
+      
+      # Optional Services
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING}
+      - AZURE_STORAGE_CONTAINER_NAME=${AZURE_STORAGE_CONTAINER_NAME:-profile-images}
+      
+      # Application Configuration
+      - APP_BASE_URL=${APP_BASE_URL:-http://localhost:4200}
+      - PAYMENT_SIMULATION_ENABLED=${PAYMENT_SIMULATION_ENABLED:-true}
+      - PAYMENT_SKIP_STRIPE_INTEGRATION=${PAYMENT_SKIP_STRIPE_INTEGRATION:-true}
+      
+      # Database Settings
+      - DB_MAX_RETRY_COUNT=${DB_MAX_RETRY_COUNT:-3}
+      - DB_MAX_RETRY_DELAY_SECONDS=${DB_MAX_RETRY_DELAY_SECONDS:-10}
+      - DB_COMMAND_TIMEOUT_SECONDS=${DB_COMMAND_TIMEOUT_SECONDS:-30}
+      - DB_ENABLE_SENSITIVE_LOGGING=${DB_ENABLE_SENSITIVE_LOGGING:-false}
+      - DB_ENABLE_DETAILED_ERRORS=${DB_ENABLE_DETAILED_ERRORS:-true}
+      - DB_AUTO_MIGRATE_ON_STARTUP=${DB_AUTO_MIGRATE_ON_STARTUP:-true}
+      - DB_VALIDATE_ON_STARTUP=${DB_VALIDATE_ON_STARTUP:-true}
+      
+      # Logging Configuration
+      - LOG_LEVEL_DEFAULT=${LOG_LEVEL_DEFAULT:-Information}
+      - LOG_LEVEL_ASPNETCORE=${LOG_LEVEL_ASPNETCORE:-Warning}
+      - LOG_LEVEL_DATABASE=${LOG_LEVEL_DATABASE:-Debug}
+      
+      # Performance Settings
+      - ENABLE_RESPONSE_COMPRESSION=${ENABLE_RESPONSE_COMPRESSION:-true}
+      - ENABLE_REQUEST_LOGGING=${ENABLE_REQUEST_LOGGING:-false}
+    ports:
+      - "${CONTAINER_API_PORT:-5032}:5032"
+    depends_on:
+      sql-server:
+        condition: service_healthy
+    volumes:
+      - api_uploads:/app/uploads
+      - api_generated:/app/generated
+      - api_enhanced:/app/enhanced
+      - api_training_zips:/app/training-zips
+      - api_style_previews:/app/style-previews
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5032/api/health"]
+      interval: ${HEALTH_CHECK_INTERVAL_SECONDS:-30}s
+      timeout: ${HEALTH_CHECK_TIMEOUT_SECONDS:-10}s
+      retries: 3
+      start_period: 60s
+    networks:
+      - aipm-network
+
+  frontend:
+    build:
+      context: ./AI.ProfilePhotoMaker.UI
+      dockerfile: ../Dockerfile.frontend
+    container_name: aipm-frontend
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - API_URL=http://api:5032/api
+    ports:
+      - "${FRONTEND_PORT:-4200}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - aipm-network
+
+volumes:
+  sqlserver_data:
+    driver: local
+  api_uploads:
+    driver: local
+  api_generated:
+    driver: local
+  api_enhanced:
+    driver: local
+  api_training_zips:
+    driver: local
+  api_style_previews:
+    driver: local
+
+networks:
+  aipm-network:
+    driver: bridge

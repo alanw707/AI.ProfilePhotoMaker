@@ -6,6 +6,7 @@ using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Models.Replicate;
+using AI.ProfilePhotoMaker.API.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
@@ -19,17 +20,20 @@ public class ReplicateApiClient : IReplicateApiClient
     private readonly IConfiguration _configuration;
     private readonly ILogger<ReplicateApiClient> _logger;
     private readonly ApplicationDbContext _context;
+    private readonly IWebhookUrlResolver _webhookUrlResolver;
 
     public ReplicateApiClient(
         HttpClient httpClient,
         IConfiguration configuration,
         ILogger<ReplicateApiClient> logger,
-        ApplicationDbContext context)
+        ApplicationDbContext context,
+        IWebhookUrlResolver webhookUrlResolver)
     {
         _httpClient = httpClient;
         _configuration = configuration;
         _logger = logger;
         _context = context;
+        _webhookUrlResolver = webhookUrlResolver;
 
         // Configure HTTP client
         _httpClient.BaseAddress = new Uri("https://api.replicate.com/v1/");
@@ -180,7 +184,7 @@ public class ReplicateApiClient : IReplicateApiClient
                     lora_type = "subject",
                     training_steps = 2000
                 },
-                webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/training-complete",
+                webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/training-complete"),
                 webhook_events_filter = new[] { "completed" }
             };
 
@@ -330,13 +334,13 @@ public class ReplicateApiClient : IReplicateApiClient
                     num_outputs = Math.Max(1, Math.Min(4, numOutputs)), // Clamp between 1-4
                     scheduler = "K_EULER_ANCESTRAL",
                     output_format = "png",
-                    webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete",
+                    webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete"),
                     webhook_events_filter = new[] { "completed" },
                     // Add metadata for webhook processing
                     user_id = userId,
                     style = style
                 },
-                webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete"
+                webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete")
             };
 
             var content = new StringContent(
@@ -585,7 +589,7 @@ public class ReplicateApiClient : IReplicateApiClient
                     lora_type = "subject",
                     training_steps = 2000
                 },
-                webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/training-complete",
+                webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/training-complete"),
                 webhook_events_filter = new[] { "completed" }
             };
 
@@ -735,10 +739,10 @@ public class ReplicateApiClient : IReplicateApiClient
                     output_format = "png",
                     width = 1024,
                     height = 1024,
-                    webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete",
+                    webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete"),
                     webhook_events_filter = new[] { "completed" }
                 },
-                webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete"
+                webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete")
             };
 
             var content = new StringContent(
@@ -808,25 +812,48 @@ public class ReplicateApiClient : IReplicateApiClient
             // Create enhancement prompt based on type
             string enhancementPrompt = GetEnhancementPrompt(enhancementType);
 
-            var predictionRequest = new
+            var baseUrl = _configuration["AppBaseUrl"];
+            var isHttps = baseUrl?.StartsWith("https://") == true;
+            
+            var input = new Dictionary<string, object>
             {
-                version = kontextProModel,
-                input = new
-                {
-                    input_image = imageUrl, // FIX: was 'image', should be 'input_image'
-                    prompt = enhancementPrompt,
-                    negative_prompt = "blurry, low quality, distorted, deformed, bad anatomy, poor lighting, overexposed, underexposed, artifact, noise",
-                    num_inference_steps = 30,
-                    guidance_scale = 7.5,
-                    strength = 0.8, // How much to modify the original image
-                    output_format = "png",
-                    width = 1024,
-                    height = 1024,
-                    webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete",
-                    webhook_events_filter = new[] { "completed" }
-                },
-                webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete"
+                ["input_image"] = imageUrl,
+                ["prompt"] = enhancementPrompt,
+                ["negative_prompt"] = "blurry, low quality, distorted, deformed, bad anatomy, poor lighting, overexposed, underexposed, artifact, noise",
+                ["num_inference_steps"] = 30,
+                ["guidance_scale"] = 7.5,
+                ["strength"] = 0.8,
+                ["output_format"] = "png",
+                ["width"] = 1024,
+                ["height"] = 1024
             };
+            
+            // Only add webhook in production/HTTPS environments
+            if (isHttps)
+            {
+                input["webhook"] = $"{baseUrl}/api/webhooks/replicate/prediction-complete";
+                input["webhook_events_filter"] = new[] { "completed" };
+            }
+            
+            // Create prediction request object
+            object predictionRequest;
+            if (isHttps)
+            {
+                predictionRequest = new
+                {
+                    version = kontextProModel,
+                    input = input,
+                    webhook = $"{baseUrl}/api/webhooks/replicate/prediction-complete"
+                };
+            }
+            else
+            {
+                predictionRequest = new
+                {
+                    version = kontextProModel,
+                    input = input
+                };
+            }
 
             var content = new StringContent(
                 JsonSerializer.Serialize(predictionRequest),
@@ -1021,7 +1048,7 @@ public class ReplicateApiClient : IReplicateApiClient
             {
                 version = modelId,
                 input = input,
-                webhook = $"{_configuration["AppBaseUrl"]}/api/webhooks/replicate/prediction-complete",
+                webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete"),
                 webhook_events_filter = new[] { "completed" }
             };
 

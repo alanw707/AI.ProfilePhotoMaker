@@ -1,22 +1,25 @@
 namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 
 /// <summary>
-/// Service for downloading and storing images from external URLs
+/// Service for downloading and storing images from external URLs with async I/O optimizations
 /// </summary>
 public class ImageDownloadService : IImageDownloadService
 {
     private readonly HttpClient _httpClient;
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<ImageDownloadService> _logger;
+    private readonly IAsyncFileService _asyncFileService;
 
     public ImageDownloadService(
         HttpClient httpClient,
         IWebHostEnvironment environment,
-        ILogger<ImageDownloadService> logger)
+        ILogger<ImageDownloadService> logger,
+        IAsyncFileService asyncFileService)
     {
         _httpClient = httpClient;
         _environment = environment;
         _logger = logger;
+        _asyncFileService = asyncFileService;
 
         // Configure HTTP client with reasonable timeouts
         _httpClient.Timeout = TimeSpan.FromMinutes(5);
@@ -105,8 +108,8 @@ public class ImageDownloadService : IImageDownloadService
                 return null;
             }
 
-            // Ensure directory exists
-            var generatedDir = EnsureGeneratedImagesDirectory(userId);
+            // Ensure directory exists asynchronously
+            var generatedDir = await EnsureGeneratedImagesDirectoryAsync(userId);
 
             // Generate filename if not provided
             if (string.IsNullOrEmpty(fileName))
@@ -136,9 +139,9 @@ public class ImageDownloadService : IImageDownloadService
             var fullFileName = $"{fileName}{extension}";
             var localPath = Path.Combine(generatedDir, fullFileName);
 
-            // Save image to local storage
-            using var fileStream = new FileStream(localPath, FileMode.Create, FileAccess.Write);
-            await response.Content.CopyToAsync(fileStream);
+            // Save image to local storage using async streaming with optimal buffer size
+            await using var contentStream = await response.Content.ReadAsStreamAsync();
+            await _asyncFileService.CopyStreamToFileAsync(contentStream, localPath, 81920);
 
             _logger.LogInformation("Successfully downloaded image from {Url} to {LocalPath} for user {UserId}",
                 imageUrl, localPath, userId);
@@ -164,17 +167,20 @@ public class ImageDownloadService : IImageDownloadService
         }
     }
 
-    public string EnsureGeneratedImagesDirectory(string userId)
+    public async Task<string> EnsureGeneratedImagesDirectoryAsync(string userId)
     {
         var generatedDir = Path.Combine(_environment.ContentRootPath, "generated", userId);
 
-        if (!Directory.Exists(generatedDir))
-        {
-            Directory.CreateDirectory(generatedDir);
-            _logger.LogInformation("Created generated images directory: {Directory}", generatedDir);
-        }
+        await _asyncFileService.CreateDirectoryAsync(generatedDir);
+        _logger.LogDebug("Ensured generated images directory exists: {Directory}", generatedDir);
 
         return generatedDir;
+    }
+
+    [Obsolete("Use EnsureGeneratedImagesDirectoryAsync instead")]
+    public string EnsureGeneratedImagesDirectory(string userId)
+    {
+        return EnsureGeneratedImagesDirectoryAsync(userId).GetAwaiter().GetResult();
     }
 
     public async Task<bool> ValidateImageUrlAsync(string imageUrl)

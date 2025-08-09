@@ -24,27 +24,15 @@ public class ApplicationDbContextFactory : IDesignTimeDbContextFactory<Applicati
         // Get connection string from configuration
         var connectionString = configuration.GetConnectionString("DefaultConnection");
         
-        // Determine database provider based on connection string
-        if (IsAzureSqlServer(connectionString))
+        // Always use SQL Server 
+        if (string.IsNullOrEmpty(connectionString))
         {
-            optionsBuilder.UseSqlServer(connectionString);
+            throw new InvalidOperationException("No SQL Server connection string configured. Please ensure DefaultConnection is set in appsettings.");
         }
-        else
-        {
-            // Default to SQLite for development
-            optionsBuilder.UseSqlite(connectionString ?? "Data Source=aiprofilemaker.db");
-        }
+        
+        optionsBuilder.UseSqlServer(connectionString);
         
         return new ApplicationDbContext(optionsBuilder.Options);
     }
     
-    private static bool IsAzureSqlServer(string? connectionString)
-    {
-        if (string.IsNullOrEmpty(connectionString))
-            return false;
-            
-        return connectionString.Contains("database.windows.net", StringComparison.OrdinalIgnoreCase) ||
-               connectionString.Contains("Server=tcp:", StringComparison.OrdinalIgnoreCase) ||
-               connectionString.Contains("Authentication=Active Directory", StringComparison.OrdinalIgnoreCase);
-    }
 }

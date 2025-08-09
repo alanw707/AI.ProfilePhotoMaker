@@ -1,0 +1,33 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": ".NET Core Launch (API)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/AI.ProfilePhotoMaker.API/bin/Debug/net8.0/AI.ProfilePhotoMaker.API.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/AI.ProfilePhotoMaker.API",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
+            "name": ".NET Core Launch (API - Production Mode)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/AI.ProfilePhotoMaker.API/bin/Debug/net8.0/AI.ProfilePhotoMaker.API.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/AI.ProfilePhotoMaker.API",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Production"
+            }
+        }
+    ]
+}
