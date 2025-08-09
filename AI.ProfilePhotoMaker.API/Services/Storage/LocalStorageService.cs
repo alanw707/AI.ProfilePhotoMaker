@@ -112,16 +112,49 @@ public class LocalStorageService : IStorageService
 
     public string GetImageUrl(string storagePath)
     {
-        // For local storage, convert relative path to absolute URL
-        var baseUrl = _configuration["AppBaseUrl"] ?? "https://localhost:5001";
+        // Default to frontend/internal use
+        return GetImageUrl(storagePath, forExternalApi: false);
+    }
 
+    public string GetImageUrl(string storagePath, bool forExternalApi)
+    {
         // Ensure storagePath starts with /
         if (!storagePath.StartsWith('/'))
         {
             storagePath = "/" + storagePath;
         }
 
-        return $"{baseUrl.TrimEnd('/')}{storagePath}";
+        string baseUrl;
+        
+        if (forExternalApi)
+        {
+            // For external APIs (like Replicate), use ExternalApiBaseUrl to ensure public HTTPS access
+            baseUrl = _configuration["ExternalApiBaseUrl"];
+            if (!string.IsNullOrEmpty(baseUrl))
+            {
+                _logger.LogDebug("GetImageUrl using ExternalApiBaseUrl for external API: {BaseUrl}{Path}", baseUrl, storagePath);
+                return $"{baseUrl.TrimEnd('/')}{storagePath}";
+            }
+            
+            // Fallback to AppBaseUrl if ExternalApiBaseUrl not configured
+            baseUrl = _configuration["AppBaseUrl"];
+            if (!string.IsNullOrEmpty(baseUrl) && baseUrl.StartsWith("https://"))
+            {
+                _logger.LogDebug("GetImageUrl using HTTPS AppBaseUrl for external API fallback: {BaseUrl}{Path}", baseUrl, storagePath);
+                return $"{baseUrl.TrimEnd('/')}{storagePath}";
+            }
+            
+            // Last resort fallback for external API - use localhost with warning
+            _logger.LogWarning("No ExternalApiBaseUrl configured - external APIs may not be able to access image URLs");
+            return $"https://localhost:5001{storagePath}";
+        }
+        else
+        {
+            // For frontend/internal use, use AppBaseUrl (can be localhost)
+            baseUrl = _configuration["AppBaseUrl"] ?? "https://localhost:5001";
+            _logger.LogDebug("GetImageUrl using AppBaseUrl for frontend use: {BaseUrl}{Path}", baseUrl, storagePath);
+            return $"{baseUrl.TrimEnd('/')}{storagePath}";
+        }
     }
 
     public async Task<List<string>> ListUserImagesAsync(string userId)

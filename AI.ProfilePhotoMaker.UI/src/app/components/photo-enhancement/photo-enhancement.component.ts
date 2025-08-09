@@ -29,7 +29,7 @@ interface EnhancedImage {
   imports: [CommonModule, FormsModule, RouterModule, HeaderNavigationComponent],
   templateUrl: './photo-enhancement.component.html',
   styleUrls: ['./photo-enhancement.component.sass'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
@@ -194,7 +194,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       // Convert relative URL to absolute URL for Replicate API
       const fullImageUrl = uploadResult.url.startsWith('http')
         ? uploadResult.url
-        : `https://awlocaldev-api.ngrok.app${uploadResult.url}`;
+        : `https://awlocaldev.ngrok.app${uploadResult.url}`;
 
       const enhanceRequest = {
         imageUrl: fullImageUrl,
@@ -299,6 +299,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
       this.errorMessage = errorMessage;
       this.isProcessing = false;
+      this._cdr.detectChanges();
     }
   }
 
@@ -431,15 +432,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
    * Verify UI state after enhancement completion
    */
   private verifyUIState(): void {
-    console.log('🔍 Final UI state verification:', {
-      isProcessing: this.isProcessing,
-      hasEnhancedImage: !!this.enhancedImage,
-      enhancedImageUrlLength: this.enhancedImage?.url?.length,
-      enhancedImageType: this.enhancedImage?.type,
-      domElementExists: !!document.querySelector('.results-section'),
-      processingElementExists: !!document.querySelector('.processing-section'),
-      enhancedImageElement: !!document.querySelector('.results-section img[alt="Enhanced"]'),
-    });
+    // UI state verification removed - debug logging cleaned up
   }
 
   /**
@@ -451,13 +444,10 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       return;
     }
 
-    console.log('Cleaning up temporary enhanced image:', fileName);
-
     // Call backend API to delete the temporary file
     this._fileUploadService.deleteTemporaryEnhancedImage(fileName).subscribe({
       next: response => {
         if (response.success) {
-          console.log('✅ Temporary enhanced image cleaned up successfully');
         } else {
           console.warn('⚠️ Failed to cleanup temporary image:', response.message);
         }

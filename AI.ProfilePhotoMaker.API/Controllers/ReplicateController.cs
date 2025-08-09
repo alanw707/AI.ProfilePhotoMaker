@@ -18,17 +18,20 @@ public class ReplicateController : ControllerBase
     private readonly IReplicateApiClient _replicateApiClient;
     private readonly IBasicTierService _basicTierService;
     private readonly ApplicationDbContext _dbContext;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<ReplicateController> _logger;
 
     public ReplicateController(
         IReplicateApiClient replicateApiClient,
         IBasicTierService basicTierService,
         ApplicationDbContext dbContext,
+        IConfiguration configuration,
         ILogger<ReplicateController> logger)
     {
         _replicateApiClient = replicateApiClient;
         _basicTierService = basicTierService;
         _dbContext = dbContext;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -87,7 +90,12 @@ public class ReplicateController : ControllerBase
 
         try
         {
-            var result = await _replicateApiClient.CreateModelTrainingAsync(dto.UserId, dto.ImageZipUrl);
+            // Convert image ZIP URL to external API format before passing to Replicate
+            var externalImageZipUrl = ConvertToExternalApiUrl(dto.ImageZipUrl);
+            _logger.LogInformation("Converted ZIP URL from {OriginalUrl} to {ExternalUrl} for Replicate API", 
+                dto.ImageZipUrl, externalImageZipUrl);
+
+            var result = await _replicateApiClient.CreateModelTrainingAsync(dto.UserId, externalImageZipUrl);
 
             // Only consume credits AFTER successful API call
             var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "model_training");
@@ -711,8 +719,13 @@ public class ReplicateController : ControllerBase
 
         try
         {
+            // Convert image URL to external API format before passing to Replicate
+            var externalImageUrl = ConvertToExternalApiUrl(dto.ImageUrl);
+            _logger.LogInformation("Converted image URL from {OriginalUrl} to {ExternalUrl} for Replicate API", 
+                dto.ImageUrl, externalImageUrl);
+
             // Enhance the uploaded photo
-            var result = await _replicateApiClient.EnhancePhotoAsync(userId, dto.ImageUrl, dto.EnhancementType ?? "professional");
+            var result = await _replicateApiClient.EnhancePhotoAsync(userId, externalImageUrl, dto.EnhancementType ?? "professional");
 
             // Only consume credit AFTER successful API call
             var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "photo_enhancement");
@@ -751,5 +764,51 @@ public class ReplicateController : ControllerBase
                 }
             });
         }
+    }
+
+    /// <summary>
+    /// Converts a URL to use ExternalApiBaseUrl for external API access (like Replicate)
+    /// This ensures external APIs can access images via publicly accessible HTTPS URLs
+    /// </summary>
+    private string ConvertToExternalApiUrl(string originalUrl)
+    {
+        // If already a fully qualified HTTP URL, return as-is
+        if (originalUrl.StartsWith("http://") || originalUrl.StartsWith("https://"))
+        {
+            // Check if it's using localhost - convert to external API URL
+            if (originalUrl.Contains("localhost") || originalUrl.Contains("127.0.0.1"))
+            {
+                var uri = new Uri(originalUrl);
+                var relativePath = uri.PathAndQuery;
+                
+                var externalBaseUrl = _configuration["ExternalApiBaseUrl"];
+                if (!string.IsNullOrEmpty(externalBaseUrl))
+                {
+                    return $"{externalBaseUrl.TrimEnd('/')}{relativePath}";
+                }
+            }
+            return originalUrl;
+        }
+
+        // If it's a relative path, convert to external API URL
+        if (originalUrl.StartsWith("/"))
+        {
+            var externalBaseUrl = _configuration["ExternalApiBaseUrl"];
+            if (!string.IsNullOrEmpty(externalBaseUrl))
+            {
+                return $"{externalBaseUrl.TrimEnd('/')}{originalUrl}";
+            }
+            
+            // Fallback to AppBaseUrl if ExternalApiBaseUrl not configured
+            var appBaseUrl = _configuration["AppBaseUrl"];
+            if (!string.IsNullOrEmpty(appBaseUrl) && appBaseUrl.StartsWith("https://"))
+            {
+                return $"{appBaseUrl.TrimEnd('/')}{originalUrl}";
+            }
+            
+            _logger.LogWarning("No ExternalApiBaseUrl configured and AppBaseUrl is not HTTPS - external APIs may not be able to access: {Url}", originalUrl);
+        }
+
+        return originalUrl;
     }
 }

@@ -812,7 +812,7 @@ public class ReplicateApiClient : IReplicateApiClient
             // Create enhancement prompt based on type
             string enhancementPrompt = GetEnhancementPrompt(enhancementType);
 
-            var baseUrl = _configuration["AppBaseUrl"];
+            var baseUrl = _configuration["ExternalApiBaseUrl"];
             var isHttps = baseUrl?.StartsWith("https://") == true;
             
             var input = new Dictionary<string, object>

@@ -36,11 +36,19 @@ public interface IStorageService
     Task<bool> ExistsAsync(string storagePath);
 
     /// <summary>
-    /// Gets the public URL for accessing an image
+    /// Gets the public URL for accessing an image (defaults to frontend/internal use)
     /// </summary>
     /// <param name="storagePath">The storage path</param>
     /// <returns>Public URL for the image</returns>
     string GetImageUrl(string storagePath);
+
+    /// <summary>
+    /// Gets the public URL for accessing an image with context awareness
+    /// </summary>
+    /// <param name="storagePath">The storage path</param>
+    /// <param name="forExternalApi">True if URL is for external API access (like Replicate), false for frontend/internal use</param>
+    /// <returns>Public URL for the image</returns>
+    string GetImageUrl(string storagePath, bool forExternalApi);
 
     /// <summary>
     /// Lists all images for a specific user

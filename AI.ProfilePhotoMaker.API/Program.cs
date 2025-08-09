@@ -1,4 +1,5 @@
 using System.Text;
+using Azure.Storage.Blobs;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Extensions;
 using AI.ProfilePhotoMaker.API.Models;
@@ -37,6 +38,12 @@ if (args.Length > 0)
     
     if (!string.IsNullOrEmpty(commandAzureStorageConnectionString))
     {
+        // Register BlobServiceClient for command-line operations
+        commandBuilder.Services.AddSingleton<BlobServiceClient>(serviceProvider =>
+        {
+            return new BlobServiceClient(commandAzureStorageConnectionString);
+        });
+        
         commandBuilder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
     }
     else
@@ -74,8 +81,6 @@ LoadEnvironmentVariables(builder.Environment);
 // Load monitoring configuration
 builder.Configuration.AddJsonFile("appsettings.Monitoring.json", optional: true, reloadOnChange: true);
 
-// Load async I/O configuration
-builder.Configuration.AddJsonFile("appsettings.AsyncIo.json", optional: true, reloadOnChange: true);
 
 // Configure Serilog for structured logging
 builder.Host.UseSerilog((context, services, configuration) =>
@@ -304,6 +309,12 @@ var azureStorageConnectionString = builder.Configuration.GetConnectionString("Az
 
 if (!string.IsNullOrEmpty(azureStorageConnectionString))
 {
+    // Register BlobServiceClient for Azure Blob Storage dependency injection
+    builder.Services.AddSingleton<BlobServiceClient>(serviceProvider =>
+    {
+        return new BlobServiceClient(azureStorageConnectionString);
+    });
+    
     builder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
     Console.WriteLine("Using Azure Blob Storage for image storage");
 }
@@ -337,8 +348,6 @@ builder.Services.AddPerformanceMonitoring(builder.Configuration);
 builder.Services.AddScoped<IAsyncFileService, AsyncFileService>();
 builder.Services.AddScoped<IAsyncZipService, AsyncZipService>();
 
-// Configure Async I/O Performance Monitoring
-builder.Services.Configure<AsyncIoPerformanceOptions>(builder.Configuration.GetSection("AsyncIoPerformance"));
 
 // Add Deployment Validation and Monitoring Services
 builder.Services.AddDeploymentValidation(builder.Configuration);
@@ -482,8 +491,6 @@ app.UseCors(corsPolicy);
 // Add performance monitoring middleware (before authentication)
 app.UsePerformanceMonitoring();
 
-// Add async I/O performance monitoring middleware (after performance monitoring)
-app.UseAsyncIoPerformanceMonitoring();
 
 // Remove debug middleware - production should use proper logging with ILogger
 // Consider adding request logging middleware with proper ILogger implementation if needed
