@@ -1,0 +1,79 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "publish",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "publish",
+                "${workspaceFolder}/AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "watch",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "watch",
+                "run",
+                "--project",
+                "${workspaceFolder}/AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "test-local-database",
+            "type": "shell",
+            "command": "dotnet",
+            "args": [
+                "run",
+                "--check-db-connection"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/AI.ProfilePhotoMaker.API"
+            },
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "start-local-sql-server",
+            "type": "shell",
+            "command": "docker",
+            "args": [
+                "run",
+                "-e", "ACCEPT_EULA=Y",
+                "-e", "SA_PASSWORD=Dev123456!",
+                "-p", "1433:1433",
+                "--name", "sql_server_dev",
+                "-d",
+                "mcr.microsoft.com/mssql/server:2022-latest"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always"
+            }
+        }
+    ]
+}

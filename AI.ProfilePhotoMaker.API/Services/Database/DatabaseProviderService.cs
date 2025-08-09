@@ -30,23 +30,15 @@ public class DatabaseProviderService : IDatabaseProviderService
         var connString = connectionString ?? GetConnectionString();
         var config = GetProviderConfig();
         
-        if (config.Provider == DatabaseProvider.SqlServer)
+        _logger.LogInformation("Configuring SQL Server provider with retry policy");
+        options.UseSqlServer(connString, sqlServerOptions =>
         {
-            _logger.LogInformation("Configuring SQL Server provider with retry policy");
-            options.UseSqlServer(connString, sqlServerOptions =>
-            {
-                sqlServerOptions.EnableRetryOnFailure(
-                    maxRetryCount: config.MaxRetryCount,
-                    maxRetryDelay: config.MaxRetryDelay,
-                    errorNumbersToAdd: null);
-                sqlServerOptions.CommandTimeout(config.CommandTimeout);
-            });
-        }
-        else
-        {
-            _logger.LogInformation("Configuring SQLite provider");
-            options.UseSqlite(connString);
-        }
+            sqlServerOptions.EnableRetryOnFailure(
+                maxRetryCount: config.MaxRetryCount,
+                maxRetryDelay: config.MaxRetryDelay,
+                errorNumbersToAdd: null);
+            sqlServerOptions.CommandTimeout(config.CommandTimeout);
+        });
 
         // Development-specific configurations
         if (_environment.IsDevelopment())
@@ -71,42 +63,31 @@ public class DatabaseProviderService : IDatabaseProviderService
                 warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.CoreEventId.SensitiveDataLoggingEnabledWarning);
             }
         });
-    }
-
-    public bool IsAzureSqlServer(string? connectionString)
-    {
-        if (string.IsNullOrEmpty(connectionString))
-            return false;
-
-        var indicators = new[]
-        {
-            "azure",
-            "database.windows.net",
-            "SqlServer",
-            "Authentication=Active Directory",
-            "Server=tcp:"
-        };
-
-        return indicators.Any(indicator => 
-            connectionString.Contains(indicator, StringComparison.OrdinalIgnoreCase));
-    }
+    }    
 
     public string GetConnectionString()
     {
-        var connectionString = _configuration.GetConnectionString("DefaultConnection");
-        
-        if (string.IsNullOrEmpty(connectionString))
+        // First try to get from environment variables
+        var envPassword = Environment.GetEnvironmentVariable("MSSQL_SA_PASSWORD");
+        if (!string.IsNullOrEmpty(envPassword))
         {
-            var fallbackConnection = _environment.IsDevelopment() 
-                ? "Data Source=ProfilePhotoMaker.db"
-                : throw new InvalidOperationException("No connection string configured for production environment");
-                
-            _logger.LogWarning("No connection string found, using fallback: {FallbackConnection}", 
-                fallbackConnection.Split('=')[0] + "=***");
-            return fallbackConnection;
+            // Build connection string using environment variable
+            var server = _configuration.GetValue<string>("Database:Server", "localhost,1433");
+            var database = _configuration.GetValue<string>("Database:Name", "AIProfileMaker");
+            var connectionString = $"Server={server};Database={database};User Id=sa;Password={envPassword};TrustServerCertificate=true;MultipleActiveResultSets=true;";
+            _logger.LogInformation("Using environment variable for database password");
+            _logger.LogDebug("Connection string: {ConnectionString}", connectionString.Replace(envPassword, "***"));
+            return connectionString;
+        }
+        
+        // Fallback to configuration
+        var configConnectionString = _configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrEmpty(configConnectionString))
+        {
+            throw new InvalidOperationException("No SQL Server connection string configured. Please set MSSQL_SA_PASSWORD environment variable or DefaultConnection in appsettings.");
         }
 
-        return connectionString;
+        return configConnectionString;
     }
 
     public DatabaseProvider GetDatabaseProvider()
@@ -139,11 +120,10 @@ public class DatabaseProviderService : IDatabaseProviderService
     private DatabaseProviderConfig InitializeProviderConfig()
     {
         var connectionString = GetConnectionString();
-        var isAzureSql = IsAzureSqlServer(connectionString);
         
         return new DatabaseProviderConfig
         {
-            Provider = isAzureSql ? DatabaseProvider.SqlServer : DatabaseProvider.SQLite,
+            Provider = DatabaseProvider.SqlServer,
             ConnectionString = connectionString,
             MaxRetryCount = _configuration.GetValue<int>("Database:MaxRetryCount", 5),
             MaxRetryDelay = TimeSpan.FromSeconds(_configuration.GetValue<int>("Database:MaxRetryDelaySeconds", 30)),

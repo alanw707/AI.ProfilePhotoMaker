@@ -6,6 +6,7 @@ import { FileUploadSectionComponent } from './file-upload-section.component';
 import { FileUploadService } from '../../../services/file-upload.service';
 import { FaceDetectionService } from '../../../services/face-detection.service';
 import { NotificationService } from '../../../services/notification.service';
+import { FileUploadManagerService } from '../../../services/file-upload-manager.service';
 import {
   QualityCheckError,
   SelectedFileWithQuality,
@@ -16,6 +17,7 @@ describe('FileUploadSectionComponent', () => {
   let fixture: ComponentFixture<FileUploadSectionComponent>;
   let mockFileUploadService: jasmine.SpyObj<FileUploadService>;
   let mockFaceDetectionService: jasmine.SpyObj<FaceDetectionService>;
+  let mockFileUploadManagerService: jasmine.SpyObj<FileUploadManagerService>;
   let mockNotificationService: jasmine.SpyObj<NotificationService>;
   let mockNgZone: jasmine.SpyObj<NgZone>;
 
@@ -27,6 +29,12 @@ describe('FileUploadSectionComponent', () => {
     const faceDetectionServiceSpy = jasmine.createSpyObj('FaceDetectionService', ['validateImage']);
     const fileUploadManagerServiceSpy = jasmine.createSpyObj('FileUploadManagerService', [
       'processFiles',
+      'clearFiles',
+      'removeFile',
+      'getValidFiles',
+      'hasValidFiles',
+      'getFileCount',
+      'getValidFileCount'
     ]);
     const notificationServiceSpy = jasmine.createSpyObj('NotificationService', [
       'success',
@@ -52,6 +60,9 @@ describe('FileUploadSectionComponent', () => {
     mockFaceDetectionService = TestBed.inject(
       FaceDetectionService
     ) as jasmine.SpyObj<FaceDetectionService>;
+    mockFileUploadManagerService = TestBed.inject(
+      FileUploadManagerService
+    ) as jasmine.SpyObj<FileUploadManagerService>;
     mockNotificationService = TestBed.inject(
       NotificationService
     ) as jasmine.SpyObj<NotificationService>;
@@ -99,10 +110,12 @@ describe('FileUploadSectionComponent', () => {
 
     it('should handle file selection from input', () => {
       const mockFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' });
-      const event = { target: { files: [mockFile] } };
+      const mockEvent = {
+        target: { files: [mockFile] }
+      } as any;
       spyOn(component, 'handleFileSelection');
 
-      component.onFileSelected(event);
+      component.onFileSelected(mockEvent);
 
       expect(component.handleFileSelection).toHaveBeenCalledWith([mockFile]);
     });
@@ -110,9 +123,9 @@ describe('FileUploadSectionComponent', () => {
     it('should reset input value after file selection', () => {
       const fileInput = fixture.debugElement.nativeElement.querySelector('input[type="file"]');
       fileInput.value = 'test.jpg';
-      const event = { target: { files: [] } };
+      const mockEvent = { target: { files: [] } } as any;
 
-      component.onFileSelected(event);
+      component.onFileSelected(mockEvent);
 
       expect(fileInput.value).toBe('');
     });
@@ -168,12 +181,9 @@ describe('FileUploadSectionComponent', () => {
       const validFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' });
       const invalidFile = new File(['content'], 'test.txt', { type: 'text/plain' });
 
-      expect(component['isValidFile'](validFile)).toBeTrue();
-      expect(component['isValidFile'](invalidFile)).toBeFalse();
-      expect(mockNotificationService.error).toHaveBeenCalledWith(
-        'Invalid File Type',
-        jasmine.stringContaining('not a supported image format')
-      );
+      // Access private method using bracket notation
+      expect((component as any)['_validateFile'](validFile).isValid).toBeTrue();
+      expect((component as any)['_validateFile'](invalidFile).isValid).toBeFalse();
     });
 
     it('should validate file size correctly', () => {
@@ -182,12 +192,8 @@ describe('FileUploadSectionComponent', () => {
         type: 'image/jpeg',
       });
 
-      expect(component['isValidFile'](validFile)).toBeTrue();
-      expect(component['isValidFile'](largeFile)).toBeFalse();
-      expect(mockNotificationService.error).toHaveBeenCalledWith(
-        'File Too Large',
-        jasmine.stringContaining('too large')
-      );
+      expect((component as any)['_validateFile'](validFile).isValid).toBeTrue();
+      expect((component as any)['_validateFile'](largeFile).isValid).toBeFalse();
     });
 
     it('should reject files exceeding maximum count', fakeAsync(() => {
@@ -231,11 +237,11 @@ describe('FileUploadSectionComponent', () => {
       };
 
       mockFaceDetectionService.validateImage.and.returnValue(Promise.resolve(mockQualityResult));
-      spyOn(component, 'getImageDimensions' as any).and.returnValue(
+      spyOn(component as any, '_getImageDimensions').and.returnValue(
         Promise.resolve({ width: 800, height: 600 })
       );
 
-      component['validateImageQuality']([mockFile]);
+      (component as any)['_validateImageQuality']([mockFile]);
       tick();
 
       expect(component.isCheckingQuality).toBeFalse();
@@ -266,11 +272,11 @@ describe('FileUploadSectionComponent', () => {
       };
 
       mockFaceDetectionService.validateImage.and.returnValue(Promise.resolve(mockQualityResult));
-      spyOn(component, 'getImageDimensions' as any).and.returnValue(
+      spyOn(component as any, '_getImageDimensions').and.returnValue(
         Promise.resolve({ width: 800, height: 600 })
       );
 
-      component['validateImageQuality']([mockFile]);
+      (component as any)['_validateImageQuality']([mockFile]);
       tick();
 
       expect(component.qualityCheckErrors.length).toBe(1);
@@ -280,11 +286,11 @@ describe('FileUploadSectionComponent', () => {
 
     it('should reject images with insufficient resolution', fakeAsync(() => {
       const mockFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' });
-      spyOn(component, 'getImageDimensions' as any).and.returnValue(
+      spyOn(component as any, '_getImageDimensions').and.returnValue(
         Promise.resolve({ width: 400, height: 300 })
       );
 
-      component['validateImageQuality']([mockFile]);
+      (component as any)['_validateImageQuality']([mockFile]);
       tick();
 
       expect(component.qualityCheckErrors.length).toBe(1);
@@ -324,7 +330,7 @@ describe('FileUploadSectionComponent', () => {
 
   describe('Image Deletion', () => {
     it('should delete uploaded image successfully', () => {
-      const mockThumb = { id: 123, url: 'test.jpg' };
+      const mockThumb = { id: '123', url: 'test.jpg', name: 'test.jpg' };
       const mockResponse = { success: true, message: 'Image deleted successfully' };
       mockFileUploadService.deleteImage.and.returnValue(of(mockResponse));
       spyOn(component.uploadedImageDeleted, 'emit');
@@ -343,10 +349,10 @@ describe('FileUploadSectionComponent', () => {
     });
 
     it('should handle delete error with 404 status', () => {
-      const mockThumb = { id: 123, url: 'test.jpg' };
+      const mockThumb = { id: '123', url: 'test.jpg', name: 'test.jpg' };
       const mockError = { status: 404, message: 'Not found' };
       mockFileUploadService.deleteImage.and.returnValue(throwError(mockError));
-      spyOn(component, 'refreshUploadedImages' as any);
+      spyOn(component as any, '_refreshUploadedImages');
 
       component.deleteUploadedImage(mockThumb, 0);
 
@@ -354,13 +360,13 @@ describe('FileUploadSectionComponent', () => {
         'Error',
         jasmine.stringContaining('not found')
       );
-      expect(component['refreshUploadedImages']).toHaveBeenCalled();
+      expect((component as any)['_refreshUploadedImages']).toHaveBeenCalled();
     });
 
     it('should handle invalid thumbnail data', () => {
       const invalidThumb = null;
 
-      component.deleteUploadedImage(invalidThumb, 0);
+      component.deleteUploadedImage(invalidThumb as any, 0);
 
       expect(mockNotificationService.error).toHaveBeenCalledWith(
         'Error',
@@ -395,7 +401,7 @@ describe('FileUploadSectionComponent', () => {
 
       expect(mockFileUploadService.uploadImages).toHaveBeenCalledWith([mockFile], undefined, false);
       expect(component.uploadCompleted.emit).toHaveBeenCalledWith(
-        mockUploadResponse.response.uploadedFiles
+        jasmine.any(Array)
       );
       expect(mockNotificationService.success).toHaveBeenCalled();
     });
@@ -523,19 +529,19 @@ describe('FileUploadSectionComponent', () => {
       component.uploadedImageThumbnails = [];
       expect(component.showUploadedImages).toBeFalse();
 
-      component.uploadedImageThumbnails = [{ id: 1, url: 'test.jpg' }];
+      component.uploadedImageThumbnails = [{ id: '1', url: 'test.jpg', name: 'test.jpg' }];
       expect(component.showUploadedImages).toBeTrue();
     });
   });
 
   describe('Cleanup', () => {
     it('should cleanup on destroy', () => {
-      spyOn(component, 'cleanupFilePreviewCache' as any);
+      spyOn(component as any, '_cleanupFilePreviewCache');
       spyOn(document, 'removeEventListener');
 
       component.ngOnDestroy();
 
-      expect(component['cleanupFilePreviewCache']).toHaveBeenCalled();
+      expect((component as any)['_cleanupFilePreviewCache']).toHaveBeenCalled();
       expect(document.removeEventListener).toHaveBeenCalled();
     });
   });

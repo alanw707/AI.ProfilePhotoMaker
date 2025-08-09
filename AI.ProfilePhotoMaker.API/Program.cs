@@ -9,6 +9,9 @@ using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Payment;
 using AI.ProfilePhotoMaker.API.Services.Storage;
+using AI.ProfilePhotoMaker.API.Services.Monitoring;
+using AI.ProfilePhotoMaker.API.Middleware;
+using AI.ProfilePhotoMaker.API.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +20,7 @@ using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.DataProtection;
 using System.Security.Claims;
+using Serilog;
 
 // Handle command-line arguments for migration and upload operations
 if (args.Length > 0)
@@ -64,6 +68,28 @@ if (args.Length > 0)
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load environment variables from .env file if present
+LoadEnvironmentVariables(builder.Environment);
+
+// Load monitoring configuration
+builder.Configuration.AddJsonFile("appsettings.Monitoring.json", optional: true, reloadOnChange: true);
+
+// Load async I/O configuration
+builder.Configuration.AddJsonFile("appsettings.AsyncIo.json", optional: true, reloadOnChange: true);
+
+// Configure Serilog for structured logging
+builder.Host.UseSerilog((context, services, configuration) =>
+{
+    configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .Enrich.WithEnvironmentName()
+        .Enrich.WithThreadId()
+        .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName)
+        .Enrich.WithProperty("Application", "AI.ProfilePhotoMaker.API");
+});
+
 // Configure forwarded headers for development proxy
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
@@ -100,6 +126,9 @@ if (builder.Environment.IsDevelopment())
 }
 
 // Add services to the container.
+
+// Add environment configuration with validation
+builder.Services.AddEnvironmentConfiguration();
 
 // Configure database services with new architecture
 builder.Services.AddDatabaseServices(builder.Configuration, builder.Environment);
@@ -262,6 +291,10 @@ builder.Services.AddSingleton<Replicate.ReplicateApi>(provider =>
 builder.Services.AddHttpClient<IReplicateApiClient, ReplicateApiClient>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IModelDiscoveryService, AI.ProfilePhotoMaker.API.Services.ModelDiscoveryService>();
 
+// Register WebhookUrlResolver service for environment-aware webhook URL resolution
+builder.Services.AddScoped<IWebhookUrlResolver, WebhookUrlResolver>();
+builder.Services.AddHttpClient<WebhookUrlResolver>();
+
 builder.Services.AddHttpClient<IImageDownloadService, ImageDownloadService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository, AI.ProfilePhotoMaker.API.Data.UserProfileRepository>();
 
@@ -296,6 +329,20 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IHealthCheck
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IDatabaseHealthService, AI.ProfilePhotoMaker.API.Services.Health.DatabaseHealthService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IStorageHealthService, AI.ProfilePhotoMaker.API.Services.Health.StorageHealthService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IDependencyHealthService, AI.ProfilePhotoMaker.API.Services.Health.DependencyHealthService>();
+
+// Add Performance Monitoring Services
+builder.Services.AddPerformanceMonitoring(builder.Configuration);
+
+// Register Async I/O Services for high-performance non-blocking file operations
+builder.Services.AddScoped<IAsyncFileService, AsyncFileService>();
+builder.Services.AddScoped<IAsyncZipService, AsyncZipService>();
+
+// Configure Async I/O Performance Monitoring
+builder.Services.Configure<AsyncIoPerformanceOptions>(builder.Configuration.GetSection("AsyncIoPerformance"));
+
+// Add Deployment Validation and Monitoring Services
+builder.Services.AddDeploymentValidation(builder.Configuration);
+builder.Services.ConfigureDeploymentValidation(builder.Configuration, builder.Environment);
 
 // Register background services
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelCreationPollingService>();
@@ -391,8 +438,17 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Validate environment configuration before starting
+await app.UseEnvironmentValidationAsync();
+
 // Apply database migrations using new architecture
 await app.UseDatabaseMigrationAsync();
+
+// Perform deployment validation on startup
+await app.ValidateDeploymentOnStartupAsync();
+
+// Validate webhook URL configuration on startup
+await ValidateWebhookConfigurationAsync(app);
 
 // Use forwarded headers for ngrok proxy
 app.UseForwardedHeaders();
@@ -422,6 +478,12 @@ var corsPolicy = app.Environment.IsDevelopment() ? "AllowDevelopment" : "V1Produ
 
 // Use production-ready CORS configuration
 app.UseCors(corsPolicy);
+
+// Add performance monitoring middleware (before authentication)
+app.UsePerformanceMonitoring();
+
+// Add async I/O performance monitoring middleware (after performance monitoring)
+app.UseAsyncIoPerformanceMonitoring();
 
 // Remove debug middleware - production should use proper logging with ILogger
 // Consider adding request logging middleware with proper ILogger implementation if needed
@@ -628,4 +690,176 @@ static bool IsUploadCommand(string command)
         "list-previews" => true,
         _ => false
     };
+}
+
+/// <summary>
+/// Loads environment variables from .env files based on environment
+/// </summary>
+static void LoadEnvironmentVariables(IWebHostEnvironment environment)
+{
+    try
+    {
+        // Look for .env files in the solution root directory (parent of API directory)
+        var contentRoot = environment.ContentRootPath;
+        var solutionRoot = Directory.GetParent(contentRoot)?.FullName ?? contentRoot;
+        
+        Console.WriteLine($"🔍 Looking for .env files in:");
+        Console.WriteLine($"   Content Root: {contentRoot}");
+        Console.WriteLine($"   Solution Root: {solutionRoot}");
+        
+        var envFiles = new[]
+        {
+            ".env",
+            $".env.{environment.EnvironmentName.ToLower()}",
+            ".env.local",
+            $".env.{environment.EnvironmentName.ToLower()}.local"
+        };
+
+        bool anyFileFound = false;
+        foreach (var envFile in envFiles)
+        {
+            // First try solution root directory
+            var envFilePath = Path.Combine(solutionRoot, envFile);
+            if (File.Exists(envFilePath))
+            {
+                Console.WriteLine($"🔧 Loading environment variables from solution root: {envFile}");
+                LoadEnvFile(envFilePath);
+                anyFileFound = true;
+            }
+            else
+            {
+                // Fallback to API directory for compatibility
+                envFilePath = Path.Combine(contentRoot, envFile);
+                if (File.Exists(envFilePath))
+                {
+                    Console.WriteLine($"🔧 Loading environment variables from API directory: {envFile}");
+                    LoadEnvFile(envFilePath);
+                    anyFileFound = true;
+                }
+            }
+        }
+        
+        if (!anyFileFound)
+        {
+            Console.WriteLine($"⚠️  No .env files found in either directory");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"⚠️  Warning: Could not load environment variables: {ex.Message}");
+    }
+}
+
+/// <summary>
+/// Loads environment variables from a specific .env file
+/// </summary>
+static void LoadEnvFile(string filePath)
+{
+    var lines = File.ReadAllLines(filePath);
+    foreach (var line in lines)
+    {
+        if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#"))
+            continue;
+
+        var parts = line.Split('=', 2);
+        if (parts.Length != 2)
+            continue;
+
+        var key = parts[0].Trim();
+        var value = parts[1].Trim();
+
+        // Remove surrounding quotes if present
+        if ((value.StartsWith("\"") && value.EndsWith("\"")) ||
+            (value.StartsWith("'") && value.EndsWith("'")))
+        {
+            value = value[1..^1];
+        }
+
+        // Only set if not already set (environment variables take precedence)
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(key)))
+        {
+            Environment.SetEnvironmentVariable(key, value);
+        }
+    }
+}
+
+/// <summary>
+/// Validates webhook URL configuration on startup and logs the results
+/// </summary>
+static async Task ValidateWebhookConfigurationAsync(WebApplication app)
+{
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var webhookUrlResolver = scope.ServiceProvider.GetRequiredService<IWebhookUrlResolver>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        var environment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+
+        logger.LogInformation("🔗 Validating webhook URL configuration for {Environment} environment...", environment.EnvironmentName);
+
+        // Get the webhook base URL
+        var webhookBaseUrl = await webhookUrlResolver.GetWebhookBaseUrlAsync();
+        
+        if (webhookBaseUrl == null)
+        {
+            if (environment.IsDevelopment())
+            {
+                logger.LogWarning("⚠️  Webhook URLs are disabled in development. Consider setting up ngrok for webhook testing.");
+                logger.LogInformation("💡 To enable webhooks in development:");
+                logger.LogInformation("   1. Start ngrok: ngrok http 5000");
+                logger.LogInformation("   2. Set Webhooks:NgrokTunnelUrl in appsettings.Development.json");
+                logger.LogInformation("   3. Or set Webhooks:BaseUrl to your preferred HTTPS endpoint");
+            }
+            else
+            {
+                logger.LogError("❌ Webhook URLs are disabled in production! This may affect functionality.");
+                logger.LogError("🔧 Ensure AppBaseUrl is configured with an HTTPS URL in production.");
+            }
+            return;
+        }
+
+        logger.LogInformation("✅ Webhook base URL resolved: {WebhookBaseUrl}", webhookBaseUrl);
+
+        // Test a sample webhook URL
+        var sampleWebhookUrl = await webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete");
+        logger.LogInformation("📨 Sample webhook URL: {SampleWebhookUrl}", sampleWebhookUrl);
+
+        // Validate the webhook URL is accessible (optional validation)
+        var isValid = await webhookUrlResolver.ValidateWebhookUrlAsync();
+        if (isValid)
+        {
+            logger.LogInformation("✅ Webhook URL validation passed - endpoints are reachable");
+        }
+        else
+        {
+            if (environment.IsDevelopment())
+            {
+                logger.LogWarning("⚠️  Webhook URL validation failed - endpoints may not be reachable yet. This is normal if ngrok is not running.");
+            }
+            else
+            {
+                logger.LogWarning("⚠️  Webhook URL validation failed - please ensure your production endpoints are accessible");
+            }
+        }
+
+        // Log environment-specific guidance
+        if (environment.IsDevelopment())
+        {
+            logger.LogInformation("🔧 Development webhook configuration:");
+            logger.LogInformation("   • Webhooks will work if HTTPS is configured (ngrok, local HTTPS, etc.)");
+            logger.LogInformation("   • HTTP webhooks are disabled for security (Replicate API requirement)");
+            logger.LogInformation("   • Configure Webhooks:NgrokTunnelUrl for manual ngrok URL override");
+        }
+        else
+        {
+            logger.LogInformation("🚀 Production webhook configuration active");
+            logger.LogInformation("   • Webhooks enabled for HTTPS environments");
+            logger.LogInformation("   • Using AppBaseUrl: {AppBaseUrl}", app.Configuration["AppBaseUrl"]);
+        }
+    }
+    catch (Exception ex)
+    {
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "❌ Failed to validate webhook configuration during startup");
+    }
 }

@@ -1,184 +1,140 @@
-# Technical Decisions - AI Profile Photo Maker
+# Technical Decisions - AI.ProfilePhotoMaker Project
 
-## Authentication Architecture Decisions
+## Authentication & Security Architecture
 
-### JWT Bearer Challenge Scheme (2025-08-08)
-**Decision**: Set `DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme` in Program.cs
-**Context**: API endpoints were returning 302 redirects instead of 401 JSON responses for unauthenticated requests
-**Rationale**: 
-- Ensures consistent API behavior across all authenticated endpoints
-- Provides proper HTTP status codes (401) for API consumers
-- Maintains clear separation between API and web authentication flows
-**Impact**: All protected API endpoints now return standardized JSON error responses
-**File**: `AI.ProfilePhotoMaker.API/Program.cs:148`
+### OAuth Integration Strategy (2025-01-31)
+- **Decision**: Implement Google OAuth with ASP.NET Core Identity + JWT Bearer tokens
+- **Rationale**: Provides secure authentication while maintaining API flexibility
+- **Implementation**: 
+  - OAuth for web interface authentication
+  - JWT tokens for API access
+  - Hybrid approach supporting both cookie and token auth
 
-### OAuth UserProfile Creation Fix (2025-08-08)
-**Decision**: Automatically create UserProfile records for OAuth users in FindOrCreateUserAsync()
-**Context**: OAuth users were getting ApplicationUser records but missing UserProfile records, causing "Profile not found" errors
-**Rationale**: 
-- Ensures 1:1 relationship between ApplicationUser and UserProfile entities
-- Eliminates "Profile not found" errors for OAuth users
-- Maintains data consistency across authentication methods
-**Impact**: All OAuth users now get complete profile setup automatically
-**File**: `AI.ProfilePhotoMaker.API/Controllers/AuthController.cs:280-330`
-**Implementation**:
-```csharp
-var userProfile = new UserProfile
-{
-    UserId = user.Id,
-    FirstName = userInfo.GivenName ?? "",
-    LastName = userInfo.FamilyName ?? "",
-    SubscriptionTier = SubscriptionTier.Basic,
-    Credits = 3,
-    PurchasedCredits = 0,
-    LastCreditReset = DateTime.UtcNow,
-    CreatedAt = DateTime.UtcNow,
-    UpdatedAt = DateTime.UtcNow
-};
-```
+### Database Migration Approach (2025-08-08)
+- **Decision**: Disable automatic migrations for MVP simplicity
+- **Rationale**: Manual control over production schema changes
+- **Configuration**: `AutoMigrateOnStartup: false` in production settings
 
-### OAuth Preservation Strategy (2025-08-08)  
-**Decision**: Maintain OAuth controller explicit authentication schemes while setting JWT as default
-**Context**: Need to fix API authentication without breaking Google OAuth flow
-**Rationale**:
-- OAuth controllers can override default scheme for their specific needs
-- Preserves existing Google authentication functionality
-- Allows API endpoints to have consistent behavior
-**Impact**: OAuth flow continues working while API gets proper error handling
+### SQL Server Password Management (2025-08-08)
+- **Decision**: Multi-location secure password storage strategy
+- **Storage Locations**:
+  - .NET User Secrets (development)
+  - GitHub Repository Secrets (CI/CD)
+  - Azure Key Vault (production)
+  - Azure SQL Server (actual authentication)
+- **Password Policy**: Complex passwords avoiding username similarity
+- **Selected Password**: `Database!2024#Secure9$` (meets Azure complexity requirements)
 
-## API Controller Architecture Decisions
+## Development Environment
 
-### StylePreview Controller Recreation (2025-08-08)
-**Decision**: Implement StylePreviewController with Azure Blob Storage fallback
-**Context**: Frontend depends on `/api/style-preview/list` endpoint that was removed
-**Rationale**:
-- Maintains backward compatibility with frontend expectations
-- Provides fallback to Azure Blob Storage when local previews unavailable
-- Follows existing controller patterns and conventions
-**Implementation**:
-- `GET /api/style-preview/list` - Returns available style previews
-- `GET /api/style-preview/url/{styleName}` - Returns storage URLs
-**File**: `AI.ProfilePhotoMaker.API/Controllers/StylePreviewController.cs`
+### Local SQL Server Strategy (Updated 2025-08-08)
+- **Decision**: Docker SQL Server 2022 for local development
+- **Configuration**: 
+  - Container: `mcr.microsoft.com/mssql/server:2022-latest`
+  - Credentials: `sa` / `Dev123456!`
+  - Port: `1433`
+- **Rationale**: Consistent local environment matching production SQL Server
 
-### Error Response Standardization (2025-08-08)
-**Decision**: Implement consistent JSON error format across all API endpoints
-**Format**: 
-```json
-{
-  "success": false,
-  "error": {
-    "code": "ErrorType",
-    "message": "Human readable message"
-  }
-}
-```
-**Rationale**: 
-- Provides consistent API consumer experience
-- Enables better frontend error handling
-- Follows REST API best practices
-**Impact**: All authentication failures now return structured error responses
+### VS Code MSSQL Extension Configuration (2025-08-08)
+- **Decision**: Use Connection String method over Browse Azure
+- **Rationale**: More reliable connection, avoids Azure authentication token issues
+- **Prevention Settings**: 
+  - `maxRecentConnections: 2`
+  - `savePassword: false`
+  - Locked connection history file to prevent duplicates
 
-## Database Architecture Decisions
+### Connection Profile Design (2025-08-08)
+- **Decision**: Emoji-based profile naming for easy identification
+- **Profiles**:
+  - 🐳 Local Development (Docker SQL Server)
+  - ☁️ Production Azure (Azure SQL Database)
+- **Rationale**: Visual distinction prevents connection errors
 
-### SQLite Development Database (Previous)
-**Decision**: Use SQLite for local development
-**Context**: Simplified local development without external database dependencies
-**Rationale**: Faster developer setup, no external dependencies for development
-**Status**: Active and working correctly
+## Production Infrastructure
 
-### UserProfile Migration Fix (2025-08-08)
-**Decision**: Create UserProfiles for existing OAuth users without profiles
-**Context**: Database had ApplicationUsers without corresponding UserProfiles from previous OAuth registrations
-**Rationale**: 
-- Ensures data integrity across existing and new users
-- Prevents "Profile not found" errors for existing OAuth users
-- Maintains consistent user experience
-**Impact**: Database state now consistent: 4 ApplicationUsers with 4 UserProfiles
-**Validation**: Confirmed via SQL queries showing complete user-profile relationships
+### Azure SQL Database Configuration (Current)
+- **Server**: `aipm-sql-v1-6j74jubocuukg.database.windows.net`
+- **Database**: `aipmdb` 
+- **Admin User**: `sqladmin`
+- **Tier**: Basic (suitable for MVP)
+- **Encryption**: Mandatory TLS with certificate validation
 
-### Azure Blob Storage Integration (Previous)
-**Decision**: Use Azure Blob Storage for production image storage with local fallback
-**Context**: Scalable cloud storage for user-generated images
-**Rationale**: Production scalability, reliability, CDN integration capabilities
-**Status**: Active with proper fallback mechanisms
+### Azure Key Vault Integration (2025-08-08)
+- **Key Vault**: `aipm-kv-v1-6j74jubocuukg`
+- **Secret Management**: Centralized secret storage for production
+- **Access Control**: RBAC with Key Vault Secrets Officer role
+- **Integration**: Used by Container Apps via Managed Identity
 
-## Port Configuration Decisions
+### Firewall Strategy (2025-08-08)
+- **Approach**: IP-based access control with Azure Services allowlist
+- **Current Rules**: 
+  - AllowAzureServices (0.0.0.0 range)
+  - Client IP allowlisting for development access
+- **Management**: Dynamic rule creation for development IPs
 
-### Standardized Port Allocation (2025-08-08)
-**Decision**: UI always on port 4200, API always on port 5032
-**Context**: Previous port conflicts and inconsistent configuration
-**Rationale**: 
-- Eliminates port conflicts in development
-- Consistent developer experience
-- Matches Angular CLI defaults
-**Configuration**:
-- Frontend: `localhost:4200` (Angular dev server)
-- Backend: `localhost:5032` (ASP.NET Core API)
-**Files Updated**: Multiple configuration files aligned to these ports
+## Code Quality & Maintenance
 
-## CORS Policy Decisions
+### Cleanup Strategy (2025-08-08)
+- **Principle**: "Keep it simple" - remove temporary artifacts
+- **Approach**: Systematic cleanup of troubleshooting scripts after resolution
+- **Validation**: Ensure functionality preserved after cleanup
+- **Documentation**: Capture knowledge before removing temporary tools
 
-### Development CORS Policy (Previous)
-**Decision**: Allow localhost:4200 with credentials for development
-**Context**: Frontend-backend communication in development environment
-**Rationale**: Enables OAuth cookies and authenticated requests in development
-**Configuration**: `AllowDevelopment` policy for localhost origins
+### Connection Management Philosophy
+- **Principle**: Minimal, clean configuration over complex setups
+- **Prevention**: Proactive measures to prevent configuration pollution
+- **Troubleshooting**: Nuclear cleanup approach when incremental fixes fail
+- **Validation**: Multi-layer testing (network, auth, application level)
 
-## Session Management Decisions
+## Architecture Patterns
 
-### JWT + Cookie Hybrid Authentication (Previous)
-**Decision**: Support both JWT tokens and OAuth cookies
-**Context**: Need to support both API clients and OAuth flows
-**Rationale**: 
-- JWT for API clients and mobile apps
-- Cookies for OAuth web flows
-- SignInScheme set to cookies for OAuth compatibility
-**Status**: Working correctly with proper challenge scheme configuration
+### Database Provider Architecture (Current)
+- **Decision**: Hardcoded SQL Server provider with retry policies
+- **Configuration**: Centralized database service configuration
+- **Settings**: Environment-specific timeout and retry configurations
+- **Health Checks**: Built-in database connectivity validation
 
-## Performance Decisions
+### Secret Management Pattern
+- **Layered Approach**: Different secrets storage for different environments
+- **Synchronization**: Manual sync required between secret stores and actual systems
+- **Validation**: Multi-system testing to ensure consistency
+- **Security**: Principle of least privilege with RBAC
 
-### Response Compression (Previous)
-**Decision**: Enable GZIP compression for API responses
-**Context**: Improve performance especially over ngrok tunnels
-**Rationale**: Reduces bandwidth usage, improves user experience
-**Configuration**: Enabled for JSON, SVG, and standard web content
+## Lessons Learned
 
-## Development Workflow Decisions
+### Password vs Secret Storage (2025-08-08)
+- **Key Insight**: Secret storage ≠ actual system password
+- **Implication**: Must update both secret stores AND target system
+- **Prevention**: Always validate end-to-end authentication, not just secret existence
 
-### Proxy Configuration Strategy (Previous)
-**Decision**: Use Angular CLI proxy for development API calls
-**Context**: Simplify development by avoiding CORS issues
-**Rationale**: 
-- Single origin for frontend and API during development
-- Simplifies authentication cookie handling
-- Matches production reverse proxy setup
-**Configuration**: `/api/*` proxied to `localhost:5032`
+### VS Code Extension Behavior (2025-08-08)
+- **Observation**: Extensions can aggressively pollute configuration
+- **Strategy**: Implement prevention settings alongside cleanup tools
+- **Method Selection**: Prefer simpler, more reliable connection methods
 
-## Error Handling Strategy Decisions
+### Troubleshooting Methodology
+- **Network First**: Always verify basic connectivity before diving into authentication
+- **Systematic Isolation**: Use built-in app testing to isolate specific issues
+- **Clean State Recovery**: Sometimes complete reset more effective than incremental fixes
 
-### Graceful API Error Handling (2025-08-08)
-**Decision**: Return structured errors instead of redirects for API endpoints
-**Context**: Frontend needs to handle authentication errors gracefully  
-**Rationale**:
-- Better user experience with clear error messages
-- Enables proper frontend retry logic
-- Consistent with REST API standards
-**Impact**: All API errors now return JSON with consistent structure
+### Multi-System Integration Complexity
+- **Challenge**: Synchronizing state across 4+ different systems
+- **Approach**: Step-by-step validation at each integration point
+- **Documentation**: Capture complex multi-system procedures for future reference
 
-## Testing and Validation Decisions
+## Future Considerations
 
-### Development-First Testing Strategy (2025-08-08)
-**Decision**: Focus OAuth testing in development environment before production consideration
-**Context**: User explicitly requested development focus over production deployment
-**Rationale**: 
-- Validates fixes thoroughly before production risk
-- Enables comprehensive testing without production impact
-- Allows for iteration and refinement of authentication flow
-**Impact**: Created comprehensive 47-scenario testing strategy for development validation
-**Documentation**: `/ClaudeDocs/Report/test-strategy-oauth-fixes-20250808-120000.md`
+### Scalability Preparations
+- **Database**: Basic tier suitable for MVP, prepared for upgrade
+- **Connection Management**: Clean patterns established for scaling
+- **Secret Rotation**: Infrastructure prepared for password rotation procedures
 
----
+### Security Enhancements
+- **Managed Identity**: Consider migrating from SQL authentication to Managed Identity
+- **Certificate-based Auth**: Explore certificate authentication for enhanced security
+- **Secret Rotation**: Implement automated secret rotation procedures
 
-*Last Updated: 2025-08-08*
-*All decisions validated and working in production-like development environment*
-*OAuth UserProfile creation fix validated in database*
+### Development Experience
+- **Automation**: Consider scripting common database operations
+- **Testing**: Expand automated connection testing capabilities
+- **Documentation**: Maintain clear connection procedures for team onboarding

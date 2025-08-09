@@ -3,22 +3,25 @@ using Microsoft.Extensions.Configuration;
 namespace AI.ProfilePhotoMaker.API.Services.Storage;
 
 /// <summary>
-/// Local filesystem implementation of storage service
+/// Local filesystem implementation of storage service with async I/O optimizations
 /// </summary>
 public class LocalStorageService : IStorageService
 {
     private readonly IWebHostEnvironment _environment;
     private readonly IConfiguration _configuration;
     private readonly ILogger<LocalStorageService> _logger;
+    private readonly IAsyncFileService _asyncFileService;
 
     public LocalStorageService(
         IWebHostEnvironment environment,
         IConfiguration configuration,
-        ILogger<LocalStorageService> logger)
+        ILogger<LocalStorageService> logger,
+        IAsyncFileService asyncFileService)
     {
         _environment = environment;
         _configuration = configuration;
         _logger = logger;
+        _asyncFileService = asyncFileService;
     }
 
     public async Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId)
@@ -27,17 +30,12 @@ public class LocalStorageService : IStorageService
         {
             // Ensure the user's generated directory exists
             var userDirectory = Path.Combine(_environment.ContentRootPath, "generated", userId);
-            if (!Directory.Exists(userDirectory))
-            {
-                Directory.CreateDirectory(userDirectory);
-                _logger.LogInformation("Created directory for user {UserId}: {Directory}", userId, userDirectory);
-            }
+            await _asyncFileService.CreateDirectoryAsync(userDirectory);
 
             var filePath = Path.Combine(userDirectory, fileName);
 
-            // Save the image to the local filesystem
-            using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write);
-            await imageStream.CopyToAsync(fileStream);
+            // Save the image to the local filesystem using async streaming with optimal buffer size
+            await _asyncFileService.CopyStreamToFileAsync(imageStream, filePath, 81920);
 
             // Return the relative path that can be served by the web server
             var storagePath = $"/generated/{userId}/{fileName}";
@@ -57,14 +55,14 @@ public class LocalStorageService : IStorageService
         try
         {
             var fullPath = GetFullPath(storagePath);
-            if (!File.Exists(fullPath))
+            if (!await _asyncFileService.FileExistsAsync(fullPath))
             {
                 _logger.LogWarning("Image not found at path: {StoragePath}", storagePath);
                 return null;
             }
 
-            var fileStream = new FileStream(fullPath, FileMode.Open, FileAccess.Read);
-            return await Task.FromResult(fileStream);
+            var fileStream = await _asyncFileService.OpenFileStreamAsync(fullPath, FileMode.Open, FileAccess.Read);
+            return fileStream;
         }
         catch (Exception ex)
         {
@@ -78,15 +76,18 @@ public class LocalStorageService : IStorageService
         try
         {
             var fullPath = GetFullPath(storagePath);
-            if (!File.Exists(fullPath))
+            var deleted = await _asyncFileService.DeleteFileAsync(fullPath);
+            
+            if (deleted)
+            {
+                _logger.LogInformation("Deleted image from local storage: {StoragePath}", storagePath);
+            }
+            else
             {
                 _logger.LogWarning("Attempted to delete non-existent image: {StoragePath}", storagePath);
-                return false;
             }
-
-            File.Delete(fullPath);
-            _logger.LogInformation("Deleted image from local storage: {StoragePath}", storagePath);
-            return await Task.FromResult(true);
+            
+            return deleted;
         }
         catch (Exception ex)
         {
@@ -100,7 +101,7 @@ public class LocalStorageService : IStorageService
         try
         {
             var fullPath = GetFullPath(storagePath);
-            return await Task.FromResult(File.Exists(fullPath));
+            return await _asyncFileService.FileExistsAsync(fullPath);
         }
         catch (Exception ex)
         {
@@ -128,26 +129,24 @@ public class LocalStorageService : IStorageService
         try
         {
             var userDirectory = Path.Combine(_environment.ContentRootPath, "generated", userId);
-            if (!Directory.Exists(userDirectory))
+            if (!await _asyncFileService.FileExistsAsync(userDirectory))
             {
                 return new List<string>();
             }
 
-            var imageExtensions = new[] { "*.png", "*.jpg", "*.jpeg", "*.webp", "*.gif" };
-            var imageFiles = new List<string>();
-
-            foreach (var extension in imageExtensions)
-            {
-                var files = Directory.GetFiles(userDirectory, extension);
-                foreach (var file in files)
+            var allFiles = await _asyncFileService.GetDirectoryFilesAsync(userDirectory, "*", false);
+            var imageExtensions = new[] { ".png", ".jpg", ".jpeg", ".webp", ".gif" };
+            
+            var imageFiles = allFiles
+                .Where(file => imageExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()))
+                .Select(file =>
                 {
                     var fileName = Path.GetFileName(file);
-                    var storagePath = $"/generated/{userId}/{fileName}";
-                    imageFiles.Add(storagePath);
-                }
-            }
+                    return $"/generated/{userId}/{fileName}";
+                })
+                .ToList();
 
-            return await Task.FromResult(imageFiles);
+            return imageFiles;
         }
         catch (Exception ex)
         {
@@ -161,25 +160,24 @@ public class LocalStorageService : IStorageService
         try
         {
             var fullPath = GetFullPath(storagePath);
-            if (!File.Exists(fullPath))
+            var fileInfo = await _asyncFileService.GetFileInfoAsync(fullPath);
+            
+            if (fileInfo == null)
             {
                 return null;
             }
 
-            var fileInfo = new FileInfo(fullPath);
             var fileName = Path.GetFileName(storagePath);
-
-            // Determine content type based on file extension
             var contentType = GetContentType(Path.GetExtension(fileName));
 
-            return await Task.FromResult(new StorageFileInfo
+            return new StorageFileInfo
             {
                 FileName = fileName,
                 Size = fileInfo.Length,
                 CreatedAt = fileInfo.CreationTimeUtc,
                 ModifiedAt = fileInfo.LastWriteTimeUtc,
                 ContentType = contentType
-            });
+            };
         }
         catch (Exception ex)
         {

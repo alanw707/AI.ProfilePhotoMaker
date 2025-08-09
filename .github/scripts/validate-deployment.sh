@@ -228,9 +228,9 @@ validate_api_integration() {
     
     # Test public API endpoints
     ENDPOINTS=(
-        "/api/styles"
-        "/api/health"
-        "/api/credit-packages"
+        "/api/style"              # public styles list
+        "/api/health"             # health controller root
+        "/api/credit/packages"    # public credit packages
     )
     
     for endpoint in "${ENDPOINTS[@]}"; do

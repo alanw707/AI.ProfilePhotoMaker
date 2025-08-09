@@ -14,11 +14,6 @@ public interface IDatabaseProviderService
         where TContext : DbContext;
     
     /// <summary>
-    /// Determine if the connection string is for Azure SQL Server
-    /// </summary>
-    bool IsAzureSqlServer(string? connectionString);
-    
-    /// <summary>
     /// Get the appropriate connection string for the current environment
     /// </summary>
     string GetConnectionString();

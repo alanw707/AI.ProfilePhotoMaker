@@ -219,10 +219,9 @@ describe('ImageQualityService', () => {
     });
 
     it('should assess high resolution images positively', async () => {
-      mockImg = createMockImage(2048, 2048); // High resolution
       const detections = [mockDetection];
 
-      const mockImg = createMockImage(1024, 1024);
+      const mockImg = createMockImage(2048, 2048); // High resolution
       const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, detections, mockFile);
 
@@ -230,10 +229,9 @@ describe('ImageQualityService', () => {
     });
 
     it('should assess low resolution images negatively', async () => {
-      mockImg = createMockImage(256, 256); // Low resolution
       const detections = [mockDetection];
 
-      const mockImg = createMockImage(1024, 1024);
+      const mockImg = createMockImage(256, 256); // Low resolution
       const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(mockImg, detections, mockFile);
 
@@ -243,21 +241,20 @@ describe('ImageQualityService', () => {
     });
 
     it('should assess good file size positively', async () => {
-      mockFile = createMockFile(3 * 1024 * 1024); // 3MB - good size
       const detections = [mockDetection];
 
       const mockImg = createMockImage(1024, 1024);
-      const mockFile = createMockFile(1024 * 1024, 'test.jpg');
+      const mockFile = createMockFile(3 * 1024 * 1024); // 3MB - good size
       const score = await service.calculateQualityScore(mockImg, detections, mockFile);
 
       expect(score.breakdown.technical).toBeGreaterThan(5);
     });
 
     it('should assess small file size negatively', async () => {
-      const smallMockFile = createMockFile(100 * 1024); // 100KB - small size
       const detections = [mockDetection];
 
       const mockImg = createMockImage(1024, 1024);
+      const smallMockFile = createMockFile(100 * 1024); // 100KB - small size
       const score = await service.calculateQualityScore(mockImg, detections, smallMockFile);
 
       expect(score.suggestions).toContain('File size is small, which may indicate low quality.');
@@ -348,6 +345,20 @@ describe('ImageQualityService', () => {
       const mockImg = createMockImage(1024, 1024);
       const mockFile = createMockFile(3 * 1024 * 1024); // 3MB
       const detections = [mockDetection];
+
+      // Mock canvas and context
+      const mockCanvas = {
+        width: 0,
+        height: 0,
+        getContext: jasmine.createSpy('getContext').and.returnValue({
+          drawImage: jasmine.createSpy('drawImage'),
+          getImageData: jasmine.createSpy('getImageData').and.returnValue({
+            data: new Uint8ClampedArray(1024 * 1024 * 4).fill(128), // Gray image
+          }),
+        }),
+      };
+
+      spyOn(document, 'createElement').and.returnValue(mockCanvas as any);
 
       const score = await service.calculateQualityScore(mockImg, detections, mockFile);
 
@@ -511,6 +522,19 @@ describe('ImageQualityService', () => {
     });
 
     it('should handle invalid image dimensions', async () => {
+      const mockCanvas = {
+        width: 0,
+        height: 0,
+        getContext: jasmine.createSpy('getContext').and.returnValue({
+          drawImage: jasmine.createSpy('drawImage'),
+          getImageData: jasmine.createSpy('getImageData').and.returnValue({
+            data: new Uint8ClampedArray(1024 * 1024 * 4).fill(128), // Gray image
+          }),
+        }),
+      };
+
+      spyOn(document, 'createElement').and.returnValue(mockCanvas as any);
+
       const invalidImg = createMockImage(50, 50); // Invalid small image
       const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const score = await service.calculateQualityScore(invalidImg, [mockDetection], mockFile);
@@ -526,6 +550,19 @@ describe('ImageQualityService', () => {
           box: null,
         },
       };
+
+      const mockCanvas = {
+        width: 0,
+        height: 0,
+        getContext: jasmine.createSpy('getContext').and.returnValue({
+          drawImage: jasmine.createSpy('drawImage'),
+          getImageData: jasmine.createSpy('getImageData').and.returnValue({
+            data: new Uint8ClampedArray(1024 * 1024 * 4).fill(128), // Gray image
+          }),
+        }),
+      };
+
+      spyOn(document, 'createElement').and.returnValue(mockCanvas as any);
 
       const mockImg = createMockImage(1024, 1024);
       const mockFile = createMockFile(1024 * 1024, 'test.jpg');
@@ -549,6 +586,19 @@ describe('ImageQualityService', () => {
     });
 
     it('should return Promise from calculateQualityScore', () => {
+      const mockCanvas = {
+        width: 0,
+        height: 0,
+        getContext: jasmine.createSpy('getContext').and.returnValue({
+          drawImage: jasmine.createSpy('drawImage'),
+          getImageData: jasmine.createSpy('getImageData').and.returnValue({
+            data: new Uint8ClampedArray(1024 * 1024 * 4).fill(128), // Gray image
+          }),
+        }),
+      };
+
+      spyOn(document, 'createElement').and.returnValue(mockCanvas as any);
+
       const mockImg = createMockImage(1024, 1024);
       const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const result = service.calculateQualityScore(mockImg, [], mockFile);
@@ -565,6 +615,19 @@ describe('ImageQualityService', () => {
 
   describe('Performance', () => {
     it('should complete quality assessment within reasonable time', async () => {
+      const mockCanvas = {
+        width: 0,
+        height: 0,
+        getContext: jasmine.createSpy('getContext').and.returnValue({
+          drawImage: jasmine.createSpy('drawImage'),
+          getImageData: jasmine.createSpy('getImageData').and.returnValue({
+            data: new Uint8ClampedArray(1024 * 1024 * 4).fill(128), // Gray image
+          }),
+        }),
+      };
+
+      spyOn(document, 'createElement').and.returnValue(mockCanvas as any);
+
       const mockImg = createMockImage(1024, 1024);
       const mockFile = createMockFile(1024 * 1024, 'test.jpg');
       const detections = [mockDetection];
@@ -577,6 +640,19 @@ describe('ImageQualityService', () => {
     });
 
     it('should handle large images efficiently', async () => {
+      const mockCanvas = {
+        width: 0,
+        height: 0,
+        getContext: jasmine.createSpy('getContext').and.returnValue({
+          drawImage: jasmine.createSpy('drawImage'),
+          getImageData: jasmine.createSpy('getImageData').and.returnValue({
+            data: new Uint8ClampedArray(4096 * 4096 * 4).fill(128), // Large image
+          }),
+        }),
+      };
+
+      spyOn(document, 'createElement').and.returnValue(mockCanvas as any);
+
       const largeImg = createMockImage(4096, 4096);
       const largeFile = createMockFile(10 * 1024 * 1024); // 10MB
 

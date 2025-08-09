@@ -12,7 +12,7 @@ using System.Security.Claims;
 namespace AI.ProfilePhotoMaker.API.Controllers
 {
     /// <summary>
-    /// Controller for handling image upload, retrieval, and management operations
+    /// Controller for handling image upload, retrieval, and management operations with async I/O optimizations
     /// </summary>
     [Authorize]
     public class ImageController : BaseController
@@ -22,6 +22,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private readonly IConfiguration _configuration;
         private readonly IUserContextService _userContextService;
         private readonly IBasicTierService _basicTierService;
+        private readonly IAsyncFileService _asyncFileService;
+        private readonly IAsyncZipService _asyncZipService;
 
         public ImageController(
             IUserProfileRepository userProfileRepository,
@@ -30,7 +32,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             IUserContextService userContextService,
             IBasicTierService basicTierService,
             ILogger<ImageController> logger,
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            IAsyncFileService asyncFileService,
+            IAsyncZipService asyncZipService)
             : base(logger, context)
         {
             _userProfileRepository = userProfileRepository;
@@ -38,6 +42,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             _configuration = configuration;
             _userContextService = userContextService;
             _basicTierService = basicTierService;
+            _asyncFileService = asyncFileService;
+            _asyncZipService = asyncZipService;
         }
 
         /// <summary>
@@ -115,7 +121,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
                     filePrefix = "selfie";
                 }
-                Directory.CreateDirectory(uploadDir);
+                await _asyncFileService.CreateDirectoryAsync(uploadDir);
 
                 foreach (var image in dto.Images)
                 {
@@ -132,10 +138,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                         ? $"/enhanced/{userId}/{fileName}"
                         : $"/uploads/{userId}/{fileName}";
 
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await image.CopyToAsync(stream);
-                    }
+                    // Use async file service with optimal buffer size for non-blocking I/O
+                    await using var imageStream = image.OpenReadStream();
+                    await _asyncFileService.CopyStreamToFileAsync(imageStream, filePath, 81920);
 
                     // Only create database records for non-enhanced images
                     if (!dto.IsEnhanced)
@@ -174,14 +179,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                     if (!hasCredits)
                     {
-                        // Cleanup uploaded files if credit deduction failed
+                        // Cleanup uploaded files if credit deduction failed using async operations
                         foreach (var uploadedImage in uploadedImages)
                         {
                             var filePath = Path.Combine(_environment.ContentRootPath, uploadedImage.OriginalImageUrl.TrimStart('/'));
-                            if (System.IO.File.Exists(filePath))
-                            {
-                                System.IO.File.Delete(filePath);
-                            }
+                            await _asyncFileService.DeleteFileAsync(filePath);
                         }
 
                         return ErrorResponse("InsufficientCredits",
@@ -199,7 +201,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 string? zipPath = null;
                 if (dto.ForTraining)
                 {
-                    zipPath = CreateTrainingZip(uploadDir, userId);
+                    zipPath = await CreateTrainingZipAsync(uploadDir, userId);
                 }
 
                 return SuccessResponse(new
@@ -334,10 +336,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                             Logger.LogWarning("Generated file path too long ({Length} chars): {FilePath}", generatedFilePath.Length, generatedFilePath);
                         }
 
-                        if (System.IO.File.Exists(generatedFilePath))
+                        physicalFileDeleted = await _asyncFileService.DeleteFileAsync(generatedFilePath);
+                        if (physicalFileDeleted)
                         {
-                            System.IO.File.Delete(generatedFilePath);
-                            physicalFileDeleted = true;
                             Logger.LogInformation("Deleted generated image file: {FilePath}", generatedFilePath);
                         }
                         else
@@ -370,10 +371,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                             Logger.LogWarning("File path too long ({Length} chars): {FilePath}", uploadFilePath.Length, uploadFilePath);
                         }
 
-                        if (System.IO.File.Exists(uploadFilePath))
+                        physicalFileDeleted = await _asyncFileService.DeleteFileAsync(uploadFilePath);
+                        if (physicalFileDeleted)
                         {
-                            System.IO.File.Delete(uploadFilePath);
-                            physicalFileDeleted = true;
                             Logger.LogInformation("Deleted uploaded image file: {FilePath}", uploadFilePath);
                         }
                         else
@@ -443,7 +443,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         /// Delete enhanced image file from temporary storage
         /// </summary>
         [HttpDelete("enhanced/{fileName}")]
-        public IActionResult DeleteEnhancedImage(string fileName)
+        public async Task<IActionResult> DeleteEnhancedImage(string fileName)
         {
             var authCheck = ValidateAuthentication();
             if (authCheck != null) return authCheck;
@@ -470,15 +470,13 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 Logger.LogDebug("Checking for enhanced image file at path: {FilePath}", filePath);
 
-                // Check if file exists
-                if (!System.IO.File.Exists(filePath))
+                // Check if file exists and delete using async operations
+                var deleted = await _asyncFileService.DeleteFileAsync(filePath);
+                if (!deleted)
                 {
                     Logger.LogWarning("Enhanced image file not found: {FilePath}", filePath);
                     return ErrorResponse("FileNotFound", "Enhanced image file not found", 404);
                 }
-
-                // Delete the file
-                System.IO.File.Delete(filePath);
 
                 Logger.LogInformation("Successfully deleted enhanced image file {FileName} for user {UserId}", fileName, userId);
 
@@ -590,56 +588,48 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         /// <summary>
-        /// Creates a training ZIP file from uploaded images
-        /// TODO: Move this to a dedicated service class
+        /// Creates a training ZIP file from uploaded images using async streaming compression
         /// </summary>
-        private string? CreateTrainingZip(string uploadDir, string userId)
+        private async Task<string?> CreateTrainingZipAsync(string uploadDir, string userId)
         {
             try
             {
                 var zipPath = Path.Combine(_environment.ContentRootPath, "training-zips", $"{userId}.zip");
-                Directory.CreateDirectory(Path.GetDirectoryName(zipPath)!);
 
-                // Delete existing ZIP file if it exists to avoid conflicts
-                if (System.IO.File.Exists(zipPath))
+                var zipOptions = new AsyncZipOptions
                 {
-                    System.IO.File.Delete(zipPath);
-                    Logger.LogInformation("Deleted existing training ZIP file before creating new one for user {UserId}", userId);
-                }
+                    AllowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" },
+                    MinimumFiles = 10,
+                    OverwriteExisting = true,
+                    CompressionLevel = CompressionLevel.Optimal,
+                    BufferSize = 81920 // 80KB buffer for optimal performance
+                };
 
-                using (var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create))
+                var result = await _asyncZipService.CreateStreamingZipAsync(uploadDir, zipPath, zipOptions);
+
+                if (result.Success)
                 {
-                    // Get all image files from the upload directory (only contains original uploads)
-                    var imageFiles = Directory.GetFiles(uploadDir, "*.*")
-                        .Where(f =>
-                        {
-                            var extension = Path.GetExtension(f);
-                            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
-                            return allowedExtensions.Contains(extension.ToLowerInvariant());
-                        })
-                        .ToArray();
-
-                    if (imageFiles.Length < 10)
-                    {
-                        Logger.LogWarning("Insufficient images ({Count}) for training ZIP for user {UserId}", imageFiles.Length, userId);
-                        return null;
-                    }
-
-                    foreach (var file in imageFiles)
-                    {
-                        archive.CreateEntryFromFile(file, Path.GetFileName(file));
-                    }
-
-                    Logger.LogInformation("Created training ZIP for user {UserId} with {FileCount} images", userId, imageFiles.Length);
+                    Logger.LogInformation("Created training ZIP for user {UserId} with {FileCount} images ({CompressedSize} bytes, {ProcessingTime}ms)", 
+                        userId, result.FilesProcessed, result.CompressedSize, result.ProcessingTime.TotalMilliseconds);
+                    return result.ZipFilePath;
                 }
-
-                return zipPath;
+                else
+                {
+                    Logger.LogWarning("Failed to create training ZIP for user {UserId}: {ErrorMessage}", userId, result.ErrorMessage);
+                    return null;
+                }
             }
             catch (Exception ex)
             {
                 LogError(ex, "Error creating training ZIP", userId);
                 return null;
             }
+        }
+
+        [Obsolete("Use CreateTrainingZipAsync instead")]
+        private string? CreateTrainingZip(string uploadDir, string userId)
+        {
+            return CreateTrainingZipAsync(uploadDir, userId).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -673,8 +663,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 var uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
 
-                // Create training ZIP from existing uploaded images (validation handled inside method)
-                var zipPath = CreateTrainingZip(uploadDir, userId);
+                // Create training ZIP from existing uploaded images using async streaming compression
+                var zipPath = await CreateTrainingZipAsync(uploadDir, userId);
 
                 if (string.IsNullOrEmpty(zipPath))
                 {
@@ -713,7 +703,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         /// Get list of available training ZIP files for the user with public URLs
         /// </summary>
         [HttpGet("training-zips")]
-        public IActionResult GetTrainingZips()
+        public async Task<IActionResult> GetTrainingZips()
         {
             try
             {
@@ -731,20 +721,23 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 var zipFilePath = Path.Combine(trainingZipsPath, $"{userId}.zip");
                 var userZipFiles = new List<object>();
 
-                if (System.IO.File.Exists(zipFilePath))
+                if (await _asyncFileService.FileExistsAsync(zipFilePath))
                 {
-                    var fileInfo = new FileInfo(zipFilePath);
-                    var fileName = Path.GetFileName(zipFilePath);
-                    var publicUrl = GetAbsoluteUrl($"/training-zips/{fileName}");
-
-                    userZipFiles.Add(new
+                    var fileInfo = await _asyncFileService.GetFileInfoAsync(zipFilePath);
+                    if (fileInfo != null)
                     {
-                        fileName = fileName,
-                        filePath = zipFilePath,
-                        publicUrl = publicUrl,
-                        createdAt = fileInfo.CreationTime,
-                        sizeBytes = fileInfo.Length
-                    });
+                        var fileName = Path.GetFileName(zipFilePath);
+                        var publicUrl = GetAbsoluteUrl($"/training-zips/{fileName}");
+
+                        userZipFiles.Add(new
+                        {
+                            fileName = fileName,
+                            filePath = zipFilePath,
+                            publicUrl = publicUrl,
+                            createdAt = fileInfo.CreationTime,
+                            sizeBytes = fileInfo.Length
+                        });
+                    }
                 }
 
                 return SuccessResponse(userZipFiles);
@@ -760,7 +753,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         /// Get the most recent training ZIP public URL for the user
         /// </summary>
         [HttpGet("latest-training-zip")]
-        public IActionResult GetLatestTrainingZip()
+        public async Task<IActionResult> GetLatestTrainingZip()
         {
             try
             {
@@ -777,14 +770,14 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 var zipFilePath = Path.Combine(trainingZipsPath, $"{userId}.zip");
 
-                if (!System.IO.File.Exists(zipFilePath))
+                var fileInfo = await _asyncFileService.GetFileInfoAsync(zipFilePath);
+                if (fileInfo == null)
                 {
                     return ErrorResponse("NoZipFiles", "No training ZIP files found for user.", 404);
                 }
 
                 var fileName = Path.GetFileName(zipFilePath);
                 var publicUrl = GetAbsoluteUrl($"/training-zips/{fileName}");
-                var fileInfo = new FileInfo(zipFilePath);
 
                 return SuccessResponse(new
                 {
@@ -805,7 +798,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         /// Delete a specific training ZIP file by filename
         /// </summary>
         [HttpDelete("training-zips/{fileName}")]
-        public IActionResult DeleteTrainingZip(string fileName)
+        public async Task<IActionResult> DeleteTrainingZip(string fileName)
         {
             try
             {
@@ -822,12 +815,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
                 var filePath = Path.Combine(trainingZipsPath, fileName);
 
-                if (!System.IO.File.Exists(filePath))
+                var deleted = await _asyncFileService.DeleteFileAsync(filePath);
+                if (!deleted)
                 {
                     return ErrorResponse("FileNotFound", "Training ZIP file not found.", 404);
                 }
-
-                System.IO.File.Delete(filePath);
 
                 Logger.LogInformation("Deleted training ZIP file {FileName} for user {UserId}", fileName, userId);
 
@@ -848,7 +840,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         /// Delete all training ZIP files for the current user
         /// </summary>
         [HttpDelete("training-zips")]
-        public IActionResult DeleteAllTrainingZips()
+        public async Task<IActionResult> DeleteAllTrainingZips()
         {
             try
             {
@@ -866,18 +858,18 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 var zipFilePath = Path.Combine(trainingZipsPath, $"{userId}.zip");
                 var deletedCount = 0;
 
-                if (System.IO.File.Exists(zipFilePath))
+                try
                 {
-                    try
+                    var deleted = await _asyncFileService.DeleteFileAsync(zipFilePath);
+                    if (deleted)
                     {
-                        System.IO.File.Delete(zipFilePath);
                         deletedCount = 1;
                         Logger.LogInformation("Deleted training ZIP file {FilePath} for user {UserId}", zipFilePath, userId);
                     }
-                    catch (Exception ex)
-                    {
-                        Logger.LogWarning(ex, "Failed to delete training ZIP file {FilePath} for user {UserId}", zipFilePath, userId);
-                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Failed to delete training ZIP file {FilePath} for user {UserId}", zipFilePath, userId);
                 }
 
                 return SuccessResponse(new
@@ -970,25 +962,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     {
                         UploadDirectoryExists = Directory.Exists(Path.Combine(_environment.ContentRootPath, "uploads", userId)),
                         GeneratedDirectoryExists = Directory.Exists(Path.Combine(_environment.ContentRootPath, "generated", userId)),
-                        OrphanedOriginalUploads = GetOrphanedImages(userId, true),
-                        OrphanedGeneratedImages = GetOrphanedImages(userId, false)
+                        OrphanedOriginalUploads = await GetOrphanedImages(userId, true),
+                        OrphanedGeneratedImages = await GetOrphanedImages(userId, false)
                     },
-                    DetailedImageAnalysis = allImages.Select(img => new
-                    {
-                        img.Id,
-                        img.Style,
-                        img.IsGenerated,
-                        img.IsOriginalUpload,
-                        img.CreatedAt,
-                        HasOriginalUrl = !string.IsNullOrEmpty(img.OriginalImageUrl),
-                        HasProcessedUrl = !string.IsNullOrEmpty(img.ProcessedImageUrl),
-                        OriginalUrl = img.OriginalImageUrl,
-                        ProcessedUrl = img.ProcessedImageUrl,
-                        OriginalFileExists = CheckFileExists(img.OriginalImageUrl, userId),
-                        ProcessedFileExists = CheckFileExists(img.ProcessedImageUrl, userId),
-                        Classification = GetImageClassification(img),
-                        PotentialIssues = GetImageIssues(img)
-                    }).ToList(),
+                    DetailedImageAnalysis = await GetDetailedImageAnalysisAsync(allImages, userId),
                     Timestamp = DateTime.UtcNow
                 };
 
@@ -1059,9 +1036,42 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         /// <summary>
-        /// Check if an image file exists on the filesystem
+        /// Get detailed image analysis with file existence checks
         /// </summary>
-        private bool CheckFileExists(string? imageUrl, string userId)
+        private async Task<List<object>> GetDetailedImageAnalysisAsync(List<ProcessedImage> images, string userId)
+        {
+            var analysisResults = new List<object>();
+            
+            foreach (var img in images)
+            {
+                var originalExists = await CheckFileExistsAsync(img.OriginalImageUrl, userId);
+                var processedExists = await CheckFileExistsAsync(img.ProcessedImageUrl, userId);
+                
+                analysisResults.Add(new
+                {
+                    img.Id,
+                    img.Style,
+                    img.IsGenerated,
+                    img.IsOriginalUpload,
+                    img.CreatedAt,
+                    HasOriginalUrl = !string.IsNullOrEmpty(img.OriginalImageUrl),
+                    HasProcessedUrl = !string.IsNullOrEmpty(img.ProcessedImageUrl),
+                    OriginalUrl = img.OriginalImageUrl,
+                    ProcessedUrl = img.ProcessedImageUrl,
+                    OriginalFileExists = originalExists,
+                    ProcessedFileExists = processedExists,
+                    Classification = GetImageClassification(img),
+                    PotentialIssues = GetImageIssues(img)
+                });
+            }
+            
+            return analysisResults;
+        }
+
+        /// <summary>
+        /// Check if an image file exists on the filesystem using async operations
+        /// </summary>
+        private async Task<bool> CheckFileExistsAsync(string? imageUrl, string userId)
         {
             if (string.IsNullOrEmpty(imageUrl)) return false;
 
@@ -1072,7 +1082,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 {
                     var relativePath = imageUrl.TrimStart('/');
                     var fullPath = Path.Combine(_environment.ContentRootPath, relativePath);
-                    return System.IO.File.Exists(fullPath);
+                    return await _asyncFileService.FileExistsAsync(fullPath);
                 }
 
                 // Handle full URLs - can't check filesystem for external URLs
@@ -1092,7 +1102,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         /// <summary>
         /// Get count of orphaned images (database records without corresponding files)
         /// </summary>
-        private int GetOrphanedImages(string userId, bool isOriginalUploads)
+        private async Task<int> GetOrphanedImages(string userId, bool isOriginalUploads)
         {
             try
             {
@@ -1110,7 +1120,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 foreach (var img in images)
                 {
                     var urlToCheck = isOriginalUploads ? img.OriginalImageUrl : img.ProcessedImageUrl;
-                    if (!CheckFileExists(urlToCheck, userId))
+                    if (!await CheckFileExistsAsync(urlToCheck, userId))
                     {
                         orphanedCount++;
                     }
@@ -1127,6 +1137,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         /// <summary>
         /// Repair corrupted database flags for image classification
         /// </summary>
+        [Authorize(Roles = "Admin")]
         [HttpPost("debug/repair-database-flags")]
         public async Task<IActionResult> RepairDatabaseFlags()
         {
@@ -1249,6 +1260,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         /// <summary>
         /// Fix corrupted Style column entries that contain timestamps
         /// </summary>
+        [Authorize(Roles = "Admin")]
         [HttpPost("debug/repair-style-corruption")]
         public async Task<IActionResult> RepairStyleCorruption()
         {
@@ -1330,6 +1342,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         /// <summary>
         /// Remove orphaned database records that point to non-existent files
         /// </summary>
+        [Authorize(Roles = "Admin")]
         [HttpPost("debug/cleanup-orphaned-records")]
         public async Task<IActionResult> CleanupOrphanedRecords()
         {
@@ -1359,7 +1372,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     // Check if original upload files exist
                     if (img.IsOriginalUpload && !string.IsNullOrEmpty(img.OriginalImageUrl))
                     {
-                        if (!CheckFileExists(img.OriginalImageUrl, userId))
+                        if (!await CheckFileExistsAsync(img.OriginalImageUrl, userId))
                         {
                             shouldRemove = true;
                             issues.Add($"Original upload file not found: {img.OriginalImageUrl}");
@@ -1369,7 +1382,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     // Check if generated image files exist
                     if (img.IsGenerated && !string.IsNullOrEmpty(img.ProcessedImageUrl))
                     {
-                        if (!CheckFileExists(img.ProcessedImageUrl, userId))
+                        if (!await CheckFileExistsAsync(img.ProcessedImageUrl, userId))
                         {
                             shouldRemove = true;
                             issues.Add($"Generated image file not found: {img.ProcessedImageUrl}");
@@ -1433,6 +1446,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         /// <summary>
         /// Complete repair solution - runs all repairs and invalidates UI cache
         /// </summary>
+        [Authorize(Roles = "Admin")]
         [HttpPost("debug/complete-repair")]
         public async Task<IActionResult> CompleteRepair()
         {
@@ -1857,7 +1871,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         /// <summary>
         /// Reconcile database with filesystem - filesystem as source of truth
         /// </summary>
-        [AllowAnonymous] // Temporary for testing
         [HttpPost("reconcile-database")]
         public async Task<IActionResult> ReconcileDatabase([FromQuery] bool dryRun = true)
         {

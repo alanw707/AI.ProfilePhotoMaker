@@ -108,6 +108,8 @@ TestResults/
 coverage/
 **/test-results/
 **/test-results/**
+test-results.*
+staging-environment-report.json
 playwright-report/
 **/junit.xml
 

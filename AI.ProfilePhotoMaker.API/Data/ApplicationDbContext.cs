@@ -43,7 +43,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         ConfigurePaymentTransactionRelationships(builder);
         ConfigureCreditPackageRelationships(builder);
         
-        // Configure indexes for performance
+        // Configure indexes for performance - ENHANCED FOR OPTIMIZATION
         ConfigurePerformanceIndexes(builder);
         
         // Configure decimal precision
@@ -65,7 +65,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasMany(p => p.UsageLogs)
             .WithOne()
             .HasForeignKey(l => l.UserId)
-            .HasPrincipalKey(p => p.UserId);
+            .HasPrincipalKey(p => p.UserId)
+            .OnDelete(DeleteBehavior.NoAction);
     }
 
     private void ConfigureProcessedImageRelationships(ModelBuilder builder)
@@ -169,11 +170,46 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasIndex(up => up.UserId)
             .HasDatabaseName("IX_UserProfiles_UserId");
 
-        // ProcessedImage performance indexes
+        // ENHANCED ProcessedImage performance indexes for optimized queries
         builder.Entity<ProcessedImage>()
             .HasIndex(pi => pi.UserProfileId)
             .HasDatabaseName("IX_ProcessedImages_UserProfileId");
 
+        // CRITICAL: Combined index for pagination queries (UserProfileId + CreatedAt DESC)
+        builder.Entity<ProcessedImage>()
+            .HasIndex(pi => new { pi.UserProfileId, pi.CreatedAt })
+            .HasDatabaseName("IX_ProcessedImages_UserProfileId_CreatedAt_Desc")
+            .IsDescending(false, true); // Ascending UserProfileId, Descending CreatedAt
+
+        // OPTIMIZED: Index for filtering by image type
+        builder.Entity<ProcessedImage>()
+            .HasIndex(pi => new { pi.UserProfileId, pi.IsOriginalUpload })
+            .HasDatabaseName("IX_ProcessedImages_UserProfileId_IsOriginalUpload");
+
+        builder.Entity<ProcessedImage>()
+            .HasIndex(pi => new { pi.UserProfileId, pi.IsGenerated })
+            .HasDatabaseName("IX_ProcessedImages_UserProfileId_IsGenerated");
+
+        // OPTIMIZED: Index for style filtering with pagination
+        builder.Entity<ProcessedImage>()
+            .HasIndex(pi => new { pi.UserProfileId, pi.Style, pi.CreatedAt })
+            .HasDatabaseName("IX_ProcessedImages_UserProfileId_Style_CreatedAt_Desc")
+            .IsDescending(false, false, true); // Ascending UserProfileId and Style, Descending CreatedAt
+
+        // OPTIMIZED: Index for statistics queries (grouped operations)
+        builder.Entity<ProcessedImage>()
+            .HasIndex(pi => new { pi.UserProfileId, pi.IsOriginalUpload, pi.IsGenerated, pi.CreatedAt })
+            .HasDatabaseName("IX_ProcessedImages_UserProfileId_Flags_CreatedAt")
+            .IsDescending(false, false, false, true);
+
+        // OPTIMIZED: Covering index for common projections (reduces key lookups)
+        builder.Entity<ProcessedImage>()
+            .HasIndex(pi => new { pi.UserProfileId, pi.CreatedAt })
+            .HasDatabaseName("IX_ProcessedImages_UserProfileId_CreatedAt_Covering")
+            .IncludeProperties(pi => new { pi.Id, pi.Style, pi.IsGenerated, pi.IsOriginalUpload })
+            .IsDescending(false, true);
+
+        // Legacy index - keep for compatibility
         builder.Entity<ProcessedImage>()
             .HasIndex(pi => pi.CreatedAt)
             .HasDatabaseName("IX_ProcessedImages_CreatedAt");
@@ -244,6 +280,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<ModelCreationRequest>()
             .HasIndex(mcr => mcr.CreatedAt)
             .HasDatabaseName("IX_ModelCreationRequests_CreatedAt");
+
+        // ENHANCED: Combined index for user model queries
+        builder.Entity<ModelCreationRequest>()
+            .HasIndex(mcr => new { mcr.UserId, mcr.Status, mcr.CompletedAt })
+            .HasDatabaseName("IX_ModelCreationRequests_UserId_Status_CompletedAt")
+            .IsDescending(false, false, true); // Descending CompletedAt for latest first
     }
 
     private void ConfigureDecimalPrecision(ModelBuilder builder)

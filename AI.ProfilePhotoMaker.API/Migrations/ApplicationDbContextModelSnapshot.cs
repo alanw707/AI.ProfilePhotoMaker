@@ -3,6 +3,7 @@ using System;
 using AI.ProfilePhotoMaker.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -15,70 +16,74 @@ namespace AI.ProfilePhotoMaker.API.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.16");
+            modelBuilder
+                .HasAnnotation("ProductVersion", "8.0.16")
+                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("AccessFailedCount")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("LastName")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("NormalizedUserName")
                         .HasMaxLength(256)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("PasswordHash")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PhoneNumber")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("PhoneNumberConfirmed")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<string>("SecurityStamp")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(256)");
 
                     b.HasKey("Id");
 
@@ -87,7 +92,8 @@ namespace AI.ProfilePhotoMaker.API.Migrations
 
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
-                        .HasDatabaseName("UserNameIndex");
+                        .HasDatabaseName("UserNameIndex")
+                        .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
@@ -96,45 +102,47 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("BonusCredits")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("Credits")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("DisplayOrder")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("Price")
                         .HasPrecision(10, 2)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<string>("StripePriceId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("StripeProductId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -152,7 +160,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 1,
                             BonusCredits = 0,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6373),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(8832),
                             Credits = 50,
                             Description = "Perfect for trying out custom training and styled generations",
                             DisplayOrder = 1,
@@ -164,7 +172,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 2,
                             BonusCredits = 30,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6376),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(8834),
                             Credits = 120,
                             Description = "Most popular - great for professionals",
                             DisplayOrder = 2,
@@ -176,7 +184,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 3,
                             BonusCredits = 100,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6379),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(8837),
                             Credits = 300,
                             Description = "Best value for content creators and businesses",
                             DisplayOrder = 3,
@@ -190,42 +198,44 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("AmountPaid")
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
 
                     b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("CreditsAwarded")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("ExternalTransactionId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("PackageId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("PaymentProvider")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("PaymentTransactionId")
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime>("PurchaseDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("Status")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
@@ -243,39 +253,39 @@ namespace AI.ProfilePhotoMaker.API.Migrations
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.ModelCreationRequest", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("ErrorMessage")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ModelName")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PendingTrainingRequestId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ReplicateModelId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Status")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("TrainedModelVersion")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("TrainingImageZipUrl")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -292,53 +302,55 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(3)");
 
                     b.Property<string>("Description")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ExternalTransactionId")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("FailureReason")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PaymentProvider")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("ProcessedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("Status")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int?>("SubscriptionId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("Type")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
@@ -357,34 +369,36 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("IsGenerated")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsOriginalUpload")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<string>("OriginalImageUrl")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ProcessedImageUrl")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime>("ScheduledDeletionDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Style")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("UserProfileId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -405,36 +419,38 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("NegativePromptTemplate")
                         .IsRequired()
                         .HasMaxLength(1000)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<string>("PromptTemplate")
                         .IsRequired()
                         .HasMaxLength(2000)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -454,222 +470,222 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6559),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9148),
                             Description = "Professional corporate headshot style",
                             IsActive = true,
                             Name = "corporate",
                             NegativePromptTemplate = "casual clothes, blurred, low quality, unprofessional",
                             PromptTemplate = "professional corporate headshot, business attire, clean background, confident expression, high-quality photography",
-                            UpdatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6559)
+                            UpdatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9149)
                         },
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6562),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9151),
                             Description = "Executive leadership portrait",
                             IsActive = true,
                             Name = "executive",
                             NegativePromptTemplate = "casual, informal, poor lighting, unprofessional",
                             PromptTemplate = "executive portrait, professional leadership style, formal business attire, authoritative presence, studio lighting",
-                            UpdatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6562)
+                            UpdatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9151)
                         },
                         new
                         {
                             Id = 3,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6564),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9154),
                             Description = "Professional consultant style",
                             IsActive = true,
                             Name = "consultant",
                             NegativePromptTemplate = "too casual, unprofessional, blurred",
                             PromptTemplate = "professional consultant portrait, business consulting style, smart casual attire, approachable yet professional",
-                            UpdatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6564)
+                            UpdatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9155)
                         },
                         new
                         {
                             Id = 4,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6566),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9156),
                             Description = "LinkedIn professional networking",
                             IsActive = true,
                             Name = "linkedin",
                             NegativePromptTemplate = "casual clothes, distracting background, unprofessional",
                             PromptTemplate = "linkedin profile photo, professional networking style, business attire, friendly professional expression, clean background",
-                            UpdatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6567)
+                            UpdatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9157)
                         },
                         new
                         {
                             Id = 5,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6569),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9158),
                             Description = "Legal professional portrait",
                             IsActive = true,
                             Name = "legal",
                             NegativePromptTemplate = "casual, informal, unprofessional",
                             PromptTemplate = "legal professional portrait, formal business attire, trustworthy appearance, professional law office style",
-                            UpdatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6570)
+                            UpdatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9159)
                         },
                         new
                         {
                             Id = 6,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6572),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9162),
                             Description = "Healthcare professional style",
                             IsActive = true,
                             Name = "medical",
                             NegativePromptTemplate = "casual clothes, unprofessional, poor quality",
                             PromptTemplate = "medical professional portrait, healthcare style, professional medical attire, trustworthy healthcare provider appearance",
-                            UpdatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6573)
+                            UpdatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9162)
                         },
                         new
                         {
                             Id = 7,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6575),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9164),
                             Description = "Author and writer portrait",
                             IsActive = true,
                             Name = "author",
                             NegativePromptTemplate = "unprofessional, distracting elements, poor composition",
                             PromptTemplate = "author portrait, writer style, creative professional appearance, literary aesthetic, thoughtful expression",
-                            UpdatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6575)
+                            UpdatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9164)
                         },
                         new
                         {
                             Id = 8,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6577),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9166),
                             Description = "Entrepreneurial business style",
                             IsActive = true,
                             Name = "entrepreneur",
                             NegativePromptTemplate = "formal corporate look, traditional, static pose",
                             PromptTemplate = "entrepreneur portrait, innovative business leader style, modern professional attire, dynamic confident expression",
-                            UpdatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6577)
+                            UpdatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9166)
                         },
                         new
                         {
                             Id = 9,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6579),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9168),
                             Description = "Startup professional style",
                             IsActive = true,
                             Name = "startup",
                             NegativePromptTemplate = "overly formal, traditional corporate, stiff pose",
                             PromptTemplate = "startup professional portrait, innovative tech style, modern casual business attire, entrepreneurial spirit",
-                            UpdatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6580)
+                            UpdatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9168)
                         },
                         new
                         {
                             Id = 10,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6582),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9171),
                             Description = "Technology professional style",
                             IsActive = true,
                             Name = "tech-professional",
                             NegativePromptTemplate = "overly formal, outdated style, unprofessional",
                             PromptTemplate = "tech professional portrait, modern technology industry style, smart casual tech attire, innovative professional look",
-                            UpdatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6582)
+                            UpdatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9171)
                         },
                         new
                         {
                             Id = 11,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6584),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9173),
                             Description = "Social media influencer style",
                             IsActive = true,
                             Name = "influencer",
                             NegativePromptTemplate = "overly formal, corporate look, boring expression",
                             PromptTemplate = "social media influencer portrait, engaging personality style, trendy professional appearance, charismatic expression",
-                            UpdatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6584)
+                            UpdatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9173)
                         },
                         new
                         {
                             Id = 12,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6586),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9175),
                             Description = "Digital nomad professional",
                             IsActive = true,
                             Name = "digital-nomad",
                             NegativePromptTemplate = "formal office attire, traditional corporate, static background",
                             PromptTemplate = "digital nomad portrait, remote work professional style, casual modern attire, location-independent professional",
-                            UpdatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6586)
+                            UpdatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9175)
                         },
                         new
                         {
                             Id = 13,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6588),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9177),
                             Description = "Creative professional style",
                             IsActive = true,
                             Name = "creative",
                             NegativePromptTemplate = "corporate formal, traditional business, boring conventional look",
                             PromptTemplate = "creative professional portrait, artistic style, expressive creative look, innovative artistic appearance",
-                            UpdatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6589)
+                            UpdatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9177)
                         },
                         new
                         {
                             Id = 14,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6591),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9179),
                             Description = "Casual professional style",
                             IsActive = true,
                             Name = "casual",
                             NegativePromptTemplate = "overly formal, stiff corporate, too dressy",
                             PromptTemplate = "casual professional portrait, relaxed business style, smart casual attire, approachable friendly appearance",
-                            UpdatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6591)
+                            UpdatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9179)
                         },
                         new
                         {
                             Id = 15,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6593),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9181),
                             Description = "Artistic creative portrait",
                             IsActive = true,
                             Name = "artistic",
                             NegativePromptTemplate = "corporate business, formal attire, conventional look",
                             PromptTemplate = "artistic portrait, creative artistic style, expressive artistic look, bohemian creative appearance",
-                            UpdatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6593)
+                            UpdatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9182)
                         },
                         new
                         {
                             Id = 16,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6595),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9183),
                             Description = "Edgy urban style",
                             IsActive = true,
                             Name = "edgy-urban",
                             NegativePromptTemplate = "conservative formal, traditional business, bland conventional",
                             PromptTemplate = "edgy urban portrait, modern urban style, contemporary city fashion, bold confident expression",
-                            UpdatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6595)
+                            UpdatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9184)
                         },
                         new
                         {
                             Id = 17,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6597),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9185),
                             Description = "Glamour portrait style",
                             IsActive = true,
                             Name = "glamour",
                             NegativePromptTemplate = "casual simple, plain appearance, understated look",
                             PromptTemplate = "glamour portrait, elegant sophisticated style, polished glamorous appearance, high-end fashion aesthetic",
-                            UpdatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6598)
+                            UpdatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9186)
                         },
                         new
                         {
                             Id = 18,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6599),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9222),
                             Description = "Academic professional style",
                             IsActive = true,
                             Name = "academic",
                             NegativePromptTemplate = "casual informal, unprofessional, non-academic",
                             PromptTemplate = "academic portrait, scholarly professional style, intellectual appearance, educational professional look",
-                            UpdatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6601)
+                            UpdatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9223)
                         },
                         new
                         {
                             Id = 19,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6602),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9224),
                             Description = "Fitness professional style",
                             IsActive = true,
                             Name = "fitness",
                             NegativePromptTemplate = "sedentary look, unhealthy appearance, low energy",
                             PromptTemplate = "fitness professional portrait, athletic style, health and wellness appearance, energetic confident look",
-                            UpdatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6603)
+                            UpdatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9225)
                         },
                         new
                         {
                             Id = 20,
-                            CreatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6605),
+                            CreatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9227),
                             Description = "Spiritual wellness style",
                             IsActive = true,
                             Name = "spiritual",
                             NegativePromptTemplate = "materialistic look, stressed appearance, conventional business",
                             PromptTemplate = "spiritual portrait, wellness style, mindful peaceful appearance, holistic health aesthetic",
-                            UpdatedAt = new DateTime(2025, 8, 7, 16, 13, 56, 332, DateTimeKind.Utc).AddTicks(6605)
+                            UpdatedAt = new DateTime(2025, 8, 8, 17, 9, 31, 983, DateTimeKind.Utc).AddTicks(9228)
                         });
                 });
 
@@ -677,60 +693,62 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime?>("CancelAtPeriodEnd")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CancellationReason")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("CancelledAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("EndDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("ExternalCustomerId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ExternalSubscriptionId")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<DateTime?>("LastPaymentDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("NextBillingDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("PaymentProvider")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("PlanId")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime>("StartDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("Status")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
@@ -748,59 +766,59 @@ namespace AI.ProfilePhotoMaker.API.Migrations
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.SubscriptionPlan", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("BillingPeriod")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<bool>("CanBatchGenerate")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("CanTrainCustomModels")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<bool>("HighResolutionOutput")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<int>("ImagesPerMonth")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<int>("MaxStylesAccess")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("MaxTrainingImages")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("Price")
                         .HasPrecision(18, 2)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("StripePriceId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("StripeProductId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -811,29 +829,31 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Action")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<int?>("CreditsCost")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int?>("CreditsRemaining")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("Details")
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
@@ -850,47 +870,49 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("Credits")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("Ethnicity")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("FirstName")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Gender")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("LastCreditReset")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("LastModelSyncCheck")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("LastName")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("PurchasedCredits")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int?>("StyleId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("SubscriptionTier")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
@@ -906,16 +928,18 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("SelectedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("StyleId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("UserProfileId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -935,25 +959,26 @@ namespace AI.ProfilePhotoMaker.API.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
                         .HasMaxLength(256)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("NormalizedName")
                         .HasMaxLength(256)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(256)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("NormalizedName")
                         .IsUnique()
-                        .HasDatabaseName("RoleNameIndex");
+                        .HasDatabaseName("RoleNameIndex")
+                        .HasFilter("[NormalizedName] IS NOT NULL");
 
                     b.ToTable("AspNetRoles", (string)null);
                 });
@@ -962,17 +987,19 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ClaimType")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("RoleId")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
@@ -985,17 +1012,19 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ClaimType")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
@@ -1007,17 +1036,17 @@ namespace AI.ProfilePhotoMaker.API.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("ProviderKey")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("ProviderDisplayName")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("LoginProvider", "ProviderKey");
 
@@ -1029,10 +1058,10 @@ namespace AI.ProfilePhotoMaker.API.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
                 {
                     b.Property<string>("UserId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("RoleId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("UserId", "RoleId");
 
@@ -1044,16 +1073,16 @@ namespace AI.ProfilePhotoMaker.API.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
                     b.Property<string>("UserId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Name")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Value")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 
@@ -1138,7 +1167,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .WithMany("UsageLogs")
                         .HasForeignKey("UserId")
                         .HasPrincipalKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("User");
