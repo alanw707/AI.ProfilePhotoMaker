@@ -1,6 +1,5 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using System.Text.RegularExpressions;
 
 namespace AI.ProfilePhotoMaker.API.Services.Storage;
 
@@ -13,39 +12,16 @@ public class AzureBlobStorageService : IStorageService
     private readonly IConfiguration _configuration;
     private readonly ILogger<AzureBlobStorageService> _logger;
     private readonly string _containerName;
-    private readonly string _storageAccountUrl;
 
     public AzureBlobStorageService(
+        BlobServiceClient blobServiceClient,
         IConfiguration configuration,
         ILogger<AzureBlobStorageService> logger)
     {
+        _blobServiceClient = blobServiceClient;
         _configuration = configuration;
         _logger = logger;
-
-        var connectionString = _configuration.GetConnectionString("AzureStorage") ??
-                              _configuration["AzureStorage:ConnectionString"];
-
-        if (string.IsNullOrEmpty(connectionString))
-        {
-            throw new InvalidOperationException("Azure Storage connection string is not configured");
-        }
-
-        _blobServiceClient = new BlobServiceClient(connectionString);
-        _containerName = _configuration["AzureStorage:ContainerName"] ?? "profile-images";
-
-        // Extract storage account URL from connection string for public URLs
-        var accountNameMatch = Regex.Match(connectionString, @"AccountName=([^;]+)");
-        if (accountNameMatch.Success)
-        {
-            var accountName = accountNameMatch.Groups[1].Value;
-            _storageAccountUrl = $"https://{accountName}.blob.core.windows.net";
-        }
-        else
-        {
-            _storageAccountUrl = "https://unknown.blob.core.windows.net";
-        }
-
-        _logger.LogInformation("Azure Blob Storage Service initialized with container: {ContainerName}", _containerName);
+        _containerName = configuration["AzureStorage:ContainerName"] ?? "profile-images";
     }
 
     public async Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId)
@@ -53,31 +29,15 @@ public class AzureBlobStorageService : IStorageService
         try
         {
             var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
-            
-            // Ensure container exists
             await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
 
-            // Create blob path: generated/{userId}/{fileName} or style-previews/{fileName}
-            var blobName = IsStylePreview(fileName) 
-                ? $"style-previews/{fileName}"
-                : $"generated/{userId}/{fileName}";
+            var blobPath = $"generated/{userId}/{fileName}";
+            var blobClient = containerClient.GetBlobClient(blobPath);
 
-            var blobClient = containerClient.GetBlobClient(blobName);
-
-            // Set content type based on file extension
-            var contentType = GetContentType(Path.GetExtension(fileName));
-
-            // Upload the blob with overwrite
             await blobClient.UploadAsync(imageStream, overwrite: true);
-            
-            // Set content type
-            await blobClient.SetHttpHeadersAsync(new BlobHttpHeaders
-            {
-                ContentType = contentType
-            });
 
-            _logger.LogInformation("Saved image to Azure Blob Storage: {BlobName}", blobName);
-            return blobName;
+            _logger.LogInformation("Saved image to Azure Blob Storage: {BlobPath}", blobPath);
+            return blobPath;
         }
         catch (Exception ex)
         {
@@ -90,8 +50,22 @@ public class AzureBlobStorageService : IStorageService
     {
         try
         {
-            var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
-            var blobClient = containerClient.GetBlobClient(storagePath);
+            string containerName;
+            string blobPath;
+            
+            if (storagePath.StartsWith("style-previews/"))
+            {
+                containerName = "style-previews";
+                blobPath = storagePath.Substring("style-previews/".Length);
+            }
+            else
+            {
+                containerName = _containerName;
+                blobPath = storagePath;
+            }
+
+            var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+            var blobClient = containerClient.GetBlobClient(blobPath.TrimStart('/'));
 
             if (!await blobClient.ExistsAsync())
             {
@@ -113,34 +87,6 @@ public class AzureBlobStorageService : IStorageService
     {
         try
         {
-            var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
-            var blobClient = containerClient.GetBlobClient(storagePath);
-
-            var result = await blobClient.DeleteIfExistsAsync();
-            
-            if (result.Value)
-            {
-                _logger.LogInformation("Deleted blob from Azure Storage: {StoragePath}", storagePath);
-            }
-            else
-            {
-                _logger.LogWarning("Attempted to delete non-existent blob: {StoragePath}", storagePath);
-            }
-
-            return result.Value;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to delete blob from Azure Storage: {StoragePath}", storagePath);
-            return false;
-        }
-    }
-
-    public async Task<bool> ExistsAsync(string storagePath)
-    {
-        try
-        {
-            // Handle style-previews paths by using correct container
             string containerName;
             string blobPath;
             
@@ -156,7 +102,48 @@ public class AzureBlobStorageService : IStorageService
             }
 
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
-            var blobClient = containerClient.GetBlobClient(blobPath);
+            var blobClient = containerClient.GetBlobClient(blobPath.TrimStart('/'));
+
+            var response = await blobClient.DeleteIfExistsAsync();
+            
+            if (response.Value)
+            {
+                _logger.LogInformation("Deleted blob from Azure Storage: {StoragePath}", storagePath);
+            }
+            else
+            {
+                _logger.LogWarning("Attempted to delete non-existent blob: {StoragePath}", storagePath);
+            }
+            
+            return response.Value;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete blob from Azure Storage: {StoragePath}", storagePath);
+            return false;
+        }
+    }
+
+    public async Task<bool> ExistsAsync(string storagePath)
+    {
+        try
+        {
+            string containerName;
+            string blobPath;
+            
+            if (storagePath.StartsWith("style-previews/"))
+            {
+                containerName = "style-previews";
+                blobPath = storagePath.Substring("style-previews/".Length);
+            }
+            else
+            {
+                containerName = _containerName;
+                blobPath = storagePath;
+            }
+
+            var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+            var blobClient = containerClient.GetBlobClient(blobPath.TrimStart('/'));
 
             var response = await blobClient.ExistsAsync();
             return response.Value;
@@ -169,6 +156,12 @@ public class AzureBlobStorageService : IStorageService
     }
 
     public string GetImageUrl(string storagePath)
+    {
+        // Default to frontend/internal use (for Azure, both internal and external use the same public blob URLs)
+        return GetImageUrl(storagePath, forExternalApi: false);
+    }
+
+    public string GetImageUrl(string storagePath, bool forExternalApi)
     {
         // Handle style-previews paths by using correct container
         string containerName;
@@ -185,9 +178,23 @@ public class AzureBlobStorageService : IStorageService
             blobPath = storagePath;
         }
 
-        // Return the public blob URL
+        // Azure Blob Storage provides public URLs that work for both internal and external access
+        // No need for different URLs based on context since blobs are publicly accessible
         var cleanPath = blobPath.TrimStart('/');
-        return $"{_storageAccountUrl}/{containerName}/{cleanPath}";
+        var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+        var blobClient = containerClient.GetBlobClient(cleanPath);
+        var url = blobClient.Uri.ToString();
+
+        if (forExternalApi)
+        {
+            _logger.LogDebug("GetImageUrl for external API (Azure Blob): {Url}", url);
+        }
+        else
+        {
+            _logger.LogDebug("GetImageUrl for frontend (Azure Blob): {Url}", url);
+        }
+
+        return url;
     }
 
     public async Task<List<string>> ListUserImagesAsync(string userId)
@@ -196,18 +203,23 @@ public class AzureBlobStorageService : IStorageService
         {
             var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
             var prefix = $"generated/{userId}/";
-            var blobs = new List<string>();
+            var imageExtensions = new[] { ".png", ".jpg", ".jpeg", ".webp", ".gif" };
+            var imageFiles = new List<string>();
 
             await foreach (var blobItem in containerClient.GetBlobsAsync(prefix: prefix))
             {
-                blobs.Add(blobItem.Name);
+                var extension = Path.GetExtension(blobItem.Name).ToLowerInvariant();
+                if (imageExtensions.Contains(extension))
+                {
+                    imageFiles.Add(blobItem.Name);
+                }
             }
 
-            return blobs;
+            return imageFiles;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to list blobs for user {UserId}", userId);
+            _logger.LogError(ex, "Failed to list images for user {UserId} from Azure Blob Storage", userId);
             return new List<string>();
         }
     }
@@ -216,7 +228,6 @@ public class AzureBlobStorageService : IStorageService
     {
         try
         {
-            // Handle style-previews paths by using correct container
             string containerName;
             string blobPath;
             
@@ -232,7 +243,7 @@ public class AzureBlobStorageService : IStorageService
             }
 
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
-            var blobClient = containerClient.GetBlobClient(blobPath);
+            var blobClient = containerClient.GetBlobClient(blobPath.TrimStart('/'));
 
             if (!await blobClient.ExistsAsync())
             {
@@ -246,40 +257,15 @@ public class AzureBlobStorageService : IStorageService
             {
                 FileName = fileName,
                 Size = properties.Value.ContentLength,
-                CreatedAt = properties.Value.CreatedOn.UtcDateTime,
-                ModifiedAt = properties.Value.LastModified.UtcDateTime,
+                CreatedAt = properties.Value.CreatedOn.DateTime,
+                ModifiedAt = properties.Value.LastModified.DateTime,
                 ContentType = properties.Value.ContentType
             };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get blob info for: {StoragePath}", storagePath);
+            _logger.LogError(ex, "Failed to get file info for blob: {StoragePath}", storagePath);
             return null;
         }
-    }
-
-    /// <summary>
-    /// Checks if the filename indicates it's a style preview image
-    /// </summary>
-    private static bool IsStylePreview(string fileName)
-    {
-        return fileName.Contains("-preview.jpg") || fileName.EndsWith("-preview.jpg");
-    }
-
-    /// <summary>
-    /// Gets the MIME content type for a file extension
-    /// </summary>
-    private static string GetContentType(string extension)
-    {
-        return extension.ToLowerInvariant() switch
-        {
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".png" => "image/png",
-            ".gif" => "image/gif",
-            ".webp" => "image/webp",
-            ".bmp" => "image/bmp",
-            ".tiff" or ".tif" => "image/tiff",
-            _ => "application/octet-stream"
-        };
     }
 }
