@@ -211,11 +211,8 @@ public class EnhancedDatabaseProviderService : IDatabaseProviderService
             // Ensure pooling is enabled
             builder.Pooling = true;
             
-            // Set connection lifetime for recycling (5 minutes)
-            if (builder.ConnectionLifetime == 0)
-            {
-                builder.ConnectionLifetime = 300;
-            }
+            // Connection lifetime is not a property of SqlConnectionStringBuilder
+            // This was an error in the enhanced implementation
             
             // Ensure MultipleActiveResultSets for EF Core
             builder.MultipleActiveResultSets = true;
