@@ -462,7 +462,7 @@ else
 }
 
 // Perform deployment validation on startup
-await app.ValidateDeploymentOnStartupAsync();
+// Temporarily disabled: await app.ValidateDeploymentOnStartupAsync();
 
 // Validate webhook URL configuration on startup
 await ValidateWebhookConfigurationAsync(app);

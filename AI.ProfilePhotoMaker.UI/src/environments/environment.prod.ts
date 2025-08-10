@@ -1,7 +1,7 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://aiprofilephotomakerapi.azurewebsites.net/api',
-  baseUrl: 'https://aiprofilephotomakerapi.azurewebsites.net',
+  apiUrl: 'https://aipm-api-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io/api',
+  baseUrl: 'https://aipm-api-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io',
   name: 'production',
   features: {
     debugMode: false,
@@ -13,7 +13,7 @@ export const environment = {
   azure: {
     enabled: true,
     frontendUrl: 'https://aiprofilephotomaker.azurestaticapps.net',
-    backendUrl: 'https://aiprofilephotomakerapi.azurewebsites.net',
-    storageUrl: 'https://aiprofilephotomaker.blob.core.windows.net',
+    backendUrl: 'https://aipm-api-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io',
+    storageUrl: 'https://aipmstv16j74jubocuukg.blob.core.windows.net',
   },
 };
