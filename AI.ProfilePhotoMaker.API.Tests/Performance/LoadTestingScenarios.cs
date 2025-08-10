@@ -294,7 +294,7 @@ public class LoadTestingScenarios : PerformanceTestBase
         _output.WriteLine($"Memory test completed: {scenarioStats.AllOkCount} operations, {scenarioStats.Ok.Mean:F1}ms average response time");
     }
 
-    protected override void Dispose()
+    public override void Dispose()
     {
         try
         {
