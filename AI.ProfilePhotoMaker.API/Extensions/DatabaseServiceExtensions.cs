@@ -15,8 +15,8 @@ public static class DatabaseServiceExtensions
     /// </summary>
     public static IServiceCollection AddDatabaseServices(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
     {
-        // Register database provider service
-        services.AddSingleton<IDatabaseProviderService, DatabaseProviderService>();
+        // Register enhanced database provider service with improved authentication handling
+        services.AddSingleton<IDatabaseProviderService, EnhancedDatabaseProviderService>();
         
         // Register DbContext with provider service
         services.AddDbContext<ApplicationDbContext>((serviceProvider, options) =>
