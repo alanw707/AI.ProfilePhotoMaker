@@ -79,22 +79,21 @@ public class EnvironmentConfiguration
 
     private async Task ValidateDatabaseConfigurationAsync(List<ValidationResult> results)
     {
-        // Check for either local development password OR production connection string
-        var password = GetEnvironmentVariable(MSSQL_SA_PASSWORD);
+        // Support either a full connection string or a local SA password for development
         var connectionString = _configuration.GetConnectionString("DefaultConnection");
-        
+        var password = GetEnvironmentVariable(MSSQL_SA_PASSWORD);
+
         // If neither is provided, it's an error
-        if (string.IsNullOrEmpty(password) && string.IsNullOrEmpty(connectionString))
+        if (string.IsNullOrEmpty(connectionString) && string.IsNullOrEmpty(password))
         {
-            results.Add(new ValidationResult(false, "DATABASE_CONFIG", 
+            results.Add(new ValidationResult(false, "DATABASE_CONFIG",
                 "Database configuration is required. Set either MSSQL_SA_PASSWORD (for local development) or ConnectionStrings__DefaultConnection (for production)"));
             return;
         }
 
         // If using local development password, validate it
-        if (!string.IsNullOrEmpty(password))
+        if (!string.IsNullOrEmpty(password) && string.IsNullOrEmpty(connectionString))
         {
-            // Validate password complexity
             if (password.Length < 8)
             {
                 results.Add(new ValidationResult(false, MSSQL_SA_PASSWORD, "Database password must be at least 8 characters"));
@@ -102,32 +101,35 @@ public class EnvironmentConfiguration
 
             if (!Regex.IsMatch(password, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$"))
             {
-                results.Add(new ValidationResult(false, MSSQL_SA_PASSWORD, 
+                results.Add(new ValidationResult(false, MSSQL_SA_PASSWORD,
                     "Database password must contain uppercase, lowercase, number, and special character"));
             }
-            
+
             _logger.LogInformation("✅ Database configuration validation completed (using local development mode)");
+            return;
         }
-        else if (!string.IsNullOrEmpty(connectionString))
+
+        // Otherwise, validate the provided connection string minimally
+        if (!string.IsNullOrEmpty(connectionString))
         {
-            // Basic validation for connection string
             if (!connectionString.Contains("Server=") && !connectionString.Contains("Data Source="))
             {
-                results.Add(new ValidationResult(false, "ConnectionStrings__DefaultConnection", 
+                results.Add(new ValidationResult(false, "ConnectionStrings__DefaultConnection",
                     "Connection string appears to be invalid (missing Server or Data Source)"));
             }
-            
-            _logger.LogInformation("✅ Database configuration validation completed (using production connection string)");
+
+            _logger.LogInformation("✅ Database configuration validation completed (using configured connection string)");
         }
     }
 
     private async Task ValidateJwtConfigurationAsync(List<ValidationResult> results)
     {
-        var jwtSecret = GetEnvironmentVariable(JWT_SECRET);
+        // Accept either environment variable JWT_SECRET or configuration key JWT:Secret
+        var jwtSecret = GetEnvironmentVariable(JWT_SECRET) ?? _configuration["JWT:Secret"] ?? _configuration["Jwt:Secret"];
         
         if (string.IsNullOrEmpty(jwtSecret))
         {
-            results.Add(new ValidationResult(false, JWT_SECRET, "JWT secret is required"));
+            results.Add(new ValidationResult(false, JWT_SECRET, "JWT secret is required (set env JWT_SECRET or config JWT:Secret)"));
             return;
         }
 
@@ -141,8 +143,9 @@ public class EnvironmentConfiguration
 
     private async Task ValidateReplicateConfigurationAsync(List<ValidationResult> results)
     {
-        var apiToken = GetEnvironmentVariable(REPLICATE_API_TOKEN);
-        var webhookSecret = GetEnvironmentVariable(REPLICATE_WEBHOOK_SECRET);
+        // Accept either env or config for Replicate credentials
+        var apiToken = GetEnvironmentVariable(REPLICATE_API_TOKEN) ?? _configuration["Replicate:ApiToken"];
+        var webhookSecret = GetEnvironmentVariable(REPLICATE_WEBHOOK_SECRET) ?? _configuration["Replicate:WebhookSecret"];
 
         if (string.IsNullOrEmpty(apiToken))
         {
