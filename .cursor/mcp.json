@@ -1,0 +1,29 @@
+{
+  "mcpServers": {
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-playwright"
+      ],
+      "disabled": false
+    },
+    "serena": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "serena-mcp-server"
+      ],
+      "disabled": false
+    }
+  }
+}
+
+
