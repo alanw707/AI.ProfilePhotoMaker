@@ -416,6 +416,16 @@ builder.Services.AddCors(options =>
                 "https://test.profilephotomaker.com"
             };
             
+            // Add origins from CORS_ALLOWED_ORIGINS environment variable if set
+            var envCorsOrigins = builder.Configuration["CORS_ALLOWED_ORIGINS"] ?? Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS");
+            if (!string.IsNullOrEmpty(envCorsOrigins))
+            {
+                var envOrigins = envCorsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                             .Select(o => o.Trim())
+                                             .Where(o => !string.IsNullOrEmpty(o));
+                allowedOrigins.AddRange(envOrigins);
+            }
+            
             // Add V1 deployment URL from configuration
             if (!string.IsNullOrEmpty(v1FrontendUrl))
             {
@@ -428,10 +438,15 @@ builder.Services.AddCors(options =>
             // Add actual V1 deployment URL for current infrastructure (keep for rollback capability)
             allowedOrigins.Add("https://aipm-web-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io");
             
-            corsBuilder.WithOrigins(allowedOrigins.ToArray())
+            // Remove duplicates and log final origins list
+            var finalOrigins = allowedOrigins.Distinct().ToArray();
+            Console.WriteLine($"🌐 CORS V1Production Origins: {string.Join(", ", finalOrigins)}");
+            
+            corsBuilder.WithOrigins(finalOrigins)
                 .AllowAnyMethod()
                 .AllowAnyHeader()
-                .AllowCredentials();
+                .AllowCredentials()
+                .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
         });
 
     options.AddPolicy("AllowDevelopment", corsBuilder =>
@@ -443,6 +458,14 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();
+    });
+    
+    // Add a debug policy that allows everything for testing
+    options.AddPolicy("DebugAllowAll", corsBuilder =>
+    {
+        corsBuilder.AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
     });
 });
 
@@ -508,6 +531,29 @@ if (!app.Environment.IsDevelopment())
 
 // CORS must come early in the middleware pipeline, before authentication
 var corsPolicy = app.Environment.IsDevelopment() ? "AllowDevelopment" : "V1Production";
+
+// Log CORS policy selection for debugging
+app.Logger.LogInformation($"🌐 CORS Policy Selected: {corsPolicy} (Environment: {app.Environment.EnvironmentName})");
+
+// Add CORS debugging middleware in production for troubleshooting
+app.Use(async (context, next) =>
+{
+    var isOptionsRequest = context.Request.Method == "OPTIONS";
+    var hasOrigin = context.Request.Headers.ContainsKey("Origin");
+    
+    if (isOptionsRequest || hasOrigin)
+    {
+        app.Logger.LogInformation($"🌐 CORS Request: {context.Request.Method} {context.Request.Path} | Origin: {context.Request.Headers.Origin} | Environment: {app.Environment.EnvironmentName}");
+    }
+    
+    await next();
+    
+    if (isOptionsRequest || hasOrigin)
+    {
+        var responseHeaders = string.Join(", ", context.Response.Headers.Where(h => h.Key.StartsWith("Access-Control")).Select(h => $"{h.Key}: {h.Value}"));
+        app.Logger.LogInformation($"🌐 CORS Response Headers: {(string.IsNullOrEmpty(responseHeaders) ? "NONE" : responseHeaders)}");
+    }
+});
 
 // Use production-ready CORS configuration
 app.UseCors(corsPolicy);
