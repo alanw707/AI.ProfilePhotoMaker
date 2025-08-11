@@ -123,8 +123,19 @@ public partial class DeploymentValidationService
         if (!token.StartsWith("r8_"))
             return (false, "Replicate token should start with 'r8_'");
 
-        if (token.Length < 20)
-            return (false, "Replicate token appears to be too short");
+        // In development, allow shorter tokens for testing
+        var minLength = _environment.IsDevelopment() ? 10 : 20;
+        if (token.Length < minLength)
+        {
+            var envNote = _environment.IsDevelopment() ? " (relaxed for development)" : "";
+            return (false, $"Replicate token appears to be too short (minimum {minLength} characters){envNote}");
+        }
+
+        // In development, allow test tokens
+        if (_environment.IsDevelopment() && token.Contains("DevTest"))
+        {
+            return (true, "Valid development test token format");
+        }
 
         return (true, "Valid Replicate API token format");
     }

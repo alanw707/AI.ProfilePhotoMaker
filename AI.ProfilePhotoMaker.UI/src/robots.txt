@@ -1,0 +1,27 @@
+# AI Profile Photo Maker - MVP Phase
+# Blocking all search engine indexing during development
+# This will be updated when ready for public launch
+
+User-agent: *
+Disallow: /
+
+# Explicitly block key areas
+Disallow: /api/
+Disallow: /uploads/
+Disallow: /generated/
+Disallow: /enhanced/
+Disallow: /style-previews/
+Disallow: /training-zips/
+
+# Block authentication and admin areas
+Disallow: /auth/
+Disallow: /login/
+Disallow: /admin/
+Disallow: /dashboard/
+
+# Block OAuth callbacks to avoid confusion
+Disallow: /signin-google
+Disallow: /signin-*
+
+# No sitemap during MVP phase
+# Sitemap: https://app.aiprofilephotomaker.com/sitemap.xml

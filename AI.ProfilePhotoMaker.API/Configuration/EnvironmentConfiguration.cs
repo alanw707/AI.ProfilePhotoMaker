@@ -36,11 +36,13 @@ public class EnvironmentConfiguration
 
     private readonly IConfiguration _configuration;
     private readonly ILogger<EnvironmentConfiguration> _logger;
+    private readonly IWebHostEnvironment _environment;
 
-    public EnvironmentConfiguration(IConfiguration configuration, ILogger<EnvironmentConfiguration> logger)
+    public EnvironmentConfiguration(IConfiguration configuration, ILogger<EnvironmentConfiguration> logger, IWebHostEnvironment environment)
     {
         _configuration = configuration;
         _logger = logger;
+        _environment = environment;
     }
 
     /// <summary>
@@ -144,16 +146,45 @@ public class EnvironmentConfiguration
     private async Task ValidateReplicateConfigurationAsync(List<ValidationResult> results)
     {
         // Accept either env or config for Replicate credentials
-        var apiToken = GetEnvironmentVariable(REPLICATE_API_TOKEN) ?? _configuration["Replicate:ApiToken"];
+        var envToken = GetEnvironmentVariable(REPLICATE_API_TOKEN);
+        var configToken = _configuration["Replicate:ApiToken"];
+        var apiToken = envToken ?? configToken;
         var webhookSecret = GetEnvironmentVariable(REPLICATE_WEBHOOK_SECRET) ?? _configuration["Replicate:WebhookSecret"];
+        
+        // Debug logging for development
+        if (_environment.IsDevelopment())
+        {
+            _logger.LogDebug("Validating Replicate token: '{TokenStart}...' (length: {Length})", 
+                string.IsNullOrEmpty(apiToken) ? "NULL" : apiToken.Substring(0, Math.Min(4, apiToken.Length)), 
+                apiToken?.Length ?? 0);
+        }
 
         if (string.IsNullOrEmpty(apiToken))
         {
             results.Add(new ValidationResult(false, REPLICATE_API_TOKEN, "Replicate API token is required"));
         }
+        else if (_environment.IsDevelopment() && (apiToken.Contains("your-actual-replicate-token-here") || apiToken.Contains("placeholder")))
+        {
+            // Allow placeholder tokens in development mode
+            _logger.LogWarning("⚠️  Using placeholder Replicate token in development mode - this will not work for actual API calls");
+        }
         else if (!apiToken.StartsWith("r8_"))
         {
             results.Add(new ValidationResult(false, REPLICATE_API_TOKEN, "Replicate API token should start with 'r8_'"));
+        }
+        else
+        {
+            // Additional validation for token length and format
+            var minLength = _environment.IsDevelopment() ? 10 : 20;
+            if (apiToken.Length < minLength)
+            {
+                var envNote = _environment.IsDevelopment() ? " (relaxed for development)" : "";
+                results.Add(new ValidationResult(false, REPLICATE_API_TOKEN, $"Replicate token appears to be too short (minimum {minLength} characters){envNote}"));
+            }
+            else if (_environment.IsDevelopment() && apiToken.Contains("DevTest"))
+            {
+                // Allow development test tokens - no error added
+            }
         }
 
         if (string.IsNullOrEmpty(webhookSecret))
