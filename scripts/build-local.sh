@@ -65,21 +65,17 @@ echo ""
 echo -e "${BLUE}🏗️ Building Frontend Image...${NC}"
 echo "Command: docker build -f Dockerfile.frontend -t ${ACR_LOGIN_SERVER}/aiprofilemaker-web:${IMAGE_TAG} ."
 
-# Navigate to frontend directory for build context
-cd AI.ProfilePhotoMaker.UI
-
+# Build from repo root so Dockerfile can access nginx.conf and docker-entrypoint.sh
 docker build \
-    -f ../Dockerfile.frontend \
+    -f Dockerfile.frontend \
     -t "${ACR_LOGIN_SERVER}/aiprofilemaker-web:${IMAGE_TAG}" \
     -t "${ACR_LOGIN_SERVER}/aiprofilemaker-web:${BUILD_NUMBER}" \
     .
 
 if [[ $? -eq 0 ]]; then
     echo -e "${GREEN}✅ Frontend image built successfully${NC}"
-    cd ..
 else
     echo -e "${RED}❌ Frontend image build failed${NC}"
-    cd ..
     exit 1
 fi
 
