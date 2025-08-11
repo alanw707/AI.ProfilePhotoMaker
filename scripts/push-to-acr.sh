@@ -97,6 +97,8 @@ fi
 
 # Push Backend Build Number Tag
 if [[ "$BUILD_NUMBER" != "latest" ]]; then
+    echo -e "${BLUE}🏷️ Tagging Backend with Build Number...${NC}"
+    docker tag "${ACR_LOGIN_SERVER}/aiprofilemaker-api:${IMAGE_TAG}" "${ACR_LOGIN_SERVER}/aiprofilemaker-api:${BUILD_NUMBER}"
     echo -e "${BLUE}🚀 Pushing Backend Build Tag...${NC}"
     docker push "${ACR_LOGIN_SERVER}/aiprofilemaker-api:${BUILD_NUMBER}"
 fi
@@ -118,6 +120,8 @@ fi
 
 # Push Frontend Build Number Tag
 if [[ "$BUILD_NUMBER" != "latest" ]]; then
+    echo -e "${BLUE}🏷️ Tagging Frontend with Build Number...${NC}"
+    docker tag "${ACR_LOGIN_SERVER}/aiprofilemaker-web:${IMAGE_TAG}" "${ACR_LOGIN_SERVER}/aiprofilemaker-web:${BUILD_NUMBER}"
     echo -e "${BLUE}🚀 Pushing Frontend Build Tag...${NC}"
     docker push "${ACR_LOGIN_SERVER}/aiprofilemaker-web:${BUILD_NUMBER}"
 fi
