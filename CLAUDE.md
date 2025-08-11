@@ -2,3 +2,4 @@
 - Don't preserve legacy old code, always remove them
 - Always apply YAGNI software principle, you ain't gonna need it
 - rememeber we're build a MVP production, doesn't need enterprise grade solutions yet
+- use Playwright tests instead of curl for web applications whenever possible

@@ -25,6 +25,10 @@ var backendAppName = '${appName}-api-${environment}'
 var frontendAppName = '${appName}-web-${environment}'
 var applicationInsightsName = '${appName}-ai-${environment}'
 
+// Existing certificate IDs - using working certificates
+var frontendCertificateId = '/subscriptions/7e5147a4-3abb-4a43-aef7-5a2ae770c739/resourceGroups/aiprofilemaker-v1/providers/Microsoft.App/managedEnvironments/aipm-env-v1-6j74jubocuukg/managedCertificates/mc-aipm-env-v1-6j-app-aiprofilepho-5691'
+var backendCertificateId = '/subscriptions/7e5147a4-3abb-4a43-aef7-5a2ae770c739/resourceGroups/aiprofilemaker-v1/providers/Microsoft.App/managedEnvironments/aipm-env-v1-6j74jubocuukg/managedCertificates/mc-aipm-env-v1-6j-api-aiprofilepho-8094'
+
 // Container Registry
 resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   name: containerRegistryName
@@ -178,25 +182,6 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01'
   }
 }
 
-// Managed Certificates for Custom Domains
-resource frontendCertificate 'Microsoft.App/managedEnvironments/managedCertificates@2023-05-01' = {
-  parent: containerAppsEnvironment
-  name: 'app-aiprofilephotomaker-com-cert'
-  properties: {
-    subjectName: 'app.aiprofilephotomaker.com'
-    domainControlValidation: 'CNAME'
-  }
-}
-
-resource backendCertificate 'Microsoft.App/managedEnvironments/managedCertificates@2023-05-01' = {
-  parent: containerAppsEnvironment
-  name: 'api-aiprofilephotomaker-com-cert'
-  properties: {
-    subjectName: 'api.aiprofilephotomaker.com'
-    domainControlValidation: 'CNAME'
-  }
-}
-
 // Backend API Container App
 resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: backendAppName
@@ -208,7 +193,6 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
     sqlDatabase
     storageAccount
     keyVault
-    backendCertificate
   ]
   identity: {
     type: 'SystemAssigned'
@@ -224,7 +208,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
         customDomains: [
           {
             name: 'api.aiprofilephotomaker.com'
-            certificateId: backendCertificate.id
+            certificateId: backendCertificateId
             bindingType: 'SniEnabled'
           }
         ]
@@ -360,7 +344,6 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
     containerAppsEnvironment
     containerRegistry
     backendApp  // Deploy after backend to avoid circular dependency during updates
-    frontendCertificate
   ]
   identity: {
     type: 'SystemAssigned'
@@ -376,7 +359,7 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
         customDomains: [
           {
             name: 'app.aiprofilephotomaker.com'
-            certificateId: frontendCertificate.id
+            certificateId: frontendCertificateId
             bindingType: 'SniEnabled'
           }
         ]

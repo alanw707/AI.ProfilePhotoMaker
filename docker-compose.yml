@@ -14,7 +14,7 @@ services:
       - sqlserver_data:/var/opt/mssql
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P $MSSQL_SA_PASSWORD -Q 'SELECT 1'"]
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P $MSSQL_SA_PASSWORD -C -Q 'SELECT 1'"]
       interval: ${HEALTH_CHECK_INTERVAL_SECONDS:-10}s
       timeout: 5s
       retries: 5
@@ -30,6 +30,7 @@ services:
     environment:
       # Database Configuration
       - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD}
+      - ConnectionStrings__DefaultConnection=${DATABASE_CONNECTION_STRING}
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
       
       # JWT Configuration
@@ -73,7 +74,7 @@ services:
       - ENABLE_RESPONSE_COMPRESSION=${ENABLE_RESPONSE_COMPRESSION:-true}
       - ENABLE_REQUEST_LOGGING=${ENABLE_REQUEST_LOGGING:-false}
     ports:
-      - "${CONTAINER_API_PORT:-5032}:5032"
+      - "${CONTAINER_API_PORT:-5032}:8080"
     depends_on:
       sql-server:
         condition: service_healthy
@@ -85,7 +86,7 @@ services:
       - api_style_previews:/app/style-previews
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5032/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
       interval: ${HEALTH_CHECK_INTERVAL_SECONDS:-30}s
       timeout: ${HEALTH_CHECK_TIMEOUT_SECONDS:-10}s
       retries: 3
