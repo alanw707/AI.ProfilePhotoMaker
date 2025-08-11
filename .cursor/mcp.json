@@ -8,11 +8,21 @@
       ]
     },
     "serena": {
-      "command": "uvx",
+      "command": "/home/alanw/.local/bin/uvx",
       "args": [
         "--from",
         "git+https://github.com/oraios/serena",
-        "serena-mcp-server"
+        "serena-mcp-server",
+        "--project",
+        "/home/alanw/projects/AI.ProfilePhotoMaker",
+        "--context",
+        "desktop-app",
+        "--mode",
+        "interactive",
+        "--mode",
+        "editing",
+        "--transport",
+        "stdio"
       ]
     },
     "filesystem": {
