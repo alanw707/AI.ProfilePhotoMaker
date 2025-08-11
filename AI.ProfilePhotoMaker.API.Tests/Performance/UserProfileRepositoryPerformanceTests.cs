@@ -525,7 +525,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
 
     #endregion
 
-    protected override void Dispose()
+    public override void Dispose()
     {
         try
         {

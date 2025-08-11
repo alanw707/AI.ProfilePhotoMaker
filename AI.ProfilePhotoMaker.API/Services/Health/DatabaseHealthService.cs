@@ -33,7 +33,7 @@ public class DatabaseHealthService : IDatabaseHealthService
         try
         {
             // Test database connectivity with a timeout
-            using var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            using var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(2));
             return await _context.Database.CanConnectAsync(cancellationToken.Token);
         }
         catch (Exception ex)

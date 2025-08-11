@@ -263,6 +263,14 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               name: 'ApplicationInsights__ConnectionString'
               value: applicationInsights.properties.ConnectionString
             }
+            {
+              name: 'Database__AutoMigrateOnStartup'
+              value: 'false'
+            }
+            {
+              name: 'Database__ValidateOnStartup'
+              value: 'false'
+            }
           ]
           // Health probes re-enabled since we're using real application images
           probes: [
@@ -273,9 +281,9 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
                 port: 8080
                 scheme: 'HTTP'
               }
-              initialDelaySeconds: 10
+              initialDelaySeconds: 15
               periodSeconds: 10
-              timeoutSeconds: 5
+              timeoutSeconds: 10
               failureThreshold: 3
               successThreshold: 1
             }
@@ -286,17 +294,17 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
                 port: 8080
                 scheme: 'HTTP'
               }
-              initialDelaySeconds: 5
-              periodSeconds: 5
-              timeoutSeconds: 3
-              failureThreshold: 3
+              initialDelaySeconds: 10
+              periodSeconds: 10
+              timeoutSeconds: 5
+              failureThreshold: 5
               successThreshold: 1
             }
           ]
         }
       ]
       scale: {
-        minReplicas: 0
+        minReplicas: 1
         maxReplicas: 3
         rules: [
           {

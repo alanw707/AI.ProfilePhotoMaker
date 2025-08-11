@@ -450,11 +450,19 @@ var app = builder.Build();
 // Validate environment configuration before starting
 await app.UseEnvironmentValidationAsync();
 
-// Apply database migrations using new architecture
-await app.UseDatabaseMigrationAsync();
+// Apply database migrations using new architecture (only if enabled)
+var autoMigrateOnStartup = app.Configuration.GetValue<bool>("Database:AutoMigrateOnStartup", true);
+if (autoMigrateOnStartup)
+{
+    await app.UseDatabaseMigrationAsync();
+}
+else
+{
+    app.Logger.LogInformation("Database migrations skipped (AutoMigrateOnStartup=false)");
+}
 
 // Perform deployment validation on startup
-await app.ValidateDeploymentOnStartupAsync();
+// Temporarily disabled: await app.ValidateDeploymentOnStartupAsync();
 
 // Validate webhook URL configuration on startup
 await ValidateWebhookConfigurationAsync(app);

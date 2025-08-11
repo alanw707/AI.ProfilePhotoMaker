@@ -14,8 +14,12 @@
 
 # Security & Environment files
 *.env
+.env*
 *.env.local
 *.env.production
+*.env.development
+AI.ProfilePhotoMaker.API/.env*
+AI.ProfilePhotoMaker.API/.env.development
 appsettings.Production.json
 appsettings.*.Production.json
 docker-compose.override.yml

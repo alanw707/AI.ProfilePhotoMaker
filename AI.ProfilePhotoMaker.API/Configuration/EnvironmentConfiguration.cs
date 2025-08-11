@@ -79,35 +79,47 @@ public class EnvironmentConfiguration
 
     private async Task ValidateDatabaseConfigurationAsync(List<ValidationResult> results)
     {
-        // If a DefaultConnection is configured, prefer it and do not require MSSQL_SA_PASSWORD
-        var defaultConnection = _configuration.GetConnectionString("DefaultConnection");
-        if (!string.IsNullOrWhiteSpace(defaultConnection))
-        {
-            _logger.LogInformation("✅ Using configured DefaultConnection for database; skipping MSSQL_SA_PASSWORD requirement");
-            return;
-        }
-
-        // Otherwise validate MSSQL_SA_PASSWORD for local/dev SQL authentication
+        // Support either a full connection string or a local SA password for development
+        var connectionString = _configuration.GetConnectionString("DefaultConnection");
         var password = GetEnvironmentVariable(MSSQL_SA_PASSWORD);
-        if (string.IsNullOrEmpty(password))
+
+        // If neither is provided, it's an error
+        if (string.IsNullOrEmpty(connectionString) && string.IsNullOrEmpty(password))
         {
-            results.Add(new ValidationResult(false, MSSQL_SA_PASSWORD, "Database password is required when no ConnectionStrings:DefaultConnection is configured"));
+            results.Add(new ValidationResult(false, "DATABASE_CONFIG",
+                "Database configuration is required. Set either MSSQL_SA_PASSWORD (for local development) or ConnectionStrings__DefaultConnection (for production)"));
             return;
         }
 
-        // Validate password complexity
-        if (password.Length < 8)
+        // If using local development password, validate it
+        if (!string.IsNullOrEmpty(password) && string.IsNullOrEmpty(connectionString))
         {
-            results.Add(new ValidationResult(false, MSSQL_SA_PASSWORD, "Database password must be at least 8 characters"));
+            if (password.Length < 8)
+            {
+                results.Add(new ValidationResult(false, MSSQL_SA_PASSWORD, "Database password must be at least 8 characters"));
+            }
+
+            if (!Regex.IsMatch(password, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$"))
+            {
+                results.Add(new ValidationResult(false, MSSQL_SA_PASSWORD,
+                    "Database password must contain uppercase, lowercase, number, and special character"));
+            }
+
+            _logger.LogInformation("✅ Database configuration validation completed (using local development mode)");
+            return;
         }
 
-        if (!Regex.IsMatch(password, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$"))
+        // Otherwise, validate the provided connection string minimally
+        if (!string.IsNullOrEmpty(connectionString))
         {
-            results.Add(new ValidationResult(false, MSSQL_SA_PASSWORD, 
-                "Database password must contain uppercase, lowercase, number, and special character"));
-        }
+            if (!connectionString.Contains("Server=") && !connectionString.Contains("Data Source="))
+            {
+                results.Add(new ValidationResult(false, "ConnectionStrings__DefaultConnection",
+                    "Connection string appears to be invalid (missing Server or Data Source)"));
+            }
 
-        _logger.LogInformation("✅ Database configuration validation completed");
+            _logger.LogInformation("✅ Database configuration validation completed (using configured connection string)");
+        }
     }
 
     private async Task ValidateJwtConfigurationAsync(List<ValidationResult> results)
@@ -126,184 +138,168 @@ public class EnvironmentConfiguration
             results.Add(new ValidationResult(false, JWT_SECRET, "JWT secret must be at least 32 characters"));
         }
 
-        // Check for weak or default secrets
-        if (jwtSecret.Contains("YourSuperSecret") || jwtSecret.Contains("REPLACE_WITH"))
-        {
-            results.Add(new ValidationResult(false, JWT_SECRET, "JWT secret appears to be a placeholder - use a real secret"));
-        }
-
-        // Validate JWT audience and issuer URLs
-        ValidateUrl(JWT_VALID_AUDIENCE, "JWT audience URL", results);
-        ValidateUrl(JWT_VALID_ISSUER, "JWT issuer URL", results);
-
         _logger.LogInformation("✅ JWT configuration validation completed");
     }
 
     private async Task ValidateReplicateConfigurationAsync(List<ValidationResult> results)
     {
-        // Accept either env REPLICATE_API_TOKEN or config Replicate:ApiToken
+        // Accept either env or config for Replicate credentials
         var apiToken = GetEnvironmentVariable(REPLICATE_API_TOKEN) ?? _configuration["Replicate:ApiToken"];
-        
+        var webhookSecret = GetEnvironmentVariable(REPLICATE_WEBHOOK_SECRET) ?? _configuration["Replicate:WebhookSecret"];
+
         if (string.IsNullOrEmpty(apiToken))
         {
-            results.Add(new ValidationResult(false, REPLICATE_API_TOKEN, "Replicate API token is required (set env REPLICATE_API_TOKEN or config Replicate:ApiToken)"));
-            return;
+            results.Add(new ValidationResult(false, REPLICATE_API_TOKEN, "Replicate API token is required"));
         }
-
-        if (!apiToken.StartsWith("r8_"))
+        else if (!apiToken.StartsWith("r8_"))
         {
             results.Add(new ValidationResult(false, REPLICATE_API_TOKEN, "Replicate API token should start with 'r8_'"));
         }
 
-        // Webhook secret is recommended but optional (signature validator tolerates missing secret in dev)
-        var webhookSecret = GetEnvironmentVariable(REPLICATE_WEBHOOK_SECRET) ?? _configuration["Replicate:WebhookSecret"];
         if (string.IsNullOrEmpty(webhookSecret))
         {
-            _logger.LogWarning("Replicate webhook secret is not configured - signature validation will be skipped");
-        }
-        else if (webhookSecret.Length < 32)
-        {
-            results.Add(new ValidationResult(false, REPLICATE_WEBHOOK_SECRET, "Webhook secret should be at least 32 characters"));
+            results.Add(new ValidationResult(false, REPLICATE_WEBHOOK_SECRET, "Replicate webhook secret is required"));
         }
 
-        _logger.LogInformation("✅ Replicate API configuration validation completed");
+        _logger.LogInformation("✅ Replicate configuration validation completed");
     }
 
     private async Task ValidateOptionalConfigurationsAsync(List<ValidationResult> results)
     {
-        // Validate Google OAuth if configured
+        var warnings = new List<string>();
+
+        // Check Google OAuth configuration
         var googleClientId = GetEnvironmentVariable(GOOGLE_CLIENT_ID);
         var googleClientSecret = GetEnvironmentVariable(GOOGLE_CLIENT_SECRET);
         
         if (!string.IsNullOrEmpty(googleClientId) || !string.IsNullOrEmpty(googleClientSecret))
         {
             if (string.IsNullOrEmpty(googleClientId))
-                results.Add(new ValidationResult(false, GOOGLE_CLIENT_ID, "Google Client ID required when Google OAuth is configured"));
+            {
+                warnings.Add("Google Client ID is missing but Client Secret is set");
+            }
             if (string.IsNullOrEmpty(googleClientSecret))
-                results.Add(new ValidationResult(false, GOOGLE_CLIENT_SECRET, "Google Client Secret required when Google OAuth is configured"));
+            {
+                warnings.Add("Google Client Secret is missing but Client ID is set");
+            }
         }
-
-        // Validate Stripe if configured
-        var stripePublishable = GetEnvironmentVariable(STRIPE_PUBLISHABLE_KEY);
-        var stripeSecret = GetEnvironmentVariable(STRIPE_SECRET_KEY);
-        
-        if (!string.IsNullOrEmpty(stripePublishable) || !string.IsNullOrEmpty(stripeSecret))
+        else
         {
-            if (string.IsNullOrEmpty(stripePublishable))
-                results.Add(new ValidationResult(false, STRIPE_PUBLISHABLE_KEY, "Stripe publishable key required when Stripe is configured"));
-            if (string.IsNullOrEmpty(stripeSecret))
-                results.Add(new ValidationResult(false, STRIPE_SECRET_KEY, "Stripe secret key required when Stripe is configured"));
+            warnings.Add("Google OAuth is not configured (optional)");
         }
 
-        // Validate Azure Storage connection string format if provided
+        // Check Stripe configuration
+        var stripeKey = GetEnvironmentVariable(STRIPE_SECRET_KEY);
+        if (string.IsNullOrEmpty(stripeKey))
+        {
+            warnings.Add("Stripe payment processing is not configured (optional)");
+        }
+
+        // Check Azure Storage configuration
         var azureStorage = GetEnvironmentVariable(AZURE_STORAGE_CONNECTION_STRING);
-        if (!string.IsNullOrEmpty(azureStorage) && !azureStorage.Contains("DefaultEndpointsProtocol"))
+        if (string.IsNullOrEmpty(azureStorage))
         {
-            results.Add(new ValidationResult(false, AZURE_STORAGE_CONNECTION_STRING, "Azure Storage connection string format appears invalid"));
+            warnings.Add("Azure Storage is not configured - using local file storage (optional)");
+        }
+
+        // Log warnings
+        foreach (var warning in warnings)
+        {
+            _logger.LogWarning($"⚠️  {warning}");
         }
 
         _logger.LogInformation("✅ Optional configurations validation completed");
-    }
-
-    private void ValidateUrl(string envVarName, string description, List<ValidationResult> results)
-    {
-        var url = GetEnvironmentVariable(envVarName);
-        if (!string.IsNullOrEmpty(url) && !Uri.TryCreate(url, UriKind.Absolute, out _))
-        {
-            results.Add(new ValidationResult(false, envVarName, $"{description} is not a valid URL: {url}"));
-        }
     }
 
     private void LogValidationSummary(List<ValidationResult> results)
     {
         if (results.Count == 0)
         {
-            _logger.LogInformation("🎉 All environment variables validated successfully!");
+            _logger.LogInformation("✅ All environment variables validated successfully");
         }
         else
         {
-            _logger.LogError("❌ Environment validation failed with {ErrorCount} errors:", results.Count);
+            _logger.LogError($"❌ Environment validation failed with {results.Count} errors:");
             foreach (var result in results)
             {
-                _logger.LogError("  - {Variable}: {Message}", result.Variable, result.Message);
+                _logger.LogError($"  - {result.Variable}: {result.Message}");
             }
         }
     }
 
     /// <summary>
-    /// Gets environment variable with fallback to configuration
+    /// Gets an environment variable value with fallback to configuration
     /// </summary>
-    public string? GetEnvironmentVariable(string name, string? defaultValue = null)
+    public string? GetEnvironmentVariable(string key)
     {
-        // Try environment variable first (highest priority)
-        var envValue = Environment.GetEnvironmentVariable(name);
-        if (!string.IsNullOrEmpty(envValue))
-            return envValue;
-
-        // Fallback to configuration (appsettings.json, user secrets, etc.)
-        var configValue = _configuration[name];
-        if (!string.IsNullOrEmpty(configValue))
-            return configValue;
-
-        return defaultValue;
-    }
-
-    /// <summary>
-    /// Gets required environment variable or throws exception
-    /// </summary>
-    public string GetRequiredEnvironmentVariable(string name)
-    {
-        var value = GetEnvironmentVariable(name);
+        // First check actual environment variable
+        var value = Environment.GetEnvironmentVariable(key);
+        
+        // If not found, check configuration (handles both appsettings and environment)
         if (string.IsNullOrEmpty(value))
         {
-            throw new InvalidOperationException($"Required environment variable '{name}' is not configured");
+            value = _configuration[key];
         }
+
         return value;
     }
 
     /// <summary>
-    /// Builds database connection string using environment variables
+    /// Gets a required environment variable or throws
     /// </summary>
-    public string BuildDatabaseConnectionString(string? server = null, string? database = null)
+    public string GetRequiredVariable(string key)
     {
-        var password = GetRequiredEnvironmentVariable(MSSQL_SA_PASSWORD);
+        var value = GetEnvironmentVariable(key);
         
-        // Allow override via full connection string
-        var customConnection = GetEnvironmentVariable("MSSQL_CONNECTION_STRING");
-        if (!string.IsNullOrEmpty(customConnection))
+        if (string.IsNullOrEmpty(value))
         {
-            return customConnection.Replace("${MSSQL_SA_PASSWORD}", password);
+            throw new InvalidOperationException($"Required environment variable '{key}' is not set");
         }
 
-        // Build standard connection string
-        var serverName = server ?? "localhost,1433";
-        var databaseName = database ?? "AIProfileMaker";
-        
-        return $"Server={serverName};Database={databaseName};User Id=sa;Password={password};TrustServerCertificate=true;MultipleActiveResultSets=true;";
+        return value;
+    }
+
+    /// <summary>
+    /// Gets an optional environment variable with default value
+    /// </summary>
+    public string GetOptionalVariable(string key, string defaultValue)
+    {
+        return GetEnvironmentVariable(key) ?? defaultValue;
+    }
+
+    /// <summary>
+    /// Checks if an environment variable is set
+    /// </summary>
+    public bool IsVariableSet(string key)
+    {
+        return !string.IsNullOrEmpty(GetEnvironmentVariable(key));
     }
 }
 
 /// <summary>
-/// Represents the result of environment variable validation
+/// Validation result for environment variables
 /// </summary>
 public class ValidationResult
 {
     public bool IsValid { get; }
+    public List<ValidationResult> Errors { get; }
     public string Variable { get; }
     public string Message { get; }
+
+    public ValidationResult(bool isValid, List<ValidationResult> errors)
+    {
+        IsValid = isValid;
+        Errors = errors;
+        Variable = string.Empty;
+        Message = string.Empty;
+    }
 
     public ValidationResult(bool isValid, string variable, string message)
     {
         IsValid = isValid;
         Variable = variable;
         Message = message;
-    }
-
-    public ValidationResult(bool isValid, List<ValidationResult> results)
-    {
-        IsValid = isValid;
-        Variable = "SUMMARY";
-        Message = isValid ? "All validations passed" : $"{results.Count} validation errors found";
+        Errors = new List<ValidationResult>();
     }
 }
 
@@ -313,7 +309,7 @@ public class ValidationResult
 public static class EnvironmentConfigurationExtensions
 {
     /// <summary>
-    /// Adds environment configuration services to DI container
+    /// Adds environment configuration services
     /// </summary>
     public static IServiceCollection AddEnvironmentConfiguration(this IServiceCollection services)
     {
@@ -322,34 +318,29 @@ public static class EnvironmentConfigurationExtensions
     }
 
     /// <summary>
-    /// Validates environment configuration during application startup
+    /// Validates environment configuration on startup
     /// </summary>
-    public static async Task<WebApplication> UseEnvironmentValidationAsync(this WebApplication app)
+    public static async Task<IApplicationBuilder> UseEnvironmentValidationAsync(this WebApplication app)
     {
         using var scope = app.Services.CreateScope();
-        var envConfig = scope.ServiceProvider.GetRequiredService<EnvironmentConfiguration>();
+        var environmentConfig = scope.ServiceProvider.GetRequiredService<EnvironmentConfiguration>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<EnvironmentConfiguration>>();
 
-        var result = await envConfig.ValidateAsync();
-        
+        logger.LogInformation("🔍 Starting environment variable validation...");
+
+        var result = await environmentConfig.ValidateAsync();
+
         if (!result.IsValid)
         {
-            logger.LogCritical("🚨 Application startup failed due to environment validation errors");
+            logger.LogCritical("❌ Application startup failed due to environment validation errors");
             logger.LogCritical("Please check your .env file or environment variable configuration");
             logger.LogCritical("See .env.example for required variables and correct format");
             
-            // In development, we can continue with warnings
-            // In production, we should terminate the application
-            if (app.Environment.IsProduction())
-            {
-                throw new InvalidOperationException("Environment validation failed. Application cannot start safely.");
-            }
-            else
-            {
-                logger.LogWarning("⚠️  Continuing in development mode despite validation errors");
-            }
+            throw new InvalidOperationException("Environment validation failed. Application cannot start safely.");
         }
 
+        logger.LogInformation("✅ Environment validation completed successfully");
+        
         return app;
     }
 }

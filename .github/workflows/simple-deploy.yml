@@ -1,4 +1,4 @@
-name: 🚀 Simple Deploy (Local Build)
+name: 🚀 Simple Deploy (Local Build to MVP environment)
 # Simplified deployment workflow for local build approach
 # Prerequisites: Images must be built locally and pushed to ACR first
 # 1. Build images locally: ./scripts/build-local.sh
