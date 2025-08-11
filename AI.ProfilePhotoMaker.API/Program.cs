@@ -411,6 +411,7 @@ builder.Services.AddCors(options =>
         {
             var allowedOrigins = new List<string>
             {
+                "https://app.aiprofilephotomaker.com",
                 "https://aiprofilephotomaker.com",
                 "https://test.profilephotomaker.com"
             };
@@ -424,7 +425,7 @@ builder.Services.AddCors(options =>
             // Add expected V1 Container Apps URL
             allowedOrigins.Add("https://aiprofilemaker-web-v1.eastus.azurecontainerapps.io");
             
-            // Add actual V1 deployment URL for current infrastructure
+            // Add actual V1 deployment URL for current infrastructure (keep for rollback capability)
             allowedOrigins.Add("https://aipm-web-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io");
             
             corsBuilder.WithOrigins(allowedOrigins.ToArray())
@@ -472,6 +473,21 @@ app.UseForwardedHeaders();
 
 // Enable response compression early in the pipeline
 app.UseResponseCompression();
+
+// Add X-Robots-Tag header for search engine blocking during MVP phase
+app.Use(async (context, next) =>
+{
+    // Add X-Robots-Tag header to all responses to prevent search engine indexing
+    // This provides server-level protection in addition to robots.txt and meta tags
+    var blockSearchEngines = app.Configuration.GetValue<bool>("SearchEngineBlocking:Enabled", true);
+    
+    if (blockSearchEngines && !app.Environment.IsDevelopment())
+    {
+        context.Response.Headers.Append("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet");
+    }
+    
+    await next();
+});
 
 // Use session middleware for OAuth state management
 if (app.Environment.IsDevelopment())
