@@ -7,21 +7,14 @@
         "@modelcontextprotocol/server-sequential-thinking"
       ]
     },
-    "playwright": {
+    "filesystem": {
       "command": "npx",
       "args": [
         "-y",
-        "@modelcontextprotocol/server-playwright"
-      ],
-      "disabled": false
-    },
-    "serena": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "serena-mcp-server"
-      ],
-      "disabled": false
+        "@modelcontextprotocol/server-filesystem",
+        "--root",
+        "/home/alanw/projects/AI.ProfilePhotoMaker"
+      ]
     }
   }
 }
