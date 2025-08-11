@@ -55,7 +55,7 @@ jobs:
           cd AI.ProfilePhotoMaker.UI
           npm ci
           npm run lint:errors-only
-          npm run build:prod
+          npm run build:mvp-v1
 
   deploy:
     name: 🚀 Simple Deploy
