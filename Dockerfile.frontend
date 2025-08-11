@@ -13,8 +13,8 @@ RUN npm ci
 # Copy source code
 COPY AI.ProfilePhotoMaker.UI/ ./
 
-# Build the Angular application (production)
-RUN npm run build:prod
+# Build the Angular application (MVP v1)
+RUN npm run build:mvp-v1
 
 # Production stage with nginx
 FROM nginx:alpine
