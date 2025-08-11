@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.177.2456",
-      "templateHash": "11531761244244510750"
+      "templateHash": "11098958065605322861"
     }
   },
   "parameters": {
@@ -225,6 +225,30 @@
       ]
     },
     {
+      "type": "Microsoft.App/managedEnvironments/managedCertificates",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}', variables('containerEnvName'), 'app-aiprofilephotomaker-com-cert')]",
+      "properties": {
+        "subjectName": "app.aiprofilephotomaker.com",
+        "domainControlValidation": "CNAME"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments', variables('containerEnvName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.App/managedEnvironments/managedCertificates",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}', variables('containerEnvName'), 'api-aiprofilephotomaker-com-cert')]",
+      "properties": {
+        "subjectName": "api.aiprofilephotomaker.com",
+        "domainControlValidation": "CNAME"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments', variables('containerEnvName'))]"
+      ]
+    },
+    {
       "type": "Microsoft.App/containerApps",
       "apiVersion": "2023-05-01",
       "name": "[variables('backendAppName')]",
@@ -239,7 +263,14 @@
           "ingress": {
             "external": true,
             "targetPort": 8080,
-            "allowInsecure": false
+            "allowInsecure": false,
+            "customDomains": [
+              {
+                "name": "api.aiprofilephotomaker.com",
+                "certificateId": "[resourceId('Microsoft.App/managedEnvironments/managedCertificates', variables('containerEnvName'), 'api-aiprofilephotomaker-com-cert')]",
+                "bindingType": "SniEnabled"
+              }
+            ]
           },
           "registries": [
             {
@@ -259,7 +290,7 @@
             },
             {
               "name": "connection-string",
-              "value": "[format('Server=tcp:{0},1433;Initial Catalog={1};User ID=sqladmin;Password={2};Encrypt=True;', reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName')), '2021-11-01').fullyQualifiedDomainName, format('{0}db', parameters('appName')), parameters('sqlAdminPassword'))]"
+              "value": "[format('Server=tcp:{0},1433;Initial Catalog={1};User ID=sqladmin;Password={2};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;', reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName')), '2021-11-01').fullyQualifiedDomainName, format('{0}db', parameters('appName')), parameters('sqlAdminPassword'))]"
             },
             {
               "name": "acr-password",
@@ -300,6 +331,18 @@
                 {
                   "name": "ApplicationInsights__ConnectionString",
                   "value": "[reference(resourceId('Microsoft.Insights/components', variables('applicationInsightsName')), '2020-02-02').ConnectionString]"
+                },
+                {
+                  "name": "Database__AutoMigrateOnStartup",
+                  "value": "false"
+                },
+                {
+                  "name": "Database__ValidateOnStartup",
+                  "value": "false"
+                },
+                {
+                  "name": "CORS_ALLOWED_ORIGINS",
+                  "value": "https://app.aiprofilephotomaker.com,https://aiprofilephotomaker.com"
                 }
               ],
               "probes": [
@@ -310,9 +353,9 @@
                     "port": 8080,
                     "scheme": "HTTP"
                   },
-                  "initialDelaySeconds": 10,
+                  "initialDelaySeconds": 15,
                   "periodSeconds": 10,
-                  "timeoutSeconds": 5,
+                  "timeoutSeconds": 10,
                   "failureThreshold": 3,
                   "successThreshold": 1
                 },
@@ -323,17 +366,17 @@
                     "port": 8080,
                     "scheme": "HTTP"
                   },
-                  "initialDelaySeconds": 5,
-                  "periodSeconds": 5,
-                  "timeoutSeconds": 3,
-                  "failureThreshold": 3,
+                  "initialDelaySeconds": 10,
+                  "periodSeconds": 10,
+                  "timeoutSeconds": 5,
+                  "failureThreshold": 5,
                   "successThreshold": 1
                 }
               ]
             }
           ],
           "scale": {
-            "minReplicas": 0,
+            "minReplicas": 1,
             "maxReplicas": 3,
             "rules": [
               {
@@ -350,6 +393,7 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Insights/components', variables('applicationInsightsName'))]",
+        "[resourceId('Microsoft.App/managedEnvironments/managedCertificates', variables('containerEnvName'), 'api-aiprofilephotomaker-com-cert')]",
         "[resourceId('Microsoft.App/managedEnvironments', variables('containerEnvName'))]",
         "[resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName'))]",
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
@@ -373,7 +417,14 @@
           "ingress": {
             "external": true,
             "targetPort": 80,
-            "allowInsecure": false
+            "allowInsecure": false,
+            "customDomains": [
+              {
+                "name": "app.aiprofilephotomaker.com",
+                "certificateId": "[resourceId('Microsoft.App/managedEnvironments/managedCertificates', variables('containerEnvName'), 'app-aiprofilephotomaker-com-cert')]",
+                "bindingType": "SniEnabled"
+              }
+            ]
           },
           "registries": [
             {
@@ -401,7 +452,7 @@
               "env": [
                 {
                   "name": "API_URL",
-                  "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('backendAppName')), '2023-05-01').configuration.ingress.fqdn)]"
+                  "value": "https://api.aiprofilephotomaker.com"
                 }
               ]
             }
@@ -415,7 +466,8 @@
       "dependsOn": [
         "[resourceId('Microsoft.App/containerApps', variables('backendAppName'))]",
         "[resourceId('Microsoft.App/managedEnvironments', variables('containerEnvName'))]",
-        "[resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName'))]"
+        "[resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName'))]",
+        "[resourceId('Microsoft.App/managedEnvironments/managedCertificates', variables('containerEnvName'), 'app-aiprofilephotomaker-com-cert')]"
       ]
     }
   ],

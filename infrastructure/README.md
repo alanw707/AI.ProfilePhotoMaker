@@ -26,8 +26,40 @@ These scripts are kept for manual intervention during production emergencies whe
 ### **simple-deploy.bicep** ✅ ACTIVE
 Primary infrastructure template used by production deployment pipeline.
 
+**⚠️ Custom Domain Requirements:**
+- DNS CNAME records must be configured **before** deployment:
+  - `app.aiprofilephotomaker.com` → {containerAppsEnvironment}.region.azurecontainerapps.io
+  - `api.aiprofilephotomaker.com` → {containerAppsEnvironment}.region.azurecontainerapps.io
+- Template includes managed certificates and persistent custom domain configuration
+- Domain bindings persist across deployment revisions (no manual reconfiguration needed)
+
 ### **simple-deploy.json** 🗑️ REMOVED  
 Auto-generated file - can be recreated with `az bicep build --file simple-deploy.bicep`
+
+## 🔧 Deployment Validation
+
+### **validate-deployment.js** ✅ ACTIVE (in `/scripts/`)
+Playwright-based validation for custom domain deployment verification.
+
+**Usage:**
+```bash
+# Basic validation
+./scripts/validate-deployment.sh
+
+# With retry configuration
+./scripts/validate-deployment.sh --wait 60 --retries 5
+
+# Run with visible browser (debugging)
+./scripts/validate-deployment.sh --headed
+```
+
+**Validates:**
+- Frontend domain accessibility (https://app.aiprofilephotomaker.com)
+- Backend health check (https://api.aiprofilephotomaker.com/api/health) 
+- CORS functionality between domains
+- SSL certificate validity
+
+**Output:** Generates `validation-report.json` with detailed results.
 
 ## 🔧 Development Tools
 
