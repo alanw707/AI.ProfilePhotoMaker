@@ -1,5 +1,62 @@
 ---
-description:
-globs:
 alwaysApply: false
+description: Product Requirements (PRD) summary for AI.ProfilePhotoMaker; endpoints, flows, limits; source-linked to PRD
 ---
+
+# Product Requirements — AI.ProfilePhotoMaker (Summary Rule)
+
+Full PRD: [docs/product/PRD.md](mdc:docs/product/PRD.md)
+
+## Summary
+- Tech: ASP.NET Core Web API + Angular; EF Core SQL Server; optional Azure Blob.
+- Core features: Auth, image uploads, training ZIP, custom model training (Replicate), styled generation, enhancement, credits/purchases, retention and deletion.
+- Privacy: originals deleted after 7 days, generated after 30 days.
+
+## Core Endpoints (by area)
+- Auth: `/api/auth/*` → [AuthController.cs](mdc:AI.ProfilePhotoMaker.API/Controllers/AuthController.cs)
+- Profile: `/api/profile/*` and `/api/profile-management/*` → [ProfileController.cs](mdc:AI.ProfilePhotoMaker.API/Controllers/ProfileController.cs), [ProfileManagementController.cs](mdc:AI.ProfilePhotoMaker.API/Controllers/ProfileManagementController.cs)
+- Image: `/api/image/*` → [ImageController.cs](mdc:AI.ProfilePhotoMaker.API/Controllers/ImageController.cs)
+- Style: `/api/style/*` → [StyleController.cs](mdc:AI.ProfilePhotoMaker.API/Controllers/StyleController.cs)
+- Replicate: `/api/replicate/*` → [ReplicateController.cs](mdc:AI.ProfilePhotoMaker.API/Controllers/ReplicateController.cs)
+- Credit: `/api/credit/*` → [CreditController.cs](mdc:AI.ProfilePhotoMaker.API/Controllers/CreditController.cs)
+- Retention: `/api/retentionpolicy/*` → [RetentionPolicyController.cs](mdc:AI.ProfilePhotoMaker.API/Controllers/RetentionPolicyController.cs)
+- Webhooks: `/api/webhooks/replicate/*` → [ReplicateWebhookController.cs](mdc:AI.ProfilePhotoMaker.API/Controllers/ReplicateWebhookController.cs)
+- Health: `/api/health*` and `/health` → [HealthController.cs](mdc:AI.ProfilePhotoMaker.API/Controllers/HealthController.cs)
+
+## Key Business Rules & Limits
+- Uploads: max 20 files/request; per-file ≤ 10MB; allowed: jpg/jpeg/png/webp; magic-bytes verification.
+- Training ZIP: requires ≥ 10 original uploads; auto or manual creation.
+- Credits:
+  - Weekly (Basic): 3; reset every 7 days.
+  - Costs: enhancement=1; model_training=15; styled_generation=5 per image.
+  - Consume credits after successful Replicate call.
+- Generation: 1–4 outputs per style per request; batch supported; validate model availability.
+- Retention: originals 7 days, generated 30 days; background cleanup + manual endpoints.
+
+## External Services & Security
+- Replicate API: training/generation/enhancement; webhook signature validation with 5‑minute window.
+  - Token/secret via env: `REPLICATE_API_TOKEN`, `REPLICATE_WEBHOOK_SECRET`.
+  - Signature validation filter: [ReplicateSignatureValidationAttribute.cs](mdc:AI.ProfilePhotoMaker.API/Filters/ReplicateSignatureValidationAttribute.cs)
+- Stripe: dev uses simulation; real keys optional; webhook handler present in services.
+- Storage: Azure Blob or Local chosen by connection string.
+- Auth: JWT (and Google OAuth when configured). 401 returns JSON (no redirects).
+
+## Acceptance Criteria (MVP highlights)
+- Upload validation/limits enforced; returns absolute URLs.
+- Training ZIP created when threshold met; returns public URL.
+- Training requires 15 purchased credits unless READY model exists.
+- Generation requires purchased credits (5/output) and handles model unavailability.
+- Enhancement uses 1 weekly credit.
+- Retention jobs set and enforce 7/30-day deletion; manual endpoints operational.
+- Credit status/packages/purchase/history endpoints behave as specified; PaymentIntent mocked in dev.
+- Webhooks persist generated images and schedule retention.
+
+## Observability & Non‑PII Logging
+- Structured logs around uploads, credit usage, training/generation, webhooks, retention.
+- Do not log PII/tokens/image contents.
+
+## Pointers
+- Composition root & env loading: [Program.cs](mdc:AI.ProfilePhotoMaker.API/Program.cs)
+- Config validation: [Configuration/EnvironmentConfiguration.cs](mdc:AI.ProfilePhotoMaker.API/Configuration/EnvironmentConfiguration.cs)
+- Storage providers: [Services/Storage/*](mdc:AI.ProfilePhotoMaker.API/Services/Storage)
+- Payment (simulation): [CreditController.cs](mdc:AI.ProfilePhotoMaker.API/Controllers/CreditController.cs), [StripePaymentService.cs](mdc:AI.ProfilePhotoMaker.API/Services/Payment/StripePaymentService.cs)
