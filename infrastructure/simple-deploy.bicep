@@ -178,6 +178,25 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01'
   }
 }
 
+// Managed Certificates for Custom Domains
+resource frontendCertificate 'Microsoft.App/managedEnvironments/managedCertificates@2023-05-01' = {
+  parent: containerAppsEnvironment
+  name: 'app-aiprofilephotomaker-com-cert'
+  properties: {
+    subjectName: 'app.aiprofilephotomaker.com'
+    domainControlValidation: 'CNAME'
+  }
+}
+
+resource backendCertificate 'Microsoft.App/managedEnvironments/managedCertificates@2023-05-01' = {
+  parent: containerAppsEnvironment
+  name: 'api-aiprofilephotomaker-com-cert'
+  properties: {
+    subjectName: 'api.aiprofilephotomaker.com'
+    domainControlValidation: 'CNAME'
+  }
+}
+
 // Backend API Container App
 resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: backendAppName
@@ -189,6 +208,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
     sqlDatabase
     storageAccount
     keyVault
+    backendCertificate
   ]
   identity: {
     type: 'SystemAssigned'
@@ -201,6 +221,13 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
         external: true
         targetPort: 8080
         allowInsecure: false
+        customDomains: [
+          {
+            name: 'api.aiprofilephotomaker.com'
+            certificateId: backendCertificate.id
+            bindingType: 'SniEnabled'
+          }
+        ]
       }
       registries: [
         {
@@ -271,6 +298,10 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               name: 'Database__ValidateOnStartup'
               value: 'false'
             }
+            {
+              name: 'CORS_ALLOWED_ORIGINS'
+              value: 'https://app.aiprofilephotomaker.com,https://aiprofilephotomaker.com'
+            }
           ]
           // Health probes re-enabled since we're using real application images
           probes: [
@@ -329,6 +360,7 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
     containerAppsEnvironment
     containerRegistry
     backendApp  // Deploy after backend to avoid circular dependency during updates
+    frontendCertificate
   ]
   identity: {
     type: 'SystemAssigned'
@@ -341,6 +373,13 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
         external: true
         targetPort: 80
         allowInsecure: false
+        customDomains: [
+          {
+            name: 'app.aiprofilephotomaker.com'
+            certificateId: frontendCertificate.id
+            bindingType: 'SniEnabled'
+          }
+        ]
       }
       registries: [
         {
@@ -369,7 +408,7 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
           env: [
             {
               name: 'API_URL'
-              value: 'https://${backendApp.properties.configuration.ingress.fqdn}'
+              value: 'https://api.aiprofilephotomaker.com'
             }
           ]
         }
