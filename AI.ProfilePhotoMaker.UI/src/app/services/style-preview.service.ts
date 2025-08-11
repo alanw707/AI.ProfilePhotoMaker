@@ -84,42 +84,8 @@ export class StylePreviewService {
     // First, pre-populate cache with known style preview URLs from Azure Blob Storage
     this.prePopulateKnownStyles();
 
-    // In production, skip the extra API call and rely on direct Azure URLs
-    if (environment.production) {
-      this._allPreviewsSubject.next(new Map(this._urlCache));
-      return;
-    }
-
-    // In non-production, try to load from API to get the latest data
-    const apiUrl = `${this._config.getApiUrl()}/style-preview/list`;
-
-    this._http
-      .get<StylePreviewListResponse | null>(apiUrl)
-      .pipe(
-        map(
-          response =>
-            response ?? ({ success: false, count: 0, previews: [] } as StylePreviewListResponse)
-        ),
-        catchError(error => {
-          console.warn('Failed to load style previews from API, using direct Azure URLs:', error);
-          return of({ success: false, count: 0, previews: [] } as StylePreviewListResponse);
-        })
-      )
-      .subscribe(response => {
-        if (response && response.success && response.previews && response.previews.length > 0) {
-          const urlMap = new Map<string, string>();
-
-          response.previews.forEach(preview => {
-            this._urlCache.set(preview.style, preview.url);
-            urlMap.set(preview.style, preview.url);
-          });
-
-          this._allPreviewsSubject.next(urlMap);
-        } else {
-          // API failed or returned no previews, emit what we have in cache
-          this._allPreviewsSubject.next(new Map(this._urlCache));
-        }
-      });
+    // Always rely on direct Azure URLs and emit current cache; skip API prefetch entirely
+    this._allPreviewsSubject.next(new Map(this._urlCache));
   }
 
   /**
