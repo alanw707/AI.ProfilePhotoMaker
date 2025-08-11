@@ -78,6 +78,18 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: 🐳 Login to ACR
+        run: |
+          az acr login --name aipmcrv16j74jubocuukg
+
+      - name: 🏗️ Build Docker images (backend/frontend)
+        run: |
+          IMAGE_TAG=latest ./scripts/build-local.sh
+
+      - name: 📤 Push Docker images to ACR
+        run: |
+          IMAGE_TAG=latest ./scripts/push-to-acr.sh
           
       - name: 🏗️ Ensure Resource Group
         run: |
