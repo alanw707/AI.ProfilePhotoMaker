@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, catchError, of, map } from 'rxjs';
 import { ConfigService } from './config.service';
+import { environment } from '../../environments/environment';
 
 export interface StylePreviewResponse {
   success: boolean;
@@ -83,7 +84,13 @@ export class StylePreviewService {
     // First, pre-populate cache with known style preview URLs from Azure Blob Storage
     this.prePopulateKnownStyles();
 
-    // Then try to load from API to get the latest data
+    // In production, skip the extra API call and rely on direct Azure URLs
+    if (environment.production) {
+      this._allPreviewsSubject.next(new Map(this._urlCache));
+      return;
+    }
+
+    // In non-production, try to load from API to get the latest data
     const apiUrl = `${this._config.getApiUrl()}/style-preview/list`;
 
     this._http
