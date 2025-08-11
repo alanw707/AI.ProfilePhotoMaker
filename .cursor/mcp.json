@@ -12,7 +12,6 @@
       "args": [
         "-y",
         "@modelcontextprotocol/server-filesystem",
-        "--root",
         "/home/alanw/projects/AI.ProfilePhotoMaker"
       ]
     }
