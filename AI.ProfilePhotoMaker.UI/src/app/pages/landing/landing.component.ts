@@ -40,7 +40,7 @@ interface StyledPhoto {
   style: string;
   category: string;
   description: string;
-  persona: string;
+  // persona: string; // Removed per user request
 }
 
 @Component({
@@ -507,7 +507,7 @@ export class LandingComponent implements OnInit, OnDestroy {
       style: style.name,
       category: this.getCategoryFromStyleName(style.name),
       description: style.description,
-      persona: this.getPersonaFromStyleName(style.name),
+      // persona: this.getPersonaFromStyleName(style.name), // Removed per user request
     }));
 
     // Subscribe to preview URL updates
@@ -529,121 +529,121 @@ export class LandingComponent implements OnInit, OnDestroy {
         name: 'Professional LinkedIn',
         description: 'Corporate professional headshot',
         category: 'Business',
-        persona: 'Business Executive',
+        // persona: 'Business Executive', // Removed per user request
       },
       {
         name: 'Creative Professional',
         description: 'Artistic and modern look',
         category: 'Creative',
-        persona: 'Creative Designer',
+        // persona: 'Creative Designer', // Removed per user request
       },
       {
         name: 'Corporate Executive',
         description: 'C-suite leadership presence',
         category: 'Executive',
-        persona: 'CEO',
+        // persona: 'CEO', // Removed per user request
       },
       {
         name: 'Casual Professional',
         description: 'Approachable yet professional',
         category: 'Relaxed',
-        persona: 'Startup Founder',
+        // persona: 'Startup Founder', // Removed per user request
       },
       {
         name: 'Classic Headshot',
         description: 'Timeless professional look',
         category: 'Traditional',
-        persona: 'Consultant',
+        // persona: 'Consultant', // Removed per user request
       },
       {
         name: 'Modern Professional',
         description: 'Cutting-edge style',
         category: 'Contemporary',
-        persona: 'Tech Leader',
+        // persona: 'Tech Leader', // Removed per user request
       },
       {
         name: 'Elegant Portrait',
         description: 'Refined and polished',
         category: 'Sophisticated',
-        persona: 'Executive Director',
+        // persona: 'Executive Director', // Removed per user request
       },
       {
         name: 'Friendly Professional',
         description: 'Warm and welcoming',
         category: 'Approachable',
-        persona: 'HR Manager',
+        // persona: 'HR Manager', // Removed per user request
       },
       {
         name: 'Confident Leader',
         description: 'Strong leadership presence',
         category: 'Leadership',
-        persona: 'Team Lead',
+        // persona: 'Team Lead', // Removed per user request
       },
       {
         name: 'Artistic Expression',
         description: 'Creative industry focused',
         category: 'Creative',
-        persona: 'Art Director',
+        // persona: 'Art Director', // Removed per user request
       },
       {
         name: 'Business Casual',
         description: 'Perfect for most industries',
         category: 'Versatile',
-        persona: 'Manager',
+        // persona: 'Manager', // Removed per user request
       },
       {
         name: 'Tech Professional',
         description: 'Tech industry optimized',
         category: 'Technology',
-        persona: 'Software Engineer',
+        // persona: 'Software Engineer', // Removed per user request
       },
       {
         name: 'Senior Executive',
         description: 'High-level executive presence',
         category: 'Leadership',
-        persona: 'VP',
+        // persona: 'VP', // Removed per user request
       },
       {
         name: 'Professional Consultant',
         description: 'Expert and trustworthy',
         category: 'Advisory',
-        persona: 'Senior Consultant',
+        // persona: 'Senior Consultant', // Removed per user request
       },
       {
         name: 'Entrepreneur',
         description: 'Visionary and forward-thinking',
         category: 'Innovation',
-        persona: 'Entrepreneur',
+        // persona: 'Entrepreneur', // Removed per user request
       },
       {
         name: 'Academic Professional',
         description: 'Scholarly and approachable',
         category: 'Education',
-        persona: 'Professor',
+        // persona: 'Professor', // Removed per user request
       },
       {
         name: 'Sales Professional',
         description: 'Trustworthy and engaging',
         category: 'Sales',
-        persona: 'Sales Director',
+        // persona: 'Sales Director', // Removed per user request
       },
       {
         name: 'Marketing Expert',
         description: 'Creative and strategic',
         category: 'Marketing',
-        persona: 'Marketing Manager',
+        // persona: 'Marketing Manager', // Removed per user request
       },
       {
         name: 'Finance Professional',
         description: 'Analytical and precise',
         category: 'Finance',
-        persona: 'Financial Analyst',
+        // persona: 'Financial Analyst', // Removed per user request
       },
       {
         name: 'Healthcare Professional',
         description: 'Caring and competent',
         category: 'Healthcare',
-        persona: 'Healthcare Executive',
+        // persona: 'Healthcare Executive', // Removed per user request
       },
     ];
 
@@ -653,7 +653,7 @@ export class LandingComponent implements OnInit, OnDestroy {
       style: style.name,
       category: style.category,
       description: style.description,
-      persona: style.persona,
+      // persona: style.persona, // Removed per user request
     }));
   }
 

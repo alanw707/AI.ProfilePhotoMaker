@@ -96,8 +96,8 @@
             aria-label="Navigate to Reviews section">
             Reviews
           </a>
-          <a 
-            (click)="navigateToLogin()" 
+          <a
+            (click)="navigateToLogin()"
             (keydown.enter)="navigateToLogin()"
             (keydown.space)="navigateToLogin()"
             tabindex="0"
@@ -133,8 +133,8 @@
       <!-- Mobile Menu -->
       <div *ngIf="mobileMenuOpen" class="mobile-menu md:hidden absolute top-full left-0 right-0 shadow-lg">
         <div class="px-4 py-6 space-y-4">
-          <a 
-            (click)="scrollToSection('features')" 
+          <a
+            (click)="scrollToSection('features')"
             (keydown.enter)="scrollToSection('features')"
             (keydown.space)="scrollToSection('features')"
             tabindex="0"
@@ -143,8 +143,8 @@
             aria-label="Navigate to Features section">
             Features
           </a>
-          <a 
-            (click)="scrollToSection('examples')" 
+          <a
+            (click)="scrollToSection('examples')"
             (keydown.enter)="scrollToSection('examples')"
             (keydown.space)="scrollToSection('examples')"
             tabindex="0"
@@ -153,8 +153,8 @@
             aria-label="Navigate to Examples section">
             Examples
           </a>
-          <a 
-            (click)="scrollToSection('pricing')" 
+          <a
+            (click)="scrollToSection('pricing')"
             (keydown.enter)="scrollToSection('pricing')"
             (keydown.space)="scrollToSection('pricing')"
             tabindex="0"
@@ -453,7 +453,7 @@
                 <h4 class="style-title">{{ formatStyleName(photo.style) }}</h4>
               </div>
               <div class="style-meta">
-                <span class="style-persona">{{ photo.persona }}</span>
+                <!-- Persona label removed per user request -->
               </div>
             </div>
           </div>
@@ -667,8 +667,8 @@
           <ul class="space-y-2">
             <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Features</a></li>
             <li>
-              <a 
-                (click)="navigateToPricing()" 
+              <a
+                (click)="navigateToPricing()"
                 (keydown.enter)="navigateToPricing()"
                 (keydown.space)="navigateToPricing()"
                 tabindex="0"
