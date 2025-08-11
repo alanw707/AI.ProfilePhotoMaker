@@ -97,6 +97,7 @@ package-lock.json
 
 # Claude Code workspace files
 .claude/
+.serena/
 
 # General build results
 **/[Bb]in/
