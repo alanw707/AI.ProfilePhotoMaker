@@ -2,7 +2,7 @@ export const environment = {
   production: true,
   apiUrl: 'https://aipm-api-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io/api',
   baseUrl: 'https://aipm-api-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io',
-  name: 'v1',
+  name: 'mvp-v1',
   features: {
     debugMode: false,
     useProxy: false,
