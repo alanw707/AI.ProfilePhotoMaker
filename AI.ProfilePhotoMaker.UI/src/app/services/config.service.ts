@@ -230,7 +230,7 @@ export class ConfigService {
    * @returns Complete style preview URL (deprecated - use StylePreviewService instead)
    * @deprecated Use StylePreviewService.getStylePreviewUrl() for proper Azure Storage URLs
    */
-  buildStylePreviewUrl(styleName: string): string {
+  buildStylePreviewUrl(_styleName: string): string {
     // Deprecated method - kept for backward compatibility
     // Use StylePreviewService for proper Azure Storage URLs
     return `/api/placeholder/style-preview`;
