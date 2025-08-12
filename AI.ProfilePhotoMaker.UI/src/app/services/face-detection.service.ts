@@ -2,19 +2,17 @@ import { Injectable, NgZone } from '@angular/core';
 import * as faceapi from 'face-api.js';
 import { ModelLoaderService } from './model-loader.service';
 import { ImageQualityService } from './image-quality.service';
-import { FaceValidationResult, IFaceDetectionService, QualityScore } from '../interfaces/service.interfaces';
+import { FaceValidationResult, IFaceDetectionService } from '../interfaces/service.interfaces';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class FaceDetectionService implements IFaceDetectionService {
-
   constructor(
     private ngZone: NgZone,
     private modelLoader: ModelLoaderService,
     private imageQuality: ImageQualityService
   ) {}
-
 
   /**
    * Validate image for face count, body type, and quality
@@ -40,36 +38,55 @@ export class FaceDetectionService implements IFaceDetectionService {
       // Face count validation with improved messaging
       if (faceCount === 0) {
         if (isCloseUpPhoto.isTooTightlyCropped) {
-          errors.push('Photo is cropped too tightly. Please use a photo that shows your head and shoulders with some background visible.');
+          errors.push(
+            'Photo is cropped too tightly. Please use a photo that shows your head and shoulders with some background visible.'
+          );
         } else {
-          errors.push('No face detected in image. Please upload a clear photo with your face visible.');
+          errors.push(
+            'No face detected in image. Please upload a clear photo with your face visible.'
+          );
         }
       } else if (faceCount > 1) {
         if (isCloseUpPhoto.isExtremeCloseUp) {
-          errors.push('Photo is too close. Please include your shoulders and back up from the camera for better results.');
+          errors.push(
+            'Photo is too close. Please include your shoulders and back up from the camera for better results.'
+          );
         } else {
-          errors.push(`Multiple faces detected (${faceCount}). Please upload photos with only yourself.`);
+          errors.push(
+            `Multiple faces detected (${faceCount}). Please upload photos with only yourself.`
+          );
         }
       }
 
       // Body type detection
       const bodyType = await this.detectBodyType(img, detections);
-      
+
       // Body type validation with improved messaging
       if (bodyType === 'full-body') {
         errors.push('Full body photo detected. Please upload headshot or upper body photos only.');
       } else if (bodyType === 'invalid') {
         if (isCloseUpPhoto.isExtremeCloseUp || isCloseUpPhoto.isTooTightlyCropped) {
-          errors.push('Photo framing issue. Please use a shoulders-up photo with some space around your head.');
+          errors.push(
+            'Photo framing issue. Please use a shoulders-up photo with some space around your head.'
+          );
         } else {
-          errors.push('Unable to determine photo composition. Please upload a clear headshot or upper body photo.');
+          errors.push(
+            'Unable to determine photo composition. Please upload a clear headshot or upper body photo.'
+          );
         }
-      } else if (bodyType === 'headshot' && (isCloseUpPhoto.isExtremeCloseUp || isCloseUpPhoto.isTooTightlyCropped)) {
+      } else if (
+        bodyType === 'headshot' &&
+        (isCloseUpPhoto.isExtremeCloseUp || isCloseUpPhoto.isTooTightlyCropped)
+      ) {
         // Even though it's correctly classified as headshot, reject if it's too close/cropped
         if (isCloseUpPhoto.isExtremeCloseUp) {
-          errors.push('Photo is too close. Please include your shoulders and back up from the camera for better results.');
+          errors.push(
+            'Photo is too close. Please include your shoulders and back up from the camera for better results.'
+          );
         } else {
-          errors.push('Photo is cropped too tightly. Please use a photo that shows your head and shoulders with some background visible.');
+          errors.push(
+            'Photo is cropped too tightly. Please use a photo that shows your head and shoulders with some background visible.'
+          );
         }
       }
 
@@ -80,41 +97,47 @@ export class FaceDetectionService implements IFaceDetectionService {
       if (errors.length > 0) {
         // Photo has validation errors - apply significant penalty
         let penalty = 0;
-        
+
         // Multiple faces or no faces
         if (faceCount === 0) {
           penalty = 50; // Cap at ~50
         } else if (faceCount > 1) {
           penalty = 60; // Cap at ~40
         }
-        
+
         // Close-up photos
         if (isCloseUpPhoto.isExtremeCloseUp) {
           penalty = Math.max(penalty, 45); // Cap at ~55
         } else if (isCloseUpPhoto.isTooTightlyCropped) {
           penalty = Math.max(penalty, 35); // Cap at ~65
         }
-        
-        // Full-body photos  
+
+        // Full-body photos
         if (bodyType === 'full-body') {
           penalty = Math.max(penalty, 50); // Cap at ~50
         }
-        
+
         // Apply the penalty
         qualityScore.overall = Math.max(20, qualityScore.overall - penalty);
-        
+
         // Also reduce face quality score in breakdown
-        qualityScore.breakdown.faceQuality = Math.max(0, qualityScore.breakdown.faceQuality - (penalty * 0.6));
+        qualityScore.breakdown.faceQuality = Math.max(
+          0,
+          qualityScore.breakdown.faceQuality - penalty * 0.6
+        );
       }
 
       // Quality warnings
       if (qualityScore.overall < 50) {
-        warnings.push('Image quality is below recommended standards. Consider uploading a higher quality photo.');
+        warnings.push(
+          'Image quality is below recommended standards. Consider uploading a higher quality photo.'
+        );
       } else if (qualityScore.overall < 70) {
         warnings.push('Image quality could be improved for better AI results.');
       }
 
-      const isValid = errors.length === 0 && faceCount === 1 && ['headshot', 'upper-body'].includes(bodyType);
+      const isValid =
+        errors.length === 0 && faceCount === 1 && ['headshot', 'upper-body'].includes(bodyType);
 
       return {
         isValid,
@@ -122,9 +145,8 @@ export class FaceDetectionService implements IFaceDetectionService {
         bodyType,
         qualityScore,
         errors,
-        warnings
+        warnings,
       };
-
     } catch (error) {
       console.error('Face validation error:', error);
       return {
@@ -133,7 +155,7 @@ export class FaceDetectionService implements IFaceDetectionService {
         bodyType: 'invalid',
         qualityScore: this.imageQuality.getDefaultQualityScore(),
         errors: ['Unable to analyze image. Please try a different photo.'],
-        warnings: []
+        warnings: [],
       };
     }
   }
@@ -141,7 +163,10 @@ export class FaceDetectionService implements IFaceDetectionService {
   /**
    * Detect if photo is too close-up or tightly cropped
    */
-  private detectCloseUpPhoto(img: HTMLImageElement, detections: faceapi.WithFaceLandmarks<any>[]): {
+  private detectCloseUpPhoto(
+    img: HTMLImageElement,
+    detections: faceapi.WithFaceLandmarks<any>[]
+  ): {
     isExtremeCloseUp: boolean;
     isTooTightlyCropped: boolean;
   } {
@@ -149,52 +174,53 @@ export class FaceDetectionService implements IFaceDetectionService {
       // No face detected - check if image might be too tightly cropped
       // This is a heuristic: very small images or extreme aspect ratios might indicate cropping issues
       const aspectRatio = img.width / img.height;
-      const isTooTightlyCropped = aspectRatio > 2 || aspectRatio < 0.5 || 
-                                 (img.width < 100 && img.height < 100);
-      
+      const isTooTightlyCropped =
+        aspectRatio > 2 || aspectRatio < 0.5 || (img.width < 100 && img.height < 100);
+
       return {
         isExtremeCloseUp: false,
-        isTooTightlyCropped
+        isTooTightlyCropped,
       };
     }
 
     if (detections.length === 1) {
       const detection = detections[0];
       const box = detection.detection.box;
-      
+
       // Calculate face metrics
       const faceWidth = box.width;
       const faceHeight = box.height;
       const faceWidthRatio = faceWidth / img.width;
       const faceHeightRatio = faceHeight / img.height;
       const faceArea = faceWidthRatio * faceHeightRatio;
-      
+
       // Check if face touches or exceeds image boundaries (with small margin)
       const margin = 10; // pixels
       const faceLeft = box.x;
       const faceRight = box.x + box.width;
       const faceTop = box.y;
       const faceBottom = box.y + box.height;
-      
-      const touchesEdges = faceLeft <= margin || 
-                          faceRight >= (img.width - margin) || 
-                          faceTop <= margin || 
-                          faceBottom >= (img.height - margin);
-      
+
+      const touchesEdges =
+        faceLeft <= margin ||
+        faceRight >= img.width - margin ||
+        faceTop <= margin ||
+        faceBottom >= img.height - margin;
+
       // Extreme close-up indicators
-      const isExtremeCloseUp = faceHeightRatio > 0.6 || // Face takes up >60% of image height
-                              faceWidthRatio > 0.7 ||   // Face takes up >70% of image width
-                              faceArea > 0.45 ||        // Face area >45% of total image
-                              touchesEdges;             // Face touches image edges
-      
+      const isExtremeCloseUp =
+        faceHeightRatio > 0.6 || // Face takes up >60% of image height
+        faceWidthRatio > 0.7 || // Face takes up >70% of image width
+        faceArea > 0.45 || // Face area >45% of total image
+        touchesEdges; // Face touches image edges
+
       // Tightly cropped indicators (face is large but not extreme)
-      const isTooTightlyCropped = !isExtremeCloseUp && 
-                                 (faceHeightRatio > 0.4 || faceWidthRatio > 0.5) &&
-                                 touchesEdges;
-      
+      const isTooTightlyCropped =
+        !isExtremeCloseUp && (faceHeightRatio > 0.4 || faceWidthRatio > 0.5) && touchesEdges;
+
       return {
         isExtremeCloseUp,
-        isTooTightlyCropped
+        isTooTightlyCropped,
       };
     }
 
@@ -207,23 +233,26 @@ export class FaceDetectionService implements IFaceDetectionService {
         const faceWidthRatio = box.width / img.width;
         return faceHeightRatio > 0.4 || faceWidthRatio > 0.5;
       });
-      
+
       return {
         isExtremeCloseUp: hasLargeFace,
-        isTooTightlyCropped: false
+        isTooTightlyCropped: false,
       };
     }
 
     return {
       isExtremeCloseUp: false,
-      isTooTightlyCropped: false
+      isTooTightlyCropped: false,
     };
   }
 
   /**
    * Detect body type based on face position and image composition
    */
-  private async detectBodyType(img: HTMLImageElement, detections: faceapi.WithFaceLandmarks<any>[]): Promise<'headshot' | 'upper-body' | 'full-body' | 'invalid'> {
+  private async detectBodyType(
+    img: HTMLImageElement,
+    detections: faceapi.WithFaceLandmarks<any>[]
+  ): Promise<'headshot' | 'upper-body' | 'full-body' | 'invalid'> {
     if (detections.length === 0) {
       return 'invalid';
     }
@@ -236,7 +265,7 @@ export class FaceDetectionService implements IFaceDetectionService {
     const box = detection.detection.box;
     const faceTop = box.y;
     const faceBottom = box.y + box.height;
-    const faceCenter = box.y + (box.height / 2);
+    const faceCenter = box.y + box.height / 2;
     const faceWidth = box.width;
     const faceHeight = box.height;
 
@@ -249,12 +278,12 @@ export class FaceDetectionService implements IFaceDetectionService {
 
     // First check if this is a close-up photo that should not be classified as full-body
     const closeUpCheck = this.detectCloseUpPhoto(img, detections);
-    
+
     // If it's an extreme close-up or tightly cropped, it cannot be full-body
     if (closeUpCheck.isExtremeCloseUp) {
       return 'headshot'; // Very close photos are headshots by definition
     }
-    
+
     if (closeUpCheck.isTooTightlyCropped) {
       return 'headshot'; // Tightly cropped photos are also headshots
     }
@@ -272,7 +301,7 @@ export class FaceDetectionService implements IFaceDetectionService {
       faceWidthRatio,
       faceHeightRatio,
       imgWidth,
-      imgHeight
+      imgHeight,
     });
 
     // Determine body type based on comprehensive scoring
@@ -290,7 +319,11 @@ export class FaceDetectionService implements IFaceDetectionService {
   /**
    * Calculate comprehensive body type score using multiple detection methods
    */
-  private async calculateBodyTypeScore(img: HTMLImageElement, detection: any, metrics: any): Promise<{
+  private async calculateBodyTypeScore(
+    img: HTMLImageElement,
+    detection: any,
+    metrics: any
+  ): Promise<{
     isHeadshot: boolean;
     isUpperBody: boolean;
     isFullBody: boolean;
@@ -373,33 +406,45 @@ export class FaceDetectionService implements IFaceDetectionService {
       isHeadshot: headshotScore === maxScore && headshotScore >= 50,
       isUpperBody: upperBodyScore === maxScore && upperBodyScore >= 40,
       isFullBody: fullBodyScore === maxScore && fullBodyScore >= 30,
-      confidence
+      confidence,
     };
   }
 
   /**
    * Detect body boundaries using edge detection
    */
-  private async detectBodyBoundaries(img: HTMLImageElement, detection: any): Promise<{
+  private async detectBodyBoundaries(
+    img: HTMLImageElement,
+    detection: any
+  ): Promise<{
     hasLowerBodyContent: boolean;
     hasShoulderContent: boolean;
     confidence: number;
   }> {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
-    
+
     // Sample analysis region below the face
     const sampleHeight = Math.min(200, img.height);
     const sampleWidth = Math.min(200, img.width);
     canvas.width = sampleWidth;
     canvas.height = sampleHeight;
-    
+
     // Focus on area below the face
     const faceBottom = detection.detection.box.y + detection.detection.box.height;
     const analysisStartY = Math.min(faceBottom, img.height * 0.3);
-    
-    ctx.drawImage(img, 0, analysisStartY, img.width, img.height - analysisStartY, 
-                  0, 0, sampleWidth, sampleHeight);
+
+    ctx.drawImage(
+      img,
+      0,
+      analysisStartY,
+      img.width,
+      img.height - analysisStartY,
+      0,
+      0,
+      sampleWidth,
+      sampleHeight
+    );
 
     try {
       const imageData = ctx.getImageData(0, 0, sampleWidth, sampleHeight);
@@ -415,24 +460,26 @@ export class FaceDetectionService implements IFaceDetectionService {
         for (let x = 1; x < sampleWidth - 1; x++) {
           const idx = (y * sampleWidth + x) * 4;
           const current = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
-          
+
           // Check horizontal edges (shoulders, torso)
           const right = (data[idx + 4] + data[idx + 5] + data[idx + 6]) / 3;
           const left = (data[idx - 4] + data[idx - 3] + data[idx - 2]) / 3;
-          
+
           // Check vertical edges (body outline)
-          const below = (data[(y + 1) * sampleWidth * 4 + x * 4] + 
-                        data[(y + 1) * sampleWidth * 4 + x * 4 + 1] + 
-                        data[(y + 1) * sampleWidth * 4 + x * 4 + 2]) / 3;
-          
+          const below =
+            (data[(y + 1) * sampleWidth * 4 + x * 4] +
+              data[(y + 1) * sampleWidth * 4 + x * 4 + 1] +
+              data[(y + 1) * sampleWidth * 4 + x * 4 + 2]) /
+            3;
+
           if (Math.abs(current - right) > 30 || Math.abs(current - left) > 30) {
             verticalEdges++;
           }
-          
+
           if (Math.abs(current - below) > 30) {
             horizontalEdges++;
           }
-          
+
           if (Math.abs(current - right) > 20 || Math.abs(current - below) > 20) {
             edgeCount++;
           }
@@ -451,16 +498,14 @@ export class FaceDetectionService implements IFaceDetectionService {
       return {
         hasLowerBodyContent,
         hasShoulderContent,
-        confidence: Math.min(edgeRatio * 2, 1)
+        confidence: Math.min(edgeRatio * 2, 1),
       };
-
     } catch (error) {
       return {
         hasLowerBodyContent: false,
         hasShoulderContent: false,
-        confidence: 0
+        confidence: 0,
       };
     }
   }
-
 }

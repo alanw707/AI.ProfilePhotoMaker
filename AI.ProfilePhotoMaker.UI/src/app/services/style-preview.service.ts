@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, catchError, of, map } from 'rxjs';
 import { ConfigService } from './config.service';
-import { environment } from '../../environments/environment';
 
 export interface StylePreviewResponse {
   success: boolean;

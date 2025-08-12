@@ -40,7 +40,6 @@ interface StyledPhoto {
   style: string;
   category: string;
   description: string;
-  // persona: string; // Removed per user request
 }
 
 @Component({
@@ -507,7 +506,6 @@ export class LandingComponent implements OnInit, OnDestroy {
       style: style.name,
       category: this.getCategoryFromStyleName(style.name),
       description: style.description,
-      // persona: this.getPersonaFromStyleName(style.name), // Removed per user request
     }));
 
     // Subscribe to preview URL updates
@@ -529,121 +527,101 @@ export class LandingComponent implements OnInit, OnDestroy {
         name: 'Professional LinkedIn',
         description: 'Corporate professional headshot',
         category: 'Business',
-        // persona: 'Business Executive', // Removed per user request
       },
       {
         name: 'Creative Professional',
         description: 'Artistic and modern look',
         category: 'Creative',
-        // persona: 'Creative Designer', // Removed per user request
       },
       {
         name: 'Corporate Executive',
         description: 'C-suite leadership presence',
         category: 'Executive',
-        // persona: 'CEO', // Removed per user request
       },
       {
         name: 'Casual Professional',
         description: 'Approachable yet professional',
         category: 'Relaxed',
-        // persona: 'Startup Founder', // Removed per user request
       },
       {
         name: 'Classic Headshot',
         description: 'Timeless professional look',
         category: 'Traditional',
-        // persona: 'Consultant', // Removed per user request
       },
       {
         name: 'Modern Professional',
         description: 'Cutting-edge style',
         category: 'Contemporary',
-        // persona: 'Tech Leader', // Removed per user request
       },
       {
         name: 'Elegant Portrait',
         description: 'Refined and polished',
         category: 'Sophisticated',
-        // persona: 'Executive Director', // Removed per user request
       },
       {
         name: 'Friendly Professional',
         description: 'Warm and welcoming',
         category: 'Approachable',
-        // persona: 'HR Manager', // Removed per user request
       },
       {
         name: 'Confident Leader',
         description: 'Strong leadership presence',
         category: 'Leadership',
-        // persona: 'Team Lead', // Removed per user request
       },
       {
         name: 'Artistic Expression',
         description: 'Creative industry focused',
         category: 'Creative',
-        // persona: 'Art Director', // Removed per user request
       },
       {
         name: 'Business Casual',
         description: 'Perfect for most industries',
         category: 'Versatile',
-        // persona: 'Manager', // Removed per user request
       },
       {
         name: 'Tech Professional',
         description: 'Tech industry optimized',
         category: 'Technology',
-        // persona: 'Software Engineer', // Removed per user request
       },
       {
         name: 'Senior Executive',
         description: 'High-level executive presence',
         category: 'Leadership',
-        // persona: 'VP', // Removed per user request
       },
       {
         name: 'Professional Consultant',
         description: 'Expert and trustworthy',
         category: 'Advisory',
-        // persona: 'Senior Consultant', // Removed per user request
       },
       {
         name: 'Entrepreneur',
         description: 'Visionary and forward-thinking',
         category: 'Innovation',
-        // persona: 'Entrepreneur', // Removed per user request
       },
       {
         name: 'Academic Professional',
         description: 'Scholarly and approachable',
         category: 'Education',
-        // persona: 'Professor', // Removed per user request
       },
       {
         name: 'Sales Professional',
         description: 'Trustworthy and engaging',
         category: 'Sales',
-        // persona: 'Sales Director', // Removed per user request
       },
       {
         name: 'Marketing Expert',
         description: 'Creative and strategic',
         category: 'Marketing',
-        // persona: 'Marketing Manager', // Removed per user request
       },
       {
         name: 'Finance Professional',
         description: 'Analytical and precise',
         category: 'Finance',
-        // persona: 'Financial Analyst', // Removed per user request
       },
       {
         name: 'Healthcare Professional',
         description: 'Caring and competent',
         category: 'Healthcare',
-        // persona: 'Healthcare Executive', // Removed per user request
       },
     ];
 
@@ -653,7 +631,6 @@ export class LandingComponent implements OnInit, OnDestroy {
       style: style.name,
       category: style.category,
       description: style.description,
-      // persona: style.persona, // Removed per user request
     }));
   }
 
@@ -688,65 +665,6 @@ export class LandingComponent implements OnInit, OnDestroy {
     }
     if (name.includes('tech') || name.includes('technology')) {
       return 'Technology';
-    }
-    return 'Professional';
-  }
-
-  getPersonaFromStyleName(styleName: string): string {
-    const name = styleName.toLowerCase();
-    if (name.includes('linkedin')) {
-      return 'Business Professional';
-    }
-    if (name.includes('creative')) {
-      return 'Creative Designer';
-    }
-    if (name.includes('corporate')) {
-      return 'Corporate Executive';
-    }
-    if (name.includes('executive')) {
-      return 'Senior Executive';
-    }
-    if (name.includes('casual')) {
-      return 'Startup Founder';
-    }
-    if (name.includes('classic')) {
-      return 'Consultant';
-    }
-    if (name.includes('modern')) {
-      return 'Tech Leader';
-    }
-    if (name.includes('elegant')) {
-      return 'Executive Director';
-    }
-    if (name.includes('friendly')) {
-      return 'HR Manager';
-    }
-    if (name.includes('confident')) {
-      return 'Team Lead';
-    }
-    if (name.includes('artistic')) {
-      return 'Art Director';
-    }
-    if (name.includes('tech')) {
-      return 'Software Engineer';
-    }
-    if (name.includes('entrepreneur')) {
-      return 'Entrepreneur';
-    }
-    if (name.includes('academic')) {
-      return 'Professor';
-    }
-    if (name.includes('sales')) {
-      return 'Sales Director';
-    }
-    if (name.includes('marketing')) {
-      return 'Marketing Manager';
-    }
-    if (name.includes('finance')) {
-      return 'Financial Analyst';
-    }
-    if (name.includes('healthcare')) {
-      return 'Healthcare Executive';
     }
     return 'Professional';
   }
