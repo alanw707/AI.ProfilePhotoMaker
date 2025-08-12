@@ -118,7 +118,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             HttpContext.Session.SetString("oauth_return_url", returnUrl);
 
             // Get backend base URL for OAuth callback
-            var backendBaseUrl = $"{Request.Scheme}://{Request.Host}";
+            // Force HTTPS in production (Azure Container Apps behind load balancer reports HTTP internally)
+            var scheme = Request.Host.Host.Contains("aiprofilephotomaker.com") ? "https" : Request.Scheme;
+            var backendBaseUrl = $"{scheme}://{Request.Host}";
             var redirectUri = $"{backendBaseUrl}/api/auth/external-login-callback";
 
             // Construct Google OAuth URL manually
@@ -197,7 +199,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             var configClientSecret = _configuration["Authentication:Google:ClientSecret"];
             var clientId = string.IsNullOrEmpty(configClientId) ? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") : configClientId;
             var clientSecret = string.IsNullOrEmpty(configClientSecret) ? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET") : configClientSecret;
-            var backendBaseUrl = $"{Request.Scheme}://{Request.Host}";
+            // Force HTTPS in production (Azure Container Apps behind load balancer reports HTTP internally)
+            var scheme = Request.Host.Host.Contains("aiprofilephotomaker.com") ? "https" : Request.Scheme;
+            var backendBaseUrl = $"{scheme}://{Request.Host}";
             var redirectUri = $"{backendBaseUrl}/api/auth/external-login-callback";
 
             var tokenRequest = new List<KeyValuePair<string, string>>
@@ -466,37 +470,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             return Redirect("https://www.google.com");
         }
 
-        [HttpGet("google-oauth-url-alt")]
-        public async Task<IActionResult> GetGoogleOAuthUrlAlternative(string returnUrl = "/app/dashboard")
-        {
-            try
-            {
-                // Try with explicit localhost redirect for testing
-                var clientId = "331984288023-lh1upthod06meoko58g7hn9d7h68l311.apps.googleusercontent.com";
-                var redirectUri = "http://localhost:4200/signin-google";
-                var state = Guid.NewGuid().ToString();
-
-                // Create OAuth URL with minimal parameters
-                var authUrl = $"https://accounts.google.com/o/oauth2/v2/auth?" +
-                    $"client_id={Uri.EscapeDataString(clientId ?? string.Empty)}&" +
-                    $"redirect_uri={Uri.EscapeDataString(redirectUri ?? string.Empty)}&" +
-                    $"response_type=code&" +
-                    $"scope={Uri.EscapeDataString("email profile")}&" +
-                    $"state={Uri.EscapeDataString(state ?? string.Empty)}";
-
-                return Ok(new
-                {
-                    authUrl = authUrl,
-                    state = state,
-                    returnUrl = returnUrl,
-                    note = "Alternative OAuth URL with minimal parameters"
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-        }
+        // Alternative OAuth method removed - contained wrong client ID
 
 
 
