@@ -95,7 +95,7 @@ builder.Host.UseSerilog((context, services, configuration) =>
         .Enrich.WithProperty("Application", "AI.ProfilePhotoMaker.API");
 });
 
-// Configure forwarded headers for development proxy
+// Configure forwarded headers for both development proxy and Azure Container Apps load balancer
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor |
@@ -106,6 +106,13 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
     // Trust development proxy
     options.KnownProxies.Add(System.Net.IPAddress.Parse("127.0.0.1"));
+    
+    // Trust Azure Container Apps load balancer - clear known networks to trust all proxies
+    if (!builder.Environment.IsDevelopment())
+    {
+        // In production (Azure Container Apps), trust all networks since we're behind their load balancer
+        options.ForwardLimit = null;
+    }
 });
 
 // Configure data protection for OAuth state handling
