@@ -118,10 +118,23 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             HttpContext.Session.SetString("oauth_return_url", returnUrl);
 
             // Get backend base URL for OAuth callback
-            // Use forwarded headers from Azure load balancer for correct protocol and host
-            var proto = Request.Headers["X-Forwarded-Proto"].FirstOrDefault() ?? Request.Scheme;
-            var host = Request.Headers["X-Forwarded-Host"].FirstOrDefault() ?? Request.Host.Value;
-            var backendBaseUrl = $"{proto}://{host}";
+            // Priority: 1) Explicit OAuth base URL config, 2) Forwarded headers, 3) Request info
+            var configOAuthBaseUrl = _configuration["Authentication:OAuth:BaseUrl"] ?? Environment.GetEnvironmentVariable("OAUTH_BASE_URL");
+            string backendBaseUrl;
+            
+            if (!string.IsNullOrEmpty(configOAuthBaseUrl))
+            {
+                // Use explicitly configured OAuth base URL (recommended for production)
+                backendBaseUrl = configOAuthBaseUrl;
+            }
+            else
+            {
+                // Fallback to forwarded headers from Azure load balancer
+                var proto = Request.Headers["X-Forwarded-Proto"].FirstOrDefault() ?? Request.Scheme;
+                var host = Request.Headers["X-Forwarded-Host"].FirstOrDefault() ?? Request.Host.Value;
+                backendBaseUrl = $"{proto}://{host}";
+            }
+            
             var redirectUri = $"{backendBaseUrl}/api/auth/external-login-callback";
 
             // Construct Google OAuth URL manually
@@ -200,10 +213,23 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             var configClientSecret = _configuration["Authentication:Google:ClientSecret"];
             var clientId = string.IsNullOrEmpty(configClientId) ? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") : configClientId;
             var clientSecret = string.IsNullOrEmpty(configClientSecret) ? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET") : configClientSecret;
-            // Use forwarded headers from Azure load balancer for correct protocol and host
-            var proto = Request.Headers["X-Forwarded-Proto"].FirstOrDefault() ?? Request.Scheme;
-            var host = Request.Headers["X-Forwarded-Host"].FirstOrDefault() ?? Request.Host.Value;
-            var backendBaseUrl = $"{proto}://{host}";
+            // Get backend base URL for OAuth callback (consistent with ExternalLogin method)
+            var configOAuthBaseUrl = _configuration["Authentication:OAuth:BaseUrl"] ?? Environment.GetEnvironmentVariable("OAUTH_BASE_URL");
+            string backendBaseUrl;
+            
+            if (!string.IsNullOrEmpty(configOAuthBaseUrl))
+            {
+                // Use explicitly configured OAuth base URL (recommended for production)
+                backendBaseUrl = configOAuthBaseUrl;
+            }
+            else
+            {
+                // Fallback to forwarded headers from Azure load balancer
+                var proto = Request.Headers["X-Forwarded-Proto"].FirstOrDefault() ?? Request.Scheme;
+                var host = Request.Headers["X-Forwarded-Host"].FirstOrDefault() ?? Request.Host.Value;
+                backendBaseUrl = $"{proto}://{host}";
+            }
+            
             var redirectUri = $"{backendBaseUrl}/api/auth/external-login-callback";
 
             var tokenRequest = new List<KeyValuePair<string, string>>
