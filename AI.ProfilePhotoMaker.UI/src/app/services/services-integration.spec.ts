@@ -37,24 +37,24 @@ class MockNgZone {
 
 // Mock dependency services
 class MockProfileService {
-  getCurrentUserProfile = jasmine.createSpy('getCurrentUserProfile').and.returnValue(
-    of({ success: true, data: { id: 1, name: 'Test User' } })
-  );
-  discoverModels = jasmine.createSpy('discoverModels').and.returnValue(
-    of({ success: true, data: { ModelsAdded: 1 } })
-  );
+  getCurrentUserProfile = jasmine
+    .createSpy('getCurrentUserProfile')
+    .and.returnValue(of({ success: true, data: { id: 1, name: 'Test User' } }));
+  discoverModels = jasmine
+    .createSpy('discoverModels')
+    .and.returnValue(of({ success: true, data: { ModelsAdded: 1 } }));
 }
 
 class MockReplicateService {
-  getCredits = jasmine.createSpy('getCredits').and.returnValue(
-    of({ success: true, data: { totalCredits: 100 } })
-  );
+  getCredits = jasmine
+    .createSpy('getCredits')
+    .and.returnValue(of({ success: true, data: { totalCredits: 100 } }));
 }
 
 class MockCreditService {
-  getCreditStatus = jasmine.createSpy('getCreditStatus').and.returnValue(
-    of({ success: true, data: { purchasedCredits: 50, weeklyCredits: 3 } })
-  );
+  getCreditStatus = jasmine
+    .createSpy('getCreditStatus')
+    .and.returnValue(of({ success: true, data: { purchasedCredits: 50, weeklyCredits: 3 } }));
 }
 
 class MockFileUploadService {
@@ -62,20 +62,22 @@ class MockFileUploadService {
     of({
       images: [
         { id: 1, isOriginalUpload: true, originalImageUrl: 'url1', isGenerated: false },
-        { id: 2, isOriginalUpload: false, isGenerated: true }
+        { id: 2, isOriginalUpload: false, isGenerated: true },
       ],
-      generatedImages: 5
+      generatedImages: 5,
     })
   );
-  
-  getTrainingStatus = jasmine.createSpy('getTrainingStatus').and.returnValue(
-    of({ status: 'Not Started', totalUploadedImages: 3 })
-  );
-  
-  getUserModelRequests = jasmine.createSpy('getUserModelRequests').and.returnValue(
-    of({ success: true, data: { hasTrainedModel: false, latestTrainedModel: null } })
-  );
-  
+
+  getTrainingStatus = jasmine
+    .createSpy('getTrainingStatus')
+    .and.returnValue(of({ status: 'Not Started', totalUploadedImages: 3 }));
+
+  getUserModelRequests = jasmine
+    .createSpy('getUserModelRequests')
+    .and.returnValue(
+      of({ success: true, data: { hasTrainedModel: false, latestTrainedModel: null } })
+    );
+
   invalidateUserImagesCache = jasmine.createSpy('invalidateUserImagesCache');
 }
 
@@ -90,7 +92,9 @@ class MockAuthService {
 }
 
 class MockConfigService {
-  getFullUrl = jasmine.createSpy('getFullUrl').and.returnValue('http://mock-api/test/fix-generated-images');
+  getFullUrl = jasmine
+    .createSpy('getFullUrl')
+    .and.returnValue('http://mock-api/test/fix-generated-images');
 }
 
 // Helper function to create mock File
@@ -109,7 +113,7 @@ function createMockImage(width = 200, height = 200): HTMLImageElement {
     onerror: null as any,
     src: '',
     addEventListener: jasmine.createSpy('addEventListener'),
-    removeEventListener: jasmine.createSpy('removeEventListener')
+    removeEventListener: jasmine.createSpy('removeEventListener'),
   } as any;
   return img;
 }
@@ -136,7 +140,7 @@ describe('Services Integration Tests', () => {
         CacheManagerService,
         ModelStateService,
         FallbackOperationsService,
-        
+
         // Mock dependencies
         { provide: NgZone, useClass: MockNgZone },
         { provide: ProfileService, useClass: MockProfileService },
@@ -146,8 +150,8 @@ describe('Services Integration Tests', () => {
         { provide: StyleService, useClass: MockStyleService },
         { provide: NotificationService, useClass: MockNotificationService },
         { provide: AuthService, useClass: MockAuthService },
-        { provide: ConfigService, useClass: MockConfigService }
-      ]
+        { provide: ConfigService, useClass: MockConfigService },
+      ],
     });
 
     dashboardStateService = TestBed.inject(DashboardStateService);
@@ -169,7 +173,7 @@ describe('Services Integration Tests', () => {
   });
 
   describe('Dashboard State + Cache Manager Integration', () => {
-    it('should use cache manager for dashboard data persistence', (done) => {
+    it('should use cache manager for dashboard data persistence', done => {
       spyOn(cacheManagerService, 'getCachedData').and.returnValue(null);
       spyOn(cacheManagerService, 'setCachedData');
       spyOn(cacheManagerService, 'shouldDebounceRequest').and.returnValue(false);
@@ -212,11 +216,11 @@ describe('Services Integration Tests', () => {
   });
 
   describe('Dashboard State + Model State Integration', () => {
-    it('should use model state service for status determination', (done) => {
+    it('should use model state service for status determination', done => {
       spyOn(modelStateService, 'getModelStatusFromData').and.returnValue({
         modelStatus: 'Model Ready',
         hasTrainedModel: true,
-        latestTrainedModel: { id: 'model-123' }
+        latestTrainedModel: { id: 'model-123' },
       });
 
       dashboardStateService.loadInitialDashboardData();
@@ -232,11 +236,11 @@ describe('Services Integration Tests', () => {
       }, 50);
     });
 
-    it('should trigger model discovery when needed', (done) => {
+    it('should trigger model discovery when needed', done => {
       spyOn(modelStateService, 'runAsyncModelDiscovery');
       spyOn(fallbackOperationsService, 'checkIfFallbackNeeded').and.returnValue({
         shouldCheckFilesystem: false,
-        shouldDiscoverModels: true
+        shouldDiscoverModels: true,
       });
 
       dashboardStateService.loadInitialDashboardData();
@@ -249,10 +253,10 @@ describe('Services Integration Tests', () => {
   });
 
   describe('Dashboard State + Fallback Operations Integration', () => {
-    it('should perform fallback operations when data discrepancies detected', (done) => {
+    it('should perform fallback operations when data discrepancies detected', done => {
       spyOn(fallbackOperationsService, 'checkIfFallbackNeeded').and.returnValue({
         shouldCheckFilesystem: true,
-        shouldDiscoverModels: false
+        shouldDiscoverModels: false,
       });
       spyOn(fallbackOperationsService, 'checkGeneratedImagesFromFilesystem').and.returnValue(
         of({ actualGeneratedCount: 10, addedCount: 5, success: true })
@@ -262,7 +266,7 @@ describe('Services Integration Tests', () => {
 
       setTimeout(() => {
         expect(fallbackOperationsService.checkGeneratedImagesFromFilesystem).toHaveBeenCalled();
-        
+
         dashboardStateService.state$.subscribe(state => {
           if (state.generatedPhotosCount === 10) {
             done();
@@ -271,10 +275,10 @@ describe('Services Integration Tests', () => {
       }, 100);
     });
 
-    it('should handle fallback operation failures gracefully', (done) => {
+    it('should handle fallback operation failures gracefully', done => {
       spyOn(fallbackOperationsService, 'checkIfFallbackNeeded').and.returnValue({
         shouldCheckFilesystem: true,
-        shouldDiscoverModels: false
+        shouldDiscoverModels: false,
       });
       spyOn(fallbackOperationsService, 'checkGeneratedImagesFromFilesystem').and.returnValue(
         throwError(() => new Error('Fallback failed'))
@@ -294,25 +298,31 @@ describe('Services Integration Tests', () => {
     it('should coordinate model loading, face detection, and quality scoring', async () => {
       const mockFile = createMockFile();
       const mockImg = createMockImage(1024, 1024);
-      
+
       // Mock the full workflow
       spyOn(imageQualityService, 'loadImageElement').and.returnValue(Promise.resolve(mockImg));
       spyOn(modelLoaderService, 'loadModels').and.returnValue(Promise.resolve());
-      
+
       // Mock face-api detection
       const mockDetection = {
         detection: {
           score: 0.8,
-          box: { x: 50, y: 60, width: 100, height: 120 }
-        }
+          box: { x: 50, y: 60, width: 100, height: 120 },
+        },
       };
       spyOn((window as any).faceapi, 'detectAllFaces').and.returnValue([mockDetection]);
-      
+
       spyOn(imageQualityService, 'calculateQualityScore').and.returnValue(
         Promise.resolve({
           overall: 75,
-          breakdown: { faceQuality: 80, technical: 70, composition: 75, fluxCompatibility: 70, lighting: 80 },
-          suggestions: ['Good quality image']
+          breakdown: {
+            faceQuality: 80,
+            technical: 70,
+            composition: 75,
+            fluxCompatibility: 70,
+            lighting: 80,
+          },
+          suggestions: ['Good quality image'],
         })
       );
 
@@ -320,7 +330,11 @@ describe('Services Integration Tests', () => {
 
       expect(modelLoaderService.loadModels).toHaveBeenCalled();
       expect(imageQualityService.loadImageElement).toHaveBeenCalledWith(mockFile);
-      expect(imageQualityService.calculateQualityScore).toHaveBeenCalledWith(mockImg, [mockDetection], mockFile);
+      expect(imageQualityService.calculateQualityScore).toHaveBeenCalledWith(
+        mockImg,
+        [mockDetection],
+        mockFile
+      );
       expect(result.faceCount).toBe(1);
       expect(result.qualityScore.overall).toBe(75);
       expect(result.isValid).toBeTrue();
@@ -328,12 +342,20 @@ describe('Services Integration Tests', () => {
 
     it('should handle model loading failures in face detection workflow', async () => {
       const mockFile = createMockFile();
-      
-      spyOn(modelLoaderService, 'loadModels').and.returnValue(Promise.reject(new Error('Model load failed')));
+
+      spyOn(modelLoaderService, 'loadModels').and.returnValue(
+        Promise.reject(new Error('Model load failed'))
+      );
       spyOn(imageQualityService, 'getDefaultQualityScore').and.returnValue({
         overall: 1,
-        breakdown: { faceQuality: 0, technical: 0, composition: 0, fluxCompatibility: 0, lighting: 0 },
-        suggestions: ['Unable to analyze image quality. Please try a different photo.']
+        breakdown: {
+          faceQuality: 0,
+          technical: 0,
+          composition: 0,
+          fluxCompatibility: 0,
+          lighting: 0,
+        },
+        suggestions: ['Unable to analyze image quality. Please try a different photo.'],
       });
 
       const result = await faceDetectionService.validateImage(mockFile);
@@ -378,17 +400,17 @@ describe('Services Integration Tests', () => {
       const req = httpMock.expectOne('http://mock-api/test/fix-generated-images');
       expect(req.request.method).toBe('POST');
       expect(req.request.headers.get('Authorization')).toBe('Bearer mock-token');
-      
+
       req.flush({ success: true, data: { addedCount: 3 } });
     });
 
-    it('should handle HTTP errors with proper error propagation', (done) => {
+    it('should handle HTTP errors with proper error propagation', done => {
       fallbackOperationsService.checkGeneratedImagesFromFilesystem().subscribe({
         next: () => fail('Should have errored'),
-        error: (error) => {
+        error: error => {
           expect(error).toBeDefined();
           done();
-        }
+        },
       });
 
       const req = httpMock.expectOne('http://mock-api/test/fix-generated-images');
@@ -399,13 +421,13 @@ describe('Services Integration Tests', () => {
   describe('Cache Manager + Multiple Services Integration', () => {
     it('should provide consistent caching across different services', () => {
       const testData = { value: 'test-data' };
-      
+
       // Set data through cache manager
       cacheManagerService.setCachedData('shared-key', testData, 5000);
-      
+
       // Should be accessible by any service
       expect(cacheManagerService.getCachedData('shared-key')).toEqual(testData);
-      
+
       // Force refresh should clear for all services
       cacheManagerService.forceRefresh('shared-key');
       expect(cacheManagerService.getCachedData('shared-key')).toBeNull();
@@ -414,9 +436,9 @@ describe('Services Integration Tests', () => {
     it('should handle cache invalidation across service boundaries', () => {
       cacheManagerService.setCachedData('key1', 'value1', 5000);
       cacheManagerService.setCachedData('key2', 'value2', 5000);
-      
+
       dashboardStateService.forceRefresh();
-      
+
       // Dashboard force refresh should clear all cache
       expect(cacheManagerService.getCachedData('key1')).toBeNull();
       expect(cacheManagerService.getCachedData('key2')).toBeNull();
@@ -424,7 +446,7 @@ describe('Services Integration Tests', () => {
   });
 
   describe('Error Propagation Across Services', () => {
-    it('should handle cascading errors gracefully', (done) => {
+    it('should handle cascading errors gracefully', done => {
       // Set up a scenario where multiple services might fail
       spyOn(TestBed.inject(ProfileService), 'getCurrentUserProfile').and.returnValue(
         throwError(() => new Error('Profile service failed'))
@@ -445,11 +467,13 @@ describe('Services Integration Tests', () => {
 
     it('should maintain service isolation during errors', async () => {
       // Even if one service fails, others should continue working
-      spyOn(modelLoaderService, 'loadModels').and.returnValue(Promise.reject(new Error('Models failed')));
-      
+      spyOn(modelLoaderService, 'loadModels').and.returnValue(
+        Promise.reject(new Error('Models failed'))
+      );
+
       const mockFile = createMockFile();
       const result = await faceDetectionService.validateImage(mockFile);
-      
+
       // Should still return a result with default values
       expect(result).toBeDefined();
       expect(result.faceCount).toBe(0);
@@ -458,26 +482,27 @@ describe('Services Integration Tests', () => {
   });
 
   describe('Performance Integration', () => {
-    it('should handle concurrent operations efficiently', (done) => {
+    it('should handle concurrent operations efficiently', done => {
       const operations = [
         () => dashboardStateService.loadInitialDashboardData(),
         () => modelStateService.runAsyncModelDiscovery(),
         () => cacheManagerService.setCachedData('perf-test', 'data', 5000),
-        () => fallbackOperationsService.checkIfFallbackNeeded({
-          generatedPhotosCount: 0,
-          modelStatus: 'Not Started',
-          hasLatestTrainedModel: false,
-          uploadedImages: 5,
-          hasUserProfile: true,
-          latestTrainedModel: null
-        })
+        () =>
+          fallbackOperationsService.checkIfFallbackNeeded({
+            generatedPhotosCount: 0,
+            modelStatus: 'Not Started',
+            hasLatestTrainedModel: false,
+            uploadedImages: 5,
+            hasUserProfile: true,
+            latestTrainedModel: null,
+          }),
       ];
 
       const startTime = performance.now();
-      
+
       // Execute all operations concurrently
       operations.forEach(op => op());
-      
+
       setTimeout(() => {
         const endTime = performance.now();
         expect(endTime - startTime).toBeLessThan(1000); // Should complete quickly
@@ -488,7 +513,7 @@ describe('Services Integration Tests', () => {
     it('should maintain responsiveness with large datasets', () => {
       const largeDataset = {
         images: new Array(1000).fill(0).map((_, i) => ({ id: i, data: `image-${i}` })),
-        metadata: new Array(1000).fill(0).map((_, i) => ({ key: `meta-${i}`, value: i }))
+        metadata: new Array(1000).fill(0).map((_, i) => ({ key: `meta-${i}`, value: i })),
       };
 
       const startTime = performance.now();
@@ -507,21 +532,21 @@ describe('Services Integration Tests', () => {
       if (typeof (dashboardStateService as any).enableGlobalDebug === 'function') {
         (dashboardStateService as any).enableGlobalDebug();
       }
-      
+
       if (typeof (modelStateService as any).enableGlobalDebug === 'function') {
         (modelStateService as any).enableGlobalDebug();
       }
-      
+
       if (typeof (cacheManagerService as any).enableGlobalDebug === 'function') {
         (cacheManagerService as any).enableGlobalDebug();
       }
-      
+
       if (typeof (fallbackOperationsService as any).enableGlobalDebug === 'function') {
         (fallbackOperationsService as any).enableGlobalDebug();
       }
 
       // Test if debug functions are available (only if the services support them)
-      const hasAnyDebugFunctions = 
+      const unusedHasAnyDebugFunctions =
         (window as any).dashboardState !== undefined ||
         (window as any).debugModelStatus !== undefined ||
         (window as any).cacheStats !== undefined ||
@@ -547,13 +572,13 @@ describe('Services Integration Tests', () => {
 
     it('should provide consistent debug interface where available', () => {
       spyOn(console, 'log');
-      
+
       // Only test services that have debug capabilities
       if (typeof (dashboardStateService as any).enableGlobalDebug === 'function') {
         (dashboardStateService as any).enableGlobalDebug();
         expect(console.log).toHaveBeenCalledWith(jasmine.stringMatching(/debug enabled/));
       }
-      
+
       if (typeof (cacheManagerService as any).enableGlobalDebug === 'function') {
         (cacheManagerService as any).enableGlobalDebug();
         expect(console.log).toHaveBeenCalledWith(jasmine.stringMatching(/debug enabled/));
@@ -565,12 +590,12 @@ describe('Services Integration Tests', () => {
   });
 
   describe('State Synchronization', () => {
-    it('should maintain consistent state across service interactions', (done) => {
+    it('should maintain consistent state across service interactions', done => {
       // Start with a known state
       dashboardStateService.setState({
         generatedPhotosCount: 0,
         modelStatus: 'Not Started',
-        uploadedImages: 3
+        uploadedImages: 3,
       });
 
       // Trigger operations that should update state
@@ -579,7 +604,7 @@ describe('Services Integration Tests', () => {
       );
       spyOn(fallbackOperationsService, 'checkIfFallbackNeeded').and.returnValue({
         shouldCheckFilesystem: true,
-        shouldDiscoverModels: false
+        shouldDiscoverModels: false,
       });
 
       dashboardStateService.loadInitialDashboardData();

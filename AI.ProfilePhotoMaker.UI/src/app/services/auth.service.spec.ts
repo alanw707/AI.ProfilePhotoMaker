@@ -7,7 +7,7 @@ import { ConfigService } from './config.service';
 
 /**
  * AuthService Test Suite
- * 
+ *
  * Simplified tests that match the actual service structure.
  * Tests critical authentication functionality including JWT token management and login/logout flows.
  */
@@ -27,8 +27,8 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         { provide: Router, useValue: mockRouter },
-        { provide: ConfigService, useValue: mockConfigService }
-      ]
+        { provide: ConfigService, useValue: mockConfigService },
+      ],
     });
 
     service = TestBed.inject(AuthService);
@@ -47,9 +47,9 @@ describe('AuthService', () => {
 
     it('should initialize authentication state from localStorage', () => {
       localStorage.setItem('auth_token', 'stored-token');
-      
+
       const newService = TestBed.inject(AuthService);
-      
+
       expect(newService.getToken()).toBe('stored-token');
       expect(newService.isAuthenticated()).toBeTrue();
     });
@@ -61,7 +61,7 @@ describe('AuthService', () => {
   });
 
   describe('Login Functionality', () => {
-    it('should login with valid credentials', (done) => {
+    it('should login with valid credentials', done => {
       const loginData: LoginDto = { email: 'test@example.com', password: 'password123' };
       const mockResponse = {
         isSuccess: true,
@@ -70,14 +70,16 @@ describe('AuthService', () => {
         expiration: '2025-01-01T00:00:00Z',
         email: 'test@example.com',
         firstName: 'Test',
-        lastName: 'User'
+        lastName: 'User',
       };
 
       service.login(loginData).subscribe(response => {
-        expect(response).toEqual(jasmine.objectContaining({
-          token: 'jwt-token',
-          email: 'test@example.com'
-        }));
+        expect(response).toEqual(
+          jasmine.objectContaining({
+            token: 'jwt-token',
+            email: 'test@example.com',
+          })
+        );
         expect(service.isAuthenticated()).toBeTrue();
         expect(service.getToken()).toBe('jwt-token');
         done();
@@ -89,13 +91,13 @@ describe('AuthService', () => {
       req.flush(mockResponse);
     });
 
-    it('should handle login errors', (done) => {
+    it('should handle login errors', done => {
       const loginData: LoginDto = { email: 'test@example.com', password: 'wrong-password' };
       const errorResponse = {
         isSuccess: false,
         message: 'Invalid credentials',
         token: '',
-        expiration: ''
+        expiration: '',
       };
 
       service.login(loginData).subscribe(response => {
@@ -108,7 +110,7 @@ describe('AuthService', () => {
       req.flush(errorResponse);
     });
 
-    it('should store token on successful login', (done) => {
+    it('should store token on successful login', done => {
       const loginData: LoginDto = { email: 'test@example.com', password: 'password123' };
       const mockResponse = {
         isSuccess: true,
@@ -117,7 +119,7 @@ describe('AuthService', () => {
         expiration: '2025-01-01T00:00:00Z',
         email: 'test@example.com',
         firstName: 'Test',
-        lastName: 'User'
+        lastName: 'User',
       };
 
       service.login(loginData).subscribe(() => {
@@ -129,11 +131,12 @@ describe('AuthService', () => {
       req.flush(mockResponse);
     });
 
-    it('should emit authentication state changes', (done) => {
+    it('should emit authentication state changes', done => {
       let emissionCount = 0;
       service.isAuthenticated$.subscribe(isAuth => {
         emissionCount++;
-        if (emissionCount === 2) { // Skip initial false emission
+        if (emissionCount === 2) {
+          // Skip initial false emission
           expect(isAuth).toBeTrue();
           done();
         }
@@ -147,7 +150,7 @@ describe('AuthService', () => {
         expiration: '2025-01-01T00:00:00Z',
         email: 'test@example.com',
         firstName: 'Test',
-        lastName: 'User'
+        lastName: 'User',
       };
 
       service.login(loginData).subscribe();
@@ -158,14 +161,14 @@ describe('AuthService', () => {
   });
 
   describe('Registration', () => {
-    it('should register new user', (done) => {
+    it('should register new user', done => {
       const registrationData: RegisterDto = {
         email: 'newuser@example.com',
         password: 'password123',
         firstName: 'New',
         lastName: 'User',
         gender: 'prefer-not-to-say',
-        ethnicity: 'prefer-not-to-say'
+        ethnicity: 'prefer-not-to-say',
       };
       const mockResponse = {
         isSuccess: true,
@@ -174,14 +177,16 @@ describe('AuthService', () => {
         expiration: '2025-01-01T00:00:00Z',
         email: 'newuser@example.com',
         firstName: 'New',
-        lastName: 'User'
+        lastName: 'User',
       };
 
       service.register(registrationData).subscribe(response => {
-        expect(response).toEqual(jasmine.objectContaining({
-          token: 'jwt-token',
-          email: 'newuser@example.com'
-        }));
+        expect(response).toEqual(
+          jasmine.objectContaining({
+            token: 'jwt-token',
+            email: 'newuser@example.com',
+          })
+        );
         expect(service.isAuthenticated()).toBeTrue();
         done();
       });
@@ -192,20 +197,20 @@ describe('AuthService', () => {
       req.flush(mockResponse);
     });
 
-    it('should handle registration errors', (done) => {
+    it('should handle registration errors', done => {
       const registrationData: RegisterDto = {
         email: 'invalid-email',
         password: '123',
         firstName: '',
         lastName: '',
         gender: '',
-        ethnicity: ''
+        ethnicity: '',
       };
       const errorResponse = {
         isSuccess: false,
         message: 'Validation failed',
         token: '',
-        expiration: ''
+        expiration: '',
       };
 
       service.register(registrationData).subscribe(response => {
@@ -227,7 +232,7 @@ describe('AuthService', () => {
         token: 'jwt-token',
         email: 'test@example.com',
         firstName: 'Test',
-        lastName: 'User'
+        lastName: 'User',
       });
       service['isAuthenticatedSubject'].next(true);
     });
@@ -239,7 +244,7 @@ describe('AuthService', () => {
       expect(service.isAuthenticated()).toBeFalse();
     });
 
-    it('should emit authentication state change on logout', (done) => {
+    it('should emit authentication state change on logout', done => {
       service.isAuthenticated$.subscribe(isAuth => {
         if (!isAuth) {
           expect(isAuth).toBeFalse();
@@ -281,32 +286,36 @@ describe('AuthService', () => {
         token: 'jwt-token',
         email: 'test@example.com',
         firstName: 'Test',
-        lastName: 'User'
+        lastName: 'User',
       };
       service['currentUserSubject'].next(mockUser);
     });
 
-    it('should get current user from observable', (done) => {
+    it('should get current user from observable', done => {
       service.currentUser$.subscribe(user => {
         if (user) {
-          expect(user).toEqual(jasmine.objectContaining({
-            email: 'test@example.com',
-            firstName: 'Test',
-            lastName: 'User'
-          }));
+          expect(user).toEqual(
+            jasmine.objectContaining({
+              email: 'test@example.com',
+              firstName: 'Test',
+              lastName: 'User',
+            })
+          );
           done();
         }
       });
     });
 
-    it('should get current user as observable', (done) => {
+    it('should get current user as observable', done => {
       service.currentUser$.subscribe(user => {
         if (user) {
-          expect(user).toEqual(jasmine.objectContaining({
-            email: 'test@example.com',
-            firstName: 'Test',
-            lastName: 'User'
-          }));
+          expect(user).toEqual(
+            jasmine.objectContaining({
+              email: 'test@example.com',
+              firstName: 'Test',
+              lastName: 'User',
+            })
+          );
           done();
         }
       });
@@ -325,7 +334,7 @@ describe('AuthService', () => {
   });
 
   describe('Error Handling', () => {
-    it('should handle network errors during login', (done) => {
+    it('should handle network errors during login', done => {
       const loginData: LoginDto = { email: 'test@example.com', password: 'password123' };
 
       service.login(loginData).subscribe(response => {
@@ -338,10 +347,10 @@ describe('AuthService', () => {
       req.error(new ErrorEvent('Network error'));
     });
 
-    it('should handle 401 unauthorized responses', (done) => {
+    it('should handle 401 unauthorized responses', done => {
       const loginData: LoginDto = { email: 'test@example.com', password: 'password123' };
 
-      service.login(loginData).subscribe(response => {
+      service.login(loginData).subscribe(_response => {
         expect(service.isAuthenticated()).toBeFalse();
         done();
       });
@@ -365,10 +374,7 @@ describe('AuthService Integration Tests', () => {
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
-      providers: [
-        AuthService,
-        { provide: ConfigService, useValue: mockConfigService }
-      ]
+      providers: [AuthService, { provide: ConfigService, useValue: mockConfigService }],
     });
 
     service = TestBed.inject(AuthService);
@@ -391,7 +397,7 @@ describe('AuthService Integration Tests', () => {
     expect(newService.getToken()).toBe('stored-token');
   });
 
-  it('should complete login flow', (done) => {
+  it('should complete login flow', done => {
     const loginData: LoginDto = { email: 'test@example.com', password: 'password123' };
     const mockResponse = {
       isSuccess: true,
@@ -400,17 +406,17 @@ describe('AuthService Integration Tests', () => {
       expiration: '2025-01-01T00:00:00Z',
       email: 'test@example.com',
       firstName: 'Test',
-      lastName: 'User'
+      lastName: 'User',
     };
 
     service.login(loginData).subscribe(response => {
       expect(response.token).toBe('jwt-token');
       expect(service.isAuthenticated()).toBeTrue();
-      
+
       // Logout
       service.logout();
       expect(service.isAuthenticated()).toBeFalse();
-      
+
       done();
     });
 

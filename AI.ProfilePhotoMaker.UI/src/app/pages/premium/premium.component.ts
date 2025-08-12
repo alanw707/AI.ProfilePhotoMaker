@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
-import { ThemeService } from '../../services/theme.service';
+
 import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
 import { CreditPackagesComponent } from '../../components/credit-packages/credit-packages.component';
 import { CreditService, UserCreditStatus } from '../../services/credit.service';

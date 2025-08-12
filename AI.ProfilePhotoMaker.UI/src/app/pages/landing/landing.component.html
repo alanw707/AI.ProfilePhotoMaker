@@ -543,8 +543,10 @@
 
             <button
               (click)="getStarted()"
-              class="w-full py-3 font-semibold transition-all duration-200"
-              [class]="plan.recommended ? 'btn-primary' : 'btn-secondary'"
+              [class]="
+                'w-full py-3 font-semibold transition-all duration-200 ' +
+                (plan.recommended ? 'btn-primary' : 'btn-secondary')
+              "
               style="border-radius: 8px !important">
               Get Started
             </button>

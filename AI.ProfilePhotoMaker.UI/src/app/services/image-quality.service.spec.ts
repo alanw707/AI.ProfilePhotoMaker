@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { NgZone } from '@angular/core';
 import { ImageQualityService } from './image-quality.service';
-import { IImageQualityService, QualityScore } from '../interfaces/service.interfaces';
+import { IImageQualityService } from '../interfaces/service.interfaces';
 
 // Mock face-api.js detection result
 const mockDetection = {

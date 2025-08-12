@@ -3,39 +3,41 @@ import { of, throwError } from 'rxjs';
 import { ModelStateService } from './model-state.service';
 import { ProfileService } from './profile.service';
 import { FileUploadService } from './file-upload.service';
-import { IModelStateService, ModelStatusInfo } from '../interfaces/service.interfaces';
+import { IModelStateService } from '../interfaces/service.interfaces';
 
 // Mock services
 class MockProfileService {
-  discoverModels = jasmine.createSpy('discoverModels').and.returnValue(
-    of({ success: true, data: { ModelsAdded: 1 } })
-  );
+  discoverModels = jasmine
+    .createSpy('discoverModels')
+    .and.returnValue(of({ success: true, data: { ModelsAdded: 1 } }));
 }
 
 class MockFileUploadService {
-  getTrainingStatus = jasmine.createSpy('getTrainingStatus').and.returnValue(
-    of({ status: 'Not Started' })
-  );
-  
-  getUserModelRequests = jasmine.createSpy('getUserModelRequests').and.returnValue(
-    of({ success: true, data: { hasTrainedModel: false, latestTrainedModel: null } })
-  );
-  
-  getDebugModelStatus = jasmine.createSpy('getDebugModelStatus').and.returnValue(
-    of({ success: true, data: {} }).toPromise()
-  );
-  
-  testModelCreationEndpoint = jasmine.createSpy('testModelCreationEndpoint').and.returnValue(
-    of({ success: true }).toPromise()
-  );
-  
-  discoverUserModels = jasmine.createSpy('discoverUserModels').and.returnValue(
-    of({ success: true }).toPromise()
-  );
-  
-  testSpecificModel = jasmine.createSpy('testSpecificModel').and.returnValue(
-    of({ success: true }).toPromise()
-  );
+  getTrainingStatus = jasmine
+    .createSpy('getTrainingStatus')
+    .and.returnValue(of({ status: 'Not Started' }));
+
+  getUserModelRequests = jasmine
+    .createSpy('getUserModelRequests')
+    .and.returnValue(
+      of({ success: true, data: { hasTrainedModel: false, latestTrainedModel: null } })
+    );
+
+  getDebugModelStatus = jasmine
+    .createSpy('getDebugModelStatus')
+    .and.returnValue(of({ success: true, data: {} }).toPromise());
+
+  testModelCreationEndpoint = jasmine
+    .createSpy('testModelCreationEndpoint')
+    .and.returnValue(of({ success: true }).toPromise());
+
+  discoverUserModels = jasmine
+    .createSpy('discoverUserModels')
+    .and.returnValue(of({ success: true }).toPromise());
+
+  testSpecificModel = jasmine
+    .createSpy('testSpecificModel')
+    .and.returnValue(of({ success: true }).toPromise());
 }
 
 describe('ModelStateService', () => {
@@ -48,10 +50,10 @@ describe('ModelStateService', () => {
       providers: [
         ModelStateService,
         { provide: ProfileService, useClass: MockProfileService },
-        { provide: FileUploadService, useClass: MockFileUploadService }
-      ]
+        { provide: FileUploadService, useClass: MockFileUploadService },
+      ],
     });
-    
+
     service = TestBed.inject(ModelStateService);
     mockProfileService = TestBed.inject(ProfileService) as any;
     mockFileUploadService = TestBed.inject(FileUploadService) as any;
@@ -123,7 +125,10 @@ describe('ModelStateService', () => {
 
       service.runAsyncModelDiscovery();
 
-      expect(console.error).toHaveBeenCalledWith('Async model discovery failed:', jasmine.any(Error));
+      expect(console.error).toHaveBeenCalledWith(
+        'Async model discovery failed:',
+        jasmine.any(Error)
+      );
     });
 
     it('should not show errors to user', () => {
@@ -148,9 +153,9 @@ describe('ModelStateService', () => {
     it('should process model status correctly when model is ready', () => {
       const mockModelData = {
         hasTrainedModel: true,
-        latestTrainedModel: { id: 'model-123', status: 'succeeded' }
+        latestTrainedModel: { id: 'model-123', status: 'succeeded' },
       };
-      
+
       mockFileUploadService.getUserModelRequests.and.returnValue(
         of({ success: true, data: mockModelData })
       );
@@ -159,7 +164,10 @@ describe('ModelStateService', () => {
       service.updateModelStatus();
 
       // Should call notify with 'Model Ready' status
-      expect((service as any)['notifyModelStatusUpdate']).toHaveBeenCalledWith('Model Ready', mockModelData.latestTrainedModel);
+      expect((service as any)['notifyModelStatusUpdate']).toHaveBeenCalledWith(
+        'Model Ready',
+        mockModelData.latestTrainedModel
+      );
     });
 
     it('should handle cases when no trained model exists', () => {
@@ -181,13 +189,16 @@ describe('ModelStateService', () => {
 
       service.updateModelStatus();
 
-      expect(console.error).toHaveBeenCalledWith('Failed to update model status:', jasmine.any(Error));
+      expect(console.error).toHaveBeenCalledWith(
+        'Failed to update model status:',
+        jasmine.any(Error)
+      );
     });
   });
 
   describe('debugModelStatus()', () => {
     it('should call all debug methods', async () => {
-      const result = await service.debugModelStatus();
+      const unusedResult = await service.debugModelStatus();
 
       expect(mockFileUploadService.getDebugModelStatus).toHaveBeenCalled();
       expect(mockFileUploadService.testModelCreationEndpoint).toHaveBeenCalled();
@@ -198,9 +209,11 @@ describe('ModelStateService', () => {
     it('should return comprehensive debug data', async () => {
       const mockDebugData = { debugInfo: 'test' };
       const mockTestData = { testResult: 'success' };
-      
+
       mockFileUploadService.getDebugModelStatus.and.returnValue(Promise.resolve(mockDebugData));
-      mockFileUploadService.testModelCreationEndpoint.and.returnValue(Promise.resolve(mockTestData));
+      mockFileUploadService.testModelCreationEndpoint.and.returnValue(
+        Promise.resolve(mockTestData)
+      );
 
       const result = await service.debugModelStatus();
 
@@ -223,7 +236,7 @@ describe('ModelStateService', () => {
 
     it('should log debug information', async () => {
       spyOn(console, 'log');
-      
+
       await service.debugModelStatus();
 
       expect(console.log).toHaveBeenCalledWith('🔍 Starting comprehensive model status debug...');
@@ -260,9 +273,7 @@ describe('ModelStateService', () => {
 
     it('should return discovery result', async () => {
       const mockResult = { success: true, data: { ModelsAdded: 2 } };
-      mockProfileService.discoverModels.and.returnValue(
-        of(mockResult).toPromise()
-      );
+      mockProfileService.discoverModels.and.returnValue(of(mockResult).toPromise());
 
       const result = await service.triggerModelDiscovery();
 
@@ -290,7 +301,9 @@ describe('ModelStateService', () => {
       await service.triggerModelDiscovery();
 
       expect(console.log).toHaveBeenCalledWith('🔍 Manually triggering model discovery...');
-      expect(console.log).toHaveBeenCalledWith('🎉 Models found and synced! Updating model status...');
+      expect(console.log).toHaveBeenCalledWith(
+        '🎉 Models found and synced! Updating model status...'
+      );
     });
   });
 
@@ -320,7 +333,7 @@ describe('ModelStateService', () => {
     it('should return "Model Ready" when trained model exists', () => {
       const modelData = {
         hasTrainedModel: true,
-        latestTrainedModel: { id: 'model-123' }
+        latestTrainedModel: { id: 'model-123' },
       };
       const trainingStatus = { status: 'Not Started' };
 
@@ -334,10 +347,7 @@ describe('ModelStateService', () => {
     it('should return "training" when requests are pending', () => {
       const modelData = {
         hasTrainedModel: false,
-        allRequests: [
-          { status: 'creating' },
-          { status: 'pending' }
-        ]
+        allRequests: [{ status: 'creating' }, { status: 'pending' }],
       };
       const trainingStatus = { status: 'Not Started' };
 
@@ -369,7 +379,7 @@ describe('ModelStateService', () => {
     it('should add debug methods to global window if method exists', () => {
       if (typeof (service as any).enableGlobalDebug === 'function') {
         (service as any).enableGlobalDebug();
-        
+
         expect((window as any).debugModelStatus).toBeDefined();
         expect((window as any).discoverModels).toBeDefined();
         expect(typeof (window as any).debugModelStatus).toBe('function');
@@ -383,13 +393,13 @@ describe('ModelStateService', () => {
     it('should make global debug functions work if method exists', () => {
       if (typeof (service as any).enableGlobalDebug === 'function') {
         (service as any).enableGlobalDebug();
-        
+
         spyOn(service, 'debugModelStatus');
         spyOn(service, 'triggerModelDiscovery');
-        
+
         (window as any).debugModelStatus();
         (window as any).discoverModels();
-        
+
         expect(service.debugModelStatus).toHaveBeenCalled();
         expect(service.triggerModelDiscovery).toHaveBeenCalled();
       } else {
@@ -401,9 +411,9 @@ describe('ModelStateService', () => {
     it('should log debug instructions if method exists', () => {
       if (typeof (service as any).enableGlobalDebug === 'function') {
         spyOn(console, 'log');
-        
+
         (service as any).enableGlobalDebug();
-        
+
         expect(console.log).toHaveBeenCalledWith(jasmine.stringMatching(/Model debug enabled/));
       } else {
         // Skip test if method doesn't exist
@@ -420,12 +430,12 @@ describe('ModelStateService', () => {
 
     it('should log status updates', () => {
       spyOn(console, 'log');
-      
+
       (service as any)['notifyModelStatusUpdate']('Model Ready', { id: 'test-model' });
-      
+
       expect(console.log).toHaveBeenCalledWith('🔄 Model status updated:', {
         modelStatus: 'Model Ready',
-        latestTrainedModel: { id: 'test-model' }
+        latestTrainedModel: { id: 'test-model' },
       });
     });
   });
@@ -442,7 +452,7 @@ describe('ModelStateService', () => {
 
     it('should handle invalid response formats', () => {
       mockProfileService.discoverModels.and.returnValue(of(null));
-      
+
       expect(() => service.runAsyncModelDiscovery()).not.toThrow();
     });
 
@@ -459,7 +469,7 @@ describe('ModelStateService', () => {
   describe('Integration with Interface', () => {
     it('should satisfy IModelStateService contract', () => {
       const interfaceService: IModelStateService = service;
-      
+
       expect(interfaceService.runAsyncModelDiscovery).toBeDefined();
       expect(interfaceService.updateModelStatus).toBeDefined();
       expect(interfaceService.debugModelStatus).toBeDefined();
@@ -471,13 +481,13 @@ describe('ModelStateService', () => {
     it('should return correct types from interface methods', async () => {
       const debugResult = await service.debugModelStatus();
       expect(typeof debugResult).toBe('object');
-      
+
       const discoveryResult = await service.triggerModelDiscovery();
       expect(typeof discoveryResult).toBe('object');
-      
+
       const isNeeded = service.isModelDiscoveryNeeded(false, 'Not Started', 1);
       expect(typeof isNeeded).toBe('boolean');
-      
+
       const statusInfo = service.getModelStatusFromData({}, {});
       expect(statusInfo.modelStatus).toBeDefined();
       expect(typeof statusInfo.hasTrainedModel).toBe('boolean');
@@ -486,8 +496,10 @@ describe('ModelStateService', () => {
 
   describe('Performance', () => {
     it('should handle multiple concurrent discovery calls', () => {
-      const calls = Array(5).fill(0).map(() => service.runAsyncModelDiscovery());
-      
+      const calls = Array(5)
+        .fill(0)
+        .map(() => service.runAsyncModelDiscovery());
+
       // Should not throw even with multiple concurrent calls
       expect(() => Promise.all(calls)).not.toThrow();
     });
@@ -496,7 +508,7 @@ describe('ModelStateService', () => {
       const startTime = performance.now();
       await service.debugModelStatus();
       const endTime = performance.now();
-      
+
       expect(endTime - startTime).toBeLessThan(5000); // 5 seconds max
     });
   });
