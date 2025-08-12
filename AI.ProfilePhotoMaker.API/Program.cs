@@ -108,27 +108,24 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Add(System.Net.IPAddress.Parse("127.0.0.1"));
 });
 
-// Configure data protection and session for OAuth state handling
-if (builder.Environment.IsDevelopment())
-{
-    builder.Services.AddDataProtection()
-        .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "keys")))
-        .SetApplicationName("AI.ProfilePhotoMaker.API");
+// Configure data protection for OAuth state handling
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "keys")))
+    .SetApplicationName("AI.ProfilePhotoMaker.API");
 
-    // Add session services for OAuth state management
-    builder.Services.AddMemoryCache();
-    builder.Services.AddDistributedMemoryCache();
-    builder.Services.AddSession(options =>
-    {
-        options.IdleTimeout = TimeSpan.FromMinutes(30);
-        options.Cookie.HttpOnly = true;
-        options.Cookie.IsEssential = true;
-        options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None; // Allow cross-site for OAuth
-        options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
-        // Don't specify domain - let browser handle same-origin cookies
-        options.Cookie.Domain = null;
-    });
-}
+// Add session services for OAuth state management (required for both Development and Production)
+builder.Services.AddMemoryCache();
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None; // Allow cross-site for OAuth
+    options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
+    // Don't specify domain - let browser handle same-origin cookies
+    options.Cookie.Domain = null;
+});
 
 // Add services to the container.
 
@@ -171,8 +168,10 @@ builder.Services.Configure<IdentityOptions>(options =>
 });
 
 // Only add Google OAuth if properly configured
-var googleClientId = builder.Configuration["Authentication:Google:ClientId"] ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
-var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET");
+var configClientId = builder.Configuration["Authentication:Google:ClientId"];
+var configClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+var googleClientId = string.IsNullOrEmpty(configClientId) ? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") : configClientId;
+var googleClientSecret = string.IsNullOrEmpty(configClientSecret) ? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET") : configClientSecret;
 
 // Add JWT Authentication with Cookie support for OAuth
 var authBuilder = builder.Services.AddAuthentication(options =>
@@ -512,11 +511,8 @@ app.Use(async (context, next) =>
     await next();
 });
 
-// Use session middleware for OAuth state management
-if (app.Environment.IsDevelopment())
-{
-    app.UseSession();
-}
+// Use session middleware for OAuth state management (required for both environments)
+app.UseSession();
 
 // Configure middleware
 if (app.Environment.IsDevelopment())
