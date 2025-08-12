@@ -105,7 +105,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return BadRequest(new { error = $"{provider} OAuth not implemented yet" });
             }
 
-            var clientId = _configuration["Authentication:Google:ClientId"] ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
+            var configClientId = _configuration["Authentication:Google:ClientId"];
+            var clientId = string.IsNullOrEmpty(configClientId) ? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") : configClientId;
             if (string.IsNullOrEmpty(clientId))
             {
                 return BadRequest(new { error = "Google OAuth is not configured" });
@@ -192,8 +193,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
         private async Task<GoogleTokenResponse?> ExchangeCodeForTokenAsync(string code)
         {
-            var clientId = _configuration["Authentication:Google:ClientId"] ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
-            var clientSecret = _configuration["Authentication:Google:ClientSecret"] ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET");
+            var configClientId = _configuration["Authentication:Google:ClientId"];
+            var configClientSecret = _configuration["Authentication:Google:ClientSecret"];
+            var clientId = string.IsNullOrEmpty(configClientId) ? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") : configClientId;
+            var clientSecret = string.IsNullOrEmpty(configClientSecret) ? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET") : configClientSecret;
             var backendBaseUrl = $"{Request.Scheme}://{Request.Host}";
             var redirectUri = $"{backendBaseUrl}/api/auth/external-login-callback";
 
