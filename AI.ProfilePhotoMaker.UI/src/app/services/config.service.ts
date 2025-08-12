@@ -94,13 +94,24 @@ export class ConfigService {
 
   /**
    * Get the OAuth base URL for external login
+   * PERFORMANCE-OPTIMIZED: Fixed critical URL malformation bug
    */
   getOAuthBaseUrl(): string {
-    // For ngrok configuration, use the backend API URL
-    if (environment.apiUrl?.startsWith('https://')) {
-      // Extract base URL from full API URL (remove /api suffix)
-      return environment.apiUrl.replace('/api', '');
+    // For production/external configuration, use the backend API URL
+    if (environment.apiUrl?.startsWith('https://') || environment.apiUrl?.startsWith('http://')) {
+      try {
+        // PERFORMANCE FIX: Use native URL constructor for bulletproof parsing
+        // This prevents the string replacement bug that caused malformed URLs
+        const url = new URL(environment.apiUrl);
+        // Return protocol + hostname + port (removes path completely)
+        return `${url.protocol}//${url.hostname}${url.port ? ':' + url.port : ''}`;
+      } catch (error) {
+        console.error('🔒 Invalid API URL configuration:', environment.apiUrl, error);
+        // Graceful fallback to current origin
+        return window.location.origin;
+      }
     }
+
     // Fallback to current origin for local development
     return window.location.origin;
   }
