@@ -171,8 +171,8 @@ builder.Services.Configure<IdentityOptions>(options =>
 });
 
 // Only add Google OAuth if properly configured
-var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
-var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+var googleClientId = builder.Configuration["Authentication:Google:ClientId"] ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
+var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET");
 
 // Add JWT Authentication with Cookie support for OAuth
 var authBuilder = builder.Services.AddAuthentication(options =>

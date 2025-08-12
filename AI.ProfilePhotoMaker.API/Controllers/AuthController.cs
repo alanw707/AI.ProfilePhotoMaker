@@ -77,7 +77,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         [HttpGet("google-oauth-url")]
         public IActionResult GetGoogleOAuthUrl(string returnUrl = "/app/dashboard")
         {
-            var googleClientId = _configuration["Authentication:Google:ClientId"];
+            var googleClientId = _configuration["Authentication:Google:ClientId"] ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
             if (string.IsNullOrEmpty(googleClientId))
             {
                 return BadRequest(new { error = "Google OAuth is not configured" });
@@ -105,7 +105,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return BadRequest(new { error = $"{provider} OAuth not implemented yet" });
             }
 
-            var clientId = _configuration["Authentication:Google:ClientId"];
+            var clientId = _configuration["Authentication:Google:ClientId"] ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
             if (string.IsNullOrEmpty(clientId))
             {
                 return BadRequest(new { error = "Google OAuth is not configured" });
@@ -192,8 +192,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
         private async Task<GoogleTokenResponse?> ExchangeCodeForTokenAsync(string code)
         {
-            var clientId = _configuration["Authentication:Google:ClientId"];
-            var clientSecret = _configuration["Authentication:Google:ClientSecret"];
+            var clientId = _configuration["Authentication:Google:ClientId"] ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
+            var clientSecret = _configuration["Authentication:Google:ClientSecret"] ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET");
             var backendBaseUrl = $"{Request.Scheme}://{Request.Host}";
             var redirectUri = $"{backendBaseUrl}/api/auth/external-login-callback";
 
