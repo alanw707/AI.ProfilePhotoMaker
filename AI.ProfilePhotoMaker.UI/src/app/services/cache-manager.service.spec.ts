@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { CacheManagerService } from './cache-manager.service';
-import { CacheStats, ICacheManagerService } from '../interfaces/service.interfaces';
+import { ICacheManagerService } from '../interfaces/service.interfaces';
 
 describe('CacheManagerService', () => {
   let service: CacheManagerService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [CacheManagerService]
+      providers: [CacheManagerService],
     });
     service = TestBed.inject(CacheManagerService);
   });
@@ -58,7 +58,7 @@ describe('CacheManagerService', () => {
       const testData = {
         user: { id: 1, name: 'Test User' },
         settings: { theme: 'dark', notifications: true },
-        array: [1, 2, 3, { nested: true }]
+        array: [1, 2, 3, { nested: true }],
       };
       const cacheKey = 'complex-data';
 
@@ -82,10 +82,10 @@ describe('CacheManagerService', () => {
 
     it('should overwrite existing cache entries', () => {
       const key = 'overwrite-test';
-      
+
       service.setCachedData(key, 'first-value', 5000);
       expect(service.getCachedData(key)).toBe('first-value');
-      
+
       service.setCachedData(key, 'second-value', 5000);
       expect(service.getCachedData(key)).toBe('second-value');
     });
@@ -102,7 +102,7 @@ describe('CacheManagerService', () => {
       expect(service.isCacheValid(key)).toBeTrue();
     });
 
-    it('should return false for expired cache entries', (done) => {
+    it('should return false for expired cache entries', done => {
       const key = 'expired-test';
       service.setCachedData(key, 'test-data', 50); // 50ms duration
 
@@ -112,7 +112,7 @@ describe('CacheManagerService', () => {
       }, 100); // Check after 100ms
     });
 
-    it('should automatically remove expired entries when checking validity', (done) => {
+    it('should automatically remove expired entries when checking validity', done => {
       const key = 'auto-remove-test';
       service.setCachedData(key, 'test-data', 50);
 
@@ -126,10 +126,10 @@ describe('CacheManagerService', () => {
     it('should update last accessed time when checking valid cache', () => {
       const key = 'access-time-test';
       service.setCachedData(key, 'test-data', 5000);
-      
-      const initialAccess = Date.now();
+
+      const unusedInitialAccess = Date.now();
       service.isCacheValid(key);
-      
+
       // Give a small delay to ensure time difference
       setTimeout(() => {
         service.isCacheValid(key);
@@ -164,7 +164,7 @@ describe('CacheManagerService', () => {
       expect(service.getCachedData('key1')).toBeNull();
       expect(service.getCachedData('key2')).toBeNull();
       expect(service.getCachedData('key3')).toBeNull();
-      
+
       const stats = service.getCacheStats();
       expect(stats.totalEntries).toBe(0);
     });
@@ -186,7 +186,7 @@ describe('CacheManagerService', () => {
       expect(service.shouldDebounceRequest(requestKey, debounceMs)).toBeTrue(); // Should be debounced
     });
 
-    it('should allow requests after debounce period', (done) => {
+    it('should allow requests after debounce period', done => {
       const requestKey = 'delayed-test';
       const debounceMs = 100;
 
@@ -245,7 +245,7 @@ describe('CacheManagerService', () => {
   describe('getCacheStats()', () => {
     it('should return correct statistics for empty cache', () => {
       const stats = service.getCacheStats();
-      
+
       expect(stats.totalEntries).toBe(0);
       expect(stats.validEntries).toBe(0);
       expect(stats.expiredEntries).toBe(0);
@@ -258,19 +258,19 @@ describe('CacheManagerService', () => {
       service.setCachedData('key3', 'value3', 5000);
 
       const stats = service.getCacheStats();
-      
+
       expect(stats.totalEntries).toBe(3);
       expect(stats.validEntries).toBe(3);
       expect(stats.expiredEntries).toBe(0);
     });
 
-    it('should count expired entries correctly', (done) => {
+    it('should count expired entries correctly', done => {
       service.setCachedData('valid', 'value', 5000);
       service.setCachedData('expired', 'value', 50); // Will expire quickly
 
       setTimeout(() => {
         const stats = service.getCacheStats();
-        
+
         expect(stats.totalEntries).toBe(2);
         expect(stats.validEntries).toBe(1);
         expect(stats.expiredEntries).toBe(1);
@@ -282,12 +282,12 @@ describe('CacheManagerService', () => {
       // Set up some requests
       service.shouldDebounceRequest('req1', 1000);
       service.shouldDebounceRequest('req2', 1000);
-      
+
       // Set up some cache entries
       service.setCachedData('key1', 'value1', 5000);
-      
+
       const stats = service.getCacheStats();
-      
+
       expect(stats.cacheHitRatio).toBeGreaterThanOrEqual(0);
       expect(stats.cacheHitRatio).toBeLessThanOrEqual(100);
     });
@@ -296,7 +296,7 @@ describe('CacheManagerService', () => {
   describe('enableGlobalDebug()', () => {
     it('should add debug methods to global window', () => {
       service.enableGlobalDebug();
-      
+
       expect((window as any).cacheStats).toBeDefined();
       expect((window as any).clearCache).toBeDefined();
       expect((window as any).viewCache).toBeDefined();
@@ -308,24 +308,24 @@ describe('CacheManagerService', () => {
     it('should make cacheStats function work globally', () => {
       service.enableGlobalDebug();
       service.setCachedData('test', 'value', 5000);
-      
+
       const globalStats = (window as any).cacheStats();
       const serviceStats = service.getCacheStats();
-      
+
       expect(globalStats).toEqual(serviceStats);
     });
 
     it('should log debug information', () => {
       spyOn(console, 'log');
-      
+
       service.enableGlobalDebug();
-      
+
       expect(console.log).toHaveBeenCalledWith(jasmine.stringMatching(/Cache debug enabled/));
     });
   });
 
   describe('Cache Cleanup', () => {
-    it('should automatically clean expired entries during operations', (done) => {
+    it('should automatically clean expired entries during operations', done => {
       // Add some entries that will expire quickly
       service.setCachedData('short1', 'value1', 50);
       service.setCachedData('short2', 'value2', 50);
@@ -334,7 +334,7 @@ describe('CacheManagerService', () => {
       setTimeout(() => {
         // Trigger cleanup by adding new data
         service.setCachedData('new', 'value4', 5000);
-        
+
         const stats = service.getCacheStats();
         expect(stats.totalEntries).toBeLessThan(4); // Some expired entries should be cleaned
         done();
@@ -345,18 +345,18 @@ describe('CacheManagerService', () => {
   describe('Edge Cases', () => {
     it('should handle very large cache entries', () => {
       const largeData = {
-        array: new Array(10000).fill(0).map((_, i) => ({ id: i, data: `item-${i}` }))
+        array: new Array(10000).fill(0).map((_, i) => ({ id: i, data: `item-${i}` })),
       };
-      
+
       service.setCachedData('large-data', largeData, 5000);
       const retrieved = service.getCachedData('large-data');
-      
+
       expect(retrieved).toEqual(largeData);
     });
 
     it('should handle very short cache durations', () => {
       service.setCachedData('short-lived', 'value', 1); // 1ms
-      
+
       // Should be immediately expired
       setTimeout(() => {
         expect(service.isCacheValid('short-lived')).toBeFalse();
@@ -385,18 +385,18 @@ describe('CacheManagerService', () => {
   describe('Integration with Interface', () => {
     it('should satisfy ICacheManagerService contract', () => {
       const interfaceService: ICacheManagerService = service;
-      
+
       // Test all interface methods exist and work
       interfaceService.setCachedData('test', 'value', 1000);
       expect(interfaceService.getCachedData('test')).toBe('value');
       expect(interfaceService.isCacheValid('test')).toBeTrue();
-      
+
       interfaceService.invalidateCache('test');
       expect(interfaceService.getCachedData('test')).toBeNull();
-      
+
       expect(typeof interfaceService.shouldDebounceRequest('test', 1000)).toBe('boolean');
       expect(interfaceService.getCacheStats()).toBeDefined();
-      
+
       expect(() => interfaceService.forceRefresh()).not.toThrow();
       expect(() => interfaceService.invalidateAllCache()).not.toThrow();
       expect(() => interfaceService.enableGlobalDebug()).not.toThrow();

@@ -3,3 +3,9 @@ node_modules/
 test-results/
 playwright-report/
 playwright/.cache/
+# Screenshot artifacts
+*.png
+*.jpg
+*.jpeg
+*.gif
+pre-upload-state-summary-*.png

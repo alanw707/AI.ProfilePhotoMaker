@@ -1,15 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { of, throwError } from 'rxjs';
+import { of } from 'rxjs';
 import { FallbackOperationsService } from './fallback-operations.service';
 import { AuthService } from './auth.service';
 import { ConfigService } from './config.service';
 import { FileUploadService } from './file-upload.service';
-import { 
-  DashboardStateForFallback, 
-  DataDiscrepancyResult, 
-  FallbackTracker,
-  IFallbackOperationsService 
+import {
+  DashboardStateForFallback,
+  IFallbackOperationsService,
 } from '../interfaces/service.interfaces';
 
 // Mock services
@@ -18,21 +16,19 @@ class MockAuthService {
 }
 
 class MockConfigService {
-  getFullUrl = jasmine.createSpy('getFullUrl').and.returnValue('http://mock-api/test/fix-generated-images');
+  getFullUrl = jasmine
+    .createSpy('getFullUrl')
+    .and.returnValue('http://mock-api/test/fix-generated-images');
 }
 
 class MockFileUploadService {
   invalidateUserImagesCache = jasmine.createSpy('invalidateUserImagesCache');
-  
+
   getUserImages = jasmine.createSpy('getUserImages').and.returnValue(
     of({
       generatedImages: 5,
-      images: [
-        { isGenerated: true },
-        { isGenerated: true },
-        { isGenerated: false }
-      ],
-      totalImages: 3
+      images: [{ isGenerated: true }, { isGenerated: true }, { isGenerated: false }],
+      totalImages: 3,
     }).toPromise()
   );
 }
@@ -51,10 +47,10 @@ describe('FallbackOperationsService', () => {
         FallbackOperationsService,
         { provide: AuthService, useClass: MockAuthService },
         { provide: ConfigService, useClass: MockConfigService },
-        { provide: FileUploadService, useClass: MockFileUploadService }
-      ]
+        { provide: FileUploadService, useClass: MockFileUploadService },
+      ],
     });
-    
+
     service = TestBed.inject(FallbackOperationsService);
     httpMock = TestBed.inject(HttpTestingController);
     mockAuthService = TestBed.inject(AuthService) as any;
@@ -97,73 +93,73 @@ describe('FallbackOperationsService', () => {
   describe('checkGeneratedImagesFromFilesystem()', () => {
     it('should make HTTP request to fix endpoint', () => {
       const mockResponse = { success: true, data: { addedCount: 3 } };
-      
+
       service.checkGeneratedImagesFromFilesystem().subscribe();
-      
+
       const req = httpMock.expectOne('http://mock-api/test/fix-generated-images');
       expect(req.request.method).toBe('POST');
       expect(req.request.headers.get('Authorization')).toBe('Bearer mock-token');
       expect(req.request.headers.get('Content-Type')).toBe('application/json');
-      
+
       req.flush(mockResponse);
     });
 
     it('should invalidate cache and refresh data when images are added', () => {
       const mockResponse = { success: true, data: { addedCount: 5 } };
-      
+
       service.checkGeneratedImagesFromFilesystem().subscribe();
-      
+
       const req = httpMock.expectOne('http://mock-api/test/fix-generated-images');
       req.flush(mockResponse);
-      
+
       expect(mockFileUploadService.invalidateUserImagesCache).toHaveBeenCalled();
       expect(mockFileUploadService.getUserImages).toHaveBeenCalledWith(true);
     });
 
-    it('should return actual generated count after refresh', (done) => {
+    it('should return actual generated count after refresh', done => {
       const mockResponse = { success: true, data: { addedCount: 3 } };
-      
+
       service.checkGeneratedImagesFromFilesystem().subscribe(result => {
         expect(result.success).toBeTrue();
         expect(result.addedCount).toBe(3);
         expect(result.actualGeneratedCount).toBe(5); // From getUserImages mock
         done();
       });
-      
+
       const req = httpMock.expectOne('http://mock-api/test/fix-generated-images');
       req.flush(mockResponse);
     });
 
-    it('should handle case when no images need fixing', (done) => {
+    it('should handle case when no images need fixing', done => {
       const mockResponse = { success: true, data: { addedCount: 0 } };
-      
+
       service.checkGeneratedImagesFromFilesystem().subscribe(result => {
         expect(result.success).toBeTrue();
         expect(result.addedCount).toBe(0);
         done();
       });
-      
+
       const req = httpMock.expectOne('http://mock-api/test/fix-generated-images');
       req.flush(mockResponse);
     });
 
     it('should throw error when no auth token available', () => {
       mockAuthService.getToken.and.returnValue(null);
-      
+
       expect(() => {
         service.checkGeneratedImagesFromFilesystem().subscribe();
       }).toThrowError('No authentication token available for fix endpoint');
     });
 
-    it('should handle HTTP errors', (done) => {
+    it('should handle HTTP errors', done => {
       service.checkGeneratedImagesFromFilesystem().subscribe({
         next: () => fail('Should have errored'),
-        error: (error) => {
+        error: error => {
           expect(error).toBeDefined();
           done();
-        }
+        },
       });
-      
+
       const req = httpMock.expectOne('http://mock-api/test/fix-generated-images');
       req.error(new ErrorEvent('Network error'));
     });
@@ -171,11 +167,13 @@ describe('FallbackOperationsService', () => {
     it('should log appropriate messages', () => {
       spyOn(console, 'log');
       const mockResponse = { success: true, data: { addedCount: 2 } };
-      
+
       service.checkGeneratedImagesFromFilesystem().subscribe();
-      
-      expect(console.log).toHaveBeenCalledWith('📁 Checking filesystem for missing generated images...');
-      
+
+      expect(console.log).toHaveBeenCalledWith(
+        '📁 Checking filesystem for missing generated images...'
+      );
+
       const req = httpMock.expectOne('http://mock-api/test/fix-generated-images');
       req.flush(mockResponse);
     });
@@ -247,16 +245,16 @@ describe('FallbackOperationsService', () => {
         hasLatestTrainedModel: false,
         uploadedImages: 5,
         hasUserProfile: true,
-        latestTrainedModel: null
+        latestTrainedModel: null,
       };
     });
 
     it('should identify when filesystem check is needed', () => {
       mockState.generatedPhotosCount = 0;
       mockState.latestTrainedModel = { id: 'model-123' };
-      
+
       const result = service.checkIfFallbackNeeded(mockState);
-      
+
       expect(result.shouldCheckFilesystem).toBeTrue();
       expect(result.shouldDiscoverModels).toBeFalse();
     });
@@ -265,9 +263,9 @@ describe('FallbackOperationsService', () => {
       mockState.modelStatus = 'Not Started';
       mockState.uploadedImages = 3;
       mockState.latestTrainedModel = null;
-      
+
       const result = service.checkIfFallbackNeeded(mockState);
-      
+
       expect(result.shouldCheckFilesystem).toBeFalse();
       expect(result.shouldDiscoverModels).toBeTrue();
     });
@@ -277,9 +275,9 @@ describe('FallbackOperationsService', () => {
       mockState.modelStatus = 'Not Started';
       mockState.latestTrainedModel = { id: 'model-123' };
       mockState.uploadedImages = 3;
-      
+
       const result = service.checkIfFallbackNeeded(mockState);
-      
+
       expect(result.shouldCheckFilesystem).toBeTrue();
       expect(result.shouldDiscoverModels).toBeTrue();
     });
@@ -288,9 +286,9 @@ describe('FallbackOperationsService', () => {
       mockState.generatedPhotosCount = 5;
       mockState.modelStatus = 'Model Ready';
       mockState.latestTrainedModel = { id: 'model-123' };
-      
+
       const result = service.checkIfFallbackNeeded(mockState);
-      
+
       expect(result.shouldCheckFilesystem).toBeFalse();
       expect(result.shouldDiscoverModels).toBeFalse();
     });
@@ -298,19 +296,22 @@ describe('FallbackOperationsService', () => {
     it('should mark operations as completed when identified', () => {
       mockState.generatedPhotosCount = 0;
       mockState.latestTrainedModel = { id: 'model-123' };
-      
+
       service.checkIfFallbackNeeded(mockState);
-      
+
       const tracker = service.getFallbackTracker();
       expect(tracker.filesystemCheck).toBeTrue();
     });
 
     it('should log appropriate messages', () => {
       spyOn(console, 'log');
-      
+
       service.checkIfFallbackNeeded(mockState);
-      
-      expect(console.log).toHaveBeenCalledWith('🔍 Checking if fallback needed with state:', jasmine.any(Object));
+
+      expect(console.log).toHaveBeenCalledWith(
+        '🔍 Checking if fallback needed with state:',
+        jasmine.any(Object)
+      );
     });
   });
 
@@ -322,7 +323,7 @@ describe('FallbackOperationsService', () => {
 
     it('should return comprehensive discrepancy data', async () => {
       const result = await service.debugDataDiscrepancy();
-      
+
       expect(result.dashboardCount).toBe(0); // Default value
       expect(result.apiGeneratedField).toBe(5);
       expect(result.filteredCount).toBe(2); // Two isGenerated: true items
@@ -331,18 +332,16 @@ describe('FallbackOperationsService', () => {
     });
 
     it('should handle getUserImages errors', async () => {
-      mockFileUploadService.getUserImages.and.returnValue(
-        Promise.reject(new Error('API error'))
-      );
-      
+      mockFileUploadService.getUserImages.and.returnValue(Promise.reject(new Error('API error')));
+
       await expectAsync(service.debugDataDiscrepancy()).toBeRejectedWithError('API error');
     });
 
     it('should log debug information', async () => {
       spyOn(console, 'log');
-      
+
       await service.debugDataDiscrepancy();
-      
+
       expect(console.log).toHaveBeenCalledWith('🔍 Debugging data discrepancy...');
       expect(console.log).toHaveBeenCalledWith('📊 Data Discrepancy Analysis:');
     });
@@ -353,9 +352,9 @@ describe('FallbackOperationsService', () => {
       // Set an old timestamp
       const tracker = service.getFallbackTracker();
       (tracker as any).lastReset = Date.now() - 400000; // 6+ minutes ago
-      
+
       service.resetFallbackTracking();
-      
+
       const newTracker = service.getFallbackTracker();
       expect(newTracker.filesystemCheck).toBeFalse();
       expect(newTracker.modelDiscovery).toBeFalse();
@@ -365,9 +364,9 @@ describe('FallbackOperationsService', () => {
     it('should not reset tracker when interval has not passed', () => {
       service.markFilesystemCheckCompleted();
       const trackerBefore = service.getFallbackTracker();
-      
+
       service.resetFallbackTracking();
-      
+
       const trackerAfter = service.getFallbackTracker();
       expect(trackerAfter.filesystemCheck).toBe(trackerBefore.filesystemCheck);
     });
@@ -376,9 +375,9 @@ describe('FallbackOperationsService', () => {
       spyOn(console, 'log');
       const tracker = service.getFallbackTracker();
       (tracker as any).lastReset = Date.now() - 400000;
-      
+
       service.resetFallbackTracking();
-      
+
       expect(console.log).toHaveBeenCalledWith('🔄 Reset fallback operation tracking');
     });
   });
@@ -387,7 +386,7 @@ describe('FallbackOperationsService', () => {
     it('should return copy of tracker state', () => {
       const tracker1 = service.getFallbackTracker();
       const tracker2 = service.getFallbackTracker();
-      
+
       expect(tracker1).toEqual(tracker2);
       expect(tracker1).not.toBe(tracker2); // Should be different objects
     });
@@ -410,7 +409,7 @@ describe('FallbackOperationsService', () => {
   describe('enableGlobalDebug()', () => {
     it('should add debug methods to global window', () => {
       service.enableGlobalDebug();
-      
+
       expect((window as any).checkFallback).toBeDefined();
       expect((window as any).fixGeneratedImages).toBeDefined();
       expect((window as any).debugData).toBeDefined();
@@ -419,14 +418,14 @@ describe('FallbackOperationsService', () => {
 
     it('should make global debug functions work', () => {
       service.enableGlobalDebug();
-      
+
       spyOn(service, 'checkIfFallbackNeeded');
       spyOn(service, 'checkGeneratedImagesFromFilesystem');
-      
+
       const mockState = { generatedPhotosCount: 0 } as DashboardStateForFallback;
       (window as any).checkFallback(mockState);
       (window as any).fixGeneratedImages();
-      
+
       expect(service.checkIfFallbackNeeded).toHaveBeenCalledWith(mockState);
       expect(service.checkGeneratedImagesFromFilesystem).toHaveBeenCalled();
     });
@@ -434,18 +433,18 @@ describe('FallbackOperationsService', () => {
     it('should manually reset fallback tracking', () => {
       service.enableGlobalDebug();
       service.markFilesystemCheckCompleted();
-      
+
       (window as any).resetFallback();
-      
+
       const tracker = service.getFallbackTracker();
       expect(tracker.filesystemCheck).toBeFalse();
     });
 
     it('should log debug instructions', () => {
       spyOn(console, 'log');
-      
+
       service.enableGlobalDebug();
-      
+
       expect(console.log).toHaveBeenCalledWith(jasmine.stringMatching(/Fallback debug enabled/));
     });
   });
@@ -453,7 +452,7 @@ describe('FallbackOperationsService', () => {
   describe('Error Handling', () => {
     it('should handle missing auth token gracefully', () => {
       mockAuthService.getToken.and.returnValue('');
-      
+
       expect(() => {
         service.checkGeneratedImagesFromFilesystem().subscribe();
       }).toThrowError();
@@ -461,38 +460,38 @@ describe('FallbackOperationsService', () => {
 
     it('should handle config service errors', () => {
       mockConfigService.getFullUrl.and.throwError('Config error');
-      
+
       expect(() => {
         service.checkGeneratedImagesFromFilesystem().subscribe();
       }).toThrowError();
     });
 
-    it('should handle HTTP request failures', (done) => {
+    it('should handle HTTP request failures', done => {
       service.checkGeneratedImagesFromFilesystem().subscribe({
         next: () => fail('Should have errored'),
-        error: (error) => {
+        error: error => {
           expect(error).toBeDefined();
           done();
-        }
+        },
       });
-      
+
       const req = httpMock.expectOne('http://mock-api/test/fix-generated-images');
       req.error(new ErrorEvent('HTTP Error'));
     });
 
-    it('should handle getUserImages failures during refresh', (done) => {
+    it('should handle getUserImages failures during refresh', done => {
       mockFileUploadService.getUserImages.and.returnValue(
         Promise.reject(new Error('Refresh failed'))
       );
-      
+
       service.checkGeneratedImagesFromFilesystem().subscribe({
         next: () => fail('Should have errored'),
-        error: (error) => {
+        error: error => {
           expect(error.message).toBe('Refresh failed');
           done();
-        }
+        },
       });
-      
+
       const req = httpMock.expectOne('http://mock-api/test/fix-generated-images');
       req.flush({ success: true, data: { addedCount: 1 } });
     });
@@ -501,7 +500,7 @@ describe('FallbackOperationsService', () => {
   describe('Integration with Interface', () => {
     it('should satisfy IFallbackOperationsService contract', () => {
       const interfaceService: IFallbackOperationsService = service;
-      
+
       expect(interfaceService.checkGeneratedImagesFromFilesystem).toBeDefined();
       expect(interfaceService.isFilesystemCheckNeeded).toBeDefined();
       expect(interfaceService.isModelDiscoveryNeeded).toBeDefined();
@@ -519,10 +518,10 @@ describe('FallbackOperationsService', () => {
       expect(tracker.filesystemCheck).toBeDefined();
       expect(tracker.modelDiscovery).toBeDefined();
       expect(tracker.lastReset).toBeDefined();
-      
+
       const isNeeded = service.isFilesystemCheckNeeded(0, true, {});
       expect(typeof isNeeded).toBe('boolean');
-      
+
       const discrepancy = await service.debugDataDiscrepancy();
       expect(discrepancy.dashboardCount).toBeDefined();
       expect(discrepancy.apiGeneratedField).toBeDefined();
@@ -532,19 +531,21 @@ describe('FallbackOperationsService', () => {
   describe('Performance', () => {
     it('should handle multiple filesystem checks efficiently', () => {
       service.markFilesystemCheckCompleted(); // Prevent actual operations
-      
-      const calls = Array(10).fill(0).map(() => {
-        const state: DashboardStateForFallback = {
-          generatedPhotosCount: 0,
-          modelStatus: 'Model Ready',
-          hasLatestTrainedModel: true,
-          uploadedImages: 5,
-          hasUserProfile: true,
-          latestTrainedModel: { id: 'test' }
-        };
-        return service.checkIfFallbackNeeded(state);
-      });
-      
+
+      const calls = Array(10)
+        .fill(0)
+        .map(() => {
+          const state: DashboardStateForFallback = {
+            generatedPhotosCount: 0,
+            modelStatus: 'Model Ready',
+            hasLatestTrainedModel: true,
+            uploadedImages: 5,
+            hasUserProfile: true,
+            latestTrainedModel: { id: 'test' },
+          };
+          return service.checkIfFallbackNeeded(state);
+        });
+
       // All calls should complete quickly
       expect(calls).toHaveLength(10);
       expect(calls.every(result => typeof result === 'object')).toBeTrue();
@@ -554,7 +555,7 @@ describe('FallbackOperationsService', () => {
       const startTime = performance.now();
       await service.debugDataDiscrepancy();
       const endTime = performance.now();
-      
+
       expect(endTime - startTime).toBeLessThan(1000); // 1 second max
     });
   });

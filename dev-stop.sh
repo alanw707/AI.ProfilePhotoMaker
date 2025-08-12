@@ -26,10 +26,6 @@ echo "🔍 Cleaning up remaining processes..."
 pkill -f "dotnet.*AI.ProfilePhotoMaker.API" 2>/dev/null || true
 pkill -f "ng serve" 2>/dev/null || true
 
-# Keep SQL Server container running for development persistence
-echo "🗄️  SQL Server container kept running for development"
-echo "   Use 'docker-compose down' to stop database if needed"
-
 echo ""
 echo "✅ LOCAL DEVELOPMENT ENVIRONMENT STOPPED"
 echo "========================================"

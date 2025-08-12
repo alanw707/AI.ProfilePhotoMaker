@@ -172,7 +172,7 @@ export class DashboardCoordinatorService implements IDashboardStateService {
    * Load complete dashboard data by orchestrating specialized services
    */
   async loadInitialDashboardData(): Promise<void> {
-    const startTime = performance.now();
+    const unusedStartTime = performance.now();
 
     // Check if we should debounce this load
     if (
