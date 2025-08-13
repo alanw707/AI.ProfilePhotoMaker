@@ -160,6 +160,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         [HttpGet("external-login-callback")]
         public async Task<IActionResult> ExternalLoginCallback(string? code = null, string? state = null, string? error = null)
         {
+            Console.WriteLine($"=== OAUTH CALLBACK ENTRY ===");
+            Console.WriteLine($"Code: {(!string.IsNullOrEmpty(code) ? "RECEIVED" : "MISSING")}");
+            Console.WriteLine($"State: {(!string.IsNullOrEmpty(state) ? "RECEIVED" : "MISSING")}");
+            Console.WriteLine($"Error: {error ?? "NONE"}");
+            Console.WriteLine($"=============================");
+
             var frontendBaseUrl = _configuration["AppBaseUrl"] ?? "http://localhost:4200";
             
             string? returnUrl = null;
@@ -169,6 +175,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 returnUrl = HttpContext.Session.GetString("oauth_return_url") ?? "/app/dashboard";
                 sessionState = HttpContext.Session.GetString("oauth_state");
+                Console.WriteLine($"Session retrieval: SUCCESS - Return URL: {returnUrl}, State: {(!string.IsNullOrEmpty(sessionState) ? "SET" : "MISSING")}");
             }
             catch (Exception ex)
             {
@@ -180,6 +187,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             // Handle OAuth errors
             if (!string.IsNullOrEmpty(error))
             {
+                Console.WriteLine($"OAuth error received: {error} - redirecting to login");
                 return Redirect($"{frontendBaseUrl}/auth/login?error=oauth_{error}");
             }
 
@@ -190,66 +198,94 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             // If session state is missing, this is a security issue - reject the request
             if (string.IsNullOrEmpty(sessionState))
             {
+                Console.WriteLine("State validation FAILED: Session state is missing - redirecting with session_expired");
                 return Redirect($"{frontendBaseUrl}/auth/login?error=session_expired");
             }
             
             // If state parameter is missing from callback, this is suspicious - reject
             if (string.IsNullOrEmpty(state))
             {
+                Console.WriteLine("State validation FAILED: Callback state parameter missing - redirecting with missing_state");
                 return Redirect($"{frontendBaseUrl}/auth/login?error=missing_state");
             }
             
             // Compare state values - must match exactly
             if (state != sessionState)
             {
+                Console.WriteLine($"State validation FAILED: Mismatch - Callback: {state}, Session: {sessionState} - redirecting with invalid_state");
                 return Redirect($"{frontendBaseUrl}/auth/login?error=invalid_state");
             }
+
+            Console.WriteLine("State validation: PASSED");
 
             // Validate authorization code
             if (string.IsNullOrEmpty(code))
             {
+                Console.WriteLine("Authorization code validation FAILED: Code missing - redirecting with missing_code");
                 return Redirect($"{frontendBaseUrl}/auth/login?error=missing_code");
             }
+
+            Console.WriteLine($"Authorization code validation: PASSED - Starting token exchange...");
 
             try
             {
                 // Exchange authorization code for access token
+                Console.WriteLine("Step 1: Starting token exchange...");
                 var tokenResponse = await ExchangeCodeForTokenAsync(code);
                 if (tokenResponse == null)
                 {
+                    Console.WriteLine("Token exchange FAILED: Null response from ExchangeCodeForTokenAsync - redirecting with token_exchange_failed");
                     return Redirect($"{frontendBaseUrl}/auth/login?error=token_exchange_failed");
                 }
+                Console.WriteLine("Step 1: Token exchange SUCCESS");
 
                 // Get user info from Google
+                Console.WriteLine("Step 2: Getting user info from Google...");
                 var userInfo = await GetGoogleUserInfoAsync(tokenResponse.AccessToken);
                 if (userInfo == null)
                 {
+                    Console.WriteLine("User info retrieval FAILED: Null response from GetGoogleUserInfoAsync - redirecting with user_info_failed");
                     return Redirect($"{frontendBaseUrl}/auth/login?error=user_info_failed");
                 }
+                Console.WriteLine($"Step 2: User info SUCCESS - Email: {userInfo.Email}");
 
                 // Find or create user
+                Console.WriteLine("Step 3: Finding or creating user...");
                 var user = await FindOrCreateUserAsync(userInfo);
                 if (user == null)
                 {
+                    Console.WriteLine("User creation FAILED: Null response from FindOrCreateUserAsync - redirecting with user_creation_failed");
                     return Redirect($"{frontendBaseUrl}/auth/login?error=user_creation_failed");
                 }
+                Console.WriteLine($"Step 3: User SUCCESS - ID: {user.Id}");
 
                 // Generate JWT token
+                Console.WriteLine("Step 4: Generating JWT token...");
                 var tokenInfo = _authService.GenerateJwtToken(user);
+                Console.WriteLine("Step 4: JWT token SUCCESS");
 
+                Console.WriteLine($"OAuth flow COMPLETE: Redirecting to {frontendBaseUrl}{returnUrl} with token");
                 return Redirect($"{frontendBaseUrl}{returnUrl}?token={tokenInfo.Token}");
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"OAuth processing EXCEPTION: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
                 return Redirect($"{frontendBaseUrl}/auth/login?error=oauth_processing_failed");
             }
         }
 
         private async Task<GoogleTokenResponse?> ExchangeCodeForTokenAsync(string code)
         {
+            Console.WriteLine($"=== TOKEN EXCHANGE START ===");
+            Console.WriteLine($"Authorization Code: {code.Substring(0, Math.Min(15, code.Length))}...");
+            
             var (clientId, clientSecret) = GetGoogleClientSettings();
             var backendBaseUrl = ResolveBackendBaseUrl();
             var redirectUri = $"{backendBaseUrl}/api/auth/external-login-callback";
+            
+            Console.WriteLine($"Backend Base URL: {backendBaseUrl}");
+            Console.WriteLine($"Redirect URI: {redirectUri}");
 
             var tokenRequest = new List<KeyValuePair<string, string>>
             {
