@@ -267,7 +267,17 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 // Enhanced error logging for token exchange failures
                 var errorContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"Token exchange failed: {response.StatusCode} - {errorContent}");
+                
+                // Log detailed error information
+                Console.WriteLine($"=== TOKEN EXCHANGE FAILURE ===");
+                Console.WriteLine($"Status: {response.StatusCode}");
+                Console.WriteLine($"Response: {errorContent}");
+                Console.WriteLine($"Client ID: {(!string.IsNullOrEmpty(clientId) ? clientId.Substring(0, Math.Min(20, clientId.Length)) + "..." : "MISSING")}");
+                Console.WriteLine($"Client Secret: {(!string.IsNullOrEmpty(clientSecret) ? "SET" : "MISSING")}");
+                Console.WriteLine($"Redirect URI: {redirectUri}");
+                Console.WriteLine($"Authorization Code: {(!string.IsNullOrEmpty(code) ? code.Substring(0, Math.Min(10, code.Length)) + "..." : "MISSING")}");
+                Console.WriteLine($"==============================");
+                
                 return null;
             }
 
@@ -314,6 +324,16 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             var clientId = !string.IsNullOrWhiteSpace(envId) ? envId : (IsPlaceholder(cfgId) ? null : cfgId);
             var clientSecret = !string.IsNullOrWhiteSpace(envSecret) ? envSecret : (IsPlaceholder(cfgSecret) ? null : cfgSecret);
+
+            // Log credential status for troubleshooting
+            Console.WriteLine($"=== GOOGLE OAUTH CREDENTIALS ===");
+            Console.WriteLine($"Config Client ID: {(IsPlaceholder(cfgId) ? "PLACEHOLDER" : (!string.IsNullOrEmpty(cfgId) ? "SET" : "MISSING"))}");
+            Console.WriteLine($"Config Client Secret: {(IsPlaceholder(cfgSecret) ? "PLACEHOLDER" : (!string.IsNullOrEmpty(cfgSecret) ? "SET" : "MISSING"))}");
+            Console.WriteLine($"Env Client ID: {(!string.IsNullOrEmpty(envId) ? "SET" : "MISSING")}");
+            Console.WriteLine($"Env Client Secret: {(!string.IsNullOrEmpty(envSecret) ? "SET" : "MISSING")}");
+            Console.WriteLine($"Final Client ID: {(!string.IsNullOrEmpty(clientId) ? "SET" : "MISSING")}");
+            Console.WriteLine($"Final Client Secret: {(!string.IsNullOrEmpty(clientSecret) ? "SET" : "MISSING")}");
+            Console.WriteLine($"================================");
 
             return (clientId ?? string.Empty, clientSecret ?? string.Empty);
         }
