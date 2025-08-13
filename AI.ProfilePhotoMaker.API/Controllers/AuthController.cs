@@ -242,6 +242,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             string? envId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") ?? _configuration["GOOGLE_CLIENT_ID"];
             string? envSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET") ?? _configuration["GOOGLE_CLIENT_SECRET"];
 
+            // Enhanced debugging for production
+            Console.WriteLine($"DEBUG OAuth Config - cfgId: {(string.IsNullOrEmpty(cfgId) ? "NULL/EMPTY" : cfgId.Substring(0, Math.Min(20, cfgId.Length)) + "...")}");
+            Console.WriteLine($"DEBUG OAuth Config - cfgSecret: {(string.IsNullOrEmpty(cfgSecret) ? "NULL/EMPTY" : "SET")}");
+            Console.WriteLine($"DEBUG OAuth Config - envId: {(string.IsNullOrEmpty(envId) ? "NULL/EMPTY" : envId.Substring(0, Math.Min(20, envId.Length)) + "...")}");
+            Console.WriteLine($"DEBUG OAuth Config - envSecret: {(string.IsNullOrEmpty(envSecret) ? "NULL/EMPTY" : "SET")}");
+
             bool IsPlaceholder(string? v) =>
                 !string.IsNullOrWhiteSpace(v) && (
                     v.StartsWith("REPLACE_WITH_", StringComparison.OrdinalIgnoreCase) ||
@@ -252,6 +258,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             var clientId = !string.IsNullOrWhiteSpace(envId) ? envId : (IsPlaceholder(cfgId) ? null : cfgId);
             var clientSecret = !string.IsNullOrWhiteSpace(envSecret) ? envSecret : (IsPlaceholder(cfgSecret) ? null : cfgSecret);
+
+            Console.WriteLine($"DEBUG OAuth Final - clientId: {(string.IsNullOrEmpty(clientId) ? "NULL/EMPTY" : clientId.Substring(0, Math.Min(20, clientId.Length)) + "...")}");
+            Console.WriteLine($"DEBUG OAuth Final - clientSecret: {(string.IsNullOrEmpty(clientSecret) ? "NULL/EMPTY" : "SET")}");
 
             return (clientId ?? string.Empty, clientSecret ?? string.Empty);
         }
@@ -523,6 +532,31 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         {
             // Simple test to see if redirects work at all
             return Redirect("https://www.google.com");
+        }
+
+        [HttpGet("debug/oauth-config")]
+        public IActionResult DebugOAuthConfig()
+        {
+            var (clientId, clientSecret) = GetGoogleClientSettings();
+            return Ok(new
+            {
+                message = "OAuth Configuration Debug",
+                configValues = new
+                {
+                    authGoogleClientId = _configuration["Authentication:Google:ClientId"]?.Substring(0, Math.Min(20, _configuration["Authentication:Google:ClientId"].Length)) + "...",
+                    authGoogleClientSecret = !string.IsNullOrEmpty(_configuration["Authentication:Google:ClientSecret"]) ? "SET" : "NULL",
+                    envGoogleClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")?.Substring(0, Math.Min(20, Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID").Length)) + "...",
+                    envGoogleClientSecret = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET")) ? "SET" : "NULL",
+                    configGoogleClientId = _configuration["GOOGLE_CLIENT_ID"]?.Substring(0, Math.Min(20, _configuration["GOOGLE_CLIENT_ID"].Length)) + "...",
+                    configGoogleClientSecret = !string.IsNullOrEmpty(_configuration["GOOGLE_CLIENT_SECRET"]) ? "SET" : "NULL"
+                },
+                finalValues = new
+                {
+                    clientId = !string.IsNullOrEmpty(clientId) ? clientId.Substring(0, Math.Min(20, clientId.Length)) + "..." : "NULL/EMPTY",
+                    clientSecret = !string.IsNullOrEmpty(clientSecret) ? "SET" : "NULL/EMPTY"
+                },
+                timestamp = DateTime.UtcNow
+            });
         }
 
         // Alternative OAuth method removed - contained wrong client ID
