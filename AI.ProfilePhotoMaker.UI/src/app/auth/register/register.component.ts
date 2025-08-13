@@ -123,12 +123,9 @@ export class RegisterComponent {
   }
 
   registerWithGoogle(): void {
-    // Use configuration-based URL for Google OAuth registration
-    // Use configuration-based URL for Google OAuth with dynamic redirect handling
-    const oauthBaseUrl = this._configService.getOAuthRedirectUrl();
+    // Use consistent OAuth base URL method for registration
+    const oauthBaseUrl = this._configService.getOAuthBaseUrl();
     const fullReturnUrl = `${this._configService.frontendBaseUrl}/app/dashboard`;
-
-    // OAuth redirect debugging info available in development console
 
     const oauthUrl = `${oauthBaseUrl}/api/auth/external-login/Google?returnUrl=${encodeURIComponent(fullReturnUrl)}`;
     window.location.href = oauthUrl;

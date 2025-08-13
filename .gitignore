@@ -157,7 +157,13 @@ scripts/package-lock.json
 scripts/package.json
 scripts/validation-report.json
 
-# Deployment parameters with secrets
+# Deployment parameters with secrets - NEVER commit actual secrets!
 deployment-params.json
 deployment-params.*.json
 !deployment-params.template.json
+
+# Environment files with secrets
+*.env
+.env.local
+.env.production
+.env.secrets
