@@ -147,17 +147,26 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return Redirect($"{frontendBaseUrl}/auth/login?error=oauth_{error}");
             }
 
-            // Validate state parameter
+            // Validate state parameter - CRITICAL SECURITY CHECK
             var sessionState = HttpContext.Session.GetString("oauth_state");
             
-            // Only validate state if both session state and provided state exist
-            // This fixes the issue where session might be lost
-            if (!string.IsNullOrEmpty(state) && !string.IsNullOrEmpty(sessionState))
+            // SECURITY: Always validate state parameter to prevent Login CSRF attacks
+            // If session state is missing, this is a security issue - reject the request
+            if (string.IsNullOrEmpty(sessionState))
             {
-                if (state != sessionState)
-                {
-                    return Redirect($"{frontendBaseUrl}/auth/login?error=invalid_state");
-                }
+                return Redirect($"{frontendBaseUrl}/auth/login?error=session_expired");
+            }
+            
+            // If state parameter is missing from callback, this is suspicious - reject
+            if (string.IsNullOrEmpty(state))
+            {
+                return Redirect($"{frontendBaseUrl}/auth/login?error=missing_state");
+            }
+            
+            // Compare state values - must match exactly
+            if (state != sessionState)
+            {
+                return Redirect($"{frontendBaseUrl}/auth/login?error=invalid_state");
             }
 
             // Validate authorization code
@@ -237,16 +246,27 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
         private (string clientId, string clientSecret) GetGoogleClientSettings()
         {
+            try
+            {
+                // Use the same Google OAuth options that the middleware uses
+                var optionsMonitor = HttpContext.RequestServices.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<Microsoft.AspNetCore.Authentication.Google.GoogleOptions>>();
+                var googleOptions = optionsMonitor.Get("Google");
+
+                if (googleOptions != null && !string.IsNullOrEmpty(googleOptions.ClientId) && !string.IsNullOrEmpty(googleOptions.ClientSecret))
+                {
+                    return (googleOptions.ClientId, googleOptions.ClientSecret);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ERROR: Failed to get Google OAuth options from middleware: {ex.Message}");
+            }
+
+            // Fallback to manual configuration reading
             string? cfgId = _configuration["Authentication:Google:ClientId"];
             string? cfgSecret = _configuration["Authentication:Google:ClientSecret"];
             string? envId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") ?? _configuration["GOOGLE_CLIENT_ID"];
             string? envSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET") ?? _configuration["GOOGLE_CLIENT_SECRET"];
-
-            // Enhanced debugging for production
-            Console.WriteLine($"DEBUG OAuth Config - cfgId: {(string.IsNullOrEmpty(cfgId) ? "NULL/EMPTY" : cfgId.Substring(0, Math.Min(20, cfgId.Length)) + "...")}");
-            Console.WriteLine($"DEBUG OAuth Config - cfgSecret: {(string.IsNullOrEmpty(cfgSecret) ? "NULL/EMPTY" : "SET")}");
-            Console.WriteLine($"DEBUG OAuth Config - envId: {(string.IsNullOrEmpty(envId) ? "NULL/EMPTY" : envId.Substring(0, Math.Min(20, envId.Length)) + "...")}");
-            Console.WriteLine($"DEBUG OAuth Config - envSecret: {(string.IsNullOrEmpty(envSecret) ? "NULL/EMPTY" : "SET")}");
 
             bool IsPlaceholder(string? v) =>
                 !string.IsNullOrWhiteSpace(v) && (
@@ -258,9 +278,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             var clientId = !string.IsNullOrWhiteSpace(envId) ? envId : (IsPlaceholder(cfgId) ? null : cfgId);
             var clientSecret = !string.IsNullOrWhiteSpace(envSecret) ? envSecret : (IsPlaceholder(cfgSecret) ? null : cfgSecret);
-
-            Console.WriteLine($"DEBUG OAuth Final - clientId: {(string.IsNullOrEmpty(clientId) ? "NULL/EMPTY" : clientId.Substring(0, Math.Min(20, clientId.Length)) + "...")}");
-            Console.WriteLine($"DEBUG OAuth Final - clientSecret: {(string.IsNullOrEmpty(clientSecret) ? "NULL/EMPTY" : "SET")}");
 
             return (clientId ?? string.Empty, clientSecret ?? string.Empty);
         }
@@ -537,26 +554,45 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         [HttpGet("debug/oauth-config")]
         public IActionResult DebugOAuthConfig()
         {
-            var (clientId, clientSecret) = GetGoogleClientSettings();
-            return Ok(new
+            try
             {
-                message = "OAuth Configuration Debug",
-                configValues = new
+                var (clientId, clientSecret) = GetGoogleClientSettings();
+                
+                string SafeSubstring(string? value, int maxLength = 20)
                 {
-                    authGoogleClientId = _configuration["Authentication:Google:ClientId"]?.Substring(0, Math.Min(20, _configuration["Authentication:Google:ClientId"].Length)) + "...",
-                    authGoogleClientSecret = !string.IsNullOrEmpty(_configuration["Authentication:Google:ClientSecret"]) ? "SET" : "NULL",
-                    envGoogleClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")?.Substring(0, Math.Min(20, Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID").Length)) + "...",
-                    envGoogleClientSecret = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET")) ? "SET" : "NULL",
-                    configGoogleClientId = _configuration["GOOGLE_CLIENT_ID"]?.Substring(0, Math.Min(20, _configuration["GOOGLE_CLIENT_ID"].Length)) + "...",
-                    configGoogleClientSecret = !string.IsNullOrEmpty(_configuration["GOOGLE_CLIENT_SECRET"]) ? "SET" : "NULL"
-                },
-                finalValues = new
+                    if (string.IsNullOrEmpty(value)) return "NULL/EMPTY";
+                    return value.Substring(0, Math.Min(maxLength, value.Length)) + "...";
+                }
+
+                return Ok(new
                 {
-                    clientId = !string.IsNullOrEmpty(clientId) ? clientId.Substring(0, Math.Min(20, clientId.Length)) + "..." : "NULL/EMPTY",
-                    clientSecret = !string.IsNullOrEmpty(clientSecret) ? "SET" : "NULL/EMPTY"
-                },
-                timestamp = DateTime.UtcNow
-            });
+                    message = "OAuth Configuration Debug",
+                    configValues = new
+                    {
+                        authGoogleClientId = SafeSubstring(_configuration["Authentication:Google:ClientId"]),
+                        authGoogleClientSecret = !string.IsNullOrEmpty(_configuration["Authentication:Google:ClientSecret"]) ? "SET" : "NULL",
+                        envGoogleClientId = SafeSubstring(Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")),
+                        envGoogleClientSecret = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET")) ? "SET" : "NULL",
+                        configGoogleClientId = SafeSubstring(_configuration["GOOGLE_CLIENT_ID"]),
+                        configGoogleClientSecret = !string.IsNullOrEmpty(_configuration["GOOGLE_CLIENT_SECRET"]) ? "SET" : "NULL"
+                    },
+                    finalValues = new
+                    {
+                        clientId = SafeSubstring(clientId),
+                        clientSecret = !string.IsNullOrEmpty(clientSecret) ? "SET" : "NULL/EMPTY"
+                    },
+                    timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new
+                {
+                    error = "Failed to debug OAuth configuration",
+                    message = ex.Message,
+                    timestamp = DateTime.UtcNow
+                });
+            }
         }
 
         // Alternative OAuth method removed - contained wrong client ID
