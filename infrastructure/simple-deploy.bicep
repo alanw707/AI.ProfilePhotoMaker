@@ -5,13 +5,22 @@ param appName string = 'aipm'
 param environment string = 'v1'
 param location string = resourceGroup().location
 
-
+// Core secrets
 @secure()
 param sqlAdminPassword string
 @secure()
 param jwtSecret string
 @secure()
 param replicateApiToken string
+
+// OAuth Configuration
+@secure()
+@description('Google OAuth Client ID for authentication')
+param googleClientId string
+
+@secure()
+@description('Google OAuth Client Secret for authentication')
+param googleClientSecret string
 
 // Generate unique names
 var uniqueSuffix = uniqueString(resourceGroup().id)
@@ -167,6 +176,23 @@ resource connectionStringKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
   }
 }
 
+// OAuth secrets in Key Vault
+resource googleClientIdKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
+  parent: keyVault
+  name: 'GoogleClientId'
+  properties: {
+    value: googleClientId
+  }
+}
+
+resource googleClientSecretKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
+  parent: keyVault
+  name: 'GoogleClientSecret'
+  properties: {
+    value: googleClientSecret
+  }
+}
+
 // Container Apps Environment
 resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' = {
   name: containerEnvName
@@ -237,6 +263,14 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
           name: 'acr-password'
           value: containerRegistry.listCredentials().passwords[0].value
         }
+        {
+          name: 'google-client-id'
+          value: googleClientId
+        }
+        {
+          name: 'google-client-secret'
+          value: googleClientSecret
+        }
       ]
     }
     template: {
@@ -285,6 +319,24 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'CORS_ALLOWED_ORIGINS'
               value: 'https://app.aiprofilephotomaker.com,https://aiprofilephotomaker.com'
+            }
+            // OAuth Configuration
+            {
+              name: 'GOOGLE_CLIENT_ID'
+              secretRef: 'google-client-id'
+            }
+            {
+              name: 'GOOGLE_CLIENT_SECRET'
+              secretRef: 'google-client-secret'
+            }
+            // Alternative naming for OAuth (for compatibility)
+            {
+              name: 'Authentication__Google__ClientId'
+              secretRef: 'google-client-id'
+            }
+            {
+              name: 'Authentication__Google__ClientSecret'
+              secretRef: 'google-client-secret'
             }
           ]
           // Health probes re-enabled since we're using real application images
@@ -415,3 +467,4 @@ output containerRegistryLoginServer string = containerRegistry.properties.loginS
 output sqlServerName string = sqlServer.name
 output storageAccountName string = storageAccount.name
 output keyVaultName string = keyVault.name
+output oauthConfigured string = 'OAuth configured with Google Client ID and Secret'
