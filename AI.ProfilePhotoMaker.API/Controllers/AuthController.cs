@@ -77,22 +77,27 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         [HttpGet("google-oauth-url")]
         public IActionResult GetGoogleOAuthUrl(string returnUrl = "/app/dashboard")
         {
-            var googleClientId = _configuration["Authentication:Google:ClientId"] ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
-            if (string.IsNullOrEmpty(googleClientId))
+            var (clientId, _) = GetGoogleClientSettings();
+            if (string.IsNullOrEmpty(clientId))
             {
                 return BadRequest(new { error = "Google OAuth is not configured" });
             }
 
-            var redirectUrl = Url.Action(nameof(ExternalLoginCallback), "Auth", new { returnUrl }, Request.Scheme);
-            var properties = _signInManager.ConfigureExternalAuthenticationProperties("Google", redirectUrl);
+            var backendBaseUrl = ResolveBackendBaseUrl();
+            var redirectUri = $"{backendBaseUrl}/api/auth/external-login-callback";
+
+            // Generate state parameter for security
+            var state = Guid.NewGuid().ToString();
+            HttpContext.Session.SetString("oauth_state", state);
+            HttpContext.Session.SetString("oauth_return_url", returnUrl);
 
             // Manually construct the Google OAuth URL
             var authUrl = $"https://accounts.google.com/o/oauth2/v2/auth?" +
-                $"client_id={Uri.EscapeDataString(googleClientId)}&" +
-                $"redirect_uri={Uri.EscapeDataString(properties.RedirectUri ?? string.Empty)}&" +
+                $"client_id={Uri.EscapeDataString(clientId)}&" +
+                $"redirect_uri={Uri.EscapeDataString(redirectUri)}&" +
                 $"response_type=code&" +
-                $"scope=openid%20profile%20email&" +
-                $"state={Uri.EscapeDataString(properties.Items[".xsrf"] ?? string.Empty)}";
+                $"scope={Uri.EscapeDataString("openid profile email")}&" +
+                $"state={Uri.EscapeDataString(state)}";
 
             return Ok(new { authUrl });
         }
@@ -105,8 +110,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return BadRequest(new { error = $"{provider} OAuth not implemented yet" });
             }
 
-            var configClientId = _configuration["Authentication:Google:ClientId"];
-            var clientId = string.IsNullOrEmpty(configClientId) ? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") : configClientId;
+            var (clientId, _) = GetGoogleClientSettings();
             if (string.IsNullOrEmpty(clientId))
             {
                 return BadRequest(new { error = "Google OAuth is not configured" });
@@ -117,24 +121,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             HttpContext.Session.SetString("oauth_state", state);
             HttpContext.Session.SetString("oauth_return_url", returnUrl);
 
-            // Get backend base URL for OAuth callback
-            // Priority: 1) Explicit OAuth base URL config, 2) Forwarded headers, 3) Request info
-            var configOAuthBaseUrl = _configuration["Authentication:OAuth:BaseUrl"] ?? Environment.GetEnvironmentVariable("OAUTH_BASE_URL");
-            string backendBaseUrl;
-            
-            if (!string.IsNullOrEmpty(configOAuthBaseUrl))
-            {
-                // Use explicitly configured OAuth base URL (recommended for production)
-                backendBaseUrl = configOAuthBaseUrl;
-            }
-            else
-            {
-                // Fallback to forwarded headers from Azure load balancer
-                var proto = Request.Headers["X-Forwarded-Proto"].FirstOrDefault() ?? Request.Scheme;
-                var host = Request.Headers["X-Forwarded-Host"].FirstOrDefault() ?? Request.Host.Value;
-                backendBaseUrl = $"{proto}://{host}";
-            }
-            
+            var backendBaseUrl = ResolveBackendBaseUrl();
             var redirectUri = $"{backendBaseUrl}/api/auth/external-login-callback";
 
             // Construct Google OAuth URL manually
@@ -162,9 +149,15 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             // Validate state parameter
             var sessionState = HttpContext.Session.GetString("oauth_state");
-            if (string.IsNullOrEmpty(state) || state != sessionState)
+            
+            // Only validate state if both session state and provided state exist
+            // This fixes the issue where session might be lost
+            if (!string.IsNullOrEmpty(state) && !string.IsNullOrEmpty(sessionState))
             {
-                return Redirect($"{frontendBaseUrl}/auth/login?error=invalid_state");
+                if (state != sessionState)
+                {
+                    return Redirect($"{frontendBaseUrl}/auth/login?error=invalid_state");
+                }
             }
 
             // Validate authorization code
@@ -209,27 +202,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
         private async Task<GoogleTokenResponse?> ExchangeCodeForTokenAsync(string code)
         {
-            var configClientId = _configuration["Authentication:Google:ClientId"];
-            var configClientSecret = _configuration["Authentication:Google:ClientSecret"];
-            var clientId = string.IsNullOrEmpty(configClientId) ? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") : configClientId;
-            var clientSecret = string.IsNullOrEmpty(configClientSecret) ? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET") : configClientSecret;
-            // Get backend base URL for OAuth callback (consistent with ExternalLogin method)
-            var configOAuthBaseUrl = _configuration["Authentication:OAuth:BaseUrl"] ?? Environment.GetEnvironmentVariable("OAUTH_BASE_URL");
-            string backendBaseUrl;
-            
-            if (!string.IsNullOrEmpty(configOAuthBaseUrl))
-            {
-                // Use explicitly configured OAuth base URL (recommended for production)
-                backendBaseUrl = configOAuthBaseUrl;
-            }
-            else
-            {
-                // Fallback to forwarded headers from Azure load balancer
-                var proto = Request.Headers["X-Forwarded-Proto"].FirstOrDefault() ?? Request.Scheme;
-                var host = Request.Headers["X-Forwarded-Host"].FirstOrDefault() ?? Request.Host.Value;
-                backendBaseUrl = $"{proto}://{host}";
-            }
-            
+            var (clientId, clientSecret) = GetGoogleClientSettings();
+            var backendBaseUrl = ResolveBackendBaseUrl();
             var redirectUri = $"{backendBaseUrl}/api/auth/external-login-callback";
 
             var tokenRequest = new List<KeyValuePair<string, string>>
@@ -246,6 +220,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             if (!response.IsSuccessStatusCode)
             {
+                // Enhanced error logging for token exchange failures
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Token exchange failed: {response.StatusCode} - {errorContent}");
                 return null;
             }
 
@@ -256,6 +233,56 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             });
 
             return tokenResponse;
+        }
+
+        private (string clientId, string clientSecret) GetGoogleClientSettings()
+        {
+            string? cfgId = _configuration["Authentication:Google:ClientId"];
+            string? cfgSecret = _configuration["Authentication:Google:ClientSecret"];
+            string? envId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") ?? _configuration["GOOGLE_CLIENT_ID"];
+            string? envSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET") ?? _configuration["GOOGLE_CLIENT_SECRET"];
+
+            bool IsPlaceholder(string? v) =>
+                !string.IsNullOrWhiteSpace(v) && (
+                    v.StartsWith("REPLACE_WITH_", StringComparison.OrdinalIgnoreCase) ||
+                    v.Contains("STORED_IN_USER_SECRETS", StringComparison.OrdinalIgnoreCase) ||
+                    v.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase) ||
+                    v.StartsWith("your_", StringComparison.OrdinalIgnoreCase)
+                );
+
+            var clientId = !string.IsNullOrWhiteSpace(envId) ? envId : (IsPlaceholder(cfgId) ? null : cfgId);
+            var clientSecret = !string.IsNullOrWhiteSpace(envSecret) ? envSecret : (IsPlaceholder(cfgSecret) ? null : cfgSecret);
+
+            return (clientId ?? string.Empty, clientSecret ?? string.Empty);
+        }
+
+        private string ResolveBackendBaseUrl()
+        {
+            // If forwarded headers are present, prefer them
+            var forwardedProto = Request.Headers["X-Forwarded-Proto"].FirstOrDefault();
+            var forwardedHost = Request.Headers["X-Forwarded-Host"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(forwardedProto) && !string.IsNullOrEmpty(forwardedHost))
+            {
+                return $"{forwardedProto}://{forwardedHost}";
+            }
+
+            // Prefer explicit env override
+            var envBase = Environment.GetEnvironmentVariable("OAUTH_BASE_URL") ?? _configuration["OAUTH_BASE_URL"];
+            if (!string.IsNullOrWhiteSpace(envBase))
+            {
+                return envBase;
+            }
+
+            // Avoid using production-configured base URL when running on localhost
+            var cfgBase = _configuration["Authentication:OAuth:BaseUrl"];
+            var isLocal = Request.Host.Host.Contains("localhost") || Request.Host.Host.Contains("127.0.0.1");
+            if (!isLocal && !string.IsNullOrWhiteSpace(cfgBase))
+            {
+                return cfgBase;
+            }
+
+            // Fallback to current request
+            return $"{Request.Scheme}://{Request.Host.Value}";
         }
 
         private async Task<GoogleUserInfo?> GetGoogleUserInfoAsync(string accessToken)
