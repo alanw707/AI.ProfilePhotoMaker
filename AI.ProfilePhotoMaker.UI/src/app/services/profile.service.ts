@@ -127,14 +127,14 @@ export class ProfileService {
   // Model discovery endpoints using new SDK integration
   discoverModels(): Observable<{ success: boolean; data: any; message?: string; error?: any }> {
     return this._http.post<{ success: boolean; data: any; message?: string; error?: any }>(
-      `${this._config.baseUrl}/model-discovery/sync`,
+      this._config.buildApiEndpoint('model-discovery/sync'),
       {}
     );
   }
 
   getModelSyncStatus(): Observable<{ success: boolean; data: any; error?: any }> {
     return this._http.get<{ success: boolean; data: any; error?: any }>(
-      `${this._config.baseUrl}/model-discovery/status`
+      this._config.buildApiEndpoint('model-discovery/status')
     );
   }
 
@@ -143,7 +143,7 @@ export class ProfileService {
     versionId: string
   ): Observable<{ success: boolean; message?: string; error?: any }> {
     return this._http.post<{ success: boolean; message?: string; error?: any }>(
-      `${this._config.baseUrl}/model-discovery/sync-specific`,
+      this._config.buildApiEndpoint('model-discovery/sync-specific'),
       {
         modelId,
         versionId,

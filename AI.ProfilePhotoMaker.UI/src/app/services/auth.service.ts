@@ -147,40 +147,46 @@ export class AuthService {
     this._currentUserSubject.next(tempUser);
 
     // Fetch user profile from API to get firstName/lastName
-    this._http.get<{ firstName?: string; lastName?: string; email?: string }>(`${this._config.baseUrl}/profile`).subscribe({
-      next: response => {
-        // Handle response that contains data directly (not wrapped in success/data structure)
-        if (response && (response.firstName || response.lastName)) {
-          const completeUser = {
-            token,
-            email,
-            firstName: response.firstName || '',
-            lastName: response.lastName || '',
-          };
+    this._http
+      .get<{
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+      }>(this._config.buildApiEndpoint('profile'))
+      .subscribe({
+        next: response => {
+          // Handle response that contains data directly (not wrapped in success/data structure)
+          if (response && (response.firstName || response.lastName)) {
+            const completeUser = {
+              token,
+              email,
+              firstName: response.firstName || '',
+              lastName: response.lastName || '',
+            };
 
-          localStorage.setItem('currentUser', JSON.stringify(completeUser));
-          this._currentUserSubject.next(completeUser);
-        } else {
-          // Keep the temp user with email username as firstName
+            localStorage.setItem('currentUser', JSON.stringify(completeUser));
+            this._currentUserSubject.next(completeUser);
+          } else {
+            // Keep the temp user with email username as firstName
+            const fallbackUser = {
+              ...tempUser,
+              firstName: email.split('@')[0],
+            };
+            localStorage.setItem('currentUser', JSON.stringify(fallbackUser));
+            this._currentUserSubject.next(fallbackUser);
+          }
+        },
+        error: error => {
+          console.error('Failed to fetch user profile:', error);
+          // Fallback to email username
           const fallbackUser = {
             ...tempUser,
             firstName: email.split('@')[0],
           };
           localStorage.setItem('currentUser', JSON.stringify(fallbackUser));
           this._currentUserSubject.next(fallbackUser);
-        }
-      },
-      error: error => {
-        console.error('Failed to fetch user profile:', error);
-        // Fallback to email username
-        const fallbackUser = {
-          ...tempUser,
-          firstName: email.split('@')[0],
-        };
-        localStorage.setItem('currentUser', JSON.stringify(fallbackUser));
-        this._currentUserSubject.next(fallbackUser);
-      },
-    });
+        },
+      });
   }
 
   private extractUserFromToken(token: string): AuthResponseDto | null {

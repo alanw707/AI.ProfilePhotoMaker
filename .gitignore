@@ -156,3 +156,8 @@ scripts/node_modules/
 scripts/package-lock.json  
 scripts/package.json
 scripts/validation-report.json
+
+# Deployment parameters with secrets
+deployment-params.json
+deployment-params.*.json
+!deployment-params.template.json
