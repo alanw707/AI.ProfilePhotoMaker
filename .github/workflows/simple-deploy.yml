@@ -134,6 +134,7 @@ jobs:
             --parameters sqlAdminPassword="${{ secrets.SQL_ADMIN_PASSWORD }}" \
                         jwtSecret="${{ secrets.JWT_SECRET }}" \
                         replicateApiToken="${{ secrets.REPLICATE_API_TOKEN }}" \
+                        replicateWebhookSecret="${{ secrets.REPLICATE_WEBHOOK_SECRET }}" \
                         googleClientId="${{ secrets.GOOGLE_CLIENT_ID }}" \
                         googleClientSecret="${{ secrets.GOOGLE_CLIENT_SECRET }}"
           
@@ -187,6 +188,7 @@ jobs:
               --parameters sqlAdminPassword="${{ secrets.SQL_ADMIN_PASSWORD }}" \
                           jwtSecret="${{ secrets.JWT_SECRET }}" \
                           replicateApiToken="${{ secrets.REPLICATE_API_TOKEN }}" \
+                          replicateWebhookSecret="${{ secrets.REPLICATE_WEBHOOK_SECRET }}" \
                           googleClientId="${{ secrets.GOOGLE_CLIENT_ID }}" \
                           googleClientSecret="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
               --output json > deployment_result.json; then
