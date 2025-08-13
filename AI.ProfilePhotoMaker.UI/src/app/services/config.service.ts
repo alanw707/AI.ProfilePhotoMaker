@@ -94,13 +94,19 @@ export class ConfigService {
 
   /**
    * Get the OAuth base URL for external login
-   * PERFORMANCE-OPTIMIZED: Fixed critical URL malformation bug
+   * CRITICAL FIX: Use baseUrl from environment for OAuth redirect URI generation
    */
   getOAuthBaseUrl(): string {
+    // For production, use the explicit baseUrl from environment
+    // This ensures OAuth redirects go to the correct backend domain
+    if (environment.baseUrl) {
+      return environment.baseUrl;
+    }
+
     // For production/external configuration, use the backend API URL
     if (environment.apiUrl?.startsWith('https://') || environment.apiUrl?.startsWith('http://')) {
       try {
-        // PERFORMANCE FIX: Use native URL constructor for bulletproof parsing
+        // Use native URL constructor for bulletproof parsing
         // This prevents the string replacement bug that caused malformed URLs
         const url = new URL(environment.apiUrl);
         // Return protocol + hostname + port (removes path completely)
@@ -125,12 +131,9 @@ export class ConfigService {
       endpoint = '/' + endpoint;
     }
 
-    // For API endpoints, prepend /api if not already present
-    if (!endpoint.startsWith('/api/')) {
-      endpoint = '/api' + endpoint;
-    }
-
-    return endpoint;
+    // Normalize by stripping optional leading /api prefix, then delegate to buildEndpointUrl
+    const normalized = endpoint.startsWith('/api/') ? endpoint.slice(5) : endpoint.slice(1);
+    return this.buildEndpointUrl(normalized);
   }
 
   // Simplified properties for compatibility
@@ -171,7 +174,10 @@ export class ConfigService {
     }
   }
 
-  // Add getOAuthRedirectUrl for compatibility
+  /**
+   * Get OAuth redirect URL - consistent method name for OAuth operations
+   * DEPRECATED: Use getOAuthBaseUrl() instead for consistency
+   */
   getOAuthRedirectUrl(): string {
     return this.getOAuthBaseUrl();
   }
