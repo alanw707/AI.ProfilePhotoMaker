@@ -14,31 +14,49 @@ pkill -f "dotnet.*AI.ProfilePhotoMaker.API" 2>/dev/null || true
 pkill -f "ng serve" 2>/dev/null || true
 sleep 2
 
+# Do NOT source .env or export secrets here. The API reads user-secrets/appsettings.
+# Provide only non-sensitive dev defaults where necessary.
+export OAUTH_BASE_URL=${OAUTH_BASE_URL:-http://localhost:5032}
+export REPLICATE_API_TOKEN=${REPLICATE_API_TOKEN:-r8_dev_dummy_1234567890}
+export REPLICATE_WEBHOOK_SECRET=${REPLICATE_WEBHOOK_SECRET:-whsec_dev_dummy_1234567890}
+
 # Start SQL Server container (if not running)
 echo "🗄️  Starting SQL Server container..."
 docker-compose up sql-server -d
 
-# Wait for SQL Server to be ready
-echo "⏳ Waiting for SQL Server to be ready..."
-while ! docker exec aipm-sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P Dev123456! -C -Q "SELECT 1" &>/dev/null; do
+# Wait for SQL Server container health (no password needed)
+echo "⏳ Waiting for SQL Server to be healthy..."
+for i in {1..60}; do
+  STATUS=$(docker inspect --format '{{.State.Health.Status}}' aipm-sqlserver 2>/dev/null || echo "unknown")
+  if [ "$STATUS" = "healthy" ]; then
+    echo " ✅ SQL Server healthy!"
+    break
+  fi
   echo -n "."
   sleep 2
 done
-echo " ✅ SQL Server ready!"
 
 # Start API in background
 echo "🔧 Starting API server (localhost:5032)..."
 cd AI.ProfilePhotoMaker.API
-ASPNETCORE_ENVIRONMENT=Development nohup dotnet run --urls "http://localhost:5032" > ../logs/api.log 2>&1 &
+ASPNETCORE_ENVIRONMENT=Development \
+OAUTH_BASE_URL="$OAUTH_BASE_URL" \
+REPLICATE_API_TOKEN="$REPLICATE_API_TOKEN" \
+REPLICATE_WEBHOOK_SECRET="$REPLICATE_WEBHOOK_SECRET" \
+nohup dotnet run --no-build --launch-profile https > ../logs/api.log 2>&1 &
 API_PID=$!
 echo $API_PID > ../logs/api.pid
 cd ..
 
 # Wait for API to be ready
 echo "⏳ Waiting for API to be ready..."
-for i in {1..30}; do
-  if curl -s http://localhost:5032/api/health >/dev/null 2>&1; then
+for i in {1..60}; do
+  if curl -fsS http://localhost:5032/api/health/live >/dev/null 2>&1; then
     echo " ✅ API ready!"
+    break
+  fi
+  if curl -fsS http://localhost:5032/swagger/v1/swagger.json >/dev/null 2>&1; then
+    echo " ✅ API ready (Swagger reachable)!"
     break
   fi
   echo -n "."

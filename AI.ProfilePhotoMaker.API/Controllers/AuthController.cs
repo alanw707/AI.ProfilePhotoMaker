@@ -376,14 +376,23 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
         private string ResolveBackendBaseUrl()
         {
+            Console.WriteLine($"=== BACKEND BASE URL RESOLUTION ===");
+            Console.WriteLine($"Current Request: {Request.Scheme}://{Request.Host.Value}{Request.Path}");
+            Console.WriteLine($"Request Host: {Request.Host.Host}");
+            
             // First check if we're in Azure production environment
             var azureWebsiteName = Environment.GetEnvironmentVariable("WEBSITE_SITE_NAME");
+            Console.WriteLine($"Azure Website Name: {azureWebsiteName ?? "NOT SET"}");
+            
             if (!string.IsNullOrEmpty(azureWebsiteName))
             {
                 // We're definitely in Azure - use the production OAuth base URL
                 var productionOAuthBase = _configuration["Authentication:OAuth:BaseUrl"];
+                Console.WriteLine($"Production OAuth Base from config: {productionOAuthBase ?? "NOT SET"}");
+                
                 if (!string.IsNullOrWhiteSpace(productionOAuthBase))
                 {
+                    Console.WriteLine($"✅ Using Azure production OAuth base: {productionOAuthBase}");
                     return productionOAuthBase;
                 }
             }
@@ -391,35 +400,53 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             // If forwarded headers are present, prefer them
             var forwardedProto = Request.Headers["X-Forwarded-Proto"].FirstOrDefault();
             var forwardedHost = Request.Headers["X-Forwarded-Host"].FirstOrDefault();
+            Console.WriteLine($"Forwarded Proto: {forwardedProto ?? "NOT SET"}");
+            Console.WriteLine($"Forwarded Host: {forwardedHost ?? "NOT SET"}");
+            
             if (!string.IsNullOrEmpty(forwardedProto) && !string.IsNullOrEmpty(forwardedHost))
             {
-                return $"{forwardedProto}://{forwardedHost}";
+                var forwardedUrl = $"{forwardedProto}://{forwardedHost}";
+                Console.WriteLine($"✅ Using forwarded headers: {forwardedUrl}");
+                return forwardedUrl;
             }
 
             // Prefer explicit env override
             var envBase = Environment.GetEnvironmentVariable("OAUTH_BASE_URL") ?? _configuration["OAUTH_BASE_URL"];
+            Console.WriteLine($"Environment OAuth Base URL: {envBase ?? "NOT SET"}");
+            
             if (!string.IsNullOrWhiteSpace(envBase))
             {
+                Console.WriteLine($"✅ Using environment override: {envBase}");
                 return envBase;
             }
 
             // Check if we're clearly in development (localhost)
             var isLocal = Request.Host.Host.Contains("localhost") || Request.Host.Host.Contains("127.0.0.1");
+            Console.WriteLine($"Is Local Development: {isLocal}");
+            
             if (isLocal)
             {
                 // Use current request URL for local development
-                return $"{Request.Scheme}://{Request.Host.Value}";
+                var localUrl = $"{Request.Scheme}://{Request.Host.Value}";
+                Console.WriteLine($"✅ Using local development URL: {localUrl}");
+                return localUrl;
             }
 
             // For any other environment, try to use the configured OAuth base URL
             var cfgBase = _configuration["Authentication:OAuth:BaseUrl"];
+            Console.WriteLine($"Config OAuth Base URL: {cfgBase ?? "NOT SET"}");
+            
             if (!string.IsNullOrWhiteSpace(cfgBase))
             {
+                Console.WriteLine($"✅ Using configured OAuth base: {cfgBase}");
                 return cfgBase;
             }
 
             // Last resort - use current request
-            return $"{Request.Scheme}://{Request.Host.Value}";
+            var fallbackUrl = $"{Request.Scheme}://{Request.Host.Value}";
+            Console.WriteLine($"⚠️  Using fallback URL: {fallbackUrl}");
+            Console.WriteLine($"===================================");
+            return fallbackUrl;
         }
 
         private async Task<GoogleUserInfo?> GetGoogleUserInfoAsync(string accessToken)

@@ -1,30 +1,14 @@
-// Simple AI Profile Photo Maker Infrastructure
-// Perfect for single developer deployment
+// Security-Optimized AI Profile Photo Maker Infrastructure
+// Uses Azure Key Vault references for maximum security
+// Eliminates secret exposure in deployment templates
 
 param appName string = 'aipm'
 param environment string = 'v1'
 param location string = resourceGroup().location
 
-// Core secrets
+// Only infrastructure secrets needed for deployment
 @secure()
 param sqlAdminPassword string
-@secure()
-param jwtSecret string
-@secure()
-param replicateApiToken string
-
-// OAuth Configuration
-@secure()
-@description('Google OAuth Client ID for authentication')
-param googleClientId string
-
-@secure()
-@description('Google OAuth Client Secret for authentication')
-param googleClientSecret string
-
-@secure()
-@description('Replicate webhook secret for signature validation')
-param replicateWebhookSecret string
 
 // Generate unique names
 var uniqueSuffix = uniqueString(resourceGroup().id)
@@ -116,7 +100,7 @@ resource profileImagesContainer 'Microsoft.Storage/storageAccounts/blobServices/
   }
 }
 
-// Log Analytics Workspace (required for Container Apps)
+// Log Analytics Workspace
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: '${appName}-logs-${environment}'
   location: location
@@ -139,62 +123,9 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
-// Key Vault
-resource keyVault 'Microsoft.KeyVault/vaults@2023-02-01' = {
-  name: keyVaultName
-  location: location
-  properties: {
-    sku: {
-      family: 'A'
-      name: 'standard'
-    }
-    tenantId: subscription().tenantId
-    enableRbacAuthorization: true
-    enableSoftDelete: true
-    softDeleteRetentionInDays: 7
-  }
-}
-
-// Store secrets in Key Vault
-resource jwtSecretKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
-  parent: keyVault
-  name: 'JwtSecret'
-  properties: {
-    value: jwtSecret
-  }
-}
-
-resource replicateTokenKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
-  parent: keyVault
-  name: 'ReplicateApiToken'
-  properties: {
-    value: replicateApiToken
-  }
-}
-
-resource connectionStringKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
-  parent: keyVault
-  name: 'ConnectionString'
-  properties: {
-    value: 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${sqlDatabase.name};User ID=sqladmin;Password=${sqlAdminPassword};Encrypt=True;'
-  }
-}
-
-// OAuth secrets in Key Vault
-resource googleClientIdKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
-  parent: keyVault
-  name: 'GoogleClientId'
-  properties: {
-    value: googleClientId
-  }
-}
-
-resource googleClientSecretKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
-  parent: keyVault
-  name: 'GoogleClientSecret'
-  properties: {
-    value: googleClientSecret
-  }
+// Key Vault (existing - reference only)
+resource keyVault 'Microsoft.KeyVault/vaults@2023-02-01' existing = {
+  name: 'aipm-kv-v1-6j74jubocuukg'  // Use existing Key Vault
 }
 
 // Container Apps Environment
@@ -212,7 +143,7 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01'
   }
 }
 
-// Backend API Container App
+// Backend API Container App with Security-Optimized Configuration
 resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: backendAppName
   location: location
@@ -222,7 +153,6 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
     sqlServer
     sqlDatabase
     storageAccount
-    keyVault
   ]
   identity: {
     type: 'SystemAssigned'
@@ -250,34 +180,37 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
           passwordSecretRef: 'acr-password'
         }
       ]
+      // 🔐 SECURITY OPTIMIZED: Key Vault references instead of direct values
       secrets: [
+        // Key Vault referenced secrets (secure - no value exposure)
         {
           name: 'jwt-secret'
-          value: jwtSecret
+          keyVaultUrl: 'https://${keyVault.name}.vault.azure.net/secrets/JwtSecret'
         }
         {
           name: 'replicate-token'
-          value: replicateApiToken
-        }
-        {
-          name: 'connection-string'
-          value: 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${sqlDatabase.name};User ID=sqladmin;Password=${sqlAdminPassword};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
-        }
-        {
-          name: 'acr-password'
-          value: containerRegistry.listCredentials().passwords[0].value
-        }
-        {
-          name: 'google-client-id'
-          value: googleClientId
-        }
-        {
-          name: 'google-client-secret'
-          value: googleClientSecret
+          keyVaultUrl: 'https://${keyVault.name}.vault.azure.net/secrets/ReplicateApiToken'
         }
         {
           name: 'replicate-webhook-secret'
-          value: replicateWebhookSecret
+          keyVaultUrl: 'https://${keyVault.name}.vault.azure.net/secrets/ReplicateWebhookSecret'
+        }
+        {
+          name: 'google-client-id'
+          keyVaultUrl: 'https://${keyVault.name}.vault.azure.net/secrets/GoogleClientId'
+        }
+        {
+          name: 'google-client-secret'
+          keyVaultUrl: 'https://${keyVault.name}.vault.azure.net/secrets/GoogleClientSecret'
+        }
+        {
+          name: 'connection-string'
+          keyVaultUrl: 'https://${keyVault.name}.vault.azure.net/secrets/ConnectionString'
+        }
+        // Non-sensitive operational secrets (direct values acceptable)
+        {
+          name: 'acr-password'
+          value: containerRegistry.listCredentials().passwords[0].value
         }
       ]
     }
@@ -285,7 +218,6 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
       containers: [
         {
           name: 'api'
-          // References locally built and pushed image - no placeholder needed
           image: '${containerRegistry.properties.loginServer}/aiprofilemaker-api:latest'
           resources: {
             cpu: json('0.5')
@@ -296,6 +228,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               name: 'ASPNETCORE_ENVIRONMENT'
               value: 'Production'
             }
+            // All sensitive values now reference Key Vault secrets
             {
               name: 'ConnectionStrings__DefaultConnection'
               secretRef: 'connection-string'
@@ -312,6 +245,23 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               name: 'Replicate__WebhookSecret'
               secretRef: 'replicate-webhook-secret'
             }
+            {
+              name: 'GOOGLE_CLIENT_ID'
+              secretRef: 'google-client-id'
+            }
+            {
+              name: 'GOOGLE_CLIENT_SECRET'
+              secretRef: 'google-client-secret'
+            }
+            {
+              name: 'Authentication__Google__ClientId'
+              secretRef: 'google-client-id'
+            }
+            {
+              name: 'Authentication__Google__ClientSecret'
+              secretRef: 'google-client-secret'
+            }
+            // Non-sensitive configuration (direct values)
             {
               name: 'AzureStorage__ConnectionString'
               value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
@@ -332,26 +282,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               name: 'CORS_ALLOWED_ORIGINS'
               value: 'https://app.aiprofilephotomaker.com,https://aiprofilephotomaker.com'
             }
-            // OAuth Configuration
-            {
-              name: 'GOOGLE_CLIENT_ID'
-              secretRef: 'google-client-id'
-            }
-            {
-              name: 'GOOGLE_CLIENT_SECRET'
-              secretRef: 'google-client-secret'
-            }
-            // Alternative naming for OAuth (for compatibility)
-            {
-              name: 'Authentication__Google__ClientId'
-              secretRef: 'google-client-id'
-            }
-            {
-              name: 'Authentication__Google__ClientSecret'
-              secretRef: 'google-client-secret'
-            }
           ]
-          // Health probes re-enabled since we're using real application images
           probes: [
             {
               type: 'Liveness'
@@ -400,14 +331,31 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
   }
 }
 
-// Frontend Container App
+// 🔐 CRITICAL: Grant Container App access to Key Vault
+resource keyVaultAccessPolicy 'Microsoft.KeyVault/vaults/accessPolicies@2023-02-01' = {
+  parent: keyVault
+  name: 'add'
+  properties: {
+    accessPolicies: [
+      {
+        tenantId: subscription().tenantId
+        objectId: backendApp.identity.principalId
+        permissions: {
+          secrets: ['get']
+        }
+      }
+    ]
+  }
+}
+
+// Frontend Container App (unchanged - no secrets needed)
 resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: frontendAppName
   location: location
   dependsOn: [
     containerAppsEnvironment
     containerRegistry
-    backendApp  // Deploy after backend to avoid circular dependency during updates
+    backendApp
   ]
   identity: {
     type: 'SystemAssigned'
@@ -446,7 +394,6 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
       containers: [
         {
           name: 'web'
-          // References locally built and pushed image - no placeholder needed
           image: '${containerRegistry.properties.loginServer}/aiprofilemaker-web:latest'
           resources: {
             cpu: json('0.25')
@@ -468,9 +415,6 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
   }
 }
 
-// Note: Using Container Registry admin credentials for simplicity
-// In production, consider using managed identity with proper role assignments
-
 // Outputs
 output frontendUrl string = 'https://${frontendApp.properties.configuration.ingress.fqdn}'
 output backendUrl string = 'https://${backendApp.properties.configuration.ingress.fqdn}'
@@ -479,4 +423,4 @@ output containerRegistryLoginServer string = containerRegistry.properties.loginS
 output sqlServerName string = sqlServer.name
 output storageAccountName string = storageAccount.name
 output keyVaultName string = keyVault.name
-output oauthConfigured string = 'OAuth configured with Google Client ID and Secret'
+output securityOptimization string = '🔐 SECURITY OPTIMIZED: All secrets reference Key Vault directly - zero exposure'

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.177.2456",
-      "templateHash": "11098958065605322861"
+      "templateHash": "13099881501447904984"
     }
   },
   "parameters": {
@@ -29,6 +29,24 @@
     },
     "replicateApiToken": {
       "type": "securestring"
+    },
+    "googleClientId": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Google OAuth Client ID for authentication"
+      }
+    },
+    "googleClientSecret": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Google OAuth Client Secret for authentication"
+      }
+    },
+    "replicateWebhookSecret": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Replicate webhook secret for signature validation"
+      }
     }
   },
   "variables": {
@@ -40,7 +58,9 @@
     "containerEnvName": "[format('{0}-env-{1}-{2}', parameters('appName'), parameters('environment'), variables('uniqueSuffix'))]",
     "backendAppName": "[format('{0}-api-{1}', parameters('appName'), parameters('environment'))]",
     "frontendAppName": "[format('{0}-web-{1}', parameters('appName'), parameters('environment'))]",
-    "applicationInsightsName": "[format('{0}-ai-{1}', parameters('appName'), parameters('environment'))]"
+    "applicationInsightsName": "[format('{0}-ai-{1}', parameters('appName'), parameters('environment'))]",
+    "frontendCertificateId": "/subscriptions/7e5147a4-3abb-4a43-aef7-5a2ae770c739/resourceGroups/aiprofilemaker-v1/providers/Microsoft.App/managedEnvironments/aipm-env-v1-6j74jubocuukg/managedCertificates/mc-aipm-env-v1-6j-app-aiprofilepho-5691",
+    "backendCertificateId": "/subscriptions/7e5147a4-3abb-4a43-aef7-5a2ae770c739/resourceGroups/aiprofilemaker-v1/providers/Microsoft.App/managedEnvironments/aipm-env-v1-6j74jubocuukg/managedCertificates/mc-aipm-env-v1-6j-api-aiprofilepho-8094"
   },
   "resources": [
     {
@@ -207,6 +227,28 @@
       ]
     },
     {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-02-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'GoogleClientId')]",
+      "properties": {
+        "value": "[parameters('googleClientId')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-02-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'GoogleClientSecret')]",
+      "properties": {
+        "value": "[parameters('googleClientSecret')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
       "type": "Microsoft.App/managedEnvironments",
       "apiVersion": "2023-05-01",
       "name": "[variables('containerEnvName')]",
@@ -222,30 +264,6 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs-{1}', parameters('appName'), parameters('environment')))]"
-      ]
-    },
-    {
-      "type": "Microsoft.App/managedEnvironments/managedCertificates",
-      "apiVersion": "2023-05-01",
-      "name": "[format('{0}/{1}', variables('containerEnvName'), 'app-aiprofilephotomaker-com-cert')]",
-      "properties": {
-        "subjectName": "app.aiprofilephotomaker.com",
-        "domainControlValidation": "CNAME"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.App/managedEnvironments', variables('containerEnvName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.App/managedEnvironments/managedCertificates",
-      "apiVersion": "2023-05-01",
-      "name": "[format('{0}/{1}', variables('containerEnvName'), 'api-aiprofilephotomaker-com-cert')]",
-      "properties": {
-        "subjectName": "api.aiprofilephotomaker.com",
-        "domainControlValidation": "CNAME"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.App/managedEnvironments', variables('containerEnvName'))]"
       ]
     },
     {
@@ -267,7 +285,7 @@
             "customDomains": [
               {
                 "name": "api.aiprofilephotomaker.com",
-                "certificateId": "[resourceId('Microsoft.App/managedEnvironments/managedCertificates', variables('containerEnvName'), 'api-aiprofilephotomaker-com-cert')]",
+                "certificateId": "[variables('backendCertificateId')]",
                 "bindingType": "SniEnabled"
               }
             ]
@@ -295,6 +313,18 @@
             {
               "name": "acr-password",
               "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').passwords[0].value]"
+            },
+            {
+              "name": "google-client-id",
+              "value": "[parameters('googleClientId')]"
+            },
+            {
+              "name": "google-client-secret",
+              "value": "[parameters('googleClientSecret')]"
+            },
+            {
+              "name": "replicate-webhook-secret",
+              "value": "[parameters('replicateWebhookSecret')]"
             }
           ]
         },
@@ -325,6 +355,10 @@
                   "secretRef": "replicate-token"
                 },
                 {
+                  "name": "Replicate__WebhookSecret",
+                  "secretRef": "replicate-webhook-secret"
+                },
+                {
                   "name": "AzureStorage__ConnectionString",
                   "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2023-01-01').keys[0].value)]"
                 },
@@ -343,6 +377,22 @@
                 {
                   "name": "CORS_ALLOWED_ORIGINS",
                   "value": "https://app.aiprofilephotomaker.com,https://aiprofilephotomaker.com"
+                },
+                {
+                  "name": "GOOGLE_CLIENT_ID",
+                  "secretRef": "google-client-id"
+                },
+                {
+                  "name": "GOOGLE_CLIENT_SECRET",
+                  "secretRef": "google-client-secret"
+                },
+                {
+                  "name": "Authentication__Google__ClientId",
+                  "secretRef": "google-client-id"
+                },
+                {
+                  "name": "Authentication__Google__ClientSecret",
+                  "secretRef": "google-client-secret"
                 }
               ],
               "probes": [
@@ -393,7 +443,6 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Insights/components', variables('applicationInsightsName'))]",
-        "[resourceId('Microsoft.App/managedEnvironments/managedCertificates', variables('containerEnvName'), 'api-aiprofilephotomaker-com-cert')]",
         "[resourceId('Microsoft.App/managedEnvironments', variables('containerEnvName'))]",
         "[resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName'))]",
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
@@ -421,7 +470,7 @@
             "customDomains": [
               {
                 "name": "app.aiprofilephotomaker.com",
-                "certificateId": "[resourceId('Microsoft.App/managedEnvironments/managedCertificates', variables('containerEnvName'), 'app-aiprofilephotomaker-com-cert')]",
+                "certificateId": "[variables('frontendCertificateId')]",
                 "bindingType": "SniEnabled"
               }
             ]
@@ -466,8 +515,7 @@
       "dependsOn": [
         "[resourceId('Microsoft.App/containerApps', variables('backendAppName'))]",
         "[resourceId('Microsoft.App/managedEnvironments', variables('containerEnvName'))]",
-        "[resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName'))]",
-        "[resourceId('Microsoft.App/managedEnvironments/managedCertificates', variables('containerEnvName'), 'app-aiprofilephotomaker-com-cert')]"
+        "[resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName'))]"
       ]
     }
   ],
@@ -499,6 +547,10 @@
     "keyVaultName": {
       "type": "string",
       "value": "[variables('keyVaultName')]"
+    },
+    "oauthConfigured": {
+      "type": "string",
+      "value": "OAuth configured with Google Client ID and Secret"
     }
   }
 }
