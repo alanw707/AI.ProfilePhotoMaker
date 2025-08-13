@@ -284,6 +284,18 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
         private string ResolveBackendBaseUrl()
         {
+            // First check if we're in Azure production environment
+            var azureWebsiteName = Environment.GetEnvironmentVariable("WEBSITE_SITE_NAME");
+            if (!string.IsNullOrEmpty(azureWebsiteName))
+            {
+                // We're definitely in Azure - use the production OAuth base URL
+                var productionOAuthBase = _configuration["Authentication:OAuth:BaseUrl"];
+                if (!string.IsNullOrWhiteSpace(productionOAuthBase))
+                {
+                    return productionOAuthBase;
+                }
+            }
+
             // If forwarded headers are present, prefer them
             var forwardedProto = Request.Headers["X-Forwarded-Proto"].FirstOrDefault();
             var forwardedHost = Request.Headers["X-Forwarded-Host"].FirstOrDefault();
@@ -299,15 +311,22 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return envBase;
             }
 
-            // Avoid using production-configured base URL when running on localhost
-            var cfgBase = _configuration["Authentication:OAuth:BaseUrl"];
+            // Check if we're clearly in development (localhost)
             var isLocal = Request.Host.Host.Contains("localhost") || Request.Host.Host.Contains("127.0.0.1");
-            if (!isLocal && !string.IsNullOrWhiteSpace(cfgBase))
+            if (isLocal)
+            {
+                // Use current request URL for local development
+                return $"{Request.Scheme}://{Request.Host.Value}";
+            }
+
+            // For any other environment, try to use the configured OAuth base URL
+            var cfgBase = _configuration["Authentication:OAuth:BaseUrl"];
+            if (!string.IsNullOrWhiteSpace(cfgBase))
             {
                 return cfgBase;
             }
 
-            // Fallback to current request
+            // Last resort - use current request
             return $"{Request.Scheme}://{Request.Host.Value}";
         }
 
