@@ -88,8 +88,19 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             // Generate state parameter for security
             var state = Guid.NewGuid().ToString();
-            HttpContext.Session.SetString("oauth_state", state);
-            HttpContext.Session.SetString("oauth_return_url", returnUrl);
+            
+            try
+            {
+                HttpContext.Session.SetString("oauth_state", state);
+                HttpContext.Session.SetString("oauth_return_url", returnUrl);
+            }
+            catch (Exception ex)
+            {
+                // Log session error but continue - some environments may not have session properly initialized
+                Console.WriteLine($"WARNING: Failed to set session values: {ex.Message}");
+                // In this case, we'll still generate the OAuth URL but state validation will fail at callback
+                // This is acceptable for direct API calls where session isn't available
+            }
 
             // Manually construct the Google OAuth URL
             var authUrl = $"https://accounts.google.com/o/oauth2/v2/auth?" +
@@ -118,8 +129,19 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             // Generate state parameter for security
             var state = Guid.NewGuid().ToString();
-            HttpContext.Session.SetString("oauth_state", state);
-            HttpContext.Session.SetString("oauth_return_url", returnUrl);
+            
+            try
+            {
+                HttpContext.Session.SetString("oauth_state", state);
+                HttpContext.Session.SetString("oauth_return_url", returnUrl);
+            }
+            catch (Exception ex)
+            {
+                // Log session error but continue - some environments may not have session properly initialized
+                Console.WriteLine($"WARNING: Failed to set session values: {ex.Message}");
+                // In this case, we'll still generate the OAuth URL but state validation will fail at callback
+                // This is acceptable for direct API calls where session isn't available
+            }
 
             var backendBaseUrl = ResolveBackendBaseUrl();
             var redirectUri = $"{backendBaseUrl}/api/auth/external-login-callback";
@@ -139,7 +161,21 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         public async Task<IActionResult> ExternalLoginCallback(string? code = null, string? state = null, string? error = null)
         {
             var frontendBaseUrl = _configuration["AppBaseUrl"] ?? "http://localhost:4200";
-            var returnUrl = HttpContext.Session.GetString("oauth_return_url") ?? "/app/dashboard";
+            
+            string? returnUrl = null;
+            string? sessionState = null;
+            
+            try
+            {
+                returnUrl = HttpContext.Session.GetString("oauth_return_url") ?? "/app/dashboard";
+                sessionState = HttpContext.Session.GetString("oauth_state");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"WARNING: Failed to retrieve session values: {ex.Message}");
+                returnUrl = "/app/dashboard"; // Default fallback
+                sessionState = null; // Will trigger session_expired error below
+            }
 
             // Handle OAuth errors
             if (!string.IsNullOrEmpty(error))
@@ -148,7 +184,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
 
             // Validate state parameter - CRITICAL SECURITY CHECK
-            var sessionState = HttpContext.Session.GetString("oauth_state");
+            // sessionState is already retrieved above with error handling
             
             // SECURITY: Always validate state parameter to prevent Login CSRF attacks
             // If session state is missing, this is a security issue - reject the request
