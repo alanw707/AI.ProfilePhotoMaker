@@ -38,32 +38,37 @@ if [ ! -f "$BICEP_FILE" ]; then
     exit 1
 fi
 
-# Check if parameters file exists
-if [ ! -f "$PARAMS_FILE" ]; then
-    echo -e "${YELLOW}⚠️ Parameters file not found. Creating from template...${NC}"
-    
-    if [ -f "deployment-params.template.json" ]; then
-        cp deployment-params.template.json "$PARAMS_FILE"
-        echo -e "${YELLOW}📝 Please edit $PARAMS_FILE with your actual values:${NC}"
-        echo "  - SQL Admin Password"
-        echo "  - JWT Secret"
-        echo "  - Replicate API Token"
-        echo "  - Google Client ID"
-        echo "  - Google Client Secret"
-        echo ""
-        echo -e "${RED}After editing, run this script again.${NC}"
-        exit 1
-    else
-        echo -e "${RED}❌ Error: Template file deployment-params.template.json not found${NC}"
+# Check for required environment variables first
+if [[ -n "$SQL_ADMIN_PASSWORD" && -n "$JWT_SECRET" && -n "$REPLICATE_API_TOKEN" && -n "$GOOGLE_CLIENT_ID" && -n "$GOOGLE_CLIENT_SECRET" ]]; then
+    echo -e "${GREEN}✅ Using environment variables for deployment${NC}"
+else
+    # Check if parameters file exists
+    if [ ! -f "$PARAMS_FILE" ]; then
+        echo -e "${YELLOW}⚠️ Parameters file not found. Creating from template...${NC}"
+        
+        if [ -f "deployment-params.template.json" ]; then
+            cp deployment-params.template.json "$PARAMS_FILE"
+            echo -e "${YELLOW}📝 Please edit $PARAMS_FILE with your actual values:${NC}"
+            echo "  - SQL Admin Password"
+            echo "  - JWT Secret"
+            echo "  - Replicate API Token"
+            echo "  - Google Client ID"
+            echo "  - Google Client Secret"
+            echo ""
+            echo -e "${RED}After editing, run this script again.${NC}"
+            exit 1
+        else
+            echo -e "${RED}❌ Error: Template file deployment-params.template.json not found${NC}"
+            exit 1
+        fi
+    fi
+
+    # Validate parameters file doesn't contain template values
+    if grep -q "REPLACE_WITH" "$PARAMS_FILE"; then
+        echo -e "${RED}❌ Error: Parameters file contains template values${NC}"
+        echo "Please edit $PARAMS_FILE with actual values"
         exit 1
     fi
-fi
-
-# Validate parameters file doesn't contain template values
-if grep -q "REPLACE_WITH" "$PARAMS_FILE"; then
-    echo -e "${RED}❌ Error: Parameters file contains template values${NC}"
-    echo "Please edit $PARAMS_FILE with actual values"
-    exit 1
 fi
 
 # Build and push images
@@ -92,11 +97,23 @@ echo "Parameters: $PARAMS_FILE"
 
 DEPLOYMENT_NAME="aipm-deployment-$(date +%Y%m%d-%H%M%S)"
 
+# Final check for required environment variables (if not using params file)
+if [[ -z "$SQL_ADMIN_PASSWORD" || -z "$JWT_SECRET" || -z "$REPLICATE_API_TOKEN" || -z "$GOOGLE_CLIENT_ID" || -z "$GOOGLE_CLIENT_SECRET" ]]; then
+    echo -e "${RED}❌ Missing required environment variables:${NC}"
+    echo "Please set: SQL_ADMIN_PASSWORD, JWT_SECRET, REPLICATE_API_TOKEN, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET"
+    exit 1
+fi
+
 az deployment group create \
     --name "$DEPLOYMENT_NAME" \
     --resource-group "$RESOURCE_GROUP" \
     --template-file "$BICEP_FILE" \
-    --parameters "@$PARAMS_FILE" \
+    --parameters \
+        sqlAdminPassword="$SQL_ADMIN_PASSWORD" \
+        jwtSecret="$JWT_SECRET" \
+        replicateApiToken="$REPLICATE_API_TOKEN" \
+        googleClientId="$GOOGLE_CLIENT_ID" \
+        googleClientSecret="$GOOGLE_CLIENT_SECRET" \
     --mode Incremental
 
 if [ $? -eq 0 ]; then

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
+import { ConfigService } from '../../../services/config.service';
 
 export interface StyleOption {
   id: string;
@@ -20,7 +21,10 @@ export interface StyleOption {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StyleSelectorComponent {
-  constructor(private _router: Router) {}
+  constructor(
+    private _router: Router,
+    private _config: ConfigService
+  ) {}
   @Input() availableStyles: StyleOption[] = [];
   @Input() imagesPerStyle = 2;
   @Input() selectedStyles = 0;
@@ -89,7 +93,8 @@ export class StyleSelectorComponent {
 
   onImageError(event: any) {
     // Placeholder image fallback - could be passed as input
-    event.target.src = '/api/placeholder/style-preview';
+    // Use absolute API base via configuration to avoid falling back to container host
+    event.target.src = this._config.buildApiEndpoint('placeholder/style-preview');
     event.target.onerror = null;
   }
 

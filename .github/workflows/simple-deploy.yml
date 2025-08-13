@@ -133,7 +133,9 @@ jobs:
             --template-file infrastructure/simple-deploy.bicep \
             --parameters sqlAdminPassword="${{ secrets.SQL_ADMIN_PASSWORD }}" \
                         jwtSecret="${{ secrets.JWT_SECRET }}" \
-                        replicateApiToken="${{ secrets.REPLICATE_API_TOKEN }}"
+                        replicateApiToken="${{ secrets.REPLICATE_API_TOKEN }}" \
+                        googleClientId="${{ secrets.GOOGLE_CLIENT_ID }}" \
+                        googleClientSecret="${{ secrets.GOOGLE_CLIENT_SECRET }}"
           
           if [ $? -ne 0 ]; then
             echo "❌ [ERROR] Template validation failed"
@@ -185,6 +187,8 @@ jobs:
               --parameters sqlAdminPassword="${{ secrets.SQL_ADMIN_PASSWORD }}" \
                           jwtSecret="${{ secrets.JWT_SECRET }}" \
                           replicateApiToken="${{ secrets.REPLICATE_API_TOKEN }}" \
+                          googleClientId="${{ secrets.GOOGLE_CLIENT_ID }}" \
+                          googleClientSecret="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
               --output json > deployment_result.json; then
               
               echo "✅ [SUCCESS] Deployment completed successfully!"
