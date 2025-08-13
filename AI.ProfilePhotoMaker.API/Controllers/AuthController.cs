@@ -157,20 +157,20 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             // Handle OAuth errors
             if (!string.IsNullOrEmpty(error))
             {
-                return Redirect($"{frontendBaseUrl}/login?error=oauth_{error}");
+                return Redirect($"{frontendBaseUrl}/auth/login?error=oauth_{error}");
             }
 
             // Validate state parameter
             var sessionState = HttpContext.Session.GetString("oauth_state");
             if (string.IsNullOrEmpty(state) || state != sessionState)
             {
-                return Redirect($"{frontendBaseUrl}/login?error=invalid_state");
+                return Redirect($"{frontendBaseUrl}/auth/login?error=invalid_state");
             }
 
             // Validate authorization code
             if (string.IsNullOrEmpty(code))
             {
-                return Redirect($"{frontendBaseUrl}/login?error=missing_code");
+                return Redirect($"{frontendBaseUrl}/auth/login?error=missing_code");
             }
 
             try
@@ -179,21 +179,21 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 var tokenResponse = await ExchangeCodeForTokenAsync(code);
                 if (tokenResponse == null)
                 {
-                    return Redirect($"{frontendBaseUrl}/login?error=token_exchange_failed");
+                    return Redirect($"{frontendBaseUrl}/auth/login?error=token_exchange_failed");
                 }
 
                 // Get user info from Google
                 var userInfo = await GetGoogleUserInfoAsync(tokenResponse.AccessToken);
                 if (userInfo == null)
                 {
-                    return Redirect($"{frontendBaseUrl}/login?error=user_info_failed");
+                    return Redirect($"{frontendBaseUrl}/auth/login?error=user_info_failed");
                 }
 
                 // Find or create user
                 var user = await FindOrCreateUserAsync(userInfo);
                 if (user == null)
                 {
-                    return Redirect($"{frontendBaseUrl}/login?error=user_creation_failed");
+                    return Redirect($"{frontendBaseUrl}/auth/login?error=user_creation_failed");
                 }
 
                 // Generate JWT token
@@ -203,7 +203,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                return Redirect($"{frontendBaseUrl}/login?error=oauth_processing_failed");
+                return Redirect($"{frontendBaseUrl}/auth/login?error=oauth_processing_failed");
             }
         }
 
