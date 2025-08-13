@@ -175,10 +175,25 @@ builder.Services.Configure<IdentityOptions>(options =>
 });
 
 // Only add Google OAuth if properly configured
+// Prefer environment variables and user-secrets; treat placeholders as missing
 var configClientId = builder.Configuration["Authentication:Google:ClientId"];
 var configClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
-var googleClientId = string.IsNullOrEmpty(configClientId) ? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") : configClientId;
-var googleClientSecret = string.IsNullOrEmpty(configClientSecret) ? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET") : configClientSecret;
+
+// Also check top-level env-backed keys (from .env loader or shell)
+var envClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") ?? builder.Configuration["GOOGLE_CLIENT_ID"];
+var envClientSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET") ?? builder.Configuration["GOOGLE_CLIENT_SECRET"];
+
+bool IsPlaceholder(string? v) =>
+    !string.IsNullOrWhiteSpace(v) && (
+        v.StartsWith("REPLACE_WITH_", StringComparison.OrdinalIgnoreCase) ||
+        v.Contains("STORED_IN_USER_SECRETS", StringComparison.OrdinalIgnoreCase) ||
+        v.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase) ||
+        v.StartsWith("your_", StringComparison.OrdinalIgnoreCase)
+    );
+
+// Prefer explicit env vars when present; otherwise use config if not placeholder
+var googleClientId = !string.IsNullOrWhiteSpace(envClientId) ? envClientId : (IsPlaceholder(configClientId) ? null : configClientId);
+var googleClientSecret = !string.IsNullOrWhiteSpace(envClientSecret) ? envClientSecret : (IsPlaceholder(configClientSecret) ? null : configClientSecret);
 
 // Add JWT Authentication with Cookie support for OAuth
 var authBuilder = builder.Services.AddAuthentication(options =>
