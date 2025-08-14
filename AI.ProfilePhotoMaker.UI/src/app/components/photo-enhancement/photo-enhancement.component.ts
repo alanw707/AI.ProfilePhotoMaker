@@ -309,7 +309,8 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     }
 
     return new Promise((resolve, reject) => {
-      this._fileUploadService.uploadSingleImage(this.selectedFile!).subscribe({
+      // Upload as temporary file (isEnhanced=false) for enhancement processing
+      this._fileUploadService.uploadSingleImage(this.selectedFile!, false).subscribe({
         next: result => {
           if (result.progress < 100) {
             this.processingProgress = Math.round(result.progress * 0.2);

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using Azure.Storage.Sas;
 
 namespace AI.ProfilePhotoMaker.API.Services.Storage;
 
@@ -46,6 +47,30 @@ public class LocalStorageService : IStorageService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to save image {FileName} for user {UserId}", fileName, userId);
+            throw;
+        }
+    }
+
+    public async Task<string> SaveImageToPathAsync(Stream imageStream, string storagePath)
+    {
+        try
+        {
+            var fullPath = GetFullPath(storagePath);
+            var directory = Path.GetDirectoryName(fullPath);
+            
+            if (directory != null)
+            {
+                await _asyncFileService.CreateDirectoryAsync(directory);
+            }
+
+            await _asyncFileService.CopyStreamToFileAsync(imageStream, fullPath, 81920);
+
+            _logger.LogInformation("Saved image to local storage: {StoragePath}", storagePath);
+            return storagePath;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to save image to storage path {StoragePath}", storagePath);
             throw;
         }
     }
@@ -244,5 +269,95 @@ public class LocalStorageService : IStorageService
             ".tiff" or ".tif" => "image/tiff",
             _ => "application/octet-stream"
         };
+    }
+
+    public async Task<string> GenerateSasUrlAsync(string storagePath, TimeSpan expiry, BlobSasPermissions permissions = BlobSasPermissions.Read)
+    {
+        // For local storage, we can't generate true SAS URLs, so return the regular URL
+        // This is used in development where we're not actually using external APIs
+        _logger.LogWarning("GenerateSasUrlAsync called on LocalStorageService - returning regular URL for development");
+        return GetImageUrl(storagePath, forExternalApi: true);
+    }
+
+    public async Task<string> SaveZipAsync(Stream zipStream, string storagePath)
+    {
+        try
+        {
+            var fullPath = GetFullPath(storagePath);
+            var directory = Path.GetDirectoryName(fullPath);
+            
+            if (directory != null)
+            {
+                await _asyncFileService.CreateDirectoryAsync(directory);
+            }
+
+            await _asyncFileService.CopyStreamToFileAsync(zipStream, fullPath, 81920);
+
+            _logger.LogInformation("Saved ZIP file to local storage: {StoragePath}", storagePath);
+            return storagePath;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to save ZIP file {StoragePath}", storagePath);
+            throw;
+        }
+    }
+
+    public async Task<bool> DeleteDirectoryAsync(string directoryPath)
+    {
+        try
+        {
+            var fullPath = GetFullPath(directoryPath);
+            
+            if (!Directory.Exists(fullPath))
+            {
+                _logger.LogWarning("Directory does not exist: {DirectoryPath}", directoryPath);
+                return false;
+            }
+
+            Directory.Delete(fullPath, recursive: true);
+            
+            _logger.LogInformation("Deleted directory: {DirectoryPath}", directoryPath);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete directory: {DirectoryPath}", directoryPath);
+            return false;
+        }
+    }
+
+    public async Task<List<string>> ListFilesAsync(string prefix)
+    {
+        try
+        {
+            var fullPrefix = GetFullPath(prefix);
+            var directory = Path.GetDirectoryName(fullPrefix);
+            var pattern = Path.GetFileName(fullPrefix);
+            
+            if (string.IsNullOrEmpty(pattern))
+            {
+                pattern = "*";
+            }
+
+            if (directory == null || !Directory.Exists(directory))
+            {
+                return new List<string>();
+            }
+
+            var files = await _asyncFileService.GetDirectoryFilesAsync(directory, pattern, true);
+            
+            return files.Select(file =>
+            {
+                // Convert back to storage path format
+                var relativePath = Path.GetRelativePath(_environment.ContentRootPath, file);
+                return "/" + relativePath.Replace(Path.DirectorySeparatorChar, '/');
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to list files with prefix: {Prefix}", prefix);
+            return new List<string>();
+        }
     }
 }
