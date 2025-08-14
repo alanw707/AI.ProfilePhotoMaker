@@ -901,7 +901,7 @@ header
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
   cursor: pointer
   border: 2px solid transparent
-  box-shadow: var(--shadow-soft)
+  box-shadow: 0 8px 32px rgba(var(--primary-rgb), 0.25)
   overflow: hidden
   
   &:hover
@@ -917,16 +917,6 @@ header
       
     .style-info-permanent
       background: rgba(var(--primary-rgb), 0.05)
-      
-  &.featured
-    box-shadow: 0 8px 32px rgba(var(--primary-rgb), 0.25)
-    
-    .style-info-permanent
-      background: rgba(var(--primary-rgb), 0.08)
-      
-      .style-category-badge
-        background: var(--primary)
-        color: white
     
   // Image Container
   .style-image-container
