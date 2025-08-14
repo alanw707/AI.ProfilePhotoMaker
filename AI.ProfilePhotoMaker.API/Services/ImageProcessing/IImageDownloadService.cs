@@ -5,7 +5,8 @@ namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 /// </summary>
 public class ImageDownloadResult
 {
-    public string LocalPath { get; set; } = string.Empty;
+    public string StoragePath { get; set; } = string.Empty; // Changed from LocalPath to StoragePath for cloud storage
+    public string LocalPath { get; set; } = string.Empty; // Kept for backward compatibility
     public string FileName { get; set; } = string.Empty;
     public bool Success { get; set; }
 }

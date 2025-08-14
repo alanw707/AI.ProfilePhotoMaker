@@ -23,6 +23,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private readonly IConfiguration _configuration;
         private readonly ApplicationDbContext _context;
         private readonly HttpClient _httpClient;
+        private readonly IWebHostEnvironment _environment;
+        private readonly ILogger<AuthController> _logger;
 
         public AuthController(
             IAuthService authService,
@@ -30,7 +32,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             SignInManager<ApplicationUser> signInManager,
             IConfiguration configuration,
             ApplicationDbContext context,
-            HttpClient httpClient)
+            HttpClient httpClient,
+            IWebHostEnvironment environment,
+            ILogger<AuthController> logger)
         {
             _authService = authService;
             _userManager = userManager;
@@ -38,6 +42,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             _configuration = configuration;
             _context = context;
             _httpClient = httpClient;
+            _environment = environment;
+            _logger = logger;
         }
 
         [HttpPost("register")]
@@ -96,9 +102,26 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                // Log session error but continue - some environments may not have session properly initialized
-                // This is acceptable for direct API calls where session isn't available
-                return BadRequest(new { error = "Session initialization failed. Please try again." });
+                // Environment-aware session error handling
+                _logger.LogWarning(ex, "Session initialization failed in OAuth URL generation: {ErrorMessage}", ex.Message);
+                
+                if (_environment.IsDevelopment())
+                {
+                    // In development, log but continue without session - reduced security but functional OAuth
+                    _logger.LogWarning("Development environment: Continuing OAuth flow without session state (reduced CSRF protection)");
+                    
+                    // Continue without session - skip setting session state
+                    // OAuth will work but with reduced CSRF protection in development
+                }
+                else
+                {
+                    // In production, session failure is a configuration issue that should be addressed
+                    _logger.LogError("Production environment: Session initialization failed - this indicates a configuration issue");
+                    return BadRequest(new { 
+                        error = "Session initialization failed. Please check HTTPS and session configuration.",
+                        details = _environment.IsDevelopment() ? ex.Message : "Contact support if this issue persists"
+                    });
+                }
             }
 
             // Manually construct the Google OAuth URL
@@ -136,9 +159,26 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                // Log session error but continue - some environments may not have session properly initialized
-                // This is acceptable for direct API calls where session isn't available
-                return BadRequest(new { error = "Session initialization failed. Please try again." });
+                // Environment-aware session error handling
+                _logger.LogWarning(ex, "Session initialization failed in external login: {ErrorMessage}", ex.Message);
+                
+                if (_environment.IsDevelopment())
+                {
+                    // In development, log but continue without session - reduced security but functional OAuth
+                    _logger.LogWarning("Development environment: Continuing OAuth flow without session state (reduced CSRF protection)");
+                    
+                    // Continue without session - skip setting session state
+                    // OAuth will work but with reduced CSRF protection in development
+                }
+                else
+                {
+                    // In production, session failure is a configuration issue that should be addressed
+                    _logger.LogError("Production environment: Session initialization failed - this indicates a configuration issue");
+                    return BadRequest(new { 
+                        error = "Session initialization failed. Please check HTTPS and session configuration.",
+                        details = _environment.IsDevelopment() ? ex.Message : "Contact support if this issue persists"
+                    });
+                }
             }
 
             var backendBaseUrl = ResolveBackendBaseUrl();
@@ -185,22 +225,51 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             // sessionState is already retrieved above with error handling
             
             // SECURITY: Always validate state parameter to prevent Login CSRF attacks
-            // If session state is missing, this is a security issue - reject the request
+            // Environment-aware state validation
             if (string.IsNullOrEmpty(sessionState))
             {
-                return Redirect($"{frontendBaseUrl}/auth/login?error=session_expired");
+                if (_environment.IsDevelopment())
+                {
+                    // In development, session might not be available - log warning but continue
+                    _logger.LogWarning("Development environment: Session state missing - OAuth callback continuing with reduced CSRF protection");
+                    
+                    // Still validate that state parameter was provided by OAuth provider
+                    if (string.IsNullOrEmpty(state))
+                    {
+                        _logger.LogError("OAuth callback missing state parameter entirely - rejecting");
+                        return Redirect($"{frontendBaseUrl}/auth/login?error=missing_state");
+                    }
+                    
+                    // Continue with reduced security - log this for visibility
+                    _logger.LogWarning("Development OAuth callback proceeding without session state validation (CSRF protection reduced)");
+                }
+                else
+                {
+                    // In production, session state is required - reject the request
+                    _logger.LogError("Production environment: Session state missing - potential CSRF attack or session configuration issue");
+                    return Redirect($"{frontendBaseUrl}/auth/login?error=session_expired");
+                }
             }
-            
-            // If state parameter is missing from callback, this is suspicious - reject
-            if (string.IsNullOrEmpty(state))
+            else
             {
-                return Redirect($"{frontendBaseUrl}/auth/login?error=missing_state");
-            }
-            
-            // Compare state values - must match exactly
-            if (state != sessionState)
-            {
-                return Redirect($"{frontendBaseUrl}/auth/login?error=invalid_state");
+                // Session state available - perform full validation
+                
+                // If state parameter is missing from callback, this is suspicious - reject
+                if (string.IsNullOrEmpty(state))
+                {
+                    _logger.LogError("OAuth callback missing state parameter - potential CSRF attack");
+                    return Redirect($"{frontendBaseUrl}/auth/login?error=missing_state");
+                }
+                
+                // Compare state values - must match exactly
+                if (state != sessionState)
+                {
+                    _logger.LogError("OAuth state mismatch - potential CSRF attack. Expected: {ExpectedState}, Received: {ReceivedState}", 
+                        sessionState, state);
+                    return Redirect($"{frontendBaseUrl}/auth/login?error=invalid_state");
+                }
+                
+                _logger.LogInformation("OAuth state validation passed successfully");
             }
 
             // Validate authorization code

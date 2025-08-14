@@ -3,6 +3,7 @@ using AI.ProfilePhotoMaker.API.Filters;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.Replicate;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
+using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
@@ -22,17 +23,20 @@ public class ReplicateWebhookController : ControllerBase
     private readonly ApplicationDbContext _dbContext;
     private readonly IReplicateApiClient _replicateApiClient;
     private readonly IImageDownloadService _imageDownloadService;
+    private readonly IStorageService _storageService;
 
     public ReplicateWebhookController(
         ILogger<ReplicateWebhookController> logger,
         ApplicationDbContext dbContext,
         IReplicateApiClient replicateApiClient,
-        IImageDownloadService imageDownloadService)
+        IImageDownloadService imageDownloadService,
+        IStorageService storageService)
     {
         _logger = logger;
         _dbContext = dbContext;
         _replicateApiClient = replicateApiClient;
         _imageDownloadService = imageDownloadService;
+        _storageService = storageService;
     }
 
     /// <summary>
@@ -233,25 +237,23 @@ public class ReplicateWebhookController : ControllerBase
                     {
                         var replicateUrl = imageUrls[i];
                         var downloadResult = i < downloadResults.Count ? downloadResults[i] : null;
-                        var localPath = downloadResult?.Success == true ? downloadResult.LocalPath : null;
+                        var storagePath = downloadResult?.Success == true ? downloadResult.StoragePath : null;
                         var actualFileName = downloadResult?.Success == true ? downloadResult.FileName : null;
 
-                        // Convert local path to public URL path
+                        // Generate public URL using storage service
                         string? publicUrl = null;
-                        if (!string.IsNullOrEmpty(localPath))
+                        if (!string.IsNullOrEmpty(storagePath))
                         {
-                            // Convert local path to relative URL path for serving
-                            var relativePath = Path.GetRelativePath(Path.Combine(Directory.GetCurrentDirectory(), "generated"), localPath);
-                            publicUrl = $"/generated/{relativePath.Replace('\\', '/')}";
+                            publicUrl = _storageService.GetImageUrl(storagePath);
                         }
 
-                        _logger.LogInformation("Downloaded image {Index}, success: {DownloadSuccess}, local path: {LocalPath}",
-                            i + 1, downloadResult?.Success, localPath);
+                        _logger.LogInformation("Downloaded image {Index}, success: {DownloadSuccess}, storage path: {StoragePath}",
+                            i + 1, downloadResult?.Success, storagePath);
 
                         var processedImage = new ProcessedImage
                         {
                             UserProfileId = userProfile.Id,
-                            OriginalImageUrl = publicUrl ?? replicateUrl, // Use local URL if download succeeded, fallback to Replicate URL
+                            OriginalImageUrl = publicUrl ?? replicateUrl, // Use storage URL if download succeeded, fallback to Replicate URL
                             ProcessedImageUrl = publicUrl, // Only set if download was successful (null if failed)
                             Style = style ?? "Unknown",
                             IsGenerated = true,
@@ -268,8 +270,8 @@ public class ReplicateWebhookController : ControllerBase
 
                         savedImageIds.Add(processedImage.Id);
 
-                        _logger.LogInformation("Saved generated image {Index} for user {UserId}: ID={ImageId}, LocalPath={LocalPath}, PublicUrl={PublicUrl}",
-                            i + 1, userId, processedImage.Id, localPath ?? "None", publicUrl ?? replicateUrl);
+                        _logger.LogInformation("Saved generated image {Index} for user {UserId}: ID={ImageId}, StoragePath={StoragePath}, PublicUrl={PublicUrl}",
+                            i + 1, userId, processedImage.Id, storagePath ?? "None", publicUrl ?? replicateUrl);
                     }
 
                     _logger.LogInformation("Successfully processed {Count} generated images for user {UserId}, style {Style}. Image IDs: {ImageIds}",
