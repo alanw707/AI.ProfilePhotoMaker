@@ -515,6 +515,9 @@ else
 // Validate webhook URL configuration on startup
 await ValidateWebhookConfigurationAsync(app);
 
+// Validate Replicate configuration on startup
+await ValidateReplicateConfigurationAsync(app);
+
 // Use forwarded headers for ngrok proxy
 app.UseForwardedHeaders();
 
@@ -963,5 +966,128 @@ static async Task ValidateWebhookConfigurationAsync(WebApplication app)
     {
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "❌ Failed to validate webhook configuration during startup");
+    }
+}
+
+/// <summary>
+/// Validates Replicate configuration on startup to catch missing required settings
+/// </summary>
+static async Task ValidateReplicateConfigurationAsync(WebApplication app)
+{
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+        var environment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+
+        logger.LogInformation("🤖 Validating Replicate configuration for {Environment} environment...", environment.EnvironmentName);
+
+        var configurationErrors = new List<string>();
+        var configurationWarnings = new List<string>();
+
+        // Check required Replicate settings
+        var apiToken = configuration["Replicate:ApiToken"];
+        if (string.IsNullOrEmpty(apiToken) || apiToken.StartsWith("REPLACE_WITH_", StringComparison.OrdinalIgnoreCase))
+        {
+            configurationErrors.Add("Replicate:ApiToken is missing or contains placeholder value");
+        }
+        else
+        {
+            logger.LogInformation("✅ Replicate API Token is configured");
+        }
+
+        var fluxTrainingModelId = configuration["Replicate:FluxTrainingModelId"];
+        if (string.IsNullOrEmpty(fluxTrainingModelId))
+        {
+            configurationWarnings.Add("Replicate:FluxTrainingModelId is missing - model training may fail");
+        }
+        else
+        {
+            logger.LogInformation("✅ Flux Training Model ID: {ModelId}", fluxTrainingModelId);
+        }
+
+        var fluxGenerationModelId = configuration["Replicate:FluxGenerationModelId"];
+        if (string.IsNullOrEmpty(fluxGenerationModelId))
+        {
+            configurationWarnings.Add("Replicate:FluxGenerationModelId is missing - basic image generation may fail");
+        }
+        else
+        {
+            logger.LogInformation("✅ Flux Generation Model ID: {ModelId}", fluxGenerationModelId);
+        }
+
+        var fluxKontextProModelId = configuration["Replicate:FluxKontextProModelId"];
+        if (string.IsNullOrEmpty(fluxKontextProModelId))
+        {
+            configurationErrors.Add("Replicate:FluxKontextProModelId is missing - photo enhancement will fail");
+        }
+        else
+        {
+            logger.LogInformation("✅ Flux Kontext Pro Model ID: {ModelId}", fluxKontextProModelId);
+        }
+
+        var webhookSecret = configuration["Replicate:WebhookSecret"];
+        if (string.IsNullOrEmpty(webhookSecret) || webhookSecret.StartsWith("REPLACE_WITH_", StringComparison.OrdinalIgnoreCase))
+        {
+            configurationErrors.Add("Replicate:WebhookSecret is missing or contains placeholder value");
+        }
+        else
+        {
+            logger.LogInformation("✅ Replicate Webhook Secret is configured");
+        }
+
+        // Report configuration status
+        if (configurationErrors.Any())
+        {
+            logger.LogError("❌ Critical Replicate configuration errors found:");
+            foreach (var error in configurationErrors)
+            {
+                logger.LogError("   • {Error}", error);
+            }
+            
+            if (environment.IsProduction())
+            {
+                logger.LogError("🚨 Production deployment detected with critical configuration errors!");
+                logger.LogError("🔧 Please configure the missing Replicate settings before proceeding.");
+            }
+            else
+            {
+                logger.LogWarning("⚠️  Development environment with configuration errors - some features will not work");
+            }
+        }
+
+        if (configurationWarnings.Any())
+        {
+            logger.LogWarning("⚠️  Replicate configuration warnings:");
+            foreach (var warning in configurationWarnings)
+            {
+                logger.LogWarning("   • {Warning}", warning);
+            }
+        }
+
+        if (!configurationErrors.Any() && !configurationWarnings.Any())
+        {
+            logger.LogInformation("✅ All Replicate configuration settings are properly configured");
+        }
+
+        // Environment-specific guidance
+        if (environment.IsDevelopment())
+        {
+            logger.LogInformation("🔧 Development Replicate configuration:");
+            logger.LogInformation("   • Configure settings in appsettings.Development.json or user secrets");
+            logger.LogInformation("   • Use 'dotnet user-secrets set \"Replicate:ApiToken\" \"your-token\"' for sensitive values");
+        }
+        else
+        {
+            logger.LogInformation("🚀 Production Replicate configuration:");
+            logger.LogInformation("   • Ensure all secrets are properly configured via environment variables");
+            logger.LogInformation("   • Verify Azure Key Vault or container secrets are accessible");
+        }
+    }
+    catch (Exception ex)
+    {
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "❌ Failed to validate Replicate configuration during startup");
     }
 }
