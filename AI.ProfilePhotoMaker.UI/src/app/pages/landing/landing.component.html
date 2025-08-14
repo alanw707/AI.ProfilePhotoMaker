@@ -416,7 +416,6 @@
           <div
             class="style-card"
             *ngFor="let photo of styledPhotos; let i = index"
-            [class.featured]="i === 0"
             (click)="onStyleCardClick(photo, i)"
             (keydown.enter)="onStyleCardClick(photo, i)"
             (keydown.space)="onStyleCardClick(photo, i)"
