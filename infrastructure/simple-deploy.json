@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.177.2456",
-      "templateHash": "13099881501447904984"
+      "templateHash": "16281682728686876266"
     }
   },
   "parameters": {
@@ -208,6 +208,17 @@
       "name": "[format('{0}/{1}', variables('keyVaultName'), 'ReplicateApiToken')]",
       "properties": {
         "value": "[parameters('replicateApiToken')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-02-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'ReplicateWebhookSecret')]",
+      "properties": {
+        "value": "[parameters('replicateWebhookSecret')]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
