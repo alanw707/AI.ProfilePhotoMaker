@@ -345,6 +345,9 @@ else
     Console.WriteLine("Using Local Storage for image storage");
 }
 
+// Register storage path resolver for environment-aware path management
+builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Storage.StoragePathResolver>();
+
 // Premium Package Services removed - using unified credit system
 
 // Register Credit Package Services (new unified system)
@@ -518,6 +521,9 @@ app.UseForwardedHeaders();
 // Enable response compression early in the pipeline
 app.UseResponseCompression();
 
+// Add storage proxy middleware VERY EARLY to intercept requests before MapFallback
+app.UseMiddleware<AI.ProfilePhotoMaker.API.Middleware.StorageProxyMiddleware>();
+
 // Add X-Robots-Tag header for search engine blocking during MVP phase
 app.Use(async (context, next) =>
 {
@@ -576,7 +582,7 @@ app.Use(async (context, next) =>
 // Use production-ready CORS configuration
 app.UseCors(corsPolicy);
 
-// Add performance monitoring middleware (before authentication)
+// Add performance monitoring middleware (before authentication)  
 app.UsePerformanceMonitoring();
 
 
@@ -724,7 +730,7 @@ if (Directory.Exists(generatedPath))
 }
 
 // Serve Angular static files
-var angularPath = Path.Combine(builder.Environment.ContentRootPath, "../AI.ProfilePhotoMaker.UI/dist/ai.profile-photo-maker.ui");
+var angularPath = Path.Combine(builder.Environment.ContentRootPath, "../AI.ProfilePhotoMaker.UI/dist/ai.profile-photo-maker.ui/browser");
 if (Directory.Exists(angularPath))
 {
     app.UseStaticFiles(new StaticFileOptions
@@ -738,8 +744,9 @@ if (Directory.Exists(angularPath))
     {
         var path = context.Request.Path.Value?.ToLower();
 
-        // Don't handle API or OAuth callback paths
+        // Don't handle API, storage proxy, or OAuth callback paths
         if (path?.StartsWith("/api/") == true ||
+            path?.StartsWith("/devstoreaccount1/") == true ||
             path?.StartsWith("/signin-") == true ||
             path?.StartsWith("/swagger") == true)
         {

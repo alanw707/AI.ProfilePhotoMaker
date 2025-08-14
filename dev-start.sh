@@ -20,6 +20,14 @@ export OAUTH_BASE_URL=${OAUTH_BASE_URL:-http://localhost:5032}
 export REPLICATE_API_TOKEN=${REPLICATE_API_TOKEN:-r8_dev_dummy_1234567890}
 export REPLICATE_WEBHOOK_SECRET=${REPLICATE_WEBHOOK_SECRET:-whsec_dev_dummy_1234567890}
 
+# Start ngrok with reserved domain
+echo "🔗 Starting ngrok tunnel..."
+pkill -f "ngrok http" 2>/dev/null || true
+sleep 1
+ngrok http 5032 --domain=clear-anteater-usually.ngrok-free.app &
+echo "⏳ Waiting for ngrok tunnel to be ready..."
+sleep 3
+
 # Start SQL Server container (if not running)
 echo "🗄️  Starting SQL Server container..."
 docker-compose up sql-server -d
@@ -88,6 +96,7 @@ echo "======================================="
 echo "📱 Frontend:  http://localhost:4200"
 echo "🔧 API:       http://localhost:5032"
 echo "🔧 API Docs:  http://localhost:5032/swagger"
+echo "🔗 Ngrok:     https://clear-anteater-usually.ngrok-free.app"
 echo "🗄️  Database: localhost:1433 (sa/Dev123456!)"
 echo ""
 echo "📊 Process IDs saved in logs/ directory"
