@@ -16,6 +16,9 @@
     },
     "googleClientSecret": {
       "value": "REPLACE_WITH_GOOGLE_CLIENT_SECRET"
+    },
+    "replicateWebhookSecret": {
+      "value": "REPLACE_WITH_REPLICATE_WEBHOOK_SECRET"
     }
   }
 }

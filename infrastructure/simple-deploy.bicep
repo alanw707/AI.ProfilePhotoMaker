@@ -172,6 +172,14 @@ resource replicateTokenKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
   }
 }
 
+resource replicateWebhookSecretKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
+  parent: keyVault
+  name: 'ReplicateWebhookSecret'
+  properties: {
+    value: replicateWebhookSecret
+  }
+}
+
 resource connectionStringKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
   parent: keyVault
   name: 'ConnectionString'
