@@ -1,0 +1,356 @@
+name: 🔍 Configuration Drift Monitor
+
+# Weekly automated configuration drift detection
+# Proactively monitors for mismatches between application expectations,
+# infrastructure definitions, and runtime configuration
+
+on:
+  # Weekly check every Monday at 6:00 AM UTC
+  schedule:
+    - cron: '0 6 * * 1'
+  
+  # Manual trigger for immediate checks
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment to check'
+        required: false
+        default: 'Production'
+        type: choice
+        options:
+          - Production
+          - Staging
+          - Development
+          - Test
+      verbose:
+        description: 'Enable verbose output'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  issues: write  # For creating drift detection issues
+
+jobs:
+  config-drift-detection:
+    name: 🔍 Detect Configuration Drift
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        environment: 
+          - ${{ github.event.inputs.environment || 'Production' }}
+          - ${{ github.event_name == 'schedule' && 'Staging' || '' }}
+      fail-fast: false
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: 🔍 Run Configuration Drift Detection
+        id: drift-check
+        run: |
+          echo "🔍 Running configuration drift detection for ${{ matrix.environment }}"
+          
+          # Set environment variables for the script
+          export TARGET_ENV="${{ matrix.environment }}"
+          export OUTPUT_FORMAT="github-actions"
+          export VERBOSE="${{ github.event.inputs.verbose || 'false' }}"
+          export EXIT_ON_DRIFT="false"  # Don't exit on drift, we'll handle it
+          
+          # Run the drift detection script
+          chmod +x scripts/detect-config-drift.sh
+          
+          if ./scripts/detect-config-drift.sh "${{ matrix.environment }}"; then
+            echo "drift-status=success" >> $GITHUB_OUTPUT
+            echo "drift-critical=0" >> $GITHUB_OUTPUT
+            echo "drift-warnings=0" >> $GITHUB_OUTPUT
+          else
+            exit_code=$?
+            if [[ $exit_code -eq 1 ]]; then
+              echo "drift-status=critical" >> $GITHUB_OUTPUT
+              echo "Critical configuration drift detected!"
+            elif [[ $exit_code -eq 2 ]]; then
+              echo "drift-status=warning" >> $GITHUB_OUTPUT
+              echo "Warning-level configuration drift detected!"
+            else
+              echo "drift-status=error" >> $GITHUB_OUTPUT
+              echo "Script execution error occurred!"
+            fi
+          fi
+          
+      - name: 📊 Parse Drift Results
+        id: parse-results
+        if: always()
+        run: |
+          echo "Parsing drift detection results..."
+          
+          # Extract results from GitHub outputs if available
+          CRITICAL_COUNT="${{ steps.drift-check.outputs.drift-critical || '0' }}"
+          WARNING_COUNT="${{ steps.drift-check.outputs.drift-warnings || '0' }}"
+          STATUS="${{ steps.drift-check.outputs.drift-status || 'unknown' }}"
+          
+          echo "critical-count=$CRITICAL_COUNT" >> $GITHUB_OUTPUT
+          echo "warning-count=$WARNING_COUNT" >> $GITHUB_OUTPUT
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          
+          # Create summary for the job
+          echo "## Configuration Drift Detection Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ matrix.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** $STATUS" >> $GITHUB_STEP_SUMMARY
+          echo "**Critical Issues:** $CRITICAL_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "**Warnings:** $WARNING_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "$STATUS" == "success" ]]; then
+            echo "✅ **Result:** No configuration drift detected" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$STATUS" == "warning" ]]; then
+            echo "⚠️ **Result:** Warning-level drift detected" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$STATUS" == "critical" ]]; then
+            echo "❌ **Result:** Critical configuration drift detected" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "🔍 **Result:** Check completed with status: $STATUS" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+      - name: 🚨 Create Issue for Critical Drift
+        if: steps.parse-results.outputs.status == 'critical'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🚨 Critical Configuration Drift Detected - ${{ matrix.environment }} Environment`;
+            const body = `## Critical Configuration Drift Alert
+            
+            **Environment:** ${{ matrix.environment }}
+            **Detection Time:** ${{ github.run_started_at }}
+            **Critical Issues:** ${{ steps.parse-results.outputs.critical-count }}
+            **Warnings:** ${{ steps.parse-results.outputs.warning-count }}
+            
+            ### Impact Assessment
+            Critical configuration drift has been detected that may cause deployment failures or runtime issues.
+            This requires immediate attention to prevent production incidents.
+            
+            ### Immediate Actions Required
+            1. Review the configuration drift detection output in the workflow logs
+            2. Compare application environment variable expectations with infrastructure definitions
+            3. Check for naming mismatches (e.g., AzureStorage__ConnectionString vs AZURE_STORAGE_CONNECTION_STRING)
+            4. Validate that all required secrets are properly configured
+            5. Update infrastructure templates or application configuration as needed
+            
+            ### View Full Details
+            - **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            - **Environment:** ${{ matrix.environment }}
+            
+            ### Common Issues to Check
+            - Azure Storage configuration mismatch
+            - Missing environment variables in Bicep templates
+            - GitHub Actions secrets not matching application expectations
+            - Development vs Production configuration conflicts
+            
+            This issue was automatically created by the Configuration Drift Monitor.
+            
+            /cc @${{ github.actor }}`;
+            
+            // Check if a similar issue already exists
+            const existingIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: ['config-drift', 'critical']
+            });
+            
+            const similarIssue = existingIssues.data.find(issue => 
+              issue.title.includes('Critical Configuration Drift') && 
+              issue.title.includes('${{ matrix.environment }}')
+            );
+            
+            if (similarIssue) {
+              // Update existing issue with new information
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: similarIssue.number,
+                body: `### New Critical Drift Detection - ${{ github.run_started_at }}
+                
+                **Critical Issues:** ${{ steps.parse-results.outputs.critical-count }}
+                **Warnings:** ${{ steps.parse-results.outputs.warning-count }}
+                **Workflow:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                
+                The configuration drift issue persists. Please prioritize resolution.`
+              });
+              
+              console.log(`Updated existing issue #${similarIssue.number}`);
+            } else {
+              // Create new issue
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['config-drift', 'critical', 'infrastructure', 'urgent']
+              });
+              
+              console.log(`Created issue #${issue.data.number}`);
+            }
+            
+      - name: ⚠️ Create Issue for Warning Drift
+        if: steps.parse-results.outputs.status == 'warning' && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `⚠️ Configuration Drift Warning - ${{ matrix.environment }} Environment`;
+            const body = `## Configuration Drift Warning
+            
+            **Environment:** ${{ matrix.environment }}
+            **Detection Time:** ${{ github.run_started_at }}
+            **Warnings:** ${{ steps.parse-results.outputs.warning-count }}
+            
+            ### Impact Assessment
+            Configuration drift warnings have been detected. While not immediately critical,
+            these should be addressed to maintain optimal system alignment and prevent
+            future deployment issues.
+            
+            ### Recommended Actions
+            1. Review the configuration drift detection output in the workflow logs
+            2. Address any minor configuration mismatches
+            3. Update documentation if configuration patterns have changed
+            4. Consider updating validation scripts to match current patterns
+            
+            ### View Full Details
+            - **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            - **Environment:** ${{ matrix.environment }}
+            
+            This issue was automatically created by the weekly Configuration Drift Monitor.
+            
+            /cc @${{ github.actor }}`;
+            
+            // Only create warning issues weekly to avoid spam
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            
+            const recentIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'all',
+              labels: ['config-drift', 'warning'],
+              since: oneWeekAgo.toISOString()
+            });
+            
+            const recentWarning = recentIssues.data.find(issue => 
+              issue.title.includes('Configuration Drift Warning') && 
+              issue.title.includes('${{ matrix.environment }}')
+            );
+            
+            if (!recentWarning) {
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['config-drift', 'warning', 'infrastructure', 'maintenance']
+              });
+              
+              console.log(`Created warning issue #${issue.data.number}`);
+            } else {
+              console.log('Recent warning issue exists, skipping creation');
+            }
+            
+      - name: 🎉 Close Resolved Issues
+        if: steps.parse-results.outputs.status == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Find open config drift issues for this environment
+            const openIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: ['config-drift']
+            });
+            
+            const environmentIssues = openIssues.data.filter(issue => 
+              issue.title.includes('${{ matrix.environment }}')
+            );
+            
+            for (const issue of environmentIssues) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `✅ **Configuration Drift Resolved**
+                
+                Latest drift detection shows no configuration issues for ${{ matrix.environment }} environment.
+                
+                **Resolution Time:** ${{ github.run_started_at }}
+                **Workflow:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                
+                Auto-closing this issue as the drift has been resolved.`
+              });
+              
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+                state_reason: 'completed'
+              });
+              
+              console.log(`Closed resolved issue #${issue.number}`);
+            }
+            
+      - name: 📊 Generate Configuration Report
+        if: always()
+        run: |
+          echo "## Configuration Drift Summary" >> config-drift-summary.md
+          echo "" >> config-drift-summary.md
+          echo "**Environment:** ${{ matrix.environment }}" >> config-drift-summary.md
+          echo "**Check Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> config-drift-summary.md
+          echo "**Status:** ${{ steps.parse-results.outputs.status }}" >> config-drift-summary.md
+          echo "**Critical Issues:** ${{ steps.parse-results.outputs.critical-count }}" >> config-drift-summary.md
+          echo "**Warnings:** ${{ steps.parse-results.outputs.warning-count }}" >> config-drift-summary.md
+          echo "" >> config-drift-summary.md
+          
+          if [[ -f "ClaudeDocs/Config-Drift/config-snapshot-"*.json ]]; then
+            echo "**Latest Snapshot:** $(ls -t ClaudeDocs/Config-Drift/config-snapshot-*.json | head -1 | xargs basename)" >> config-drift-summary.md
+          fi
+          
+          echo "" >> config-drift-summary.md
+          echo "Generated by Configuration Drift Monitor workflow" >> config-drift-summary.md
+          
+      - name: 📤 Upload Configuration Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: config-drift-report-${{ matrix.environment }}-${{ github.run_number }}
+          path: |
+            config-drift-summary.md
+            ClaudeDocs/Config-Drift/
+          retention-days: 30
+          
+  notify-completion:
+    name: 📢 Notify Completion
+    runs-on: ubuntu-latest
+    needs: config-drift-detection
+    if: always()
+    
+    steps:
+      - name: 📊 Aggregate Results
+        run: |
+          echo "## Weekly Configuration Drift Monitor Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Monitoring Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "**Environments Checked:** ${{ matrix.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check job results
+          if [[ "${{ needs.config-drift-detection.result }}" == "success" ]]; then
+            echo "✅ **Overall Status:** All configuration checks passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Overall Status:** Some configuration issues detected" >> $GITHUB_STEP_SUMMARY
+            echo "Check individual job results and any created issues for details." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next Check:** Next Monday at 6:00 AM UTC" >> $GITHUB_STEP_SUMMARY
+          echo "**Manual Trigger:** Available via workflow_dispatch" >> $GITHUB_STEP_SUMMARY
