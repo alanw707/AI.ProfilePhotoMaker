@@ -19,10 +19,11 @@
 - `REPLICATE_API_TOKEN` (starts with 'r8_')
 - `REPLICATE_WEBHOOK_SECRET`
 - `MSSQL_SA_PASSWORD` (8+ chars with complexity) OR `ConnectionStrings__DefaultConnection`
+- `GOOGLE_CLIENT_ID` (format: 123456789-abc123.apps.googleusercontent.com)
+- `GOOGLE_CLIENT_SECRET` (starts with 'GOCSPX-')
 
 **Optional Secrets:**
 - `AZURE_STORAGE_CONNECTION_STRING` (can use `UseDevelopmentStorage=true`)
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (for OAuth testing)
 - `STRIPE_SECRET_KEY` (for payment testing)
 
 ### 🎯 Production/Staging Environments

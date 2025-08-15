@@ -32,13 +32,26 @@ public class DatabaseHealthService : IDatabaseHealthService
     {
         try
         {
-            // Test database connectivity with a timeout
-            using var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-            return await _context.Database.CanConnectAsync(cancellationToken.Token);
+            // More aggressive timeout and proper cancellation
+            using var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            
+            // Use a task with explicit timeout to prevent hanging
+            var connectTask = _context.Database.CanConnectAsync(cancellationToken.Token);
+            var completedTask = await Task.WhenAny(connectTask, Task.Delay(1500, cancellationToken.Token));
+            
+            if (completedTask == connectTask)
+            {
+                return await connectTask;
+            }
+            else
+            {
+                _logger.LogWarning("Database connectivity check timed out after 1.5 seconds");
+                return false;
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Database connectivity check failed");
+            _logger.LogWarning(ex, "Database connectivity check failed: {Message}", ex.Message);
             return false;
         }
     }

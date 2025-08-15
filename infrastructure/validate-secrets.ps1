@@ -20,10 +20,18 @@ Write-Host "🔐 Secret Management Validation" -ForegroundColor Cyan
 Write-Host "================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Expected secrets configuration
+# Expected secrets configuration - ALL REQUIRED
 $ExpectedSecrets = @{
     "REPLICATE_WEBHOOK_SECRET" = "whsec_wUh0bvV+/jGsxbEqPsRgHI1tdct1Y+KM"
     "GOOGLE_CLIENT_ID" = "116968296687-fievkkqa9kdb2e3p1l11shh25bk751l4.apps.googleusercontent.com"
+    "GOOGLE_CLIENT_SECRET" = $null  # Will be validated for presence and format only
+    "JWT_SECRET" = $null            # Will be validated for presence and length only
+    "REPLICATE_API_TOKEN" = $null   # Will be validated for presence and format only
+    "STRIPE_SECRET_KEY" = $null     # Will be validated for presence and format only
+    "STRIPE_PUBLISHABLE_KEY" = $null # Will be validated for presence and format only
+    "STRIPE_WEBHOOK_SECRET" = $null # Will be validated for presence and format only
+    "AZURE_STORAGE_CONNECTION_STRING" = $null # Will be validated for presence only
+    "AZURE_STORAGE_CONTAINER_NAME" = $null    # Will be validated for presence only
 }
 
 $ValidationResults = @{
@@ -100,6 +108,14 @@ if ($keyVaultName) {
             $kvSecretName = switch ($secret) {
                 "REPLICATE_WEBHOOK_SECRET" { "ReplicateWebhookSecret" }
                 "GOOGLE_CLIENT_ID" { "GoogleClientId" }
+                "GOOGLE_CLIENT_SECRET" { "GoogleClientSecret" }
+                "JWT_SECRET" { "JwtSecret" }
+                "REPLICATE_API_TOKEN" { "ReplicateApiToken" }
+                "STRIPE_SECRET_KEY" { "StripeSecretKey" }
+                "STRIPE_PUBLISHABLE_KEY" { "StripePublishableKey" }
+                "STRIPE_WEBHOOK_SECRET" { "StripeWebhookSecret" }
+                "AZURE_STORAGE_CONNECTION_STRING" { "AzureStorageConnectionString" }
+                "AZURE_STORAGE_CONTAINER_NAME" { "AzureStorageContainerName" }
                 default { $secret }
             }
             
@@ -141,18 +157,31 @@ if ($UpdateKeyVault -and $keyVaultName -and !$DryRun) {
         $kvSecretName = switch ($secret) {
             "REPLICATE_WEBHOOK_SECRET" { "ReplicateWebhookSecret" }
             "GOOGLE_CLIENT_ID" { "GoogleClientId" }
+            "GOOGLE_CLIENT_SECRET" { "GoogleClientSecret" }
+            "JWT_SECRET" { "JwtSecret" }
+            "REPLICATE_API_TOKEN" { "ReplicateApiToken" }
+            "STRIPE_SECRET_KEY" { "StripeSecretKey" }
+            "STRIPE_PUBLISHABLE_KEY" { "StripePublishableKey" }
+            "STRIPE_WEBHOOK_SECRET" { "StripeWebhookSecret" }
+            "AZURE_STORAGE_CONNECTION_STRING" { "AzureStorageConnectionString" }
+            "AZURE_STORAGE_CONTAINER_NAME" { "AzureStorageContainerName" }
             default { $secret }
         }
         
         $secretValue = $ExpectedSecrets[$secret]
         
-        try {
-            Write-Host "  📝 [INFO] Setting Key Vault secret: $kvSecretName" -ForegroundColor Blue
-            az keyvault secret set --vault-name $keyVaultName --name $kvSecretName --value $secretValue --output none
-            Write-Host "  ✅ Successfully updated Key Vault secret: $kvSecretName" -ForegroundColor Green
-        } catch {
-            Write-Host "  ❌ Failed to update Key Vault secret '$kvSecretName': $($_.Exception.Message)" -ForegroundColor Red
-            $ValidationResults.Success = $false
+        # Only update secrets that have known values (not $null)
+        if ($secretValue -ne $null) {
+            try {
+                Write-Host "  📝 [INFO] Setting Key Vault secret: $kvSecretName" -ForegroundColor Blue
+                az keyvault secret set --vault-name $keyVaultName --name $kvSecretName --value $secretValue --output none
+                Write-Host "  ✅ Successfully updated Key Vault secret: $kvSecretName" -ForegroundColor Green
+            } catch {
+                Write-Host "  ❌ Failed to update Key Vault secret '$kvSecretName': $($_.Exception.Message)" -ForegroundColor Red
+                $ValidationResults.Success = $false
+            }
+        } else {
+            Write-Host "  ℹ️ [INFO] Skipping $kvSecretName (value validation only, no update)" -ForegroundColor Cyan
         }
     }
     Write-Host ""
