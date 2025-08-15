@@ -429,31 +429,56 @@ jobs:
           echo ""
           echo "🧪 [INFO] Validating Bicep deployment template..."
           
-          # Debug: Show parameter names being passed (values are automatically masked by GitHub)
-          echo "🔍 [DEBUG] Parameter verification:"
-          echo "  Passing sqlAdminPassword: ✓"
-          echo "  Passing jwtSecret: ✓"  
-          echo "  Passing replicateApiToken: ✓"
-          echo "  Passing replicateWebhookSecret: ✓"
-          echo "  Passing googleClientId: ✓"
-          echo "  Passing googleClientSecret: ✓"
-          echo "  Passing stripeSecretKey: ✓"
-          echo "  Passing stripePublishableKey: ✓"
-          echo "  Passing stripeWebhookSecret: ✓"
+          # Create Azure parameters file for reliable parameter passing
+          echo "🔍 [SOLUTION] Using parameters file approach to fix parameter parsing issues..."
           
-          # Run validation with detailed error output
+          # Create parameters file with environment variable expansion
+          cat > deployment-parameters.json << EOF
+          {
+            "\$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+            "contentVersion": "1.0.0.0",
+            "parameters": {
+              "sqlAdminPassword": {
+                "value": "${{ secrets.SQL_ADMIN_PASSWORD }}"
+              },
+              "jwtSecret": {
+                "value": "${{ secrets.JWT_SECRET }}"
+              },
+              "replicateApiToken": {
+                "value": "${{ secrets.REPLICATE_API_TOKEN }}"
+              },
+              "replicateWebhookSecret": {
+                "value": "${{ secrets.REPLICATE_WEBHOOK_SECRET }}"
+              },
+              "googleClientId": {
+                "value": "${{ secrets.GOOGLE_CLIENT_ID }}"
+              },
+              "googleClientSecret": {
+                "value": "${{ secrets.GOOGLE_CLIENT_SECRET }}"
+              },
+              "stripeSecretKey": {
+                "value": "${{ secrets.STRIPE_SECRET_KEY }}"
+              },
+              "stripePublishableKey": {
+                "value": "${{ secrets.STRIPE_PUBLISHABLE_KEY }}"
+              },
+              "stripeWebhookSecret": {
+                "value": "${{ secrets.STRIPE_WEBHOOK_SECRET }}"
+              }
+            }
+          }
+          EOF
+          
+          echo "✅ [SUCCESS] Parameters file created with all required parameters"
+          echo "🔍 [DEBUG] Parameter file keys:"
+          jq -r '.parameters | keys[]' deployment-parameters.json
+          
+          # Run validation using parameters file (much more reliable than inline parameters)
+          echo "🧪 [INFO] Validating Bicep deployment with parameters file..."
           az deployment group validate \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --template-file infrastructure/simple-deploy.bicep \
-            --parameters sqlAdminPassword="${{ secrets.SQL_ADMIN_PASSWORD }}" \
-                        jwtSecret="${{ secrets.JWT_SECRET }}" \
-                        replicateApiToken="${{ secrets.REPLICATE_API_TOKEN }}" \
-                        replicateWebhookSecret="${{ secrets.REPLICATE_WEBHOOK_SECRET }}" \
-                        googleClientId="${{ secrets.GOOGLE_CLIENT_ID }}" \
-                        googleClientSecret="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
-                        stripeSecretKey="${{ secrets.STRIPE_SECRET_KEY }}" \
-                        stripePublishableKey="${{ secrets.STRIPE_PUBLISHABLE_KEY }}" \
-                        stripeWebhookSecret="${{ secrets.STRIPE_WEBHOOK_SECRET }}" \
+            --parameters @deployment-parameters.json \
             --verbose
           
           if [ $? -ne 0 ]; then
@@ -509,21 +534,13 @@ jobs:
             echo "  stripePublishableKey: ✓"
             echo "  stripeWebhookSecret: ✓"
             
-            # Start deployment
+            # Start deployment using parameters file (consistent with validation step)
             if az deployment group create \
               --resource-group "${{ env.RESOURCE_GROUP }}" \
               --template-file infrastructure/simple-deploy.bicep \
               --name "$DEPLOYMENT_NAME" \
               --mode Incremental \
-              --parameters sqlAdminPassword="${{ secrets.SQL_ADMIN_PASSWORD }}" \
-                          jwtSecret="${{ secrets.JWT_SECRET }}" \
-                          replicateApiToken="${{ secrets.REPLICATE_API_TOKEN }}" \
-                          replicateWebhookSecret="${{ secrets.REPLICATE_WEBHOOK_SECRET }}" \
-                          googleClientId="${{ secrets.GOOGLE_CLIENT_ID }}" \
-                          googleClientSecret="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
-                          stripeSecretKey="${{ secrets.STRIPE_SECRET_KEY }}" \
-                          stripePublishableKey="${{ secrets.STRIPE_PUBLISHABLE_KEY }}" \
-                          stripeWebhookSecret="${{ secrets.STRIPE_WEBHOOK_SECRET }}" \
+              --parameters @deployment-parameters.json \
               --output json > deployment_result.json; then
               
               echo "✅ [SUCCESS] Deployment completed successfully!"
