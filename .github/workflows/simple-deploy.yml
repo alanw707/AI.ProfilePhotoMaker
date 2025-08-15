@@ -436,7 +436,10 @@ jobs:
                         replicateApiToken="${{ secrets.REPLICATE_API_TOKEN }}" \
                         replicateWebhookSecret="${{ secrets.REPLICATE_WEBHOOK_SECRET }}" \
                         googleClientId="${{ secrets.GOOGLE_CLIENT_ID }}" \
-                        googleClientSecret="${{ secrets.GOOGLE_CLIENT_SECRET }}"
+                        googleClientSecret="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+                        stripeSecretKey="${{ secrets.STRIPE_SECRET_KEY }}" \
+                        stripePublishableKey="${{ secrets.STRIPE_PUBLISHABLE_KEY }}" \
+                        stripeWebhookSecret="${{ secrets.STRIPE_WEBHOOK_SECRET }}"
           
           if [ $? -ne 0 ]; then
             echo "❌ [ERROR] Bicep deployment validation failed"
