@@ -134,10 +134,16 @@ else
     log_warning "⚠️  JWT Secret not found for validation"
 fi
 
-# Google OAuth Client ID validation
+# Enhanced Google OAuth Client ID validation (detects production issues)
 GOOGLE_CLIENT_ID=$(echo "$USER_SECRETS" | grep "^Authentication:Google:ClientId = " | cut -d'=' -f2- | xargs)
 if [[ -n "$GOOGLE_CLIENT_ID" ]]; then
-    if [[ "$GOOGLE_CLIENT_ID" =~ ^[0-9]+-[a-zA-Z0-9]+\.apps\.googleusercontent\.com$ ]]; then
+    if [[ "$GOOGLE_CLIENT_ID" == *"Specify --help"* ]] || [[ "$GOOGLE_CLIENT_ID" == *"command"* ]]; then
+        log_error "❌ CRITICAL: Google Client ID contains help text instead of OAuth client ID"
+        log_error "   Expected format: 123456789-abc123.apps.googleusercontent.com"
+        log_error "   Current value appears to be: ${GOOGLE_CLIENT_ID:0:50}..."
+    elif [[ ! "$GOOGLE_CLIENT_ID" == *".apps.googleusercontent.com" ]]; then
+        log_error "❌ Google Client ID should end with .apps.googleusercontent.com"
+    elif [[ "$GOOGLE_CLIENT_ID" =~ ^[0-9]+-[a-zA-Z0-9]+\.apps\.googleusercontent\.com$ ]]; then
         log_success "✅ Google Client ID format valid"
     else
         log_warning "⚠️  Google Client ID format may be invalid"
