@@ -57,11 +57,120 @@ jobs:
           npm run lint:errors-only
           npm run build:mvp-v1
 
-  deploy:
-    name: 🚀 Simple Deploy
+  validate-secrets:
+    name: 🔐 Validate Secrets
     runs-on: ubuntu-latest
     needs: test
     if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        
+      - name: 🔐 Validate GitHub Actions Secrets
+        env:
+          # Required secrets for validation
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
+          REPLICATE_WEBHOOK_SECRET: ${{ secrets.REPLICATE_WEBHOOK_SECRET }}
+          SQL_ADMIN_PASSWORD: ${{ secrets.SQL_ADMIN_PASSWORD }}
+        run: |
+          echo "🔍 Validating GitHub Actions secrets for deployment..."
+          
+          # Function to validate secret
+          validate_secret() {
+            local secret_name="$1"
+            local secret_value="$2"
+            local min_length="${3:-1}"
+            
+            if [[ -z "$secret_value" ]]; then
+              echo "❌ MISSING: $secret_name"
+              return 1
+            elif [[ ${#secret_value} -lt $min_length ]]; then
+              echo "❌ TOO SHORT: $secret_name (${#secret_value} chars, min: $min_length)"
+              return 1
+            else
+              echo "✅ VALID: $secret_name (${#secret_value} chars)"
+              return 0
+            fi
+          }
+          
+          # Validate all required secrets
+          errors=0
+          
+          validate_secret "AZURE_CLIENT_ID" "$AZURE_CLIENT_ID" 30 || ((errors++))
+          validate_secret "AZURE_SUBSCRIPTION_ID" "$AZURE_SUBSCRIPTION_ID" 30 || ((errors++))
+          validate_secret "AZURE_TENANT_ID" "$AZURE_TENANT_ID" 30 || ((errors++))
+          validate_secret "JWT_SECRET" "$JWT_SECRET" 32 || ((errors++))
+          # Enhanced Azure SQL password validation (production requires stronger passwords)
+          if [[ -z "$SQL_ADMIN_PASSWORD" ]]; then
+            echo "❌ MISSING: SQL_ADMIN_PASSWORD"
+            ((errors++))
+          elif [[ ${#SQL_ADMIN_PASSWORD} -lt 8 ]]; then
+            echo "❌ TOO SHORT: SQL_ADMIN_PASSWORD (${#SQL_ADMIN_PASSWORD} chars, min: 8)"
+            ((errors++))
+          elif [[ ${#SQL_ADMIN_PASSWORD} -gt 128 ]]; then
+            echo "❌ TOO LONG: SQL_ADMIN_PASSWORD (${#SQL_ADMIN_PASSWORD} chars, max: 128)"
+            ((errors++))
+          elif [[ ! "$SQL_ADMIN_PASSWORD" =~ [A-Z] ]]; then
+            echo "❌ INVALID: SQL_ADMIN_PASSWORD must contain uppercase letters (Azure SQL requirement)"
+            ((errors++))
+          elif [[ ! "$SQL_ADMIN_PASSWORD" =~ [a-z] ]]; then
+            echo "❌ INVALID: SQL_ADMIN_PASSWORD must contain lowercase letters (Azure SQL requirement)"
+            ((errors++))
+          elif [[ ! "$SQL_ADMIN_PASSWORD" =~ [0-9] ]]; then
+            echo "❌ INVALID: SQL_ADMIN_PASSWORD must contain numbers (Azure SQL requirement)"
+            ((errors++))
+          elif [[ "$SQL_ADMIN_PASSWORD" != *"!"* && "$SQL_ADMIN_PASSWORD" != *"@"* && "$SQL_ADMIN_PASSWORD" != *"#"* && "$SQL_ADMIN_PASSWORD" != *"$"* && "$SQL_ADMIN_PASSWORD" != *"%"* && "$SQL_ADMIN_PASSWORD" != *"^"* && "$SQL_ADMIN_PASSWORD" != *"&"* && "$SQL_ADMIN_PASSWORD" != *"*"* && "$SQL_ADMIN_PASSWORD" != *"("* && "$SQL_ADMIN_PASSWORD" != *")"* && "$SQL_ADMIN_PASSWORD" != *"-"* && "$SQL_ADMIN_PASSWORD" != *"_"* && "$SQL_ADMIN_PASSWORD" != *"+"* && "$SQL_ADMIN_PASSWORD" != *"="* ]]; then
+            echo "❌ INVALID: SQL_ADMIN_PASSWORD must contain special characters (Azure SQL requirement)"
+            ((errors++))
+          elif [[ "$SQL_ADMIN_PASSWORD" =~ (Test|test|Dev|dev|Pass|pass|Admin|admin|123|password|Password) ]]; then
+            echo "❌ INSECURE: SQL_ADMIN_PASSWORD contains common weak patterns (not suitable for production)"
+            echo "   Avoid: Test, Dev, Pass, Admin, 123, password variations"
+            ((errors++))
+          else
+            echo "✅ VALID: SQL_ADMIN_PASSWORD (Azure SQL complexity requirements met)"
+          fi
+          validate_secret "REPLICATE_API_TOKEN" "$REPLICATE_API_TOKEN" 20 || ((errors++))
+          validate_secret "REPLICATE_WEBHOOK_SECRET" "$REPLICATE_WEBHOOK_SECRET" 32 || ((errors++))
+          
+          # Enhanced Google OAuth validation (detect the current production issue)
+          if [[ -z "$GOOGLE_CLIENT_ID" ]]; then
+            echo "❌ MISSING: GOOGLE_CLIENT_ID"
+            ((errors++))
+          elif [[ "$GOOGLE_CLIENT_ID" == *"Specify --help"* ]] || [[ "$GOOGLE_CLIENT_ID" == *"command"* ]]; then
+            echo "❌ INVALID: GOOGLE_CLIENT_ID contains help text instead of OAuth client ID"
+            echo "   Current value appears to be: ${GOOGLE_CLIENT_ID:0:50}..."
+            echo "   Expected format: 123456789-abc123.apps.googleusercontent.com"
+            ((errors++))
+          elif [[ ! "$GOOGLE_CLIENT_ID" == *".apps.googleusercontent.com" ]]; then
+            echo "❌ INVALID: GOOGLE_CLIENT_ID should end with .apps.googleusercontent.com"
+            ((errors++))
+          else
+            echo "✅ VALID: GOOGLE_CLIENT_ID (OAuth format confirmed)"
+          fi
+          
+          validate_secret "GOOGLE_CLIENT_SECRET" "$GOOGLE_CLIENT_SECRET" 20 || ((errors++))
+          
+          echo ""
+          if [[ $errors -eq 0 ]]; then
+            echo "✅ All secrets validation passed! Deployment can proceed."
+          else
+            echo "❌ Secrets validation failed with $errors error(s)"
+            echo "🛑 DEPLOYMENT BLOCKED - Fix secrets before deploying"
+            exit 1
+          fi
+
+  deploy:
+    name: 🚀 Simple Deploy
+    runs-on: ubuntu-latest
+    needs: [test, validate-secrets]
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped') && (needs.validate-secrets.result == 'success')
     
     steps:
       - name: 📥 Checkout

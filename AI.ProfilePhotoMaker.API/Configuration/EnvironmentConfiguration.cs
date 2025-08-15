@@ -199,25 +199,8 @@ public class EnvironmentConfiguration
     {
         var warnings = new List<string>();
 
-        // Check Google OAuth configuration
-        var googleClientId = GetEnvironmentVariable(GOOGLE_CLIENT_ID);
-        var googleClientSecret = GetEnvironmentVariable(GOOGLE_CLIENT_SECRET);
-        
-        if (!string.IsNullOrEmpty(googleClientId) || !string.IsNullOrEmpty(googleClientSecret))
-        {
-            if (string.IsNullOrEmpty(googleClientId))
-            {
-                warnings.Add("Google Client ID is missing but Client Secret is set");
-            }
-            if (string.IsNullOrEmpty(googleClientSecret))
-            {
-                warnings.Add("Google Client Secret is missing but Client ID is set");
-            }
-        }
-        else
-        {
-            warnings.Add("Google OAuth is not configured (optional)");
-        }
+        // Check Google OAuth configuration with enhanced validation
+        await ValidateGoogleOAuthConfigurationAsync(results, warnings);
 
         // Check Stripe configuration
         var stripeKey = GetEnvironmentVariable(STRIPE_SECRET_KEY);
@@ -226,12 +209,8 @@ public class EnvironmentConfiguration
             warnings.Add("Stripe payment processing is not configured (optional)");
         }
 
-        // Check Azure Storage configuration
-        var azureStorage = GetEnvironmentVariable(AZURE_STORAGE_CONNECTION_STRING);
-        if (string.IsNullOrEmpty(azureStorage))
-        {
-            warnings.Add("Azure Storage is not configured - using local file storage (optional)");
-        }
+        // Check Azure Storage configuration - ENVIRONMENT-AWARE VALIDATION
+        await ValidateAzureStorageConfigurationAsync(results, warnings);
 
         // Log warnings
         foreach (var warning in warnings)
@@ -240,6 +219,128 @@ public class EnvironmentConfiguration
         }
 
         _logger.LogInformation("✅ Optional configurations validation completed");
+    }
+
+    /// <summary>
+    /// Validates Google OAuth configuration with enhanced format checking
+    /// </summary>
+    private async Task ValidateGoogleOAuthConfigurationAsync(List<ValidationResult> results, List<string> warnings)
+    {
+        var googleClientId = GetEnvironmentVariable(GOOGLE_CLIENT_ID);
+        var googleClientSecret = GetEnvironmentVariable(GOOGLE_CLIENT_SECRET);
+        
+        if (!string.IsNullOrEmpty(googleClientId) || !string.IsNullOrEmpty(googleClientSecret))
+        {
+            // Both should be present if either is configured
+            if (string.IsNullOrEmpty(googleClientId))
+            {
+                results.Add(new ValidationResult(false, GOOGLE_CLIENT_ID, "Google Client ID is missing but Client Secret is set"));
+            }
+            if (string.IsNullOrEmpty(googleClientSecret))
+            {
+                results.Add(new ValidationResult(false, GOOGLE_CLIENT_SECRET, "Google Client Secret is missing but Client ID is set"));
+            }
+            
+            // Validate Google Client ID format and content
+            if (!string.IsNullOrEmpty(googleClientId))
+            {
+                // Check for common misconfigurations
+                if (googleClientId.Contains("Specify --help") || googleClientId.Contains("command") || googleClientId.Contains("options"))
+                {
+                    results.Add(new ValidationResult(false, GOOGLE_CLIENT_ID, 
+                        "Google Client ID contains invalid text (appears to be help text or command output). Expected format: 123456789-abc123.apps.googleusercontent.com"));
+                }
+                else if (googleClientId.StartsWith("YOUR_") || googleClientId.Contains("REPLACE_WITH_") || googleClientId.Contains("placeholder"))
+                {
+                    results.Add(new ValidationResult(false, GOOGLE_CLIENT_ID, 
+                        "Google Client ID contains placeholder text. Must be replaced with actual Google OAuth client ID"));
+                }
+                else if (!googleClientId.Contains(".apps.googleusercontent.com"))
+                {
+                    results.Add(new ValidationResult(false, GOOGLE_CLIENT_ID, 
+                        "Google Client ID format appears invalid. Expected format: 123456789-abc123.apps.googleusercontent.com"));
+                }
+                else
+                {
+                    _logger.LogInformation("✅ Google Client ID format appears valid");
+                }
+            }
+            
+            // Validate Google Client Secret format
+            if (!string.IsNullOrEmpty(googleClientSecret))
+            {
+                if (googleClientSecret.Contains("Specify --help") || googleClientSecret.Contains("command") || googleClientSecret.Contains("options"))
+                {
+                    results.Add(new ValidationResult(false, GOOGLE_CLIENT_SECRET, 
+                        "Google Client Secret contains invalid text (appears to be help text or command output)"));
+                }
+                else if (googleClientSecret.StartsWith("YOUR_") || googleClientSecret.Contains("REPLACE_WITH_") || googleClientSecret.Contains("placeholder"))
+                {
+                    results.Add(new ValidationResult(false, GOOGLE_CLIENT_SECRET, 
+                        "Google Client Secret contains placeholder text. Must be replaced with actual Google OAuth client secret"));
+                }
+                else if (!googleClientSecret.StartsWith("GOCSPX-") && googleClientSecret.Length < 20)
+                {
+                    warnings.Add("Google Client Secret format may be invalid (expected to start with GOCSPX- or be 20+ characters)");
+                }
+                else
+                {
+                    _logger.LogInformation("✅ Google Client Secret format appears valid");
+                }
+            }
+        }
+        else
+        {
+            warnings.Add("Google OAuth is not configured (optional)");
+        }
+    }
+
+    /// <summary>
+    /// Validates Azure Storage configuration with environment-specific requirements
+    /// </summary>
+    private async Task ValidateAzureStorageConfigurationAsync(List<ValidationResult> results, List<string> warnings)
+    {
+        var azureStorage = GetEnvironmentVariable(AZURE_STORAGE_CONNECTION_STRING);
+        var containerName = GetEnvironmentVariable(AZURE_STORAGE_CONTAINER_NAME);
+        
+        // Azure Storage is REQUIRED in production and staging environments
+        if (_environment.IsProduction() || _environment.IsStaging())
+        {
+            if (string.IsNullOrEmpty(azureStorage))
+            {
+                results.Add(new ValidationResult(false, AZURE_STORAGE_CONNECTION_STRING,
+                    $"Azure Storage connection string is REQUIRED in {_environment.EnvironmentName} environment. Local storage is not supported in containerized deployments."));
+            }
+            else
+            {
+                // Validate connection string format for production
+                if (!azureStorage.Contains("AccountName=") || !azureStorage.Contains("AccountKey="))
+                {
+                    results.Add(new ValidationResult(false, AZURE_STORAGE_CONNECTION_STRING,
+                        "Azure Storage connection string appears to be invalid (missing AccountName or AccountKey)"));
+                }
+            }
+
+            if (string.IsNullOrEmpty(containerName))
+            {
+                results.Add(new ValidationResult(false, AZURE_STORAGE_CONTAINER_NAME,
+                    $"Azure Storage container name is REQUIRED in {_environment.EnvironmentName} environment"));
+            }
+
+            _logger.LogInformation($"✅ Azure Storage is REQUIRED and validated for {_environment.EnvironmentName} environment");
+        }
+        else
+        {
+            // Development/local environments - Azure Storage is optional
+            if (string.IsNullOrEmpty(azureStorage))
+            {
+                warnings.Add($"Azure Storage is not configured - using local file storage (acceptable in {_environment.EnvironmentName})");
+            }
+            else
+            {
+                _logger.LogInformation($"✅ Azure Storage configured for {_environment.EnvironmentName} environment");
+            }
+        }
     }
 
     private void LogValidationSummary(List<ValidationResult> results)
@@ -346,6 +447,14 @@ public static class EnvironmentConfigurationExtensions
     {
         services.AddSingleton<EnvironmentConfiguration>();
         return services;
+    }
+
+    /// <summary>
+    /// Extension method to check if environment is Staging
+    /// </summary>
+    public static bool IsStaging(this IWebHostEnvironment environment)
+    {
+        return environment.IsEnvironment("Staging");
     }
 
     /// <summary>

@@ -1,10 +1,13 @@
 #!/bin/bash
 
-# Comprehensive Secrets Validation Framework
-# Part of Unified Secrets Management Plan
+# Environment-Aware Secrets Validation Framework
+# Enhanced with deployment environment validation
 # Validates consistency across all secret stores
 
 set -euo pipefail
+
+# Get target environment (default to Production if not specified)
+TARGET_ENV="${1:-Production}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -23,7 +26,8 @@ log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; ((VALIDATION_WARNINGS++));
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; ((VALIDATION_ERRORS++)); }
 
 echo -e "${BLUE}=========================================${NC}"
-echo -e "${BLUE} Comprehensive Secrets Validation${NC}"
+echo -e "${BLUE} Environment-Aware Secrets Validation${NC}"
+echo -e "${BLUE} Target Environment: ${TARGET_ENV}${NC}"
 echo -e "${BLUE}=========================================${NC}"
 echo ""
 
@@ -59,6 +63,8 @@ REQUIRED_USER_SECRETS=(
     "AzureStorage:ConnectionString"
     "Authentication:Google:ClientId"
     "Authentication:Google:ClientSecret"
+    "Replicate:ApiToken"
+    "Replicate:WebhookSecret"
 )
 
 # Check each required secret
@@ -70,18 +76,7 @@ for secret in "${REQUIRED_USER_SECRETS[@]}"; do
     fi
 done
 
-# Check if Replicate secrets are present (should be after sync)
-if echo "$USER_SECRETS" | grep -q "^Replicate:ApiToken = "; then
-    log_success "✅ Found: Replicate:ApiToken"
-else
-    log_warning "⚠️  Missing: Replicate:ApiToken (sync required)"
-fi
-
-if echo "$USER_SECRETS" | grep -q "^Replicate:WebhookSecret = "; then
-    log_success "✅ Found: Replicate:WebhookSecret"
-else
-    log_warning "⚠️  Missing: Replicate:WebhookSecret (sync required)"
-fi
+# Replicate secrets are now included in the main REQUIRED_USER_SECRETS array above
 
 echo ""
 
@@ -172,7 +167,52 @@ fi
 echo ""
 
 # ===========================================
-# 4. VALIDATE INFRASTRUCTURE CONFIGURATION
+# 4. VALIDATE ENVIRONMENT-SPECIFIC REQUIREMENTS
+# ===========================================
+
+log_info "🔍 Validating environment-specific requirements for ${TARGET_ENV}..."
+
+# Azure Storage validation - environment dependent
+if [[ "$TARGET_ENV" == "Production" || "$TARGET_ENV" == "Staging" ]]; then
+    log_info "🎯 ${TARGET_ENV} environment detected - Azure Storage is REQUIRED"
+    
+    # Check for Azure Storage in environment variables (production deployment)
+    if [[ -n "${AZURE_STORAGE_CONNECTION_STRING:-}" ]]; then
+        if [[ "$AZURE_STORAGE_CONNECTION_STRING" == *"AccountName="* && "$AZURE_STORAGE_CONNECTION_STRING" == *"AccountKey="* ]]; then
+            log_success "✅ Azure Storage connection string format valid"
+        else
+            log_error "❌ Azure Storage connection string invalid format"
+        fi
+    else
+        # Check in user secrets for deployment preparation
+        AZURE_STORAGE_SECRET=$(echo "$USER_SECRETS" | grep "^AzureStorage:ConnectionString = " | cut -d'=' -f2- | xargs)
+        if [[ -n "$AZURE_STORAGE_SECRET" ]]; then
+            if [[ "$AZURE_STORAGE_SECRET" == *"UseDevelopmentStorage=true"* ]]; then
+                log_error "❌ CRITICAL: Development storage not allowed in ${TARGET_ENV}"
+                log_error "   Must configure real Azure Storage for production deployment"
+            else
+                log_success "✅ Azure Storage configured for deployment"
+            fi
+        else
+            log_error "❌ CRITICAL: Azure Storage connection string missing for ${TARGET_ENV}"
+        fi
+    fi
+    
+    # Container name validation
+    if [[ -n "${AZURE_STORAGE_CONTAINER_NAME:-}" ]]; then
+        log_success "✅ Azure Storage container name configured"
+    else
+        log_error "❌ CRITICAL: Azure Storage container name missing for ${TARGET_ENV}"
+    fi
+else
+    log_info "🔧 ${TARGET_ENV} environment - Azure Storage is optional"
+    log_success "✅ Local storage acceptable for development"
+fi
+
+echo ""
+
+# ===========================================
+# 5. VALIDATE INFRASTRUCTURE CONFIGURATION
 # ===========================================
 
 log_info "🔍 Validating infrastructure configuration..."
@@ -214,7 +254,7 @@ fi
 echo ""
 
 # ===========================================
-# 5. VALIDATE APPLICATION CONFIGURATION
+# 6. VALIDATE APPLICATION CONFIGURATION
 # ===========================================
 
 log_info "🔍 Validating application configuration..."
