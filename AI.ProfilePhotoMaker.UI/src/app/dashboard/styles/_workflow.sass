@@ -374,6 +374,182 @@ $spacing-2xl: 48px
           padding: 6px 12px
 
 // =============================================================================
+// GET STARTED SECTION (Non-Premium Users)
+// =============================================================================
+
+.get-started-section
+  padding: $spacing-xl 0
+  
+  .get-started-card
+    @include shared.card-base
+    padding: $spacing-xl
+    max-width: 100%
+    margin: 0 auto
+    
+    @media (max-width: 768px)
+      padding: $spacing-lg
+    
+  .get-started-header
+    text-align: center
+    margin-bottom: $spacing-2xl
+    
+    h2
+      color: var(--text-primary, #1f2937)
+      font-family: 'Poppins', sans-serif
+      font-size: clamp(24px, 4vw, 36px)
+      font-weight: 700
+      margin: 0 0 $spacing-sm 0
+      letter-spacing: -0.02em
+      
+    p
+      color: var(--text-secondary, #6b7280)
+      font-family: 'Inter', sans-serif
+      font-size: clamp(14px, 2vw, 18px)
+      font-weight: 400
+      margin: 0
+      line-height: 1.6
+      opacity: 0.9
+      
+  .options-grid
+    display: grid
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr))
+    gap: $spacing-lg
+    margin-bottom: $spacing-2xl
+    
+    @media (max-width: 768px)
+      grid-template-columns: 1fr
+      gap: $spacing-md
+      
+  .option-card
+    @include shared.card-base
+    padding: $spacing-lg
+    border: 2px solid var(--border-color, #e5e7eb)
+    border-radius: 16px
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+    position: relative
+    overflow: hidden
+    
+    &:hover
+      transform: translateY(-4px)
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12)
+      border-color: var(--primary-color, #3b82f6)
+      
+    &.premium-option
+      border-color: rgba(125, 211, 216, 0.3)
+      background: linear-gradient(135deg, rgba(125, 211, 216, 0.05) 0%, rgba(125, 211, 216, 0.02) 100%)
+      
+      &:hover
+        border-color: #7DD3D8
+        box-shadow: 0 8px 24px rgba(125, 211, 216, 0.2)
+        
+      .option-header
+        .option-icon
+          background: linear-gradient(135deg, #7DD3D8 0%, #5EEAD4 100%)
+          color: #0F172A
+          
+    &.basic-option
+      border-color: rgba(168, 85, 247, 0.3)
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.05) 0%, rgba(168, 85, 247, 0.02) 100%)
+      
+      &:hover
+        border-color: #A855F7
+        box-shadow: 0 8px 24px rgba(168, 85, 247, 0.2)
+        
+      .option-header
+        .option-icon
+          background: linear-gradient(135deg, #A855F7 0%, #8B5CF6 100%)
+          color: white
+          
+    .option-header
+      display: flex
+      align-items: center
+      gap: $spacing-md
+      margin-bottom: $spacing-lg
+      
+      .option-icon
+        width: 48px
+        height: 48px
+        border-radius: 12px
+        display: flex
+        align-items: center
+        justify-content: center
+        font-size: 24px
+        font-weight: 600
+        flex-shrink: 0
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1)
+        
+      h3
+        color: var(--text-primary, #1f2937)
+        font-family: 'Poppins', sans-serif
+        font-size: clamp(18px, 2.5vw, 22px)
+        font-weight: 600
+        margin: 0
+        letter-spacing: -0.01em
+        
+    .option-content
+      ul
+        list-style: none
+        padding: 0
+        margin: 0 0 $spacing-lg 0
+        
+        li
+          color: var(--text-secondary, #6b7280)
+          font-family: 'Inter', sans-serif
+          font-size: 14px
+          font-weight: 400
+          line-height: 1.6
+          margin-bottom: 12px
+          padding-left: 24px
+          position: relative
+          
+          &::before
+            content: ''
+            position: absolute
+            left: 0
+            top: 8px
+            width: 6px
+            height: 6px
+            background: var(--primary-color, #3b82f6)
+            border-radius: 50%
+            
+      .btn
+        width: 100%
+        padding: 14px 20px
+        border-radius: 10px
+        border: none
+        font-family: 'Poppins', sans-serif
+        font-size: 14px
+        font-weight: 600
+        cursor: pointer
+        transition: all 0.3s ease
+        display: flex
+        align-items: center
+        justify-content: center
+        gap: 8px
+        text-decoration: none
+        
+        &.btn-primary
+          background: linear-gradient(135deg, #7DD3D8 0%, #5EEAD4 100%)
+          color: #0F172A
+          box-shadow: 0 4px 12px rgba(125, 211, 216, 0.3)
+          
+          &:hover
+            transform: translateY(-2px)
+            box-shadow: 0 6px 20px rgba(125, 211, 216, 0.4)
+            
+        &.btn-secondary
+          background: linear-gradient(135deg, #A855F7 0%, #8B5CF6 100%)
+          color: white
+          box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3)
+          
+          &:hover
+            transform: translateY(-2px)
+            box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4)
+            
+        svg
+          flex-shrink: 0
+
+// =============================================================================
 // GALLERY ACTIONS (Step 3)
 // =============================================================================
 
