@@ -45,3 +45,4 @@
 - **Azure Storage is required in containerized environments** (Production/Staging)
 - **Missing Azure Storage causes 500 errors** due to inaccessible `/uploads` paths
 - **Always run secret validation before deployment** to prevent production incidents
+- Never direclty commit to main branch when making change

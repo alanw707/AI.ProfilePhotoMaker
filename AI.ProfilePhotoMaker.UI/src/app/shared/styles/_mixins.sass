@@ -47,13 +47,13 @@
   @include btn-base
   
   &  
-    background: var(--card-bg)
-    color: var(--text-primary)
-    border: 1px solid var(--border-color)
+    background: var(--card-bg, #ffffff)
+    color: var(--text-primary, #1a202c)
+    border: 1px solid var(--border-color, #e5e7eb)
 
   &:hover:not(:disabled)
-    background: var(--hover-bg)
-    border-color: var(--accent-primary)
+    background: var(--hover-bg, rgba(0, 0, 0, 0.03))
+    border-color: var(--accent-primary, #4fd1c7)
     transform: translateY(-1px)
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06)
 
@@ -68,14 +68,14 @@
 
 @mixin btn-upload
   @include btn-base
-  background: var(--card-bg)
-  color: var(--accent-primary)
-  border: 2px dashed var(--border-color)
+  background: var(--card-bg, #ffffff)
+  color: var(--accent-primary, #4fd1c7)
+  border: 2px dashed var(--border-color, #e5e7eb)
   padding: 16px 24px
 
   &:hover:not(:disabled)
-    border-color: var(--accent-primary)
-    background: var(--hover-bg)
+    border-color: var(--accent-primary, #4fd1c7)
+    background: var(--hover-bg, rgba(0, 0, 0, 0.03))
     transform: translateY(-1px)
 
 // =============================================================================
@@ -83,16 +83,16 @@
 // =============================================================================
 
 @mixin card-base
-  background: var(--card-bg)
+  background: var(--card-bg, #ffffff)
   border-radius: 12px
-  border: 1px solid var(--border-color)
-  box-shadow: var(--shadow-sm)
+  border: 1px solid var(--border-color, #e5e7eb)
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.04))
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
 
 @mixin card-hover
   &:hover
     transform: translateY(-2px)
-    box-shadow: var(--shadow-lg)
+    box-shadow: var(--shadow-lg, 0 12px 32px rgba(0, 0, 0, 0.08))
 
 @mixin card-interactive
   @include card-base
