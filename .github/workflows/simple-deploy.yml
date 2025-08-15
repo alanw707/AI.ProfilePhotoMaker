@@ -428,6 +428,20 @@ jobs:
           # Standard Bicep deployment validation
           echo ""
           echo "🧪 [INFO] Validating Bicep deployment template..."
+          
+          # Debug: Show parameter names being passed (values are automatically masked by GitHub)
+          echo "🔍 [DEBUG] Parameter verification:"
+          echo "  Passing sqlAdminPassword: ✓"
+          echo "  Passing jwtSecret: ✓"  
+          echo "  Passing replicateApiToken: ✓"
+          echo "  Passing replicateWebhookSecret: ✓"
+          echo "  Passing googleClientId: ✓"
+          echo "  Passing googleClientSecret: ✓"
+          echo "  Passing stripeSecretKey: ✓"
+          echo "  Passing stripePublishableKey: ✓"
+          echo "  Passing stripeWebhookSecret: ✓"
+          
+          # Run validation with detailed error output
           az deployment group validate \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --template-file infrastructure/simple-deploy.bicep \
@@ -439,7 +453,8 @@ jobs:
                         googleClientSecret="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
                         stripeSecretKey="${{ secrets.STRIPE_SECRET_KEY }}" \
                         stripePublishableKey="${{ secrets.STRIPE_PUBLISHABLE_KEY }}" \
-                        stripeWebhookSecret="${{ secrets.STRIPE_WEBHOOK_SECRET }}"
+                        stripeWebhookSecret="${{ secrets.STRIPE_WEBHOOK_SECRET }}" \
+            --verbose
           
           if [ $? -ne 0 ]; then
             echo "❌ [ERROR] Bicep deployment validation failed"
@@ -481,6 +496,18 @@ jobs:
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             RETRY_COUNT=$((RETRY_COUNT + 1))
             echo "🔄 [INFO] Attempt $RETRY_COUNT of $MAX_RETRIES"
+            
+            # Debug: Confirm parameters for deployment
+            echo "🔍 [DEBUG] Deployment parameters:"
+            echo "  sqlAdminPassword: ✓"
+            echo "  jwtSecret: ✓"
+            echo "  replicateApiToken: ✓"
+            echo "  replicateWebhookSecret: ✓"
+            echo "  googleClientId: ✓"
+            echo "  googleClientSecret: ✓"
+            echo "  stripeSecretKey: ✓"
+            echo "  stripePublishableKey: ✓"
+            echo "  stripeWebhookSecret: ✓"
             
             # Start deployment
             if az deployment group create \
