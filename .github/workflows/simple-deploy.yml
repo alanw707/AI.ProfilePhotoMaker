@@ -69,7 +69,7 @@ jobs:
         
       - name: 🔐 Validate GitHub Actions Secrets
         env:
-          # Required secrets for validation
+          # Required secrets for validation - ALL REQUIRED (referenced in infrastructure)
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
@@ -79,6 +79,11 @@ jobs:
           REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
           REPLICATE_WEBHOOK_SECRET: ${{ secrets.REPLICATE_WEBHOOK_SECRET }}
           SQL_ADMIN_PASSWORD: ${{ secrets.SQL_ADMIN_PASSWORD }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+          AZURE_STORAGE_CONTAINER_NAME: ${{ secrets.AZURE_STORAGE_CONTAINER_NAME }}
         run: |
           echo "🔍 Validating GitHub Actions secrets for deployment..."
           
@@ -157,6 +162,15 @@ jobs:
           
           validate_secret "GOOGLE_CLIENT_SECRET" "$GOOGLE_CLIENT_SECRET" 20 || ((errors++))
           
+          # Stripe secrets validation - ALL REQUIRED (referenced in infrastructure)
+          validate_secret "STRIPE_SECRET_KEY" "$STRIPE_SECRET_KEY" 20 || ((errors++))
+          validate_secret "STRIPE_PUBLISHABLE_KEY" "$STRIPE_PUBLISHABLE_KEY" 20 || ((errors++))
+          validate_secret "STRIPE_WEBHOOK_SECRET" "$STRIPE_WEBHOOK_SECRET" 20 || ((errors++))
+          
+          # Azure Storage secrets validation - REQUIRED (referenced in infrastructure)
+          validate_secret "AZURE_STORAGE_CONNECTION_STRING" "$AZURE_STORAGE_CONNECTION_STRING" 50 || ((errors++))
+          validate_secret "AZURE_STORAGE_CONTAINER_NAME" "$AZURE_STORAGE_CONTAINER_NAME" 3 || ((errors++))
+          
           echo ""
           if [[ $errors -eq 0 ]]; then
             echo "✅ All secrets validation passed! Deployment can proceed."
@@ -220,9 +234,9 @@ jobs:
           echo "📊 [INFO] Resource Group Details:"
           az group show --name "${{ env.RESOURCE_GROUP }}" --query "{Name:name, Location:location, Status:properties.provisioningState}" --output table
           
-      - name: 🔍 Validate Bicep Template
+      - name: 🔍 Validate Infrastructure Configuration
         run: |
-          echo "🔍 [VALIDATE] Validating Bicep template..."
+          echo "🔍 [VALIDATE] Validating infrastructure configuration alignment..."
           
           # Compile Bicep template
           echo "📝 [INFO] Compiling Bicep template..."
@@ -235,8 +249,185 @@ jobs:
           
           echo "✅ [SUCCESS] Bicep template compiled successfully"
           
-          # Validate deployment
-          echo "🧪 [INFO] Validating deployment..."
+          # Extract environment variables from Bicep template
+          echo ""
+          echo "📊 [ANALYSIS] Extracting environment variables from Bicep template..."
+          
+          # Parse Bicep file for environment variable definitions
+          BICEP_ENV_VARS=$(grep -E "^\s*name:\s*'[A-Z_]+'" infrastructure/simple-deploy.bicep | sed "s/.*name: '//" | sed "s/'.*$//" | sort -u)
+          
+          # Also extract ASP.NET Core configuration pattern variables (Section__Key format)
+          BICEP_CONFIG_VARS=$(grep -E "^\s*name:\s*'[A-Za-z]+__[A-Za-z]+'" infrastructure/simple-deploy.bicep | sed "s/.*name: '//" | sed "s/'.*$//" | sort -u)
+          
+          echo "🔍 [FOUND] Environment variables defined in Bicep template:"
+          echo "$BICEP_ENV_VARS" | while read var; do
+            echo "  • $var"
+          done
+          
+          if [[ -n "$BICEP_CONFIG_VARS" ]]; then
+            echo ""
+            echo "🔍 [FOUND] ASP.NET Core configuration variables in Bicep template:"
+            echo "$BICEP_CONFIG_VARS" | while read var; do
+              echo "  • $var"
+            done
+          fi
+          
+          # Extract environment variable constants from EnvironmentConfiguration.cs
+          echo ""
+          echo "📊 [ANALYSIS] Extracting expected environment variables from application code..."
+          
+          APP_ENV_VARS=$(grep -E "^\s*public const string [A-Z_]+ = \"[A-Z_]+\";" AI.ProfilePhotoMaker.API/Configuration/EnvironmentConfiguration.cs | sed -E 's/.*= "([^"]+)".*/\1/' | sort -u)
+          
+          echo "🔍 [FOUND] Environment variables expected by application:"
+          echo "$APP_ENV_VARS" | while read var; do
+            echo "  • $var"
+          done
+          
+          # Cross-reference critical environment variables
+          echo ""
+          echo "🔍 [VALIDATION] Cross-referencing critical environment variables..."
+          
+          # Critical variables that must match between Bicep and application
+          CRITICAL_VARS=(
+            "AZURE_STORAGE_CONNECTION_STRING"
+            "AZURE_STORAGE_CONTAINER_NAME"
+            "JWT_SECRET"
+            "REPLICATE_API_TOKEN"
+            "REPLICATE_WEBHOOK_SECRET"
+            "GOOGLE_CLIENT_ID"
+            "GOOGLE_CLIENT_SECRET"
+          )
+          
+          validation_errors=0
+          
+          # Function to check if a variable is provided in infrastructure (direct or config pattern)
+          check_infrastructure_provides() {
+            local var_name="$1"
+            
+            # Check direct environment variable
+            local direct_match=$(echo "$BICEP_ENV_VARS" | grep -x "$var_name" || true)
+            if [[ -n "$direct_match" ]]; then
+              echo "direct"
+              return 0
+            fi
+            
+            # Check ASP.NET Core configuration pattern mappings
+            case "$var_name" in
+              "JWT_SECRET")
+                local config_match=$(echo "$BICEP_CONFIG_VARS" | grep -x "Jwt__Secret" || true)
+                if [[ -n "$config_match" ]]; then
+                  echo "config:Jwt__Secret"
+                  return 0
+                fi
+                ;;
+              "REPLICATE_API_TOKEN")
+                local config_match=$(echo "$BICEP_CONFIG_VARS" | grep -x "Replicate__ApiToken" || true)
+                if [[ -n "$config_match" ]]; then
+                  echo "config:Replicate__ApiToken"
+                  return 0
+                fi
+                ;;
+              "REPLICATE_WEBHOOK_SECRET")
+                local config_match=$(echo "$BICEP_CONFIG_VARS" | grep -x "Replicate__WebhookSecret" || true)
+                if [[ -n "$config_match" ]]; then
+                  echo "config:Replicate__WebhookSecret"
+                  return 0
+                fi
+                ;;
+            esac
+            
+            # Check if it's provided via connection string pattern
+            if [[ "$var_name" == "MSSQL_SA_PASSWORD" ]]; then
+              local conn_match=$(echo "$BICEP_CONFIG_VARS" | grep -x "ConnectionStrings__DefaultConnection" || true)
+              if [[ -n "$conn_match" ]]; then
+                echo "config:ConnectionStrings__DefaultConnection"
+                return 0
+              fi
+            fi
+            
+            echo ""
+            return 1
+          }
+          
+          # Check each critical variable
+          for var in "${CRITICAL_VARS[@]}"; do
+            infrastructure_provides=$(check_infrastructure_provides "$var")
+            app_expects_var=$(echo "$APP_ENV_VARS" | grep -x "$var" || true)
+            
+            echo -n "  Checking $var: "
+            
+            if [[ -n "$app_expects_var" ]]; then
+              if [[ -n "$infrastructure_provides" ]]; then
+                if [[ "$infrastructure_provides" == "direct" ]]; then
+                  echo "✅ MATCH (Direct environment variable)"
+                else
+                  echo "✅ MATCH (Via $infrastructure_provides)"
+                fi
+              else
+                echo "❌ MISSING in Bicep template (Application expects this variable)"
+                ((validation_errors++))
+              fi
+            else
+              if [[ -n "$infrastructure_provides" ]]; then
+                echo "⚠️  PROVIDED but not explicitly expected (May be unused)"
+              else
+                echo "ℹ️  Not configured (Neither provided nor expected)"
+              fi
+            fi
+          done
+          
+          # Check for specific naming mismatches that have caused issues
+          echo ""
+          echo "🔍 [MISMATCH DETECTION] Checking for common naming pattern issues..."
+          
+          # Look for similar but incorrect variable names in Bicep
+          BICEP_SIMILAR_VARS=$(grep -E "^\s*name:\s*'[A-Za-z_]*[Ss]torage[A-Za-z_]*'" infrastructure/simple-deploy.bicep | sed "s/.*name: '//" | sed "s/'.*$//" || true)
+          if [[ -n "$BICEP_SIMILAR_VARS" ]]; then
+            echo "🔍 [FOUND] Storage-related variables in Bicep:"
+            echo "$BICEP_SIMILAR_VARS" | while read var; do
+              if [[ "$var" != "AZURE_STORAGE_CONNECTION_STRING" && "$var" != "AZURE_STORAGE_CONTAINER_NAME" ]]; then
+                echo "  ⚠️  $var (Potential mismatch - check if this should be AZURE_STORAGE_*)"
+                ((validation_errors++))
+              else
+                echo "  ✅ $var (Correct naming)"
+              fi
+            done
+          fi
+          
+          # Check for ConnectionStrings pattern vs direct environment variables
+          BICEP_CONN_STRINGS=$(grep -E "ConnectionStrings__" infrastructure/simple-deploy.bicep || true)
+          if [[ -n "$BICEP_CONN_STRINGS" ]]; then
+            echo ""
+            echo "ℹ️  [INFO] Found ConnectionStrings__ pattern in Bicep (this is correct for ASP.NET Core)"
+            echo "$BICEP_CONN_STRINGS" | while read line; do
+              echo "    $line"
+            done
+          fi
+          
+          # Final validation summary
+          echo ""
+          echo "📊 [SUMMARY] Infrastructure validation results:"
+          if [[ $validation_errors -eq 0 ]]; then
+            echo "✅ All critical environment variables are properly aligned between infrastructure and application"
+            echo "✅ No naming mismatches detected"
+            echo "✅ Infrastructure configuration validation PASSED"
+          else
+            echo "❌ Found $validation_errors validation error(s)"
+            echo "❌ Infrastructure and application environment variable configuration MISMATCH detected"
+            echo ""
+            echo "🛠️  [FIX] To resolve these issues:"
+            echo "  1. Check infrastructure/simple-deploy.bicep for environment variable names"
+            echo "  2. Compare against constants in AI.ProfilePhotoMaker.API/Configuration/EnvironmentConfiguration.cs"
+            echo "  3. Ensure exact name matching (case-sensitive)"
+            echo "  4. Common mistake: AzureStorage__ConnectionString vs AZURE_STORAGE_CONNECTION_STRING"
+            echo ""
+            echo "🚫 DEPLOYMENT BLOCKED - Fix environment variable mismatches before deploying"
+            exit 1
+          fi
+          
+          # Standard Bicep deployment validation
+          echo ""
+          echo "🧪 [INFO] Validating Bicep deployment template..."
           az deployment group validate \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --template-file infrastructure/simple-deploy.bicep \
@@ -248,11 +439,11 @@ jobs:
                         googleClientSecret="${{ secrets.GOOGLE_CLIENT_SECRET }}"
           
           if [ $? -ne 0 ]; then
-            echo "❌ [ERROR] Template validation failed"
+            echo "❌ [ERROR] Bicep deployment validation failed"
             exit 1
           fi
           
-          echo "✅ [SUCCESS] Template validation completed successfully"
+          echo "✅ [SUCCESS] Infrastructure configuration validation completed successfully"
           
       - name: 🏗️ Deploy Infrastructure
         id: infra
@@ -300,6 +491,9 @@ jobs:
                           replicateWebhookSecret="${{ secrets.REPLICATE_WEBHOOK_SECRET }}" \
                           googleClientId="${{ secrets.GOOGLE_CLIENT_ID }}" \
                           googleClientSecret="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+                          stripeSecretKey="${{ secrets.STRIPE_SECRET_KEY }}" \
+                          stripePublishableKey="${{ secrets.STRIPE_PUBLISHABLE_KEY }}" \
+                          stripeWebhookSecret="${{ secrets.STRIPE_WEBHOOK_SECRET }}" \
               --output json > deployment_result.json; then
               
               echo "✅ [SUCCESS] Deployment completed successfully!"

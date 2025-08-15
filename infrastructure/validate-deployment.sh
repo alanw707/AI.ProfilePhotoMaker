@@ -52,7 +52,7 @@ if command -v gh &> /dev/null; then
     fi
     
     # Check other required secrets
-    for secret in "GOOGLE_CLIENT_ID" "GOOGLE_CLIENT_SECRET" "JWT_SECRET" "REPLICATE_API_TOKEN" "SQL_ADMIN_PASSWORD"; do
+    for secret in "GOOGLE_CLIENT_ID" "GOOGLE_CLIENT_SECRET" "JWT_SECRET" "REPLICATE_API_TOKEN" "SQL_ADMIN_PASSWORD" "STRIPE_SECRET_KEY" "STRIPE_PUBLISHABLE_KEY" "STRIPE_WEBHOOK_SECRET" "AZURE_STORAGE_CONNECTION_STRING" "AZURE_STORAGE_CONTAINER_NAME"; do
         if gh secret list | grep -q "$secret"; then
             log_result "SUCCESS" "GitHub secret '$secret' exists"
         else
@@ -74,7 +74,7 @@ if command -v az &> /dev/null; then
         log_result "SUCCESS" "Key Vault '$KEY_VAULT_NAME' is accessible"
         
         # Check required secrets
-        for kv_secret in "ReplicateWebhookSecret" "GoogleClientId" "GoogleClientSecret" "JwtSecret" "ReplicateApiToken" "ConnectionString"; do
+        for kv_secret in "ReplicateWebhookSecret" "GoogleClientId" "GoogleClientSecret" "JwtSecret" "ReplicateApiToken" "ConnectionString" "StripeSecretKey" "StripePublishableKey" "StripeWebhookSecret" "AzureStorageConnectionString" "AzureStorageContainerName"; do
             if az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name "$kv_secret" --output none 2>/dev/null; then
                 log_result "SUCCESS" "Key Vault secret '$kv_secret' exists"
             else

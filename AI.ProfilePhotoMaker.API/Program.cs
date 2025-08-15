@@ -512,11 +512,21 @@ else
 // Perform deployment validation on startup
 // Temporarily disabled: await app.ValidateDeploymentOnStartupAsync();
 
-// Validate webhook URL configuration on startup
-await ValidateWebhookConfigurationAsync(app);
-
-// Validate Replicate configuration on startup
-await ValidateReplicateConfigurationAsync(app);
+// Run validations in background after startup to prevent blocking
+_ = Task.Run(async () => {
+    await Task.Delay(10000); // Wait 10s for app to fully start
+    try {
+        using var scope = app.Services.CreateScope();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        
+        logger.LogInformation("🔍 Running background startup validations...");
+        await ValidateWebhookConfigurationAsync(app);
+        await ValidateReplicateConfigurationAsync(app);
+        logger.LogInformation("✅ Background validations completed");
+    } catch (Exception ex) {
+        app.Logger.LogError(ex, "❌ Background validation failed: {Message}", ex.Message);
+    }
+});
 
 // Use forwarded headers for ngrok proxy
 app.UseForwardedHeaders();
