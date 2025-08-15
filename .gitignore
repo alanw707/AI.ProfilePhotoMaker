@@ -167,3 +167,4 @@ deployment-params.*.json
 .env.local
 .env.production
 .env.secrets
+deployment-secrets.env
