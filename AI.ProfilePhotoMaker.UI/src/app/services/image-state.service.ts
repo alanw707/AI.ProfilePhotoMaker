@@ -33,7 +33,6 @@ export class ImageStateService extends StateBaseService<ImageState> {
   private readonly CACHE_KEY = 'image_state_data';
   private readonly VALIDATION_TTL = 5 * 60 * 1000; // 5 minutes
 
-
   constructor(
     _cacheManager: CacheManagerService,
     _notificationService: NotificationService,
@@ -141,12 +140,28 @@ export class ImageStateService extends StateBaseService<ImageState> {
           const isOriginalByStyle = img.style === 'Original';
           const hasUrl = !!img.originalImageUrl;
 
-          const isUploadedImage = (isOriginalByFlag || isOriginalByStyle) && hasUrl;
+          // Additional safety check: Filter out enhanced images that might have slipped through
+          // Enhanced images should NEVER be counted in dashboard uploads
+          const isEnhancedImage = this.isEnhancedImage(
+            img.originalImageUrl,
+            img.processedImageUrl,
+            img.fileName
+          );
+
+          const isUploadedImage =
+            (isOriginalByFlag || isOriginalByStyle) && hasUrl && !isEnhancedImage;
 
           // Flag/style mismatch indicates possible database corruption
           if (isOriginalByFlag !== isOriginalByStyle) {
             console.warn(
               `⚠️ Image ${img.id} has flag/style mismatch: isOriginalUpload=${isOriginalByFlag}, style=${img.style} - possible database corruption`
+            );
+          }
+
+          // Warn if enhanced images are found in upload list (indicates bug)
+          if (isEnhancedImage) {
+            console.warn(
+              `🚨 Enhanced image ${img.id} found in upload list - this should not happen! URL: ${img.originalImageUrl}`
             );
           }
 
@@ -389,5 +404,18 @@ export class ImageStateService extends StateBaseService<ImageState> {
     });
 
     this.loadUserImages(true);
+  }
+
+  /**
+   * Utility method to check if an image is an enhanced image
+   * Enhanced images are temporary files and should not be counted in dashboard uploads
+   */
+  private isEnhancedImage(originalUrl?: string, processedUrl?: string, fileName?: string): boolean {
+    return (
+      originalUrl?.includes('/enhanced/') ||
+      processedUrl?.includes('/enhanced/') ||
+      fileName?.includes('enhanced_') ||
+      false
+    );
   }
 }

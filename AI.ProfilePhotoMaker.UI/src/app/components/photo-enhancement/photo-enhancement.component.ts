@@ -9,10 +9,9 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { RouterModule } from '@angular/router';
 import { ReplicateService } from '../../services/replicate.service';
 import { FileUploadService } from '../../services/file-upload.service';
-import { AuthService } from '../../services/auth.service';
 import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
 import { DashboardCoordinatorService } from '../../services/dashboard-coordinator.service';
 import { CreditService, UserCreditStatus } from '../../services/credit.service';
@@ -52,8 +51,6 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   constructor(
     private _replicateService: ReplicateService,
     private _fileUploadService: FileUploadService,
-    private _authService: AuthService,
-    private _router: Router,
     private _stateService: DashboardCoordinatorService,
     private _creditService: CreditService,
     private _cdr: ChangeDetectorRef
@@ -309,8 +306,8 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     }
 
     return new Promise((resolve, reject) => {
-      // Upload as temporary file (isEnhanced=false) for enhancement processing
-      this._fileUploadService.uploadSingleImage(this.selectedFile!, false).subscribe({
+      // Upload as enhanced image (isEnhanced=true) to prevent database records
+      this._fileUploadService.uploadSingleImage(this.selectedFile!, true).subscribe({
         next: result => {
           if (result.progress < 100) {
             this.processingProgress = Math.round(result.progress * 0.2);
@@ -427,13 +424,6 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     this.errorMessage = '';
     this.isProcessing = false;
     this.processingProgress = 0;
-  }
-
-  /**
-   * Verify UI state after enhancement completion
-   */
-  private verifyUIState(): void {
-    // UI state verification removed - debug logging cleaned up
   }
 
   /**
