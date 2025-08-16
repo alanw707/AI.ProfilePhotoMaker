@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.IO.Compression;
-using System.Security.Claims;
 
 namespace AI.ProfilePhotoMaker.API.Controllers
 {
@@ -141,6 +140,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     var imageUrl = _storageService.GetImageUrl(storagePath);
 
                     // Only create database records for non-enhanced images
+                    // Enhanced images are temporary files and should NOT be counted in dashboard
                     if (!dto.IsEnhanced)
                     {
                         var processedImage = new ProcessedImage
@@ -159,6 +159,14 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                         profile.ProcessedImages.Add(processedImage);
                         uploadedImages.Add(processedImage);
+                        
+                        Logger.LogInformation("Created database record for uploaded image {FileName} for user {UserId}", 
+                            fileName, userId);
+                    }
+                    else
+                    {
+                        Logger.LogInformation("Skipped database record for enhanced image {FileName} for user {UserId} - temporary file only", 
+                            fileName, userId);
                     }
 
                     uploadResults.Add(new
@@ -658,11 +666,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
         }
 
-        [Obsolete("Use CreateTrainingZipAsync instead")]
-        private string? CreateTrainingZip(string uploadDir, string userId)
-        {
-            return CreateTrainingZipAsync(userId).GetAwaiter().GetResult();
-        }
 
         /// <summary>
         /// Checks if file is an image based on extension
@@ -1439,6 +1442,89 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         /// <summary>
+        /// Clean up enhanced images that shouldn't be in the database
+        /// Enhanced images are temporary files and should never be recorded as uploads
+        /// </summary>
+        [HttpPost("debug/cleanup-enhanced-images")]
+        public async Task<IActionResult> CleanupEnhancedImages()
+        {
+            var authCheck = ValidateAuthentication();
+            if (authCheck != null) return authCheck;
+            var userId = GetCurrentUserId()!;
+
+            try
+            {
+                var profile = await _userProfileRepository.GetByUserIdAsync(userId);
+                if (profile == null)
+                    return ErrorResponse("ProfileNotFound", "Profile not found", 404);
+
+                var allImages = profile.ProcessedImages.ToList();
+                var enhancedImages = new List<ProcessedImage>();
+                var removedDetails = new List<object>();
+
+                foreach (var img in allImages)
+                {
+                    bool isEnhancedImage = false;
+                    var issues = new List<string>();
+
+                    // Check if this is an enhanced image (temporary file that shouldn't be in database)
+                    if (img.OriginalImageUrl?.Contains("/enhanced/") == true ||
+                        img.ProcessedImageUrl?.Contains("/enhanced/") == true ||
+                        img.OriginalImageUrl?.Contains("enhanced_") == true ||
+                        img.ProcessedImageUrl?.Contains("enhanced_") == true)
+                    {
+                        isEnhancedImage = true;
+                        issues.Add($"Enhanced image found in database: {img.OriginalImageUrl ?? img.ProcessedImageUrl}");
+                    }
+
+                    if (isEnhancedImage)
+                    {
+                        enhancedImages.Add(img);
+                        removedDetails.Add(new
+                        {
+                            img.Id,
+                            img.Style,
+                            img.IsGenerated,
+                            img.IsOriginalUpload,
+                            img.CreatedAt,
+                            img.OriginalImageUrl,
+                            img.ProcessedImageUrl,
+                            Issues = issues
+                        });
+                    }
+                }
+
+                // Remove enhanced images from the profile
+                foreach (var enhancedImage in enhancedImages)
+                {
+                    profile.ProcessedImages.Remove(enhancedImage);
+                }
+
+                if (enhancedImages.Count > 0)
+                {
+                    await _userProfileRepository.UpdateAsync(profile);
+                    LogInfo($"Removed {enhancedImages.Count} enhanced image records for user {userId}");
+                }
+
+                return SuccessResponse(new
+                {
+                    TotalImagesChecked = allImages.Count,
+                    EnhancedImagesRemoved = enhancedImages.Count,
+                    RemovedImageDetails = removedDetails,
+                    Message = enhancedImages.Count > 0
+                        ? $"Successfully removed {enhancedImages.Count} enhanced image records that shouldn't be in database"
+                        : "No enhanced image records found in database",
+                    Timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, "Error cleaning up enhanced images", userId);
+                return ErrorResponse("CleanupFailed", "Failed to cleanup enhanced images", 500);
+            }
+        }
+
+        /// <summary>
         /// Complete repair solution - runs all repairs and invalidates UI cache
         /// </summary>
         [Authorize(Roles = "Admin")]
@@ -1462,16 +1548,20 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     CacheInvalidation = new { }
                 };
 
-                // Step 1: Style corruption repair
-                LogInfo("Starting complete repair process - Step 1: Style corruption");
+                // Step 1: Enhanced images cleanup (new step)
+                LogInfo("Starting complete repair process - Step 1: Enhanced images cleanup");
+                var enhancedCleanupResult = await CleanupEnhancedImages();
+
+                // Step 2: Style corruption repair
+                LogInfo("Complete repair process - Step 2: Style corruption repair");
                 var styleRepairResult = await RepairStyleCorruption();
 
-                // Step 2: Orphaned records cleanup  
-                LogInfo("Complete repair process - Step 2: Orphaned records cleanup");
+                // Step 3: Orphaned records cleanup  
+                LogInfo("Complete repair process - Step 3: Orphaned records cleanup");
                 var orphanedCleanupResult = await CleanupOrphanedRecords();
 
-                // Step 3: Invalidate user cache to force UI refresh
-                LogInfo("Complete repair process - Step 3: Cache invalidation");
+                // Step 4: Invalidate user cache to force UI refresh
+                LogInfo("Complete repair process - Step 4: Cache invalidation");
                 await _userContextService.InvalidateUserCacheAsync(userId);
 
                 LogInfo($"Complete repair process finished for user {userId}");
@@ -1481,7 +1571,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     Message = "Complete repair process finished successfully",
                     Steps = new[]
                     {
-                        "✅ Style corruption repair completed",
+                        "✅ Enhanced images cleanup completed",
+                        "✅ Style corruption repair completed", 
                         "✅ Orphaned records cleanup completed",
                         "✅ UI cache invalidated for fresh data load"
                     },
