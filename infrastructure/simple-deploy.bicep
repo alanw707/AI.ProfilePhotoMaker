@@ -5,6 +5,9 @@ param appName string = 'aipm'
 param environment string = 'v1'
 param location string = resourceGroup().location
 
+// Image tag to deploy (e.g., timestamp). Defaults to 'latest' for local/dev.
+param imageTag string = 'latest'
+
 // Core secrets
 @secure()
 param sqlAdminPassword string
@@ -342,8 +345,8 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
       containers: [
         {
           name: 'api'
-          // References locally built and pushed image - no placeholder needed
-          image: '${containerRegistry.properties.loginServer}/aiprofilemaker-api:latest'
+          // References locally built and pushed image with parameterized tag
+          image: '${containerRegistry.properties.loginServer}/aiprofilemaker-api:${imageTag}'
           resources: {
             cpu: json('0.5')
             memory: '1Gi'
@@ -533,8 +536,8 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
       containers: [
         {
           name: 'web'
-          // References locally built and pushed image - no placeholder needed
-          image: '${containerRegistry.properties.loginServer}/aiprofilemaker-web:latest'
+          // References locally built and pushed image with parameterized tag
+          image: '${containerRegistry.properties.loginServer}/aiprofilemaker-web:${imageTag}'
           resources: {
             cpu: json('0.25')
             memory: '0.5Gi'
