@@ -1613,27 +1613,64 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 var allImages = profile.ProcessedImages.ToList();
                 var orphaned = new List<ProcessedImage>();
+                var skippedAmbiguous = 0;
+
+                async Task<bool> PathExistsAsync(string? path)
+                {
+                    if (string.IsNullOrEmpty(path)) return false;
+                    if (path.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return true; // cannot verify external URLs; do not mark missing
+                    return await _storageService.ExistsAsync(path);
+                }
 
                 foreach (var img in allImages)
                 {
-                    bool missingOriginal = false;
-                    bool missingProcessed = false;
-
-                    if (!string.IsNullOrEmpty(img.OriginalImageUrl) && !img.OriginalImageUrl.StartsWith("http"))
-                    {
-                        missingOriginal = !await _storageService.ExistsAsync(img.OriginalImageUrl);
-                    }
-                    if (!string.IsNullOrEmpty(img.ProcessedImageUrl) && !img.ProcessedImageUrl.StartsWith("http"))
-                    {
-                        missingProcessed = !await _storageService.ExistsAsync(img.ProcessedImageUrl);
-                    }
-
-                    // If either expected backing file is missing, consider record orphaned
-                    if (missingOriginal || missingProcessed ||
-                        (string.IsNullOrEmpty(img.OriginalImageUrl) && string.IsNullOrEmpty(img.ProcessedImageUrl)))
+                    // If both URLs are missing entirely, this is clearly orphaned
+                    if (string.IsNullOrEmpty(img.OriginalImageUrl) && string.IsNullOrEmpty(img.ProcessedImageUrl))
                     {
                         orphaned.Add(img);
+                        continue;
                     }
+
+                    var isClearlyOriginal = img.IsOriginalUpload && !img.IsGenerated;
+                    var isClearlyGenerated = img.IsGenerated && !img.IsOriginalUpload;
+
+                    // Resolve ambiguous flags using style when possible
+                    if (!isClearlyOriginal && !isClearlyGenerated)
+                    {
+                        if (string.Equals(img.Style, ImageConstants.OriginalStyle, StringComparison.OrdinalIgnoreCase))
+                        {
+                            isClearlyOriginal = true;
+                        }
+                        else if (!string.IsNullOrEmpty(img.Style) && !string.Equals(img.Style, ImageConstants.OriginalStyle, StringComparison.OrdinalIgnoreCase))
+                        {
+                            isClearlyGenerated = true;
+                        }
+                    }
+
+                    // Original uploads must have the original file present; processed file is not required
+                    if (isClearlyOriginal)
+                    {
+                        var originalExists = await PathExistsAsync(img.OriginalImageUrl);
+                        if (!originalExists)
+                        {
+                            orphaned.Add(img);
+                        }
+                        continue;
+                    }
+
+                    // Generated images must have the processed file present; original file is not required
+                    if (isClearlyGenerated)
+                    {
+                        var processedExists = await PathExistsAsync(img.ProcessedImageUrl);
+                        if (!processedExists)
+                        {
+                            orphaned.Add(img);
+                        }
+                        continue;
+                    }
+
+                    // Ambiguous records (cannot confidently classify) — do not delete to avoid data loss
+                    skippedAmbiguous++;
                 }
 
                 if (dryRun)
@@ -1642,6 +1679,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     {
                         TotalImages = allImages.Count,
                         OrphanedRecords = orphaned.Count,
+                        SkippedAmbiguousRecords = skippedAmbiguous,
                         Message = orphaned.Count > 0
                             ? $"Found {orphaned.Count} orphaned image record(s)"
                             : "No orphaned image records found",
@@ -1665,6 +1703,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 {
                     TotalImagesChecked = allImages.Count,
                     OrphanedRecordsRemoved = orphaned.Count,
+                    SkippedAmbiguousRecords = skippedAmbiguous,
                     Message = orphaned.Count > 0
                         ? $"Successfully removed {orphaned.Count} orphaned image record(s)"
                         : "No orphaned image records to remove",
