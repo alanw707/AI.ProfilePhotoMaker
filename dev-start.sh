@@ -8,6 +8,9 @@ set -e
 echo "🚀 Starting AI Profile Photo Maker Local Development Environment"
 echo "=============================================================="
 
+# Ensure logs directory exists
+mkdir -p logs
+
 # Stop any existing processes
 echo "🔍 Checking for existing processes..."
 pkill -f "dotnet.*AI.ProfilePhotoMaker.API" 2>/dev/null || true
@@ -20,11 +23,18 @@ export OAUTH_BASE_URL=${OAUTH_BASE_URL:-http://localhost:5032}
 export REPLICATE_API_TOKEN=${REPLICATE_API_TOKEN:-r8_dev_dummy_1234567890}
 export REPLICATE_WEBHOOK_SECRET=${REPLICATE_WEBHOOK_SECRET:-whsec_dev_dummy_1234567890}
 
-# Start ngrok with reserved domain
-echo "🔗 Starting ngrok tunnel..."
+# Start ngrok with reserved domain (headless, log to file)
+echo "🔗 Starting ngrok tunnel (headless)..."
 pkill -f "ngrok http" 2>/dev/null || true
 sleep 1
-ngrok http 5032 --domain=clear-anteater-usually.ngrok-free.app &
+nohup ngrok http 5032 \
+  --domain=clear-anteater-usually.ngrok-free.app \
+  --log=stdout \
+  --log-level=info \
+  --log-format=logfmt \
+  > logs/ngrok.log 2>&1 &
+NGROK_PID=$!
+echo $NGROK_PID > logs/ngrok.pid
 echo "⏳ Waiting for ngrok tunnel to be ready..."
 sleep 3
 
