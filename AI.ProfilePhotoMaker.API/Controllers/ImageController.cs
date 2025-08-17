@@ -1593,6 +1593,90 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         #endregion
+
+        /// <summary>
+        /// Reconcile database image records with backing storage.
+        /// Removes records that reference non-existent files. When dryRun=true, only reports counts.
+        /// </summary>
+        [HttpPost("reconcile-database")]
+        public async Task<IActionResult> ReconcileDatabase([FromQuery] bool dryRun = true)
+        {
+            var authCheck = ValidateAuthentication();
+            if (authCheck != null) return authCheck;
+            var userId = GetCurrentUserId()!;
+
+            try
+            {
+                var profile = await _userProfileRepository.GetByUserIdAsync(userId);
+                if (profile == null)
+                    return ErrorResponse("ProfileNotFound", "Profile not found", 404);
+
+                var allImages = profile.ProcessedImages.ToList();
+                var orphaned = new List<ProcessedImage>();
+
+                foreach (var img in allImages)
+                {
+                    bool missingOriginal = false;
+                    bool missingProcessed = false;
+
+                    if (!string.IsNullOrEmpty(img.OriginalImageUrl) && !img.OriginalImageUrl.StartsWith("http"))
+                    {
+                        missingOriginal = !await _storageService.ExistsAsync(img.OriginalImageUrl);
+                    }
+                    if (!string.IsNullOrEmpty(img.ProcessedImageUrl) && !img.ProcessedImageUrl.StartsWith("http"))
+                    {
+                        missingProcessed = !await _storageService.ExistsAsync(img.ProcessedImageUrl);
+                    }
+
+                    // If either expected backing file is missing, consider record orphaned
+                    if (missingOriginal || missingProcessed ||
+                        (string.IsNullOrEmpty(img.OriginalImageUrl) && string.IsNullOrEmpty(img.ProcessedImageUrl)))
+                    {
+                        orphaned.Add(img);
+                    }
+                }
+
+                if (dryRun)
+                {
+                    return SuccessResponse(new
+                    {
+                        TotalImages = allImages.Count,
+                        OrphanedRecords = orphaned.Count,
+                        Message = orphaned.Count > 0
+                            ? $"Found {orphaned.Count} orphaned image record(s)"
+                            : "No orphaned image records found",
+                        Timestamp = DateTime.UtcNow
+                    });
+                }
+
+                foreach (var img in orphaned)
+                {
+                    profile.ProcessedImages.Remove(img);
+                }
+
+                if (orphaned.Count > 0)
+                {
+                    await _userProfileRepository.UpdateAsync(profile);
+                    await _userContextService.InvalidateUserCacheAsync(userId);
+                    LogInfo($"Removed {orphaned.Count} orphaned image records for user {userId}");
+                }
+
+                return SuccessResponse(new
+                {
+                    TotalImagesChecked = allImages.Count,
+                    OrphanedRecordsRemoved = orphaned.Count,
+                    Message = orphaned.Count > 0
+                        ? $"Successfully removed {orphaned.Count} orphaned image record(s)"
+                        : "No orphaned image records to remove",
+                    Timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, "Error reconciling image database", userId);
+                return ErrorResponse("ReconciliationFailed", "Failed to reconcile image database", 500);
+            }
+        }
     }
 
 }
