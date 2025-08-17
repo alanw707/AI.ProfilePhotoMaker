@@ -18,6 +18,8 @@ on:
 
 env:
   RESOURCE_GROUP: aiprofilemaker-v1
+  # Use a timestamped image tag for each deployment to avoid stale :latest
+  IMAGE_TAG: ${{ github.run_number }}-${{ github.run_id }}
   
 permissions:
   id-token: write
@@ -208,11 +210,11 @@ jobs:
 
       - name: 🏗️ Build Docker images (backend/frontend)
         run: |
-          IMAGE_TAG=latest ./scripts/build-local.sh
+          IMAGE_TAG=${{ env.IMAGE_TAG }} ./scripts/build-local.sh
 
       - name: 📤 Push Docker images to ACR
         run: |
-          IMAGE_TAG=latest ./scripts/push-to-acr.sh
+          IMAGE_TAG=${{ env.IMAGE_TAG }} ./scripts/push-to-acr.sh
           
       - name: 🏗️ Ensure Resource Group
         run: |
@@ -478,7 +480,7 @@ jobs:
           az deployment group validate \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --template-file infrastructure/simple-deploy.bicep \
-            --parameters @deployment-parameters.json \
+            --parameters @deployment-parameters.json imageTag='${{ env.IMAGE_TAG }}' \
             --verbose
           
           if [ $? -ne 0 ]; then
@@ -540,7 +542,7 @@ jobs:
               --template-file infrastructure/simple-deploy.bicep \
               --name "$DEPLOYMENT_NAME" \
               --mode Incremental \
-              --parameters @deployment-parameters.json \
+              --parameters @deployment-parameters.json imageTag='${{ env.IMAGE_TAG }}' \
               --output json > deployment_result.json; then
               
               echo "✅ [SUCCESS] Deployment completed successfully!"
