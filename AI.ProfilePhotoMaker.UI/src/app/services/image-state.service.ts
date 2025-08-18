@@ -227,24 +227,25 @@ export class ImageStateService extends StateBaseService<ImageState> {
     const validation = await this._imageValidation.filterValidImages(images);
 
     if (validation.removedCount > 0) {
+      // TEMPORARILY DISABLED: Auto-repair to prevent deletion of images with wrong URLs
+      // TODO: Re-enable after fixing existing database records with proper Azure URLs
       // Trigger repair if 404s were found
-      if (validation.repairSuggested && validation.notFoundCount > 0) {
-        try {
-          const repairResult = await this._fileUploadService.repairImageDatabase().toPromise();
-          if (repairResult?.success) {
-            // Force refresh from server after repair
-            await this.forceRefreshAfterRepair();
-
-            return {
-              validImages: validation.validImages,
-              removedCount: validation.removedCount,
-              repairTriggered: true,
-            };
-          }
-        } catch (repairError) {
-          console.error('🔧 Database repair failed:', repairError);
-        }
-      }
+      // if (validation.repairSuggested && validation.notFoundCount > 0) {
+      //   try {
+      //     const repairResult = await this._fileUploadService.repairImageDatabase().toPromise();
+      //     if (repairResult?.success) {
+      //       // Force refresh from server after repair
+      //       await this.forceRefreshAfterRepair();
+      //       return {
+      //         validImages: validation.validImages,
+      //         removedCount: validation.removedCount,
+      //         repairTriggered: true,
+      //       };
+      //     }
+      //   } catch (repairError) {
+      //     console.error('🔧 Database repair failed:', repairError);
+      //   }
+      // }
     }
 
     return {

@@ -91,7 +91,10 @@ export class DashboardStateService implements IDashboardStateService {
 
     // Debounce rapid reloads
     if (
-      this._cacheManager.shouldDebounceRequest('settings_load', CacheManagerService.LOAD_DEBOUNCE_MS)
+      this._cacheManager.shouldDebounceRequest(
+        'settings_load',
+        CacheManagerService.LOAD_DEBOUNCE_MS
+      )
     ) {
       return;
     }
@@ -547,7 +550,7 @@ export class DashboardStateService implements IDashboardStateService {
             },
             error: _error => {
               // Silent failure for filesystem check - intentionally empty
-            }, 
+            },
           });
         }
 
@@ -642,24 +645,25 @@ export class DashboardStateService implements IDashboardStateService {
     const validation = await this._imageValidation.filterValidImages(images);
 
     if (validation.removedCount > 0) {
+      // TEMPORARILY DISABLED: Auto-repair to prevent deletion of images with wrong URLs
+      // TODO: Re-enable after fixing existing database records with proper Azure URLs
       // Trigger repair if 404s were found (orphaned database records)
-      if (validation.repairSuggested && validation.notFoundCount > 0) {
-        try {
-          const repairResult = await this._fileUploadService.repairImageDatabase().toPromise();
-          if (repairResult?.success) {
-            // Force refresh from server to get accurate counts after repair
-            await this._forceRefreshAfterRepair();
-
-            return {
-              validImages: validation.validImages,
-              removedCount: validation.removedCount,
-              repairTriggered: true,
-            };
-          }
-        } catch {
-          // Silent failure - repair error is handled by caller
-        }
-      }
+      // if (validation.repairSuggested && validation.notFoundCount > 0) {
+      //   try {
+      //     const repairResult = await this._fileUploadService.repairImageDatabase().toPromise();
+      //     if (repairResult?.success) {
+      //       // Force refresh from server to get accurate counts after repair
+      //       await this._forceRefreshAfterRepair();
+      //       return {
+      //         validImages: validation.validImages,
+      //         removedCount: validation.removedCount,
+      //         repairTriggered: true,
+      //       };
+      //     }
+      //   } catch {
+      //     // Silent failure - repair error is handled by caller
+      //   }
+      // }
     }
 
     return {
