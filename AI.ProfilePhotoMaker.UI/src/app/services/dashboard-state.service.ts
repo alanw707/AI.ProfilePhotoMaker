@@ -767,7 +767,7 @@ export class DashboardStateService implements IDashboardStateService {
     const lastRepairKey = 'lastAutoRepairTime';
     const lastRepair = localStorage.getItem(lastRepairKey);
     if (lastRepair) {
-      const timeSinceLastRepair = Date.now() - parseInt(lastRepair);
+      const timeSinceLastRepair = Date.now() - (parseInt(lastRepair) || 0);
       if (timeSinceLastRepair < this._configService.autoRepairCooldownMs) {
         const remainingCooldown = Math.ceil(
           (this._configService.autoRepairCooldownMs - timeSinceLastRepair) / (60 * 1000)
@@ -779,7 +779,7 @@ export class DashboardStateService implements IDashboardStateService {
 
     // Check session attempt limit
     const sessionAttemptsKey = 'sessionAutoRepairAttempts';
-    const sessionAttempts = parseInt(localStorage.getItem(sessionAttemptsKey) || '0');
+    const sessionAttempts = parseInt(sessionStorage.getItem(sessionAttemptsKey) || '0') || 0;
     if (sessionAttempts >= this._configService.autoRepairMaxAttempts) {
       console.log(
         `🔧 Auto-repair max attempts reached: ${sessionAttempts}/${this._configService.autoRepairMaxAttempts}`
@@ -816,8 +816,9 @@ export class DashboardStateService implements IDashboardStateService {
 
       // Increment session attempts counter
       const sessionAttemptsKey = 'sessionAutoRepairAttempts';
-      const currentAttempts = parseInt(localStorage.getItem(sessionAttemptsKey) || '0') + 1;
-      localStorage.setItem(sessionAttemptsKey, currentAttempts.toString());
+      const currentAttempts =
+        (parseInt(sessionStorage.getItem(sessionAttemptsKey) || '0') || 0) + 1;
+      sessionStorage.setItem(sessionAttemptsKey, currentAttempts.toString());
 
       // Check dry-run mode
       if (this._configService.isAutoRepairDryRunOnly) {
