@@ -9,6 +9,17 @@ export const environment = {
     cors: true,
     enableImageValidation: true,
     enableReplicateCredits: true,
+
+    // NEW: Auto-Repair Feature Flags (MVP-v1 Configuration - Safety First)
+    enableAutoRepair: false, // DISABLED initially for safety
+    autoRepairDryRunOnly: true, // DRY-RUN ONLY when enabled
+    autoRepairThreshold: 5, // Higher threshold for safety
+    autoRepairCooldown: 24 * 60 * 60 * 1000, // 24-hour cooldown
+    autoRepairMaxAttempts: 1, // Conservative attempt limit
+    autoRepairTimeoutMs: 30000, // 30-second timeout
+    autoRepairNotifications: true, // Show notifications for transparency
+    autoRepairTelemetry: true, // Full metrics in production
+    autoRepairValidationLevel: 'strict', // Strictest validation
   },
   azure: {
     enabled: true,

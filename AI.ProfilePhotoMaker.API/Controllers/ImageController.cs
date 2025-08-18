@@ -145,8 +145,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     {
                         var processedImage = new ProcessedImage
                         {
-                            OriginalImageUrl = storagePath,
-                            ProcessedImageUrl = storagePath,
+                            OriginalImageUrl = imageUrl,
+                            ProcessedImageUrl = imageUrl,
                             Style = ImageConstants.OriginalStyle,
                             UserProfileId = profile.Id,
                             CreatedAt = DateTime.UtcNow,
