@@ -226,26 +226,8 @@ export class ImageStateService extends StateBaseService<ImageState> {
 
     const validation = await this._imageValidation.filterValidImages(images);
 
-    if (validation.removedCount > 0) {
-      // TEMPORARILY DISABLED: Auto-repair to prevent deletion of images with wrong URLs
-      // TODO: Re-enable after fixing existing database records with proper Azure URLs
-      // Trigger repair if 404s were found
-      // if (validation.repairSuggested && validation.notFoundCount > 0) {
-      //   try {
-      //     const repairResult = await this._fileUploadService.repairImageDatabase().toPromise();
-      //     if (repairResult?.success) {
-      //       // Force refresh from server after repair
-      //       await this.forceRefreshAfterRepair();
-      //       return {
-      //         validImages: validation.validImages,
-      //         removedCount: validation.removedCount,
-      //         repairTriggered: true,
-      //       };
-      //     }
-      //   } catch (repairError) {
-      //     console.error('🔧 Database repair failed:', repairError);
-      //   }
-      // }
+    if (validation.removedCount > 0 && this._shouldTriggerAutoRepair(validation)) {
+      return await this._attemptAutoRepair(validation);
     }
 
     return {
@@ -418,5 +400,182 @@ export class ImageStateService extends StateBaseService<ImageState> {
       fileName?.includes('enhanced_') ||
       false
     );
+  }
+
+  // NEW: Enhanced Auto-Repair Helper Methods with Safety Guards
+
+  /**
+   * Check if auto-repair should be triggered based on safety conditions
+   * @param validation - The validation result containing broken image counts
+   * @returns true if auto-repair should proceed, false if safety conditions not met
+   */
+  private _shouldTriggerAutoRepair(validation: any): boolean {
+    // Check master feature flag
+    if (!this._configService.isAutoRepairEnabled) {
+      console.log('🔧 Auto-repair disabled by feature flag');
+      return false;
+    }
+
+    // Check threshold requirement
+    if (validation.notFoundCount < this._configService.autoRepairThreshold) {
+      console.log(
+        `🔧 Auto-repair threshold not met: ${validation.notFoundCount} < ${this._configService.autoRepairThreshold}`
+      );
+      return false;
+    }
+
+    // Check cooldown period
+    const lastRepairKey = 'lastAutoRepairTime';
+    const lastRepair = localStorage.getItem(lastRepairKey);
+    if (lastRepair) {
+      const timeSinceLastRepair = Date.now() - parseInt(lastRepair);
+      if (timeSinceLastRepair < this._configService.autoRepairCooldownMs) {
+        const remainingCooldown = Math.ceil(
+          (this._configService.autoRepairCooldownMs - timeSinceLastRepair) / (60 * 1000)
+        );
+        console.log(`🔧 Auto-repair in cooldown: ${remainingCooldown} minutes remaining`);
+        return false;
+      }
+    }
+
+    // Check session attempt limit
+    const sessionAttemptsKey = 'sessionAutoRepairAttempts';
+    const sessionAttempts = parseInt(localStorage.getItem(sessionAttemptsKey) || '0');
+    if (sessionAttempts >= this._configService.autoRepairMaxAttempts) {
+      console.log(
+        `🔧 Auto-repair max attempts reached: ${sessionAttempts}/${this._configService.autoRepairMaxAttempts}`
+      );
+      return false;
+    }
+
+    // Check if repair is suggested by validation logic
+    if (!validation.repairSuggested || validation.notFoundCount <= 0) {
+      console.log('🔧 Auto-repair not suggested by validation logic');
+      return false;
+    }
+
+    console.log(
+      `🔧 Auto-repair conditions met: ${validation.notFoundCount} broken images detected`
+    );
+    return true;
+  }
+
+  /**
+   * Attempt auto-repair with comprehensive safety measures and logging
+   * @param validation - The validation result containing broken image information
+   * @returns Enhanced validation result with repair status
+   */
+  private async _attemptAutoRepair(validation: any): Promise<any> {
+    try {
+      console.log(
+        `🔧 Auto-repair triggered: ${validation.notFoundCount} broken references detected`
+      );
+
+      // Record repair attempt
+      const now = Date.now();
+      localStorage.setItem('lastAutoRepairTime', now.toString());
+
+      // Increment session attempts counter
+      const sessionAttemptsKey = 'sessionAutoRepairAttempts';
+      const currentAttempts = parseInt(localStorage.getItem(sessionAttemptsKey) || '0') + 1;
+      localStorage.setItem(sessionAttemptsKey, currentAttempts.toString());
+
+      // Check dry-run mode
+      if (this._configService.isAutoRepairDryRunOnly) {
+        console.log('🔧 Auto-repair in DRY-RUN mode - no actual changes will be made');
+
+        if (this._configService.isAutoRepairNotificationsEnabled) {
+          this._notificationService.info(
+            'Auto-Repair Simulation',
+            `Would repair ${validation.notFoundCount} broken image references (DRY-RUN mode)`
+          );
+        }
+
+        return {
+          validImages: validation.validImages,
+          removedCount: validation.removedCount,
+          repairTriggered: false,
+          dryRunMode: true,
+        };
+      }
+
+      // Perform actual repair
+      console.log('🔧 Executing auto-repair...');
+      const repairResult = await this._fileUploadService.repairImageDatabase().toPromise();
+
+      if (repairResult?.success) {
+        console.log('✅ Auto-repair completed successfully');
+
+        if (this._configService.isAutoRepairNotificationsEnabled) {
+          this._notificationService.success(
+            'Auto-Repair Complete',
+            `Successfully repaired ${validation.notFoundCount} broken image references`
+          );
+        }
+
+        // Force refresh to get accurate data after repair
+        await this.forceRefreshAfterRepair();
+
+        return {
+          validImages: validation.validImages,
+          removedCount: validation.removedCount,
+          repairTriggered: true,
+          repairSuccess: true,
+        };
+      } else {
+        console.warn('⚠️ Auto-repair completed but returned no success indicator');
+        return {
+          validImages: validation.validImages,
+          removedCount: validation.removedCount,
+          repairTriggered: false,
+          repairError: 'No success indicator returned',
+        };
+      }
+    } catch (error) {
+      console.error('🚨 Auto-repair failed:', error);
+
+      // Send error telemetry if enabled
+      if (this._configService.isAutoRepairTelemetryEnabled) {
+        this._trackRepairError(error, validation);
+      }
+
+      if (this._configService.isAutoRepairNotificationsEnabled) {
+        this._notificationService.error(
+          'Auto-Repair Failed',
+          'Image repair encountered an error. Please try manual refresh.'
+        );
+      }
+
+      return {
+        validImages: validation.validImages,
+        removedCount: validation.removedCount,
+        repairTriggered: false,
+        repairError: error,
+      };
+    }
+  }
+
+  /**
+   * Track auto-repair errors for telemetry and debugging
+   * @param error - The error that occurred during repair
+   * @param validation - The validation context when error occurred
+   */
+  private _trackRepairError(error: any, validation: any): void {
+    const errorData = {
+      timestamp: new Date().toISOString(),
+      errorMessage: error?.message || 'Unknown error',
+      validationContext: {
+        notFoundCount: validation.notFoundCount,
+        removedCount: validation.removedCount,
+        repairSuggested: validation.repairSuggested,
+      },
+      environment: this._configService.getCurrentEnvironment(),
+      validationLevel: this._configService.autoRepairValidationLevel,
+    };
+
+    console.warn('📊 Auto-repair error telemetry:', errorData);
+
+    // Future: Send to analytics service
+    // this._analyticsService.trackError('auto-repair-failed', errorData);
   }
 }
