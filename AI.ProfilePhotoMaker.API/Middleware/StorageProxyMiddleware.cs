@@ -18,15 +18,16 @@ public class StorageProxyMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        var path = context.Request.Path.Value?.ToLower();
+        var originalPath = context.Request.Path.Value;
+        var pathForCheck = originalPath?.ToLower();
         
-        _logger.LogDebug("Storage proxy middleware processing path: {Path}", path);
+        _logger.LogDebug("Storage proxy middleware processing path: {Path}", originalPath);
         
-        // Check if this is a storage proxy request
-        if (path?.StartsWith("/devstoreaccount1/") == true)
+        // Check if this is a storage proxy request (case-insensitive check)
+        if (pathForCheck?.StartsWith("/devstoreaccount1/") == true)
         {
-            _logger.LogInformation("Storage proxy middleware intercepting request: {Path}", path);
-            await ProxyStorageRequest(context, path);
+            _logger.LogInformation("Storage proxy middleware intercepting request: {Path}", originalPath);
+            await ProxyStorageRequest(context, originalPath);
             return;
         }
 

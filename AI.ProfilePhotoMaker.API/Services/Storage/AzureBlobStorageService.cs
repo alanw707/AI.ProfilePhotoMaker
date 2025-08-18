@@ -7,48 +7,50 @@ namespace AI.ProfilePhotoMaker.API.Services.Storage;
 /// <summary>
 /// Azure Blob Storage implementation of storage service
 /// </summary>
-public class AzureBlobStorageService : IStorageService
+public class AzureBlobStorageService : BaseStorageService
 {
     private readonly BlobServiceClient _blobServiceClient;
-    private readonly IConfiguration _configuration;
-    private readonly ILogger<AzureBlobStorageService> _logger;
     private readonly string _containerName;
 
     public AzureBlobStorageService(
         BlobServiceClient blobServiceClient,
         IConfiguration configuration,
         ILogger<AzureBlobStorageService> logger)
+        : base(configuration, logger)
     {
         _blobServiceClient = blobServiceClient;
-        _configuration = configuration;
-        _logger = logger;
         _containerName = configuration["AzureStorage:ContainerName"] ?? "profile-images";
     }
 
-    public async Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId)
+    public override async Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId)
     {
+        ValidateUserId(userId);
+        ValidateFileName(fileName);
+        
         try
         {
             var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
             await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
 
-            var blobPath = $"generated/{userId}/{fileName}";
+            var blobPath = GenerateUserStoragePath(userId, fileName);
             var blobClient = containerClient.GetBlobClient(blobPath);
 
             await blobClient.UploadAsync(imageStream, overwrite: true);
 
-            _logger.LogInformation("Saved image to Azure Blob Storage: {BlobPath}", blobPath);
+            LogOperation(LogLevel.Information, "SaveImageAsync", blobPath);
             return blobPath;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to save image {FileName} for user {UserId} to Azure Blob Storage", fileName, userId);
+            LogError(ex, "SaveImageAsync", $"userId: {userId}, fileName: {fileName}");
             throw;
         }
     }
 
-    public async Task<string> SaveImageToPathAsync(Stream imageStream, string storagePath)
+    public override async Task<string> SaveImageToPathAsync(Stream imageStream, string storagePath)
     {
+        ValidateStoragePath(storagePath);
+        
         try
         {
             string containerName;
@@ -72,18 +74,20 @@ public class AzureBlobStorageService : IStorageService
 
             await blobClient.UploadAsync(imageStream, overwrite: true);
 
-            _logger.LogInformation("Saved image to Azure Blob Storage: {BlobPath}", blobPath);
+            LogOperation(LogLevel.Information, "SaveImageToPathAsync", storagePath);
             return storagePath;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to save image to storage path {StoragePath}", storagePath);
+            LogError(ex, "SaveImageToPathAsync", storagePath);
             throw;
         }
     }
 
-    public async Task<Stream?> GetImageAsync(string storagePath)
+    public override async Task<Stream?> GetImageAsync(string storagePath)
     {
+        ValidateStoragePath(storagePath);
+        
         try
         {
             string containerName;
@@ -105,7 +109,7 @@ public class AzureBlobStorageService : IStorageService
 
             if (!await blobClient.ExistsAsync())
             {
-                _logger.LogWarning("Blob not found: {StoragePath}", storagePath);
+                LogOperation(LogLevel.Warning, "GetImageAsync - not found", storagePath);
                 return null;
             }
 
@@ -114,13 +118,15 @@ public class AzureBlobStorageService : IStorageService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get image from Azure Blob Storage: {StoragePath}", storagePath);
+            LogError(ex, "GetImageAsync", storagePath);
             return null;
         }
     }
 
-    public async Task<bool> DeleteImageAsync(string storagePath)
+    public override async Task<bool> DeleteImageAsync(string storagePath)
     {
+        ValidateStoragePath(storagePath);
+        
         try
         {
             string containerName;
@@ -144,24 +150,26 @@ public class AzureBlobStorageService : IStorageService
             
             if (response.Value)
             {
-                _logger.LogInformation("Deleted blob from Azure Storage: {StoragePath}", storagePath);
+                LogOperation(LogLevel.Information, "DeleteImageAsync - success", storagePath);
             }
             else
             {
-                _logger.LogWarning("Attempted to delete non-existent blob: {StoragePath}", storagePath);
+                LogOperation(LogLevel.Warning, "DeleteImageAsync - not found", storagePath);
             }
             
             return response.Value;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete blob from Azure Storage: {StoragePath}", storagePath);
+            LogError(ex, "DeleteImageAsync", storagePath);
             return false;
         }
     }
 
-    public async Task<bool> ExistsAsync(string storagePath)
+    public override async Task<bool> ExistsAsync(string storagePath)
     {
+        ValidateStoragePath(storagePath);
+        
         try
         {
             string containerName;
@@ -186,19 +194,15 @@ public class AzureBlobStorageService : IStorageService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to check if blob exists: {StoragePath}", storagePath);
+            LogError(ex, "ExistsAsync", storagePath);
             return false;
         }
     }
 
-    public string GetImageUrl(string storagePath)
+    public override string GetImageUrl(string storagePath)
     {
-        // Default to frontend/internal use (for Azure, both internal and external use the same public blob URLs)
-        return GetImageUrl(storagePath, forExternalApi: false);
-    }
-
-    public string GetImageUrl(string storagePath, bool forExternalApi)
-    {
+        ValidateStoragePath(storagePath);
+        
         // Handle style-previews paths by using correct container
         string containerName;
         string blobPath;
@@ -214,48 +218,31 @@ public class AzureBlobStorageService : IStorageService
             blobPath = storagePath;
         }
 
-        if (forExternalApi)
-        {
-            // For external APIs (like Replicate), use ExternalApiBaseUrl to route through ngrok tunnel
-            var externalApiBaseUrl = _configuration["ExternalApiBaseUrl"];
-            if (!string.IsNullOrEmpty(externalApiBaseUrl))
-            {
-                var extContainerClient = _blobServiceClient.GetBlobContainerClient(containerName);
-                var extBlobClient = extContainerClient.GetBlobClient(blobPath.TrimStart('/'));
-                var azureStoragePath = extBlobClient.Uri.AbsolutePath; // Gets the path part: /devstoreaccount1/container/blob
-                var externalUrl = $"{externalApiBaseUrl.TrimEnd('/')}{azureStoragePath}";
-                
-                _logger.LogDebug("GetImageUrl for external API (Azure Blob via ngrok): {Url}", externalUrl);
-                return externalUrl;
-            }
-            
-            // Fallback warning if no ExternalApiBaseUrl configured
-            _logger.LogWarning("No ExternalApiBaseUrl configured - external APIs may not be able to access Azure blob URLs");
-        }
-
-        // For frontend/internal use or fallback, return direct Azure Blob Storage URL
+        // For Azure Blob Storage in production, always return direct Azure Blob URLs
+        // These are publicly accessible URLs since containers have public blob access
         var cleanPath = blobPath.TrimStart('/');
         var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
         var blobClient = containerClient.GetBlobClient(cleanPath);
         var url = blobClient.Uri.ToString();
 
-        _logger.LogDebug("GetImageUrl for frontend (Azure Blob): {Url}", url);
+        Logger.LogDebug("GetImageUrl (Azure Blob): {Url}", url);
         return url;
     }
 
-    public async Task<List<string>> ListUserImagesAsync(string userId)
+    public override async Task<List<string>> ListUserImagesAsync(string userId)
     {
+        ValidateUserId(userId);
+        
         try
         {
             var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
             var prefix = $"generated/{userId}/";
-            var imageExtensions = new[] { ".png", ".jpg", ".jpeg", ".webp", ".gif" };
             var imageFiles = new List<string>();
 
             await foreach (var blobItem in containerClient.GetBlobsAsync(prefix: prefix))
             {
-                var extension = Path.GetExtension(blobItem.Name).ToLowerInvariant();
-                if (imageExtensions.Contains(extension))
+                var extension = Path.GetExtension(blobItem.Name);
+                if (IsImageExtension(extension))
                 {
                     imageFiles.Add(blobItem.Name);
                 }
@@ -265,13 +252,15 @@ public class AzureBlobStorageService : IStorageService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to list images for user {UserId} from Azure Blob Storage", userId);
+            LogError(ex, "ListUserImagesAsync", $"userId: {userId}");
             return new List<string>();
         }
     }
 
-    public async Task<StorageFileInfo?> GetFileInfoAsync(string storagePath)
+    public override async Task<StorageFileInfo?> GetFileInfoAsync(string storagePath)
     {
+        ValidateStoragePath(storagePath);
+        
         try
         {
             string containerName;
@@ -310,13 +299,15 @@ public class AzureBlobStorageService : IStorageService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get file info for blob: {StoragePath}", storagePath);
+            LogError(ex, "GetFileInfoAsync", storagePath);
             return null;
         }
     }
 
-    public async Task<string> GenerateSasUrlAsync(string storagePath, TimeSpan expiry, BlobSasPermissions permissions = BlobSasPermissions.Read)
+    public override async Task<string> GenerateSasUrlAsync(string storagePath, TimeSpan expiry, BlobSasPermissions permissions = BlobSasPermissions.Read)
     {
+        ValidateStoragePath(storagePath);
+        
         try
         {
             string containerName;
@@ -339,7 +330,7 @@ public class AzureBlobStorageService : IStorageService
             // Check if the blob client can generate SAS
             if (!blobClient.CanGenerateSasUri)
             {
-                _logger.LogError("Cannot generate SAS URL for blob: {StoragePath}. Storage account key required.", storagePath);
+                Logger.LogError("Cannot generate SAS URL for blob: {StoragePath}. Storage account key required.", storagePath);
                 throw new InvalidOperationException("Cannot generate SAS URL. Storage account key required.");
             }
 
@@ -355,20 +346,22 @@ public class AzureBlobStorageService : IStorageService
 
             var sasUri = blobClient.GenerateSasUri(sasBuilder);
             
-            _logger.LogDebug("Generated SAS URL for blob: {StoragePath}, expires: {ExpiresOn}", 
+            Logger.LogDebug("Generated SAS URL for blob: {StoragePath}, expires: {ExpiresOn}", 
                 storagePath, sasBuilder.ExpiresOn);
             
             return sasUri.ToString();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to generate SAS URL for blob: {StoragePath}", storagePath);
+            LogError(ex, "GenerateSasUrlAsync", storagePath);
             throw;
         }
     }
 
-    public async Task<string> SaveZipAsync(Stream zipStream, string storagePath)
+    public override async Task<string> SaveZipAsync(Stream zipStream, string storagePath)
     {
+        ValidateStoragePath(storagePath);
+        
         try
         {
             string containerName;
@@ -395,24 +388,26 @@ public class AzureBlobStorageService : IStorageService
             {
                 HttpHeaders = new BlobHttpHeaders
                 {
-                    ContentType = "application/zip"
+                    ContentType = GetContentType(".zip")
                 }
             };
 
             await blobClient.UploadAsync(zipStream, blobUploadOptions);
 
-            _logger.LogInformation("Saved ZIP file to Azure Blob Storage: {BlobPath}", blobPath);
+            LogOperation(LogLevel.Information, "SaveZipAsync", storagePath);
             return storagePath;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to save ZIP file {StoragePath} to Azure Blob Storage", storagePath);
+            LogError(ex, "SaveZipAsync", storagePath);
             throw;
         }
     }
 
-    public async Task<bool> DeleteDirectoryAsync(string directoryPath)
+    public override async Task<bool> DeleteDirectoryAsync(string directoryPath)
     {
+        ValidateStoragePath(directoryPath);
+        
         try
         {
             string containerName;
@@ -440,18 +435,20 @@ public class AzureBlobStorageService : IStorageService
                 deletedCount++;
             }
 
-            _logger.LogInformation("Deleted {Count} blobs from directory: {DirectoryPath}", deletedCount, directoryPath);
+            LogOperation(LogLevel.Information, "DeleteDirectoryAsync", directoryPath, new { DeletedCount = deletedCount });
             return deletedCount > 0;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete directory from Azure Storage: {DirectoryPath}", directoryPath);
+            LogError(ex, "DeleteDirectoryAsync", directoryPath);
             return false;
         }
     }
 
-    public async Task<List<string>> ListFilesAsync(string prefix)
+    public override async Task<List<string>> ListFilesAsync(string prefix)
     {
+        ValidateStoragePath(prefix);
+        
         try
         {
             string containerName;
@@ -481,12 +478,12 @@ public class AzureBlobStorageService : IStorageService
                 files.Add(fullPath);
             }
 
-            _logger.LogDebug("Listed {Count} files with prefix: {Prefix}", files.Count, prefix);
+            Logger.LogDebug("Listed {Count} files with prefix: {Prefix}", files.Count, prefix);
             return files;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to list files with prefix: {Prefix}", prefix);
+            LogError(ex, "ListFilesAsync", prefix);
             return new List<string>();
         }
     }
