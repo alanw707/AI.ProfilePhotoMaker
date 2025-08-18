@@ -257,7 +257,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     }
                     else
                     {
-                        // Storage path - use storage service to get public URL
+                        // Storage path - get environment-appropriate URL for frontend access
                         originalUrl = _storageService.GetImageUrl(i.OriginalImageUrl);
                     }
                 }
@@ -272,7 +272,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     }
                     else
                     {
-                        // Storage path - use storage service to get public URL
+                        // Storage path - get environment-appropriate URL for frontend access
                         processedUrl = _storageService.GetImageUrl(i.ProcessedImageUrl);
                     }
                 }
@@ -1716,6 +1716,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return ErrorResponse("ReconciliationFailed", "Failed to reconcile image database", 500);
             }
         }
+
     }
 
 }
