@@ -102,12 +102,12 @@ describe('PhotoGenerationComponent', () => {
 
     it('should unsubscribe from progress polling', () => {
       const mockSubscription = jasmine.createSpyObj('Subscription', ['unsubscribe']);
-      component['progressSubscription'] = mockSubscription;
+      component['_progressSubscription'] = mockSubscription;
 
       component['stopProgressPolling']();
 
       expect(mockSubscription.unsubscribe).toHaveBeenCalled();
-      expect(component['progressSubscription']).toBeUndefined();
+      expect(component['_progressSubscription']).toBeUndefined();
     });
   });
 
