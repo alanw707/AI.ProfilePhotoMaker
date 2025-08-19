@@ -211,23 +211,26 @@
   .empty-state
     text-align: center
     padding: 3rem 2rem
+    background: var(--card-bg, #ffffff)
+    border-radius: 12px
+    border: 1px solid var(--border-color, #e5e7eb)
     
     .empty-icon
       font-size: 4rem
       margin-bottom: 1rem
       
     h3
-      color: #2c3e50
+      color: var(--text-primary, #1a202c)
       margin: 0 0 0.5rem 0
       
     p
-      color: #6c757d
+      color: var(--text-secondary, #4a5568)
       margin: 0 0 2rem 0
       
     .action-btn
       display: inline-block
       padding: 1rem 2rem
-      background: linear-gradient(135deg, #667eea, #764ba2)
+      background: linear-gradient(135deg, var(--accent-primary, #4fd1c7), var(--accent-secondary, #3b82f6))
       color: white
       text-decoration: none
       border-radius: 8px
@@ -236,12 +239,15 @@
       
       &:hover
         transform: translateY(-2px)
-        box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4)
+        box-shadow: 0 4px 16px rgba(79, 209, 199, 0.4)
 
 .loading
   text-align: center
   padding: 2rem
-  color: #6c757d
+  color: var(--text-secondary, #4a5568)
+  background: var(--card-bg, #ffffff)
+  border-radius: 12px
+  border: 1px solid var(--border-color, #e5e7eb)
 
 @media (max-width: 768px)
   .detailed-view

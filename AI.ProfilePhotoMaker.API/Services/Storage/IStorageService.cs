@@ -1,3 +1,5 @@
+using Azure.Storage.Sas;
+
 namespace AI.ProfilePhotoMaker.API.Services.Storage;
 
 /// <summary>
@@ -14,6 +16,14 @@ public interface IStorageService
     /// <param name="folderType">The folder type (e.g., "enhanced", "uploads", "generated") for organizing different image types</param>
     /// <returns>The storage path/URL for the saved image</returns>
     Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId, string folderType = "generated");
+
+    /// <summary>
+    /// Saves an image stream to storage with a specific storage path
+    /// </summary>
+    /// <param name="imageStream">The image data stream</param>
+    /// <param name="storagePath">The full storage path where the image should be saved</param>
+    /// <returns>The storage path of the saved image</returns>
+    Task<string> SaveImageToPathAsync(Stream imageStream, string storagePath);
 
     /// <summary>
     /// Retrieves an image stream from storage
@@ -37,19 +47,12 @@ public interface IStorageService
     Task<bool> ExistsAsync(string storagePath);
 
     /// <summary>
-    /// Gets the public URL for accessing an image (defaults to frontend/internal use)
+    /// Gets the public URL for accessing an image
+    /// Each implementation provides environment-appropriate URLs
     /// </summary>
     /// <param name="storagePath">The storage path</param>
     /// <returns>Public URL for the image</returns>
     string GetImageUrl(string storagePath);
-
-    /// <summary>
-    /// Gets the public URL for accessing an image with context awareness
-    /// </summary>
-    /// <param name="storagePath">The storage path</param>
-    /// <param name="forExternalApi">True if URL is for external API access (like Replicate), false for frontend/internal use</param>
-    /// <returns>Public URL for the image</returns>
-    string GetImageUrl(string storagePath, bool forExternalApi);
 
     /// <summary>
     /// Lists all images for a specific user
@@ -64,6 +67,37 @@ public interface IStorageService
     /// <param name="storagePath">The storage path</param>
     /// <returns>File information including size, creation date, etc.</returns>
     Task<StorageFileInfo?> GetFileInfoAsync(string storagePath);
+
+    /// <summary>
+    /// Generates a SAS URL for external API access (like Replicate)
+    /// </summary>
+    /// <param name="storagePath">The storage path</param>
+    /// <param name="expiry">How long the SAS URL should be valid</param>
+    /// <param name="permissions">Permissions for the SAS URL (default: Read)</param>
+    /// <returns>SAS URL for external access</returns>
+    Task<string> GenerateSasUrlAsync(string storagePath, TimeSpan expiry, Azure.Storage.Sas.BlobSasPermissions permissions = Azure.Storage.Sas.BlobSasPermissions.Read);
+
+    /// <summary>
+    /// Saves a ZIP file stream to storage
+    /// </summary>
+    /// <param name="zipStream">The ZIP file stream</param>
+    /// <param name="storagePath">The storage path for the ZIP file</param>
+    /// <returns>The storage path of the saved ZIP file</returns>
+    Task<string> SaveZipAsync(Stream zipStream, string storagePath);
+
+    /// <summary>
+    /// Deletes all files in a directory/prefix
+    /// </summary>
+    /// <param name="directoryPath">The directory path/prefix to delete</param>
+    /// <returns>True if deletion was successful</returns>
+    Task<bool> DeleteDirectoryAsync(string directoryPath);
+
+    /// <summary>
+    /// Lists all files with a given prefix
+    /// </summary>
+    /// <param name="prefix">The path prefix to search for</param>
+    /// <returns>List of file paths matching the prefix</returns>
+    Task<List<string>> ListFilesAsync(string prefix);
 }
 
 /// <summary>

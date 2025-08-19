@@ -5,6 +5,9 @@ param appName string = 'aipm'
 param environment string = 'v1'
 param location string = resourceGroup().location
 
+// Image tag to deploy (e.g., timestamp). Defaults to 'latest' for local/dev.
+param imageTag string = 'latest'
+
 // Core secrets
 @secure()
 param sqlAdminPassword string
@@ -21,6 +24,23 @@ param googleClientId string
 @secure()
 @description('Google OAuth Client Secret for authentication')
 param googleClientSecret string
+
+@secure()
+@description('Replicate webhook secret for signature validation')
+param replicateWebhookSecret string
+
+// Stripe Payment Configuration
+@secure()
+@description('Stripe secret key for payment processing')
+param stripeSecretKey string
+
+@secure()
+@description('Stripe publishable key for frontend payment processing')
+param stripePublishableKey string
+
+@secure()
+@description('Stripe webhook secret for payment event validation')
+param stripeWebhookSecret string
 
 // Generate unique names
 var uniqueSuffix = uniqueString(resourceGroup().id)
@@ -168,6 +188,14 @@ resource replicateTokenKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
   }
 }
 
+resource replicateWebhookSecretKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
+  parent: keyVault
+  name: 'ReplicateWebhookSecret'
+  properties: {
+    value: replicateWebhookSecret
+  }
+}
+
 resource connectionStringKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
   parent: keyVault
   name: 'ConnectionString'
@@ -190,6 +218,30 @@ resource googleClientSecretKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
   name: 'GoogleClientSecret'
   properties: {
     value: googleClientSecret
+  }
+}
+
+resource stripeSecretKeyKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
+  parent: keyVault
+  name: 'StripeSecretKey'
+  properties: {
+    value: stripeSecretKey
+  }
+}
+
+resource stripePublishableKeyKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
+  parent: keyVault
+  name: 'StripePublishableKey'
+  properties: {
+    value: stripePublishableKey
+  }
+}
+
+resource stripeWebhookSecretKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
+  parent: keyVault
+  name: 'StripeWebhookSecret'
+  properties: {
+    value: stripeWebhookSecret
   }
 }
 
@@ -271,14 +323,30 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
           name: 'google-client-secret'
           value: googleClientSecret
         }
+        {
+          name: 'replicate-webhook-secret'
+          value: replicateWebhookSecret
+        }
+        {
+          name: 'stripe-secret-key'
+          value: stripeSecretKey
+        }
+        {
+          name: 'stripe-publishable-key'
+          value: stripePublishableKey
+        }
+        {
+          name: 'stripe-webhook-secret'
+          value: stripeWebhookSecret
+        }
       ]
     }
     template: {
       containers: [
         {
           name: 'api'
-          // References locally built and pushed image - no placeholder needed
-          image: '${containerRegistry.properties.loginServer}/aiprofilemaker-api:latest'
+          // References locally built and pushed image with parameterized tag
+          image: '${containerRegistry.properties.loginServer}/aiprofilemaker-api:${imageTag}'
           resources: {
             cpu: json('0.5')
             memory: '1Gi'
@@ -301,8 +369,16 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               secretRef: 'replicate-token'
             }
             {
-              name: 'AzureStorage__ConnectionString'
+              name: 'Replicate__WebhookSecret'
+              secretRef: 'replicate-webhook-secret'
+            }
+            {
+              name: 'AZURE_STORAGE_CONNECTION_STRING'
               value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
+            }
+            {
+              name: 'AZURE_STORAGE_CONTAINER_NAME'
+              value: 'profile-images'
             }
             {
               name: 'ApplicationInsights__ConnectionString'
@@ -337,6 +413,32 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'Authentication__Google__ClientSecret'
               secretRef: 'google-client-secret'
+            }
+            // Stripe Payment Configuration
+            {
+              name: 'STRIPE_SECRET_KEY'
+              secretRef: 'stripe-secret-key'
+            }
+            {
+              name: 'STRIPE_PUBLISHABLE_KEY'
+              secretRef: 'stripe-publishable-key'
+            }
+            {
+              name: 'STRIPE_WEBHOOK_SECRET'
+              secretRef: 'stripe-webhook-secret'
+            }
+            // Alternative naming for Stripe (for compatibility)
+            {
+              name: 'Stripe__SecretKey'
+              secretRef: 'stripe-secret-key'
+            }
+            {
+              name: 'Stripe__PublishableKey'
+              secretRef: 'stripe-publishable-key'
+            }
+            {
+              name: 'Stripe__WebhookSecret'
+              secretRef: 'stripe-webhook-secret'
             }
           ]
           // Health probes re-enabled since we're using real application images
@@ -434,8 +536,8 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
       containers: [
         {
           name: 'web'
-          // References locally built and pushed image - no placeholder needed
-          image: '${containerRegistry.properties.loginServer}/aiprofilemaker-web:latest'
+          // References locally built and pushed image with parameterized tag
+          image: '${containerRegistry.properties.loginServer}/aiprofilemaker-web:${imageTag}'
           resources: {
             cpu: json('0.25')
             memory: '0.5Gi'
