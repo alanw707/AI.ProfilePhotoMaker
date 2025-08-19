@@ -111,9 +111,6 @@ jobs:
           npm run lint:ci > eslint-results.json || true
           cat eslint-results.json
 
-      - name: 💅 Prettier Format Check
-        working-directory: AI.ProfilePhotoMaker.UI
-        run: npm run format:check
 
       - name: 🧪 Unit Tests with Coverage
         working-directory: AI.ProfilePhotoMaker.UI

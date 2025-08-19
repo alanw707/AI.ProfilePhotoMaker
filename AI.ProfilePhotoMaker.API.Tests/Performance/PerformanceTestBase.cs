@@ -97,7 +97,7 @@ public abstract class PerformanceTestBase : IDisposable
     {
         var services = new ServiceCollection();
         services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseInMemory($"TestDb_{Guid.NewGuid()}"));
+            options.UseInMemoryDatabase($"TestDb_{Guid.NewGuid()}"));
         services.AddScoped<IUserProfileRepository, UserProfileRepository>();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
         
@@ -109,7 +109,10 @@ public abstract class PerformanceTestBase : IDisposable
         typeof(PerformanceTestBase).GetField("_context", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
             .SetValue(this, newContext);
         
-        _serviceProvider?.Dispose();
+        if (_serviceProvider is IDisposable disposableProvider)
+        {
+            disposableProvider.Dispose();
+        }
         typeof(PerformanceTestBase).GetField("_serviceProvider", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
             .SetValue(this, newServiceProvider);
     }
@@ -307,7 +310,10 @@ public abstract class PerformanceTestBase : IDisposable
         }
 
         _context?.Dispose();
-        _serviceProvider?.Dispose();
+        if (_serviceProvider is IDisposable disposableProvider)
+        {
+            disposableProvider.Dispose();
+        }
     }
 }
 
