@@ -22,15 +22,15 @@ public class LocalStorageService : BaseStorageService
         _asyncFileService = asyncFileService;
     }
 
-    public override async Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId)
+    public override async Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId, string folderType = "generated")
     {
         ValidateUserId(userId);
         ValidateFileName(fileName);
         
         try
         {
-            // Ensure the user's generated directory exists
-            var userDirectory = Path.Combine(_environment.ContentRootPath, "generated", userId);
+            // Ensure the user's folder directory exists  
+            var userDirectory = Path.Combine(_environment.ContentRootPath, folderType, userId);
             await _asyncFileService.CreateDirectoryAsync(userDirectory);
 
             var filePath = Path.Combine(userDirectory, fileName);
@@ -39,7 +39,7 @@ public class LocalStorageService : BaseStorageService
             await _asyncFileService.CopyStreamToFileAsync(imageStream, filePath, 81920);
 
             // Return the relative path that can be served by the web server
-            var storagePath = GenerateUserStoragePath(userId, fileName);
+            var storagePath = GenerateUserStoragePath(userId, fileName, folderType);
 
             LogOperation(LogLevel.Information, "SaveImageAsync", storagePath);
             return storagePath;

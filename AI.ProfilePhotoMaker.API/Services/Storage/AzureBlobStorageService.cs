@@ -22,7 +22,7 @@ public class AzureBlobStorageService : BaseStorageService
         _containerName = configuration["AzureStorage:ContainerName"] ?? "profile-images";
     }
 
-    public override async Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId)
+    public override async Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId, string folderType = "generated")
     {
         ValidateUserId(userId);
         ValidateFileName(fileName);
@@ -32,7 +32,7 @@ public class AzureBlobStorageService : BaseStorageService
             var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
             await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
 
-            var blobPath = GenerateUserStoragePath(userId, fileName);
+            var blobPath = GenerateUserStoragePath(userId, fileName, folderType);
             var blobClient = containerClient.GetBlobClient(blobPath);
 
             await blobClient.UploadAsync(imageStream, overwrite: true);
