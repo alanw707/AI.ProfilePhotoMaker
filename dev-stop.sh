@@ -21,10 +21,19 @@ if [ -f "logs/frontend.pid" ]; then
     rm -f logs/frontend.pid
 fi
 
+# Stop ngrok process
+if [ -f "logs/ngrok.pid" ]; then
+    NGROK_PID=$(cat logs/ngrok.pid)
+    echo "🔗 Stopping ngrok tunnel (PID: $NGROK_PID)..."
+    kill $NGROK_PID 2>/dev/null || true
+    rm -f logs/ngrok.pid
+fi
+
 # Kill any remaining processes
 echo "🔍 Cleaning up remaining processes..."
 pkill -f "dotnet.*AI.ProfilePhotoMaker.API" 2>/dev/null || true
 pkill -f "ng serve" 2>/dev/null || true
+pkill -f "ngrok.*5032" 2>/dev/null || true
 
 echo ""
 echo "✅ LOCAL DEVELOPMENT ENVIRONMENT STOPPED"

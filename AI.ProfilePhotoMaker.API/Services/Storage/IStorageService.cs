@@ -13,8 +13,9 @@ public interface IStorageService
     /// <param name="imageStream">The image data stream</param>
     /// <param name="fileName">The filename (without path)</param>
     /// <param name="userId">The user ID for folder organization</param>
+    /// <param name="folderType">The folder type (e.g., "enhanced", "uploads", "generated") for organizing different image types</param>
     /// <returns>The storage path/URL for the saved image</returns>
-    Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId);
+    Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId, string folderType = "generated");
 
     /// <summary>
     /// Saves an image stream to storage with a specific storage path
