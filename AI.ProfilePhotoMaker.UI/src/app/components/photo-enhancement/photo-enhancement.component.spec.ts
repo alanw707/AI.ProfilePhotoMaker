@@ -138,9 +138,9 @@ describe('PhotoEnhancementComponent', () => {
         nextResetDate: new Date(),
       };
 
-      component['creditsInfo'] = mockCredits;
+      component.userCreditStatus = mockCredits;
 
-      expect(component['creditsInfo']).toBe(mockCredits);
+      expect(component.userCreditStatus).toBe(mockCredits);
     });
 
     it('should handle error messages', () => {
