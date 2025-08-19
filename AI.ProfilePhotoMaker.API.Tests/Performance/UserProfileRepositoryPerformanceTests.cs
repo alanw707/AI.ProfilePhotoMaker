@@ -231,7 +231,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         if (heavyUser.ProcessedImages.Count > 20)
         {
             page2.Items.Should().NotBeEmpty();
-            page1.Items.Should().NotIntersectWith(page2.Items, p => p.Id); // No duplicate items
+            page1.Items.Should().NotIntersectWith(page2.Items); // No duplicate items
         }
         
         _output.WriteLine($"Pagination performance results:");

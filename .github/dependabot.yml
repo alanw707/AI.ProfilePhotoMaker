@@ -1,0 +1,137 @@
+version: 2
+
+updates:
+  # .NET Dependencies
+  - package-ecosystem: "nuget"
+    directory: "/AI.ProfilePhotoMaker.API"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "@alanw707"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(dev-deps)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "backend"
+      - "security"
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+    groups:
+      security-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "security"
+      minor-updates:
+        patterns:
+          - "Microsoft.*"
+          - "Azure.*"
+          - "System.*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # .NET Test Dependencies  
+  - package-ecosystem: "nuget"
+    directory: "/AI.ProfilePhotoMaker.API.Tests"
+    schedule:
+      interval: "weekly"
+      day: "monday" 
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "@alanw707"
+    commit-message:
+      prefix: "chore(test-deps)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "testing"
+
+  # Frontend Dependencies
+  - package-ecosystem: "npm"
+    directory: "/AI.ProfilePhotoMaker.UI"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "@alanw707"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(dev-deps)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "frontend"
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+    groups:
+      angular-updates:
+        patterns:
+          - "@angular*"
+          - "angular-*"
+        update-types:
+          - "minor"
+          - "patch"
+      security-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "security"
+      dev-dependencies:
+        patterns:
+          - "@types/*"
+          - "eslint*"
+          - "prettier"
+          - "@playwright/*"
+          - "karma*"
+          - "jasmine*"
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "@alanw707"
+    commit-message:
+      prefix: "chore(ci)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "ci/cd"
+
+  # Docker Dependencies
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "@alanw707"
+    commit-message:
+      prefix: "chore(docker)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "infrastructure"

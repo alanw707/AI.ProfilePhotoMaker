@@ -1,0 +1,53 @@
+{
+  "bundleAnalyzerConfig": {
+    "analyzerMode": "static",
+    "reportFilename": "bundle-analysis.html",
+    "openAnalyzer": false,
+    "generateStatsFile": true,
+    "statsFilename": "bundle-stats.json",
+    "logLevel": "info"
+  },
+  "budgets": [
+    {
+      "type": "initial",
+      "maximumWarning": "500kb",
+      "maximumError": "1mb"
+    },
+    {
+      "type": "anyComponentStyle", 
+      "maximumWarning": "2kb",
+      "maximumError": "4kb"
+    },
+    {
+      "type": "any",
+      "maximumWarning": "2mb",
+      "maximumError": "5mb"
+    },
+    {
+      "type": "bundle",
+      "name": "vendor",
+      "maximumWarning": "1mb",
+      "maximumError": "2mb"
+    }
+  ],
+  "thresholds": {
+    "gzipped": {
+      "warning": 400000,
+      "error": 500000
+    },
+    "parsed": {
+      "warning": 1000000, 
+      "error": 1500000
+    }
+  },
+  "excludeAssets": [
+    "*.map",
+    "*.png",
+    "*.jpg",
+    "*.jpeg",
+    "*.gif",
+    "*.svg",
+    "*.ico",
+    "face_*"
+  ]
+}

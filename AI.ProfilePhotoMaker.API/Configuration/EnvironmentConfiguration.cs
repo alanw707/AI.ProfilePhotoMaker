@@ -85,7 +85,7 @@ public class EnvironmentConfiguration
         }
     }
 
-    private async Task ValidateDatabaseConfigurationAsync(List<ValidationResult> results)
+    private Task ValidateDatabaseConfigurationAsync(List<ValidationResult> results)
     {
         // Support either a full connection string or a local SA password for development
         var connectionString = _configuration.GetConnectionString("DefaultConnection");
@@ -96,7 +96,7 @@ public class EnvironmentConfiguration
         {
             results.Add(new ValidationResult(false, "DATABASE_CONFIG",
                 "Database configuration is required. Set either MSSQL_SA_PASSWORD (for local development) or ConnectionStrings__DefaultConnection (for production)"));
-            return;
+            return Task.CompletedTask;
         }
 
         // If using local development password, validate it
@@ -114,7 +114,7 @@ public class EnvironmentConfiguration
             }
 
             _logger.LogInformation("✅ Database configuration validation completed (using local development mode)");
-            return;
+            return Task.CompletedTask;
         }
 
         // Otherwise, validate the provided connection string minimally
@@ -128,9 +128,11 @@ public class EnvironmentConfiguration
 
             _logger.LogInformation("✅ Database configuration validation completed (using configured connection string)");
         }
+        
+        return Task.CompletedTask;
     }
 
-    private async Task ValidateJwtConfigurationAsync(List<ValidationResult> results)
+    private Task ValidateJwtConfigurationAsync(List<ValidationResult> results)
     {
         // Accept either environment variable JWT_SECRET or configuration key JWT:Secret
         var jwtSecret = GetEnvironmentVariable(JWT_SECRET) ?? _configuration["JWT:Secret"] ?? _configuration["Jwt:Secret"];
@@ -138,7 +140,7 @@ public class EnvironmentConfiguration
         if (string.IsNullOrEmpty(jwtSecret))
         {
             results.Add(new ValidationResult(false, JWT_SECRET, "JWT secret is required (set env JWT_SECRET or config JWT:Secret)"));
-            return;
+            return Task.CompletedTask;
         }
 
         if (jwtSecret.Length < 32)
@@ -147,9 +149,11 @@ public class EnvironmentConfiguration
         }
 
         _logger.LogInformation("✅ JWT configuration validation completed");
+        
+        return Task.CompletedTask;
     }
 
-    private async Task ValidateReplicateConfigurationAsync(List<ValidationResult> results)
+    private Task ValidateReplicateConfigurationAsync(List<ValidationResult> results)
     {
         // Accept either env or config for Replicate credentials
         var envToken = GetEnvironmentVariable(REPLICATE_API_TOKEN);
@@ -199,12 +203,14 @@ public class EnvironmentConfiguration
         }
 
         _logger.LogInformation("✅ Replicate configuration validation completed");
+        
+        return Task.CompletedTask;
     }
 
     /// <summary>
     /// Validates required Stripe payment configuration
     /// </summary>
-    private async Task ValidateStripeConfigurationAsync(List<ValidationResult> results)
+    private Task ValidateStripeConfigurationAsync(List<ValidationResult> results)
     {
         // All Stripe secrets are REQUIRED - referenced in infrastructure and application code
         var stripeSecretKey = GetEnvironmentVariable(STRIPE_SECRET_KEY);
@@ -239,6 +245,8 @@ public class EnvironmentConfiguration
         }
         
         _logger.LogInformation("✅ Stripe configuration validation completed");
+        
+        return Task.CompletedTask;
     }
 
     private async Task ValidateEnvironmentSpecificConfigurationsAsync(List<ValidationResult> results)
