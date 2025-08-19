@@ -174,7 +174,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         // Verify functionality
         var profileWithImages = await _repository.GetProfileWithRecentImagesAsync(testUser.UserId, 10);
         profileWithImages.Should().NotBeNull();
-        profileWithImages!.RecentImages.Should().HaveCountLessOrEqualTo(10);
+        profileWithImages!.RecentImages.Count.Should().BeLessThanOrEqualTo(10);
         profileWithImages.TotalImageCount.Should().Be(testUser.ProcessedImages.Count);
     }
 
