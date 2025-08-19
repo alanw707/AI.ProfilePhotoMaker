@@ -17,7 +17,7 @@ public abstract class BaseStorageService : IStorageService
     }
 
     // Abstract methods that must be implemented by derived classes
-    public abstract Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId);
+    public abstract Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId, string folderType = "generated");
     public abstract Task<string> SaveImageToPathAsync(Stream imageStream, string storagePath);
     public abstract Task<Stream?> GetImageAsync(string storagePath);
     public abstract Task<bool> DeleteImageAsync(string storagePath);
@@ -158,11 +158,11 @@ public abstract class BaseStorageService : IStorageService
     /// <param name="fileName">File name</param>
     /// <param name="subdirectory">Optional subdirectory (e.g., "generated", "uploads")</param>
     /// <returns>Formatted storage path</returns>
-    protected static string GenerateUserStoragePath(string userId, string fileName, string subdirectory = "generated")
+    protected static string GenerateUserStoragePath(string userId, string fileName, string folderType = "generated")
     {
         ValidateUserId(userId);
         ValidateFileName(fileName);
         
-        return $"{subdirectory}/{userId}/{fileName}";
+        return $"{folderType}/{userId}/{fileName}";
     }
 }
