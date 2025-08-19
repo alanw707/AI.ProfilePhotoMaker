@@ -3,6 +3,7 @@ import { HttpClient, HttpEventType } from '@angular/common/http';
 import { catchError, map, Observable, of, tap } from 'rxjs';
 import { ConfigService } from './config.service';
 import { ImageUrlService } from './image-url.service';
+import { AuthService } from './auth.service';
 
 export interface UploadResponse {
   profileId: number;
@@ -56,7 +57,8 @@ export class FileUploadService {
   constructor(
     private http: HttpClient,
     private config: ConfigService,
-    private imageUrlService: ImageUrlService
+    private imageUrlService: ImageUrlService,
+    private authService: AuthService
   ) {}
 
   uploadImages(
@@ -71,7 +73,7 @@ export class FileUploadService {
   ): Observable<{ progress: number; response?: UploadResponse }> {
     const formData = new FormData();
 
-    files.forEach((file) => {
+    files.forEach(file => {
       formData.append('images', file, file.name);
     });
 
@@ -94,9 +96,9 @@ export class FileUploadService {
     // Add forTraining flag
     formData.append('forTraining', forTraining.toString());
 
-    // Add authentication headers
+    // Add authentication headers using production-ready AuthService
     const headers: any = {};
-    const token = localStorage.getItem('auth_token');
+    const token = this.authService.getToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -121,9 +123,14 @@ export class FileUploadService {
             case HttpEventType.Response: {
               // API returns wrapped response: { success: true, data: {...} }
               const apiResponse = event.body as unknown;
-              if (apiResponse && typeof apiResponse === 'object' && 
-                  'success' in apiResponse && 'data' in apiResponse &&
-                  (apiResponse as any).success && (apiResponse as any).data) {
+              if (
+                apiResponse &&
+                typeof apiResponse === 'object' &&
+                'success' in apiResponse &&
+                'data' in apiResponse &&
+                (apiResponse as any).success &&
+                (apiResponse as any).data
+              ) {
                 // Transform API response to match UploadResponse interface
                 const data = (apiResponse as any).data;
                 const transformedResponse: UploadResponse = {
@@ -344,9 +351,9 @@ export class FileUploadService {
     formData.append('forTraining', 'false');
     formData.append('isEnhanced', isEnhanced.toString());
 
-    // Add authentication headers
+    // Add authentication headers using production-ready AuthService
     const headers: any = {};
-    const token = localStorage.getItem('auth_token');
+    const token = this.authService.getToken();
     console.log('Authentication check:', {
       tokenExists: !!token,
       tokenPrefix: token?.substring(0, 20) + '...',
@@ -484,11 +491,20 @@ export class FileUploadService {
   ): Observable<{ success: boolean; message: string }> {
     console.log('🗑️ Attempting to delete enhanced image file:', fileName);
 
+    // Add authentication headers using production-ready AuthService
+    const headers: any = {};
+    const token = this.authService.getToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    } else {
+      console.warn('No authentication token found - delete may fail');
+    }
+
     return this.http
       .delete<{
         success: boolean;
         message: string;
-      }>(this.config.getFullUrl(`/api/image/enhanced/${encodeURIComponent(fileName)}`))
+      }>(this.config.getFullUrl(`/api/image/enhanced/${encodeURIComponent(fileName)}`), { headers })
       .pipe(
         tap(response => {
           if (response.success) {

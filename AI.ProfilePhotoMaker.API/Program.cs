@@ -341,8 +341,11 @@ if (!string.IsNullOrEmpty(azureStorageConnectionString))
 }
 else
 {
+    // DEPRECATED: LocalStorageService is legacy fallback when Azurite is not configured
+    // All environments should use Azurite/Azure Blob Storage for consistency
+    // TODO: Remove LocalStorageService once all environments have proper Azure Storage configuration
     builder.Services.AddScoped<IStorageService, LocalStorageService>();
-    Console.WriteLine("Using Local Storage for image storage");
+    Console.WriteLine("Using Local Storage for image storage (DEPRECATED - configure Azurite for development)");
 }
 
 // Premium Package Services removed - using unified credit system
@@ -600,131 +603,103 @@ app.Use(async (context, next) =>
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Serve static files from uploads directory - only if directory exists
-var uploadsPath = Path.Combine(builder.Environment.ContentRootPath, "uploads");
-if (Directory.Exists(uploadsPath))
+// Static file serving for images removed - now using Azure Blob Storage with Azurite for all environments
+// All image serving handled by AzureBlobStorageService with direct blob URLs
+
+// Proxy middleware for external API access to Azurite in development
+if (app.Environment.IsDevelopment())
 {
-    app.UseStaticFiles(new StaticFileOptions
+    // Legacy blob-proxy path support
+    app.Map("/blob-proxy", blobApp =>
     {
-        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsPath),
-        RequestPath = "/uploads",
-        OnPrepareResponse = ctx =>
-    {
-        // Add CORS headers to allow cross-origin requests for image downloads
-        ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
-        ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
-        ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type");
-
-        // Ensure proper content type for images
-        var extension = Path.GetExtension(ctx.File.Name).ToLowerInvariant();
-        if (extension == ".png") ctx.Context.Response.ContentType = "image/png";
-        else if (extension == ".jpg" || extension == ".jpeg") ctx.Context.Response.ContentType = "image/jpeg";
-        else if (extension == ".gif") ctx.Context.Response.ContentType = "image/gif";
-        else if (extension == ".webp") ctx.Context.Response.ContentType = "image/webp";
-
-        // Add aggressive caching for uploaded images (immutable content)
-        ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=86400, immutable");
-        ctx.Context.Response.Headers.Append("ETag", $"\"{ctx.File.LastModified:yyyy-MM-dd-HH-mm-ss}\"");
-    }
+        blobApp.Run(async context =>
+        {
+            try
+            {
+                // Extract container and blob path from request
+                var pathSegments = context.Request.Path.Value?.TrimStart('/').Split('/');
+                if (pathSegments?.Length >= 2)
+                {
+                    var containerName = pathSegments[0];
+                    var blobPath = string.Join("/", pathSegments.Skip(1));
+                    
+                    // Forward to Azurite (default port 10000)
+                    var azuriteUrl = $"http://127.0.0.1:10000/devstoreaccount1/{containerName}/{blobPath}";
+                    
+                    using var httpClient = new HttpClient();
+                    var response = await httpClient.GetAsync(azuriteUrl);
+                    
+                    if (response.IsSuccessStatusCode)
+                    {
+                        context.Response.StatusCode = (int)response.StatusCode;
+                        context.Response.ContentType = response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
+                        
+                        // Add CORS headers for external API access
+                        context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+                        context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
+                        
+                        await response.Content.CopyToAsync(context.Response.Body);
+                    }
+                    else
+                    {
+                        context.Response.StatusCode = (int)response.StatusCode;
+                    }
+                }
+                else
+                {
+                    context.Response.StatusCode = 400;
+                    await context.Response.WriteAsync("Invalid blob path");
+                }
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteAsync($"Proxy error: {ex.Message}");
+            }
+        });
     });
-}
 
-// Serve static files from training-zips directory - only if directory exists
-var trainingZipsPath = Path.Combine(builder.Environment.ContentRootPath, "training-zips");
-if (Directory.Exists(trainingZipsPath))
-{
-    app.UseStaticFiles(new StaticFileOptions
+    // Direct devstoreaccount1 path proxy for AzureBlobStorageService URLs
+    app.Map("/devstoreaccount1", devstoreApp =>
     {
-        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(trainingZipsPath),
-    RequestPath = "/training-zips"
-    });
-}
-
-// Serve static files from style-previews directory - only if directory exists
-var stylePreviewsPath = Path.Combine(builder.Environment.ContentRootPath, "style-previews");
-if (Directory.Exists(stylePreviewsPath))
-{
-    app.UseStaticFiles(new StaticFileOptions
-    {
-        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(stylePreviewsPath),
-    RequestPath = "/style-previews",
-    OnPrepareResponse = ctx =>
-    {
-        // Add CORS headers to allow cross-origin requests for image downloads
-        ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
-        ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
-        ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type");
-
-        // Ensure proper content type for images
-        var extension = Path.GetExtension(ctx.File.Name).ToLowerInvariant();
-        if (extension == ".png") ctx.Context.Response.ContentType = "image/png";
-        else if (extension == ".jpg" || extension == ".jpeg") ctx.Context.Response.ContentType = "image/jpeg";
-        else if (extension == ".gif") ctx.Context.Response.ContentType = "image/gif";
-        else if (extension == ".webp") ctx.Context.Response.ContentType = "image/webp";
-
-        // Add aggressive caching for style previews (static assets, rarely change)
-        ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=604800, immutable");
-        ctx.Context.Response.Headers.Append("ETag", $"\"{ctx.File.LastModified:yyyy-MM-dd-HH-mm-ss}\"");
-    }
-    });
-}
-
-// Serve static files from enhanced images directory - only if directory exists
-var enhancedPath = Path.Combine(builder.Environment.ContentRootPath, "enhanced");
-if (Directory.Exists(enhancedPath))
-{
-    app.UseStaticFiles(new StaticFileOptions
-    {
-        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(enhancedPath),
-    RequestPath = "/enhanced",
-    OnPrepareResponse = ctx =>
-    {
-        // Add CORS headers to allow cross-origin requests for image downloads
-        ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
-        ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
-        ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type");
-
-        // Ensure proper content type for images
-        var extension = Path.GetExtension(ctx.File.Name).ToLowerInvariant();
-        if (extension == ".png") ctx.Context.Response.ContentType = "image/png";
-        else if (extension == ".jpg" || extension == ".jpeg") ctx.Context.Response.ContentType = "image/jpeg";
-        else if (extension == ".gif") ctx.Context.Response.ContentType = "image/gif";
-        else if (extension == ".webp") ctx.Context.Response.ContentType = "image/webp";
-
-        // Add caching for enhanced images (personal photos, moderate caching)
-        ctx.Context.Response.Headers.Append("Cache-Control", "private, max-age=3600");
-        ctx.Context.Response.Headers.Append("ETag", $"\"{ctx.File.LastModified:yyyy-MM-dd-HH-mm-ss}\"");
-    }
-    });
-}
-
-// Serve static files from generated images directory - only if directory exists
-var generatedPath = Path.Combine(builder.Environment.ContentRootPath, "generated");
-if (Directory.Exists(generatedPath))
-{
-    app.UseStaticFiles(new StaticFileOptions
-    {
-        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(generatedPath),
-    RequestPath = "/generated",
-    OnPrepareResponse = ctx =>
-    {
-        // Add CORS headers to allow cross-origin requests for image downloads
-        ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
-        ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
-        ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type");
-
-        // Ensure proper content type for images
-        var extension = Path.GetExtension(ctx.File.Name).ToLowerInvariant();
-        if (extension == ".png") ctx.Context.Response.ContentType = "image/png";
-        else if (extension == ".jpg" || extension == ".jpeg") ctx.Context.Response.ContentType = "image/jpeg";
-        else if (extension == ".gif") ctx.Context.Response.ContentType = "image/gif";
-        else if (extension == ".webp") ctx.Context.Response.ContentType = "image/webp";
-    }
+        devstoreApp.Run(async context =>
+        {
+            try
+            {
+                // Forward entire path to Azurite
+                var fullPath = context.Request.Path.Value?.TrimStart('/') ?? "";
+                var azuriteUrl = $"http://127.0.0.1:10000/devstoreaccount1/{fullPath}";
+                
+                using var httpClient = new HttpClient();
+                var response = await httpClient.GetAsync(azuriteUrl);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    context.Response.StatusCode = (int)response.StatusCode;
+                    context.Response.ContentType = response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
+                    
+                    // Add CORS headers for external API access
+                    context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+                    context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
+                    
+                    await response.Content.CopyToAsync(context.Response.Body);
+                }
+                else
+                {
+                    context.Response.StatusCode = (int)response.StatusCode;
+                }
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteAsync($"Azurite proxy error: {ex.Message}");
+            }
+        });
     });
 }
 
 // Serve Angular static files
-var angularPath = Path.Combine(builder.Environment.ContentRootPath, "../AI.ProfilePhotoMaker.UI/dist/ai.profile-photo-maker.ui");
+var angularPath = Path.Combine(builder.Environment.ContentRootPath, "../AI.ProfilePhotoMaker.UI/dist/ai.profile-photo-maker.ui/browser");
 if (Directory.Exists(angularPath))
 {
     app.UseStaticFiles(new StaticFileOptions

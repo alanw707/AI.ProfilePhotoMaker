@@ -2,6 +2,7 @@ using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services;
+using AI.ProfilePhotoMaker.API.Services.Storage;
 using AI.ProfilePhotoMaker.API.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -24,6 +25,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private readonly IBasicTierService _basicTierService;
         private readonly IAsyncFileService _asyncFileService;
         private readonly IAsyncZipService _asyncZipService;
+        private readonly IStorageService _storageService;
 
         public ImageController(
             IUserProfileRepository userProfileRepository,
@@ -34,7 +36,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             ILogger<ImageController> logger,
             ApplicationDbContext context,
             IAsyncFileService asyncFileService,
-            IAsyncZipService asyncZipService)
+            IAsyncZipService asyncZipService,
+            IStorageService storageService)
             : base(logger, context)
         {
             _userProfileRepository = userProfileRepository;
@@ -44,6 +47,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             _basicTierService = basicTierService;
             _asyncFileService = asyncFileService;
             _asyncZipService = asyncZipService;
+            _storageService = storageService;
         }
 
         /// <summary>
@@ -108,20 +112,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 var uploadResults = new List<object>();
                 var uploadedImages = new List<ProcessedImage>();
 
-                // Determine upload directory and file naming based on image type
-                string uploadDir;
-                string filePrefix;
-                if (dto.IsEnhanced)
-                {
-                    uploadDir = Path.Combine(_environment.ContentRootPath, "enhanced", userId);
-                    filePrefix = "enhanced";
-                }
-                else
-                {
-                    uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
-                    filePrefix = "selfie";
-                }
-                await _asyncFileService.CreateDirectoryAsync(uploadDir);
+                // Determine upload strategy based on image type
+                string filePrefix = dto.IsEnhanced ? "enhanced" : "selfie";
 
                 foreach (var image in dto.Images)
                 {
@@ -133,14 +125,27 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     // Generate clean filename based on image type
                     var extension = Path.GetExtension(image.FileName);
                     var fileName = $"{Guid.NewGuid()}_{filePrefix}{extension}";
-                    var filePath = Path.Combine(uploadDir, fileName);
-                    var relativeUrl = dto.IsEnhanced
-                        ? $"/enhanced/{userId}/{fileName}"
-                        : $"/uploads/{userId}/{fileName}";
-
+                    
+                    string relativeUrl;
+                    
                     // Use async file service with optimal buffer size for non-blocking I/O
                     await using var imageStream = image.OpenReadStream();
-                    await _asyncFileService.CopyStreamToFileAsync(imageStream, filePath, 81920);
+                    
+                    if (dto.IsEnhanced)
+                    {
+                        // Store enhanced images in storage service with enhanced folder
+                        var storagePath = await _storageService.SaveImageAsync(imageStream, fileName, userId, "enhanced");
+                        relativeUrl = _storageService.GetImageUrl(storagePath);
+                    }
+                    else
+                    {
+                        // Keep original logic for regular uploads (local filesystem)
+                        var uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
+                        await _asyncFileService.CreateDirectoryAsync(uploadDir);
+                        var filePath = Path.Combine(uploadDir, fileName);
+                        await _asyncFileService.CopyStreamToFileAsync(imageStream, filePath, 81920);
+                        relativeUrl = $"/uploads/{userId}/{fileName}";
+                    }
 
                     // Only create database records for non-enhanced images
                     if (!dto.IsEnhanced)
@@ -201,7 +206,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 string? zipPath = null;
                 if (dto.ForTraining)
                 {
-                    zipPath = await CreateTrainingZipAsync(uploadDir, userId);
+                    // Training zips are only created for non-enhanced images (uploaded to local filesystem)
+                    var uploadsDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
+                    zipPath = await CreateTrainingZipAsync(uploadsDir, userId);
                 }
 
                 return SuccessResponse(new
@@ -440,7 +447,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         /// <summary>
-        /// Delete enhanced image file from temporary storage
+        /// Delete enhanced image file from storage (supports both Azure Blob and local filesystem)
         /// </summary>
         [HttpDelete("enhanced/{fileName}")]
         public async Task<IActionResult> DeleteEnhancedImage(string fileName)
@@ -464,17 +471,35 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     return ErrorResponse("InvalidFileName", "Invalid file name", 400);
                 }
 
-                // Construct the full path to the enhanced image
-                var enhancedDir = Path.Combine(_environment.ContentRootPath, "enhanced", userId);
-                var filePath = Path.Combine(enhancedDir, fileName);
+                // Environment-specific deletion: use only the configured storage service
+                var storagePath = $"enhanced/{userId}/{fileName}";
+                bool deletedFromStorage = false;
 
-                Logger.LogDebug("Checking for enhanced image file at path: {FilePath}", filePath);
+                Logger.LogInformation("Attempting to delete enhanced image file {FileName} for user {UserId}", fileName, userId);
 
-                // Check if file exists and delete using async operations
-                var deleted = await _asyncFileService.DeleteFileAsync(filePath);
-                if (!deleted)
+                // Delete using the configured storage service only (environment-appropriate)
+                try
                 {
-                    Logger.LogWarning("Enhanced image file not found: {FilePath}", filePath);
+                    deletedFromStorage = await _storageService.DeleteImageAsync(storagePath);
+                    if (deletedFromStorage)
+                    {
+                        Logger.LogInformation("Successfully deleted enhanced image from storage service: {StoragePath}", storagePath);
+                    }
+                    else
+                    {
+                        Logger.LogWarning("Storage service reported file not found: {StoragePath}", storagePath);
+                    }
+                }
+                catch (Exception storageEx)
+                {
+                    Logger.LogError(storageEx, "Failed to delete enhanced image from storage service: {StoragePath}", storagePath);
+                }
+
+                var overallSuccess = deletedFromStorage;
+
+                if (!overallSuccess)
+                {
+                    Logger.LogWarning("Enhanced image file not found in storage: {FileName} for user {UserId}", fileName, userId);
                     return ErrorResponse("FileNotFound", "Enhanced image file not found", 404);
                 }
 
@@ -483,7 +508,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return SuccessResponse(new
                 {
                     fileName = fileName,
-                    message = "Enhanced image file deleted successfully"
+                    message = "Enhanced image file deleted successfully",
+                    deletedFromStorage = deletedFromStorage,
+                    storagePath = storagePath
                 });
             }
             catch (Exception ex)
