@@ -24,7 +24,7 @@ public class StorageProxyMiddleware
         _logger.LogDebug("Storage proxy middleware processing path: {Path}", originalPath);
         
         // Check if this is a storage proxy request (case-insensitive check)
-        if (pathForCheck?.StartsWith("/devstoreaccount1/") == true)
+        if (pathForCheck?.StartsWith("/devstoreaccount1/") == true && originalPath != null)
         {
             _logger.LogInformation("Storage proxy middleware intercepting request: {Path}", originalPath);
             await ProxyStorageRequest(context, originalPath);
