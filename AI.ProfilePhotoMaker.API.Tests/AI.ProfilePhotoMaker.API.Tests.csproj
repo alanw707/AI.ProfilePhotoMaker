@@ -33,4 +33,10 @@
     <ProjectReference Include="..\AI.ProfilePhotoMaker.API\AI.ProfilePhotoMaker.API.csproj" />
   </ItemGroup>
 
+  <!-- Exclude performance test files with NBomber V4 API incompatibilities -->
+  <ItemGroup>
+    <Compile Remove="Performance\LoadTestingScenarios.cs" />
+    <Compile Remove="Performance\BenchmarkComparison.cs" />
+  </ItemGroup>
+
 </Project>

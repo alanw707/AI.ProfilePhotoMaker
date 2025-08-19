@@ -148,7 +148,7 @@ This project is licensed under the MIT License - see the LICENSE.txt file for de
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Before opening a PR, please review the repository guidelines in [AGENTS.md](AGENTS.md) for project structure, local dev commands, coding style, testing, and PR requirements.
 
 ## Acknowledgments
 
@@ -163,5 +163,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 - [Refactoring Documentation](docs/REFACTOR.md) - Comprehensive refactoring process and architecture improvements
 - [OAuth Troubleshooting](docs/OAUTH_TROUBLESHOOTING.md) - OAuth implementation and troubleshooting guide
+ - [Product Requirements (PRD)](docs/product/PRD.md) - Product goals, scope, and milestones
 
 *Last updated: June 28, 2025*

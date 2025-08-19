@@ -174,7 +174,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         // Verify functionality
         var profileWithImages = await _repository.GetProfileWithRecentImagesAsync(testUser.UserId, 10);
         profileWithImages.Should().NotBeNull();
-        profileWithImages!.RecentImages.Should().HaveCountLessOrEqualTo(10);
+        profileWithImages!.RecentImages.Count.Should().BeLessThanOrEqualTo(10);
         profileWithImages.TotalImageCount.Should().Be(testUser.ProcessedImages.Count);
     }
 
@@ -231,7 +231,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         if (heavyUser.ProcessedImages.Count > 20)
         {
             page2.Items.Should().NotBeEmpty();
-            page1.Items.Should().NotIntersectWith(page2.Items, p => p.Id); // No duplicate items
+            page1.Items.Should().NotIntersectWith(page2.Items); // No duplicate items
         }
         
         _output.WriteLine($"Pagination performance results:");

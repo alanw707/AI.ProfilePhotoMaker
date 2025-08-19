@@ -1,0 +1,53 @@
+name: "AI Profile Photo Maker CodeQL Config"
+
+disable-default-queries: false
+
+query-filters:
+  - include:
+      kind: problem
+      problem.severity:
+        - error
+        - warning
+  - exclude:
+      id: 
+        - js/unused-local-variable  # Handled by ESLint
+        - js/debugger-statement     # Handled by ESLint
+
+queries:
+  - name: security-extended
+    uses: security-extended
+  - name: security-and-quality
+    uses: security-and-quality
+
+# Paths to analyze
+paths:
+  - AI.ProfilePhotoMaker.API/**/*.cs
+  - AI.ProfilePhotoMaker.UI/src/**/*.ts
+  - AI.ProfilePhotoMaker.UI/src/**/*.js
+  - AI.ProfilePhotoMaker.UI/src/**/*.html
+
+# Paths to ignore
+paths-ignore:
+  - AI.ProfilePhotoMaker.UI/node_modules/**
+  - AI.ProfilePhotoMaker.UI/dist/**
+  - "**/bin/**"
+  - "**/obj/**"
+  - "**/*.generated.cs"
+  - "**/*.designer.cs"
+  - "**/Migrations/**"
+  - "ClaudeDocs/**"
+  - "docs/**"
+  - "**/*.spec.ts"
+  - "**/*.test.ts"
+
+# Language-specific configurations
+csharp:
+  # Focus on security vulnerabilities
+  additional-packs:
+    - "codeql/csharp-security-extended-queries"
+  
+javascript-typescript:
+  # Focus on security and common vulnerabilities
+  additional-packs:
+    - "codeql/javascript-security-extended-queries"
+    - "codeql/javascript-frameworks-queries"
