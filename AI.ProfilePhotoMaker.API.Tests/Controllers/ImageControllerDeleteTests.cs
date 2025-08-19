@@ -12,6 +12,7 @@ using AI.ProfilePhotoMaker.API.Controllers;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services;
+using AI.ProfilePhotoMaker.API.Services.Storage;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -29,6 +30,10 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
         private readonly Mock<IConfiguration> _mockConfiguration;
         private readonly Mock<IUserContextService> _mockUserContextService;
         private readonly Mock<IBasicTierService> _mockBasicTierService;
+        private readonly Mock<IAsyncFileService> _mockAsyncFileService;
+        private readonly Mock<IAsyncZipService> _mockAsyncZipService;
+        private readonly Mock<IStorageService> _mockStorageService;
+        private readonly Mock<StoragePathResolver> _mockPathResolver;
         private readonly ApplicationDbContext _context;
         private readonly ImageController _controller;
         private readonly string _testContentRoot;
@@ -45,6 +50,10 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             _mockConfiguration = new Mock<IConfiguration>();
             _mockUserContextService = new Mock<IUserContextService>();
             _mockBasicTierService = new Mock<IBasicTierService>();
+            _mockAsyncFileService = new Mock<IAsyncFileService>();
+            _mockAsyncZipService = new Mock<IAsyncZipService>();
+            _mockStorageService = new Mock<IStorageService>();
+            _mockPathResolver = new Mock<StoragePathResolver>();
 
             // Create test directories
             _testContentRoot = Path.Combine(Path.GetTempPath(), "ImageDeleteTests", Guid.NewGuid().ToString());
@@ -68,7 +77,11 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
                 _mockUserContextService.Object,
                 _mockBasicTierService.Object,
                 _mockLogger.Object,
-                _context
+                _context,
+                _mockAsyncFileService.Object,
+                _mockAsyncZipService.Object,
+                _mockStorageService.Object,
+                _mockPathResolver.Object
             );
 
             SetupAuthentication();
