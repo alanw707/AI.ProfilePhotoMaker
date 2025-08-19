@@ -5,6 +5,7 @@ using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Environments;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
+using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;

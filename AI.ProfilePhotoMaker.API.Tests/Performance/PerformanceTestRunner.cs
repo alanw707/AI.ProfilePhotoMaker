@@ -1,6 +1,8 @@
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using FluentAssertions;
 using System.Text.Json;
 using Xunit;
 using Xunit.Abstractions;

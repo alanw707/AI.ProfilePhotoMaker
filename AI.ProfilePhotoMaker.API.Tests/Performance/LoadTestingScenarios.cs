@@ -1,5 +1,6 @@
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
+using FluentAssertions;
 using NBomber.Contracts;
 using NBomber.CSharp;
 using Microsoft.Extensions.DependencyInjection;
