@@ -13,6 +13,7 @@ import { DashboardStateService } from '../../services/dashboard-state.service';
 import { FileUploadService } from '../../services/file-upload.service';
 import { ReplicateService } from '../../services/replicate.service';
 import { Router } from '@angular/router';
+import { UserCreditStatus } from '../../services/credit.service';
 
 /**
  * Photo Enhancement Component Test Suite
@@ -131,11 +132,12 @@ describe('PhotoEnhancementComponent', () => {
     });
 
     it('should track credits info', () => {
-      const mockCredits = {
-        availableCredits: 13,
-        subscriptionTier: 'basic',
-        lastCreditReset: new Date(),
-        nextResetDate: new Date(),
+      const mockCredits: UserCreditStatus = {
+        totalCredits: 13,
+        weeklyCredits: 10,
+        purchasedCredits: 3,
+        lastCreditReset: '2024-01-01T00:00:00Z',
+        nextResetDate: '2024-01-08T00:00:00Z',
       };
 
       component.userCreditStatus = mockCredits;
