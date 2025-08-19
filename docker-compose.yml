@@ -22,12 +22,34 @@ services:
     networks:
       - aipm-network
 
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    container_name: aipm-azurite
+    command: "azurite --blobHost 0.0.0.0 --blobPort 10000 --queueHost 0.0.0.0 --queuePort 10001 --tableHost 0.0.0.0 --tablePort 10002 --location /workspace --debug /workspace/debug.log"
+    ports:
+      - "10000:10000"  # Blob service
+      - "10001:10001"  # Queue service  
+      - "10002:10002"  # Table service
+    volumes:
+      - azurite_data:/workspace
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:10000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - aipm-network
+
   # API and Frontend services removed for local development
   # Run API with: dotnet run --project AI.ProfilePhotoMaker.API
   # Run Frontend with: npm run dev (in AI.ProfilePhotoMaker.UI directory)
 
 volumes:
   sqlserver_data:
+    driver: local
+  azurite_data:
     driver: local
 
 networks:

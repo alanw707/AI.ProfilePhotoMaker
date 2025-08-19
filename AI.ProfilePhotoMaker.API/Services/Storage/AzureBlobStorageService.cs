@@ -24,14 +24,14 @@ public class AzureBlobStorageService : IStorageService
         _containerName = configuration["AzureStorage:ContainerName"] ?? "profile-images";
     }
 
-    public async Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId)
+    public async Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId, string folderType = "generated")
     {
         try
         {
             var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
             await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
 
-            var blobPath = $"generated/{userId}/{fileName}";
+            var blobPath = $"{folderType}/{userId}/{fileName}";
             var blobClient = containerClient.GetBlobClient(blobPath);
 
             await blobClient.UploadAsync(imageStream, overwrite: true);
@@ -178,23 +178,50 @@ public class AzureBlobStorageService : IStorageService
             blobPath = storagePath;
         }
 
-        // Azure Blob Storage provides public URLs that work for both internal and external access
-        // No need for different URLs based on context since blobs are publicly accessible
         var cleanPath = blobPath.TrimStart('/');
         var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
         var blobClient = containerClient.GetBlobClient(cleanPath);
-        var url = blobClient.Uri.ToString();
+        var fullUrl = blobClient.Uri.ToString();
 
+        // Check if using Azurite (development storage emulator)
+        if (IsUsingAzurite(fullUrl))
+        {
+            // For Azurite, generate relative URLs that work with ngrok proxy
+            // Format: /devstoreaccount1/{containerName}/{blobPath}
+            var relativeUrl = $"/devstoreaccount1/{containerName}/{cleanPath}";
+            
+            if (forExternalApi)
+            {
+                _logger.LogDebug("GetImageUrl for external API (Azurite relative): {Url}", relativeUrl);
+            }
+            else
+            {
+                _logger.LogDebug("GetImageUrl for frontend (Azurite relative): {Url}", relativeUrl);
+            }
+            
+            return relativeUrl;
+        }
+
+        // For Azure Blob Storage (production), use full URLs
         if (forExternalApi)
         {
-            _logger.LogDebug("GetImageUrl for external API (Azure Blob): {Url}", url);
+            _logger.LogDebug("GetImageUrl for external API (Azure Blob): {Url}", fullUrl);
         }
         else
         {
-            _logger.LogDebug("GetImageUrl for frontend (Azure Blob): {Url}", url);
+            _logger.LogDebug("GetImageUrl for frontend (Azure Blob): {Url}", fullUrl);
         }
 
-        return url;
+        return fullUrl;
+    }
+
+    /// <summary>
+    /// Determines if the current configuration is using Azurite (development storage emulator)
+    /// </summary>
+    private bool IsUsingAzurite(string blobUrl)
+    {
+        // Azurite URLs contain localhost or 127.0.0.1 and port 10000
+        return blobUrl.Contains("127.0.0.1:10000") || blobUrl.Contains("localhost:10000");
     }
 
     public async Task<List<string>> ListUserImagesAsync(string userId)

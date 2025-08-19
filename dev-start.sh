@@ -14,9 +14,12 @@ pkill -f "dotnet.*AI.ProfilePhotoMaker.API" 2>/dev/null || true
 pkill -f "ng serve" 2>/dev/null || true
 sleep 2
 
-# Start SQL Server container (if not running)
+# Start SQL Server and Azurite containers (if not running)
 echo "🗄️  Starting SQL Server container..."
 docker-compose up sql-server -d
+
+echo "☁️  Starting Azurite (Azure Storage Emulator)..."
+docker-compose up azurite -d
 
 # Wait for SQL Server to be ready
 echo "⏳ Waiting for SQL Server to be ready..."
@@ -25,6 +28,38 @@ while ! docker exec aipm-sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U
   sleep 2
 done
 echo " ✅ SQL Server ready!"
+
+# Wait for Azurite to be ready
+echo "⏳ Waiting for Azurite to be ready..."
+for i in {1..15}; do
+  if curl -s http://localhost:10000/ >/dev/null 2>&1; then
+    echo " ✅ Azurite ready!"
+    break
+  fi
+  echo -n "."
+  sleep 2
+done
+
+# Start ngrok tunnel for webhook development
+echo "🔗 Starting ngrok tunnel (webhook development)..."
+nohup ngrok http 5032 --domain=clear-anteater-usually.ngrok-free.app --log=stdout --log-level=info --log-format=logfmt > logs/ngrok.log 2>&1 &
+NGROK_PID=$!
+echo $NGROK_PID > logs/ngrok.pid
+
+# Wait for ngrok to be ready
+echo "⏳ Waiting for ngrok tunnel to be ready..."
+for i in {1..20}; do
+  if curl -s http://localhost:4040/api/tunnels >/dev/null 2>&1; then
+    echo " ✅ ngrok tunnel ready!"
+    NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url' 2>/dev/null || echo "")
+    if [ ! -z "$NGROK_URL" ]; then
+      echo "🔗 Webhook URL: $NGROK_URL"
+    fi
+    break
+  fi
+  echo -n "."
+  sleep 2
+done
 
 # Start API in background
 echo "🔧 Starting API server (localhost:5032)..."
@@ -70,7 +105,9 @@ echo "======================================="
 echo "📱 Frontend:  http://localhost:4200"
 echo "🔧 API:       http://localhost:5032"
 echo "🔧 API Docs:  http://localhost:5032/swagger"
+echo "🔗 ngrok:     https://clear-anteater-usually.ngrok-free.app"
 echo "🗄️  Database: localhost:1433 (sa/Dev123456!)"
+echo "☁️  Azurite:  http://localhost:10000 (Azure Storage Emulator)"
 echo ""
 echo "📊 Process IDs saved in logs/ directory"
 echo "📝 Logs available in logs/ directory"
