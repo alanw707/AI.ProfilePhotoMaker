@@ -21,7 +21,12 @@ export class ThemeService {
   setTheme(theme: Theme): void {
     this._currentTheme.next(theme);
     localStorage.setItem('theme', theme);
+    // Ensure theme attribute is properly set and force a style recalculation
     document.documentElement.setAttribute('data-theme', theme);
+    // Trigger a style recalculation to ensure CSS variables are applied
+    document.documentElement.style.display = 'none';
+    void document.documentElement.offsetHeight; // Force reflow
+    document.documentElement.style.display = '';
   }
 
   toggleTheme(): void {

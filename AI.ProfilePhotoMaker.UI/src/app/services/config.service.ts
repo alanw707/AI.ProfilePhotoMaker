@@ -290,4 +290,78 @@ export class ConfigService {
   get isReplicateCreditsEnabled(): boolean {
     return environment.features?.enableReplicateCredits ?? true;
   }
+
+  // NEW: Auto-Repair Feature Flag Methods
+
+  /**
+   * Check if auto-repair functionality is enabled
+   * @returns true if auto-repair should be active, false to disable
+   */
+  get isAutoRepairEnabled(): boolean {
+    return environment.features?.enableAutoRepair ?? false;
+  }
+
+  /**
+   * Check if auto-repair should run in dry-run mode only
+   * @returns true for dry-run mode (log only), false for actual repairs
+   */
+  get isAutoRepairDryRunOnly(): boolean {
+    return environment.features?.autoRepairDryRunOnly ?? true;
+  }
+
+  /**
+   * Get the minimum number of broken images required to trigger auto-repair
+   * @returns threshold number (default: 3)
+   */
+  get autoRepairThreshold(): number {
+    return environment.features?.autoRepairThreshold ?? 3;
+  }
+
+  /**
+   * Get the cooldown period between auto-repair attempts in milliseconds
+   * @returns cooldown period in ms (default: 24 hours)
+   */
+  get autoRepairCooldownMs(): number {
+    return environment.features?.autoRepairCooldown ?? 24 * 60 * 60 * 1000;
+  }
+
+  /**
+   * Get the maximum number of auto-repair attempts per session
+   * @returns max attempts (default: 3)
+   */
+  get autoRepairMaxAttempts(): number {
+    return environment.features?.autoRepairMaxAttempts ?? 3;
+  }
+
+  /**
+   * Get the timeout for auto-repair operations in milliseconds
+   * @returns timeout in ms (default: 30 seconds)
+   */
+  get autoRepairTimeoutMs(): number {
+    return environment.features?.autoRepairTimeoutMs ?? 30000;
+  }
+
+  /**
+   * Check if auto-repair notifications should be shown to users
+   * @returns true to show notifications, false to suppress
+   */
+  get isAutoRepairNotificationsEnabled(): boolean {
+    return environment.features?.autoRepairNotifications ?? true;
+  }
+
+  /**
+   * Check if auto-repair telemetry should be collected
+   * @returns true to collect telemetry, false to disable
+   */
+  get isAutoRepairTelemetryEnabled(): boolean {
+    return environment.features?.autoRepairTelemetry ?? true;
+  }
+
+  /**
+   * Get the validation level for auto-repair operations
+   * @returns validation level ('strict', 'moderate', 'lenient')
+   */
+  get autoRepairValidationLevel(): string {
+    return environment.features?.autoRepairValidationLevel ?? 'strict';
+  }
 }

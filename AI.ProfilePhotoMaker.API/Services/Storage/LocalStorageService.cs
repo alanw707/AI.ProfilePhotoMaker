@@ -1,15 +1,14 @@
 using Microsoft.Extensions.Configuration;
+using Azure.Storage.Sas;
 
 namespace AI.ProfilePhotoMaker.API.Services.Storage;
 
 /// <summary>
 /// Local filesystem implementation of storage service with async I/O optimizations
 /// </summary>
-public class LocalStorageService : IStorageService
+public class LocalStorageService : BaseStorageService
 {
     private readonly IWebHostEnvironment _environment;
-    private readonly IConfiguration _configuration;
-    private readonly ILogger<LocalStorageService> _logger;
     private readonly IAsyncFileService _asyncFileService;
 
     public LocalStorageService(
@@ -17,19 +16,21 @@ public class LocalStorageService : IStorageService
         IConfiguration configuration,
         ILogger<LocalStorageService> logger,
         IAsyncFileService asyncFileService)
+        : base(configuration, logger)
     {
         _environment = environment;
-        _configuration = configuration;
-        _logger = logger;
         _asyncFileService = asyncFileService;
     }
 
-    public async Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId, string folderType = "generated")
+    public override async Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId)
     {
+        ValidateUserId(userId);
+        ValidateFileName(fileName);
+        
         try
         {
-            // Ensure the user's directory exists with the specified folder type
-            var userDirectory = Path.Combine(_environment.ContentRootPath, folderType, userId);
+            // Ensure the user's generated directory exists
+            var userDirectory = Path.Combine(_environment.ContentRootPath, "generated", userId);
             await _asyncFileService.CreateDirectoryAsync(userDirectory);
 
             var filePath = Path.Combine(userDirectory, fileName);
@@ -38,26 +39,54 @@ public class LocalStorageService : IStorageService
             await _asyncFileService.CopyStreamToFileAsync(imageStream, filePath, 81920);
 
             // Return the relative path that can be served by the web server
-            var storagePath = $"/{folderType}/{userId}/{fileName}";
+            var storagePath = GenerateUserStoragePath(userId, fileName);
 
-            _logger.LogInformation("Saved image to local storage: {StoragePath}", storagePath);
+            LogOperation(LogLevel.Information, "SaveImageAsync", storagePath);
             return storagePath;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to save image {FileName} for user {UserId}", fileName, userId);
+            LogError(ex, "SaveImageAsync", $"userId: {userId}, fileName: {fileName}");
             throw;
         }
     }
 
-    public async Task<Stream?> GetImageAsync(string storagePath)
+    public override async Task<string> SaveImageToPathAsync(Stream imageStream, string storagePath)
     {
+        ValidateStoragePath(storagePath);
+        
+        try
+        {
+            var fullPath = GetFullPath(storagePath);
+            var directory = Path.GetDirectoryName(fullPath);
+            
+            if (directory != null)
+            {
+                await _asyncFileService.CreateDirectoryAsync(directory);
+            }
+
+            await _asyncFileService.CopyStreamToFileAsync(imageStream, fullPath, 81920);
+
+            LogOperation(LogLevel.Information, "SaveImageToPathAsync", storagePath);
+            return storagePath;
+        }
+        catch (Exception ex)
+        {
+            LogError(ex, "SaveImageToPathAsync", storagePath);
+            throw;
+        }
+    }
+
+    public override async Task<Stream?> GetImageAsync(string storagePath)
+    {
+        ValidateStoragePath(storagePath);
+        
         try
         {
             var fullPath = GetFullPath(storagePath);
             if (!await _asyncFileService.FileExistsAsync(fullPath))
             {
-                _logger.LogWarning("Image not found at path: {StoragePath}", storagePath);
+                LogOperation(LogLevel.Warning, "GetImageAsync - not found", storagePath);
                 return null;
             }
 
@@ -66,13 +95,15 @@ public class LocalStorageService : IStorageService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get image from storage: {StoragePath}", storagePath);
+            LogError(ex, "GetImageAsync", storagePath);
             return null;
         }
     }
 
-    public async Task<bool> DeleteImageAsync(string storagePath)
+    public override async Task<bool> DeleteImageAsync(string storagePath)
     {
+        ValidateStoragePath(storagePath);
+        
         try
         {
             var fullPath = GetFullPath(storagePath);
@@ -80,24 +111,26 @@ public class LocalStorageService : IStorageService
             
             if (deleted)
             {
-                _logger.LogInformation("Deleted image from local storage: {StoragePath}", storagePath);
+                LogOperation(LogLevel.Information, "DeleteImageAsync - success", storagePath);
             }
             else
             {
-                _logger.LogWarning("Attempted to delete non-existent image: {StoragePath}", storagePath);
+                LogOperation(LogLevel.Warning, "DeleteImageAsync - not found", storagePath);
             }
             
             return deleted;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete image from storage: {StoragePath}", storagePath);
+            LogError(ex, "DeleteImageAsync", storagePath);
             return false;
         }
     }
 
-    public async Task<bool> ExistsAsync(string storagePath)
+    public override async Task<bool> ExistsAsync(string storagePath)
     {
+        ValidateStoragePath(storagePath);
+        
         try
         {
             var fullPath = GetFullPath(storagePath);
@@ -105,60 +138,39 @@ public class LocalStorageService : IStorageService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to check if image exists: {StoragePath}", storagePath);
+            LogError(ex, "ExistsAsync", storagePath);
             return false;
         }
     }
 
-    public string GetImageUrl(string storagePath)
+    public override string GetImageUrl(string storagePath)
     {
-        // Default to frontend/internal use
-        return GetImageUrl(storagePath, forExternalApi: false);
-    }
-
-    public string GetImageUrl(string storagePath, bool forExternalApi)
-    {
+        ValidateStoragePath(storagePath);
+        
         // Ensure storagePath starts with /
         if (!storagePath.StartsWith('/'))
         {
             storagePath = "/" + storagePath;
         }
 
-        string baseUrl;
+        // For local development, prioritize ExternalApiBaseUrl (ngrok) if available,
+        // otherwise fall back to AppBaseUrl for both frontend and external API access
+        var externalApiBaseUrl = Configuration["ExternalApiBaseUrl"];
+        if (!string.IsNullOrEmpty(externalApiBaseUrl))
+        {
+            Logger.LogDebug("GetImageUrl using ExternalApiBaseUrl: {BaseUrl}{Path}", externalApiBaseUrl, storagePath);
+            return $"{externalApiBaseUrl.TrimEnd('/')}{storagePath}";
+        }
         
-        if (forExternalApi)
-        {
-            // For external APIs (like Replicate), use ExternalApiBaseUrl to ensure public HTTPS access
-            baseUrl = _configuration["ExternalApiBaseUrl"];
-            if (!string.IsNullOrEmpty(baseUrl))
-            {
-                _logger.LogDebug("GetImageUrl using ExternalApiBaseUrl for external API: {BaseUrl}{Path}", baseUrl, storagePath);
-                return $"{baseUrl.TrimEnd('/')}{storagePath}";
-            }
-            
-            // Fallback to AppBaseUrl if ExternalApiBaseUrl not configured
-            baseUrl = _configuration["AppBaseUrl"];
-            if (!string.IsNullOrEmpty(baseUrl) && baseUrl.StartsWith("https://"))
-            {
-                _logger.LogDebug("GetImageUrl using HTTPS AppBaseUrl for external API fallback: {BaseUrl}{Path}", baseUrl, storagePath);
-                return $"{baseUrl.TrimEnd('/')}{storagePath}";
-            }
-            
-            // Last resort fallback for external API - use localhost with warning
-            _logger.LogWarning("No ExternalApiBaseUrl configured - external APIs may not be able to access image URLs");
-            return $"https://localhost:5001{storagePath}";
-        }
-        else
-        {
-            // For frontend/internal use, use AppBaseUrl (can be localhost)
-            baseUrl = _configuration["AppBaseUrl"] ?? "https://localhost:5001";
-            _logger.LogDebug("GetImageUrl using AppBaseUrl for frontend use: {BaseUrl}{Path}", baseUrl, storagePath);
-            return $"{baseUrl.TrimEnd('/')}{storagePath}";
-        }
+        var appBaseUrl = Configuration["AppBaseUrl"] ?? "https://localhost:5001";
+        Logger.LogDebug("GetImageUrl using AppBaseUrl: {BaseUrl}{Path}", appBaseUrl, storagePath);
+        return $"{appBaseUrl.TrimEnd('/')}{storagePath}";
     }
 
-    public async Task<List<string>> ListUserImagesAsync(string userId)
+    public override async Task<List<string>> ListUserImagesAsync(string userId)
     {
+        ValidateUserId(userId);
+        
         try
         {
             var userDirectory = Path.Combine(_environment.ContentRootPath, "generated", userId);
@@ -168,14 +180,13 @@ public class LocalStorageService : IStorageService
             }
 
             var allFiles = await _asyncFileService.GetDirectoryFilesAsync(userDirectory, "*", false);
-            var imageExtensions = new[] { ".png", ".jpg", ".jpeg", ".webp", ".gif" };
             
             var imageFiles = allFiles
-                .Where(file => imageExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()))
+                .Where(file => IsImageExtension(Path.GetExtension(file)))
                 .Select(file =>
                 {
                     var fileName = Path.GetFileName(file);
-                    return $"/generated/{userId}/{fileName}";
+                    return GenerateUserStoragePath(userId, fileName);
                 })
                 .ToList();
 
@@ -183,13 +194,15 @@ public class LocalStorageService : IStorageService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to list images for user {UserId}", userId);
+            LogError(ex, "ListUserImagesAsync", $"userId: {userId}");
             return new List<string>();
         }
     }
 
-    public async Task<StorageFileInfo?> GetFileInfoAsync(string storagePath)
+    public override async Task<StorageFileInfo?> GetFileInfoAsync(string storagePath)
     {
+        ValidateStoragePath(storagePath);
+        
         try
         {
             var fullPath = GetFullPath(storagePath);
@@ -214,7 +227,7 @@ public class LocalStorageService : IStorageService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get file info for: {StoragePath}", storagePath);
+            LogError(ex, "GetFileInfoAsync", storagePath);
             return null;
         }
     }
@@ -229,20 +242,102 @@ public class LocalStorageService : IStorageService
         return Path.Combine(_environment.ContentRootPath, relativePath);
     }
 
-    /// <summary>
-    /// Gets the MIME content type for a file extension
-    /// </summary>
-    private static string GetContentType(string extension)
+
+    public override async Task<string> GenerateSasUrlAsync(string storagePath, TimeSpan expiry, BlobSasPermissions permissions = BlobSasPermissions.Read)
     {
-        return extension.ToLowerInvariant() switch
+        ValidateStoragePath(storagePath);
+        
+        // For local storage, we can't generate true SAS URLs, so return the regular URL
+        // This is used in development where we're not actually using external APIs
+        Logger.LogWarning("GenerateSasUrlAsync called on LocalStorageService - returning regular URL for development");
+        return GetImageUrl(storagePath);
+    }
+
+    public override async Task<string> SaveZipAsync(Stream zipStream, string storagePath)
+    {
+        ValidateStoragePath(storagePath);
+        
+        try
         {
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".png" => "image/png",
-            ".gif" => "image/gif",
-            ".webp" => "image/webp",
-            ".bmp" => "image/bmp",
-            ".tiff" or ".tif" => "image/tiff",
-            _ => "application/octet-stream"
-        };
+            var fullPath = GetFullPath(storagePath);
+            var directory = Path.GetDirectoryName(fullPath);
+            
+            if (directory != null)
+            {
+                await _asyncFileService.CreateDirectoryAsync(directory);
+            }
+
+            await _asyncFileService.CopyStreamToFileAsync(zipStream, fullPath, 81920);
+
+            LogOperation(LogLevel.Information, "SaveZipAsync", storagePath);
+            return storagePath;
+        }
+        catch (Exception ex)
+        {
+            LogError(ex, "SaveZipAsync", storagePath);
+            throw;
+        }
+    }
+
+    public override async Task<bool> DeleteDirectoryAsync(string directoryPath)
+    {
+        ValidateStoragePath(directoryPath);
+        
+        try
+        {
+            var fullPath = GetFullPath(directoryPath);
+            
+            if (!Directory.Exists(fullPath))
+            {
+                LogOperation(LogLevel.Warning, "DeleteDirectoryAsync - not found", directoryPath);
+                return false;
+            }
+
+            Directory.Delete(fullPath, recursive: true);
+            
+            LogOperation(LogLevel.Information, "DeleteDirectoryAsync - success", directoryPath);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LogError(ex, "DeleteDirectoryAsync", directoryPath);
+            return false;
+        }
+    }
+
+    public override async Task<List<string>> ListFilesAsync(string prefix)
+    {
+        ValidateStoragePath(prefix);
+        
+        try
+        {
+            var fullPrefix = GetFullPath(prefix);
+            var directory = Path.GetDirectoryName(fullPrefix);
+            var pattern = Path.GetFileName(fullPrefix);
+            
+            if (string.IsNullOrEmpty(pattern))
+            {
+                pattern = "*";
+            }
+
+            if (directory == null || !Directory.Exists(directory))
+            {
+                return new List<string>();
+            }
+
+            var files = await _asyncFileService.GetDirectoryFilesAsync(directory, pattern, true);
+            
+            return files.Select(file =>
+            {
+                // Convert back to storage path format
+                var relativePath = Path.GetRelativePath(_environment.ContentRootPath, file);
+                return "/" + relativePath.Replace(Path.DirectorySeparatorChar, '/');
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            LogError(ex, "ListFilesAsync", prefix);
+            return new List<string>();
+        }
     }
 }

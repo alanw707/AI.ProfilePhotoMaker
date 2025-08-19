@@ -1,3 +1,5 @@
+using AI.ProfilePhotoMaker.API.Services.Storage;
+
 namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 
 /// <summary>
@@ -9,17 +11,23 @@ public class ImageDownloadService : IImageDownloadService
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<ImageDownloadService> _logger;
     private readonly IAsyncFileService _asyncFileService;
+    private readonly IStorageService _storageService;
+    private readonly StoragePathResolver _pathResolver;
 
     public ImageDownloadService(
         HttpClient httpClient,
         IWebHostEnvironment environment,
         ILogger<ImageDownloadService> logger,
-        IAsyncFileService asyncFileService)
+        IAsyncFileService asyncFileService,
+        IStorageService storageService,
+        StoragePathResolver pathResolver)
     {
         _httpClient = httpClient;
         _environment = environment;
         _logger = logger;
         _asyncFileService = asyncFileService;
+        _storageService = storageService;
+        _pathResolver = pathResolver;
 
         // Configure HTTP client with reasonable timeouts
         _httpClient.Timeout = TimeSpan.FromMinutes(5);
@@ -42,29 +50,39 @@ public class ImageDownloadService : IImageDownloadService
         for (int i = 0; i < imageUrls.Count; i++)
         {
             var imageUrl = imageUrls[i];
-            // Let DownloadImageAsync generate unique filename to prevent overwrites
-            var fileName = (string?)null;
+            // Generate unique filename to prevent overwrites
+            var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff");
+            var fileName = $"{style.ToLowerInvariant()}-{timestamp}-{i + 1}.jpg";
 
             try
             {
-                var localPath = await DownloadImageAsync(imageUrl, userId, style, fileName);
-                if (!string.IsNullOrEmpty(localPath))
+                // Download image stream
+                using var response = await _httpClient.GetAsync(imageUrl);
+                if (response.IsSuccessStatusCode)
                 {
-                    // Extract the actual filename from the path
-                    var actualFileName = Path.GetFileName(localPath);
+                    using var imageStream = await response.Content.ReadAsStreamAsync();
+                    
+                    // Save directly to blob storage
+                    var storagePath = _pathResolver.GetPath(StorageType.Generated, userId, fileName);
+                    var savedStoragePath = await _storageService.SaveImageToPathAsync(imageStream, storagePath);
+                    
                     downloadResults.Add(new ImageDownloadResult
                     {
-                        LocalPath = localPath,
-                        FileName = actualFileName,
+                        StoragePath = savedStoragePath,
+                        LocalPath = savedStoragePath, // For backward compatibility
+                        FileName = fileName,
                         Success = true
                     });
-                    _logger.LogInformation("Successfully downloaded image {Index} for user {UserId}: {LocalPath} as {FileName}",
-                        i + 1, userId, localPath, actualFileName);
+                    _logger.LogInformation("Successfully downloaded and saved image {Index} for user {UserId}: {StoragePath}",
+                        i + 1, userId, savedStoragePath);
                 }
                 else
                 {
+                    _logger.LogWarning("Failed to download image {Index} from {Url}: {StatusCode}",
+                        i + 1, imageUrl, response.StatusCode);
                     downloadResults.Add(new ImageDownloadResult
                     {
+                        StoragePath = string.Empty,
                         LocalPath = string.Empty,
                         FileName = string.Empty,
                         Success = false
@@ -77,6 +95,7 @@ public class ImageDownloadService : IImageDownloadService
                     i + 1, imageUrl, userId);
                 downloadResults.Add(new ImageDownloadResult
                 {
+                    StoragePath = string.Empty,
                     LocalPath = string.Empty,
                     FileName = string.Empty,
                     Success = false

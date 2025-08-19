@@ -719,6 +719,22 @@ public class ReplicateController : ControllerBase
 
         try
         {
+            // Validate required Replicate configuration before proceeding
+            var fluxKontextProModelId = _configuration["Replicate:FluxKontextProModelId"];
+            if (string.IsNullOrEmpty(fluxKontextProModelId))
+            {
+                _logger.LogError("FluxKontextProModelId configuration is missing for user {UserId}", userId);
+                return StatusCode(500, new
+                {
+                    success = false,
+                    error = new
+                    {
+                        code = "ConfigurationError",
+                        message = "Photo enhancement service is temporarily unavailable. Please try again later."
+                    }
+                });
+            }
+
             // Convert image URL to external API format before passing to Replicate
             var externalImageUrl = ConvertToExternalApiUrl(dto.ImageUrl);
             _logger.LogInformation("Converted image URL from {OriginalUrl} to {ExternalUrl} for Replicate API", 
@@ -750,17 +766,68 @@ public class ReplicateController : ControllerBase
                 error = (object?)null
             });
         }
+        catch (ArgumentException ex)
+        {
+            _logger.LogError(ex, "Invalid configuration or parameters for photo enhancement for user {UserId}", userId);
+            return BadRequest(new
+            {
+                success = false,
+                error = new
+                {
+                    code = "InvalidRequest",
+                    message = "Invalid request parameters. Please check your input and try again."
+                }
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Service unavailable for photo enhancement for user {UserId}", userId);
+            return StatusCode(503, new
+            {
+                success = false,
+                error = new
+                {
+                    code = "ServiceUnavailable",
+                    message = "Photo enhancement service is temporarily unavailable. Please try again later."
+                }
+            });
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Network error during photo enhancement for user {UserId}", userId);
+            return StatusCode(502, new
+            {
+                success = false,
+                error = new
+                {
+                    code = "NetworkError",
+                    message = "Failed to connect to enhancement service. Please try again later."
+                }
+            });
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Request timeout during photo enhancement for user {UserId}", userId);
+            return StatusCode(408, new
+            {
+                success = false,
+                error = new
+                {
+                    code = "RequestTimeout",
+                    message = "Enhancement request timed out. Please try again with a smaller image."
+                }
+            });
+        }
         catch (Exception ex)
         {
-            // If enhancement fails, we should consider refunding the credit
-            // For now, we'll log the error and return failure
+            _logger.LogError(ex, "Unexpected error during photo enhancement for user {UserId}: {ErrorMessage}", userId, ex.Message);
             return StatusCode(500, new
             {
                 success = false,
                 error = new
                 {
                     code = "EnhancementFailed",
-                    message = "Failed to enhance photo. Please try again later."
+                    message = "Failed to enhance photo due to an unexpected error. Please try again later."
                 }
             });
         }

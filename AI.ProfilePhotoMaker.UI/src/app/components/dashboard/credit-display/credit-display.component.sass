@@ -9,7 +9,7 @@
     opacity: 0.6
     
     .credits-count
-      color: var(--text-secondary)
+      color: var(--text-secondary, #4a5568)
       font-style: italic
 
 // Main Credit Display
@@ -19,14 +19,14 @@
     align-items: center
     gap: 12px
     padding: 16px
-    background: var(--card-bg)
-    border: 1px solid var(--border-color)
+    background: var(--card-bg, #ffffff)
+    border: 1px solid var(--border-color, #e5e7eb)
     border-radius: 12px
     flex: 1
     transition: all 0.3s ease
 
     &:hover
-      border-color: var(--accent-primary)
+      border-color: var(--accent-primary, #4fd1c7)
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1)
 
     .credits-icon
@@ -40,14 +40,14 @@
       gap: 4px
 
       .credits-count
-        color: var(--text-primary)
+        color: var(--text-primary, #1a202c)
         font-family: 'Poppins', sans-serif
         font-size: 18px
         font-weight: 600
         margin: 0
 
       .credits-note
-        color: var(--text-secondary)
+        color: var(--text-secondary, #4a5568)
         font-size: 14px
         margin: 0
 
@@ -71,13 +71,13 @@
 // Credit Breakdown Section
 .credit-breakdown-section
   .credit-info-box
-    background: var(--bg-secondary)
-    border: 1px solid var(--border-color)
+    background: var(--bg-secondary, #f8f9fa)
+    border: 1px solid var(--border-color, #e5e7eb)
     border-radius: 12px
     padding: 16px
 
     h5
-      color: var(--text-primary)
+      color: var(--text-primary, #1a202c)
       font-family: 'Poppins', sans-serif
       font-size: 16px
       font-weight: 600
@@ -96,23 +96,23 @@
       padding: 4px 0
 
       .credit-label
-        color: var(--text-secondary)
+        color: var(--text-secondary, #4a5568)
 
       .credit-cost
-        color: var(--text-primary)
+        color: var(--text-primary, #1a202c)
         font-weight: 600
 
     .total-credits
-      border-top: 1px solid var(--border-color)
+      border-top: 1px solid var(--border-color, #e5e7eb)
       padding-top: 8px
       margin-top: 4px
 
       .credit-label
         font-weight: 600
-        color: var(--text-primary)
+        color: var(--text-primary, #1a202c)
 
       .credit-cost
-        color: var(--accent-primary)
+        color: var(--accent-primary, #4fd1c7)
         font-size: 16px
         font-weight: 700
 
@@ -120,15 +120,15 @@
 .cost-calculation-section
   .credit-info-box
     .cost-note
-      color: var(--text-secondary)
+      color: var(--text-secondary, #4a5568)
       font-size: 14px
       margin: 12px 0 0 0
       text-align: center
       padding-top: 12px
-      border-top: 1px solid var(--border-color)
+      border-top: 1px solid var(--border-color, #e5e7eb)
 
       strong
-        color: var(--accent-success)
+        color: var(--accent-success, #10b981)
         font-weight: 600
 
 // Insufficient Credits Warning
@@ -139,7 +139,7 @@
   padding: 16px
 
   .warning-content
-    color: var(--text-primary)
+    color: var(--text-primary, #1a202c)
 
     .warning-header
       display: flex
@@ -160,11 +160,11 @@
 
     p
       margin: 0 0 16px 0
-      color: var(--text-secondary)
+      color: var(--text-secondary, #4a5568)
       font-size: 14px
 
       strong
-        color: var(--text-primary)
+        color: var(--text-primary, #1a202c)
 
     .btn
       background: #ef4444
@@ -249,8 +249,8 @@
 // Basic Credits Display (for non-premium users)
 .basic-credits-display
   .credits-info-card
-    background: var(--card-bg)
-    border: 1px solid var(--border-color)
+    background: var(--card-bg, #ffffff)
+    border: 1px solid var(--border-color, #e5e7eb)
     border-radius: 12px
     padding: 16px
     display: flex
@@ -259,18 +259,18 @@
 
     .credits-icon
       font-size: 24px
-      color: var(--accent-primary)
+      color: var(--accent-primary, #4fd1c7)
 
     .credits-text
       .credits-count
-        color: var(--text-primary)
+        color: var(--text-primary, #1a202c)
         font-family: 'Poppins', sans-serif
         font-size: 18px
         font-weight: 600
         margin: 0
 
       .credits-note
-        color: var(--text-secondary)
+        color: var(--text-secondary, #4a5568)
         font-size: 14px
         margin: 0
 

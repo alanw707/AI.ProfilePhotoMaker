@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.IO.Compression;
-using System.Security.Claims;
 
 namespace AI.ProfilePhotoMaker.API.Controllers
 {
@@ -26,6 +25,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private readonly IAsyncFileService _asyncFileService;
         private readonly IAsyncZipService _asyncZipService;
         private readonly IStorageService _storageService;
+        private readonly StoragePathResolver _pathResolver;
 
         public ImageController(
             IUserProfileRepository userProfileRepository,
@@ -37,7 +37,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             ApplicationDbContext context,
             IAsyncFileService asyncFileService,
             IAsyncZipService asyncZipService,
-            IStorageService storageService)
+            IStorageService storageService,
+            StoragePathResolver pathResolver)
             : base(logger, context)
         {
             _userProfileRepository = userProfileRepository;
@@ -48,6 +49,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             _asyncFileService = asyncFileService;
             _asyncZipService = asyncZipService;
             _storageService = storageService;
+            _pathResolver = pathResolver;
         }
 
         /// <summary>
@@ -112,8 +114,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 var uploadResults = new List<object>();
                 var uploadedImages = new List<ProcessedImage>();
 
-                // Determine upload strategy based on image type
-                string filePrefix = dto.IsEnhanced ? "enhanced" : "selfie";
+                // Determine storage type and file prefix based on image type
+                var storageType = dto.IsEnhanced ? StorageType.Enhanced : StorageType.Upload;
+                var filePrefix = dto.IsEnhanced ? "enhanced" : "selfie";
 
                 foreach (var image in dto.Images)
                 {
@@ -126,34 +129,24 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     var extension = Path.GetExtension(image.FileName);
                     var fileName = $"{Guid.NewGuid()}_{filePrefix}{extension}";
                     
-                    string relativeUrl;
-                    
-                    // Use async file service with optimal buffer size for non-blocking I/O
+                    // Get storage path using path resolver
+                    var storagePath = _pathResolver.GetPath(storageType, userId, fileName);
+
+                    // Save to blob storage
                     await using var imageStream = image.OpenReadStream();
-                    
-                    if (dto.IsEnhanced)
-                    {
-                        // Store enhanced images in storage service with enhanced folder
-                        var storagePath = await _storageService.SaveImageAsync(imageStream, fileName, userId, "enhanced");
-                        relativeUrl = _storageService.GetImageUrl(storagePath);
-                    }
-                    else
-                    {
-                        // Keep original logic for regular uploads (local filesystem)
-                        var uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
-                        await _asyncFileService.CreateDirectoryAsync(uploadDir);
-                        var filePath = Path.Combine(uploadDir, fileName);
-                        await _asyncFileService.CopyStreamToFileAsync(imageStream, filePath, 81920);
-                        relativeUrl = $"/uploads/{userId}/{fileName}";
-                    }
+                    await _storageService.SaveImageToPathAsync(imageStream, storagePath);
+
+                    // Get the URL for the uploaded image
+                    var imageUrl = _storageService.GetImageUrl(storagePath);
 
                     // Only create database records for non-enhanced images
+                    // Enhanced images are temporary files and should NOT be counted in dashboard
                     if (!dto.IsEnhanced)
                     {
                         var processedImage = new ProcessedImage
                         {
-                            OriginalImageUrl = relativeUrl,
-                            ProcessedImageUrl = relativeUrl,
+                            OriginalImageUrl = imageUrl,
+                            ProcessedImageUrl = imageUrl,
                             Style = ImageConstants.OriginalStyle,
                             UserProfileId = profile.Id,
                             CreatedAt = DateTime.UtcNow,
@@ -166,13 +159,21 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                         profile.ProcessedImages.Add(processedImage);
                         uploadedImages.Add(processedImage);
+                        
+                        Logger.LogInformation("Created database record for uploaded image {FileName} for user {UserId}", 
+                            fileName, userId);
+                    }
+                    else
+                    {
+                        Logger.LogInformation("Skipped database record for enhanced image {FileName} for user {UserId} - temporary file only", 
+                            fileName, userId);
                     }
 
                     uploadResults.Add(new
                     {
                         FileName = fileName,
                         Size = image.Length,
-                        Url = GetAbsoluteUrl(relativeUrl)
+                        Url = imageUrl
                     });
                 }
 
@@ -184,11 +185,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                     if (!hasCredits)
                     {
-                        // Cleanup uploaded files if credit deduction failed using async operations
+                        // Cleanup uploaded files if credit deduction failed - use storage service for cleanup
                         foreach (var uploadedImage in uploadedImages)
                         {
-                            var filePath = Path.Combine(_environment.ContentRootPath, uploadedImage.OriginalImageUrl.TrimStart('/'));
-                            await _asyncFileService.DeleteFileAsync(filePath);
+                            await _storageService.DeleteImageAsync(uploadedImage.OriginalImageUrl);
                         }
 
                         return ErrorResponse("InsufficientCredits",
@@ -206,9 +206,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 string? zipPath = null;
                 if (dto.ForTraining)
                 {
-                    // Training zips are only created for non-enhanced images (uploaded to local filesystem)
-                    var uploadsDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
-                    zipPath = await CreateTrainingZipAsync(uploadsDir, userId);
+                    zipPath = await CreateTrainingZipAsync(userId);
                 }
 
                 return SuccessResponse(new
@@ -229,7 +227,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         /// <summary>
-        /// Gets user's processed images with URLs
+        /// Gets user's processed images with URLs using blob storage service
         /// </summary>
         [HttpGet("images")]
         public async Task<IActionResult> GetImages()
@@ -249,20 +247,34 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 string? originalUrl = null;
                 string? processedUrl = null;
 
+                // Handle OriginalImageUrl - use storage service for URL generation
                 if (!string.IsNullOrEmpty(i.OriginalImageUrl))
                 {
                     if (i.OriginalImageUrl.StartsWith("http"))
                     {
+                        // Already a full URL (external or SAS URL)
                         originalUrl = i.OriginalImageUrl;
                     }
                     else
                     {
-                        originalUrl = GetAbsoluteUrl(i.OriginalImageUrl);
+                        // Storage path - get environment-appropriate URL for frontend access
+                        originalUrl = _storageService.GetImageUrl(i.OriginalImageUrl);
                     }
                 }
+
+                // Handle ProcessedImageUrl - use storage service for URL generation
                 if (!string.IsNullOrEmpty(i.ProcessedImageUrl))
                 {
-                    processedUrl = i.ProcessedImageUrl.StartsWith("http") ? i.ProcessedImageUrl : GetAbsoluteUrl(i.ProcessedImageUrl);
+                    if (i.ProcessedImageUrl.StartsWith("http"))
+                    {
+                        // Already a full URL (external or SAS URL)
+                        processedUrl = i.ProcessedImageUrl;
+                    }
+                    else
+                    {
+                        // Storage path - get environment-appropriate URL for frontend access
+                        processedUrl = _storageService.GetImageUrl(i.ProcessedImageUrl);
+                    }
                 }
 
                 images.Add(new
@@ -290,7 +302,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         /// <summary>
-        /// Deletes a specific image
+        /// Deletes a specific image using blob storage service
         /// </summary>
         [HttpDelete("images/{imageId}")]
         public async Task<IActionResult> DeleteImage(int imageId)
@@ -314,8 +326,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return ErrorResponse("ImageNotFound", "Image not found", 404);
             }
 
-            // No need to check IsDeleted since we're using hard delete
-
             try
             {
                 var physicalFileDeleted = false;
@@ -324,75 +334,51 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 Logger.LogInformation("Starting deletion of image {ImageId} for user {UserId}. Profile has {ImageCount} images",
                     imageId, userId, imageCountBefore);
 
-                // Delete physical file based on image type and storage location
+                // Delete physical files using storage service
                 if (image.IsGenerated && !string.IsNullOrEmpty(image.ProcessedImageUrl))
                 {
                     try
                     {
-                        // Generated images are stored in /generated/{userId}/ directory
-                        var fileName = Path.GetFileName(image.ProcessedImageUrl);
-                        var generatedFilePath = Path.Combine(_environment.ContentRootPath, "generated", userId, fileName);
+                        Logger.LogDebug("Attempting to delete generated image from storage: {StoragePath}", image.ProcessedImageUrl);
 
-                        Logger.LogDebug("Attempting to delete generated image file: {FilePath}", generatedFilePath);
-                        Logger.LogDebug("Processed URL: {ProcessedUrl}, Extracted filename: {FileName}, UserId: {UserId}",
-                            image.ProcessedImageUrl, fileName, userId);
-
-                        // Validate path length and characters
-                        if (generatedFilePath.Length > 260)
-                        {
-                            Logger.LogWarning("Generated file path too long ({Length} chars): {FilePath}", generatedFilePath.Length, generatedFilePath);
-                        }
-
-                        physicalFileDeleted = await _asyncFileService.DeleteFileAsync(generatedFilePath);
+                        physicalFileDeleted = await _storageService.DeleteImageAsync(image.ProcessedImageUrl);
                         if (physicalFileDeleted)
                         {
-                            Logger.LogInformation("Deleted generated image file: {FilePath}", generatedFilePath);
+                            Logger.LogInformation("Deleted generated image from storage: {StoragePath}", image.ProcessedImageUrl);
                         }
                         else
                         {
-                            Logger.LogWarning("Generated image file not found: {FilePath}", generatedFilePath);
+                            Logger.LogWarning("Generated image not found in storage: {StoragePath}", image.ProcessedImageUrl);
                         }
                     }
                     catch (Exception fileEx)
                     {
-                        Logger.LogError(fileEx, "Error deleting generated image file for image {ImageId}. URL: {ProcessedUrl}, UserId: {UserId}",
+                        Logger.LogError(fileEx, "Error deleting generated image from storage for image {ImageId}. URL: {ProcessedUrl}, UserId: {UserId}",
                             imageId, image.ProcessedImageUrl, userId);
-                        // Continue with database deletion even if file deletion fails
+                        // Continue with database deletion even if storage deletion fails
                     }
                 }
                 else if (image.IsOriginalUpload && !string.IsNullOrEmpty(image.OriginalImageUrl))
                 {
                     try
                     {
-                        // Original uploads are stored in /uploads/{userId}/ directory
-                        var fileName = Path.GetFileName(image.OriginalImageUrl);
-                        var uploadFilePath = Path.Combine(_environment.ContentRootPath, "uploads", userId, fileName);
+                        Logger.LogDebug("Attempting to delete uploaded image from storage: {StoragePath}", image.OriginalImageUrl);
 
-                        Logger.LogDebug("Attempting to delete uploaded image file: {FilePath}", uploadFilePath);
-                        Logger.LogDebug("Original URL: {OriginalUrl}, Extracted filename: {FileName}, UserId: {UserId}",
-                            image.OriginalImageUrl, fileName, userId);
-
-                        // Validate path length and characters
-                        if (uploadFilePath.Length > 260)
-                        {
-                            Logger.LogWarning("File path too long ({Length} chars): {FilePath}", uploadFilePath.Length, uploadFilePath);
-                        }
-
-                        physicalFileDeleted = await _asyncFileService.DeleteFileAsync(uploadFilePath);
+                        physicalFileDeleted = await _storageService.DeleteImageAsync(image.OriginalImageUrl);
                         if (physicalFileDeleted)
                         {
-                            Logger.LogInformation("Deleted uploaded image file: {FilePath}", uploadFilePath);
+                            Logger.LogInformation("Deleted uploaded image from storage: {StoragePath}", image.OriginalImageUrl);
                         }
                         else
                         {
-                            Logger.LogWarning("Uploaded image file not found: {FilePath}", uploadFilePath);
+                            Logger.LogWarning("Uploaded image not found in storage: {StoragePath}", image.OriginalImageUrl);
                         }
                     }
                     catch (Exception fileEx)
                     {
-                        Logger.LogError(fileEx, "Error deleting uploaded image file for image {ImageId}. URL: {OriginalUrl}, UserId: {UserId}",
+                        Logger.LogError(fileEx, "Error deleting uploaded image from storage for image {ImageId}. URL: {OriginalUrl}, UserId: {UserId}",
                             imageId, image.OriginalImageUrl, userId);
-                        // Continue with database deletion even if file deletion fails
+                        // Continue with database deletion even if storage deletion fails
                     }
                 }
 
@@ -447,7 +433,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         /// <summary>
-        /// Delete enhanced image file from storage (supports both Azure Blob and local filesystem)
+        /// Delete enhanced image file from temporary storage
         /// </summary>
         [HttpDelete("enhanced/{fileName}")]
         public async Task<IActionResult> DeleteEnhancedImage(string fileName)
@@ -471,36 +457,28 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     return ErrorResponse("InvalidFileName", "Invalid file name", 400);
                 }
 
-                // Environment-specific deletion: use only the configured storage service
-                var storagePath = $"enhanced/{userId}/{fileName}";
-                bool deletedFromStorage = false;
+                // Get storage path for enhanced image
+                var storagePath = _pathResolver.GetPath(StorageType.Enhanced, userId, fileName);
 
-                Logger.LogInformation("Attempting to delete enhanced image file {FileName} for user {UserId}", fileName, userId);
+                Logger.LogDebug("Checking for enhanced image file at storage path: {StoragePath}", storagePath);
 
-                // Delete using the configured storage service only (environment-appropriate)
-                try
+                // Check if file exists and delete using blob storage
+                var exists = await _storageService.ExistsAsync(storagePath);
+                if (!exists)
                 {
-                    deletedFromStorage = await _storageService.DeleteImageAsync(storagePath);
-                    if (deletedFromStorage)
+                    Logger.LogInformation("Enhanced image file already cleaned up: {StoragePath}", storagePath);
+                    return SuccessResponse(new
                     {
-                        Logger.LogInformation("Successfully deleted enhanced image from storage service: {StoragePath}", storagePath);
-                    }
-                    else
-                    {
-                        Logger.LogWarning("Storage service reported file not found: {StoragePath}", storagePath);
-                    }
-                }
-                catch (Exception storageEx)
-                {
-                    Logger.LogError(storageEx, "Failed to delete enhanced image from storage service: {StoragePath}", storagePath);
+                        fileName = fileName,
+                        message = "Enhanced image file already cleaned up (idempotent delete)"
+                    });
                 }
 
-                var overallSuccess = deletedFromStorage;
-
-                if (!overallSuccess)
+                var deleted = await _storageService.DeleteImageAsync(storagePath);
+                if (!deleted)
                 {
-                    Logger.LogWarning("Enhanced image file not found in storage: {FileName} for user {UserId}", fileName, userId);
-                    return ErrorResponse("FileNotFound", "Enhanced image file not found", 404);
+                    Logger.LogWarning("Failed to delete enhanced image file: {StoragePath}", storagePath);
+                    return ErrorResponse("DeletionFailed", "Failed to delete enhanced image file", 500);
                 }
 
                 Logger.LogInformation("Successfully deleted enhanced image file {FileName} for user {UserId}", fileName, userId);
@@ -508,9 +486,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return SuccessResponse(new
                 {
                     fileName = fileName,
-                    message = "Enhanced image file deleted successfully",
-                    deletedFromStorage = deletedFromStorage,
-                    storagePath = storagePath
+                    message = "Enhanced image file deleted successfully"
                 });
             }
             catch (Exception ex)
@@ -615,36 +591,73 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         /// <summary>
-        /// Creates a training ZIP file from uploaded images using async streaming compression
+        /// Creates a training ZIP file from uploaded images using blob storage
         /// </summary>
-        private async Task<string?> CreateTrainingZipAsync(string uploadDir, string userId)
+        private async Task<string?> CreateTrainingZipAsync(string userId)
         {
             try
             {
-                var zipPath = Path.Combine(_environment.ContentRootPath, "training-zips", $"{userId}.zip");
+                // Get list of uploaded images for this user from blob storage
+                var uploadsPrefix = _pathResolver.GetDirectoryPrefix(StorageType.Upload, userId);
+                var imageFiles = await _storageService.ListFilesAsync(uploadsPrefix);
 
-                var zipOptions = new AsyncZipOptions
+                if (imageFiles.Count < 10)
                 {
-                    AllowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" },
-                    MinimumFiles = 10,
-                    OverwriteExisting = true,
-                    CompressionLevel = CompressionLevel.Optimal,
-                    BufferSize = 81920 // 80KB buffer for optimal performance
-                };
-
-                var result = await _asyncZipService.CreateStreamingZipAsync(uploadDir, zipPath, zipOptions);
-
-                if (result.Success)
-                {
-                    Logger.LogInformation("Created training ZIP for user {UserId} with {FileCount} images ({CompressedSize} bytes, {ProcessingTime}ms)", 
-                        userId, result.FilesProcessed, result.CompressedSize, result.ProcessingTime.TotalMilliseconds);
-                    return result.ZipFilePath;
-                }
-                else
-                {
-                    Logger.LogWarning("Failed to create training ZIP for user {UserId}: {ErrorMessage}", userId, result.ErrorMessage);
+                    Logger.LogWarning("User {UserId} has insufficient images for training ZIP ({Count}/10 required)", 
+                        userId, imageFiles.Count);
                     return null;
                 }
+
+                // Filter for valid image extensions
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+                var validImages = imageFiles.Where(file => 
+                    allowedExtensions.Contains(Path.GetExtension(file).ToLowerInvariant())
+                ).ToList();
+
+                if (validImages.Count < 10)
+                {
+                    Logger.LogWarning("User {UserId} has insufficient valid images for training ZIP ({Count}/10 required)", 
+                        userId, validImages.Count);
+                    return null;
+                }
+
+                Logger.LogInformation("Creating training ZIP for user {UserId} with {Count} images", userId, validImages.Count);
+
+                // Create ZIP in memory
+                using var memoryStream = new MemoryStream();
+                using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
+                {
+                    foreach (var imagePath in validImages)
+                    {
+                        var fileName = Path.GetFileName(imagePath);
+                        var imageStream = await _storageService.GetImageAsync(imagePath);
+                        
+                        if (imageStream != null)
+                        {
+                            using (imageStream)
+                            {
+                                var entry = archive.CreateEntry(fileName, CompressionLevel.Optimal);
+                                using var entryStream = entry.Open();
+                                await imageStream.CopyToAsync(entryStream);
+                            }
+                        }
+                    }
+                }
+
+                memoryStream.Position = 0;
+                
+                // Save ZIP to blob storage
+                var zipFileName = $"{userId}.zip";
+                var zipStoragePath = _pathResolver.GetPath(StorageType.TrainingZip, userId, zipFileName);
+                await _storageService.SaveZipAsync(memoryStream, zipStoragePath);
+
+                // Generate SAS URL for Replicate API access
+                var sasUrl = await _storageService.GenerateSasUrlAsync(zipStoragePath, TimeSpan.FromHours(2));
+
+                Logger.LogInformation("Created training ZIP for user {UserId} with {FileCount} images at {StoragePath}", 
+                    userId, validImages.Count, zipStoragePath);
+                
+                return sasUrl;
             }
             catch (Exception ex)
             {
@@ -653,11 +666,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
         }
 
-        [Obsolete("Use CreateTrainingZipAsync instead")]
-        private string? CreateTrainingZip(string uploadDir, string userId)
-        {
-            return CreateTrainingZipAsync(uploadDir, userId).GetAwaiter().GetResult();
-        }
 
         /// <summary>
         /// Checks if file is an image based on extension
@@ -688,10 +696,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 // Get uploaded images count for response message
                 var uploadedImages = profile.ProcessedImages.Where(i => i.Style == ImageConstants.OriginalStyle).ToList();
 
-                var uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
-
-                // Create training ZIP from existing uploaded images using async streaming compression
-                var zipPath = await CreateTrainingZipAsync(uploadDir, userId);
+                // Create training ZIP from existing uploaded images using blob storage
+                var zipPath = await CreateTrainingZipAsync(userId);
 
                 if (string.IsNullOrEmpty(zipPath))
                 {
@@ -700,12 +706,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     {
                         return ErrorResponse("InsufficientImages",
                             $"Need at least 10 images for training (currently {uploadedImages.Count})");
-                    }
-
-                    if (!Directory.Exists(uploadDir))
-                    {
-                        return ErrorResponse("NoUploadDirectory",
-                            "Upload directory not found. Please upload images first.");
                     }
 
                     return ErrorResponse("ZipCreationFailed",
@@ -738,31 +738,27 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 if (authCheck != null) return authCheck;
                 var userId = GetCurrentUserId()!;
 
-                var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
-
-                if (!Directory.Exists(trainingZipsPath))
-                {
-                    return SuccessResponse(new List<object>());
-                }
-
-                var zipFilePath = Path.Combine(trainingZipsPath, $"{userId}.zip");
                 var userZipFiles = new List<object>();
 
-                if (await _asyncFileService.FileExistsAsync(zipFilePath))
+                // Check if user's training ZIP exists in blob storage
+                var zipFileName = $"{userId}.zip";
+                var zipStoragePath = _pathResolver.GetPath(StorageType.TrainingZip, userId, zipFileName);
+
+                if (await _storageService.ExistsAsync(zipStoragePath))
                 {
-                    var fileInfo = await _asyncFileService.GetFileInfoAsync(zipFilePath);
+                    var fileInfo = await _storageService.GetFileInfoAsync(zipStoragePath);
                     if (fileInfo != null)
                     {
-                        var fileName = Path.GetFileName(zipFilePath);
-                        var publicUrl = GetAbsoluteUrl($"/training-zips/{fileName}");
+                        // Generate SAS URL for download (valid for 1 hour)
+                        var downloadUrl = await _storageService.GenerateSasUrlAsync(zipStoragePath, TimeSpan.FromHours(1));
 
                         userZipFiles.Add(new
                         {
-                            fileName = fileName,
-                            filePath = zipFilePath,
-                            publicUrl = publicUrl,
-                            createdAt = fileInfo.CreationTime,
-                            sizeBytes = fileInfo.Length
+                            fileName = zipFileName,
+                            storagePath = zipStoragePath,
+                            downloadUrl = downloadUrl,
+                            createdAt = fileInfo.CreatedAt,
+                            sizeBytes = fileInfo.Size
                         });
                     }
                 }
@@ -772,7 +768,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             catch (Exception ex)
             {
                 LogError(ex, "Error getting training ZIP files");
-                return ErrorResponse("FileSystemError", "Failed to get training ZIP files.", 500);
+                return ErrorResponse("ErrorGettingZips", "Failed to get training ZIP files", 500);
             }
         }
 
@@ -788,36 +784,31 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 if (authCheck != null) return authCheck;
                 var userId = GetCurrentUserId()!;
 
-                var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
+                // Check if user's training ZIP exists in blob storage
+                var zipFileName = $"{userId}.zip";
+                var zipStoragePath = _pathResolver.GetPath(StorageType.TrainingZip, userId, zipFileName);
 
-                if (!Directory.Exists(trainingZipsPath))
-                {
-                    return ErrorResponse("NoZipFiles", "No training ZIP files found.", 404);
-                }
-
-                var zipFilePath = Path.Combine(trainingZipsPath, $"{userId}.zip");
-
-                var fileInfo = await _asyncFileService.GetFileInfoAsync(zipFilePath);
+                var fileInfo = await _storageService.GetFileInfoAsync(zipStoragePath);
                 if (fileInfo == null)
                 {
                     return ErrorResponse("NoZipFiles", "No training ZIP files found for user.", 404);
                 }
 
-                var fileName = Path.GetFileName(zipFilePath);
-                var publicUrl = GetAbsoluteUrl($"/training-zips/{fileName}");
+                // Generate SAS URL for access (valid for 2 hours for Replicate)
+                var publicUrl = await _storageService.GenerateSasUrlAsync(zipStoragePath, TimeSpan.FromHours(2));
 
                 return SuccessResponse(new
                 {
-                    fileName = fileName,
+                    fileName = zipFileName,
                     publicUrl = publicUrl,
-                    createdAt = fileInfo.CreationTime,
-                    sizeBytes = fileInfo.Length
+                    createdAt = fileInfo.CreatedAt,
+                    sizeBytes = fileInfo.Size
                 });
             }
             catch (Exception ex)
             {
                 LogError(ex, "Error getting latest training ZIP file");
-                return ErrorResponse("FileSystemError", "Failed to get latest training ZIP file.", 500);
+                return ErrorResponse("ErrorGettingZip", "Failed to get latest training ZIP file", 500);
             }
         }
 
@@ -839,10 +830,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     return ErrorResponse("InvalidFileName", "Invalid filename or access denied.");
                 }
 
-                var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
-                var filePath = Path.Combine(trainingZipsPath, fileName);
+                var zipStoragePath = _pathResolver.GetPath(StorageType.TrainingZip, userId, fileName);
 
-                var deleted = await _asyncFileService.DeleteFileAsync(filePath);
+                var deleted = await _storageService.DeleteImageAsync(zipStoragePath);
                 if (!deleted)
                 {
                     return ErrorResponse("FileNotFound", "Training ZIP file not found.", 404);
@@ -875,28 +865,19 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 if (authCheck != null) return authCheck;
                 var userId = GetCurrentUserId()!;
 
-                var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
+                // Use StoragePathResolver to get the correct storage path for training ZIPs
+                var trainingZipPath = _pathResolver.GetPath(StorageType.TrainingZip, userId, $"{userId}.zip");
+                
+                var deleted = await _storageService.DeleteImageAsync(trainingZipPath);
+                var deletedCount = deleted ? 1 : 0;
 
-                if (!Directory.Exists(trainingZipsPath))
+                if (deleted)
                 {
-                    return SuccessResponse(new { deletedCount = 0, message = "No training ZIP files found." });
+                    Logger.LogInformation("Deleted training ZIP file at {StoragePath} for user {UserId}", trainingZipPath, userId);
                 }
-
-                var zipFilePath = Path.Combine(trainingZipsPath, $"{userId}.zip");
-                var deletedCount = 0;
-
-                try
+                else
                 {
-                    var deleted = await _asyncFileService.DeleteFileAsync(zipFilePath);
-                    if (deleted)
-                    {
-                        deletedCount = 1;
-                        Logger.LogInformation("Deleted training ZIP file {FilePath} for user {UserId}", zipFilePath, userId);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogWarning(ex, "Failed to delete training ZIP file {FilePath} for user {UserId}", zipFilePath, userId);
+                    Logger.LogInformation("No training ZIP file found at {StoragePath} for user {UserId}", trainingZipPath, userId);
                 }
 
                 return SuccessResponse(new
@@ -908,7 +889,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             catch (Exception ex)
             {
                 LogError(ex, "Error deleting all training ZIP files");
-                return ErrorResponse("FileSystemError", "Failed to delete training ZIP files.", 500);
+                return ErrorResponse("StorageError", "Failed to delete training ZIP files.", 500);
             }
         }
 
@@ -985,12 +966,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                         ImagesWithOriginalStyle = allImages.Count(i => i.Style == ImageConstants.OriginalStyle),
                         ImagesWithGeneratedStyles = allImages.Count(i => i.Style != ImageConstants.OriginalStyle)
                     },
-                    FileSystemCheck = new
+                    StorageCheck = new
                     {
-                        UploadDirectoryExists = Directory.Exists(Path.Combine(_environment.ContentRootPath, "uploads", userId)),
-                        GeneratedDirectoryExists = Directory.Exists(Path.Combine(_environment.ContentRootPath, "generated", userId)),
-                        OrphanedOriginalUploads = await GetOrphanedImages(userId, true),
-                        OrphanedGeneratedImages = await GetOrphanedImages(userId, false)
+                        Note = "Storage checks now use blob storage service instead of filesystem"
                     },
                     DetailedImageAnalysis = await GetDetailedImageAnalysisAsync(allImages, userId),
                     Timestamp = DateTime.UtcNow
@@ -1063,7 +1041,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         /// <summary>
-        /// Get detailed image analysis with file existence checks
+        /// Get detailed image analysis with storage existence checks
         /// </summary>
         private async Task<List<object>> GetDetailedImageAnalysisAsync(List<ProcessedImage> images, string userId)
         {
@@ -1071,8 +1049,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             
             foreach (var img in images)
             {
-                var originalExists = await CheckFileExistsAsync(img.OriginalImageUrl, userId);
-                var processedExists = await CheckFileExistsAsync(img.ProcessedImageUrl, userId);
+                var originalExists = await CheckStorageExistsAsync(img.OriginalImageUrl);
+                var processedExists = await CheckStorageExistsAsync(img.ProcessedImageUrl);
                 
                 analysisResults.Add(new
                 {
@@ -1096,29 +1074,22 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         /// <summary>
-        /// Check if an image file exists on the filesystem using async operations
+        /// Check if an image file exists in storage
         /// </summary>
-        private async Task<bool> CheckFileExistsAsync(string? imageUrl, string userId)
+        private async Task<bool> CheckStorageExistsAsync(string? imageUrl)
         {
             if (string.IsNullOrEmpty(imageUrl)) return false;
 
             try
             {
-                // Handle relative URLs
-                if (imageUrl.StartsWith("/uploads/") || imageUrl.StartsWith("/generated/"))
-                {
-                    var relativePath = imageUrl.TrimStart('/');
-                    var fullPath = Path.Combine(_environment.ContentRootPath, relativePath);
-                    return await _asyncFileService.FileExistsAsync(fullPath);
-                }
-
-                // Handle full URLs - can't check filesystem for external URLs
+                // For external URLs, we can't check storage
                 if (imageUrl.StartsWith("http"))
                 {
                     return false; // Indicate we can't verify external URLs
                 }
 
-                return false;
+                // Check storage using storage service
+                return await _storageService.ExistsAsync(imageUrl);
             }
             catch
             {
@@ -1127,7 +1098,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         /// <summary>
-        /// Get count of orphaned images (database records without corresponding files)
+        /// Get count of orphaned images (database records without corresponding storage files)
         /// </summary>
         private async Task<int> GetOrphanedImages(string userId, bool isOriginalUploads)
         {
@@ -1147,7 +1118,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 foreach (var img in images)
                 {
                     var urlToCheck = isOriginalUploads ? img.OriginalImageUrl : img.ProcessedImageUrl;
-                    if (!await CheckFileExistsAsync(urlToCheck, userId))
+                    if (!await CheckStorageExistsAsync(urlToCheck))
                     {
                         orphanedCount++;
                     }
@@ -1396,23 +1367,23 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     bool shouldRemove = false;
                     var issues = new List<string>();
 
-                    // Check if original upload files exist
+                    // Check if original upload files exist in storage
                     if (img.IsOriginalUpload && !string.IsNullOrEmpty(img.OriginalImageUrl))
                     {
-                        if (!await CheckFileExistsAsync(img.OriginalImageUrl, userId))
+                        if (!await CheckStorageExistsAsync(img.OriginalImageUrl))
                         {
                             shouldRemove = true;
-                            issues.Add($"Original upload file not found: {img.OriginalImageUrl}");
+                            issues.Add($"Original upload file not found in storage: {img.OriginalImageUrl}");
                         }
                     }
 
-                    // Check if generated image files exist
+                    // Check if generated image files exist in storage
                     if (img.IsGenerated && !string.IsNullOrEmpty(img.ProcessedImageUrl))
                     {
-                        if (!await CheckFileExistsAsync(img.ProcessedImageUrl, userId))
+                        if (!await CheckStorageExistsAsync(img.ProcessedImageUrl))
                         {
                             shouldRemove = true;
-                            issues.Add($"Generated image file not found: {img.ProcessedImageUrl}");
+                            issues.Add($"Generated image file not found in storage: {img.ProcessedImageUrl}");
                         }
                     }
 
@@ -1471,6 +1442,89 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         /// <summary>
+        /// Clean up enhanced images that shouldn't be in the database
+        /// Enhanced images are temporary files and should never be recorded as uploads
+        /// </summary>
+        [HttpPost("debug/cleanup-enhanced-images")]
+        public async Task<IActionResult> CleanupEnhancedImages()
+        {
+            var authCheck = ValidateAuthentication();
+            if (authCheck != null) return authCheck;
+            var userId = GetCurrentUserId()!;
+
+            try
+            {
+                var profile = await _userProfileRepository.GetByUserIdAsync(userId);
+                if (profile == null)
+                    return ErrorResponse("ProfileNotFound", "Profile not found", 404);
+
+                var allImages = profile.ProcessedImages.ToList();
+                var enhancedImages = new List<ProcessedImage>();
+                var removedDetails = new List<object>();
+
+                foreach (var img in allImages)
+                {
+                    bool isEnhancedImage = false;
+                    var issues = new List<string>();
+
+                    // Check if this is an enhanced image (temporary file that shouldn't be in database)
+                    if (img.OriginalImageUrl?.Contains("/enhanced/") == true ||
+                        img.ProcessedImageUrl?.Contains("/enhanced/") == true ||
+                        img.OriginalImageUrl?.Contains("enhanced_") == true ||
+                        img.ProcessedImageUrl?.Contains("enhanced_") == true)
+                    {
+                        isEnhancedImage = true;
+                        issues.Add($"Enhanced image found in database: {img.OriginalImageUrl ?? img.ProcessedImageUrl}");
+                    }
+
+                    if (isEnhancedImage)
+                    {
+                        enhancedImages.Add(img);
+                        removedDetails.Add(new
+                        {
+                            img.Id,
+                            img.Style,
+                            img.IsGenerated,
+                            img.IsOriginalUpload,
+                            img.CreatedAt,
+                            img.OriginalImageUrl,
+                            img.ProcessedImageUrl,
+                            Issues = issues
+                        });
+                    }
+                }
+
+                // Remove enhanced images from the profile
+                foreach (var enhancedImage in enhancedImages)
+                {
+                    profile.ProcessedImages.Remove(enhancedImage);
+                }
+
+                if (enhancedImages.Count > 0)
+                {
+                    await _userProfileRepository.UpdateAsync(profile);
+                    LogInfo($"Removed {enhancedImages.Count} enhanced image records for user {userId}");
+                }
+
+                return SuccessResponse(new
+                {
+                    TotalImagesChecked = allImages.Count,
+                    EnhancedImagesRemoved = enhancedImages.Count,
+                    RemovedImageDetails = removedDetails,
+                    Message = enhancedImages.Count > 0
+                        ? $"Successfully removed {enhancedImages.Count} enhanced image records that shouldn't be in database"
+                        : "No enhanced image records found in database",
+                    Timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, "Error cleaning up enhanced images", userId);
+                return ErrorResponse("CleanupFailed", "Failed to cleanup enhanced images", 500);
+            }
+        }
+
+        /// <summary>
         /// Complete repair solution - runs all repairs and invalidates UI cache
         /// </summary>
         [Authorize(Roles = "Admin")]
@@ -1494,16 +1548,20 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     CacheInvalidation = new { }
                 };
 
-                // Step 1: Style corruption repair
-                LogInfo("Starting complete repair process - Step 1: Style corruption");
+                // Step 1: Enhanced images cleanup (new step)
+                LogInfo("Starting complete repair process - Step 1: Enhanced images cleanup");
+                var enhancedCleanupResult = await CleanupEnhancedImages();
+
+                // Step 2: Style corruption repair
+                LogInfo("Complete repair process - Step 2: Style corruption repair");
                 var styleRepairResult = await RepairStyleCorruption();
 
-                // Step 2: Orphaned records cleanup  
-                LogInfo("Complete repair process - Step 2: Orphaned records cleanup");
+                // Step 3: Orphaned records cleanup  
+                LogInfo("Complete repair process - Step 3: Orphaned records cleanup");
                 var orphanedCleanupResult = await CleanupOrphanedRecords();
 
-                // Step 3: Invalidate user cache to force UI refresh
-                LogInfo("Complete repair process - Step 3: Cache invalidation");
+                // Step 4: Invalidate user cache to force UI refresh
+                LogInfo("Complete repair process - Step 4: Cache invalidation");
                 await _userContextService.InvalidateUserCacheAsync(userId);
 
                 LogInfo($"Complete repair process finished for user {userId}");
@@ -1513,7 +1571,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     Message = "Complete repair process finished successfully",
                     Steps = new[]
                     {
-                        "✅ Style corruption repair completed",
+                        "✅ Enhanced images cleanup completed",
+                        "✅ Style corruption repair completed", 
                         "✅ Orphaned records cleanup completed",
                         "✅ UI cache invalidated for fresh data load"
                     },
@@ -1533,587 +1592,131 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Repopulate ProcessedImage table from filesystem images
-        /// </summary>
-        [HttpPost("repopulate-from-filesystem")]
-        public async Task<IActionResult> RepopulateFromFilesystem([FromQuery] bool dryRun = true)
-        {
-            try
-            {
-                var repopulationResult = await RepopulateImagesFromFilesystemAsync(dryRun);
-
-                return SuccessResponse(new
-                {
-                    dryRun = dryRun,
-                    data = repopulationResult,
-                    message = dryRun ? "Dry run completed - no changes made to database" : "Filesystem repopulation completed"
-                });
-            }
-            catch (Exception ex)
-            {
-                LogError(ex, "Error during filesystem repopulation");
-                return ErrorResponse("RepopulationFailed", "Failed to repopulate from filesystem", 500);
-            }
-        }
-
-        private async Task<object> RepopulateImagesFromFilesystemAsync(bool dryRun)
-        {
-            var baseDirectory = _environment.ContentRootPath;
-            var uploadsPath = Path.Combine(baseDirectory, "uploads");
-            var generatedPath = Path.Combine(baseDirectory, "generated");
-
-            var imageExtensions = new[] { ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp" };
-            var processedUsers = new List<object>();
-            var summary = new RepopulationSummary();
-
-            // Get all user profiles with their GUIDs
-            var userProfiles = await Context.UserProfiles
-                .Include(u => u.ProcessedImages)
-                .Select(u => new { u.Id, u.UserId, u.FirstName, u.LastName })
-                .ToListAsync();
-
-            Logger.LogInformation("Found {Count} user profiles for repopulation", userProfiles.Count);
-
-            // Process uploads directory
-            if (Directory.Exists(uploadsPath))
-            {
-                var uploadUsers = Directory.GetDirectories(uploadsPath);
-                foreach (var userDir in uploadUsers)
-                {
-                    var guidUserId = Path.GetFileName(userDir);
-                    var userProfile = userProfiles.FirstOrDefault(u => u.UserId == guidUserId);
-
-                    if (userProfile == null)
-                    {
-                        summary.Errors.Add($"No profile found for GUID: {guidUserId}");
-                        summary.FailedMappings++;
-                        continue;
-                    }
-
-                    var userResult = await ProcessUserDirectoryAsync(userDir, userProfile.Id, true, imageExtensions, dryRun);
-                    processedUsers.Add(new
-                    {
-                        UserId = guidUserId,
-                        UserProfileId = userProfile.Id,
-                        UserName = $"{userProfile.FirstName} {userProfile.LastName}",
-                        DirectoryType = "uploads",
-                        userResult.ImagesFound,
-                        userResult.ImagesProcessed,
-                        userResult.Errors
-                    });
-
-                    summary.TotalUploads += userResult.ImagesFound;
-                    summary.SuccessfulMappings++;
-                }
-            }
-
-            // Process generated directory
-            if (Directory.Exists(generatedPath))
-            {
-                var generatedUsers = Directory.GetDirectories(generatedPath);
-                foreach (var userDir in generatedUsers)
-                {
-                    var guidUserId = Path.GetFileName(userDir);
-                    var userProfile = userProfiles.FirstOrDefault(u => u.UserId == guidUserId);
-
-                    if (userProfile == null)
-                    {
-                        summary.Errors.Add($"No profile found for GUID: {guidUserId}");
-                        summary.FailedMappings++;
-                        continue;
-                    }
-
-                    var userResult = await ProcessUserDirectoryAsync(userDir, userProfile.Id, false, imageExtensions, dryRun);
-                    var existingUserIndex = processedUsers.FindIndex(u =>
-                        ((dynamic)u).UserId == guidUserId);
-
-                    if (existingUserIndex >= 0)
-                    {
-                        // Update existing entry
-                        var existingUser = (dynamic)processedUsers[existingUserIndex];
-                        processedUsers[existingUserIndex] = new
-                        {
-                            UserId = guidUserId,
-                            UserProfileId = userProfile.Id,
-                            UserName = $"{userProfile.FirstName} {userProfile.LastName}",
-                            DirectoryType = "both",
-                            ImagesFound = existingUser.ImagesFound + userResult.ImagesFound,
-                            ImagesProcessed = existingUser.ImagesProcessed + userResult.ImagesProcessed,
-                            Errors = ((IEnumerable<string>)existingUser.Errors).Concat(userResult.Errors).ToList()
-                        };
-                    }
-                    else
-                    {
-                        processedUsers.Add(new
-                        {
-                            UserId = guidUserId,
-                            UserProfileId = userProfile.Id,
-                            UserName = $"{userProfile.FirstName} {userProfile.LastName}",
-                            DirectoryType = "generated",
-                            userResult.ImagesFound,
-                            userResult.ImagesProcessed,
-                            userResult.Errors
-                        });
-                        summary.SuccessfulMappings++;
-                    }
-
-                    summary.TotalGenerated += userResult.ImagesFound;
-                }
-            }
-
-            summary.TotalUsers = processedUsers.Count;
-
-            return new
-            {
-                ProcessedUsers = processedUsers,
-                Summary = new
-                {
-                    summary.TotalUsers,
-                    summary.TotalUploads,
-                    summary.TotalGenerated,
-                    TotalImages = summary.TotalUploads + summary.TotalGenerated,
-                    summary.SuccessfulMappings,
-                    summary.FailedMappings,
-                    summary.Errors
-                }
-            };
-        }
-
-        private async Task<(int ImagesFound, int ImagesProcessed, List<string> Errors)> ProcessUserDirectoryAsync(
-            string userDirectoryPath, int userProfileId, bool isUploadDirectory, string[] imageExtensions, bool dryRun)
-        {
-            var errors = new List<string>();
-            var imagesFound = 0;
-            var imagesProcessed = 0;
-
-            try
-            {
-                var imageFiles = Directory.GetFiles(userDirectoryPath)
-                    .Where(f => imageExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
-                    .ToArray();
-
-                imagesFound = imageFiles.Length;
-                Logger.LogInformation("Found {Count} images in {Directory}", imagesFound, userDirectoryPath);
-
-                if (!dryRun && imagesFound > 0)
-                {
-                    var imagesToCreate = new List<ProcessedImage>();
-
-                    foreach (var imageFile in imageFiles)
-                    {
-                        try
-                        {
-                            var fileName = Path.GetFileName(imageFile);
-                            var fileInfo = new FileInfo(imageFile);
-                            var style = ExtractStyleFromFilename(fileName, isUploadDirectory);
-                            var userGuid = Path.GetFileName(Path.GetDirectoryName(imageFile));
-
-                            var processedImage = new ProcessedImage
-                            {
-                                UserProfileId = userProfileId,
-                                Style = style,
-                                IsOriginalUpload = isUploadDirectory,
-                                IsGenerated = !isUploadDirectory,
-                                CreatedAt = fileInfo.CreationTimeUtc,
-                                // Set correct URLs based on image type
-                                OriginalImageUrl = isUploadDirectory
-                                    ? $"/uploads/{userGuid}/{fileName}"  // Uploaded images: source is uploads
-                                    : $"/generated/{userGuid}/{fileName}", // Generated images: source is generated (fallback for filesystem-found files)
-                                ProcessedImageUrl = isUploadDirectory
-                                    ? $"/uploads/{userGuid}/{fileName}"   // Uploaded images: processed same as original
-                                    : $"/generated/{userGuid}/{fileName}" // Generated images: processed path
-                            };
-
-                            // Set retention policy
-                            processedImage.SetScheduledDeletionDate();
-
-                            imagesToCreate.Add(processedImage);
-                            imagesProcessed++;
-                        }
-                        catch (Exception ex)
-                        {
-                            errors.Add($"Failed to process {Path.GetFileName(imageFile)}: {ex.Message}");
-                            Logger.LogWarning(ex, "Failed to process image file {ImageFile}", imageFile);
-                        }
-                    }
-
-                    if (imagesToCreate.Any())
-                    {
-                        Context.ProcessedImages.AddRange(imagesToCreate);
-                        await Context.SaveChangesAsync();
-                        Logger.LogInformation("Created {Count} ProcessedImage records for user {UserProfileId}", imagesToCreate.Count, userProfileId);
-                    }
-                }
-                else if (dryRun)
-                {
-                    imagesProcessed = imagesFound; // In dry run, assume all would be processed
-                }
-            }
-            catch (Exception ex)
-            {
-                errors.Add($"Failed to process directory {userDirectoryPath}: {ex.Message}");
-                Logger.LogError(ex, "Failed to process user directory {Directory}", userDirectoryPath);
-            }
-
-            return (imagesFound, imagesProcessed, errors);
-        }
-
-        private string ExtractStyleFromFilename(string fileName, bool isUploadDirectory)
-        {
-            if (isUploadDirectory)
-            {
-                return ImageConstants.OriginalStyle;
-            }
-
-            // Extract style from generated image filename patterns
-            var fileNameLower = fileName.ToLowerInvariant();
-
-            if (fileNameLower.Contains("professional"))
-                return "Professional";
-            if (fileNameLower.Contains("casual"))
-                return "Casual";
-            if (fileNameLower.Contains("business"))
-                return "Business";
-            if (fileNameLower.Contains("headshot"))
-                return "Headshot";
-            if (fileNameLower.Contains("portrait"))
-                return "Portrait";
-            if (fileNameLower.Contains("linkedin"))
-                return "LinkedIn";
-            if (fileNameLower.Contains("corporate"))
-                return "Corporate";
-
-            // Default for generated images
-            return "Generated";
-        }
+        #endregion
 
         /// <summary>
-        /// Repair generated images with incorrect OriginalImageUrl paths
-        /// </summary>
-        [HttpPost("repair-generated-image-urls")]
-        public async Task<IActionResult> RepairGeneratedImageUrls([FromQuery] bool dryRun = true)
-        {
-            try
-            {
-                var repairResult = await RepairGeneratedImageUrlsAsync(dryRun);
-
-                return SuccessResponse(new
-                {
-                    dryRun = dryRun,
-                    data = repairResult,
-                    message = dryRun ? "Dry run completed - no changes made to database" : "Generated image URL repair completed"
-                });
-            }
-            catch (Exception ex)
-            {
-                LogError(ex, "Error during generated image URL repair");
-                return ErrorResponse("RepairFailed", "Failed to repair generated image URLs", 500);
-            }
-        }
-
-        private async Task<object> RepairGeneratedImageUrlsAsync(bool dryRun)
-        {
-            // Find all generated images with incorrect /uploads/ URLs in OriginalImageUrl
-            var corruptedImages = await Context.ProcessedImages
-                .Where(img => img.IsGenerated &&
-                             img.OriginalImageUrl != null &&
-                             img.OriginalImageUrl.Contains("/uploads/"))
-                .ToListAsync();
-
-            Logger.LogInformation("Found {Count} generated images with incorrect /uploads/ URLs in OriginalImageUrl",
-                corruptedImages.Count);
-
-            var repairedCount = 0;
-            var errors = new List<string>();
-
-            foreach (var image in corruptedImages)
-            {
-                try
-                {
-                    var oldUrl = image.OriginalImageUrl;
-
-                    // Strategy: Use ProcessedImageUrl as the source for generated images
-                    // This makes sense because for generated images, the "original" and "processed" are the same file
-                    var newUrl = image.ProcessedImageUrl ?? oldUrl;
-
-                    // Ensure the new URL doesn't also have /uploads/ (double corruption)
-                    if (newUrl?.Contains("/uploads/") == true)
-                    {
-                        // Fallback: Try to convert /uploads/ to /generated/
-                        newUrl = newUrl.Replace("/uploads/", "/generated/");
-                    }
-
-                    if (!dryRun)
-                    {
-                        image.OriginalImageUrl = newUrl;
-                        repairedCount++;
-
-                        Logger.LogInformation("Repaired image {ImageId}: '{OldUrl}' -> '{NewUrl}'",
-                            image.Id, oldUrl, newUrl);
-                    }
-                    else
-                    {
-                        repairedCount++;
-                        Logger.LogInformation("Would repair image {ImageId}: '{OldUrl}' -> '{NewUrl}'",
-                            image.Id, oldUrl, newUrl);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    var error = $"Failed to repair image {image.Id}: {ex.Message}";
-                    errors.Add(error);
-                    Logger.LogWarning(ex, error);
-                }
-            }
-
-            if (!dryRun && repairedCount > 0)
-            {
-                await Context.SaveChangesAsync();
-                Logger.LogInformation("Successfully repaired {Count} generated image URLs", repairedCount);
-            }
-
-            return new
-            {
-                TotalCorruptedFound = corruptedImages.Count,
-                RepairedCount = repairedCount,
-                Errors = errors,
-                Summary = new
-                {
-                    Message = dryRun
-                        ? $"Found {corruptedImages.Count} corrupted URLs, would repair {repairedCount}"
-                        : $"Repaired {repairedCount} of {corruptedImages.Count} corrupted URLs",
-                    CorruptedImages = corruptedImages.Take(10).Select(img => new
-                    {
-                        img.Id,
-                        img.Style,
-                        OriginalImageUrl = img.OriginalImageUrl,
-                        ProcessedImageUrl = img.ProcessedImageUrl,
-                        WouldBecomeUrl = img.ProcessedImageUrl ?? img.OriginalImageUrl?.Replace("/uploads/", "/generated/")
-                    }).ToList()
-                }
-            };
-        }
-
-        /// <summary>
-        /// Reconcile database with filesystem - filesystem as source of truth
+        /// Reconcile database image records with backing storage.
+        /// Removes records that reference non-existent files. When dryRun=true, only reports counts.
         /// </summary>
         [HttpPost("reconcile-database")]
         public async Task<IActionResult> ReconcileDatabase([FromQuery] bool dryRun = true)
         {
+            var authCheck = ValidateAuthentication();
+            if (authCheck != null) return authCheck;
+            var userId = GetCurrentUserId()!;
+
             try
             {
-                var reconcileResult = await ReconcileDatabaseWithFilesystemAsync(dryRun);
+                var profile = await _userProfileRepository.GetByUserIdAsync(userId);
+                if (profile == null)
+                    return ErrorResponse("ProfileNotFound", "Profile not found", 404);
+
+                var allImages = profile.ProcessedImages.ToList();
+                var orphaned = new List<ProcessedImage>();
+                var skippedAmbiguous = 0;
+
+                async Task<bool> PathExistsAsync(string? path)
+                {
+                    if (string.IsNullOrEmpty(path)) return false;
+                    if (path.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return true; // cannot verify external URLs; do not mark missing
+                    return await _storageService.ExistsAsync(path);
+                }
+
+                foreach (var img in allImages)
+                {
+                    // If both URLs are missing entirely, this is clearly orphaned
+                    if (string.IsNullOrEmpty(img.OriginalImageUrl) && string.IsNullOrEmpty(img.ProcessedImageUrl))
+                    {
+                        orphaned.Add(img);
+                        continue;
+                    }
+
+                    var isClearlyOriginal = img.IsOriginalUpload && !img.IsGenerated;
+                    var isClearlyGenerated = img.IsGenerated && !img.IsOriginalUpload;
+
+                    // Resolve ambiguous flags using style when possible
+                    if (!isClearlyOriginal && !isClearlyGenerated)
+                    {
+                        if (string.Equals(img.Style, ImageConstants.OriginalStyle, StringComparison.OrdinalIgnoreCase))
+                        {
+                            isClearlyOriginal = true;
+                        }
+                        else if (!string.IsNullOrEmpty(img.Style) && !string.Equals(img.Style, ImageConstants.OriginalStyle, StringComparison.OrdinalIgnoreCase))
+                        {
+                            isClearlyGenerated = true;
+                        }
+                    }
+
+                    // Original uploads must have the original file present; processed file is not required
+                    if (isClearlyOriginal)
+                    {
+                        var originalExists = await PathExistsAsync(img.OriginalImageUrl);
+                        if (!originalExists)
+                        {
+                            orphaned.Add(img);
+                        }
+                        continue;
+                    }
+
+                    // Generated images must have the processed file present; original file is not required
+                    if (isClearlyGenerated)
+                    {
+                        var processedExists = await PathExistsAsync(img.ProcessedImageUrl);
+                        if (!processedExists)
+                        {
+                            orphaned.Add(img);
+                        }
+                        continue;
+                    }
+
+                    // Ambiguous records (cannot confidently classify) — do not delete to avoid data loss
+                    skippedAmbiguous++;
+                }
+
+                if (dryRun)
+                {
+                    return SuccessResponse(new
+                    {
+                        TotalImages = allImages.Count,
+                        OrphanedRecords = orphaned.Count,
+                        SkippedAmbiguousRecords = skippedAmbiguous,
+                        Message = orphaned.Count > 0
+                            ? $"Found {orphaned.Count} orphaned image record(s)"
+                            : "No orphaned image records found",
+                        Timestamp = DateTime.UtcNow
+                    });
+                }
+
+                foreach (var img in orphaned)
+                {
+                    profile.ProcessedImages.Remove(img);
+                }
+
+                if (orphaned.Count > 0)
+                {
+                    await _userProfileRepository.UpdateAsync(profile);
+                    await _userContextService.InvalidateUserCacheAsync(userId);
+                    LogInfo($"Removed {orphaned.Count} orphaned image records for user {userId}");
+                }
 
                 return SuccessResponse(new
                 {
-                    dryRun = dryRun,
-                    data = reconcileResult,
-                    message = dryRun ? "Dry run completed - no changes made to database" : "Database reconciliation completed"
+                    TotalImagesChecked = allImages.Count,
+                    OrphanedRecordsRemoved = orphaned.Count,
+                    SkippedAmbiguousRecords = skippedAmbiguous,
+                    Message = orphaned.Count > 0
+                        ? $"Successfully removed {orphaned.Count} orphaned image record(s)"
+                        : "No orphaned image records to remove",
+                    Timestamp = DateTime.UtcNow
                 });
             }
             catch (Exception ex)
             {
-                LogError(ex, "Error during database reconciliation");
-                return ErrorResponse("ReconciliationFailed", "Failed to reconcile database with filesystem", 500);
+                LogError(ex, "Error reconciling image database", userId);
+                return ErrorResponse("ReconciliationFailed", "Failed to reconcile image database", 500);
             }
         }
 
-        private async Task<object> ReconcileDatabaseWithFilesystemAsync(bool dryRun)
-        {
-            var baseDirectory = _environment.ContentRootPath;
-            var uploadsPath = Path.Combine(baseDirectory, "uploads");
-            var generatedPath = Path.Combine(baseDirectory, "generated");
-
-            var reconciliationSummary = new ReconciliationSummary();
-            var detailedResults = new List<object>();
-
-            // Get all user profiles
-            var userProfiles = await Context.UserProfiles
-                .Include(u => u.ProcessedImages)
-                .ToListAsync();
-
-            Logger.LogInformation("Starting database reconciliation for {UserCount} users", userProfiles.Count);
-
-            foreach (var userProfile in userProfiles)
-            {
-                try
-                {
-                    var userResult = await ReconcileUserImagesAsync(userProfile, uploadsPath, generatedPath, dryRun);
-                    detailedResults.Add(userResult);
-
-                    reconciliationSummary.TotalUsers++;
-                    reconciliationSummary.OrphanedRecordsRemoved += userResult.OrphanedRecordsRemoved;
-                    reconciliationSummary.MissingRecordsCreated += userResult.MissingRecordsCreated;
-                    reconciliationSummary.TotalFilesProcessed += userResult.FilesProcessed;
-                    reconciliationSummary.Errors.AddRange(userResult.Errors);
-                }
-                catch (Exception ex)
-                {
-                    var error = $"Failed to process user {userProfile.UserId}: {ex.Message}";
-                    reconciliationSummary.Errors.Add(error);
-                    Logger.LogError(ex, error);
-                }
-            }
-
-            if (!dryRun && (reconciliationSummary.OrphanedRecordsRemoved > 0 || reconciliationSummary.MissingRecordsCreated > 0))
-            {
-                await Context.SaveChangesAsync();
-                Logger.LogInformation("Database reconciliation completed. Removed {Orphaned} orphaned records, created {Missing} missing records",
-                    reconciliationSummary.OrphanedRecordsRemoved, reconciliationSummary.MissingRecordsCreated);
-            }
-
-            return new
-            {
-                Summary = reconciliationSummary,
-                DetailedResults = detailedResults.Take(10), // Limit output for performance
-                Message = dryRun
-                    ? $"Would remove {reconciliationSummary.OrphanedRecordsRemoved} orphaned records and create {reconciliationSummary.MissingRecordsCreated} missing records"
-                    : $"Removed {reconciliationSummary.OrphanedRecordsRemoved} orphaned records and created {reconciliationSummary.MissingRecordsCreated} missing records"
-            };
-        }
-
-        private async Task<UserReconciliationResult> ReconcileUserImagesAsync(
-            UserProfile userProfile, string uploadsPath, string generatedPath, bool dryRun)
-        {
-            var result = new UserReconciliationResult
-            {
-                UserId = userProfile.UserId,
-                UserName = $"{userProfile.FirstName} {userProfile.LastName}".Trim()
-            };
-
-            var userUploadsDir = Path.Combine(uploadsPath, userProfile.UserId);
-            var userGeneratedDir = Path.Combine(generatedPath, userProfile.UserId);
-
-            // Get current database records
-            var currentImages = userProfile.ProcessedImages.ToList();
-            var uploadedImages = currentImages.Where(img => img.IsOriginalUpload).ToList();
-            var generatedImages = currentImages.Where(img => img.IsGenerated).ToList();
-
-            // Check uploaded images
-            if (Directory.Exists(userUploadsDir))
-            {
-                await ReconcileUserDirectoryAsync(userProfile, userUploadsDir, uploadedImages, true, dryRun, result);
-            }
-            else if (uploadedImages.Any())
-            {
-                // No uploads directory but database has uploaded images - mark for removal
-                foreach (var orphanedImage in uploadedImages)
-                {
-                    if (!dryRun)
-                    {
-                        Context.ProcessedImages.Remove(orphanedImage);
-                    }
-                    result.OrphanedRecordsRemoved++;
-                    result.RemovedImages.Add($"ID {orphanedImage.Id}: {orphanedImage.OriginalImageUrl} (no uploads directory)");
-                }
-            }
-
-            // Check generated images
-            if (Directory.Exists(userGeneratedDir))
-            {
-                await ReconcileUserDirectoryAsync(userProfile, userGeneratedDir, generatedImages, false, dryRun, result);
-            }
-            else if (generatedImages.Any())
-            {
-                // No generated directory but database has generated images - mark for removal
-                foreach (var orphanedImage in generatedImages)
-                {
-                    if (!dryRun)
-                    {
-                        Context.ProcessedImages.Remove(orphanedImage);
-                    }
-                    result.OrphanedRecordsRemoved++;
-                    result.RemovedImages.Add($"ID {orphanedImage.Id}: {orphanedImage.ProcessedImageUrl} (no generated directory)");
-                }
-            }
-
-            return result;
-        }
-
-        private async Task ReconcileUserDirectoryAsync(
-            UserProfile userProfile, string directoryPath, List<ProcessedImage> databaseImages,
-            bool isUploadDirectory, bool dryRun, UserReconciliationResult result)
-        {
-            var imageExtensions = new[] { ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp" };
-            var filesOnDisk = Directory.GetFiles(directoryPath)
-                .Where(f => imageExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
-                .ToList();
-
-            result.FilesProcessed += filesOnDisk.Count;
-
-            // Check for orphaned database records (file doesn't exist)
-            foreach (var dbImage in databaseImages)
-            {
-                var expectedPath = isUploadDirectory
-                    ? Path.Combine(directoryPath, Path.GetFileName(dbImage.OriginalImageUrl ?? ""))
-                    : Path.Combine(directoryPath, Path.GetFileName(dbImage.ProcessedImageUrl ?? ""));
-
-                if (!System.IO.File.Exists(expectedPath))
-                {
-                    // Orphaned database record - file doesn't exist
-                    if (!dryRun)
-                    {
-                        Context.ProcessedImages.Remove(dbImage);
-                    }
-                    result.OrphanedRecordsRemoved++;
-                    result.RemovedImages.Add($"ID {dbImage.Id}: {dbImage.OriginalImageUrl ?? dbImage.ProcessedImageUrl} (file not found)");
-
-                    Logger.LogInformation("Removing orphaned database record for missing file: {FilePath}", expectedPath);
-                }
-            }
-
-            // Check for orphaned files (no database record) - optional: create missing records
-            foreach (var filePath in filesOnDisk)
-            {
-                var fileName = Path.GetFileName(filePath);
-                var hasDbRecord = databaseImages.Any(img =>
-                    (isUploadDirectory && img.OriginalImageUrl?.EndsWith(fileName) == true) ||
-                    (!isUploadDirectory && img.ProcessedImageUrl?.EndsWith(fileName) == true));
-
-                if (!hasDbRecord)
-                {
-                    // Orphaned file - could create database record, but for now just log
-                    result.OrphanedFiles.Add($"{fileName} (no database record)");
-                    Logger.LogInformation("Found orphaned file with no database record: {FilePath}", filePath);
-                    // Note: Not auto-creating records as we don't have enough metadata
-                }
-            }
-        }
-
-        private class ReconciliationSummary
-        {
-            public int TotalUsers { get; set; } = 0;
-            public int OrphanedRecordsRemoved { get; set; } = 0;
-            public int MissingRecordsCreated { get; set; } = 0;
-            public int TotalFilesProcessed { get; set; } = 0;
-            public List<string> Errors { get; set; } = new List<string>();
-        }
-
-        private class UserReconciliationResult
-        {
-            public string UserId { get; set; } = "";
-            public string UserName { get; set; } = "";
-            public int FilesProcessed { get; set; } = 0;
-            public int OrphanedRecordsRemoved { get; set; } = 0;
-            public int MissingRecordsCreated { get; set; } = 0;
-            public List<string> RemovedImages { get; set; } = new List<string>();
-            public List<string> CreatedImages { get; set; } = new List<string>();
-            public List<string> OrphanedFiles { get; set; } = new List<string>();
-            public List<string> Errors { get; set; } = new List<string>();
-        }
-
-        private class RepopulationSummary
-        {
-            public int TotalUsers { get; set; } = 0;
-            public int TotalUploads { get; set; } = 0;
-            public int TotalGenerated { get; set; } = 0;
-            public int SuccessfulMappings { get; set; } = 0;
-            public int FailedMappings { get; set; } = 0;
-            public List<string> Errors { get; set; } = new List<string>();
-        }
-
-        #endregion
     }
 
 }
