@@ -601,6 +601,7 @@ public class ReplicateController : ControllerBase
         {
             // If generation fails, we should consider refunding the credit
             // For now, we'll log the error and return failure
+            _logger.LogError(ex, "Image generation failed for user {UserId}", userId);
             return StatusCode(500, new
             {
                 success = false,

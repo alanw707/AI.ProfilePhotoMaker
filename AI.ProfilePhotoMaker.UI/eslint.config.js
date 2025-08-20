@@ -129,7 +129,7 @@ module.exports = tseslint.config(
         {
           "selector": "objectLiteralProperty",
           "filter": {
-            "regex": "^(Authorization|X-[A-Z][a-zA-Z-]*|ngrok-skip-browser-warning|Content-Type|Accept|User-Agent|image\\/[a-z]+|id|created_at|updated_at|deleted_at|completed_at|user_id|profile_id|image_url|thumbnail_url|file_name|file_size|mime_type|status_code|error_code|request_id|session_id|access_token|refresh_token|expires_in|token_type|scope|state|code|redirect_uri|client_id|grant_type|response_type)$",
+            "regex": "^(Authorization|X-[A-Z][a-zA-Z-]*|ngrok-skip-browser-warning|Content-Type|Accept|User-Agent|image\\/[a-z]+|id|created_at|updated_at|deleted_at|completed_at|user_id|profile_id|image_url|thumbnail_url|file_name|file_size|mime_type|status_code|error_code|request_id|session_id|access_token|refresh_token|expires_in|token_type|scope|state|code|redirect_uri|client_id|grant_type|response_type|@context|@type|http://schemas\\.xmlsoap\\.org/ws/2005/05/identity/claims/(emailaddress|givenname|surname)|MODEL_LOADER_SERVICE|IMAGE_QUALITY_SERVICE|FACE_DETECTION_SERVICE|CACHE_MANAGER_SERVICE|MODEL_STATE_SERVICE|FALLBACK_OPERATIONS_SERVICE|DASHBOARD_STATE_SERVICE)$",
             "match": true
           },
           "format": null
