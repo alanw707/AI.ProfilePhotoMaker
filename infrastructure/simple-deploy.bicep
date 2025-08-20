@@ -411,6 +411,15 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               name: 'AzureStorage__ContainerName'
               value: 'profile-images'
             }
+            // Plain env vars for EnvironmentConfiguration production checks
+            {
+              name: 'AZURE_STORAGE_CONNECTION_STRING'
+              value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
+            }
+            {
+              name: 'AZURE_STORAGE_CONTAINER_NAME'
+              value: 'profile-images'
+            }
             {
               name: 'ApplicationInsights__ConnectionString'
               value: applicationInsights.properties.ConnectionString
