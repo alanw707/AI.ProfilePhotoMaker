@@ -373,11 +373,15 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               secretRef: 'replicate-webhook-secret'
             }
             {
-              name: 'AZURE_STORAGE_CONNECTION_STRING'
+              name: 'ConnectionStrings__AzureStorage'
               value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
             }
             {
-              name: 'AZURE_STORAGE_CONTAINER_NAME'
+              name: 'AzureStorage__ConnectionString'
+              value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
+            }
+            {
+              name: 'AzureStorage__ContainerName'
               value: 'profile-images'
             }
             {

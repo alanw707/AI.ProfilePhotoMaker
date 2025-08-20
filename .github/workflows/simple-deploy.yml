@@ -604,6 +604,179 @@ jobs:
           echo "  Backend: $BACKEND_URL"
           echo "✅ [SUCCESS] Infrastructure deployment completed successfully!"
           
+      - name: 🔍 Post-Deployment Storage Validation
+        run: |
+          echo "🔍 [VALIDATE] Performing post-deployment Azure Storage validation..."
+          echo "📝 [INFO] This validates that container apps have correct environment variables"
+          
+          # Wait for container app to be fully updated
+          echo "⏳ [INFO] Waiting for container app to stabilize after deployment..."
+          sleep 15
+          
+          # Function to validate storage environment variables in container app
+          validate_storage_config() {
+            local app_name="$1"
+            local validation_errors=0
+            
+            echo "🔍 [CHECK] Validating storage configuration for: $app_name"
+            
+            # Get all environment variables from the container app
+            echo "📋 [INFO] Retrieving environment variables from container app..."
+            local env_vars=$(az containerapp show --name "$app_name" --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --query "properties.template.containers[0].env[].name" --output tsv 2>/dev/null || echo "")
+            
+            if [[ -z "$env_vars" ]]; then
+              echo "❌ [ERROR] Failed to retrieve environment variables from $app_name"
+              return 1
+            fi
+            
+            echo "📊 [FOUND] Environment variables in $app_name:"
+            echo "$env_vars" | while read var; do
+              echo "  • $var"
+            done
+            
+            # Check for required Azure Storage environment variables
+            echo ""
+            echo "🔍 [VALIDATE] Checking required Azure Storage environment variables..."
+            
+            # Check for ConnectionStrings__AzureStorage (primary .NET pattern)
+            if echo "$env_vars" | grep -q "^ConnectionStrings__AzureStorage$"; then
+              echo "✅ [FOUND] ConnectionStrings__AzureStorage (.NET Core pattern)"
+            else
+              echo "❌ [MISSING] ConnectionStrings__AzureStorage"
+              ((validation_errors++))
+            fi
+            
+            # Check for AzureStorage__ConnectionString (alternative pattern)
+            if echo "$env_vars" | grep -q "^AzureStorage__ConnectionString$"; then
+              echo "✅ [FOUND] AzureStorage__ConnectionString (Alternative pattern)"
+            else
+              echo "⚠️  [MISSING] AzureStorage__ConnectionString (Alternative pattern)"
+              echo "   Note: This is optional if ConnectionStrings__AzureStorage is present"
+            fi
+            
+            # Check for container name
+            if echo "$env_vars" | grep -q "^AzureStorage__ContainerName$"; then
+              echo "✅ [FOUND] AzureStorage__ContainerName"
+            else
+              echo "❌ [MISSING] AzureStorage__ContainerName"
+              ((validation_errors++))
+            fi
+            
+            # Check for legacy incorrect naming (should NOT be present)
+            if echo "$env_vars" | grep -q "^AZURE_STORAGE_CONNECTION_STRING$"; then
+              echo "⚠️  [LEGACY] Found AZURE_STORAGE_CONNECTION_STRING (legacy naming)"
+              echo "   Note: This works but ConnectionStrings__AzureStorage is preferred"
+            fi
+            
+            return $validation_errors
+          }
+          
+          # Validate backend container app storage configuration
+          echo "🎯 [TARGET] Validating backend API storage configuration..."
+          if ! validate_storage_config "aipm-api-v1"; then
+            echo "❌ [ERROR] Backend storage validation failed"
+            backend_validation_failed=true
+          else
+            echo "✅ [SUCCESS] Backend storage validation passed"
+            backend_validation_failed=false
+          fi
+          
+          echo ""
+          
+          # Additional validation: Check if storage account actually exists
+          echo "🔍 [VALIDATE] Verifying Azure Storage account exists..."
+          STORAGE_ACCOUNTS=$(az storage account list --resource-group "${{ env.RESOURCE_GROUP }}" --query "[].name" --output tsv)
+          
+          if [[ -z "$STORAGE_ACCOUNTS" ]]; then
+            echo "❌ [ERROR] No storage accounts found in resource group"
+            storage_account_exists=false
+          else
+            echo "✅ [FOUND] Storage accounts in resource group:"
+            echo "$STORAGE_ACCOUNTS" | while read account; do
+              echo "  • $account"
+            done
+            storage_account_exists=true
+          fi
+          
+          # Check if profile-images container exists
+          if [[ "$storage_account_exists" == "true" ]]; then
+            STORAGE_ACCOUNT=$(echo "$STORAGE_ACCOUNTS" | head -n1)
+            echo ""
+            echo "🔍 [VALIDATE] Checking profile-images container in storage account: $STORAGE_ACCOUNT"
+            
+            # Get storage account key for container check
+            STORAGE_KEY=$(az storage account keys list --account-name "$STORAGE_ACCOUNT" --resource-group "${{ env.RESOURCE_GROUP }}" --query "[0].value" --output tsv)
+            
+            # Check if container exists
+            if az storage container exists --name "profile-images" --account-name "$STORAGE_ACCOUNT" --account-key "$STORAGE_KEY" --query "exists" --output tsv | grep -q "true"; then
+              echo "✅ [FOUND] profile-images container exists"
+              container_exists=true
+            else
+              echo "❌ [ERROR] profile-images container not found"
+              container_exists=false
+            fi
+          else
+            container_exists=false
+          fi
+          
+          # Summary of validation results
+          echo ""
+          echo "📊 [SUMMARY] Post-deployment storage validation results:"
+          
+          overall_success=true
+          
+          if [[ "$backend_validation_failed" == "true" ]]; then
+            echo "❌ Backend storage environment variables: FAILED"
+            overall_success=false
+          else
+            echo "✅ Backend storage environment variables: PASSED"
+          fi
+          
+          if [[ "$storage_account_exists" == "true" ]]; then
+            echo "✅ Azure Storage account: FOUND"
+          else
+            echo "❌ Azure Storage account: NOT FOUND"
+            overall_success=false
+          fi
+          
+          if [[ "$container_exists" == "true" ]]; then
+            echo "✅ profile-images container: FOUND"
+          else
+            echo "❌ profile-images container: NOT FOUND"
+            overall_success=false
+          fi
+          
+          # Final validation result
+          if [[ "$overall_success" == "true" ]]; then
+            echo ""
+            echo "🎉 [SUCCESS] All post-deployment storage validation checks PASSED"
+            echo "✅ Production environment properly configured for Azure Blob Storage"
+            echo ""
+            echo "📝 [INFO] Expected application behavior:"
+            echo "  • Application will use AzureBlobStorageService"
+            echo "  • Images will generate URLs like: https://{storage}.blob.core.windows.net/profile-images/..."
+            echo "  • Images will be directly accessible from Azure Blob Storage"
+          else
+            echo ""
+            echo "❌ [FAILURE] Post-deployment storage validation FAILED"
+            echo "🚨 [CRITICAL] Production may experience image upload issues"
+            echo ""
+            echo "🛠️  [FIXES] To resolve validation failures:"
+            echo "  1. Check Bicep template environment variable configuration"
+            echo "  2. Verify GitHub Actions secrets are properly set"
+            echo "  3. Ensure storage account deployment succeeded"
+            echo "  4. Re-run deployment if infrastructure is incomplete"
+            echo ""
+            echo "🚫 [WARNING] Deployment technically succeeded but storage configuration issues detected"
+            echo "📞 [ACTION] Monitor application logs and test image upload functionality"
+            
+            # Don't fail the deployment, but warn about potential issues
+            echo ""
+            echo "⚠️  [DECISION] Allowing deployment to continue with warnings"
+            echo "📝 [REASON] Storage issues can be fixed without full redeployment"
+          fi
+          
       - name: 🧪 Health Check
         run: |
           echo "🧪 [HEALTH] Performing health checks..."
@@ -624,19 +797,100 @@ jobs:
           else
             # Test backend health
             echo "🔍 [TEST] Testing backend health: $BACKEND_URL/api/health"
+            backend_health_passed=false
+            
             if curl -f -s --max-time 30 "$BACKEND_URL/api/health" > /dev/null; then
               echo "✅ [SUCCESS] Backend is healthy"
+              backend_health_passed=true
             else
               echo "⚠️ [WARNING] Backend health check failed (application may still be starting up)"
               # Fallback to legacy health endpoint
               echo "🔍 [FALLBACK] Trying legacy health endpoint: $BACKEND_URL/health"
               if curl -f -s --max-time 30 "$BACKEND_URL/health" > /dev/null; then
                 echo "✅ [SUCCESS] Backend is healthy (via legacy endpoint)"
+                backend_health_passed=true
               else
                 echo "❌ [WARNING] Both health endpoints failed"
                 echo "📝 [INFO] This may indicate missing images in ACR"
                 echo "📝 [INFO] Run: ./scripts/build-local.sh && ./scripts/push-to-acr.sh"
               fi
+            fi
+            
+            # Critical Storage Service Configuration Validation
+            if [[ "$backend_health_passed" == "true" ]]; then
+              echo ""
+              echo "🔍 [CRITICAL] Validating storage service configuration..."
+              echo "📝 [INFO] This ensures production uses Azure Blob Storage (not Local Storage)"
+              
+              # Get storage health information
+              storage_health_response=$(curl -f -s --max-time 15 "$BACKEND_URL/api/health/storage" 2>/dev/null || echo "")
+              
+              if [[ -n "$storage_health_response" ]]; then
+                echo "✅ [SUCCESS] Storage health endpoint accessible"
+                
+                # Parse provider from JSON response
+                storage_provider=$(echo "$storage_health_response" | grep -o '"provider":"[^"]*"' | sed 's/"provider":"//' | sed 's/"//' || echo "")
+                has_connection_string=$(echo "$storage_health_response" | grep -o '"hasConnectionString":[^,}]*' | sed 's/"hasConnectionString"://' || echo "")
+                can_connect=$(echo "$storage_health_response" | grep -o '"canConnect":[^,}]*' | sed 's/"canConnect"://' || echo "")
+                
+                echo "📊 [INFO] Storage Configuration Analysis:"
+                echo "  • Provider: $storage_provider"
+                echo "  • Has Connection String: $has_connection_string"
+                echo "  • Can Connect: $can_connect"
+                
+                # Validate provider type for production
+                if [[ "$storage_provider" == "AzureBlobStorage" ]]; then
+                  echo "✅ [SUCCESS] Production is correctly using Azure Blob Storage"
+                  
+                  if [[ "$has_connection_string" == "true" ]]; then
+                    echo "✅ [SUCCESS] Azure Storage connection string is configured"
+                  else
+                    echo "⚠️ [WARNING] Connection string flag shows false (may be parsing issue)"
+                  fi
+                  
+                  if [[ "$can_connect" == "true" ]]; then
+                    echo "✅ [SUCCESS] Azure Storage connectivity test passed"
+                    echo ""
+                    echo "🎉 [VALIDATION] Storage service configuration is CORRECT for production"
+                    echo "📝 [INFO] Expected behavior:"
+                    echo "  • Images will generate URLs like: https://{storage}.blob.core.windows.net/profile-images/..."
+                    echo "  • Images will be directly accessible from Azure Blob Storage"
+                    echo "  • No 404 errors on uploaded images"
+                  else
+                    echo "❌ [ERROR] Azure Storage connectivity test failed"
+                    echo "🚨 [CRITICAL] Production may experience image upload issues"
+                  fi
+                  
+                elif [[ "$storage_provider" == "LocalStorage" ]]; then
+                  echo "❌ [CRITICAL] Production is incorrectly using Local Storage!"
+                  echo "🚨 [PROBLEM] This will cause 404 errors on uploaded images in containerized environments"
+                  echo ""
+                  echo "🛠️ [SOLUTION] Root cause analysis:"
+                  echo "  1. Azure Storage environment variables are missing or incorrectly named"
+                  echo "  2. Connection string format may be invalid"
+                  echo "  3. Infrastructure deployment may have failed to set environment variables"
+                  echo ""
+                  echo "🔧 [IMMEDIATE ACTIONS]:"
+                  echo "  1. Check container app environment variables contain:"
+                  echo "     - ConnectionStrings__AzureStorage"
+                  echo "     - AzureStorage__ContainerName"
+                  echo "  2. Verify GitHub Actions secrets are properly configured"
+                  echo "  3. Consider manual environment variable update if needed"
+                  echo ""
+                  echo "⚠️ [DEPLOYMENT WARNING] Image uploads will fail until storage service is fixed"
+                  
+                else
+                  echo "❓ [UNKNOWN] Unexpected storage provider: $storage_provider"
+                  echo "⚠️ [WARNING] Cannot validate storage configuration"
+                fi
+                
+              else
+                echo "❌ [ERROR] Could not retrieve storage health information"
+                echo "📝 [INFO] This may indicate the application is not fully started"
+                echo "⚠️ [WARNING] Cannot validate storage service configuration"
+              fi
+            else
+              echo "⚠️ [SKIP] Skipping storage validation because backend health check failed"
             fi
             
             # Test frontend
