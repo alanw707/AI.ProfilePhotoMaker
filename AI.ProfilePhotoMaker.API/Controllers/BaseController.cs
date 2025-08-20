@@ -50,7 +50,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         /// <param name="data">Response data</param>
         /// <param name="message">Optional success message</param>
         /// <returns>Standardized success response</returns>
-        protected IActionResult SuccessResponse(object data, string? message = null)
+        protected IActionResult SuccessResponse(object? data, string? message = null)
         {
             return Ok(new { success = true, data = data, message = message, error = (object?)null });
         }

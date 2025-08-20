@@ -223,7 +223,7 @@ var authBuilder = builder.Services.AddAuthentication(options =>
             ValidateAudience = true,
             ValidAudience = builder.Configuration["JWT:ValidAudience"],
             ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"]))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"] ?? string.Empty))
         };
         
         // CRITICAL: Configure JWT Bearer to return 401 for API endpoints instead of redirecting
@@ -957,7 +957,7 @@ static async Task ValidateWebhookConfigurationAsync(WebApplication app)
 /// <summary>
 /// Validates Replicate configuration on startup to catch missing required settings
 /// </summary>
-static async Task ValidateReplicateConfigurationAsync(WebApplication app)
+static Task ValidateReplicateConfigurationAsync(WebApplication app)
 {
     try
     {
@@ -1075,4 +1075,5 @@ static async Task ValidateReplicateConfigurationAsync(WebApplication app)
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "❌ Failed to validate Replicate configuration during startup");
     }
+    return Task.CompletedTask;
 }

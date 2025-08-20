@@ -254,7 +254,7 @@ public class ReplicateWebhookController : ControllerBase
                         {
                             UserProfileId = userProfile.Id,
                             OriginalImageUrl = publicUrl ?? replicateUrl, // Use storage URL if download succeeded, fallback to Replicate URL
-                            ProcessedImageUrl = publicUrl, // Only set if download was successful (null if failed)
+                            ProcessedImageUrl = publicUrl ?? string.Empty, // Only set if download was successful; otherwise empty
                             Style = style ?? "Unknown",
                             IsGenerated = true,
                             IsOriginalUpload = false,

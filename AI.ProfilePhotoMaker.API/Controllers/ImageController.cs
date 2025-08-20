@@ -60,6 +60,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         {
             try
             {
+                if (Context == null)
+                {
+                    return ErrorResponse("ServerError", "Database context unavailable", 500);
+                }
                 var styles = await Context.Styles
                     .Where(s => s.IsActive)
                     .Select(s => s.Name)
@@ -401,6 +405,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 await _userProfileRepository.UpdateAsync(profile);
 
                 // Verify deletion worked by querying directly from database context (bypasses EF tracking)
+                if (Context == null)
+                {
+                    return ErrorResponse("ServerError", "Database context unavailable", 500);
+                }
                 var imageStillExists = await Context.ProcessedImages
                     .AsNoTracking()
                     .AnyAsync(i => i.Id == imageId);
@@ -1104,6 +1112,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         {
             try
             {
+                if (Context == null)
+                {
+                    return 0;
+                }
                 var profile = Context.UserProfiles.Include(p => p.ProcessedImages)
                     .FirstOrDefault(p => p.UserId == userId);
 
