@@ -128,23 +128,57 @@ export class AuthService {
   }
 
   private fetchUserProfileForOAuth(token: string): void {
-    // Create a minimal user object with just email for now
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const email =
-      payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] ||
-      payload['email'] ||
-      '';
+    let tempUser: AuthResponseDto;
 
-    // Temporary user object while we fetch profile
-    const tempUser = {
-      token,
-      email,
-      firstName: '',
-      lastName: '',
-    };
+    try {
+      // Validate token format before processing
+      if (!token || typeof token !== 'string') {
+        console.error('🔒 Invalid token provided for OAuth profile fetch');
+        return;
+      }
 
-    localStorage.setItem('currentUser', JSON.stringify(tempUser));
-    this._currentUserSubject.next(tempUser);
+      const tokenParts = token.split('.');
+      if (tokenParts.length !== 3) {
+        console.error('🔒 Invalid JWT token format for OAuth profile fetch');
+        return;
+      }
+
+      // Create a minimal user object with just email for now
+      const payload = JSON.parse(atob(tokenParts[1]));
+
+      if (!payload || typeof payload !== 'object') {
+        console.error('🔒 Invalid token payload for OAuth profile fetch');
+        return;
+      }
+
+      const email =
+        payload?.['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] ||
+        payload?.['email'] ||
+        '';
+
+      // Temporary user object while we fetch profile
+      tempUser = {
+        token,
+        email,
+        firstName: '',
+        lastName: '',
+      };
+
+      localStorage.setItem('currentUser', JSON.stringify(tempUser));
+      this._currentUserSubject.next(tempUser);
+    } catch (error) {
+      console.error('🔒 Error creating temporary user for OAuth:', error);
+      // Create fallback user with minimal data
+      tempUser = {
+        token,
+        email: '',
+        firstName: 'User',
+        lastName: '',
+      };
+      localStorage.setItem('currentUser', JSON.stringify(tempUser));
+      this._currentUserSubject.next(tempUser);
+      return;
+    }
 
     // Fetch user profile from API to get firstName/lastName
     this._http
@@ -159,7 +193,7 @@ export class AuthService {
           if (response && (response.firstName || response.lastName)) {
             const completeUser = {
               token,
-              email,
+              email: tempUser.email,
               firstName: response.firstName || '',
               lastName: response.lastName || '',
             };
@@ -170,7 +204,7 @@ export class AuthService {
             // Keep the temp user with email username as firstName
             const fallbackUser = {
               ...tempUser,
-              firstName: email.split('@')[0],
+              firstName: tempUser.email ? tempUser.email.split('@')[0] : 'User',
             };
             localStorage.setItem('currentUser', JSON.stringify(fallbackUser));
             this._currentUserSubject.next(fallbackUser);
@@ -181,7 +215,7 @@ export class AuthService {
           // Fallback to email username
           const fallbackUser = {
             ...tempUser,
-            firstName: email.split('@')[0],
+            firstName: tempUser.email ? tempUser.email.split('@')[0] : 'User',
           };
           localStorage.setItem('currentUser', JSON.stringify(fallbackUser));
           this._currentUserSubject.next(fallbackUser);
@@ -191,27 +225,44 @@ export class AuthService {
 
   private extractUserFromToken(token: string): AuthResponseDto | null {
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      // Remove sensitive payload logging in production
+      // Validate token format before processing
+      if (!token || typeof token !== 'string') {
+        console.error('🔒 Invalid token format provided');
+        return null;
+      }
+
+      const tokenParts = token.split('.');
+      if (tokenParts.length !== 3) {
+        console.error('🔒 Invalid JWT token format');
+        return null;
+      }
+
+      const payload = JSON.parse(atob(tokenParts[1]));
+
+      // Ensure payload is an object
+      if (!payload || typeof payload !== 'object') {
+        console.error('🔒 Invalid token payload');
+        return null;
+      }
 
       // Check .NET ClaimTypes standard URIs first, then fallback to short names
       const email =
-        payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] ||
-        payload['email'] ||
+        payload?.['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] ||
+        payload?.['email'] ||
         '';
 
       const firstName =
-        payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname'] ||
-        payload['given_name'] ||
-        payload['givenname'] ||
-        payload['firstName'] ||
+        payload?.['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname'] ||
+        payload?.['given_name'] ||
+        payload?.['givenname'] ||
+        payload?.['firstName'] ||
         '';
 
       const lastName =
-        payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname'] ||
-        payload['family_name'] ||
-        payload['surname'] ||
-        payload['lastName'] ||
+        payload?.['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname'] ||
+        payload?.['family_name'] ||
+        payload?.['surname'] ||
+        payload?.['lastName'] ||
         '';
 
       // If no firstName/lastName in JWT, return null to force profile API lookup
@@ -227,7 +278,7 @@ export class AuthService {
         lastName,
       };
     } catch (error) {
-      console.error('Failed to extract user from token:', error);
+      console.error('🔒 Failed to extract user from token:', error);
       return null;
     }
   }
@@ -285,9 +336,18 @@ export class AuthService {
       // Clear all authentication data securely
       this.clearAllAuthData();
 
-      // Update reactive state
-      this._isAuthenticatedSubject.next(false);
-      this._currentUserSubject.next(null);
+      // Update reactive state safely
+      try {
+        this._isAuthenticatedSubject.next(false);
+      } catch (subjectError) {
+        console.error('🔒 Error updating authentication subject:', subjectError);
+      }
+
+      try {
+        this._currentUserSubject.next(null);
+      } catch (subjectError) {
+        console.error('🔒 Error updating current user subject:', subjectError);
+      }
 
       // Navigate to login with reason
       this.navigateToLogin(reason);
@@ -295,9 +355,22 @@ export class AuthService {
       console.log('🔒 Secure logout completed successfully');
     } catch (error) {
       console.error('🔒 Error during secure logout:', error);
+
       // Force clear even if error occurs
-      localStorage.clear();
-      this._router.navigate(['/auth/login']);
+      try {
+        localStorage.clear();
+      } catch (clearError) {
+        console.error('🔒 Error clearing localStorage:', clearError);
+      }
+
+      // Fallback navigation
+      try {
+        this._router.navigate(['/auth/login']);
+      } catch (navigationError) {
+        console.error('🔒 Error navigating to login:', navigationError);
+        // Ultimate fallback - force page reload
+        window.location.href = '/auth/login';
+      }
     }
   }
 
@@ -319,7 +392,11 @@ export class AuthService {
     ];
 
     authKeys.forEach(key => {
-      localStorage.removeItem(key);
+      try {
+        localStorage.removeItem(key);
+      } catch (error) {
+        console.error(`🔒 Error removing ${key} from localStorage:`, error);
+      }
     });
   }
 
@@ -368,18 +445,31 @@ export class AuthService {
 
   getCurrentUserId(): string | null {
     const token = this.getToken();
-    if (!token) {
+    if (!token || typeof token !== 'string') {
       return null;
     }
 
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      const tokenParts = token.split('.');
+      if (tokenParts.length !== 3) {
+        console.error('🔒 Invalid JWT token format for user ID extraction');
+        return null;
+      }
+
+      const payload = JSON.parse(atob(tokenParts[1]));
+
+      // Ensure payload is an object
+      if (!payload || typeof payload !== 'object') {
+        console.error('🔒 Invalid token payload for user ID extraction');
+        return null;
+      }
+
       // .NET Identity uses 'nameid' claim for NameIdentifier
       const userId =
-        payload.nameid ||
-        payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ||
-        payload.sub ||
-        payload.userId;
+        payload?.nameid ||
+        payload?.['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ||
+        payload?.sub ||
+        payload?.userId;
       return userId || null;
     } catch (error) {
       console.error('🔒 Failed to extract user ID from token:', error);
@@ -409,11 +499,6 @@ export class AuthService {
       console.error('🔒 Failed to establish secure session:', error);
       throw new Error('Session establishment failed');
     }
-  }
-
-  private setSession(authResult: AuthResponseDto): void {
-    // Deprecated - use setSecureSession instead
-    this.setSecureSession(authResult);
   }
 
   private hasToken(): boolean {
@@ -454,10 +539,36 @@ export class AuthService {
 
   private isTokenExpired(token: string): boolean {
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      // Validate token format before processing
+      if (!token || typeof token !== 'string') {
+        console.error('🔒 Invalid token format for expiry check');
+        return true;
+      }
+
+      const tokenParts = token.split('.');
+      if (tokenParts.length !== 3) {
+        console.error('🔒 Invalid JWT token format for expiry check');
+        return true;
+      }
+
+      const payload = JSON.parse(atob(tokenParts[1]));
+
+      // Ensure payload is an object and has exp claim
+      if (!payload || typeof payload !== 'object' || typeof payload.exp !== 'number') {
+        console.error('🔒 Invalid token payload or missing expiry claim');
+        return true;
+      }
+
       const exp = payload.exp * 1000; // Convert to milliseconds
-      return Date.now() >= exp;
+      const isExpired = Date.now() >= exp;
+
+      if (isExpired) {
+        console.warn('🔒 Token has expired');
+      }
+
+      return isExpired;
     } catch (error) {
+      console.error('🔒 Error checking token expiry:', error);
       return true; // If we can't parse the token, consider it expired
     }
   }

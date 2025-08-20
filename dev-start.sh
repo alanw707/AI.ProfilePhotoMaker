@@ -31,11 +31,26 @@ for i in {1..10}; do
   sleep 1
 done
 
-# Do NOT source .env or export secrets here. The API reads user-secrets/appsettings.
-# Provide only non-sensitive dev defaults where necessary.
+# Load local development overrides if present (kept locally; not for production)
+if [ -f ./.env.development ]; then
+  echo "🔐 Loading .env.development for local overrides (selected keys)"
+  # Only extract non-problematic keys we need for Replicate; avoid sourcing entire file
+  if [ -z "${REPLICATE_API_TOKEN:-}" ]; then
+    REPLICATE_API_TOKEN="$(sed -n 's/^REPLICATE_API_TOKEN=\(.*\)$/\1/p' ./.env.development | tail -n1)"
+  fi
+  if [ -z "${REPLICATE_WEBHOOK_SECRET:-}" ]; then
+    REPLICATE_WEBHOOK_SECRET="$(sed -n 's/^REPLICATE_WEBHOOK_SECRET=\(.*\)$/\1/p' ./.env.development | tail -n1)"
+  fi
+fi
+
+# Provide sane defaults if not set by environment/.env.development
 export OAUTH_BASE_URL=${OAUTH_BASE_URL:-http://localhost:5032}
 export REPLICATE_API_TOKEN=${REPLICATE_API_TOKEN:-r8_dev_dummy_1234567890}
 export REPLICATE_WEBHOOK_SECRET=${REPLICATE_WEBHOOK_SECRET:-whsec_dev_dummy_1234567890}
+
+# Map flat env vars to ASP.NET Core nested config keys expected by IConfiguration
+export Replicate__ApiToken=${Replicate__ApiToken:-$REPLICATE_API_TOKEN}
+export Replicate__WebhookSecret=${Replicate__WebhookSecret:-$REPLICATE_WEBHOOK_SECRET}
 
 # Start ngrok with reserved domain (headless, log to file)
 echo "🔗 Starting ngrok tunnel (headless)..."
@@ -75,6 +90,8 @@ ASPNETCORE_ENVIRONMENT=Development \
 OAUTH_BASE_URL="$OAUTH_BASE_URL" \
 REPLICATE_API_TOKEN="$REPLICATE_API_TOKEN" \
 REPLICATE_WEBHOOK_SECRET="$REPLICATE_WEBHOOK_SECRET" \
+Replicate__ApiToken="$Replicate__ApiToken" \
+Replicate__WebhookSecret="$Replicate__WebhookSecret" \
 nohup dotnet run --no-build --launch-profile https > ../logs/api.log 2>&1 &
 API_PID=$!
 echo $API_PID > ../logs/api.pid
