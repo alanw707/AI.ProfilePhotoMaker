@@ -200,12 +200,22 @@ public class HealthCheckService : IHealthCheckService
             
             var status = canConnect && testResults.Values.All(r => r) ? "Healthy" : "Unhealthy";
 
+            // Extract convenient top-level flags from configuration for easier health parsing
+            var provider = configuration.TryGetValue("provider", out var pVal) ? pVal?.ToString() : null;
+            var hasConn = configuration.TryGetValue("hasConnectionString", out var hcVal) &&
+                          bool.TryParse(hcVal?.ToString(), out var hcBool) && hcBool;
+            var isEmu = configuration.TryGetValue("isEmulator", out var emVal) &&
+                        bool.TryParse(emVal?.ToString(), out var emBool) && emBool;
+
             return new StorageHealthResponseDto
             {
                 Status = status,
                 Duration = stopwatch.ElapsedMilliseconds,
                 Version = GetVersion(),
                 Environment = _environment.EnvironmentName,
+                Provider = provider,
+                HasConnectionString = hasConn,
+                IsEmulator = isEmu,
                 CanConnect = canConnect,
                 TestResults = testResults,
                 Configuration = configuration,

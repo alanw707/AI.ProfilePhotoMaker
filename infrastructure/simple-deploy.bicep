@@ -122,6 +122,32 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
   parent: storageAccount
   name: 'default'
+  properties: {
+    // Configure CORS so the frontend can fetch images directly from Blob Storage
+    cors: {
+      corsRules: [
+        {
+          // Production and app domains
+          allowedOrigins: [
+            'https://app.aiprofilephotomaker.com',
+            'https://aiprofilephotomaker.com',
+            // Container Apps default FQDNs (resolved at deploy time)
+            'https://${frontendApp.properties.configuration.ingress.fqdn}',
+            'https://${backendApp.properties.configuration.ingress.fqdn}',
+            // Local development convenience
+            'http://localhost:4200',
+            'http://localhost:5173'
+          ]
+          // Allow typical read methods from the browser
+          allowedMethods: [ 'GET', 'HEAD', 'OPTIONS' ]
+          // Permit all request headers and expose common response headers
+          allowedHeaders: [ '*' ]
+          exposedHeaders: [ 'Content-Length', 'Content-Type', 'Last-Modified', 'ETag', 'x-ms-*' ]
+          maxAgeInSeconds: 3600
+        }
+      ]
+    }
+  }
 }
 
 resource profileImagesContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {

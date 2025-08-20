@@ -230,6 +230,18 @@ public class StorageHealthResponseDto : HealthCheckResponseDto
     public string? Provider { get; set; }
 
     /// <summary>
+    /// Indicates whether a storage connection string is configured
+    /// </summary>
+    [JsonPropertyName("hasConnectionString")]
+    public bool HasConnectionString { get; set; }
+
+    /// <summary>
+    /// Indicates whether the Azure Storage emulator is in use
+    /// </summary>
+    [JsonPropertyName("isEmulator")]
+    public bool IsEmulator { get; set; }
+
+    /// <summary>
     /// Connection status
     /// </summary>
     [JsonPropertyName("canConnect")]
