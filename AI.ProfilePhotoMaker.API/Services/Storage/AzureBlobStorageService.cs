@@ -324,7 +324,7 @@ public class AzureBlobStorageService : BaseStorageService
         }
     }
 
-    public override async Task<string> GenerateSasUrlAsync(string storagePath, TimeSpan expiry, BlobSasPermissions permissions = BlobSasPermissions.Read)
+    public override Task<string> GenerateSasUrlAsync(string storagePath, TimeSpan expiry, BlobSasPermissions permissions = BlobSasPermissions.Read)
     {
         ValidateStoragePath(storagePath);
         
@@ -369,7 +369,7 @@ public class AzureBlobStorageService : BaseStorageService
             Logger.LogDebug("Generated SAS URL for blob: {StoragePath}, expires: {ExpiresOn}", 
                 storagePath, sasBuilder.ExpiresOn);
             
-            return sasUri.ToString();
+            return Task.FromResult(sasUri.ToString());
         }
         catch (Exception ex)
         {

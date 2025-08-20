@@ -217,7 +217,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             {
                 HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(new Claim[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock")) }
             };
-            _mockUserProfileRepository.Setup(r => r.GetByUserIdAsync(userId)).ReturnsAsync((UserProfile)null);
+            _mockUserProfileRepository.Setup(r => r.GetByUserIdAsync(userId)).ReturnsAsync((UserProfile?)null);
             _mockUserProfileRepository.Setup(r => r.AddAsync(It.IsAny<UserProfile>()))
                                       .Callback<UserProfile>(profile =>
                                       {

@@ -27,8 +27,8 @@ public partial class DeploymentValidationService
                 Data = new Dictionary<string, object>
                 {
                     ["status"] = health.Status,
-                    ["version"] = health.Version,
-                    ["environment"] = health.Environment
+                    ["version"] = health.Version ?? string.Empty,
+                    ["environment"] = health.Environment ?? string.Empty
                 }
             };
         }
@@ -171,7 +171,7 @@ public partial class DeploymentValidationService
         }
     }
 
-    private async Task<ValidationComponentDto> ValidateRuntimeSecurityComponentAsync()
+    private Task<ValidationComponentDto> ValidateRuntimeSecurityComponentAsync()
     {
         var stopwatch = Stopwatch.StartNew();
         try
@@ -191,7 +191,7 @@ public partial class DeploymentValidationService
 
             stopwatch.Stop();
 
-            return new ValidationComponentDto
+            return Task.FromResult(new ValidationComponentDto
             {
                 Status = securityIssues.Count == 0 ? "Secure" : "SecurityIssues",
                 IsValid = securityIssues.Count == 0,
@@ -205,19 +205,19 @@ public partial class DeploymentValidationService
                     ["environment"] = _environment.EnvironmentName,
                     ["securityIssueCount"] = securityIssues.Count
                 }
-            };
+            });
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            return new ValidationComponentDto
+            return Task.FromResult(new ValidationComponentDto
             {
                 Status = "Error",
                 IsValid = false,
                 Description = "Runtime security configuration validation",
                 Duration = stopwatch.ElapsedMilliseconds,
                 Error = ex.Message
-            };
+            });
         }
     }
 
@@ -434,8 +434,11 @@ public partial class DeploymentValidationService
         return tests;
     }
 
+    // Suppress CS1998 false positive in some analyzer contexts for this method
+    #pragma warning disable CS1998
     private async Task<List<RegressionTestResultDto>> RunSecurityRegressionTestsAsync()
     {
+        await Task.Yield();
         var tests = new List<RegressionTestResultDto>();
 
         // Security configuration test
@@ -448,6 +451,7 @@ public partial class DeploymentValidationService
 
         return tests;
     }
+    #pragma warning restore CS1998
 
     private async Task<RegressionTestResultDto> RunSingleRegressionTestAsync(string testName, string category, Func<Task> testAction, string severity)
     {

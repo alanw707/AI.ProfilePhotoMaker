@@ -98,7 +98,7 @@ public class AsyncIoPerformanceMiddleware
                pathValue.Contains("/file");
     }
 
-    private async Task LogPerformanceMetricsAsync(
+    private Task LogPerformanceMetricsAsync(
         HttpContext context,
         string requestId,
         int threadId,
@@ -145,9 +145,10 @@ public class AsyncIoPerformanceMiddleware
             // Add custom telemetry here if needed
             context.Items.Add("AsyncIoMetrics", metrics);
         }
+        return Task.CompletedTask;
     }
 
-    private async Task LogSlowRequestWarningAsync(HttpContext context, string requestId, TimeSpan duration, int threadId)
+    private Task LogSlowRequestWarningAsync(HttpContext context, string requestId, TimeSpan duration, int threadId)
     {
         _logger.LogWarning(
             "Potential blocking I/O detected - Request {RequestId} on thread {ThreadId} took {DurationMs}ms " +
@@ -163,9 +164,10 @@ public class AsyncIoPerformanceMiddleware
         {
             // Add custom metric emission here
         }
+        return Task.CompletedTask;
     }
 
-    private async Task LogThreadPoolExhaustionWarningAsync(string requestId, ThreadPoolStats before, ThreadPoolStats after)
+    private Task LogThreadPoolExhaustionWarningAsync(string requestId, ThreadPoolStats before, ThreadPoolStats after)
     {
         _logger.LogWarning(
             "Thread pool exhaustion detected during request {RequestId}. " +
@@ -177,6 +179,7 @@ public class AsyncIoPerformanceMiddleware
             after.AvailableWorkerThreads,
             before.AvailableCompletionPortThreads,
             after.AvailableCompletionPortThreads);
+        return Task.CompletedTask;
     }
 
     private static ThreadPoolStats GetThreadPoolStats()

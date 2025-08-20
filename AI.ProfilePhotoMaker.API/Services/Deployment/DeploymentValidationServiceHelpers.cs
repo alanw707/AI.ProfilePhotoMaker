@@ -12,7 +12,7 @@ namespace AI.ProfilePhotoMaker.API.Services.Deployment;
 /// </summary>
 public partial class DeploymentValidationService
 {
-    private async Task<(Dictionary<string, EnvironmentVariableDto>, List<string>)> ValidateEnvironmentVariablesAsync()
+    private Task<(Dictionary<string, EnvironmentVariableDto>, List<string>)> ValidateEnvironmentVariablesAsync()
     {
         var envVars = new Dictionary<string, EnvironmentVariableDto>();
         var missingRequired = new List<string>();
@@ -75,7 +75,7 @@ public partial class DeploymentValidationService
             };
         }
 
-        return (envVars, missingRequired);
+        return Task.FromResult((envVars, missingRequired));
     }
 
     private (bool IsValid, string Message) ValidateEnvironmentVariableValue(string name, string? value)
@@ -191,7 +191,7 @@ public partial class DeploymentValidationService
         return "Unknown";
     }
 
-    private async Task<Dictionary<string, ConfigurationSectionDto>> ValidateConfigurationSectionsAsync()
+    private Task<Dictionary<string, ConfigurationSectionDto>> ValidateConfigurationSectionsAsync()
     {
         var sections = new Dictionary<string, ConfigurationSectionDto>();
 
@@ -239,7 +239,7 @@ public partial class DeploymentValidationService
             IsComplete = replicateIssues.Count == 0
         };
 
-        return sections;
+        return Task.FromResult(sections);
     }
 
     private List<string> CheckForDefaultValues()
@@ -345,7 +345,7 @@ public partial class DeploymentValidationService
         return issues;
     }
 
-    private async Task<List<SecurityCheckDto>> ValidateJwtSecurityAsync()
+    private Task<List<SecurityCheckDto>> ValidateJwtSecurityAsync()
     {
         var checks = new List<SecurityCheckDto>();
 
@@ -402,7 +402,7 @@ public partial class DeploymentValidationService
             }
         });
 
-        return checks;
+        return Task.FromResult(checks);
     }
 
     private List<SecurityCheckDto> ValidateHttpsConfiguration()
@@ -451,7 +451,7 @@ public partial class DeploymentValidationService
         return checks;
     }
 
-    private async Task<List<SecurityCheckDto>> ValidateDatabaseSecurityAsync()
+    private Task<List<SecurityCheckDto>> ValidateDatabaseSecurityAsync()
     {
         var checks = new List<SecurityCheckDto>();
 
@@ -511,7 +511,7 @@ public partial class DeploymentValidationService
             });
         }
 
-        return checks;
+        return Task.FromResult(checks);
     }
 
     private List<SecurityCheckDto> ValidateExternalServiceSecurity()

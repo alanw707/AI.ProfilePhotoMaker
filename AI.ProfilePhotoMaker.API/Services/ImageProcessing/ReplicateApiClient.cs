@@ -190,7 +190,12 @@ public class ReplicateApiClient : IReplicateApiClient
 
             var content = new StringContent(JsonSerializer.Serialize(trainingRequest), Encoding.UTF8, "application/json");
             var modelVersion = _configuration["Replicate:FluxTrainingModelId"];
-            var endpoint = $"models/replicate/fast-flux-trainer/versions/{modelVersion.Split(':')[1]}/trainings";
+            if (string.IsNullOrWhiteSpace(modelVersion) || !modelVersion.Contains(':'))
+            {
+                throw new InvalidOperationException("Replicate:FluxTrainingModelId is not configured with expected 'owner/model:version' format.");
+            }
+            var versionId = modelVersion.Split(':')[1];
+            var endpoint = $"models/replicate/fast-flux-trainer/versions/{versionId}/trainings";
             var response = await _httpClient.PostAsync(endpoint, content);
 
             if (!response.IsSuccessStatusCode)
@@ -595,7 +600,12 @@ public class ReplicateApiClient : IReplicateApiClient
 
             var content = new StringContent(JsonSerializer.Serialize(trainingRequest), Encoding.UTF8, "application/json");
             var modelVersion = _configuration["Replicate:FluxTrainingModelId"];
-            var endpoint = $"models/replicate/fast-flux-trainer/versions/{modelVersion.Split(':')[1]}/trainings";
+            if (string.IsNullOrWhiteSpace(modelVersion) || !modelVersion.Contains(':'))
+            {
+                throw new InvalidOperationException("Replicate:FluxTrainingModelId is not configured with expected 'owner/model:version' format.");
+            }
+            var versionId = modelVersion.Split(':')[1];
+            var endpoint = $"models/replicate/fast-flux-trainer/versions/{versionId}/trainings";
             var response = await _httpClient.PostAsync(endpoint, content);
 
             if (!response.IsSuccessStatusCode)
