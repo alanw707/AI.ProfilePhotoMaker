@@ -284,7 +284,7 @@ public class HealthCheckService : IHealthCheckService
         }
     }
 
-    public async Task<HealthCheckResponseDto> GetReadinessAsync()
+    public Task<HealthCheckResponseDto> GetReadinessAsync()
     {
         var stopwatch = Stopwatch.StartNew();
         
@@ -295,28 +295,28 @@ public class HealthCheckService : IHealthCheckService
             
             stopwatch.Stop();
             
-            return new HealthCheckResponseDto
+            return Task.FromResult(new HealthCheckResponseDto
             {
                 Status = "Ready",
                 Duration = stopwatch.ElapsedMilliseconds,
                 Version = GetVersion(),
                 Environment = _environment.EnvironmentName,
                 Message = "Application is ready (database check bypassed for faster response)"
-            };
+            });
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
             _logger.LogError(ex, "Error during readiness check");
             
-            return new HealthCheckResponseDto
+            return Task.FromResult(new HealthCheckResponseDto
             {
                 Status = "NotReady",
                 Duration = stopwatch.ElapsedMilliseconds,
                 Version = GetVersion(),
                 Environment = _environment.EnvironmentName,
                 Message = $"Readiness check failed: {ex.Message}"
-            };
+            });
         }
     }
 

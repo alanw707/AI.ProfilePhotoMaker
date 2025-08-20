@@ -87,7 +87,7 @@ public class EnhancedStorageProxyMiddleware
             context.Response.StatusCode = 200;
             
             // Add cache headers for performance
-            context.Response.Headers.Add("Cache-Control", "public, max-age=3600");
+            context.Response.Headers["Cache-Control"] = "public, max-age=3600";
             
             await context.Response.Body.WriteAsync(content);
 
@@ -132,8 +132,8 @@ public class EnhancedStorageProxyMiddleware
             context.Response.ContentType = contentType;
             
             // Add cache headers for performance (1 year for images)
-            context.Response.Headers.Add("Cache-Control", "public, max-age=31536000, immutable");
-            context.Response.Headers.Add("ETag", $"\"{storagePath.GetHashCode():X}\"");
+            context.Response.Headers["Cache-Control"] = "public, max-age=31536000, immutable";
+            context.Response.Headers["ETag"] = $"\"{storagePath.GetHashCode():X}\"";
             
             // Stream the image to the response
             await imageStream.CopyToAsync(context.Response.Body);

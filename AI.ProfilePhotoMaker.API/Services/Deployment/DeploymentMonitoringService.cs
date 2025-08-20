@@ -60,7 +60,7 @@ public class DeploymentMonitoringService : IDeploymentMonitoringService
                 ResponseTimeMs = (int)appHealth.Duration,
                 UptimePercentage = appHealth.Status.ToLower() == "healthy" ? 100.0 : 0.0,
                 LastHealthCheck = DateTime.UtcNow,
-                ErrorMessage = appHealth.Status.ToLower() != "healthy" ? appHealth.Message : string.Empty
+                ErrorMessage = appHealth.Status.ToLower() != "healthy" ? (appHealth.Message ?? string.Empty) : string.Empty
             };
 
             // Check database health
@@ -101,7 +101,7 @@ public class DeploymentMonitoringService : IDeploymentMonitoringService
                     ResponseTimeMs = (int)dependency.Value.ResponseTime,
                     UptimePercentage = dependency.Value.Status.ToLower() == "healthy" ? 100.0 : 0.0,
                     LastHealthCheck = DateTime.UtcNow,
-                    ErrorMessage = dependency.Value.Error
+                    ErrorMessage = dependency.Value.Error ?? string.Empty
                 };
             }
 
@@ -268,7 +268,7 @@ public class DeploymentMonitoringService : IDeploymentMonitoringService
                     ResponseTimeMs = (int)dependency.Value.ResponseTime,
                     Endpoint = dependency.Key,
                     LastSuccessfulCall = isAvailable ? DateTime.UtcNow : DateTime.MinValue,
-                    ErrorMessage = dependency.Value.Error,
+                    ErrorMessage = dependency.Value.Error ?? string.Empty,
                     IsCritical = IsCriticalService(dependency.Key)
                 };
 
@@ -530,7 +530,7 @@ public class DeploymentMonitoringService : IDeploymentMonitoringService
         }
     }
 
-    private async Task<Dictionary<string, object>> GetConfigurationSnapshotAsync()
+    private Task<Dictionary<string, object>> GetConfigurationSnapshotAsync()
     {
         var snapshot = new Dictionary<string, object>();
 
@@ -573,7 +573,7 @@ public class DeploymentMonitoringService : IDeploymentMonitoringService
             snapshot["Error"] = $"Snapshot creation failed: {ex.Message}";
         }
 
-        return snapshot;
+        return Task.FromResult(snapshot);
     }
 
     private List<ConfigurationDriftDto> CompareConfigurations(Dictionary<string, object> baseline, Dictionary<string, object> current)
