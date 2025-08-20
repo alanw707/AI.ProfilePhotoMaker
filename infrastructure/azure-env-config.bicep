@@ -128,11 +128,11 @@ resource appService 'Microsoft.Web/sites@2022-03-01' = {
         // AI/ML Services (from Key Vault)
         {
           name: 'REPLICATE_API_TOKEN'
-          value: '@Microsoft.KeyVault(SecretUri=https://${keyVaultName}.vault.azure.net/secrets/replicate-api-token/)'
+          value: '@Microsoft.KeyVault(SecretUri=https://${keyVaultName}.vault.azure.net/secrets/ReplicateApiToken/)'
         }
         {
           name: 'REPLICATE_WEBHOOK_SECRET'
-          value: '@Microsoft.KeyVault(SecretUri=https://${keyVaultName}.vault.azure.net/secrets/replicate-webhook-secret/)'
+          value: '@Microsoft.KeyVault(SecretUri=https://${keyVaultName}.vault.azure.net/secrets/ReplicateWebhookSecret/)'
         }
         
         // =================================================================
