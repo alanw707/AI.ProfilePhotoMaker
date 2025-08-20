@@ -111,6 +111,11 @@ jobs:
         uses: github/codeql-action/autobuild@v3
 
       - name: 🔍 Analyze
+        continue-on-error: true
         uses: github/codeql-action/analyze@v3
         with:
           category: '/language:all'
+      - name: 📝 Note on CodeQL default setup
+        if: ${{ always() }}
+        run: |
+          echo "If Code Scanning default setup is enabled, this advanced CodeQL job may be skipped or set to continue-on-error to avoid conflicts."
