@@ -808,6 +808,25 @@ jobs:
           echo "📝 [REASON] Storage issues can be fixed without full redeployment"
           fi
           
+      - name: 🔄 Refresh Container App secrets and roll revision
+        run: |
+          echo "🔄 [SYNC] Refreshing Container App secrets from GitHub Secrets and forcing new revision"
+          az containerapp secret set \
+            --name aipm-api-v1 \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --secrets \
+              replicate-token='${{ secrets.REPLICATE_API_TOKEN }}' \
+              replicate-webhook-secret='${{ secrets.REPLICATE_WEBHOOK_SECRET }}'
+
+          # Force a new revision so app reads updated secrets at startup
+          REV_TS=$(date +%s)
+          az containerapp update \
+            --name aipm-api-v1 \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --set-env-vars REVISION_ROLL_TIMESTAMP=$REV_TS
+
+          echo "✅ [SUCCESS] Container App secrets refreshed and revision rolled ($REV_TS)"
+
       - name: 🛡️ Validate Blob CORS (post-deploy)
         run: |
           set -e

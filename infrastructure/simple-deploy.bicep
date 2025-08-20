@@ -374,6 +374,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               name: 'ASPNETCORE_ENVIRONMENT'
               value: 'Production'
             }
+            // Map both ASP.NET Core config pattern and plain env var to the same secret
             {
               name: 'ConnectionStrings__DefaultConnection'
               secretRef: 'connection-string'
@@ -388,6 +389,14 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             }
             {
               name: 'Replicate__WebhookSecret'
+              secretRef: 'replicate-webhook-secret'
+            }
+            {
+              name: 'REPLICATE_API_TOKEN'
+              secretRef: 'replicate-token'
+            }
+            {
+              name: 'REPLICATE_WEBHOOK_SECRET'
               secretRef: 'replicate-webhook-secret'
             }
             {
