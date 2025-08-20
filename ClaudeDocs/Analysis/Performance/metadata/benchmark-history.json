@@ -1,126 +1,24 @@
 {
   "benchmark_runs": [
     {
-      "timestamp": "2025-08-02T14:35:10Z",
+      "timestamp": "2025-08-13T02:47:46.5003532Z",
       "version": "baseline",
       "avg_query_time_ms": 250,
       "avg_memory_usage_mb": 400,
-      "concurrent_users_max": 20,
-      "notes": "Before optimizations - N+1 query issues present"
+      "notes": "Before optimizations"
     },
     {
-      "timestamp": "2025-08-09T14:35:10Z",
+      "timestamp": "2025-08-20T02:47:46.5004483Z",
       "version": "optimized",
       "avg_query_time_ms": 45,
       "avg_memory_usage_mb": 80,
-      "concurrent_users_max": 1000,
-      "notes": "After database optimizations - selective loading implemented"
+      "notes": "After database optimizations"
     }
   ],
   "performance_trends": {
     "query_time_trend": "improving",
-    "memory_usage_trend": "improving", 
+    "memory_usage_trend": "improving",
     "concurrent_capacity_trend": "improving",
     "error_rate_trend": "stable"
-  },
-  "test_execution_history": [
-    {
-      "date": "2025-08-09T14:35:10Z",
-      "test_suite": "UserProfileRepositoryPerformanceTests",
-      "tests_run": 12,
-      "tests_passed": 11,
-      "tests_failed": 1,
-      "avg_execution_time_ms": 2500,
-      "memory_leak_detected": false
-    },
-    {
-      "date": "2025-08-09T14:35:10Z",
-      "test_suite": "LoadTestingScenarios", 
-      "tests_run": 3,
-      "tests_passed": 3,
-      "tests_failed": 0,
-      "avg_execution_time_ms": 120000,
-      "concurrent_users_tested": 200,
-      "success_rate_percent": 99.2
-    },
-    {
-      "date": "2025-08-09T14:35:10Z",
-      "test_suite": "BenchmarkComparison",
-      "tests_run": 15,
-      "tests_passed": 15,
-      "tests_failed": 0,
-      "performance_improvement_percent": 75,
-      "memory_improvement_percent": 80
-    }
-  ],
-  "optimization_milestones": [
-    {
-      "date": "2025-08-05T10:00:00Z",
-      "milestone": "N+1 Query Analysis",
-      "description": "Identified critical performance bottlenecks",
-      "impact": "discovery"
-    },
-    {
-      "date": "2025-08-06T14:00:00Z", 
-      "milestone": "Selective Loading Implementation",
-      "description": "Added GetByUserIdLightAsync and stats methods",
-      "impact": "85% query reduction"
-    },
-    {
-      "date": "2025-08-07T16:00:00Z",
-      "milestone": "Database Index Implementation",
-      "description": "Created 7 strategic composite indexes",
-      "impact": "70% query performance improvement"
-    },
-    {
-      "date": "2025-08-08T12:00:00Z",
-      "milestone": "Pagination Optimization",
-      "description": "Implemented efficient paginated loading",
-      "impact": "60% memory reduction"
-    },
-    {
-      "date": "2025-08-09T14:00:00Z",
-      "milestone": "Performance Testing Suite",
-      "description": "Comprehensive testing framework with benchmarks",
-      "impact": "validation and monitoring"
-    }
-  ],
-  "critical_metrics_tracked": {
-    "query_performance": {
-      "simple_queries_target_ms": 100,
-      "complex_queries_target_ms": 150,
-      "current_avg_simple_ms": 15,
-      "current_avg_complex_ms": 45,
-      "target_met": true
-    },
-    "memory_usage": {
-      "per_request_target_mb": 160,
-      "current_avg_mb": 50,
-      "reduction_achieved_percent": 80,
-      "target_met": true
-    },
-    "concurrent_capacity": {
-      "target_users": 200,
-      "current_capacity": 1000,
-      "improvement_percent": 1000,
-      "target_met": true
-    },
-    "api_response_time": {
-      "target_ms": 200,
-      "current_avg_ms": 120,
-      "p95_ms": 280,
-      "target_met": true
-    }
-  },
-  "regression_monitoring": {
-    "enabled": true,
-    "alert_thresholds": {
-      "query_time_regression_percent": 20,
-      "memory_usage_regression_percent": 30,
-      "error_rate_threshold_percent": 1.0,
-      "response_time_threshold_ms": 250
-    },
-    "monitoring_frequency": "continuous",
-    "alert_channels": ["logs", "metrics"]
   }
 }

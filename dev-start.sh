@@ -14,8 +14,22 @@ mkdir -p logs
 # Stop any existing processes
 echo "🔍 Checking for existing processes..."
 pkill -f "dotnet.*AI.ProfilePhotoMaker.API" 2>/dev/null || true
+pkill -f "dotnet run.*5032" 2>/dev/null || true
+pkill -f "dotnet run.*5033" 2>/dev/null || true
 pkill -f "ng serve" 2>/dev/null || true
-sleep 2
+echo "⏳ Waiting for processes to cleanup..."
+sleep 5
+
+# Verify port 5032 is available before proceeding
+echo "🔍 Verifying port 5032 is available..."
+for i in {1..10}; do
+  if ! ss -tulpn | grep ":5032" >/dev/null 2>&1; then
+    echo " ✅ Port 5032 is available!"
+    break
+  fi
+  echo -n "."
+  sleep 1
+done
 
 # Do NOT source .env or export secrets here. The API reads user-secrets/appsettings.
 # Provide only non-sensitive dev defaults where necessary.
