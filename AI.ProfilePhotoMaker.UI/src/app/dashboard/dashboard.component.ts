@@ -283,8 +283,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if ((thumb as { id?: number })?.id) {
-      this._removeImageById((thumb as { id: number }).id);
+    // Handle both string and number IDs robustly
+    const rawId = (thumb as any)?.id;
+    const idNum = typeof rawId === 'number' ? rawId : parseInt(String(rawId), 10);
+    if (!isNaN(idNum)) {
+      this._removeImageById(idNum);
+    } else {
+      // If ID is invalid, do a full refresh to stay in sync
+      this._refreshUploadedImagesFromServer();
     }
   }
 
