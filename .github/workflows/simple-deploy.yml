@@ -408,11 +408,13 @@ jobs:
           if [[ -n "$BICEP_SIMILAR_VARS" ]]; then
             echo "🔍 [FOUND] Storage-related variables in Bicep:"
             echo "$BICEP_SIMILAR_VARS" | while read var; do
-              if [[ "$var" != "AZURE_STORAGE_CONNECTION_STRING" && "$var" != "AZURE_STORAGE_CONTAINER_NAME" ]]; then
+              # Valid Azure Storage configuration patterns - these are correct and should not be flagged as errors
+              if [[ "$var" == "AZURE_STORAGE_CONNECTION_STRING" || "$var" == "AZURE_STORAGE_CONTAINER_NAME" || 
+                    "$var" == "ConnectionStrings__AzureStorage" || "$var" == "AzureStorage__ConnectionString" || "$var" == "AzureStorage__ContainerName" ]]; then
+                echo "  ✅ $var (Correct Azure Storage configuration pattern)"
+              else
                 echo "  ⚠️  $var (Potential mismatch - check if this should be AZURE_STORAGE_*)"
                 ((validation_errors++))
-              else
-                echo "  ✅ $var (Correct naming)"
               fi
             done
           fi
