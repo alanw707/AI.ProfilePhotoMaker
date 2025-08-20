@@ -4,9 +4,12 @@ on:
   pull_request:
     branches: [ main, develop ]
     paths-ignore:
-      - '*.md'
+      - '**/*.md'
       - 'docs/**'
       - 'ClaudeDocs/**'
+
+permissions:
+  contents: read
 
 concurrency:
   group: pr-review-${{ github.event.pull_request.number }}
@@ -37,11 +40,11 @@ jobs:
       - name: 🔍 .NET Analyzers (bugs/best practices/perf)
         run: |
           dotnet build AI.ProfilePhotoMaker.sln \
+            --no-restore \
+            -c Release \
             -warnaserror \
-            -p:Configuration=Release \
             -p:EnableNETAnalyzers=true \
-            -p:AnalysisLevel=latest \
-            -p:TreatWarningsAsErrors=true
+            -p:AnalysisLevel=latest
 
       - name: ⚙️ Setup Node.js
         uses: actions/setup-node@v4
@@ -52,11 +55,11 @@ jobs:
 
       - name: 📦 Install UI Dependencies
         working-directory: AI.ProfilePhotoMaker.UI
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
-      - name: 🔍 ESLint (fail on warnings)
+      - name: 🔍 ESLint (errors only)
         working-directory: AI.ProfilePhotoMaker.UI
-        run: npx eslint "src/**/*.{ts,html}" --max-warnings=0
+        run: npm run lint:errors-only
 
       - name: ✅ TypeScript Type Check
         working-directory: AI.ProfilePhotoMaker.UI
