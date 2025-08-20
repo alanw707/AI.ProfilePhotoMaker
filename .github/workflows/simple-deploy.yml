@@ -816,7 +816,6 @@ jobs:
           echo "🔎 [CORS] Listing current CORS rules..."
           az storage cors list --services b \
             --account-name "$STORAGE_ACCOUNT" \
-            --auth-mode login \
             --output json > cors.json
 
           cat cors.json | jq '.' || true
