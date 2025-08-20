@@ -260,7 +260,7 @@ public class EnvironmentConfiguration
     /// <summary>
     /// Validates required Google OAuth configuration with enhanced format checking
     /// </summary>
-    private async Task ValidateGoogleOAuthConfigurationAsync(List<ValidationResult> results)
+    private Task ValidateGoogleOAuthConfigurationAsync(List<ValidationResult> results)
     {
         var googleClientId = GetEnvironmentVariable(GOOGLE_CLIENT_ID);
         var googleClientSecret = GetEnvironmentVariable(GOOGLE_CLIENT_SECRET);
@@ -326,12 +326,13 @@ public class EnvironmentConfiguration
         }
         
         _logger.LogInformation("✅ Google OAuth configuration validation completed");
+        return Task.CompletedTask;
     }
 
     /// <summary>
     /// Validates Azure Storage configuration with environment-specific requirements
     /// </summary>
-    private async Task ValidateAzureStorageConfigurationAsync(List<ValidationResult> results)
+    private Task ValidateAzureStorageConfigurationAsync(List<ValidationResult> results)
     {
         var azureStorage = GetEnvironmentVariable(AZURE_STORAGE_CONNECTION_STRING);
         var containerName = GetEnvironmentVariable(AZURE_STORAGE_CONTAINER_NAME);
@@ -381,6 +382,7 @@ public class EnvironmentConfiguration
                     $"Azure Storage container name is REQUIRED in all environments (referenced in infrastructure configuration)"));
             }
         }
+        return Task.CompletedTask;
     }
 
     private void LogValidationSummary(List<ValidationResult> results)

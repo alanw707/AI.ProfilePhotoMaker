@@ -209,7 +209,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 returnUrl = HttpContext.Session.GetString("oauth_return_url") ?? "/app/dashboard";
                 sessionState = HttpContext.Session.GetString("oauth_state");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 returnUrl = "/app/dashboard"; // Default fallback
                 sessionState = null; // Will trigger session_expired error below
@@ -305,7 +305,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 var tokenInfo = _authService.GenerateJwtToken(user);
                 return Redirect($"{frontendBaseUrl}{returnUrl}?token={tokenInfo.Token}");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return Redirect($"{frontendBaseUrl}/auth/login?error=oauth_processing_failed");
             }
@@ -356,7 +356,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     return (googleOptions.ClientId, googleOptions.ClientSecret);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Fall through to manual configuration reading
             }
@@ -501,7 +501,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 }
                 catch (Exception ex)
                 {
-                    // Log error appropriately in production (consider using ILogger)
+                    _logger.LogError(ex, "Failed to create user profile during OAuth user creation");
                     throw; // Re-throw to handle at higher level
                 }
             }
@@ -534,7 +534,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     }
                     catch (Exception ex)
                     {
-                        // Log error appropriately in production (consider using ILogger)
+                        _logger.LogError(ex, "Failed to create missing user profile for existing user");
                         throw; // Re-throw to handle at higher level
                     }
                 }

@@ -31,17 +31,17 @@
       @include shared.btn-base
       
       &.btn-outline-secondary
-        @include shared.btn-secondary
         font-size: 14px
         padding: 8px 16px
         border: 1px solid var(--border-color)
+        border-radius: 8px
         color: var(--text-secondary)
         background: transparent
-        border-radius: 8px
         cursor: pointer
         transition: all 0.2s ease
         font-family: 'Inter', sans-serif
         font-weight: 500
+        @include shared.btn-secondary
         
         &:hover
           background: var(--hover-bg)

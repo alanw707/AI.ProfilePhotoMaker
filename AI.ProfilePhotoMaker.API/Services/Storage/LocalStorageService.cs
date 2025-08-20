@@ -243,14 +243,14 @@ public class LocalStorageService : BaseStorageService
     }
 
 
-    public override async Task<string> GenerateSasUrlAsync(string storagePath, TimeSpan expiry, BlobSasPermissions permissions = BlobSasPermissions.Read)
+    public override Task<string> GenerateSasUrlAsync(string storagePath, TimeSpan expiry, BlobSasPermissions permissions = BlobSasPermissions.Read)
     {
         ValidateStoragePath(storagePath);
         
         // For local storage, we can't generate true SAS URLs, so return the regular URL
         // This is used in development where we're not actually using external APIs
         Logger.LogWarning("GenerateSasUrlAsync called on LocalStorageService - returning regular URL for development");
-        return GetImageUrl(storagePath);
+        return Task.FromResult(GetImageUrl(storagePath));
     }
 
     public override async Task<string> SaveZipAsync(Stream zipStream, string storagePath)
@@ -279,7 +279,7 @@ public class LocalStorageService : BaseStorageService
         }
     }
 
-    public override async Task<bool> DeleteDirectoryAsync(string directoryPath)
+    public override Task<bool> DeleteDirectoryAsync(string directoryPath)
     {
         ValidateStoragePath(directoryPath);
         
@@ -290,18 +290,18 @@ public class LocalStorageService : BaseStorageService
             if (!Directory.Exists(fullPath))
             {
                 LogOperation(LogLevel.Warning, "DeleteDirectoryAsync - not found", directoryPath);
-                return false;
+                return Task.FromResult(false);
             }
 
             Directory.Delete(fullPath, recursive: true);
             
             LogOperation(LogLevel.Information, "DeleteDirectoryAsync - success", directoryPath);
-            return true;
+            return Task.FromResult(true);
         }
         catch (Exception ex)
         {
             LogError(ex, "DeleteDirectoryAsync", directoryPath);
-            return false;
+            return Task.FromResult(false);
         }
     }
 

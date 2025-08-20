@@ -453,8 +453,7 @@ export class SettingsComponent implements OnInit {
         resolve();
       }, 5000);
 
-      let subscription: any;
-      subscription = this.authService.currentUser$.subscribe(user => {
+      const subscription = this.authService.currentUser$.subscribe(user => {
         clearTimeout(timeout);
         if (user) {
           this.userEmail = user.email;
@@ -511,8 +510,7 @@ export class SettingsComponent implements OnInit {
       this.dashboardStateService.loadBasicDataForSettings();
 
       // Subscribe to dashboard state for credit information - take first emission
-      let subscription: any;
-      subscription = this.dashboardStateService.state$.subscribe(state => {
+      const subscription = this.dashboardStateService.state$.subscribe(state => {
         clearTimeout(timeout);
         this.creditsInfo = state.creditsInfo;
         this.userCreditStatus = state.userCreditStatus;
