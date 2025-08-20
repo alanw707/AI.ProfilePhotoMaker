@@ -39,7 +39,8 @@ while true; do
     fi
     
     # Check Database
-    if docker exec aipm-sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P Dev123456! -C -Q "SELECT 1" &>/dev/null; then
+    DB_PASS=${MSSQL_SA_PASSWORD:-Dev123456!}
+    if docker exec aipm-sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$DB_PASS" -C -Q "SELECT 1" &>/dev/null; then
         DB_STATUS="✅ Connected"
         DB_HEALTHY=true
     else

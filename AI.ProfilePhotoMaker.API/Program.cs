@@ -304,14 +304,23 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IBasicTierService, AI.ProfilePhotoMaker.API.Services.BasicTierService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IUserContextService, AI.ProfilePhotoMaker.API.Services.UserContextService>();
 
-// Register Replicate SDK
-builder.Services.AddSingleton<Replicate.ReplicateApi>(provider =>
+// Register Replicate SDK (skip in mock mode)
+var enableReplicateMock = (Environment.GetEnvironmentVariable("ENABLE_REPLICATE_MOCK") ?? string.Empty)
+    .Equals("true", StringComparison.OrdinalIgnoreCase);
+if (!enableReplicateMock)
 {
-    var configuration = provider.GetRequiredService<IConfiguration>();
-    var apiToken = configuration["Replicate:ApiToken"]
-        ?? throw new InvalidOperationException("Replicate API token not configured");
-    return new Replicate.ReplicateApi(apiToken);
-});
+    builder.Services.AddSingleton<Replicate.ReplicateApi>(provider =>
+    {
+        var configuration = provider.GetRequiredService<IConfiguration>();
+        var apiToken = configuration["Replicate:ApiToken"]
+            ?? throw new InvalidOperationException("Replicate API token not configured");
+        return new Replicate.ReplicateApi(apiToken);
+    });
+}
+else
+{
+    // Mock mode enabled: skip initializing Replicate SDK
+}
 
 // Register Replicate services
 builder.Services.AddHttpClient<IReplicateApiClient, ReplicateApiClient>();

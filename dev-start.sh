@@ -31,26 +31,61 @@ for i in {1..10}; do
   sleep 1
 done
 
-# Load local development overrides if present (kept locally; not for production)
-if [ -f ./.env.development ]; then
-  echo "🔐 Loading .env.development for local overrides (selected keys)"
-  # Only extract non-problematic keys we need for Replicate; avoid sourcing entire file
-  if [ -z "${REPLICATE_API_TOKEN:-}" ]; then
-    REPLICATE_API_TOKEN="$(sed -n 's/^REPLICATE_API_TOKEN=\(.*\)$/\1/p' ./.env.development | tail -n1)"
-  fi
-  if [ -z "${REPLICATE_WEBHOOK_SECRET:-}" ]; then
-    REPLICATE_WEBHOOK_SECRET="$(sed -n 's/^REPLICATE_WEBHOOK_SECRET=\(.*\)$/\1/p' ./.env.development | tail -n1)"
-  fi
+# Resolve Replicate credentials and DB password with precedence
+# user-secrets/.env.development/env for tokens; .env.development/env/default for DB
+echo "🔐 Resolving Replicate credentials (preferring dotnet user-secrets)"
+
+# Attempt to read from dotnet user-secrets
+USER_SECRETS_API_TOKEN=$(cd AI.ProfilePhotoMaker.API && dotnet user-secrets list 2>/dev/null | sed -n 's/^Replicate:ApiToken = \(.*\)$/\1/p' | tail -n1)
+if [ -z "$USER_SECRETS_API_TOKEN" ]; then
+  # Fallback to flat key if present in user-secrets
+  USER_SECRETS_API_TOKEN=$(cd AI.ProfilePhotoMaker.API && dotnet user-secrets list 2>/dev/null | sed -n 's/^REPLICATE_API_TOKEN = \(.*\)$/\1/p' | tail -n1)
+fi
+USER_SECRETS_WEBHOOK_SECRET=$(cd AI.ProfilePhotoMaker.API && dotnet user-secrets list 2>/dev/null | sed -n 's/^Replicate:WebhookSecret = \(.*\)$/\1/p' | tail -n1)
+if [ -z "$USER_SECRETS_WEBHOOK_SECRET" ]; then
+  USER_SECRETS_WEBHOOK_SECRET=$(cd AI.ProfilePhotoMaker.API && dotnet user-secrets list 2>/dev/null | sed -n 's/^REPLICATE_WEBHOOK_SECRET = \(.*\)$/\1/p' | tail -n1)
 fi
 
-# Provide sane defaults if not set by environment/.env.development
-export OAUTH_BASE_URL=${OAUTH_BASE_URL:-http://localhost:5032}
-export REPLICATE_API_TOKEN=${REPLICATE_API_TOKEN:-r8_dev_dummy_1234567890}
-export REPLICATE_WEBHOOK_SECRET=${REPLICATE_WEBHOOK_SECRET:-whsec_dev_dummy_1234567890}
+# Load local development overrides from .env.development for convenience (but will be overridden by user-secrets if present)
+if [ -f ./.env.development ]; then
+  echo "🔧 Reading .env.development for fallback values"
+  ENV_FILE_API_TOKEN=$(sed -n 's/^REPLICATE_API_TOKEN=\(.*\)$/\1/p' ./.env.development | tail -n1)
+  ENV_FILE_WEBHOOK_SECRET=$(sed -n 's/^REPLICATE_WEBHOOK_SECRET=\(.*\)$/\1/p' ./.env.development | tail -n1)
+  ENV_FILE_MSSQL_SA_PASSWORD=$(sed -n 's/^MSSQL_SA_PASSWORD=\(.*\)$/\1/p' ./.env.development | tail -n1)
+fi
 
-# Map flat env vars to ASP.NET Core nested config keys expected by IConfiguration
-export Replicate__ApiToken=${Replicate__ApiToken:-$REPLICATE_API_TOKEN}
-export Replicate__WebhookSecret=${Replicate__WebhookSecret:-$REPLICATE_WEBHOOK_SECRET}
+# Select the final values (user-secrets preferred)
+FINAL_REPLICATE_API_TOKEN=${USER_SECRETS_API_TOKEN:-${ENV_FILE_API_TOKEN:-${REPLICATE_API_TOKEN:-}}}
+FINAL_REPLICATE_WEBHOOK_SECRET=${USER_SECRETS_WEBHOOK_SECRET:-${ENV_FILE_WEBHOOK_SECRET:-${REPLICATE_WEBHOOK_SECRET:-}}}
+
+# Provide sane defaults only if still empty
+export OAUTH_BASE_URL=${OAUTH_BASE_URL:-http://localhost:5032}
+# Determine replicate mock mode based on token quality
+ENABLE_REPLICATE_MOCK=false
+if [ -z "$FINAL_REPLICATE_API_TOKEN" ]; then
+  echo "⚠️  No Replicate token found in user-secrets or .env.development; enabling mock mode"
+  ENABLE_REPLICATE_MOCK=true
+  FINAL_REPLICATE_API_TOKEN=r8_dev_dummy_1234567890
+fi
+# If token looks placeholder-like, prefer mock mode to avoid 401 spam
+if [[ "$FINAL_REPLICATE_API_TOKEN" != r8_* ]] || [[ "$FINAL_REPLICATE_API_TOKEN" == *"dummy"* ]] || [[ ${#FINAL_REPLICATE_API_TOKEN} -lt 32 ]]; then
+  echo "⚠️  Replicate token appears invalid/placeholder; enabling mock mode for local dev"
+  ENABLE_REPLICATE_MOCK=true
+fi
+if [ -z "$FINAL_REPLICATE_WEBHOOK_SECRET" ]; then
+  FINAL_REPLICATE_WEBHOOK_SECRET=whsec_dev_dummy_1234567890
+fi
+
+# Export environment variables for the API process
+export REPLICATE_API_TOKEN="$FINAL_REPLICATE_API_TOKEN"
+export REPLICATE_WEBHOOK_SECRET="$FINAL_REPLICATE_WEBHOOK_SECRET"
+export Replicate__ApiToken="$FINAL_REPLICATE_API_TOKEN"
+export Replicate__WebhookSecret="$FINAL_REPLICATE_WEBHOOK_SECRET"
+export ENABLE_REPLICATE_MOCK="$ENABLE_REPLICATE_MOCK"
+
+# Ensure SQL Server password is set for docker-compose and healthcheck
+FINAL_MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD:-${ENV_FILE_MSSQL_SA_PASSWORD:-Dev123456!}}
+export MSSQL_SA_PASSWORD="$FINAL_MSSQL_SA_PASSWORD"
 
 # Start ngrok with reserved domain (headless, log to file)
 echo "🔗 Starting ngrok tunnel (headless)..."
@@ -71,7 +106,7 @@ sleep 3
 echo "🗄️  Starting SQL Server container..."
 docker-compose up sql-server -d
 
-# Wait for SQL Server container health (no password needed)
+# Wait for SQL Server container health
 echo "⏳ Waiting for SQL Server to be healthy..."
 for i in {1..60}; do
   STATUS=$(docker inspect --format '{{.State.Health.Status}}' aipm-sqlserver 2>/dev/null || echo "unknown")
@@ -92,6 +127,7 @@ REPLICATE_API_TOKEN="$REPLICATE_API_TOKEN" \
 REPLICATE_WEBHOOK_SECRET="$REPLICATE_WEBHOOK_SECRET" \
 Replicate__ApiToken="$Replicate__ApiToken" \
 Replicate__WebhookSecret="$Replicate__WebhookSecret" \
+ENABLE_REPLICATE_MOCK="$ENABLE_REPLICATE_MOCK" \
 nohup dotnet run --no-build --launch-profile https > ../logs/api.log 2>&1 &
 API_PID=$!
 echo $API_PID > ../logs/api.pid
@@ -138,7 +174,7 @@ echo "📱 Frontend:  http://localhost:4200"
 echo "🔧 API:       http://localhost:5032"
 echo "🔧 API Docs:  http://localhost:5032/swagger"
 echo "🔗 Ngrok:     https://clear-anteater-usually.ngrok-free.app"
-echo "🗄️  Database: localhost:1433 (sa/Dev123456!)"
+echo "🗄️  Database: localhost:1433 (sa/<hidden>)"
 echo ""
 echo "📊 Process IDs saved in logs/ directory"
 echo "📝 Logs available in logs/ directory"

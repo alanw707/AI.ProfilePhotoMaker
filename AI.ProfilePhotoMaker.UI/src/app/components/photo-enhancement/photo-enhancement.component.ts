@@ -188,13 +188,9 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       this.processingProgress = 30;
       this.processingStatus = 'Starting AI enhancement...';
 
-      // Convert relative URL to absolute URL for Replicate API
-      const fullImageUrl = uploadResult.url.startsWith('http')
-        ? uploadResult.url
-        : `https://awlocaldev.ngrok.app${uploadResult.url}`;
-
       const enhanceRequest = {
-        imageUrl: fullImageUrl,
+        // Pass through the URL; backend will convert to external HTTPS if needed
+        imageUrl: uploadResult.url,
         enhancementType: this.enhancementType,
       };
 

@@ -819,6 +819,19 @@ public class ReplicateController : ControllerBase
                 }
             });
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogError(ex, "Replicate authentication failed during photo enhancement for user {UserId}", userId);
+            return StatusCode(401, new
+            {
+                success = false,
+                error = new
+                {
+                    code = "ReplicateAuthFailed",
+                    message = "Enhancement failed to authenticate with Replicate. Verify API token configuration.",
+                }
+            });
+        }
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Network error during photo enhancement for user {UserId}", userId);
