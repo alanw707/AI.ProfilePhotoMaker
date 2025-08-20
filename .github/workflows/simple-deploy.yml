@@ -846,7 +846,8 @@ jobs:
               echo "📝 [INFO] This ensures production uses Azure Blob Storage (not Local Storage)"
               
               # Get storage health information
-              storage_health_response=$(curl -f -s --max-time 15 "$BACKEND_URL/api/health/storage" 2>/dev/null || echo "")
+              # Do not use -f so we can read JSON even if the endpoint returns 503 (Unhealthy)
+              storage_health_response=$(curl -s --max-time 15 "$BACKEND_URL/api/health/storage" 2>/dev/null || echo "")
               
               if [[ -n "$storage_health_response" ]]; then
                 echo "✅ [SUCCESS] Storage health endpoint accessible"
