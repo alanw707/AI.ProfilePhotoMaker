@@ -327,7 +327,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         _output.WriteLine($"Testing memory usage with user having {heavyUser.ProcessedImages.Count} images");
 
         // Measure memory usage of different methods
-        var memoryTests = new Dictionary<string, Func<Task<object>>>
+        var memoryTests = new Dictionary<string, Func<Task<object?>>>
         {
             ["GetByUserIdLightAsync (Optimized)"] = async () => await _repository.GetByUserIdLightAsync(heavyUser.UserId),
             ["GetByUserIdAsync (Full Load)"] = async () => await _repository.GetByUserIdAsync(heavyUser.UserId),
@@ -379,7 +379,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         var testUser = _testUsers.First(u => u.ProcessedImages.Count > 100);
         
         // Test queries that should benefit from indexes
-        var indexedQueries = new Dictionary<string, Func<Task<object>>>
+        var indexedQueries = new Dictionary<string, Func<Task<object?>>>
         {
             ["UserProfile by UserId (IX_UserProfiles_UserId)"] = 
                 async () => await _repository.GetByUserIdLightAsync(testUser.UserId),

@@ -103,7 +103,7 @@ public class PerformanceTestRunner : PerformanceTestBase
         var mediumUser = testUsers.Where(u => u.ProcessedImages.Count > 50 && u.ProcessedImages.Count < 500).First();
 
         // Test core repository methods
-        var queryTests = new Dictionary<string, Func<Task<object>>>
+        var queryTests = new Dictionary<string, Func<Task<object?>>>
         {
             ["GetByUserIdLightAsync"] = async () => await _repository.GetByUserIdLightAsync(heavyUser.UserId),
             ["GetUserProfileStatsAsync"] = async () => await _repository.GetUserProfileStatsAsync(heavyUser.UserId),
@@ -158,7 +158,7 @@ public class PerformanceTestRunner : PerformanceTestBase
         var heavyUser = testUsers.OrderByDescending(u => u.ProcessedImages.Count).First();
 
         // Compare memory usage of different approaches
-        var memoryTests = new Dictionary<string, Func<Task<object>>>
+        var memoryTests = new Dictionary<string, Func<Task<object?>>>
         {
             ["EagerLoading (GetByUserIdAsync)"] = async () => await _repository.GetByUserIdAsync(heavyUser.UserId),
             ["OptimizedLight (GetByUserIdLightAsync)"] = async () => await _repository.GetByUserIdLightAsync(heavyUser.UserId),

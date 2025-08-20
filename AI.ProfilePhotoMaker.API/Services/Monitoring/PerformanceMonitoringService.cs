@@ -70,7 +70,10 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
                 queue.Enqueue(metric);
                 // Keep only last 1000 entries per endpoint
                 while (queue.Count > 1000)
-                    queue.TryDequeue(out ApiRequestMetric _);
+                {
+                    ApiRequestMetric? _discard;
+                    queue.TryDequeue(out _discard);
+                }
                 return queue;
             });
 
@@ -120,7 +123,10 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
                 queue.Enqueue(metric);
                 // Keep only last 500 entries per query type/table
                 while (queue.Count > 500)
-                    queue.TryDequeue(out DatabaseQueryMetric _);
+                {
+                    DatabaseQueryMetric? _discard;
+                    queue.TryDequeue(out _discard);
+                }
                 return queue;
             });
 
@@ -157,7 +163,10 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
                 queue.Enqueue(metric);
                 // Keep only last 200 entries per service
                 while (queue.Count > 200)
-                    queue.TryDequeue(out ExternalServiceMetric _);
+                {
+                    ExternalServiceMetric? _discard;
+                    queue.TryDequeue(out _discard);
+                }
                 return queue;
             });
 
@@ -249,7 +258,7 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
         return metrics;
     }
 
-    public async Task<ResourceUtilizationDto> GetResourceUtilizationAsync()
+    public Task<ResourceUtilizationDto> GetResourceUtilizationAsync()
     {
         var utilization = new ResourceUtilizationDto
         {
@@ -293,7 +302,7 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
             };
 
             // CPU metrics
-            if (_cpuCounter != null)
+            if (_cpuCounter != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 var cpuUsage = _cpuCounter.NextValue();
                 utilization.Resources["CpuUsage"] = new ResourceMetricDto
@@ -346,7 +355,7 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
             utilization.CriticalIssues.Add($"Failed to collect resource metrics: {ex.Message}");
         }
 
-        return utilization;
+        return Task.FromResult(utilization);
     }
 
     public Activity StartOperation(string operationName, string? correlationId = null)
@@ -417,13 +426,16 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
 
         // Keep only last 1000 custom metrics
         while (_customMetrics.Count > 1000)
-            _customMetrics.TryDequeue(out CustomMetric _);
+        {
+            CustomMetric? _discard;
+            _customMetrics.TryDequeue(out _discard);
+        }
 
         // Track in Application Insights
         _telemetryClient.TrackMetric(name, value, tags);
     }
 
-    public async Task<double> GetErrorRateAsync(string endpoint, TimeSpan timeWindow)
+    public Task<double> GetErrorRateAsync(string endpoint, TimeSpan timeWindow)
     {
         var cutoff = DateTime.UtcNow - timeWindow;
         var totalRequests = 0;
@@ -438,10 +450,10 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
             failedRequests += recentMetrics.Count(m => m.StatusCode >= 400);
         }
 
-        return totalRequests > 0 ? (failedRequests * 100.0 / totalRequests) : 0;
+        return Task.FromResult(totalRequests > 0 ? (failedRequests * 100.0 / totalRequests) : 0);
     }
 
-    public async Task<double> GetAverageResponseTimeAsync(string endpoint, TimeSpan timeWindow)
+    public Task<double> GetAverageResponseTimeAsync(string endpoint, TimeSpan timeWindow)
     {
         var cutoff = DateTime.UtcNow - timeWindow;
         var responseTimes = new List<long>();
@@ -454,10 +466,10 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
             responseTimes.AddRange(recentMetrics.Select(m => m.Duration));
         }
 
-        return responseTimes.Count > 0 ? responseTimes.Average() : 0;
+        return Task.FromResult(responseTimes.Count > 0 ? responseTimes.Average() : 0);
     }
 
-    public async Task<double> GetThroughputAsync(TimeSpan timeWindow)
+    public Task<double> GetThroughputAsync(TimeSpan timeWindow)
     {
         var cutoff = DateTime.UtcNow - timeWindow;
         var totalRequests = 0;
@@ -467,7 +479,7 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
             totalRequests += queue.Count(m => m.Timestamp > cutoff);
         }
 
-        return totalRequests / timeWindow.TotalSeconds;
+        return Task.FromResult(totalRequests / timeWindow.TotalSeconds);
     }
 
     public async Task<List<PerformanceAlertDto>> CheckPerformanceAlertsAsync()
@@ -557,7 +569,7 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
 
     #region Private Helper Methods
 
-    private async Task PopulateApiMetricsAsync(ApiMetricsDto apiMetrics, DateTime from, DateTime to)
+    private Task PopulateApiMetricsAsync(ApiMetricsDto apiMetrics, DateTime from, DateTime to)
     {
         var allMetrics = new List<ApiRequestMetric>();
         foreach (var queue in _apiMetrics.Values)
@@ -619,9 +631,10 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
                 .GroupBy(m => m.StatusCode)
                 .ToDictionary(g => g.Key, g => (long)g.Count());
         }
+        return Task.CompletedTask;
     }
 
-    private async Task PopulateDatabaseMetricsAsync(DatabaseMetricsDto databaseMetrics, DateTime from, DateTime to)
+    private Task PopulateDatabaseMetricsAsync(DatabaseMetricsDto databaseMetrics, DateTime from, DateTime to)
     {
         var allMetrics = new List<DatabaseQueryMetric>();
         foreach (var queue in _databaseMetrics.Values)
@@ -663,9 +676,10 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
         }
 
         databaseMetrics.HealthStatus = "Healthy"; // This could be enhanced with actual health checks
+        return Task.CompletedTask;
     }
 
-    private async Task PopulateExternalServiceMetricsAsync(ExternalServicesMetricsDto externalServicesMetrics, DateTime from, DateTime to)
+    private Task PopulateExternalServiceMetricsAsync(ExternalServicesMetricsDto externalServicesMetrics, DateTime from, DateTime to)
     {
         foreach (var kvp in _externalServiceMetrics)
         {
@@ -715,9 +729,10 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
         {
             externalServicesMetrics.OverallHealth = "Healthy";
         }
+        return Task.CompletedTask;
     }
 
-    private async Task PopulateSystemMetricsAsync(SystemMetricsDto systemMetrics)
+    private Task PopulateSystemMetricsAsync(SystemMetricsDto systemMetrics)
     {
         try
         {
@@ -730,7 +745,9 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
                 PrivateMemory = _currentProcess.PrivateMemorySize64,
                 ManagedMemory = GC.GetTotalMemory(false),
                 PeakWorkingSet = _currentProcess.PeakWorkingSet64,
-                AvailableMemory = (long)(_memoryCounter?.NextValue() * 1024 * 1024 ?? 0)
+                AvailableMemory = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) 
+                    ? (long)((_memoryCounter?.NextValue() ?? 0) * 1024 * 1024) 
+                    : 0
             };
 
             var totalMemory = GetTotalPhysicalMemory();
@@ -747,7 +764,7 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
                 PrivilegedProcessorTime = _currentProcess.PrivilegedProcessorTime.TotalMilliseconds
             };
 
-            if (_cpuCounter != null)
+            if (_cpuCounter != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 systemMetrics.Cpu.UsagePercentage = _cpuCounter.NextValue();
             }
@@ -781,6 +798,7 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
         {
             _logger.LogError(ex, "Failed to collect system metrics");
         }
+        return Task.CompletedTask;
     }
 
     private void PopulateCustomMetrics(Dictionary<string, double> customMetrics, DateTime from, DateTime to)

@@ -292,6 +292,11 @@ public class ModelDiscoveryService : IModelDiscoveryService
                     _logger.LogInformation("Repairing version for model {ModelId}", model.ReplicateModelId);
 
                     // Get the actual version ID from Replicate API
+                    if (string.IsNullOrEmpty(model.ReplicateModelId))
+                    {
+                        _logger.LogWarning("Skipping model with empty ReplicateModelId during version repair");
+                        continue;
+                    }
                     var actualVersionId = await _replicateApiClient.GetModelVersionAsync(model.ReplicateModelId);
 
                     if (!string.IsNullOrEmpty(actualVersionId) && actualVersionId != model.TrainedModelVersion)
@@ -662,4 +667,3 @@ public class RepairedModelInfo
     public string? OldVersion { get; set; }
     public string? NewVersion { get; set; }
 }
-
