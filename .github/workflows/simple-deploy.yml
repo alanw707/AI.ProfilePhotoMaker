@@ -621,6 +621,14 @@ jobs:
           echo "frontend-url=$FRONTEND_URL" >> $GITHUB_OUTPUT
           echo "backend-url=$BACKEND_URL" >> $GITHUB_OUTPUT
           
+          # Export storage account name for later CORS validation
+          STORAGE_ACCOUNT=$(echo "$DEPLOYMENT_OUTPUTS" | jq -r '.storageAccountName.value // empty')
+          if [ -z "$STORAGE_ACCOUNT" ] || [ "$STORAGE_ACCOUNT" = "null" ]; then
+            echo "⚠️  [WARN] storageAccountName not found in outputs; falling back to known production account"
+            STORAGE_ACCOUNT="aipmstv16j74jubocuukg"
+          fi
+          echo "STORAGE_ACCOUNT=$STORAGE_ACCOUNT" >> $GITHUB_ENV
+          
           echo "📊 [INFO] Infrastructure outputs:"
           echo "  Registry: $REGISTRY_SERVER"
           echo "  Frontend: $FRONTEND_URL"
@@ -797,9 +805,52 @@ jobs:
             # Don't fail the deployment, but warn about potential issues
             echo ""
             echo "⚠️  [DECISION] Allowing deployment to continue with warnings"
-            echo "📝 [REASON] Storage issues can be fixed without full redeployment"
+          echo "📝 [REASON] Storage issues can be fixed without full redeployment"
           fi
           
+      - name: 🛡️ Validate Blob CORS (post-deploy)
+        run: |
+          set -e
+          echo "🛡️ [CORS] Validating Azure Blob CORS configuration for: $STORAGE_ACCOUNT"
+
+          echo "🔎 [CORS] Listing current CORS rules..."
+          az storage cors list --services b \
+            --account-name "$STORAGE_ACCOUNT" \
+            --auth-mode login \
+            --output json > cors.json
+
+          cat cors.json | jq '.' || true
+
+          REQUIRED_ORIGIN="https://app.aiprofilephotomaker.com"
+          if ! grep -q "$REQUIRED_ORIGIN" cors.json; then
+            echo "❌ [CORS] Required origin not found: $REQUIRED_ORIGIN"
+            exit 1
+          fi
+
+          TEST_BLOB_PATH="profile-images/prod/uploads/cors-validation.txt"
+          echo "🔎 [CORS] Performing OPTIONS preflight against $TEST_BLOB_PATH..."
+          RESPONSE_HEADERS=$(mktemp)
+          curl -s -D "$RESPONSE_HEADERS" -o /dev/null -X OPTIONS \
+            "https://$STORAGE_ACCOUNT.blob.core.windows.net/$TEST_BLOB_PATH" \
+            -H "Origin: $REQUIRED_ORIGIN" \
+            -H "Access-Control-Request-Method: GET"
+
+          if grep -q "403 CORS not enabled" "$RESPONSE_HEADERS"; then
+            echo "❌ [CORS] Preflight failed: CORS not enabled or no matching rule"
+            echo "--- Response ---"
+            cat "$RESPONSE_HEADERS"
+            exit 1
+          fi
+
+          if ! grep -qi "Access-Control-Allow-Origin: $REQUIRED_ORIGIN" "$RESPONSE_HEADERS"; then
+            echo "❌ [CORS] Missing Access-Control-Allow-Origin in preflight response"
+            echo "--- Response ---"
+            cat "$RESPONSE_HEADERS"
+            exit 1
+          fi
+
+          echo "✅ [CORS] Validation passed: Required origin and preflight behavior confirmed."
+
       - name: 🧪 Health Check
         run: |
           echo "🧪 [HEALTH] Performing health checks..."
