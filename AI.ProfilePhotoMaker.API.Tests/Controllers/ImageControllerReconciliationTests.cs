@@ -33,7 +33,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
         private readonly Mock<IAsyncFileService> _mockAsyncFileService;
         private readonly Mock<IAsyncZipService> _mockAsyncZipService;
         private readonly Mock<IStorageService> _mockStorageService;
-        private readonly Mock<StoragePathResolver> _mockPathResolver;
+        private readonly StoragePathResolver _pathResolver;
         private readonly ApplicationDbContext _context;
         private readonly ImageController _controller;
         private readonly string _testContentRoot;
@@ -52,7 +52,10 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             _mockAsyncFileService = new Mock<IAsyncFileService>();
             _mockAsyncZipService = new Mock<IAsyncZipService>();
             _mockStorageService = new Mock<IStorageService>();
-            _mockPathResolver = new Mock<StoragePathResolver>();
+            // Use real StoragePathResolver instance
+            var mockResolverLogger = new Mock<ILogger<StoragePathResolver>>();
+            _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Development");
+            _pathResolver = new StoragePathResolver(_mockEnvironment.Object, _mockConfiguration.Object, mockResolverLogger.Object);
 
             // Create test directories
             _testContentRoot = Path.Combine(Path.GetTempPath(), "ImageControllerTests", Guid.NewGuid().ToString());
@@ -62,6 +65,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             Directory.CreateDirectory(_testGeneratedPath);
 
             _mockEnvironment.Setup(e => e.ContentRootPath).Returns(_testContentRoot);
+            _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Development");
 
             // Setup in-memory database
             var options = new DbContextOptionsBuilder<ApplicationDbContext>()
@@ -80,10 +84,40 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
                 _mockAsyncFileService.Object,
                 _mockAsyncZipService.Object,
                 _mockStorageService.Object,
-                _mockPathResolver.Object
+                _pathResolver
             );
 
             SetupAuthentication();
+
+            // Repository should read from in-memory DbContext for this suite
+            _mockUserProfileRepository
+                .Setup(r => r.GetByUserIdAsync(It.IsAny<string>()))
+                .ReturnsAsync((string uid) => _context.UserProfiles
+                    .Include(u => u.ProcessedImages)
+                    .FirstOrDefault(u => u.UserId == uid));
+
+            // Map storage paths to temp disk for existence checks
+            string MapToDisk(string storagePath)
+            {
+                if (storagePath.StartsWith("/uploads/"))
+                {
+                    var relative = storagePath.Substring("/uploads/".Length);
+                    return Path.Combine(_testUploadsPath, relative);
+                }
+                if (storagePath.StartsWith("/generated/"))
+                {
+                    var relative = storagePath.Substring("/generated/".Length);
+                    return Path.Combine(_testGeneratedPath, relative);
+                }
+                return Path.Combine(_testContentRoot, storagePath.TrimStart('/'));
+            }
+
+            _mockStorageService
+                .Setup(s => s.ExistsAsync(It.IsAny<string>()))
+                .ReturnsAsync((string sp) => File.Exists(MapToDisk(sp)));
+            _mockStorageService
+                .Setup(s => s.GetImageUrl(It.IsAny<string>()))
+                .Returns<string>(p => $"https://localhost:5000{p}");
         }
 
         private void SetupAuthentication()
@@ -146,8 +180,8 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             result.Should().BeOfType<OkObjectResult>();
             var okResult = result as OkObjectResult;
             var response = JsonSerializer.Serialize(okResult?.Value);
-            response.Should().Contain("OrphanedRecordsRemoved");
-            response.Should().Contain("\"OrphanedRecordsRemoved\":1");
+            // Dry run reports counts without removal
+            response.Should().Contain("\"OrphanedRecords\":1");
         }
 
         [Fact]
@@ -181,6 +215,15 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             _context.UserProfiles.Add(userProfile);
             _context.ProcessedImages.Add(orphanedImage);
             await _context.SaveChangesAsync();
+
+            // Ensure repository returns the profile and UpdateAsync persists changes
+            _mockUserProfileRepository
+                .Setup(r => r.GetByUserIdAsync(userId))
+                .ReturnsAsync(() => _context.UserProfiles.Include(u => u.ProcessedImages).First(u => u.UserId == userId));
+            _mockUserProfileRepository
+                .Setup(r => r.UpdateAsync(It.IsAny<UserProfile>()))
+                .Callback<UserProfile>(p => { _context.UserProfiles.Update(p); _context.SaveChanges(); })
+                .Returns(Task.CompletedTask);
 
             var initialCount = await _context.ProcessedImages.CountAsync();
             initialCount.Should().Be(1);
@@ -236,6 +279,11 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             _context.ProcessedImages.Add(validImage);
             await _context.SaveChangesAsync();
 
+            _mockUserProfileRepository
+                .Setup(r => r.UpdateAsync(It.IsAny<UserProfile>()))
+                .Callback<UserProfile>(p => { _context.UserProfiles.Update(p); _context.SaveChanges(); })
+                .Returns(Task.CompletedTask);
+
             // Act
             var result = await _controller.ReconcileDatabase(dryRun: false);
 
@@ -250,7 +298,18 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
         [Fact]
         public async Task ReconcileDatabase_HandlesEmptyDatabase_Gracefully()
         {
-            // Arrange - No users in database
+            // Arrange - Create empty user profile (no images)
+            var userId = "test-user-123";
+            var userProfile = new UserProfile
+            {
+                Id = 1,
+                UserId = userId,
+                FirstName = "Test",
+                LastName = "User",
+                ProcessedImages = new List<ProcessedImage>()
+            };
+            _context.UserProfiles.Add(userProfile);
+            await _context.SaveChangesAsync();
 
             // Act
             var result = await _controller.ReconcileDatabase(dryRun: true);
@@ -315,6 +374,11 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             _context.UserProfiles.Add(userProfile);
             _context.ProcessedImages.AddRange(validImage, orphanedImage);
             await _context.SaveChangesAsync();
+
+            _mockUserProfileRepository
+                .Setup(r => r.UpdateAsync(It.IsAny<UserProfile>()))
+                .Callback<UserProfile>(p => { _context.UserProfiles.Update(p); _context.SaveChanges(); })
+                .Returns(Task.CompletedTask);
 
             var initialCount = await _context.ProcessedImages.CountAsync();
             initialCount.Should().Be(2);

@@ -94,7 +94,13 @@ public class AtomicImageService : IAtomicImageService
         var uploadedStoragePaths = new List<string>();
         var createdImages = new List<ProcessedImage>();
 
-        using var transaction = await _context.Database.BeginTransactionAsync();
+        IDbContextTransaction? transaction = null;
+        var providerName = _context.Database.ProviderName ?? string.Empty;
+        var isInMemory = providerName.Contains("InMemory", StringComparison.OrdinalIgnoreCase);
+        if (!isInMemory)
+        {
+            transaction = await _context.Database.BeginTransactionAsync();
+        }
         
         try
         {
@@ -196,7 +202,10 @@ public class AtomicImageService : IAtomicImageService
             }
 
             // Step 4: Commit transaction
-            await transaction.CommitAsync();
+            if (transaction != null)
+            {
+                await transaction.CommitAsync();
+            }
 
             // Success!
             result.Success = true;
@@ -214,7 +223,10 @@ public class AtomicImageService : IAtomicImageService
             _logger.LogError(ex, "Atomic upload failed for user {UserId}", userId);
             
             // Rollback transaction (this also happens automatically on dispose)
-            await transaction.RollbackAsync();
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync();
+            }
             
             // Cleanup storage files
             await CleanupStorageFilesAsync(uploadedStoragePaths);
@@ -241,7 +253,13 @@ public class AtomicImageService : IAtomicImageService
         var imagesToDelete = new List<ProcessedImage>();
         var storagePathsToDelete = new List<string>();
 
-        using var transaction = await _context.Database.BeginTransactionAsync();
+        IDbContextTransaction? transaction = null;
+        var providerName = _context.Database.ProviderName ?? string.Empty;
+        var isInMemory = providerName.Contains("InMemory", StringComparison.OrdinalIgnoreCase);
+        if (!isInMemory)
+        {
+            transaction = await _context.Database.BeginTransactionAsync();
+        }
         
         try
         {
@@ -330,12 +348,25 @@ public class AtomicImageService : IAtomicImageService
                     
                     // Storage deletion failed - rollback database changes
                     result.ErrorMessage = $"Failed to delete storage file {storagePath}: {ex.Message}";
+                    // If no real transaction (e.g., InMemory provider), manually restore DB state
+                    if (transaction == null)
+                    {
+                        foreach (var img in imagesToDelete)
+                        {
+                            profile.ProcessedImages.Add(img);
+                        }
+                        await _context.SaveChangesAsync();
+                        result.DatabaseRecordsDeleted = 0;
+                    }
                     return result;
                 }
             }
 
             // Step 4: Commit transaction
-            await transaction.CommitAsync();
+            if (transaction != null)
+            {
+                await transaction.CommitAsync();
+            }
 
             // Success!
             result.Success = true;
@@ -352,7 +383,10 @@ public class AtomicImageService : IAtomicImageService
             _logger.LogError(ex, "Atomic delete failed for user {UserId}", userId);
             
             // Rollback transaction
-            await transaction.RollbackAsync();
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync();
+            }
             
             result.ErrorMessage = $"Atomic delete failed: {ex.Message}";
             return result;

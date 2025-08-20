@@ -64,28 +64,12 @@ public class ReplicateApiClient : IReplicateApiClient
     {
         try
         {
-            // Mock mode: short-circuit with a simulated successful result
+            // Mock mode: return a simulated model name without external calls
             if (_mockEnabled)
             {
-                var outputArray = new[] { imageUrl };
-                var json = System.Text.Json.JsonSerializer.SerializeToElement(outputArray);
-                var mock = new ReplicatePredictionResult
-                {
-                    Id = $"mock-{Guid.NewGuid():N}",
-                    Version = "mock",
-                    Status = "succeeded",
-                    Input = new Dictionary<string, object>
-                    {
-                        ["input_image"] = imageUrl,
-                        ["prompt"] = GetEnhancementPrompt(enhancementType)
-                    },
-                    Output = json,
-                    CreatedAt = DateTime.UtcNow,
-                    StartedAt = DateTime.UtcNow,
-                    CompletedAt = DateTime.UtcNow
-                };
-                s_mockPredictions[mock.Id!] = mock;
-                return mock;
+                var fullModelName = $"mock/{modelName}";
+                _logger.LogInformation("[Mock] Returning model name {Model}", fullModelName);
+                return fullModelName;
             }
             var modelRequest = new
             {
