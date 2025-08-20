@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.177.2456",
-      "templateHash": "16281682728686876266"
+      "templateHash": "12003756255414236357"
     }
   },
   "parameters": {
@@ -20,6 +20,10 @@
     "location": {
       "type": "string",
       "defaultValue": "[resourceGroup().location]"
+    },
+    "imageTag": {
+      "type": "string",
+      "defaultValue": "latest"
     },
     "sqlAdminPassword": {
       "type": "securestring"
@@ -46,6 +50,24 @@
       "type": "securestring",
       "metadata": {
         "description": "Replicate webhook secret for signature validation"
+      }
+    },
+    "stripeSecretKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Stripe secret key for payment processing"
+      }
+    },
+    "stripePublishableKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Stripe publishable key for frontend payment processing"
+      }
+    },
+    "stripeWebhookSecret": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Stripe webhook secret for payment event validation"
       }
     }
   },
@@ -260,6 +282,39 @@
       ]
     },
     {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-02-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'StripeSecretKey')]",
+      "properties": {
+        "value": "[parameters('stripeSecretKey')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-02-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'StripePublishableKey')]",
+      "properties": {
+        "value": "[parameters('stripePublishableKey')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-02-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'StripeWebhookSecret')]",
+      "properties": {
+        "value": "[parameters('stripeWebhookSecret')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
       "type": "Microsoft.App/managedEnvironments",
       "apiVersion": "2023-05-01",
       "name": "[variables('containerEnvName')]",
@@ -336,6 +391,18 @@
             {
               "name": "replicate-webhook-secret",
               "value": "[parameters('replicateWebhookSecret')]"
+            },
+            {
+              "name": "stripe-secret-key",
+              "value": "[parameters('stripeSecretKey')]"
+            },
+            {
+              "name": "stripe-publishable-key",
+              "value": "[parameters('stripePublishableKey')]"
+            },
+            {
+              "name": "stripe-webhook-secret",
+              "value": "[parameters('stripeWebhookSecret')]"
             }
           ]
         },
@@ -343,7 +410,7 @@
           "containers": [
             {
               "name": "api",
-              "image": "[format('{0}/aiprofilemaker-api:latest', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').loginServer)]",
+              "image": "[format('{0}/aiprofilemaker-api:{1}', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').loginServer, parameters('imageTag'))]",
               "resources": {
                 "cpu": "[json('0.5')]",
                 "memory": "1Gi"
@@ -370,8 +437,16 @@
                   "secretRef": "replicate-webhook-secret"
                 },
                 {
+                  "name": "ConnectionStrings__AzureStorage",
+                  "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2023-01-01').keys[0].value)]"
+                },
+                {
                   "name": "AzureStorage__ConnectionString",
                   "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2023-01-01').keys[0].value)]"
+                },
+                {
+                  "name": "AzureStorage__ContainerName",
+                  "value": "profile-images"
                 },
                 {
                   "name": "ApplicationInsights__ConnectionString",
@@ -404,6 +479,30 @@
                 {
                   "name": "Authentication__Google__ClientSecret",
                   "secretRef": "google-client-secret"
+                },
+                {
+                  "name": "STRIPE_SECRET_KEY",
+                  "secretRef": "stripe-secret-key"
+                },
+                {
+                  "name": "STRIPE_PUBLISHABLE_KEY",
+                  "secretRef": "stripe-publishable-key"
+                },
+                {
+                  "name": "STRIPE_WEBHOOK_SECRET",
+                  "secretRef": "stripe-webhook-secret"
+                },
+                {
+                  "name": "Stripe__SecretKey",
+                  "secretRef": "stripe-secret-key"
+                },
+                {
+                  "name": "Stripe__PublishableKey",
+                  "secretRef": "stripe-publishable-key"
+                },
+                {
+                  "name": "Stripe__WebhookSecret",
+                  "secretRef": "stripe-webhook-secret"
                 }
               ],
               "probes": [
@@ -504,7 +603,7 @@
           "containers": [
             {
               "name": "web",
-              "image": "[format('{0}/aiprofilemaker-web:latest', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').loginServer)]",
+              "image": "[format('{0}/aiprofilemaker-web:{1}', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName')), '2023-07-01').loginServer, parameters('imageTag'))]",
               "resources": {
                 "cpu": "[json('0.25')]",
                 "memory": "0.5Gi"

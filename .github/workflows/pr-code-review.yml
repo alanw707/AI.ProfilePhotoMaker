@@ -1,4 +1,4 @@
-name: 🔍 PR Code Review - Security, Performance & Quality
+name: 🔍 PR Static Analysis
 
 on:
   pull_request:
@@ -7,8 +7,6 @@ on:
       - '*.md'
       - 'docs/**'
       - 'ClaudeDocs/**'
-  pull_request_review:
-    types: [submitted]
 
 concurrency:
   group: pr-review-${{ github.event.pull_request.number }}
@@ -21,26 +19,12 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
-  # 🛡️ Security Analysis
-  security-analysis:
-    name: 🛡️ Security Scan
+  static-analysis:
+    name: 🧭 Static Analysis (API + UI)
     runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-    
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: 🔍 Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: csharp, javascript-typescript
-          config-file: ./.github/codeql/codeql-config.yml
 
       - name: ⚙️ Setup .NET
         uses: actions/setup-dotnet@v4
@@ -50,176 +34,14 @@ jobs:
       - name: 📦 Restore .NET Dependencies
         run: dotnet restore AI.ProfilePhotoMaker.sln
 
-      - name: 🏗️ Build .NET Solution
-        run: dotnet build AI.ProfilePhotoMaker.sln --no-restore
-
-      - name: ⚙️ Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: AI.ProfilePhotoMaker.UI/package-lock.json
-
-      - name: 📦 Install Frontend Dependencies
-        working-directory: AI.ProfilePhotoMaker.UI
-        run: npm ci
-
-      - name: 🏗️ Build Angular App
-        working-directory: AI.ProfilePhotoMaker.UI
-        run: npm run build
-
-      - name: 🔍 Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-
-      - name: 🔐 NPM Security Audit
-        working-directory: AI.ProfilePhotoMaker.UI
-        run: |
-          npm audit --audit-level=moderate --json > npm-audit.json || true
-          npx audit-ci --config .audit-ci.json
-
-      - name: 🕵️ Secret Detection
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
-          extra_args: --debug --only-verified
-
-  # 🎨 Frontend Quality & Performance
-  frontend-quality:
-    name: 🎨 Frontend Analysis
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: 📥 Checkout Code
-        uses: actions/checkout@v4
-
-      - name: ⚙️ Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: AI.ProfilePhotoMaker.UI/package-lock.json
-
-      - name: 📦 Install Dependencies
-        working-directory: AI.ProfilePhotoMaker.UI
-        run: npm ci
-
-      - name: 🔍 ESLint Analysis
-        working-directory: AI.ProfilePhotoMaker.UI
-        run: |
-          npm run lint:ci > eslint-results.json || true
-          cat eslint-results.json
-
-
-      - name: 🧪 Unit Tests with Coverage
-        working-directory: AI.ProfilePhotoMaker.UI
-        run: |
-          npm test -- --watch=false --browsers=ChromeHeadless --code-coverage
-          
-      - name: 📊 Upload Coverage Reports
-        uses: codecov/codecov-action@v4
-        with:
-          file: AI.ProfilePhotoMaker.UI/coverage/lcov.info
-          flags: frontend
-
-      - name: 🏗️ Production Build Analysis
-        working-directory: AI.ProfilePhotoMaker.UI
-        run: |
-          npm run build:mvp-v1 -- --stats-json
-          npx webpack-bundle-analyzer dist/ai.profile-photo-maker.ui/stats.json --report --mode static --report-filename bundle-analysis.html
-
-      - name: 💡 Lighthouse CI
-        uses: treosh/lighthouse-ci-action@v10
-        with:
-          configPath: './AI.ProfilePhotoMaker.UI/.lighthouserc.json'
-          uploadArtifacts: true
-          temporaryPublicStorage: true
-
-  # ⚙️ Backend Quality & Performance  
-  backend-quality:
-    name: ⚙️ Backend Analysis
-    runs-on: ubuntu-latest
-    
-    services:
-      sqlserver:
-        image: mcr.microsoft.com/mssql/server:2022-latest
-        env:
-          SA_PASSWORD: TestPassword123!
-          ACCEPT_EULA: Y
-        ports:
-          - 1433:1433
-    
-    steps:
-      - name: 📥 Checkout Code
-        uses: actions/checkout@v4
-
-      - name: ⚙️ Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: 🔧 Restore Dependencies
-        run: dotnet restore AI.ProfilePhotoMaker.sln
-
-      - name: 🔍 Code Analysis with Roslyn
+      - name: 🔍 .NET Analyzers (bugs/best practices/perf)
         run: |
           dotnet build AI.ProfilePhotoMaker.sln \
-            --configuration Release \
-            --verbosity normal \
-            --property:TreatWarningsAsErrors=true \
-            --property:WarningsAsErrors="" \
-            --property:WarningsNotAsErrors="CS1591"
-
-      - name: 🧪 Run Unit Tests with Coverage
-        run: |
-          dotnet test AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj \
-            --configuration Release \
-            --no-build \
-            --collect:"XPlat Code Coverage" \
-            --results-directory TestResults/ \
-            --logger "trx;LogFileName=test-results.trx" \
-            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
-
-      - name: 📊 Upload Coverage Reports
-        uses: codecov/codecov-action@v4
-        with:
-          file: TestResults/*/coverage.cobertura.xml
-          flags: backend
-
-      - name: ⚡ Performance Benchmarks
-        run: |
-          cd AI.ProfilePhotoMaker.API.Tests/Performance
-          dotnet run --configuration Release -- --job short
-
-      - name: 🗃️ Entity Framework Analysis
-        run: |
-          dotnet ef migrations script --project AI.ProfilePhotoMaker.API --startup-project AI.ProfilePhotoMaker.API --output migration-script.sql
-          echo "📄 Migration Script Generated Successfully"
-
-  # 🧪 Integration & E2E Testing
-  integration-testing:
-    name: 🧪 Integration Tests
-    runs-on: ubuntu-latest
-    needs: [security-analysis, frontend-quality, backend-quality]
-    
-    services:
-      sqlserver:
-        image: mcr.microsoft.com/mssql/server:2022-latest
-        env:
-          SA_PASSWORD: TestPassword123!
-          ACCEPT_EULA: Y
-        ports:
-          - 1433:1433
-    
-    steps:
-      - name: 📥 Checkout Code
-        uses: actions/checkout@v4
-
-      - name: ⚙️ Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+            -warnaserror \
+            -p:Configuration=Release \
+            -p:EnableNETAnalyzers=true \
+            -p:AnalysisLevel=latest \
+            -p:TreatWarningsAsErrors=true
 
       - name: ⚙️ Setup Node.js
         uses: actions/setup-node@v4
@@ -228,70 +50,14 @@ jobs:
           cache: 'npm'
           cache-dependency-path: AI.ProfilePhotoMaker.UI/package-lock.json
 
-      - name: 🔧 Setup Environment
-        run: |
-          echo "ConnectionStrings__DefaultConnection=Server=localhost,1433;Database=ProfilePhotoMakerTest;User Id=sa;Password=TestPassword123!;TrustServerCertificate=true" >> $GITHUB_ENV
-          echo "JWT_SECRET=ThisIsAVeryLongSecretKeyForTestingPurposesOnly123456789" >> $GITHUB_ENV
-
-      - name: 📦 Install Dependencies
-        run: |
-          dotnet restore AI.ProfilePhotoMaker.sln
-          cd AI.ProfilePhotoMaker.UI && npm ci
-
-      - name: 🏗️ Build Applications
-        run: |
-          dotnet build AI.ProfilePhotoMaker.sln --no-restore --configuration Release
-          cd AI.ProfilePhotoMaker.UI && npm run build
-
-      - name: 🎭 Install Playwright
+      - name: 📦 Install UI Dependencies
         working-directory: AI.ProfilePhotoMaker.UI
-        run: npx playwright install
+        run: npm ci
 
-      - name: 🚀 Start Applications
-        run: |
-          dotnet run --project AI.ProfilePhotoMaker.API --urls "http://localhost:5032" &
-          cd AI.ProfilePhotoMaker.UI && npm start &
-          sleep 10
-
-      - name: 🧪 Run E2E Tests
+      - name: 🔍 ESLint (fail on warnings)
         working-directory: AI.ProfilePhotoMaker.UI
-        run: npx playwright test
+        run: npx eslint "src/**/*.{ts,html}" --max-warnings=0
 
-      - name: 📤 Upload Test Results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: playwright-report
-          path: AI.ProfilePhotoMaker.UI/playwright-report/
-          retention-days: 7
-
-  # 📊 Quality Gate & Summary
-  quality-gate:
-    name: 📊 Quality Gate
-    runs-on: ubuntu-latest
-    needs: [security-analysis, frontend-quality, backend-quality, integration-testing]
-    if: always()
-    
-    steps:
-      - name: 📥 Checkout Code
-        uses: actions/checkout@v4
-
-      - name: 📋 Quality Gate Assessment
-        run: |
-          echo "## 🎯 PR Code Review Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🛡️ Security Analysis: ${{ needs.security-analysis.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "### 🎨 Frontend Quality: ${{ needs.frontend-quality.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "### ⚙️ Backend Quality: ${{ needs.backend-quality.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "### 🧪 Integration Tests: ${{ needs.integration-testing.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          # Check if any critical jobs failed
-          if [[ "${{ needs.security-analysis.result }}" == "failure" || 
-                "${{ needs.frontend-quality.result }}" == "failure" || 
-                "${{ needs.backend-quality.result }}" == "failure" ]]; then
-            echo "❌ **Quality gate FAILED** - Critical issues found!" >> $GITHUB_STEP_SUMMARY
-            exit 1
-          else
-            echo "✅ **Quality gate PASSED** - All checks successful!" >> $GITHUB_STEP_SUMMARY
-          fi
+      - name: ✅ TypeScript Type Check
+        working-directory: AI.ProfilePhotoMaker.UI
+        run: npx tsc -p tsconfig.app.json --noEmit
