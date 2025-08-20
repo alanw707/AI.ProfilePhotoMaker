@@ -44,7 +44,8 @@ public class AzureBlobStorageService : BaseStorageService
                 }
             };
 
-            await blobClient.UploadAsync(imageStream, uploadOptions, overwrite: true);
+            await blobClient.DeleteIfExistsAsync();
+            await blobClient.UploadAsync(imageStream, uploadOptions);
 
             LogOperation(LogLevel.Information, "SaveImageAsync", blobPath);
             return blobPath;
@@ -90,7 +91,8 @@ public class AzureBlobStorageService : BaseStorageService
                 }
             };
 
-            await blobClient.UploadAsync(imageStream, uploadOptions, overwrite: true);
+            await blobClient.DeleteIfExistsAsync();
+            await blobClient.UploadAsync(imageStream, uploadOptions);
 
             LogOperation(LogLevel.Information, "SaveImageToPathAsync", storagePath);
             return storagePath;
@@ -410,6 +412,7 @@ public class AzureBlobStorageService : BaseStorageService
                 }
             };
 
+            await blobClient.DeleteIfExistsAsync();
             await blobClient.UploadAsync(zipStream, blobUploadOptions);
 
             LogOperation(LogLevel.Information, "SaveZipAsync", storagePath);
