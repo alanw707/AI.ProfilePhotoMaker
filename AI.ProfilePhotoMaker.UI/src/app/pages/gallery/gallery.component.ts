@@ -9,6 +9,7 @@ import {
 } from '../../components/photo-gallery/photo-gallery.component';
 import { FileUploadService, ProcessedImage } from '../../services/file-upload.service';
 import jsZip from 'jszip';
+import { ConfigService } from '../../services/config.service';
 
 @Component({
   selector: 'app-gallery',
@@ -31,7 +32,8 @@ export class GalleryComponent implements OnInit {
     private _router: Router,
     private _route: ActivatedRoute,
     private _fileUploadService: FileUploadService,
-    private _cdr: ChangeDetectorRef
+    private _cdr: ChangeDetectorRef,
+    private _config: ConfigService
   ) {}
 
   ngOnInit() {
@@ -213,13 +215,17 @@ export class GalleryComponent implements OnInit {
       const imageUrl = image.downloadUrl || image.url;
 
       // Try fetch with CORS mode (required for blob downloads)
+      const env = this._config.getCurrentEnvironment();
+      const isProdLike = env === 'production' || env === 'test';
+      const headers = isProdLike
+        ? {}
+        : ({ 'ngrok-skip-browser-warning': 'true' } as Record<string, string>);
+
       const response = await fetch(imageUrl, {
         mode: 'cors',
         cache: 'no-cache',
         credentials: 'omit',
-        headers: {
-          'ngrok-skip-browser-warning': 'true',
-        },
+        headers,
       });
 
       if (!response.ok) {

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.177.2456",
-      "templateHash": "12003756255414236357"
+      "templateHash": "6018294520685048455"
     }
   },
   "parameters": {
@@ -156,7 +156,41 @@
       "type": "Microsoft.Storage/storageAccounts/blobServices",
       "apiVersion": "2023-01-01",
       "name": "[format('{0}/{1}', variables('storageAccountName'), 'default')]",
+      "properties": {
+        "cors": {
+          "corsRules": [
+            {
+              "allowedOrigins": [
+                "https://app.aiprofilephotomaker.com",
+                "https://aiprofilephotomaker.com",
+                "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('frontendAppName')), '2023-05-01').configuration.ingress.fqdn)]",
+                "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('backendAppName')), '2023-05-01').configuration.ingress.fqdn)]",
+                "http://localhost:4200",
+                "http://localhost:5173"
+              ],
+              "allowedMethods": [
+                "GET",
+                "HEAD",
+                "OPTIONS"
+              ],
+              "allowedHeaders": [
+                "*"
+              ],
+              "exposedHeaders": [
+                "Content-Length",
+                "Content-Type",
+                "Last-Modified",
+                "ETag",
+                "x-ms-*"
+              ],
+              "maxAgeInSeconds": 3600
+            }
+          ]
+        }
+      },
       "dependsOn": [
+        "[resourceId('Microsoft.App/containerApps', variables('backendAppName'))]",
+        "[resourceId('Microsoft.App/containerApps', variables('frontendAppName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
       ]
     },
@@ -555,7 +589,6 @@
         "[resourceId('Microsoft.Insights/components', variables('applicationInsightsName'))]",
         "[resourceId('Microsoft.App/managedEnvironments', variables('containerEnvName'))]",
         "[resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName'))]",
-        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
         "[resourceId('Microsoft.Sql/servers/databases', variables('sqlServerName'), format('{0}db', parameters('appName')))]",
         "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"

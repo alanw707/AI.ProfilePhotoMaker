@@ -35,7 +35,16 @@ public class AzureBlobStorageService : BaseStorageService
             var blobPath = GenerateUserStoragePath(userId, fileName, folderType);
             var blobClient = containerClient.GetBlobClient(blobPath);
 
-            await blobClient.UploadAsync(imageStream, overwrite: true);
+            var contentType = GetContentType(Path.GetExtension(fileName));
+            var uploadOptions = new BlobUploadOptions
+            {
+                HttpHeaders = new BlobHttpHeaders
+                {
+                    ContentType = contentType
+                }
+            };
+
+            await blobClient.UploadAsync(imageStream, uploadOptions, overwrite: true);
 
             LogOperation(LogLevel.Information, "SaveImageAsync", blobPath);
             return blobPath;
@@ -72,7 +81,16 @@ public class AzureBlobStorageService : BaseStorageService
 
             var blobClient = containerClient.GetBlobClient(blobPath.TrimStart('/'));
 
-            await blobClient.UploadAsync(imageStream, overwrite: true);
+            var contentType = GetContentType(Path.GetExtension(blobPath));
+            var uploadOptions = new BlobUploadOptions
+            {
+                HttpHeaders = new BlobHttpHeaders
+                {
+                    ContentType = contentType
+                }
+            };
+
+            await blobClient.UploadAsync(imageStream, uploadOptions, overwrite: true);
 
             LogOperation(LogLevel.Information, "SaveImageToPathAsync", storagePath);
             return storagePath;

@@ -129,13 +129,13 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01'
         {
           // Production and app domains
           allowedOrigins: [
-            'https://app.aiprofilephotomaker.com',
-            'https://aiprofilephotomaker.com',
+            'https://app.aiprofilephotomaker.com'
+            'https://aiprofilephotomaker.com'
             // Container Apps default FQDNs (resolved at deploy time)
-            'https://${frontendApp.properties.configuration.ingress.fqdn}',
-            'https://${backendApp.properties.configuration.ingress.fqdn}',
+            'https://${frontendApp.properties.configuration.ingress.fqdn}'
+            'https://${backendApp.properties.configuration.ingress.fqdn}'
             // Local development convenience
-            'http://localhost:4200',
+            'http://localhost:4200'
             'http://localhost:5173'
           ]
           // Allow typical read methods from the browser
@@ -290,14 +290,6 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01'
 resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: backendAppName
   location: location
-  dependsOn: [
-    containerAppsEnvironment
-    containerRegistry
-    sqlServer
-    sqlDatabase
-    storageAccount
-    keyVault
-  ]
   identity: {
     type: 'SystemAssigned'
   }
@@ -525,8 +517,6 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: frontendAppName
   location: location
   dependsOn: [
-    containerAppsEnvironment
-    containerRegistry
     backendApp  // Deploy after backend to avoid circular dependency during updates
   ]
   identity: {
