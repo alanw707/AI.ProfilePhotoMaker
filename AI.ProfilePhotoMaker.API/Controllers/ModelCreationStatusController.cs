@@ -1,5 +1,6 @@
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
+using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,13 +18,16 @@ public class ModelCreationStatusController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<ModelCreationStatusController> _logger;
+    private readonly IReplicateApiClient _replicateApiClient;
 
     public ModelCreationStatusController(
         ApplicationDbContext context,
-        ILogger<ModelCreationStatusController> logger)
+        ILogger<ModelCreationStatusController> logger,
+        IReplicateApiClient replicateApiClient)
     {
         _context = context;
         _logger = logger;
+        _replicateApiClient = replicateApiClient;
     }
 
     private string? GetCurrentUserId()
@@ -55,9 +59,15 @@ public class ModelCreationStatusController : ControllerBase
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
 
-            // Find the most recent completed model
+            // Find the most recent completed model and validate against Replicate
             var completedModel = modelRequests
                 .FirstOrDefault(r => r.Status == ModelCreationStatus.Ready && !string.IsNullOrEmpty(r.TrainedModelVersion));
+
+            // Validate completed model against Replicate API to ensure it still exists
+            if (completedModel != null && !string.IsNullOrEmpty(completedModel.ReplicateModelId))
+            {
+                await ValidateModelStatusAsync(completedModel);
+            }
 
             // ModelCreationRequest is now the single source of truth for model data
 
@@ -122,6 +132,12 @@ public class ModelCreationStatusController : ControllerBase
                     message = "Model creation request not found",
                     error = new { code = "NotFound", message = $"Request ID {requestId} not found" }
                 });
+            }
+
+            // Validate against Replicate API if model is marked as Ready
+            if (modelRequest.Status == ModelCreationStatus.Ready && !string.IsNullOrEmpty(modelRequest.ReplicateModelId))
+            {
+                await ValidateModelStatusAsync(modelRequest);
             }
 
             return Ok(new
@@ -237,6 +253,47 @@ public class ModelCreationStatusController : ControllerBase
                 message = "Error retrieving model creation requests",
                 error = new { code = "InternalError", message = ex.Message }
             });
+        }
+    }
+
+    /// <summary>
+    /// Validates model status against Replicate API and updates database if model no longer exists
+    /// </summary>
+    private async Task ValidateModelStatusAsync(ModelCreationRequest modelRequest)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(modelRequest.ReplicateModelId))
+            {
+                _logger.LogWarning("Cannot validate model: ReplicateModelId is null or empty for request {RequestId}", modelRequest.Id);
+                return;
+            }
+
+            _logger.LogInformation("Validating model {ModelId} against Replicate API", modelRequest.ReplicateModelId);
+            
+            bool modelExists = await _replicateApiClient.CheckModelExistsAsync(modelRequest.ReplicateModelId);
+            
+            if (!modelExists)
+            {
+                _logger.LogWarning("Model {ModelId} no longer exists on Replicate, updating status to Failed", modelRequest.ReplicateModelId);
+                
+                // Update model status to Failed since it was deleted from Replicate
+                modelRequest.Status = ModelCreationStatus.Failed;
+                modelRequest.ErrorMessage = "Model was deleted from Replicate externally";
+                
+                // Save changes to database
+                _context.ModelCreationRequests.Update(modelRequest);
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                _logger.LogInformation("Model {ModelId} validated successfully on Replicate", modelRequest.ReplicateModelId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating model {ModelId} against Replicate API", modelRequest.ReplicateModelId);
+            // Don't fail the entire request if validation fails, just log the error
         }
     }
 }

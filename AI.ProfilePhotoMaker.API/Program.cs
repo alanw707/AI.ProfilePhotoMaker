@@ -390,7 +390,6 @@ builder.Services.AddDeploymentValidation(builder.Configuration);
 builder.Services.ConfigureDeploymentValidation(builder.Configuration, builder.Environment);
 
 // Register background services
-builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelCreationPollingService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.BasicTierBackgroundService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelExpirationBackgroundService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.RetentionPolicyBackgroundService>();
