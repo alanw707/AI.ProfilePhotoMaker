@@ -16,11 +16,14 @@ namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 /// </summary>
 public class ReplicateApiClient : IReplicateApiClient
 {
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, ReplicatePredictionResult> s_mockPredictions
+        = new();
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
     private readonly ILogger<ReplicateApiClient> _logger;
     private readonly ApplicationDbContext _context;
     private readonly IWebhookUrlResolver _webhookUrlResolver;
+    private readonly bool _mockEnabled;
 
     public ReplicateApiClient(
         HttpClient httpClient,
@@ -34,15 +37,20 @@ public class ReplicateApiClient : IReplicateApiClient
         _logger = logger;
         _context = context;
         _webhookUrlResolver = webhookUrlResolver;
+        _mockEnabled = (Environment.GetEnvironmentVariable("ENABLE_REPLICATE_MOCK") ?? string.Empty)
+            .Equals("true", StringComparison.OrdinalIgnoreCase);
 
         // Configure HTTP client
         _httpClient.BaseAddress = new Uri("https://api.replicate.com/v1/");
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-        // Add API token from configuration
-        string apiToken = _configuration["Replicate:ApiToken"]
-            ?? throw new InvalidOperationException("Replicate API token not configured");
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Token", apiToken);
+        // Add API token from configuration unless in mock mode
+        if (!_mockEnabled)
+        {
+            string apiToken = _configuration["Replicate:ApiToken"]
+                ?? throw new InvalidOperationException("Replicate API token not configured");
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Token", apiToken);
+        }
     }
 
     /// <summary>
@@ -56,6 +64,13 @@ public class ReplicateApiClient : IReplicateApiClient
     {
         try
         {
+            // Mock mode: return a simulated model name without external calls
+            if (_mockEnabled)
+            {
+                var fullModelName = $"mock/{modelName}";
+                _logger.LogInformation("[Mock] Returning model name {Model}", fullModelName);
+                return fullModelName;
+            }
             var modelRequest = new
             {
                 owner = "alanw707",
@@ -405,6 +420,22 @@ public class ReplicateApiClient : IReplicateApiClient
     {
         try
         {
+            if (_mockEnabled)
+            {
+                if (s_mockPredictions.TryGetValue(predictionId, out var cached))
+                {
+                    return cached;
+                }
+                // Unknown mock id: return a generic succeeded response
+                return new ReplicatePredictionResult
+                {
+                    Id = predictionId,
+                    Version = "mock",
+                    Status = "succeeded",
+                    CreatedAt = DateTime.UtcNow.AddSeconds(-2),
+                    CompletedAt = DateTime.UtcNow
+                };
+            }
             var response = await _httpClient.GetAsync($"predictions/{predictionId}");
 
             if (!response.IsSuccessStatusCode)
@@ -875,8 +906,30 @@ public class ReplicateApiClient : IReplicateApiClient
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Replicate Kontext Pro enhancement failed: {ErrorContent}", errorContent);
-                throw new Exception($"Failed to create Kontext Pro enhancement prediction: {response.StatusCode}, {errorContent}");
+                _logger.LogError(
+                    "Replicate Kontext Pro enhancement failed. Status: {StatusCode}. Body: {ErrorContent}",
+                    (int)response.StatusCode,
+                    errorContent);
+
+                switch (response.StatusCode)
+                {
+                    case HttpStatusCode.Unauthorized:
+                        throw new UnauthorizedAccessException(
+                            "Replicate API authentication failed. Check REPLICATE_API_TOKEN.");
+                    case HttpStatusCode.PaymentRequired:
+                        throw new InvalidOperationException(
+                            "Replicate API payment required. Please check billing.");
+                    case (HttpStatusCode)429:
+                        throw new InvalidOperationException(
+                            "Replicate API rate limit reached. Please try again later.");
+                    case HttpStatusCode.BadRequest:
+                        // Surface common bad request scenario: inaccessible input image URL
+                        throw new ArgumentException(
+                            $"Invalid enhancement request. Replicate responded 400. Details: {errorContent}");
+                    default:
+                        throw new Exception(
+                            $"Failed to create Kontext Pro enhancement prediction: {(int)response.StatusCode} {response.StatusCode}, {errorContent}");
+                }
             }
 
             var responseJson = await response.Content.ReadAsStringAsync();

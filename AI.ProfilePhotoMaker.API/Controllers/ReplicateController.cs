@@ -120,10 +120,36 @@ public class ReplicateController : ControllerBase
                 error = (object?)null
             });
         }
-        catch (Exception)
+        catch (UnauthorizedAccessException ex)
         {
-            // If training fails, we might want to refund the credit
-            // For now, we'll just log the error and return failure
+            _logger.LogError(ex, "Replicate auth failed during training for user {UserId}", userId);
+            return StatusCode(500, new
+            {
+                success = false,
+                error = new
+                {
+                    code = "ReplicateAuthFailed",
+                    message = "Replicate API authentication failed. Check your API token."
+                }
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Replicate configuration error during training for user {UserId}", userId);
+            return StatusCode(500, new
+            {
+                success = false,
+                error = new
+                {
+                    code = "ReplicateConfigError",
+                    message = ex.Message
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Training failed for user {UserId}", userId);
+            // If training fails, we might want to refund the credit later.
             return StatusCode(500, new
             {
                 success = false,
@@ -790,6 +816,19 @@ public class ReplicateController : ControllerBase
                 {
                     code = "ServiceUnavailable",
                     message = "Photo enhancement service is temporarily unavailable. Please try again later."
+                }
+            });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogError(ex, "Replicate authentication failed during photo enhancement for user {UserId}", userId);
+            return StatusCode(401, new
+            {
+                success = false,
+                error = new
+                {
+                    code = "ReplicateAuthFailed",
+                    message = "Enhancement failed to authenticate with Replicate. Verify API token configuration.",
                 }
             });
         }

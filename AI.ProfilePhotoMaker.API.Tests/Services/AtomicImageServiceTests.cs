@@ -60,6 +60,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
             
             // Setup mock environment
             _mockEnvironment.Setup(e => e.ContentRootPath).Returns(_testContentRoot);
+            _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Development");
             
             // Setup path resolver
             _pathResolver = new StoragePathResolver(

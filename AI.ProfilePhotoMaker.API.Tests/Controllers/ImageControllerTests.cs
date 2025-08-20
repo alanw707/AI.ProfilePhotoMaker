@@ -32,7 +32,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
         private readonly Mock<IAsyncFileService> _mockAsyncFileService;
         private readonly Mock<IAsyncZipService> _mockAsyncZipService;
         private readonly Mock<IStorageService> _mockStorageService;
-        private readonly Mock<StoragePathResolver> _mockPathResolver;
+        private readonly StoragePathResolver _pathResolver;
         private readonly ImageController _controller;
 
         public ImageControllerTests()
@@ -48,7 +48,15 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             _mockAsyncFileService = new Mock<IAsyncFileService>();
             _mockAsyncZipService = new Mock<IAsyncZipService>();
             _mockStorageService = new Mock<IStorageService>();
-            _mockPathResolver = new Mock<StoragePathResolver>();
+            // Use real StoragePathResolver (cannot be mocked without params)
+            var mockResolverLogger = new Mock<ILogger<StoragePathResolver>>();
+            _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Development");
+            _pathResolver = new StoragePathResolver(_mockEnvironment.Object, _mockConfiguration.Object, mockResolverLogger.Object);
+
+            // Provide URL generation for relative storage paths
+            _mockStorageService
+                .Setup(s => s.GetImageUrl(It.IsAny<string>()))
+                .Returns<string>(p => $"https://localhost:5000{p}");
 
             _controller = new ImageController(
                 _mockUserProfileRepository.Object,
@@ -61,7 +69,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
                 _mockAsyncFileService.Object,
                 _mockAsyncZipService.Object,
                 _mockStorageService.Object,
-                _mockPathResolver.Object
+                _pathResolver
             );
 
             var userId = _fixture.Create<string>();

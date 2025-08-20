@@ -139,7 +139,6 @@ interface WorkflowOrchestrationDependencies {
 @Injectable({
   providedIn: 'root',
 })
-
 export class WorkflowOrchestrationService {
   private readonly _initialProgress: WorkflowProgress = {
     isTraining: false,
@@ -369,10 +368,8 @@ export class WorkflowOrchestrationService {
       }
     } catch (error) {
       console.error('Error in training workflow:', error);
-      this._deps.notificationService.error(
-        'Training Error',
-        'Failed to start training. Please try again.'
-      );
+      const detail = error instanceof Error ? error.message : 'Failed to start training';
+      this._deps.notificationService.error('Training Error', detail);
     }
   }
 
@@ -408,9 +405,7 @@ export class WorkflowOrchestrationService {
     } catch (error: unknown) {
       console.error('Training startup error:', error);
       this._setProgress({ isTraining: false });
-      throw new Error(
-        error instanceof Error ? error.message : 'Failed to start training'
-      );
+      throw new Error(error instanceof Error ? error.message : 'Failed to start training');
     }
   }
 
@@ -438,7 +433,11 @@ export class WorkflowOrchestrationService {
     const zipResult = await fileUploadService.createTrainingZip().toPromise();
 
     if (!zipResult?.success || !zipResult.zipCreated) {
-      throw new Error(zipResult?.error?.message || 'Failed to create training ZIP');
+      throw new Error(
+        (zipResult as any)?.error?.message ||
+          (zipResult as any)?.message ||
+          'Failed to create training ZIP'
+      );
     }
   }
 

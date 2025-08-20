@@ -33,7 +33,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
         private readonly Mock<IAsyncFileService> _mockAsyncFileService;
         private readonly Mock<IAsyncZipService> _mockAsyncZipService;
         private readonly Mock<IStorageService> _mockStorageService;
-        private readonly Mock<StoragePathResolver> _mockPathResolver;
+        private readonly StoragePathResolver _pathResolver;
         private readonly ApplicationDbContext _context;
         private readonly ImageController _controller;
         private readonly string _testContentRoot;
@@ -53,7 +53,10 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             _mockAsyncFileService = new Mock<IAsyncFileService>();
             _mockAsyncZipService = new Mock<IAsyncZipService>();
             _mockStorageService = new Mock<IStorageService>();
-            _mockPathResolver = new Mock<StoragePathResolver>();
+            // Use real StoragePathResolver instance
+            var mockResolverLogger = new Mock<ILogger<StoragePathResolver>>();
+            _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Development");
+            _pathResolver = new StoragePathResolver(_mockEnvironment.Object, _mockConfiguration.Object, mockResolverLogger.Object);
 
             // Create test directories
             _testContentRoot = Path.Combine(Path.GetTempPath(), "ImageDeleteTests", Guid.NewGuid().ToString());
@@ -63,6 +66,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             Directory.CreateDirectory(_testGeneratedPath);
 
             _mockEnvironment.Setup(e => e.ContentRootPath).Returns(_testContentRoot);
+            _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Development");
 
             // Setup in-memory database
             var options = new DbContextOptionsBuilder<ApplicationDbContext>()
@@ -81,11 +85,43 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
                 _mockAsyncFileService.Object,
                 _mockAsyncZipService.Object,
                 _mockStorageService.Object,
-                _mockPathResolver.Object
+                _pathResolver
             );
 
             SetupAuthentication();
             SetupMockUserProfile();
+
+            // Map storage paths ("/uploads/..." and "/generated/...") to temp disk paths for this test
+            string MapToDisk(string storagePath)
+            {
+                if (storagePath.StartsWith("/uploads/"))
+                {
+                    var relative = storagePath.Substring("/uploads/".Length);
+                    return Path.Combine(_testUploadsPath, relative);
+                }
+                if (storagePath.StartsWith("/generated/"))
+                {
+                    var relative = storagePath.Substring("/generated/".Length);
+                    return Path.Combine(_testGeneratedPath, relative);
+                }
+                return Path.Combine(_testContentRoot, storagePath.TrimStart('/'));
+            }
+
+            // Wire storage service to operate on temp disk
+            _mockStorageService
+                .Setup(s => s.DeleteImageAsync(It.IsAny<string>()))
+                .ReturnsAsync((string sp) =>
+                {
+                    var disk = MapToDisk(sp);
+                    if (File.Exists(disk)) { File.Delete(disk); return true; }
+                    return false;
+                });
+            _mockStorageService
+                .Setup(s => s.ExistsAsync(It.IsAny<string>()))
+                .ReturnsAsync((string sp) => File.Exists(MapToDisk(sp)));
+            _mockStorageService
+                .Setup(s => s.GetImageUrl(It.IsAny<string>()))
+                .Returns<string>(p => $"https://localhost:5000{p}");
         }
 
         private void SetupAuthentication()

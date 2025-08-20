@@ -233,13 +233,47 @@ export class FileUploadService {
     message: string;
     error?: any;
   }> {
-    return this.http.post<{
-      success: boolean;
-      zipCreated: boolean;
-      zipPath: string;
-      message: string;
-      error?: any;
-    }>(this.config.getFullUrl(this.config.apiConfig.endpoints.image.createTrainingZip), {});
+    // Attach auth like other protected endpoints
+    const headers: any = {};
+    const token = this.authService.getToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    // API returns a standard wrapper: { success, data: { ZipCreated, ZipPath, Message }, message?, error? }
+    // Normalize to the flattened shape used by orchestrator.
+    return this.http
+      .post<any>(
+        this.config.getFullUrl(this.config.apiConfig.endpoints.image.createTrainingZip),
+        {},
+        { headers }
+      )
+      .pipe(
+        map(response => {
+          const success = !!response?.success;
+          const data = response?.data || {};
+          const zipCreated = Boolean(data.ZipCreated ?? data.zipCreated ?? false);
+          const zipPath = String(data.ZipPath ?? data.zipPath ?? '');
+          const message = String(response?.message ?? data.Message ?? data.message ?? '');
+          return { success, zipCreated, zipPath, message, error: response?.error } as {
+            success: boolean;
+            zipCreated: boolean;
+            zipPath: string;
+            message: string;
+            error?: any;
+          };
+        }),
+        catchError(err => {
+          // Surface a normalized error shape to callers
+          return of({
+            success: false,
+            zipCreated: false,
+            zipPath: '',
+            message: err?.error?.error?.message || err?.message || 'Failed to create training ZIP',
+            error: err?.error?.error || err?.error || err,
+          });
+        })
+      );
   }
 
   listTrainingFiles(): Observable<{ success: boolean; data: string[]; error: any }> {
