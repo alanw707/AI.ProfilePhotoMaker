@@ -336,6 +336,27 @@ jobs:
                   return 0
                 fi
                 ;;
+              "AZURE_STORAGE_CONNECTION_STRING")
+                # Check for ConnectionStrings__AzureStorage (primary pattern)
+                local conn_match=$(echo "$BICEP_CONFIG_VARS" | grep -x "ConnectionStrings__AzureStorage" || true)
+                if [[ -n "$conn_match" ]]; then
+                  echo "config:ConnectionStrings__AzureStorage"
+                  return 0
+                fi
+                # Check for AzureStorage__ConnectionString (fallback pattern)
+                local storage_match=$(echo "$BICEP_CONFIG_VARS" | grep -x "AzureStorage__ConnectionString" || true)
+                if [[ -n "$storage_match" ]]; then
+                  echo "config:AzureStorage__ConnectionString"
+                  return 0
+                fi
+                ;;
+              "AZURE_STORAGE_CONTAINER_NAME")
+                local config_match=$(echo "$BICEP_CONFIG_VARS" | grep -x "AzureStorage__ContainerName" || true)
+                if [[ -n "$config_match" ]]; then
+                  echo "config:AzureStorage__ContainerName"
+                  return 0
+                fi
+                ;;
             esac
             
             # Check if it's provided via connection string pattern
