@@ -13,6 +13,8 @@ import { FallbackOperationsService } from './fallback-operations.service';
 import { ImageValidationService } from './image-validation.service';
 import { ConfigService } from './config.service';
 import { SubscriptionStateService } from './subscription-state.service';
+import { LoggingService, LogLevel } from './logging.service';
+import { environment } from '../../environments/environment';
 import {
   DashboardState,
   IDashboardStateService,
@@ -53,7 +55,8 @@ export class DashboardStateService implements IDashboardStateService {
     private _fallbackOps: FallbackOperationsService,
     private _imageValidation: ImageValidationService,
     private _configService: ConfigService,
-    private _subscriptionState: SubscriptionStateService
+    private _subscriptionState: SubscriptionStateService,
+    private _logger: LoggingService
   ) {}
 
   getState(): DashboardState {
@@ -407,7 +410,7 @@ export class DashboardStateService implements IDashboardStateService {
       error: _error => {
         // Log only critical errors (500+ status codes)
         if (_error?.status >= 500 || !_error?.status) {
-          console.error('❌ Dashboard API call failed:', _error);
+          this._logger.error('Dashboard API call failed', _error);
         }
         this._notificationService.error(
           'Dashboard Load Failed',
@@ -749,16 +752,28 @@ export class DashboardStateService implements IDashboardStateService {
    * @returns true if auto-repair should proceed, false if safety conditions not met
    */
   private _shouldTriggerAutoRepair(validation: any): boolean {
+    const enableAutoRepairDebug = environment.features.logging?.enableAutoRepairDebug ?? false;
+
     // Check master feature flag
     if (!this._configService.isAutoRepairEnabled) {
-      console.log('🔧 Auto-repair disabled by feature flag');
+      this._logger.conditionalLog(
+        enableAutoRepairDebug,
+        LogLevel.DEBUG,
+        'Auto-repair disabled by feature flag'
+      );
       return false;
     }
 
     // Check threshold requirement
     if (validation.notFoundCount < this._configService.autoRepairThreshold) {
-      console.log(
-        `🔧 Auto-repair threshold not met: ${validation.notFoundCount} < ${this._configService.autoRepairThreshold}`
+      this._logger.conditionalLog(
+        enableAutoRepairDebug,
+        LogLevel.DEBUG,
+        'Auto-repair threshold not met',
+        {
+          notFoundCount: validation.notFoundCount,
+          threshold: this._configService.autoRepairThreshold,
+        }
       );
       return false;
     }
@@ -772,7 +787,11 @@ export class DashboardStateService implements IDashboardStateService {
         const remainingCooldown = Math.ceil(
           (this._configService.autoRepairCooldownMs - timeSinceLastRepair) / (60 * 1000)
         );
-        console.log(`🔧 Auto-repair in cooldown: ${remainingCooldown} minutes remaining`);
+        this._logger.conditionalLog(
+          enableAutoRepairDebug,
+          LogLevel.DEBUG,
+          `Auto-repair in cooldown: ${remainingCooldown} minutes remaining`
+        );
         return false;
       }
     }
@@ -781,20 +800,30 @@ export class DashboardStateService implements IDashboardStateService {
     const sessionAttemptsKey = 'sessionAutoRepairAttempts';
     const sessionAttempts = parseInt(sessionStorage.getItem(sessionAttemptsKey) || '0') || 0;
     if (sessionAttempts >= this._configService.autoRepairMaxAttempts) {
-      console.log(
-        `🔧 Auto-repair max attempts reached: ${sessionAttempts}/${this._configService.autoRepairMaxAttempts}`
+      this._logger.conditionalLog(
+        enableAutoRepairDebug,
+        LogLevel.DEBUG,
+        'Auto-repair max attempts reached',
+        { attempts: sessionAttempts, maxAttempts: this._configService.autoRepairMaxAttempts }
       );
       return false;
     }
 
     // Check if repair is suggested by validation logic
     if (!validation.repairSuggested || validation.notFoundCount <= 0) {
-      console.log('🔧 Auto-repair not suggested by validation logic');
+      this._logger.conditionalLog(
+        enableAutoRepairDebug,
+        LogLevel.DEBUG,
+        'Auto-repair not suggested by validation logic'
+      );
       return false;
     }
 
-    console.log(
-      `🔧 Auto-repair conditions met: ${validation.notFoundCount} broken images detected`
+    this._logger.conditionalLog(
+      enableAutoRepairDebug,
+      LogLevel.DEBUG,
+      'Auto-repair conditions met',
+      { brokenImages: validation.notFoundCount }
     );
     return true;
   }
@@ -805,10 +834,12 @@ export class DashboardStateService implements IDashboardStateService {
    * @returns Enhanced validation result with repair status
    */
   private async _attemptAutoRepair(validation: any): Promise<any> {
+    const enableAutoRepairDebug = environment.features.logging?.enableAutoRepairDebug ?? false;
+
     try {
-      console.log(
-        `🔧 Auto-repair triggered: ${validation.notFoundCount} broken references detected`
-      );
+      this._logger.conditionalLog(enableAutoRepairDebug, LogLevel.DEBUG, 'Auto-repair triggered', {
+        brokenReferences: validation.notFoundCount,
+      });
 
       // Record repair attempt
       const now = Date.now();
@@ -822,7 +853,11 @@ export class DashboardStateService implements IDashboardStateService {
 
       // Check dry-run mode
       if (this._configService.isAutoRepairDryRunOnly) {
-        console.log('🔧 Auto-repair in DRY-RUN mode - no actual changes will be made');
+        this._logger.conditionalLog(
+          enableAutoRepairDebug,
+          LogLevel.DEBUG,
+          'Auto-repair in DRY-RUN mode - no actual changes will be made'
+        );
 
         if (this._configService.isAutoRepairNotificationsEnabled) {
           this._notificationService.info(
@@ -840,11 +875,15 @@ export class DashboardStateService implements IDashboardStateService {
       }
 
       // Perform actual repair
-      console.log('🔧 Executing auto-repair...');
+      this._logger.conditionalLog(
+        enableAutoRepairDebug,
+        LogLevel.DEBUG,
+        'Executing auto-repair...'
+      );
       const repairResult = await this._fileUploadService.repairImageDatabase().toPromise();
 
       if (repairResult?.success) {
-        console.log('✅ Auto-repair completed successfully');
+        this._logger.info('Auto-repair completed successfully');
 
         if (this._configService.isAutoRepairNotificationsEnabled) {
           this._notificationService.success(
@@ -863,7 +902,7 @@ export class DashboardStateService implements IDashboardStateService {
           repairSuccess: true,
         };
       } else {
-        console.warn('⚠️ Auto-repair completed but returned no success indicator');
+        this._logger.warn('Auto-repair completed but returned no success indicator');
         return {
           validImages: validation.validImages,
           removedCount: validation.removedCount,
@@ -872,7 +911,7 @@ export class DashboardStateService implements IDashboardStateService {
         };
       }
     } catch (error) {
-      console.error('🚨 Auto-repair failed:', error);
+      this._logger.error('Auto-repair failed', error);
 
       // Send error telemetry if enabled
       if (this._configService.isAutoRepairTelemetryEnabled) {
@@ -913,7 +952,7 @@ export class DashboardStateService implements IDashboardStateService {
       validationLevel: this._configService.autoRepairValidationLevel,
     };
 
-    console.warn('📊 Auto-repair error telemetry:', errorData);
+    this._logger.warn('Auto-repair error telemetry', errorData);
 
     // Future: Send to analytics service
     // this._analyticsService.trackError('auto-repair-failed', errorData);

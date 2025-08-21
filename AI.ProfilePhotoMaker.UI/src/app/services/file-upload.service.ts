@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpEventType } from '@angular/common/http';
-import { catchError, map, Observable, of, tap } from 'rxjs';
+import { catchError, map, Observable, of, tap, timeout } from 'rxjs';
 import { ConfigService } from './config.service';
 import { ImageUrlService } from './image-url.service';
 import { AuthService } from './auth.service';
@@ -44,6 +44,31 @@ export interface TrainingStatusResponse {
   latestZipFile: string;
   canStartTraining: boolean;
   status: string;
+}
+
+export type UnifiedModelStatusCode =
+  | 'NotStarted'
+  | 'ReadyForTraining'
+  | 'Training'
+  | 'ModelReady'
+  | 'Failed';
+
+export interface UnifiedModelStatusResponse {
+  statusCode: UnifiedModelStatusCode;
+  hasTrainedModel: boolean;
+  trainedModelId?: string | null;
+  trainedModelVersion?: string | null;
+  totalUploadedImages: number;
+  canStartTraining: boolean;
+  reason?: string | null;
+  lastUpdated?: string;
+  currentRequest?: {
+    id: string;
+    status: string;
+    createdAt: string;
+    completedAt?: string | null;
+    errorMessage?: string | null;
+  } | null;
 }
 
 @Injectable({
@@ -221,8 +246,43 @@ export class FileUploadService {
   }
 
   getTrainingStatus(): Observable<TrainingStatusResponse> {
-    return this.http.get<TrainingStatusResponse>(
-      this.config.getFullUrl('/profile/training-status')
+    return this.http.get<any>(this.config.getFullUrl('/profile/training-status')).pipe(
+      // Normalize server casing (API returns PascalCase keys)
+      map(raw => {
+        const normalized: TrainingStatusResponse = {
+          profileId: raw?.profileId ?? raw?.ProfileId ?? 0,
+          hasTrainedModel: raw?.hasTrainedModel ?? raw?.HasTrainedModel ?? false,
+          trainedModelId: raw?.trainedModelId ?? raw?.TrainedModelId ?? null,
+          modelTrainedAt: raw?.modelTrainedAt ?? raw?.ModelTrainedAt ?? null,
+          totalUploadedImages: raw?.totalUploadedImages ?? raw?.TotalUploadedImages ?? 0,
+          latestZipFile: raw?.latestZipFile ?? raw?.LatestZipFile ?? null,
+          canStartTraining: raw?.canStartTraining ?? raw?.CanStartTraining ?? false,
+          status: raw?.status ?? raw?.Status ?? 'Not Started',
+        } as TrainingStatusResponse;
+        return normalized;
+      })
+    );
+  }
+
+  getUnifiedModelStatus(): Observable<UnifiedModelStatusResponse> {
+    return this.http.get<any>(this.config.getFullUrl('/model-status')).pipe(
+      timeout({ first: 1500 }),
+      map(raw => {
+        const normalized: UnifiedModelStatusResponse = {
+          statusCode: (raw?.statusCode ??
+            raw?.StatusCode ??
+            'NotStarted') as UnifiedModelStatusCode,
+          hasTrainedModel: raw?.hasTrainedModel ?? raw?.HasTrainedModel ?? false,
+          trainedModelId: raw?.trainedModelId ?? raw?.TrainedModelId ?? null,
+          trainedModelVersion: raw?.trainedModelVersion ?? raw?.TrainedModelVersion ?? null,
+          totalUploadedImages: raw?.totalUploadedImages ?? raw?.TotalUploadedImages ?? 0,
+          canStartTraining: raw?.canStartTraining ?? raw?.CanStartTraining ?? false,
+          reason: raw?.reason ?? raw?.Reason ?? null,
+          lastUpdated: raw?.lastUpdated ?? raw?.LastUpdated ?? null,
+          currentRequest: raw?.currentRequest ?? raw?.CurrentRequest ?? null,
+        };
+        return normalized;
+      })
     );
   }
 
@@ -349,29 +409,7 @@ export class FileUploadService {
   }
 
   // Debug methods
-  getDebugModelStatus(): Observable<{ success: boolean; data?: any; error?: any }> {
-    return this.http.get<{ success: boolean; data?: any; error?: any }>(
-      this.config.getFullUrl('/debug/user-model-status')
-    );
-  }
-
-  testModelCreationEndpoint(): Observable<{ success: boolean; data?: any; error?: any }> {
-    return this.http.get<{ success: boolean; data?: any; error?: any }>(
-      this.config.getFullUrl('/debug/test-model-creation-endpoint')
-    );
-  }
-
-  discoverUserModels(): Observable<{ success: boolean; data?: any; error?: any }> {
-    return this.http.get<{ success: boolean; data?: any; error?: any }>(
-      this.config.getFullUrl('/debug/discover-user-models')
-    );
-  }
-
-  testSpecificModel(): Observable<{ success: boolean; data?: any; error?: any }> {
-    return this.http.get<{ success: boolean; data?: any; error?: any }>(
-      this.config.getFullUrl('/debug/test-specific-model')
-    );
-  }
+  // (Removed obsolete debug endpoints without backend support)
 
   uploadSingleImage(
     file: File,

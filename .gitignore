@@ -97,6 +97,22 @@ package-lock.json
 
 # Claude Code workspace files
 .claude/
+
+# Temporary downloads and artifacts
+.downloads/
+.playwright-mcp/
+
+# Test artifacts - screenshots and results
+**/screenshots/*.png
+**/results/*.json
+AI.ProfilePhotoMaker.API/tests/playwright/screenshots/
+AI.ProfilePhotoMaker.API/tests/playwright/results/
+
+# Generated documentation and reports
+**/ClaudeDocs/Report/*.md
+**/playwright-report/data/*.md
+**/*-validation-report.md
+**/*-test-report.md
 .serena/
 
 # General build results

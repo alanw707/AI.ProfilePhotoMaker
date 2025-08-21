@@ -80,7 +80,6 @@ export interface ModelStatusInfo {
 export interface IModelStateService {
   runAsyncModelDiscovery(): void;
   updateModelStatus(): void;
-  debugModelStatus(): Promise<any>;
   triggerModelDiscovery(): Promise<any>;
   isModelDiscoveryNeeded(
     hasTrainedModel: boolean,
