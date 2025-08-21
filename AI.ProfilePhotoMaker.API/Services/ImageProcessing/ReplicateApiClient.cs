@@ -179,7 +179,8 @@ public class ReplicateApiClient : IReplicateApiClient
             {
                 UserId = userId,
                 ModelName = modelName,
-                ReplicateModelId = destination.Split('/').Last(), // Extract model name from destination
+                // Store full model ID in format owner/model-name for consistency with webhooks
+                ReplicateModelId = destination,
                 Status = ModelCreationStatus.Pending,
                 TrainingImageZipUrl = imageZipUrl,
                 PendingTrainingRequestId = Guid.NewGuid().ToString()
