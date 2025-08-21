@@ -322,8 +322,15 @@ else
     // Mock mode enabled: skip initializing Replicate SDK
 }
 
-// Register Replicate services
-builder.Services.AddHttpClient<IReplicateApiClient, ReplicateApiClient>();
+// Register Replicate services with optional mock
+if (enableReplicateMock)
+{
+    builder.Services.AddSingleton<IReplicateApiClient, MockReplicateApiClient>();
+}
+else
+{
+    builder.Services.AddHttpClient<IReplicateApiClient, ReplicateApiClient>();
+}
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IModelDiscoveryService, AI.ProfilePhotoMaker.API.Services.ModelDiscoveryService>();
 
 // Register WebhookUrlResolver service for environment-aware webhook URL resolution

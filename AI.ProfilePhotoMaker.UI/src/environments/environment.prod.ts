@@ -20,6 +20,18 @@ export const environment = {
     autoRepairNotifications: true, // Show notifications for transparency
     autoRepairTelemetry: true, // Full metrics in production
     autoRepairValidationLevel: 'strict', // Strictest validation
+
+    // Granular Logging Controls (Production - Minimal Logging)
+    logging: {
+      enableApiDebug: false, // No API debug noise in production
+      enableStateDebug: false, // No state debug noise in production
+      enableWorkflowDebug: false, // No workflow debug in production
+      enableAuthDebug: false, // No auth debug noise in production
+      enableFileDebug: false, // No file debug noise in production
+      enableGalleryDebug: false, // No gallery debug noise in production
+      enableDashboardDebug: false, // No dashboard debug noise in production
+      enableAutoRepairDebug: false, // No auto-repair debug in production
+    },
   },
   azure: {
     enabled: true,

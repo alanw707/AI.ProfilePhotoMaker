@@ -10,6 +10,8 @@ import {
 import { FileUploadService, ProcessedImage } from '../../services/file-upload.service';
 import jsZip from 'jszip';
 import { ConfigService } from '../../services/config.service';
+import { LoggingService, LogLevel } from '../../services/logging.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-gallery',
@@ -33,7 +35,8 @@ export class GalleryComponent implements OnInit {
     private _route: ActivatedRoute,
     private _fileUploadService: FileUploadService,
     private _cdr: ChangeDetectorRef,
-    private _config: ConfigService
+    private _config: ConfigService,
+    private _logger: LoggingService
   ) {}
 
   ngOnInit() {
@@ -45,7 +48,11 @@ export class GalleryComponent implements OnInit {
     // Check for refresh parameter
     this._route.queryParams.subscribe(params => {
       if (params['refresh']) {
-        console.log('🔄 Gallery refresh requested via query parameter');
+        this._logger.conditionalLog(
+          environment.features.logging?.enableGalleryDebug ?? false,
+          LogLevel.DEBUG,
+          'Gallery refresh requested via query parameter'
+        );
         this.loadImages(true);
       } else {
         this.loadImages();
@@ -54,7 +61,9 @@ export class GalleryComponent implements OnInit {
   }
 
   async loadImages(forceRefresh = false) {
-    console.log('🔄 Gallery loadImages START:', {
+    const enableDebug = environment.features.logging?.enableGalleryDebug ?? false;
+
+    this._logger.conditionalLog(enableDebug, LogLevel.DEBUG, 'Gallery loadImages START', {
       isLoading: this.isLoading,
       forceRefresh,
       galleryImagesCount: this.galleryImages.length,
@@ -64,20 +73,21 @@ export class GalleryComponent implements OnInit {
     try {
       // Run image database repair on first load only to sync filesystem with database
       if (!this._hasRunInitialRepair && !forceRefresh) {
-        console.log('🔧 Running initial image database repair...');
+        this._logger.info('Running initial image database repair...');
         try {
           const repairResponse = await this._fileUploadService.repairImageDatabase().toPromise();
           if (repairResponse?.success) {
-            console.log('✅ Image repair completed:', repairResponse.message);
+            this._logger.info('Image repair completed', repairResponse.message);
           }
         } catch (repairError) {
-          console.warn('⚠️ Image repair failed, continuing with normal load:', repairError);
+          this._logger.warn('Image repair failed, continuing with normal load', repairError);
         }
         this._hasRunInitialRepair = true;
       }
 
       const response = await this._fileUploadService.getUserImages(forceRefresh).toPromise();
-      console.log('📡 API Response received:', {
+
+      this._logger.conditionalLog(enableDebug, LogLevel.DEBUG, 'API Response received', {
         success: response?.success,
         hasData: !!response?.data,
         totalImages: response?.data?.totalImages,
@@ -99,7 +109,7 @@ export class GalleryComponent implements OnInit {
 
             // Skip images without valid URLs
             if (!preferredUrl) {
-              console.warn('⚠️ Skipping image with no valid URL:', {
+              this._logger.warn('Skipping image with no valid URL', {
                 id: img.id,
                 isGenerated: img.isGenerated,
                 style: img.style,
@@ -126,7 +136,7 @@ export class GalleryComponent implements OnInit {
           })
           .filter(img => img !== null) as any[];
 
-        console.log('🖼️ Gallery images processed:', {
+        this._logger.conditionalLog(enableDebug, LogLevel.DEBUG, 'Gallery images processed', {
           uniqueImages: uniqueImages.length,
           galleryImages: this.galleryImages.length,
           firstImage: this.galleryImages[0],
@@ -134,15 +144,15 @@ export class GalleryComponent implements OnInit {
 
         // Log if duplicates were found and removed
         if (uniqueImages.length < response.data.images.length) {
-          console.warn(
-            `🔍 Removed ${response.data.images.length - uniqueImages.length} duplicate images from display`
+          this._logger.debug(
+            `Removed ${response.data.images.length - uniqueImages.length} duplicate images from display`
           );
         }
 
         // Log if images were filtered out due to missing URLs
         if (this.galleryImages.length < uniqueImages.length) {
-          console.warn(
-            `⚠️ Filtered out ${uniqueImages.length - this.galleryImages.length} images with missing URLs`
+          this._logger.warn(
+            `Filtered out ${uniqueImages.length - this.galleryImages.length} images with missing URLs`
           );
         }
 
@@ -150,11 +160,12 @@ export class GalleryComponent implements OnInit {
         this._cdr.detectChanges();
       }
     } catch (error) {
-      console.error('❌ Failed to load images:', error);
+      this._logger.error('Failed to load images', error);
     } finally {
       this.isLoading = false;
       this._cdr.detectChanges(); // Force Angular to update UI
-      console.log('✅ Gallery loadImages COMPLETE:', {
+
+      this._logger.conditionalLog(enableDebug, LogLevel.DEBUG, 'Gallery loadImages COMPLETE', {
         isLoading: this.isLoading,
         galleryImagesCount: this.galleryImages.length,
       });
@@ -299,7 +310,7 @@ export class GalleryComponent implements OnInit {
         window.URL.revokeObjectURL(blobUrl);
       }, 100);
     } catch (error) {
-      console.error('❌ Download failed:', error);
+      this._logger.error('Download failed', error);
 
       const errorMessage = error instanceof Error ? error.message : String(error);
       alert(
@@ -364,17 +375,17 @@ export class GalleryComponent implements OnInit {
 
   onImageDelete(image: GalleryImage) {
     if (confirm(`Are you sure you want to delete "${image.title}"?`)) {
-      console.log('🗑️ Deleting image:', { id: image.id, title: image.title });
+      this._logger.fileDebug('Deleting image', image.title, { id: image.id, title: image.title });
 
       this._fileUploadService.deleteImage(image.id).subscribe({
         next: response => {
-          console.log('🗑️ Delete response:', response);
+          this._logger.debug('Delete response', response);
           if (response.success) {
             // Remove image from array - create completely new array to ensure change detection
             const originalLength = this.galleryImages.length;
             const newImages = this.galleryImages.filter(img => img.id !== image.id);
 
-            console.log('✅ Image removed from gallery:', {
+            this._logger.info('Image removed from gallery', {
               originalLength,
               newLength: newImages.length,
               imageId: image.id,
@@ -392,17 +403,17 @@ export class GalleryComponent implements OnInit {
             this._cdr.detectChanges();
 
             // Log final state for debugging
-            console.log('🔄 Gallery state after delete:', {
+            this._logger.debug('Gallery state after delete', {
               totalImages: this.galleryImages.length,
               isLoading: this.isLoading,
             });
           } else {
-            console.error('❌ Delete failed - API returned success: false');
+            this._logger.error('Delete failed - API returned success: false');
             alert('Failed to delete image. Please try again.');
           }
         },
         error: error => {
-          console.error('❌ Delete request failed:', error);
+          this._logger.error('Delete request failed', error);
           alert(`Delete failed: ${error.message || 'Unknown error'}. Please try again.`);
         },
       });
@@ -411,7 +422,7 @@ export class GalleryComponent implements OnInit {
 
   async onBulkDownload(images: GalleryImage[]) {
     if (images.length === 0) {
-      console.warn('No images selected for download');
+      this._logger.warn('No images selected for download');
       return;
     }
 
