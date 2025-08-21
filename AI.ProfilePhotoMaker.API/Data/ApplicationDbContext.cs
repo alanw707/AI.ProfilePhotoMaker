@@ -17,6 +17,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<UserStyleSelection> UserStyleSelections { get; set; }
     public virtual DbSet<ModelCreationRequest> ModelCreationRequests { get; set; }
     public virtual DbSet<UsageLog> UsageLogs { get; set; }
+    public virtual DbSet<Prediction> Predictions { get; set; }
 
     // Subscription management
     public virtual DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
@@ -286,6 +287,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasIndex(mcr => new { mcr.UserId, mcr.Status, mcr.CompletedAt })
             .HasDatabaseName("IX_ModelCreationRequests_UserId_Status_CompletedAt")
             .IsDescending(false, false, true); // Descending CompletedAt for latest first
+
+        // Prediction ownership indexes
+        builder.Entity<Prediction>()
+            .HasIndex(p => p.UserId)
+            .HasDatabaseName("IX_Predictions_UserId");
+        builder.Entity<Prediction>()
+            .HasIndex(p => new { p.UserId, p.CreatedAt })
+            .HasDatabaseName("IX_Predictions_UserId_CreatedAt_Desc")
+            .IsDescending(false, true);
     }
 
     private void ConfigureDecimalPrecision(ModelBuilder builder)

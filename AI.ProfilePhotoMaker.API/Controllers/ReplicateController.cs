@@ -95,7 +95,17 @@ public class ReplicateController : ControllerBase
             _logger.LogInformation("Converted ZIP URL from {OriginalUrl} to {ExternalUrl} for Replicate API", 
                 dto.ImageZipUrl, externalImageZipUrl);
 
-            var result = await _replicateApiClient.CreateModelTrainingAsync(dto.UserId, externalImageZipUrl);
+            // Enforce user context: trust authenticated user over DTO
+            if (!string.IsNullOrEmpty(dto.UserId) && !string.Equals(dto.UserId, userId, StringComparison.Ordinal))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    error = new { code = "InvalidUserContext", message = "Request user does not match authenticated user." }
+                });
+            }
+
+            var result = await _replicateApiClient.CreateModelTrainingAsync(userId, externalImageZipUrl);
 
             // Only consume credits AFTER successful API call
             var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "model_training");
@@ -168,6 +178,19 @@ public class ReplicateController : ControllerBase
     [HttpGet("train/status/{trainingId}")]
     public async Task<IActionResult> GetTrainingStatus(string trainingId)
     {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+
+        // Enforce ownership: require a matching pending/creating model request for this user and trainingId
+        var ownsTraining = await _dbContext.ModelCreationRequests
+            .AnyAsync(m => m.UserId == userId && m.PendingTrainingRequestId == trainingId);
+
+        if (!ownsTraining)
+        {
+            return NotFound(new { success = false, error = new { code = "NotFound", message = "Training not found." } });
+        }
+
         var result = await _replicateApiClient.GetTrainingStatusAsync(trainingId);
         return Ok(new { success = true, data = result, error = (object?)null });
     }
@@ -272,7 +295,17 @@ public class ReplicateController : ControllerBase
             _logger.LogInformation("Retrieved user info from database: Gender={Gender}, Ethnicity={Ethnicity}",
                 userInfo?.Gender ?? "NULL", userInfo?.Ethnicity ?? "NULL");
 
-            var result = await _replicateApiClient.GenerateImagesAsync(modelVersionToUse, dto.UserId, dto.Style, userInfo);
+            // Enforce user context: trust authenticated user over DTO
+            if (!string.IsNullOrEmpty(dto.UserId) && !string.Equals(dto.UserId, userId, StringComparison.Ordinal))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    error = new { code = "InvalidUserContext", message = "Request user does not match authenticated user." }
+                });
+            }
+
+            var result = await _replicateApiClient.GenerateImagesAsync(modelVersionToUse, userId, dto.Style, userInfo);
 
             // Only consume credits AFTER successful API call (5 credits per image generated)
             var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, requiredCredits, "styled_generation");
@@ -421,11 +454,21 @@ public class ReplicateController : ControllerBase
                 userInfo?.Gender ?? "NULL", userInfo?.Ethnicity ?? "NULL");
 
             // Generate images for all styles in parallel
+            // Enforce user context: trust authenticated user over DTO
+            if (!string.IsNullOrEmpty(dto.UserId) && !string.Equals(dto.UserId, userId, StringComparison.Ordinal))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    error = new { code = "InvalidUserContext", message = "Request user does not match authenticated user." }
+                });
+            }
+
             var generationTasks = dto.Styles.Select<string, Task<dynamic>>(async (style) =>
             {
                 try
                 {
-                    var result = await _replicateApiClient.GenerateImagesAsync(modelVersionToUse, dto.UserId, style, userInfo, dto.NumOutputsPerStyle);
+                    var result = await _replicateApiClient.GenerateImagesAsync(modelVersionToUse, userId, style, userInfo, dto.NumOutputsPerStyle);
                     return new { Style = style, Success = true, Result = result, Error = (string?)null };
                 }
                 catch (Exception ex)
@@ -506,6 +549,17 @@ public class ReplicateController : ControllerBase
     [HttpGet("generate/status/{predictionId}")]
     public async Task<IActionResult> GetPredictionStatus(string predictionId)
     {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+
+        // Enforce ownership: ensure prediction belongs to this user
+        var ownsPrediction = await _dbContext.Predictions.AnyAsync(p => p.Id == predictionId && p.UserId == userId);
+        if (!ownsPrediction)
+        {
+            return NotFound(new { success = false, error = new { code = "NotFound", message = "Prediction not found." } });
+        }
+
         var result = await _replicateApiClient.GetPredictionStatusAsync(predictionId);
 
         // If prediction succeeded and has output, try to fetch and return dataUrl
@@ -590,25 +644,18 @@ public class ReplicateController : ControllerBase
             });
         }
 
-        // Consume a credit for this casual headshot generation
-        var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "casual_headshot_generation");
-        if (!creditConsumed)
-        {
-            return BadRequest(new
-            {
-                success = false,
-                error = new
-                {
-                    code = "CreditConsumptionFailed",
-                    message = "Failed to consume credit. Please try again."
-                }
-            });
-        }
-
         try
         {
             // Use base FLUX model for basic tier - no custom training required
             var result = await _replicateApiClient.GenerateBasicImageAsync(userId, dto.UserInfo, dto.Gender);
+
+            // Consume a credit only after successful prediction creation
+            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "casual_headshot_generation");
+            if (!creditConsumed)
+            {
+                _logger.LogError("Successfully created Replicate basic prediction but failed to consume credit for user {UserId}", userId);
+                // Prediction already created; do not fail the request
+            }
 
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
 

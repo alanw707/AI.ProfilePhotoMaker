@@ -391,6 +391,26 @@ public class ReplicateApiClient : IReplicateApiClient
                 throw new Exception("Failed to deserialize prediction response");
             }
 
+            // Persist ownership for status checks
+            try
+            {
+                if (!string.IsNullOrEmpty(result.Id))
+                {
+                    _context.Predictions.Add(new Prediction
+                    {
+                        Id = result.Id!,
+                        UserId = userId,
+                        Style = style,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to persist prediction ownership for {PredictionId} (user {UserId})", result.Id, userId);
+            }
+
             return result;
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
@@ -815,6 +835,26 @@ public class ReplicateApiClient : IReplicateApiClient
             }
 
             _logger.LogInformation("Basic image generation started for user {UserId} with prediction ID {PredictionId}", userId, result.Id);
+
+            // Persist ownership for status checks
+            try
+            {
+                if (!string.IsNullOrEmpty(result.Id))
+                {
+                    _context.Predictions.Add(new Prediction
+                    {
+                        Id = result.Id!,
+                        UserId = userId,
+                        Style = "basic",
+                        CreatedAt = DateTime.UtcNow
+                    });
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to persist basic prediction ownership for {PredictionId} (user {UserId})", result.Id, userId);
+            }
             return result;
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
