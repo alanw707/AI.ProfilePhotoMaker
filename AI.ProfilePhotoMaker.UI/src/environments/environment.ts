@@ -20,6 +20,18 @@ export const environment = {
     autoRepairNotifications: true, // Show notifications for debugging
     autoRepairTelemetry: true, // Enable telemetry for analysis
     autoRepairValidationLevel: 'lenient', // Less strict for dev data
+
+    // Granular Logging Controls (Development - Reduced Noise)
+    logging: {
+      enableApiDebug: false, // Disable API call noise
+      enableStateDebug: false, // Disable state change noise
+      enableWorkflowDebug: false, // Disable workflow debugging
+      enableAuthDebug: false, // Disable auth noise
+      enableFileDebug: false, // Disable file operation noise
+      enableGalleryDebug: false, // Disable gallery operation noise
+      enableDashboardDebug: false, // Disable dashboard state noise
+      enableAutoRepairDebug: false, // Disable auto-repair debug (can enable when needed)
+    },
   },
   ngrok: {
     enabled: false,

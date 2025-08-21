@@ -28,6 +28,8 @@ import { DashboardCoordinatorService } from '../services/dashboard-coordinator.s
 import { ConfigService } from '../services/config.service';
 import { StylePreviewService } from '../services/style-preview.service';
 import { WorkflowStepService, ImageThumbnail } from '../services/workflow-step.service';
+import { LoggingService, LogLevel } from '../services/logging.service';
+import { environment } from '../../environments/environment';
 import { DashboardState } from '../interfaces/service.interfaces';
 // Lazy-loaded service types
 interface WorkflowProgress {
@@ -150,7 +152,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private readonly _stylePreviewService: StylePreviewService,
     private readonly _workflowStepService: WorkflowStepService,
     private readonly _injector: Injector,
-    private readonly _cdr: ChangeDetectorRef
+    private readonly _cdr: ChangeDetectorRef,
+    private readonly _logger: LoggingService
   ) {
     this.state$ = this.stateService.state$;
     this.workflowProgress$ = this._workflowProgressSubject.asObservable();
@@ -174,17 +177,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     // Subscribe to state changes to update UI
     this.state$.subscribe(state => {
-      // Debug logging for troubleshooting
-      console.log('📊 Dashboard state updated:', {
-        userProfile: !!state.userProfile,
-        creditsInfo: !!state.creditsInfo,
-        userCreditStatus: !!state.userCreditStatus,
-        uploadedImages: state.uploadedImages,
-        generatedPhotosCount: state.generatedPhotosCount,
-        modelStatus: state.modelStatus,
-        isPremiumWorkflow: state.isPremiumWorkflow,
-        isLoading: state.isLoading,
-      });
+      // Debug logging for troubleshooting (development only)
+      this._logger.conditionalLog(
+        environment.features.logging?.enableDashboardDebug ?? false,
+        LogLevel.DEBUG,
+        'Dashboard state updated',
+        {
+          userProfile: !!state.userProfile,
+          creditsInfo: !!state.creditsInfo,
+          userCreditStatus: !!state.userCreditStatus,
+          uploadedImages: state.uploadedImages,
+          generatedPhotosCount: state.generatedPhotosCount,
+          modelStatus: state.modelStatus,
+          isPremiumWorkflow: state.isPremiumWorkflow,
+          isLoading: state.isLoading,
+        }
+      );
 
       // Force change detection when state updates
       this.selectedStyles = this.getSelectedStylesCount();
