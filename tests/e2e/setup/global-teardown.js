@@ -259,7 +259,7 @@ async function generateStorageValidationReport() {
         testCoverage: 'Production vs development configuration validation'
       }
     ],
-    documentation: 'See TROUBLESHOOTING-IMAGE-UPLOAD.md for detailed guidance'
+    documentation: 'See docs/security/OAUTH_TROUBLESHOOTING.md and docs/deployment/ for detailed guidance'
   };
   
   const storageReportFile = path.join(testResultsDir, 'storage-validation-report.json');

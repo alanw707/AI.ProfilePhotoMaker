@@ -22,9 +22,14 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.DataProtection;
 using System.Security.Claims;
 using Serilog;
+using Microsoft.AspNetCore.TestHost;
 
 // Handle command-line arguments for migration and upload operations
-if (args.Length > 0)
+// Skip in Testing environment to avoid interference with test setup
+var isTestingEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Testing" ||
+                          Environment.GetEnvironmentVariable("RUNNING_IN_TESTS") == "true";
+
+if (args.Length > 0 && !isTestingEnvironment)
 {
     var commandBuilder = WebApplication.CreateBuilder(args);
     
@@ -73,14 +78,20 @@ if (args.Length > 0)
     // If we get here, it's not a recognized command, continue with normal startup
 }
 
+// Create the application using the standard pattern that WebApplicationFactory expects
 var builder = WebApplication.CreateBuilder(args);
+
+// Use TestServer in Testing environment to avoid Kestrel binding during integration tests
+if (builder.Environment.IsEnvironment("Testing"))
+{
+    builder.WebHost.UseTestServer();
+}
 
 // Load environment variables from .env file if present
 LoadEnvironmentVariables(builder.Environment);
 
 // Load monitoring configuration
 builder.Configuration.AddJsonFile("appsettings.Monitoring.json", optional: true, reloadOnChange: true);
-
 
 // Configure Serilog for structured logging
 builder.Host.UseSerilog((context, services, configuration) =>
@@ -106,7 +117,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
     // Trust development proxy
     options.KnownProxies.Add(System.Net.IPAddress.Parse("127.0.0.1"));
-    
+
     // Trust Azure Container Apps load balancer - clear known networks to trust all proxies
     if (!builder.Environment.IsDevelopment())
     {
@@ -134,14 +145,22 @@ builder.Services.AddSession(options =>
     options.Cookie.Domain = null;
 });
 
-// Add services to the container.
-
 // Add environment configuration with validation
 builder.Services.AddEnvironmentConfiguration();
 
-// Configure database services with new architecture
-builder.Services.AddDatabaseServices(builder.Configuration, builder.Environment);
-builder.Services.AddDatabaseConfiguration(builder.Configuration);
+// Configure database services
+if (builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    {
+        options.UseInMemoryDatabase($"TestDb_{Guid.NewGuid()}");
+    });
+}
+else
+{
+    builder.Services.AddDatabaseServices(builder.Configuration, builder.Environment);
+    builder.Services.AddDatabaseConfiguration(builder.Configuration);
+}
 
 // Add Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
@@ -151,47 +170,28 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
 // Add SignInManager
 builder.Services.AddScoped<SignInManager<ApplicationUser>>();
 
-
 // Configure Identity options
 builder.Services.Configure<IdentityOptions>(options =>
 {
-    // Password settings
     options.Password.RequireDigit = true;
     options.Password.RequireLowercase = true;
     options.Password.RequireNonAlphanumeric = true;
     options.Password.RequireUppercase = true;
     options.Password.RequiredLength = 8;
     options.Password.RequiredUniqueChars = 1;
-
-    // Lockout settings
     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
     options.Lockout.MaxFailedAccessAttempts = 5;
     options.Lockout.AllowedForNewUsers = true;
-
-    // User settings
-    options.User.AllowedUserNameCharacters =
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
+    options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
     options.User.RequireUniqueEmail = true;
 });
 
 // Only add Google OAuth if properly configured
-// Prefer environment variables and user-secrets; treat placeholders as missing
 var configClientId = builder.Configuration["Authentication:Google:ClientId"];
 var configClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
-
-// Also check top-level env-backed keys (from .env loader or shell)
 var envClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") ?? builder.Configuration["GOOGLE_CLIENT_ID"];
 var envClientSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET") ?? builder.Configuration["GOOGLE_CLIENT_SECRET"];
-
-bool IsPlaceholder(string? v) =>
-    !string.IsNullOrWhiteSpace(v) && (
-        v.StartsWith("REPLACE_WITH_", StringComparison.OrdinalIgnoreCase) ||
-        v.Contains("STORED_IN_USER_SECRETS", StringComparison.OrdinalIgnoreCase) ||
-        v.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase) ||
-        v.StartsWith("your_", StringComparison.OrdinalIgnoreCase)
-    );
-
-// Prefer explicit env vars when present; otherwise use config if not placeholder
+bool IsPlaceholder(string? v) => !string.IsNullOrWhiteSpace(v) && (v.StartsWith("REPLACE_WITH_", StringComparison.OrdinalIgnoreCase) || v.Contains("STORED_IN_USER_SECRETS", StringComparison.OrdinalIgnoreCase) || v.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase) || v.StartsWith("your_", StringComparison.OrdinalIgnoreCase));
 var googleClientId = !string.IsNullOrWhiteSpace(envClientId) ? envClientId : (IsPlaceholder(configClientId) ? null : configClientId);
 var googleClientSecret = !string.IsNullOrWhiteSpace(envClientSecret) ? envClientSecret : (IsPlaceholder(configClientSecret) ? null : configClientSecret);
 
@@ -199,9 +199,7 @@ var googleClientSecret = !string.IsNullOrWhiteSpace(envClientSecret) ? envClient
 var authBuilder = builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        // Set DefaultChallengeScheme to JWT Bearer for API endpoints to return 401 instead of 302 redirects
         options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        // Note: OAuth controllers will explicitly specify their authentication schemes to override this
         options.DefaultSignInScheme = Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme;
     })
     .AddCookie(options =>
@@ -225,29 +223,14 @@ var authBuilder = builder.Services.AddAuthentication(options =>
             ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"] ?? string.Empty))
         };
-        
-        // CRITICAL: Configure JWT Bearer to return 401 for API endpoints instead of redirecting
         options.Events = new JwtBearerEvents
         {
             OnChallenge = context =>
             {
-                // Skip the default challenge behavior which would redirect
                 context.HandleResponse();
-
-                // Return 401 Unauthorized with proper JSON response for API calls
                 context.Response.StatusCode = 401;
                 context.Response.ContentType = "application/json";
-                
-                var response = new
-                {
-                    success = false,
-                    error = new
-                    {
-                        code = "Unauthorized",
-                        message = "Authentication required. Please provide a valid JWT token."
-                    }
-                };
-                
+                var response = new { success = false, error = new { code = "Unauthorized", message = "Authentication required. Please provide a valid JWT token." } };
                 return context.Response.WriteAsJsonAsync(response);
             },
             OnAuthenticationFailed = context =>
@@ -273,33 +256,23 @@ if (!string.IsNullOrEmpty(googleClientId) && !string.IsNullOrEmpty(googleClientS
         options.Scope.Add("profile");
     });
 }
-else
-{
-    // Google OAuth not configured - skipping (ClientId or ClientSecret missing)
-}
 
 // Validate JWT Secret
 var jwtSecret = builder.Configuration["JWT:Secret"];
 if (string.IsNullOrEmpty(jwtSecret) || jwtSecret.Length < 32)
 {
-    // In a real application, you would want to throw an exception here.
-    // For the purpose of this review, we will just log a warning.
-    // It's highly recommended to use a secure secret management system like Azure Key Vault.
     Console.WriteLine("Warning: JWT Secret is not configured or is not long enough. Please configure a secret of at least 32 characters in your application settings.");
 }
 
 // Register the Services
-builder.Services.AddHttpContextAccessor(); // Required for UserContextService
-
-// Add response compression for better performance over ngrok
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddResponseCompression(options =>
 {
     options.EnableForHttps = true;
     options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
-    options.MimeTypes = Microsoft.AspNetCore.ResponseCompression.ResponseCompressionDefaults.MimeTypes.Concat(
-        new[] { "application/json", "text/json", "image/svg+xml" });
+    options.MimeTypes = Microsoft.AspNetCore.ResponseCompression.ResponseCompressionDefaults.MimeTypes.Concat(new[] { "application/json", "text/json", "image/svg+xml" });
 });
-builder.Services.AddHttpClient(); // Required for OAuth HTTP calls
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IBasicTierService, AI.ProfilePhotoMaker.API.Services.BasicTierService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IUserContextService, AI.ProfilePhotoMaker.API.Services.UserContextService>();
@@ -317,15 +290,11 @@ if (!enableReplicateMock)
         return new Replicate.ReplicateApi(apiToken);
     });
 }
-else
-{
-    // Mock mode enabled: skip initializing Replicate SDK
-}
 
 // Register Replicate services with optional mock
 if (enableReplicateMock)
 {
-    builder.Services.AddSingleton<IReplicateApiClient, MockReplicateApiClient>();
+    builder.Services.AddScoped<IReplicateApiClient, MockReplicateApiClient>();
 }
 else
 {
@@ -333,87 +302,56 @@ else
 }
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IModelDiscoveryService, AI.ProfilePhotoMaker.API.Services.ModelDiscoveryService>();
 
-// Register WebhookUrlResolver service for environment-aware webhook URL resolution
 builder.Services.AddScoped<IWebhookUrlResolver, WebhookUrlResolver>();
 builder.Services.AddHttpClient<WebhookUrlResolver>();
-
 builder.Services.AddHttpClient<IImageDownloadService, ImageDownloadService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository, AI.ProfilePhotoMaker.API.Data.UserProfileRepository>();
 
 // Register Storage Services - choose between Local or Azure Blob Storage
-var azureStorageConnectionString = builder.Configuration.GetConnectionString("AzureStorage") ?? 
-                                  builder.Configuration["AzureStorage:ConnectionString"];
-
+var azureStorageConnectionString = builder.Configuration.GetConnectionString("AzureStorage") ?? builder.Configuration["AzureStorage:ConnectionString"];
 if (!string.IsNullOrEmpty(azureStorageConnectionString))
 {
-    // Register BlobServiceClient for Azure Blob Storage dependency injection
-    builder.Services.AddSingleton<BlobServiceClient>(serviceProvider =>
-    {
-        return new BlobServiceClient(azureStorageConnectionString);
-    });
-    
+    builder.Services.AddSingleton<BlobServiceClient>(_ => new BlobServiceClient(azureStorageConnectionString));
     builder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
 }
 else
 {
-    // DEPRECATED: LocalStorageService is legacy fallback when Azurite is not configured
-    // All environments should use Azurite/Azure Blob Storage for consistency
-    // TODO: Remove LocalStorageService once all environments have proper Azure Storage configuration
     builder.Services.AddScoped<IStorageService, LocalStorageService>();
 }
-
-// Register storage path resolver for environment-aware path management
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Storage.StoragePathResolver>();
 
-// Premium Package Services removed - using unified credit system
-
-// Register Credit Package Services (new unified system)
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.ICreditPackageService, AI.ProfilePhotoMaker.API.Services.CreditPackageService>();
-
-// Register Payment Services
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Payment.IPaymentService, AI.ProfilePhotoMaker.API.Services.Payment.StripePaymentService>();
-
-// Register Retention Policy Services
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IRetentionPolicyService, AI.ProfilePhotoMaker.API.Services.RetentionPolicyService>();
-
-// Register Health Check Services
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IHealthCheckService, AI.ProfilePhotoMaker.API.Services.Health.HealthCheckService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IDatabaseHealthService, AI.ProfilePhotoMaker.API.Services.Health.DatabaseHealthService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IStorageHealthService, AI.ProfilePhotoMaker.API.Services.Health.StorageHealthService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IDependencyHealthService, AI.ProfilePhotoMaker.API.Services.Health.DependencyHealthService>();
 
-// Add Performance Monitoring Services
 builder.Services.AddPerformanceMonitoring(builder.Configuration);
-
-// Register Async I/O Services for high-performance non-blocking file operations
 builder.Services.AddScoped<IAsyncFileService, AsyncFileService>();
 builder.Services.AddScoped<IAsyncZipService, AsyncZipService>();
 
-
-// Add Deployment Validation and Monitoring Services
 builder.Services.AddDeploymentValidation(builder.Configuration);
 builder.Services.ConfigureDeploymentValidation(builder.Configuration, builder.Environment);
 
-// Register background services
+// Add training polling services
+builder.Services.AddScoped<ITrainingPollingService, TrainingPollingService>();
+builder.Services.AddHostedService<TrainingPollingBackgroundService>();
+
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.BasicTierBackgroundService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelExpirationBackgroundService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.RetentionPolicyBackgroundService>();
 
-
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
-    });
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+});
 builder.Services.AddEndpointsApiExplorer();
-
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "AIProfileMaker", Version = "v1" });
-
     c.OperationFilter<FileUploadOperationFilter>();
-    // Add JWT Authentication to Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
@@ -422,7 +360,6 @@ builder.Services.AddSwaggerGen(c =>
         Type = SecuritySchemeType.ApiKey,
         Scheme = "Bearer"
     });
-
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -439,138 +376,95 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-
-// Environment-aware CORS configuration for better maintainability  
-var v1FrontendUrl = builder.Configuration["AppBaseUrl"] ?? 
-                   "https://aiprofilemaker-web-v1.eastus.azurecontainerapps.io";
-
+var v1FrontendUrl = builder.Configuration["AppBaseUrl"] ?? "https://aiprofilemaker-web-v1.eastus.azurecontainerapps.io";
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("V1Production",
-        corsBuilder =>
+    options.AddPolicy("V1Production", corsBuilder =>
+    {
+        var allowedOrigins = new List<string>
         {
-            var allowedOrigins = new List<string>
-            {
-                "https://app.aiprofilephotomaker.com",
-                "https://aiprofilephotomaker.com",
-                "https://test.profilephotomaker.com"
-            };
-            
-            // Add origins from CORS_ALLOWED_ORIGINS environment variable if set
-            var envCorsOrigins = builder.Configuration["CORS_ALLOWED_ORIGINS"] ?? Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS");
-            if (!string.IsNullOrEmpty(envCorsOrigins))
-            {
-                var envOrigins = envCorsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                                             .Select(o => o.Trim())
-                                             .Where(o => !string.IsNullOrEmpty(o));
-                allowedOrigins.AddRange(envOrigins);
-            }
-            
-            // Add V1 deployment URL from configuration
-            if (!string.IsNullOrEmpty(v1FrontendUrl))
-            {
-                allowedOrigins.Add(v1FrontendUrl);
-            }
-            
-            // Add expected V1 Container Apps URL
-            allowedOrigins.Add("https://aiprofilemaker-web-v1.eastus.azurecontainerapps.io");
-            
-            // Add actual V1 deployment URL for current infrastructure (keep for rollback capability)
-            allowedOrigins.Add("https://aipm-web-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io");
-            
-            // Remove duplicates and log final origins list
-            var finalOrigins = allowedOrigins.Distinct().ToArray();
-            
-            corsBuilder.WithOrigins(finalOrigins)
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .AllowCredentials()
-                .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
-        });
-
+            "https://app.aiprofilephotomaker.com",
+            "https://aiprofilephotomaker.com",
+            "https://test.profilephotomaker.com"
+        };
+        var envCorsOrigins = builder.Configuration["CORS_ALLOWED_ORIGINS"] ?? Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS");
+        if (!string.IsNullOrEmpty(envCorsOrigins))
+        {
+            var envOrigins = envCorsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(o => o.Trim()).Where(o => !string.IsNullOrEmpty(o));
+            allowedOrigins.AddRange(envOrigins);
+        }
+        if (!string.IsNullOrEmpty(v1FrontendUrl))
+        {
+            allowedOrigins.Add(v1FrontendUrl);
+        }
+        allowedOrigins.Add("https://aiprofilemaker-web-v1.eastus.azurecontainerapps.io");
+        allowedOrigins.Add("https://aipm-web-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io");
+        var finalOrigins = allowedOrigins.Distinct().ToArray();
+        corsBuilder.WithOrigins(finalOrigins).AllowAnyMethod().AllowAnyHeader().AllowCredentials().SetPreflightMaxAge(TimeSpan.FromMinutes(10));
+    });
     options.AddPolicy("AllowDevelopment", corsBuilder =>
     {
-        corsBuilder.WithOrigins(
-                "http://localhost:4200",
-                "https://localhost:4200"
-            )
-            .AllowAnyMethod()
-            .AllowAnyHeader()
-            .AllowCredentials();
+        corsBuilder.WithOrigins("http://localhost:4200", "https://localhost:4200").AllowAnyMethod().AllowAnyHeader().AllowCredentials();
     });
-    
-    // Add a debug policy that allows everything for testing
     options.AddPolicy("DebugAllowAll", corsBuilder =>
     {
-        corsBuilder.AllowAnyOrigin()
-            .AllowAnyMethod()
-            .AllowAnyHeader();
+        corsBuilder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
     });
 });
 
 var app = builder.Build();
 
-// Validate environment configuration before starting
-await app.UseEnvironmentValidationAsync();
-
-// Apply database migrations using new architecture (only if enabled)
-var autoMigrateOnStartup = app.Configuration.GetValue<bool>("Database:AutoMigrateOnStartup", true);
-if (autoMigrateOnStartup)
+// Validate environment configuration before starting (skip in Testing)
+if (!app.Environment.IsEnvironment("Testing"))
 {
-    await app.UseDatabaseMigrationAsync();
-}
-else
-{
-    app.Logger.LogInformation("Database migrations skipped (AutoMigrateOnStartup=false)");
+    await app.UseEnvironmentValidationAsync();
 }
 
-// Perform deployment validation on startup
-// Temporarily disabled: await app.ValidateDeploymentOnStartupAsync();
-
-// Run validations in background after startup to prevent blocking
-_ = Task.Run(async () => {
-    await Task.Delay(10000); // Wait 10s for app to fully start
-    try {
-        using var scope = app.Services.CreateScope();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        
-        logger.LogInformation("🔍 Running background startup validations...");
-        await ValidateWebhookConfigurationAsync(app);
-        await ValidateReplicateConfigurationAsync(app);
-        logger.LogInformation("✅ Background validations completed");
-    } catch (Exception ex) {
-        app.Logger.LogError(ex, "❌ Background validation failed: {Message}", ex.Message);
+// Apply database migrations using new architecture (only if enabled and not in Testing)
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    var autoMigrateOnStartup = app.Configuration.GetValue<bool>("Database:AutoMigrateOnStartup", true);
+    if (autoMigrateOnStartup)
+    {
+        await app.UseDatabaseMigrationAsync();
     }
-});
+    else
+    {
+        app.Logger.LogInformation("Database migrations skipped (AutoMigrateOnStartup=false)");
+    }
+}
 
-// Use forwarded headers for ngrok proxy
+    // Run validations in background after startup to prevent blocking
+    _ = Task.Run(async () => {
+        await Task.Delay(10000);
+        try {
+            using var scope = app.Services.CreateScope();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("🔍 Running background startup validations...");
+            await ValidateWebhookConfigurationAsync(app);
+            await ValidateReplicateConfigurationAsync(app);
+            logger.LogInformation("✅ Background validations completed");
+        } catch (Exception ex) {
+            app.Logger.LogError(ex, "❌ Background validation failed: {Message}", ex.Message);
+        }
+    });
+
 app.UseForwardedHeaders();
-
-// Enable response compression early in the pipeline
 app.UseResponseCompression();
-
-// Add storage proxy middleware VERY EARLY to intercept requests before MapFallback
 app.UseMiddleware<AI.ProfilePhotoMaker.API.Middleware.StorageProxyMiddleware>();
 
-// Add X-Robots-Tag header for search engine blocking during MVP phase
 app.Use(async (context, next) =>
 {
-    // Add X-Robots-Tag header to all responses to prevent search engine indexing
-    // This provides server-level protection in addition to robots.txt and meta tags
     var blockSearchEngines = app.Configuration.GetValue<bool>("SearchEngineBlocking:Enabled", true);
-    
     if (blockSearchEngines && !app.Environment.IsDevelopment())
     {
         context.Response.Headers.Append("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet");
     }
-    
     await next();
 });
 
-// Use session middleware for OAuth state management (required for both environments)
 app.UseSession();
 
-// Configure middleware
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -581,93 +475,51 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
-// CORS must come early in the middleware pipeline, before authentication
 var corsPolicy = app.Environment.IsDevelopment() ? "AllowDevelopment" : "V1Production";
-
-// Log CORS policy selection for debugging
 app.Logger.LogInformation($"🌐 CORS Policy Selected: {corsPolicy} (Environment: {app.Environment.EnvironmentName})");
-
-// Add CORS debugging middleware in production for troubleshooting
 app.Use(async (context, next) =>
 {
     var isOptionsRequest = context.Request.Method == "OPTIONS";
     var hasOrigin = context.Request.Headers.ContainsKey("Origin");
-    
     if (isOptionsRequest || hasOrigin)
     {
         app.Logger.LogInformation($"🌐 CORS Request: {context.Request.Method} {context.Request.Path} | Origin: {context.Request.Headers.Origin} | Environment: {app.Environment.EnvironmentName}");
     }
-    
     await next();
-    
     if (isOptionsRequest || hasOrigin)
     {
         var responseHeaders = string.Join(", ", context.Response.Headers.Where(h => h.Key.StartsWith("Access-Control")).Select(h => $"{h.Key}: {h.Value}"));
         app.Logger.LogInformation($"🌐 CORS Response Headers: {(string.IsNullOrEmpty(responseHeaders) ? "NONE" : responseHeaders)}");
     }
 });
-
-// Use production-ready CORS configuration
 app.UseCors(corsPolicy);
-
-// Add performance monitoring middleware (before authentication)  
 app.UsePerformanceMonitoring();
-
-
-// Remove debug middleware - production should use proper logging with ILogger
-// Consider adding request logging middleware with proper ILogger implementation if needed
-
-// Continue with the pipeline
-app.Use(async (context, next) =>
-{
-    await next();
-
-    // Handle authentication-related responses if needed
-    var path = context.Request.Path.Value?.ToLower();
-    if (path?.Contains("signin") == true || path?.Contains("oauth") == true || path?.Contains("auth") == true)
-    {
-    }
-});
-
-// CRITICAL: Authentication middleware must come before static files to handle OAuth callbacks
+app.Use(async (context, next) => { await next(); });
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Static file serving for images removed - now using Azure Blob Storage with Azurite for all environments
-// All image serving handled by AzureBlobStorageService with direct blob URLs
-
-// Proxy middleware for external API access to Azurite in development
 if (app.Environment.IsDevelopment())
 {
-    // Legacy blob-proxy path support
     app.Map("/blob-proxy", blobApp =>
     {
         blobApp.Run(async context =>
         {
             try
             {
-                // Extract container and blob path from request
                 var pathSegments = context.Request.Path.Value?.TrimStart('/').Split('/');
                 if (pathSegments?.Length >= 2)
                 {
                     var containerName = pathSegments[0];
                     var blobPath = string.Join("/", pathSegments.Skip(1));
-                    
-                    // Forward to Azurite (default port 10000)
                     var azuriteUrl = $"http://127.0.0.1:10000/devstoreaccount1/{containerName}/{blobPath}";
-                    
                     using var httpClient = new HttpClient();
                     var response = await httpClient.GetAsync(azuriteUrl);
-                    
                     if (response.IsSuccessStatusCode)
                     {
                         context.Response.StatusCode = (int)response.StatusCode;
                         context.Response.ContentType = response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
-                        
-                        // Add CORS headers for external API access
                         context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
                         context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
-                        
                         await response.Content.CopyToAsync(context.Response.Body);
                     }
                     else
@@ -689,29 +541,22 @@ if (app.Environment.IsDevelopment())
         });
     });
 
-    // Direct devstoreaccount1 path proxy for AzureBlobStorageService URLs
     app.Map("/devstoreaccount1", devstoreApp =>
     {
         devstoreApp.Run(async context =>
         {
             try
             {
-                // Forward entire path to Azurite
                 var fullPath = context.Request.Path.Value?.TrimStart('/') ?? "";
                 var azuriteUrl = $"http://127.0.0.1:10000/devstoreaccount1/{fullPath}";
-                
                 using var httpClient = new HttpClient();
                 var response = await httpClient.GetAsync(azuriteUrl);
-                
                 if (response.IsSuccessStatusCode)
                 {
                     context.Response.StatusCode = (int)response.StatusCode;
                     context.Response.ContentType = response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
-                    
-                    // Add CORS headers for external API access
                     context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
                     context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
-                    
                     await response.Content.CopyToAsync(context.Response.Body);
                 }
                 else
@@ -728,7 +573,6 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-// Serve Angular static files
 var angularPath = Path.Combine(builder.Environment.ContentRootPath, "../AI.ProfilePhotoMaker.UI/dist/ai.profile-photo-maker.ui/browser");
 if (Directory.Exists(angularPath))
 {
@@ -737,13 +581,9 @@ if (Directory.Exists(angularPath))
         FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(angularPath),
         RequestPath = ""
     });
-
-    // Fallback to index.html for Angular routing (exclude API and OAuth paths)
     app.MapFallback(context =>
     {
         var path = context.Request.Path.Value?.ToLower();
-
-        // Don't handle API, storage proxy, or OAuth callback paths
         if (path?.StartsWith("/api/") == true ||
             path?.StartsWith("/devstoreaccount1/") == true ||
             path?.StartsWith("/signin-") == true ||
@@ -751,22 +591,18 @@ if (Directory.Exists(angularPath))
         {
             return Task.CompletedTask;
         }
-
-        // Serve index.html for Angular routing
         context.Response.ContentType = "text/html";
         return context.Response.SendFileAsync(Path.Combine(angularPath, "index.html"));
     });
 }
 
-// Health check endpoints are now handled by HealthController
-// Legacy health check middleware disabled in favor of controller-based endpoints
-
-// OAuth callbacks are now handled by the standard middleware
-// No custom debug routes needed
-
 app.MapControllers();
 
-app.Run();
+// Only call app.Run() if not in Testing environment (TestServer handles hosting in tests)
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.Run();
+}
 
 // Helper methods for command detection
 static bool IsMigrationCommand(string command)
@@ -793,291 +629,5 @@ static bool IsUploadCommand(string command)
     };
 }
 
-/// <summary>
-/// Loads environment variables from .env files based on environment
-/// </summary>
-static void LoadEnvironmentVariables(IWebHostEnvironment environment)
-{
-    try
-    {
-        // Look for .env files in the solution root directory (parent of API directory)
-        var contentRoot = environment.ContentRootPath;
-        var solutionRoot = Directory.GetParent(contentRoot)?.FullName ?? contentRoot;
-        
-        
-        var envFiles = new[]
-        {
-            ".env",
-            $".env.{environment.EnvironmentName.ToLower()}",
-            ".env.local",
-            $".env.{environment.EnvironmentName.ToLower()}.local"
-        };
-
-        bool anyFileFound = false;
-        foreach (var envFile in envFiles)
-        {
-            // First try solution root directory
-            var envFilePath = Path.Combine(solutionRoot, envFile);
-            if (File.Exists(envFilePath))
-            {
-                LoadEnvFile(envFilePath);
-                anyFileFound = true;
-            }
-            else
-            {
-                // Fallback to API directory for compatibility
-                envFilePath = Path.Combine(contentRoot, envFile);
-                if (File.Exists(envFilePath))
-                {
-                    LoadEnvFile(envFilePath);
-                    anyFileFound = true;
-                }
-            }
-        }
-        
-        if (!anyFileFound)
-        {
-        }
-    }
-    catch (Exception)
-    {
-    }
-}
-
-/// <summary>
-/// Loads environment variables from a specific .env file
-/// </summary>
-static void LoadEnvFile(string filePath)
-{
-    var lines = File.ReadAllLines(filePath);
-    foreach (var line in lines)
-    {
-        if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#"))
-            continue;
-
-        var parts = line.Split('=', 2);
-        if (parts.Length != 2)
-            continue;
-
-        var key = parts[0].Trim();
-        var value = parts[1].Trim();
-
-        // Remove surrounding quotes if present
-        if ((value.StartsWith("\"") && value.EndsWith("\"")) ||
-            (value.StartsWith("'") && value.EndsWith("'")))
-        {
-            value = value[1..^1];
-        }
-
-        // Only set if not already set (environment variables take precedence)
-        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(key)))
-        {
-            Environment.SetEnvironmentVariable(key, value);
-        }
-    }
-}
-
-/// <summary>
-/// Validates webhook URL configuration on startup and logs the results
-/// </summary>
-static async Task ValidateWebhookConfigurationAsync(WebApplication app)
-{
-    try
-    {
-        using var scope = app.Services.CreateScope();
-        var webhookUrlResolver = scope.ServiceProvider.GetRequiredService<IWebhookUrlResolver>();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        var environment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
-
-        logger.LogInformation("🔗 Validating webhook URL configuration for {Environment} environment...", environment.EnvironmentName);
-
-        // Get the webhook base URL
-        var webhookBaseUrl = await webhookUrlResolver.GetWebhookBaseUrlAsync();
-        
-        if (webhookBaseUrl == null)
-        {
-            if (environment.IsDevelopment())
-            {
-                logger.LogWarning("⚠️  Webhook URLs are disabled in development. Consider setting up ngrok for webhook testing.");
-                logger.LogInformation("💡 To enable webhooks in development:");
-                logger.LogInformation("   1. Start ngrok: ngrok http 5000");
-                logger.LogInformation("   2. Set Webhooks:NgrokTunnelUrl in appsettings.Development.json");
-                logger.LogInformation("   3. Or set Webhooks:BaseUrl to your preferred HTTPS endpoint");
-            }
-            else
-            {
-                logger.LogError("❌ Webhook URLs are disabled in production! This may affect functionality.");
-                logger.LogError("🔧 Ensure AppBaseUrl is configured with an HTTPS URL in production.");
-            }
-            return;
-        }
-
-        logger.LogInformation("✅ Webhook base URL resolved: {WebhookBaseUrl}", webhookBaseUrl);
-
-        // Test a sample webhook URL
-        var sampleWebhookUrl = await webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete");
-        logger.LogInformation("📨 Sample webhook URL: {SampleWebhookUrl}", sampleWebhookUrl);
-
-        // Validate the webhook URL is accessible (optional validation)
-        var isValid = await webhookUrlResolver.ValidateWebhookUrlAsync();
-        if (isValid)
-        {
-            logger.LogInformation("✅ Webhook URL validation passed - endpoints are reachable");
-        }
-        else
-        {
-            if (environment.IsDevelopment())
-            {
-                logger.LogWarning("⚠️  Webhook URL validation failed - endpoints may not be reachable yet. This is normal if ngrok is not running.");
-            }
-            else
-            {
-                logger.LogWarning("⚠️  Webhook URL validation failed - please ensure your production endpoints are accessible");
-            }
-        }
-
-        // Log environment-specific guidance
-        if (environment.IsDevelopment())
-        {
-            logger.LogInformation("🔧 Development webhook configuration:");
-            logger.LogInformation("   • Webhooks will work if HTTPS is configured (ngrok, local HTTPS, etc.)");
-            logger.LogInformation("   • HTTP webhooks are disabled for security (Replicate API requirement)");
-            logger.LogInformation("   • Configure Webhooks:NgrokTunnelUrl for manual ngrok URL override");
-        }
-        else
-        {
-            logger.LogInformation("🚀 Production webhook configuration active");
-            logger.LogInformation("   • Webhooks enabled for HTTPS environments");
-            logger.LogInformation("   • Using AppBaseUrl: {AppBaseUrl}", app.Configuration["AppBaseUrl"]);
-        }
-    }
-    catch (Exception ex)
-    {
-        var logger = app.Services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "❌ Failed to validate webhook configuration during startup");
-    }
-}
-
-/// <summary>
-/// Validates Replicate configuration on startup to catch missing required settings
-/// </summary>
-static Task ValidateReplicateConfigurationAsync(WebApplication app)
-{
-    try
-    {
-        using var scope = app.Services.CreateScope();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
-        var environment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
-
-        logger.LogInformation("🤖 Validating Replicate configuration for {Environment} environment...", environment.EnvironmentName);
-
-        var configurationErrors = new List<string>();
-        var configurationWarnings = new List<string>();
-
-        // Check required Replicate settings
-        var apiToken = configuration["Replicate:ApiToken"];
-        if (string.IsNullOrEmpty(apiToken) || apiToken.StartsWith("REPLACE_WITH_", StringComparison.OrdinalIgnoreCase))
-        {
-            configurationErrors.Add("Replicate:ApiToken is missing or contains placeholder value");
-        }
-        else
-        {
-            logger.LogInformation("✅ Replicate API Token is configured");
-        }
-
-        var fluxTrainingModelId = configuration["Replicate:FluxTrainingModelId"];
-        if (string.IsNullOrEmpty(fluxTrainingModelId))
-        {
-            configurationWarnings.Add("Replicate:FluxTrainingModelId is missing - model training may fail");
-        }
-        else
-        {
-            logger.LogInformation("✅ Flux Training Model ID: {ModelId}", fluxTrainingModelId);
-        }
-
-        var fluxGenerationModelId = configuration["Replicate:FluxGenerationModelId"];
-        if (string.IsNullOrEmpty(fluxGenerationModelId))
-        {
-            configurationWarnings.Add("Replicate:FluxGenerationModelId is missing - basic image generation may fail");
-        }
-        else
-        {
-            logger.LogInformation("✅ Flux Generation Model ID: {ModelId}", fluxGenerationModelId);
-        }
-
-        var fluxKontextProModelId = configuration["Replicate:FluxKontextProModelId"];
-        if (string.IsNullOrEmpty(fluxKontextProModelId))
-        {
-            configurationErrors.Add("Replicate:FluxKontextProModelId is missing - photo enhancement will fail");
-        }
-        else
-        {
-            logger.LogInformation("✅ Flux Kontext Pro Model ID: {ModelId}", fluxKontextProModelId);
-        }
-
-        var webhookSecret = configuration["Replicate:WebhookSecret"];
-        if (string.IsNullOrEmpty(webhookSecret) || webhookSecret.StartsWith("REPLACE_WITH_", StringComparison.OrdinalIgnoreCase))
-        {
-            configurationErrors.Add("Replicate:WebhookSecret is missing or contains placeholder value");
-        }
-        else
-        {
-            logger.LogInformation("✅ Replicate Webhook Secret is configured");
-        }
-
-        // Report configuration status
-        if (configurationErrors.Any())
-        {
-            logger.LogError("❌ Critical Replicate configuration errors found:");
-            foreach (var error in configurationErrors)
-            {
-                logger.LogError("   • {Error}", error);
-            }
-            
-            if (environment.IsProduction())
-            {
-                logger.LogError("🚨 Production deployment detected with critical configuration errors!");
-                logger.LogError("🔧 Please configure the missing Replicate settings before proceeding.");
-            }
-            else
-            {
-                logger.LogWarning("⚠️  Development environment with configuration errors - some features will not work");
-            }
-        }
-
-        if (configurationWarnings.Any())
-        {
-            logger.LogWarning("⚠️  Replicate configuration warnings:");
-            foreach (var warning in configurationWarnings)
-            {
-                logger.LogWarning("   • {Warning}", warning);
-            }
-        }
-
-        if (!configurationErrors.Any() && !configurationWarnings.Any())
-        {
-            logger.LogInformation("✅ All Replicate configuration settings are properly configured");
-        }
-
-        // Environment-specific guidance
-        if (environment.IsDevelopment())
-        {
-            logger.LogInformation("🔧 Development Replicate configuration:");
-            logger.LogInformation("   • Configure settings in appsettings.Development.json or user secrets");
-            logger.LogInformation("   • Use 'dotnet user-secrets set \"Replicate:ApiToken\" \"your-token\"' for sensitive values");
-        }
-        else
-        {
-            logger.LogInformation("🚀 Production Replicate configuration:");
-            logger.LogInformation("   • Ensure all secrets are properly configured via environment variables");
-            logger.LogInformation("   • Verify Azure Key Vault or container secrets are accessible");
-        }
-    }
-    catch (Exception ex)
-    {
-        var logger = app.Services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "❌ Failed to validate Replicate configuration during startup");
-    }
-    return Task.CompletedTask;
-}
+// Expose Program class for WebApplicationFactory in tests
+public partial class Program { }

@@ -588,18 +588,7 @@ export class SettingsComponent implements OnInit {
         statusSources.push('user-profile');
       }
 
-      // Method 4: Debug endpoint as final verification (if other methods disagree)
-      if (!hasTrainedModel) {
-        try {
-          const debugStatus = await this.fileUploadService.getDebugModelStatus().toPromise();
-          if (debugStatus?.success && debugStatus.data?.hasTrainedModel) {
-            hasTrainedModel = true;
-            statusSources.push('debug-status');
-          }
-        } catch (error) {
-          console.warn('⚠️ Debug status endpoint failed:', error);
-        }
-      }
+      // Debug endpoint removed: no longer used as a fallback
 
       // Update the status
       this.dataStats.hasTrainedModel = hasTrainedModel;

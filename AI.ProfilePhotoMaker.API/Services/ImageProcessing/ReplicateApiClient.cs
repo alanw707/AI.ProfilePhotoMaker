@@ -202,9 +202,7 @@ public class ReplicateApiClient : IReplicateApiClient
                     trigger_word = $"user_{userId}",
                     lora_type = "subject",
                     training_steps = 2000
-                },
-                webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/training-complete"),
-                webhook_events_filter = new[] { "completed" }
+                }
             };
 
             var content = new StringContent(JsonSerializer.Serialize(trainingRequest), Encoding.UTF8, "application/json");
@@ -648,9 +646,7 @@ public class ReplicateApiClient : IReplicateApiClient
                     trigger_word = $"user_{userId}",
                     lora_type = "subject",
                     training_steps = 2000
-                },
-                webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/training-complete"),
-                webhook_events_filter = new[] { "completed" }
+                }
             };
 
             var content = new StringContent(JsonSerializer.Serialize(trainingRequest), Encoding.UTF8, "application/json");

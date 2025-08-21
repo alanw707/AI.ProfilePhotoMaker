@@ -35,53 +35,40 @@ export class ModelStateService implements IModelStateService {
    * Update only the model status after discovery
    */
   updateModelStatus(): void {
-    forkJoin({
-      trainingStatus: this.fileUploadService.getTrainingStatus(),
-      modelRequests: this.fileUploadService.getUserModelRequests(),
-    }).subscribe({
-      next: ({ modelRequests }) => {
-        const modelRequestsData = modelRequests.success ? modelRequests.data : null;
-
-        let modelStatus = 'Not Started';
-
-        // Re-check model status with updated data
-        if (modelRequestsData?.hasTrainedModel && modelRequestsData?.latestTrainedModel) {
-          modelStatus = 'Model Ready';
-          // Emit this update to dashboard state service if needed
-          this.notifyModelStatusUpdate(modelStatus, modelRequestsData.latestTrainedModel);
-        } else {
-          this.notifyModelStatusUpdate(modelStatus, null);
-        }
+    // Prefer unified model status endpoint when available
+    this.fileUploadService.getUnifiedModelStatus().subscribe({
+      next: unified => {
+        const display = this.mapUnifiedStatusToDisplay(unified.statusCode, unified.reason);
+        const latestTrainedModel = unified.hasTrainedModel
+          ? {
+              trainedModelVersion: unified.trainedModelVersion,
+              replicateModelId: unified.trainedModelId,
+            }
+          : null;
+        this.notifyModelStatusUpdate(display, latestTrainedModel);
       },
-      error: error => {
-        console.error('Failed to update model status:', error);
+      error: _ => {
+        // Fallback to legacy combination of endpoints
+        forkJoin({
+          trainingStatus: this.fileUploadService.getTrainingStatus(),
+          modelRequests: this.fileUploadService.getUserModelRequests(),
+        }).subscribe({
+          next: ({ modelRequests }) => {
+            const modelRequestsData = modelRequests.success ? modelRequests.data : null;
+            let modelStatus = 'Not Started';
+            if (modelRequestsData?.hasTrainedModel && modelRequestsData?.latestTrainedModel) {
+              modelStatus = 'Model Ready';
+              this.notifyModelStatusUpdate(modelStatus, modelRequestsData.latestTrainedModel);
+            } else {
+              this.notifyModelStatusUpdate(modelStatus, null);
+            }
+          },
+          error: error => {
+            console.error('Failed to update model status:', error);
+          },
+        });
       },
     });
-  }
-
-  /**
-   * Debug methods for console testing
-   */
-  async debugModelStatus(): Promise<any> {
-    try {
-      const debugResult = await this.fileUploadService.getDebugModelStatus().toPromise();
-
-      const testResult = await this.fileUploadService.testModelCreationEndpoint().toPromise();
-
-      const discoverResult = await this.fileUploadService.discoverUserModels().toPromise();
-
-      const specificModelTest = await this.fileUploadService.testSpecificModel().toPromise();
-
-      return {
-        debug: debugResult,
-        test: testResult,
-        discover: discoverResult,
-        specificModel: specificModelTest,
-      };
-    } catch (error) {
-      console.error('🚨 Debug failed:', error);
-      return { error };
-    }
   }
 
   /**
@@ -129,36 +116,64 @@ export class ModelStateService implements IModelStateService {
     let hasTrainedModel = false;
     let latestTrainedModel = null;
 
-    // 🔍 ENHANCED DEBUG: Model status data analysis
-
-    // Use ModelCreationRequest as single source of truth
+    // Use ModelCreationRequest as single source of truth when a trained model exists
     if (modelRequestsData?.hasTrainedModel && modelRequestsData?.latestTrainedModel) {
       hasTrainedModel = true;
       modelStatus = 'Model Ready';
       latestTrainedModel = modelRequestsData.latestTrainedModel;
+      return { modelStatus, hasTrainedModel, latestTrainedModel };
     }
-    // Check if we have pending/in-progress training
-    else if (
-      modelRequestsData?.allRequests?.some(
-        (req: any) => req.status === 'creating' || req.status === 'pending'
-      )
-    ) {
+
+    // Prefer explicit training status from API when it communicates actionable states
+    // This helps when old pending/creating requests linger but no active training exists
+    const ts = trainingStatus ?? {};
+    const tsStatus = (ts.status ?? ts.Status ?? '').toString();
+    if (tsStatus) {
+      const normalized = tsStatus.trim();
+      // Trust these server-computed messages over inferred states
+      if (
+        normalized.startsWith('Ready for training') ||
+        normalized.startsWith('No images uploaded') ||
+        normalized.startsWith('Need at least')
+      ) {
+        modelStatus = normalized;
+        return { modelStatus, hasTrainedModel, latestTrainedModel };
+      }
+    }
+
+    // If no trained model yet, look at the most recent request first to avoid stale entries influencing status
+    const all = Array.isArray(modelRequestsData?.allRequests)
+      ? [...modelRequestsData.allRequests]
+      : [];
+
+    // Sort descending by createdAt if available
+    all.sort((a: any, b: any) => {
+      const ad = new Date(a.createdAt ?? 0).getTime();
+      const bd = new Date(b.createdAt ?? 0).getTime();
+      return bd - ad;
+    });
+
+    const latest = all[0];
+
+    if (latest?.status === 'creating' || latest?.status === 'pending') {
       modelStatus = 'training';
-    }
-    // Check if we have a failed model request (e.g., deleted from Replicate)
-    // If user has uploaded photos but model failed, they should be ready to train again
-    else if (
-      modelRequestsData?.allRequests?.some(
+    } else if (
+      // If DB shows a 'ready' request but no trained version exists (edge-case), treat as ready to (re)train
+      all.some((req: any) => req.status === 'ready') &&
+      !modelRequestsData?.hasTrainedModel
+    ) {
+      modelStatus = 'Ready for training';
+    } else if (
+      // If a model was deleted from Replicate, surface an actionable state
+      all.some(
         (req: any) =>
           req.status === 'failed' && req.errorMessage?.includes('deleted from Replicate')
       )
     ) {
-      // Set to "Ready for training" so user knows they can start training again with existing photos
       modelStatus = 'Ready for training';
-    }
-    // Default to training status or initial state
-    else {
-      modelStatus = trainingStatus?.status || 'Not Started';
+    } else {
+      // Default to server-reported training status or initial state
+      modelStatus = tsStatus || 'Not Started';
     }
 
     return { modelStatus, hasTrainedModel, latestTrainedModel };
@@ -171,5 +186,21 @@ export class ModelStateService implements IModelStateService {
   private notifyModelStatusUpdate(_modelStatus: string, _latestTrainedModel: any): void {
     // This could emit an event or call a callback
     // For now, just log the update
+  }
+
+  private mapUnifiedStatusToDisplay(statusCode: string, reason?: string | null): string {
+    switch (statusCode) {
+      case 'ModelReady':
+        return 'Model Ready';
+      case 'Training':
+        return 'training';
+      case 'ReadyForTraining':
+        return 'Ready for training';
+      case 'Failed':
+        return reason && reason.includes('deleted') ? 'Ready for training' : 'Training failed';
+      case 'NotStarted':
+      default:
+        return 'Not Started';
+    }
   }
 }

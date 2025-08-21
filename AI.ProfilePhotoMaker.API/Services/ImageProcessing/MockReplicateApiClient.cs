@@ -54,20 +54,23 @@ public class MockReplicateApiClient : IReplicateApiClient
         };
         Trainings[training.Id!] = training;
 
-        // Complete after short delay
+        // Set up completion progression for polling
         _ = Task.Run(async () =>
         {
-            await Task.Delay(300);
-            request.TrainedModelVersion = "mock-version";
-            request.Status = ModelCreationStatus.Ready;
-            request.CompletedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-
+            await Task.Delay(100); // First transition to processing
             var tr = Trainings[training.Id!];
+            tr.Status = "processing";
+            Trainings[training.Id!] = tr;
+            
+            await Task.Delay(200); // Then complete
+            tr = Trainings[training.Id!];
             tr.Status = "succeeded";
             tr.CompletedAt = DateTime.UtcNow;
-            tr.Version = $"{request.ReplicateModelId}:{request.TrainedModelVersion}";
+            tr.Version = $"{request.ReplicateModelId}:mock-version";
             Trainings[training.Id!] = tr;
+            
+            _logger.LogInformation("[Mock] Training {TrainingId} completed with version {Version}", 
+                training.Id, tr.Version);
         });
 
         return training;
@@ -89,16 +92,19 @@ public class MockReplicateApiClient : IReplicateApiClient
     {
         if (Trainings.TryGetValue(trainingId, out var tr))
         {
+            _logger.LogInformation("[Mock] GetTrainingStatus {TrainingId} => {Status}", trainingId, tr.Status);
             return Task.FromResult(tr);
         }
-        // Unknown id: return succeeded
+        
+        // Unknown id: return succeeded for backwards compatibility
+        _logger.LogWarning("[Mock] GetTrainingStatus unknown id {TrainingId}, returning succeeded", trainingId);
         return Task.FromResult(new ReplicateTrainingResult
         {
             Id = trainingId,
             Status = "succeeded",
             CreatedAt = DateTime.UtcNow.AddSeconds(-1),
             CompletedAt = DateTime.UtcNow,
-            Version = "mock/mock:mock-version",
+            Version = "mock/unknown:mock-version",
         });
     }
 
@@ -222,4 +228,3 @@ public class MockReplicateApiClient : IReplicateApiClient
 
     public Task<bool> CheckModelAvailabilityAsync(string modelId) => Task.FromResult(true);
 }
-
