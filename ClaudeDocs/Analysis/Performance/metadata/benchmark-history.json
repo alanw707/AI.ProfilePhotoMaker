@@ -1,14 +1,14 @@
 {
   "benchmark_runs": [
     {
-      "timestamp": "2025-08-14T03:55:54.9764104Z",
+      "timestamp": "2025-08-14T11:06:03.4476274Z",
       "version": "baseline",
       "avg_query_time_ms": 250,
       "avg_memory_usage_mb": 400,
       "notes": "Before optimizations"
     },
     {
-      "timestamp": "2025-08-21T03:55:54.9765671Z",
+      "timestamp": "2025-08-21T11:06:03.4480334Z",
       "version": "optimized",
       "avg_query_time_ms": 45,
       "avg_memory_usage_mb": 80,
