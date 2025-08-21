@@ -49,8 +49,8 @@ public class ModelCreationStatusController : ControllerBase
                 return Unauthorized(new
                 {
                     success = false,
-                    message = "User not authenticated",
-                    error = new { code = "Unauthorized", message = "User ID not found in token" }
+                    message = "Authentication required",
+                    error = new { code = "Unauthorized", message = "User not authenticated" }
                 });
             }
 
@@ -59,14 +59,14 @@ public class ModelCreationStatusController : ControllerBase
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
 
-            // Find the most recent completed model and validate against Replicate
-            var completedModel = modelRequests
-                .FirstOrDefault(r => r.Status == ModelCreationStatus.Ready && !string.IsNullOrEmpty(r.TrainedModelVersion));
+            // Find the most recent model marked as Ready (regardless of TrainedModelVersion) and validate against Replicate
+            var readyModel = modelRequests
+                .FirstOrDefault(r => r.Status == ModelCreationStatus.Ready);
 
-            // Validate completed model against Replicate API to ensure it still exists
-            if (completedModel != null && !string.IsNullOrEmpty(completedModel.ReplicateModelId))
+            // Validate ready model against Replicate API to ensure it still exists
+            if (readyModel != null && !string.IsNullOrEmpty(readyModel.ReplicateModelId))
             {
-                await ValidateModelStatusAsync(completedModel);
+                await ValidateModelStatusAsync(readyModel);
             }
 
             // ModelCreationRequest is now the single source of truth for model data
@@ -78,14 +78,14 @@ public class ModelCreationStatusController : ControllerBase
                 data = new
                 {
                     totalRequests = modelRequests.Count,
-                    hasTrainedModel = completedModel != null,
-                    latestTrainedModel = completedModel != null ? new
+                    hasTrainedModel = readyModel != null && !string.IsNullOrEmpty(readyModel.TrainedModelVersion),
+                    latestTrainedModel = (readyModel != null && !string.IsNullOrEmpty(readyModel.TrainedModelVersion)) ? new
                     {
-                        requestId = completedModel.Id,
-                        modelName = completedModel.ModelName,
-                        replicateModelId = completedModel.ReplicateModelId,
-                        trainedModelVersion = completedModel.TrainedModelVersion,
-                        completedAt = completedModel.CompletedAt
+                        requestId = readyModel.Id,
+                        modelName = readyModel.ModelName,
+                        replicateModelId = readyModel.ReplicateModelId,
+                        trainedModelVersion = readyModel.TrainedModelVersion,
+                        completedAt = readyModel.CompletedAt
                     } : null,
                     allRequests = modelRequests.Select(r => new
                     {
@@ -214,86 +214,70 @@ public class ModelCreationStatusController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Get all model creation requests (for debugging)
-    /// </summary>
-    [HttpGet("all")]
-    public async Task<IActionResult> GetAllModelCreationRequests()
-    {
-        try
-        {
-            var modelRequests = await _context.ModelCreationRequests
-                .OrderByDescending(r => r.CreatedAt)
-                .ToListAsync();
 
-            return Ok(new
-            {
-                success = true,
-                message = $"Found {modelRequests.Count} total model creation requests",
-                data = modelRequests.Select(r => new
-                {
-                    requestId = r.Id,
-                    userId = r.UserId,
-                    modelName = r.ModelName,
-                    replicateModelId = r.ReplicateModelId,
-                    trainedModelVersion = r.TrainedModelVersion,
-                    status = r.Status.ToString().ToLower(),
-                    createdAt = r.CreatedAt,
-                    completedAt = r.CompletedAt,
-                    errorMessage = r.ErrorMessage
-                })
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving all model creation requests");
-            return StatusCode(500, new
-            {
-                success = false,
-                message = "Error retrieving model creation requests",
-                error = new { code = "InternalError", message = ex.Message }
-            });
-        }
-    }
 
     /// <summary>
-    /// Validates model status against Replicate API and updates database if model no longer exists
+    /// Validates model status against both database consistency and Replicate API, updates if inconsistencies found
     /// </summary>
     private async Task ValidateModelStatusAsync(ModelCreationRequest modelRequest)
     {
         try
         {
-            if (string.IsNullOrEmpty(modelRequest.ReplicateModelId))
+            bool needsUpdate = false;
+            
+            // First check database consistency
+            if (modelRequest.Status == ModelCreationStatus.Ready)
             {
-                _logger.LogWarning("Cannot validate model: ReplicateModelId is null or empty for request {RequestId}", modelRequest.Id);
-                return;
+                // Check for inconsistent "ready" status with missing trained model or error messages
+                if (string.IsNullOrEmpty(modelRequest.TrainedModelVersion) || !string.IsNullOrEmpty(modelRequest.ErrorMessage))
+                {
+                    _logger.LogWarning("Model {RequestId} marked as Ready but has inconsistent data: TrainedModelVersion={TrainedModelVersion}, ErrorMessage={ErrorMessage}", 
+                        modelRequest.Id, modelRequest.TrainedModelVersion ?? "NULL", modelRequest.ErrorMessage ?? "NULL");
+                    
+                    modelRequest.Status = ModelCreationStatus.Failed;
+                    if (string.IsNullOrEmpty(modelRequest.ErrorMessage))
+                    {
+                        modelRequest.ErrorMessage = "Model marked as ready but training data is incomplete";
+                    }
+                    needsUpdate = true;
+                }
             }
-
-            _logger.LogInformation("Validating model {ModelId} against Replicate API", modelRequest.ReplicateModelId);
             
-            bool modelExists = await _replicateApiClient.CheckModelExistsAsync(modelRequest.ReplicateModelId);
-            
-            if (!modelExists)
+            // Then check against Replicate API if we have a model ID and status is still ready
+            if (modelRequest.Status == ModelCreationStatus.Ready && !string.IsNullOrEmpty(modelRequest.ReplicateModelId))
             {
-                _logger.LogWarning("Model {ModelId} no longer exists on Replicate, updating status to Failed", modelRequest.ReplicateModelId);
+                _logger.LogInformation("Validating model {ModelId} against Replicate API", modelRequest.ReplicateModelId);
                 
-                // Update model status to Failed since it was deleted from Replicate
-                modelRequest.Status = ModelCreationStatus.Failed;
-                modelRequest.ErrorMessage = "Model was deleted from Replicate externally";
+                bool modelExists = await _replicateApiClient.CheckModelExistsAsync(modelRequest.ReplicateModelId);
                 
-                // Save changes to database
+                
+                if (!modelExists)
+                {
+                    _logger.LogWarning("Model {ModelId} no longer exists on Replicate, updating status to Failed", modelRequest.ReplicateModelId);
+                    
+                    modelRequest.Status = ModelCreationStatus.Failed;
+                    modelRequest.ErrorMessage = "Model was deleted from Replicate externally";
+                    needsUpdate = true;
+                }
+            }
+            else if (string.IsNullOrEmpty(modelRequest.ReplicateModelId))
+            {
+                _logger.LogWarning("Cannot validate model against Replicate API: ReplicateModelId is null or empty for request {RequestId}", modelRequest.Id);
+            }
+            
+            // Save changes if any updates were made
+            if (needsUpdate)
+            {
                 _context.ModelCreationRequests.Update(modelRequest);
                 await _context.SaveChangesAsync();
-            }
-            else
-            {
-                _logger.LogInformation("Model {ModelId} validated successfully on Replicate", modelRequest.ReplicateModelId);
+                _logger.LogInformation("Updated model request {RequestId} with corrected status: {Status}", modelRequest.Id, modelRequest.Status);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error validating model {ModelId} against Replicate API", modelRequest.ReplicateModelId);
+            _logger.LogError(ex, "Error validating model {ModelId} against database and Replicate API", modelRequest.ReplicateModelId);
             // Don't fail the entire request if validation fails, just log the error
         }
     }
+
 }

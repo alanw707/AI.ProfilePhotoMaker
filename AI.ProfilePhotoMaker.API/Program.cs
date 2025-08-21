@@ -346,7 +346,6 @@ if (!string.IsNullOrEmpty(azureStorageConnectionString))
     });
     
     builder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
-    Console.WriteLine("Using Azure Blob Storage for image storage");
 }
 else
 {
@@ -354,7 +353,6 @@ else
     // All environments should use Azurite/Azure Blob Storage for consistency
     // TODO: Remove LocalStorageService once all environments have proper Azure Storage configuration
     builder.Services.AddScoped<IStorageService, LocalStorageService>();
-    Console.WriteLine("Using Local Storage for image storage (DEPRECATED - configure Azurite for development)");
 }
 
 // Register storage path resolver for environment-aware path management
@@ -475,7 +473,6 @@ builder.Services.AddCors(options =>
             
             // Remove duplicates and log final origins list
             var finalOrigins = allowedOrigins.Distinct().ToArray();
-            Console.WriteLine($"🌐 CORS V1Production Origins: {string.Join(", ", finalOrigins)}");
             
             corsBuilder.WithOrigins(finalOrigins)
                 .AllowAnyMethod()
@@ -622,7 +619,6 @@ app.Use(async (context, next) =>
     var path = context.Request.Path.Value?.ToLower();
     if (path?.Contains("signin") == true || path?.Contains("oauth") == true || path?.Contains("auth") == true)
     {
-        Console.WriteLine($"🔐 OAuth response: {context.Response.StatusCode}");
     }
 });
 
@@ -801,9 +797,6 @@ static void LoadEnvironmentVariables(IWebHostEnvironment environment)
         var contentRoot = environment.ContentRootPath;
         var solutionRoot = Directory.GetParent(contentRoot)?.FullName ?? contentRoot;
         
-        Console.WriteLine($"🔍 Looking for .env files in:");
-        Console.WriteLine($"   Content Root: {contentRoot}");
-        Console.WriteLine($"   Solution Root: {solutionRoot}");
         
         var envFiles = new[]
         {
@@ -820,7 +813,6 @@ static void LoadEnvironmentVariables(IWebHostEnvironment environment)
             var envFilePath = Path.Combine(solutionRoot, envFile);
             if (File.Exists(envFilePath))
             {
-                Console.WriteLine($"🔧 Loading environment variables from solution root: {envFile}");
                 LoadEnvFile(envFilePath);
                 anyFileFound = true;
             }
@@ -830,7 +822,6 @@ static void LoadEnvironmentVariables(IWebHostEnvironment environment)
                 envFilePath = Path.Combine(contentRoot, envFile);
                 if (File.Exists(envFilePath))
                 {
-                    Console.WriteLine($"🔧 Loading environment variables from API directory: {envFile}");
                     LoadEnvFile(envFilePath);
                     anyFileFound = true;
                 }
@@ -839,12 +830,10 @@ static void LoadEnvironmentVariables(IWebHostEnvironment environment)
         
         if (!anyFileFound)
         {
-            Console.WriteLine($"⚠️  No .env files found in either directory");
         }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
-        Console.WriteLine($"⚠️  Warning: Could not load environment variables: {ex.Message}");
     }
 }
 

@@ -47,7 +47,10 @@ public class ReplicateApiClient : IReplicateApiClient
         // Add API token from configuration unless in mock mode
         if (!_mockEnabled)
         {
-            string apiToken = _configuration["Replicate:ApiToken"]
+            // Prefer explicit environment variable if present, then config binding
+            string? envToken = Environment.GetEnvironmentVariable("REPLICATE_API_TOKEN");
+            string? cfgToken = _configuration["Replicate:ApiToken"];
+            string apiToken = envToken ?? cfgToken
                 ?? throw new InvalidOperationException("Replicate API token not configured");
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Token", apiToken);
         }
