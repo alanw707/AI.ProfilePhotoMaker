@@ -145,6 +145,17 @@ export class ModelStateService implements IModelStateService {
     ) {
       modelStatus = 'training';
     }
+    // Check if we have a failed model request (e.g., deleted from Replicate)
+    // If user has uploaded photos but model failed, they should be ready to train again
+    else if (
+      modelRequestsData?.allRequests?.some(
+        (req: any) =>
+          req.status === 'failed' && req.errorMessage?.includes('deleted from Replicate')
+      )
+    ) {
+      // Set to "Ready for training" so user knows they can start training again with existing photos
+      modelStatus = 'Ready for training';
+    }
     // Default to training status or initial state
     else {
       modelStatus = trainingStatus?.status || 'Not Started';

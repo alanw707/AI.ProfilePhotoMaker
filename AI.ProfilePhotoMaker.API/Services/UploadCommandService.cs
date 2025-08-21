@@ -30,7 +30,6 @@ public static class UploadCommandService
         catch (Exception ex)
         {
             logger.LogCritical(ex, "Upload command failed: {Command}", command);
-            Console.WriteLine($"ERROR: Upload command '{command}' failed: {ex.Message}");
             return 1;
         }
     }
@@ -56,12 +55,6 @@ public static class UploadCommandService
         if (string.IsNullOrEmpty(azureStorageConnectionString) || 
             azureStorageConnectionString.StartsWith("REPLACE_WITH_"))
         {
-            Console.WriteLine("ERROR: Azure Storage connection string is not configured.");
-            Console.WriteLine("Please configure either:");
-            Console.WriteLine("  - ConnectionStrings:AzureStorage in appsettings.json");
-            Console.WriteLine("  - AzureStorage:ConnectionString in configuration");
-            Console.WriteLine();
-            Console.WriteLine("For testing without Azure Storage, you can simulate the upload:");
             if (dryRun)
             {
                 // Allow dry-run without Azure configuration for testing
@@ -81,8 +74,6 @@ public static class UploadCommandService
             var storageService = scopedProvider.GetService<IStorageService>();
             if (storageService is not AzureBlobStorageService)
             {
-                Console.WriteLine("ERROR: Upload command requires Azure Blob Storage configuration.");
-                Console.WriteLine("Current storage service is not Azure Blob Storage.");
                 logger.LogError("Upload command attempted with non-Azure storage service: {ServiceType}", 
                     storageService?.GetType().Name ?? "null");
                 return 1;
@@ -95,8 +86,6 @@ public static class UploadCommandService
         }
         catch (Exception ex) when (ex.Message.Contains("Settings must be of the form"))
         {
-            Console.WriteLine("ERROR: Invalid Azure Storage connection string format.");
-            Console.WriteLine("The connection string must be in the format: 'DefaultEndpointsProtocol=...'.");
             logger.LogError(ex, "Invalid Azure Storage connection string format");
             return 1;
         }
