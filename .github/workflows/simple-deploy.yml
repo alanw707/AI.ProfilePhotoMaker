@@ -834,6 +834,10 @@ jobs:
           echo "📝 [INFO] This ensures new container revisions are running the expected image tag"
           echo "📝 [INFO] and detects any startup failures or configuration issues"
           
+          # Install jq for JSON parsing in verification script
+          echo "📦 [INSTALL] Installing jq for JSON parsing..."
+          sudo apt-get update && sudo apt-get install -y jq
+          
           # Wait a moment for revision roll to propagate
           echo "⏳ [WAIT] Allowing time for revision changes to propagate..."
           sleep 15
@@ -853,7 +857,7 @@ jobs:
             --expected-tag "$IMAGE_TAG" \
             --rollback-on-failure \
             --verbose \
-            --max-wait 600; then
+            --max-wait 300; then
             
             echo "✅ [SUCCESS] Container revision verification passed"
             echo "📊 [INFO] All container apps are running expected revision and are healthy"

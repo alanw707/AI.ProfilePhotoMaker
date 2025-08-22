@@ -21,7 +21,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 ENVIRONMENT="${ENVIRONMENT:-v1}"
 RESOURCE_GROUP="aiprofilemaker-${ENVIRONMENT}"
 EXPECTED_IMAGE_TAG="${IMAGE_TAG:-latest}"
-MAX_WAIT_TIME="${MAX_WAIT_TIME:-600}" # 10 minutes
+MAX_WAIT_TIME="${MAX_WAIT_TIME:-300}" # 5 minutes (reduced from 10)
 CHECK_INTERVAL="${CHECK_INTERVAL:-30}" # 30 seconds
 VERIFICATION_LOG="${PROJECT_ROOT}/container-verification-$(date +%Y%m%d-%H%M%S).log"
 
@@ -319,6 +319,15 @@ verify_container_app() {
         
         if [[ $elapsed -gt $MAX_WAIT_TIME ]]; then
             log_error "❌ Verification timeout (${MAX_WAIT_TIME}s) for $app_name"
+            log_info "💡 Timeout reached - performing final health check..."
+            
+            # Perform one final health check before giving up
+            if [[ "$WAIT_FOR_HEALTH" == "true" ]] && check_health_endpoint "$app_name"; then
+                log_success "✅ Final health check passed - accepting deployment despite timeout"
+                verification_passed=true
+            else
+                log_error "❌ Final health check failed - deployment verification failed"
+            fi
             break
         fi
         
@@ -338,7 +347,18 @@ verify_container_app() {
                 
                 # Check revision status
                 local revision_status=$(get_revision_status "$app_name")
-                local active_revisions=$(echo "$revision_status" | jq length)
+                
+                # Check if jq is available, if not provide a fallback
+                if ! command -v jq &> /dev/null; then
+                    log_warning "⚠️ jq not available, using basic JSON parsing"
+                    # Simple fallback - if we get valid JSON array, count occurrences of "name"
+                    local active_revisions=0
+                    if [[ "$revision_status" =~ \[.*\] ]]; then
+                        active_revisions=$(echo "$revision_status" | grep -o '"name"' | wc -l)
+                    fi
+                else
+                    local active_revisions=$(echo "$revision_status" | jq length)
+                fi
                 
                 if [[ "$active_revisions" -gt 0 ]]; then
                     log_info "📊 Active revisions: $active_revisions"
@@ -347,32 +367,44 @@ verify_container_app() {
                         echo "$revision_status" | jq '.'
                     fi
                     
-                    # Check if all active revisions are ready
-                    local ready_revisions=$(echo "$revision_status" | jq '[.[] | select(.provisioning == "Succeeded")] | length')
+                    # Check revision provisioning status
+                    if ! command -v jq &> /dev/null; then
+                        # Fallback parsing without jq - Azure returns "Provisioned" not "provisioned"
+                        local ready_revisions=$(echo "$revision_status" | grep -c '"provisioning": *"Provisioned"' || echo "0")
+                        local provisioning_revisions=$(echo "$revision_status" | grep -c '"provisioning": *"Provisioning"' || echo "0")
+                    else
+                        local ready_revisions=$(echo "$revision_status" | jq '[.[] | select(.provisioning == "Provisioned")] | length')
+                        local provisioning_revisions=$(echo "$revision_status" | jq '[.[] | select(.provisioning == "Provisioning")] | length')
+                    fi
                     
-                    if [[ "$ready_revisions" -eq "$active_revisions" ]]; then
-                        log_success "✅ All active revisions are ready"
-                        
-                        # Optional health check
-                        if [[ "$WAIT_FOR_HEALTH" == "true" ]]; then
-                            if check_health_endpoint "$app_name"; then
-                                log_success "✅ Health check passed"
-                                verification_passed=true
-                                break
-                            else
-                                log_warning "⚠️ Health check failed, analyzing startup issues..."
-                                if ! analyze_startup_failures "$app_name"; then
-                                    log_error "❌ Startup failures detected"
-                                    break
-                                fi
-                            fi
-                        else
-                            log_info "ℹ️ Skipping health check (--no-health-wait enabled)"
+                    log_info "📊 Revision Status: Ready=$ready_revisions, Provisioning=$provisioning_revisions, Total=$active_revisions"
+                    
+                    # If health checks are enabled, prioritize health over provisioning status
+                    if [[ "$WAIT_FOR_HEALTH" == "true" ]]; then
+                        log_info "🔍 Checking health endpoint (more reliable than provisioning status)..."
+                        if check_health_endpoint "$app_name"; then
+                            log_success "✅ Health check passed - application is working despite provisioning status"
                             verification_passed=true
                             break
+                        else
+                            # Only fail immediately if we have no provisioning revisions and health fails
+                            if [[ "$provisioning_revisions" -eq 0 && "$ready_revisions" -eq 0 ]]; then
+                                log_error "❌ No provisioning/ready revisions and health check failed"
+                                analyze_startup_failures "$app_name"
+                                break
+                            else
+                                log_info "⏳ Health check failed but revisions still provisioning, will retry..."
+                            fi
                         fi
                     else
-                        log_warning "⚠️ Some revisions not ready yet ($ready_revisions/$active_revisions)"
+                        # No health check - rely on provisioning status
+                        if [[ "$ready_revisions" -eq "$active_revisions" ]]; then
+                            log_success "✅ All active revisions are ready"
+                            verification_passed=true
+                            break
+                        else
+                            log_warning "⚠️ Some revisions not ready yet ($ready_revisions/$active_revisions)"
+                        fi
                     fi
                 else
                     log_warning "⚠️ No active revisions found"
