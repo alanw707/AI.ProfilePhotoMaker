@@ -57,8 +57,8 @@ public class MigrationService : IMigrationService
             _logger.LogInformation("Applying {Count} pending migrations: {Migrations}", 
                 pendingMigrations.Count(), string.Join(", ", pendingMigrations));
 
-            // Apply migrations
-            await _context.Database.MigrateAsync();
+            // Apply migrations with conflict resolution
+            await ApplyMigrationsWithConflictResolutionAsync(pendingMigrations);
             
             _logger.LogInformation("Successfully applied all migrations");
             result.Success = true;
@@ -319,5 +319,98 @@ public class MigrationService : IMigrationService
         });
 
         return string.Join(";", maskedParts);
+    }
+
+    /// <summary>
+    /// Apply migrations with intelligent conflict resolution for production databases
+    /// </summary>
+    private async Task ApplyMigrationsWithConflictResolutionAsync(IEnumerable<string> pendingMigrations)
+    {
+        var pendingList = pendingMigrations.ToList();
+        
+        // Check if this looks like a fresh deployment to existing database
+        if (pendingList.Contains("20250808170932_InitialSQLServerFixed") && 
+            pendingList.Contains("20250821035813_AddPredictionsTable"))
+        {
+            _logger.LogInformation("Detected existing database scenario - checking if schema already exists");
+            
+            // Check if the AspNetRoles table already exists
+            var tableExistsQuery = @"
+                SELECT CASE 
+                    WHEN EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'AspNetRoles') 
+                    THEN 1 ELSE 0 
+                END";
+            
+            using var connection = _context.Database.GetDbConnection();
+            await connection.OpenAsync();
+            using var command = connection.CreateCommand();
+            command.CommandText = tableExistsQuery;
+            var tableExists = Convert.ToBoolean(await command.ExecuteScalarAsync());
+            
+            if (tableExists)
+            {
+                _logger.LogInformation("AspNetRoles table exists - marking initial migration as applied and applying only new tables");
+                
+                // Mark the initial migration as applied without running it
+                await MarkMigrationAsAppliedAsync("20250808170932_InitialSQLServerFixed");
+                
+                // Now create only the Predictions table if it doesn't exist
+                var createPredictionsTableQuery = @"
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Predictions')
+                    BEGIN
+                        CREATE TABLE [Predictions] (
+                            [Id] nvarchar(450) NOT NULL,
+                            [UserId] nvarchar(450) NOT NULL,
+                            [Style] nvarchar(max) NULL,
+                            [CreatedAt] datetime2 NOT NULL,
+                            CONSTRAINT [PK_Predictions] PRIMARY KEY ([Id])
+                        );
+                        
+                        CREATE NONCLUSTERED INDEX [IX_Predictions_UserId] ON [Predictions] ([UserId]);
+                    END";
+                
+                command.CommandText = createPredictionsTableQuery;
+                await command.ExecuteNonQueryAsync();
+                
+                // Mark the Predictions table migration as applied
+                await MarkMigrationAsAppliedAsync("20250821035813_AddPredictionsTable");
+                
+                _logger.LogInformation("Successfully applied schema-safe migrations");
+                return;
+            }
+        }
+        
+        // Default migration behavior for normal scenarios
+        _logger.LogInformation("Applying migrations using standard Entity Framework approach");
+        await _context.Database.MigrateAsync();
+    }
+    
+    /// <summary>
+    /// Mark a migration as applied in the migration history without running it
+    /// </summary>
+    private async Task MarkMigrationAsAppliedAsync(string migrationId)
+    {
+        var insertMigrationQuery = @"
+            IF NOT EXISTS (SELECT * FROM [__EFMigrationsHistory] WHERE [MigrationId] = @migrationId)
+            BEGIN
+                INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+                VALUES (@migrationId, '8.0.7');
+            END";
+        
+        using var connection = _context.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+            await connection.OpenAsync();
+            
+        using var command = connection.CreateCommand();
+        command.CommandText = insertMigrationQuery;
+        
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = "@migrationId";
+        parameter.Value = migrationId;
+        command.Parameters.Add(parameter);
+        
+        await command.ExecuteNonQueryAsync();
+        
+        _logger.LogInformation("Marked migration {MigrationId} as applied", migrationId);
     }
 }
