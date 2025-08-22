@@ -22,7 +22,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.DataProtection;
 using System.Security.Claims;
 using Serilog;
-using Microsoft.AspNetCore.TestHost;
+// Conditional TestHost import - only loaded when needed in Testing environment
 
 // Handle command-line arguments for migration and upload operations
 // Skip in Testing environment to avoid interference with test setup
@@ -81,11 +81,8 @@ if (args.Length > 0 && !isTestingEnvironment)
 // Create the application using the standard pattern that WebApplicationFactory expects
 var builder = WebApplication.CreateBuilder(args);
 
-// Use TestServer in Testing environment to avoid Kestrel binding during integration tests
-if (builder.Environment.IsEnvironment("Testing"))
-{
-    builder.WebHost.UseTestServer();
-}
+// TestServer setup moved to test projects to avoid production dependencies
+// Production containers use standard Kestrel hosting
 
 // Load environment variables from .env file if present
 LoadEnvironmentVariables(builder.Environment);
