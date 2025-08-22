@@ -827,6 +827,97 @@ jobs:
 
           echo "✅ [SUCCESS] Container App secrets refreshed and revision rolled ($REV_TS)"
 
+      - name: 🔍 Verify Container Revision and Startup Health
+        id: verify
+        run: |
+          echo "🔍 [VERIFY] Verifying container revision deployment and startup health..."
+          echo "📝 [INFO] This ensures new container revisions are running the expected image tag"
+          echo "📝 [INFO] and detects any startup failures or configuration issues"
+          
+          # Wait a moment for revision roll to propagate
+          echo "⏳ [WAIT] Allowing time for revision changes to propagate..."
+          sleep 15
+          
+          # Run container revision verification with rollback capability
+          export IMAGE_TAG="${{ env.IMAGE_TAG }}"
+          export ENVIRONMENT="v1"
+          export RESOURCE_GROUP="${{ env.RESOURCE_GROUP }}"
+          
+          echo "🔍 [INFO] Running comprehensive container revision verification..."
+          echo "  Expected Image Tag: $IMAGE_TAG"
+          echo "  Environment: $ENVIRONMENT"
+          echo "  Resource Group: $RESOURCE_GROUP"
+          
+          # Run verification with rollback enabled for production safety
+          if ./scripts/verify-container-revision.sh \
+            --expected-tag "$IMAGE_TAG" \
+            --rollback-on-failure \
+            --verbose \
+            --max-wait 600; then
+            
+            echo "✅ [SUCCESS] Container revision verification passed"
+            echo "📊 [INFO] All container apps are running expected revision and are healthy"
+            
+            # Capture verification report for artifacts
+            VERIFICATION_REPORT=$(ls container-verification-report-*.json 2>/dev/null | head -1 || echo "")
+            if [[ -n "$VERIFICATION_REPORT" ]]; then
+              echo "📋 [REPORT] Verification report: $VERIFICATION_REPORT"
+              echo "verification-report=$VERIFICATION_REPORT" >> $GITHUB_OUTPUT
+            fi
+            
+          else
+            echo "❌ [FAILURE] Container revision verification failed"
+            echo "🚨 [CRITICAL] New container revision deployment unsuccessful"
+            
+            # Show verification details for troubleshooting
+            echo ""
+            echo "🔍 [DEBUG] Container revision verification failed. Possible causes:"
+            echo "  1. New container image not found in ACR"
+            echo "  2. Container startup failures (configuration errors, missing dependencies)"
+            echo "  3. Health endpoint not responding (application not starting properly)"
+            echo "  4. Resource constraints (CPU/memory limits)"
+            echo "  5. Environment variable misconfigurations"
+            
+            echo ""
+            echo "📋 [LOGS] Recent container logs for troubleshooting:"
+            
+            # Get logs from both container apps for analysis
+            for app in "aipm-api-v1" "aipm-web-v1"; do
+              echo ""
+              echo "--- Logs for $app ---"
+              az containerapp logs show \
+                --name "$app" \
+                --resource-group "${{ env.RESOURCE_GROUP }}" \
+                --follow false \
+                --tail 20 \
+                --output table 2>/dev/null || echo "Could not retrieve logs for $app"
+            done
+            
+            echo ""
+            echo "🛠️  [NEXT STEPS] To resolve container revision issues:"
+            echo "  1. Check the verification report and logs above"
+            echo "  2. Verify images exist in ACR: az acr repository list --name aipmcrv16j74jubocuukg"
+            echo "  3. Check container app environment variables"
+            echo "  4. Review application startup logs for configuration errors"
+            echo "  5. If automatic rollback failed, consider manual rollback"
+            
+            # Capture failure details
+            VERIFICATION_LOG=$(ls container-verification-*.log 2>/dev/null | head -1 || echo "")
+            if [[ -n "$VERIFICATION_LOG" ]]; then
+              echo "📋 [LOG] Verification log: $VERIFICATION_LOG"
+              echo "verification-log=$VERIFICATION_LOG" >> $GITHUB_OUTPUT
+            fi
+            
+            echo ""
+            echo "🚫 [DEPLOYMENT STATUS] Container revision verification failed"
+            echo "⚠️  [WARNING] Deployment technically succeeded but new revision is not healthy"
+            echo "📞 [ACTION] Manual intervention required to resolve container issues"
+            
+            # Don't fail the entire deployment, but mark it as problematic
+            # This allows the workflow to continue and generate reports
+            echo "verification-failed=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: 🛡️ Validate Blob CORS (post-deploy)
         run: |
           set -e
@@ -996,14 +1087,46 @@ jobs:
           fi
           
           echo ""
-          echo "🎉 [SUCCESS] Deployment completed!"
+          echo "🎉 [SUCCESS] Deployment workflow completed!"
           echo "📊 [INFO] Application URLs:"
           echo "  Frontend: ${FRONTEND_URL:-'Not available'}"
           echo "  Backend API: ${BACKEND_URL:-'Not available'}"
           echo "  Registry: ${{ steps.infra.outputs.registry-server }}"
           echo ""
-          echo "📝 [INFO] Next steps:"
+          
+          # Check if container revision verification was successful
+          VERIFICATION_FAILED="${{ steps.verify.outputs.verification-failed }}"
+          if [[ "$VERIFICATION_FAILED" == "true" ]]; then
+            echo "⚠️  [WARNING] Container revision verification failed"
+            echo "🚨 [CRITICAL] New container revision is not healthy - manual intervention required"
+            echo ""
+            echo "📝 [PRIORITY ACTIONS]:"
+            echo "  1. Review container revision verification logs (uploaded as artifacts)"
+            echo "  2. Check container app logs for startup errors"
+            echo "  3. Verify images exist in ACR with correct tag"
+            echo "  4. Consider manual rollback if automatic rollback failed"
+          else
+            echo "✅ [SUCCESS] Container revision verification passed"
+            echo "📊 [INFO] All container apps are running expected revision and are healthy"
+          fi
+          
+          echo ""
+          echo "📝 [INFO] Additional next steps:"
           echo "  1. If health checks failed, ensure images exist in ACR:"
           echo "     ./scripts/build-local.sh && ./scripts/push-to-acr.sh"
           echo "  2. Re-run deployment if images were missing"
           echo "  3. Monitor Container Apps logs for startup issues"
+          echo "  4. Review verification artifacts for detailed deployment status"
+
+      - name: 📁 Upload Deployment Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployment-verification-artifacts-${{ env.IMAGE_TAG }}
+          path: |
+            deploy-*.log
+            container-verification-*.log
+            container-verification-report-*.json
+            deployment-report-*.json
+            rollback-*.json
+          retention-days: 30
