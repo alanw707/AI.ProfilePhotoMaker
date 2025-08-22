@@ -4,9 +4,11 @@ using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.Replicate;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Storage;
+using AI.ProfilePhotoMaker.API.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -24,19 +26,22 @@ public class ReplicateWebhookController : ControllerBase
     private readonly IReplicateApiClient _replicateApiClient;
     private readonly IImageDownloadService _imageDownloadService;
     private readonly IStorageService _storageService;
+    private readonly IHubContext<PredictionHub> _hubContext;
 
     public ReplicateWebhookController(
         ILogger<ReplicateWebhookController> logger,
         ApplicationDbContext dbContext,
         IReplicateApiClient replicateApiClient,
         IImageDownloadService imageDownloadService,
-        IStorageService storageService)
+        IStorageService storageService,
+        IHubContext<PredictionHub> hubContext)
     {
         _logger = logger;
         _dbContext = dbContext;
         _replicateApiClient = replicateApiClient;
         _imageDownloadService = imageDownloadService;
         _storageService = storageService;
+        _hubContext = hubContext;
     }
 
     // Training webhook endpoint removed - now using polling mechanism
@@ -141,6 +146,53 @@ public class ReplicateWebhookController : ControllerBase
 
                     _logger.LogInformation("Successfully processed {Count} generated images for user {UserId}, style {Style}. Image IDs: {ImageIds}",
                         imageUrls.Count, userId, style, string.Join(", ", savedImageIds));
+
+                    // Update Predictions table with completion status (enables local status checking)
+                    try
+                    {
+                        var prediction = await _dbContext.Predictions.FirstOrDefaultAsync(p => p.Id == payload.Id);
+                        if (prediction != null)
+                        {
+                            _logger.LogInformation("Prediction {PredictionId} completed successfully for user {UserId}", payload.Id, userId);
+                            // Note: Full completion tracking would require adding CompletedAt, Status fields via migration
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Prediction {PredictionId} not found in local database for completion update", payload.Id);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to update prediction completion status for {PredictionId}", payload.Id);
+                    }
+
+                    // Send real-time notification to user (eliminates need for polling)
+                    try
+                    {
+                        await _hubContext.Clients.Group($"user_{userId}")
+                            .SendAsync("PredictionCompleted", new
+                            {
+                                predictionId = payload.Id,
+                                status = "succeeded",
+                                imageCount = savedImageIds.Count,
+                                imageIds = savedImageIds,
+                                style = style
+                            });
+                        
+                        await _hubContext.Clients.Group($"prediction_{payload.Id}")
+                            .SendAsync("PredictionUpdated", new
+                            {
+                                predictionId = payload.Id,
+                                status = "succeeded",
+                                completedAt = DateTime.UtcNow
+                            });
+                            
+                        _logger.LogDebug("Sent real-time completion notification for prediction {PredictionId} to user {UserId}", payload.Id, userId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to send real-time notification for prediction {PredictionId}", payload.Id);
+                    }
 
                     return Ok(new
                     {
