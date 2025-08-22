@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { forkJoin } from 'rxjs';
+import { forkJoin, firstValueFrom } from 'rxjs';
 import { ProfileService } from './profile.service';
 import { FileUploadService } from './file-upload.service';
 import { IModelStateService } from '../interfaces/service.interfaces';
@@ -76,7 +76,7 @@ export class ModelStateService implements IModelStateService {
    */
   async triggerModelDiscovery(): Promise<any> {
     try {
-      const discoveryResult = await this.profileService.discoverModels().toPromise();
+      const discoveryResult = await firstValueFrom(this.profileService.discoverModels());
 
       if (discoveryResult?.success && discoveryResult?.data?.ModelsAdded > 0) {
         this.updateModelStatus();

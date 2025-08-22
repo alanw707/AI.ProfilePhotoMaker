@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { forkJoin, of } from 'rxjs';
+import { forkJoin, of, firstValueFrom } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { StateBaseService } from './state-base.service';
 import { CreditService, UserCreditStatus } from './credit.service';
@@ -26,7 +26,6 @@ export interface SubscriptionState {
 export class SubscriptionStateService extends StateBaseService<SubscriptionState> {
   private readonly cacheKey = 'subscription_state_data';
   private readonly creditsCacheKey = 'credits_data';
-
 
   constructor(
     _cacheManager: CacheManagerService,
@@ -89,7 +88,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
         apiCalls['credits'] = of({ success: false, data: null, error: 'disabled' });
       }
 
-      const result = await forkJoin(apiCalls).toPromise();
+      const result = await firstValueFrom(forkJoin(apiCalls));
       if (!result) {
         throw new Error('Failed to load subscription data');
       }
@@ -167,14 +166,13 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
     this.setLoading(true);
 
     try {
-      const creditStatus = await this._creditService
-        .getCreditStatus()
-        .pipe(
+      const creditStatus = await firstValueFrom(
+        this._creditService.getCreditStatus().pipe(
           catchError(error => {
             return of({ success: false, data: null, error });
           })
         )
-        .toPromise();
+      );
 
       const userCreditStatus = creditStatus?.success ? creditStatus.data : null;
 

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, forkJoin, of } from 'rxjs';
+import { BehaviorSubject, forkJoin, of, firstValueFrom } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ProfileService } from './profile.service';
 import { ReplicateService } from './replicate.service';
@@ -454,7 +454,7 @@ export class DashboardStateService implements IDashboardStateService {
       this._imageValidation.clearCache();
 
       // Get fresh data from server
-      const userImages = await this._fileUploadService.getUserImages(true).toPromise();
+      const userImages = await firstValueFrom(this._fileUploadService.getUserImages(true));
 
       if (userImages?.success && userImages.data) {
         const userImagesData = userImages.data;
@@ -880,7 +880,7 @@ export class DashboardStateService implements IDashboardStateService {
         LogLevel.DEBUG,
         'Executing auto-repair...'
       );
-      const repairResult = await this._fileUploadService.repairImageDatabase().toPromise();
+      const repairResult = await firstValueFrom(this._fileUploadService.repairImageDatabase());
 
       if (repairResult?.success) {
         this._logger.info('Auto-repair completed successfully');

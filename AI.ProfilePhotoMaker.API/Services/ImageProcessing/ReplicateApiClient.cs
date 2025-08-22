@@ -84,13 +84,39 @@ public class ReplicateApiClient : IReplicateApiClient
             };
 
             var content = new StringContent(JsonSerializer.Serialize(modelRequest), Encoding.UTF8, "application/json");
+            _logger.LogInformation("Creating model for user {UserId}: {ModelName}", userId, modelName);
             var response = await _httpClient.PostAsync("models", content);
 
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Replicate model creation failed: {ErrorContent}", errorContent);
-                throw new Exception($"Failed to create model: {response.StatusCode}, {errorContent}");
+                _logger.LogError("Replicate model creation failed: {StatusCode} {ErrorContent}", response.StatusCode, errorContent);
+                
+                // Parse and handle specific error cases
+                if (response.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    _logger.LogError("Replicate API authentication failed during model creation for user {UserId}", userId);
+                    throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.");
+                }
+                else if (response.StatusCode == HttpStatusCode.PaymentRequired)
+                {
+                    _logger.LogError("Replicate API payment required during model creation for user {UserId}", userId);
+                    throw new InvalidOperationException("Replicate API payment required. Please check your billing.");
+                }
+                else if (response.StatusCode == HttpStatusCode.UnprocessableEntity)
+                {
+                    _logger.LogError("Replicate API validation error during model creation for user {UserId}: {Error}", userId, errorContent);
+                    throw new InvalidOperationException($"Invalid model creation request: {errorContent}");
+                }
+                else if (response.StatusCode == HttpStatusCode.Conflict)
+                {
+                    _logger.LogError("Model name conflict for user {UserId}: {ModelName}", userId, modelName);
+                    throw new InvalidOperationException($"Model name already exists: {modelName}");
+                }
+                else
+                {
+                    throw new Exception($"Failed to create model: {response.StatusCode}, {errorContent}");
+                }
             }
 
             var responseJson = await response.Content.ReadAsStringAsync();
@@ -213,16 +239,46 @@ public class ReplicateApiClient : IReplicateApiClient
             }
             var versionId = modelVersion.Split(':')[1];
             var endpoint = $"models/replicate/fast-flux-trainer/versions/{versionId}/trainings";
+            
+            _logger.LogInformation("Creating training for user {UserId} at endpoint: {Endpoint} with ZIP URL: {ZipUrl}", 
+                userId, endpoint, imageZipUrl);
             var response = await _httpClient.PostAsync(endpoint, content);
 
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Replicate training creation failed: {ErrorContent}", errorContent);
-                throw new Exception($"Failed to create training: {response.StatusCode}, {errorContent}");
+                _logger.LogError("Replicate training creation failed: {StatusCode} {ErrorContent}", response.StatusCode, errorContent);
+                
+                // Parse and handle specific error cases
+                if (response.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    _logger.LogError("Replicate API authentication failed during training for user {UserId}", userId);
+                    throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.");
+                }
+                else if (response.StatusCode == HttpStatusCode.PaymentRequired)
+                {
+                    _logger.LogError("Replicate API payment required during training for user {UserId}", userId);
+                    throw new InvalidOperationException("Replicate API payment required. Please check your billing.");
+                }
+                else if (response.StatusCode == HttpStatusCode.UnprocessableEntity)
+                {
+                    _logger.LogError("Replicate API validation error during training for user {UserId}: {Error}", userId, errorContent);
+                    throw new InvalidOperationException($"Invalid training request: {errorContent}");
+                }
+                else if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    _logger.LogWarning("Replicate API rate limit reached for user {UserId}", userId);
+                    throw new InvalidOperationException("Replicate API rate limit reached. Please try again later.");
+                }
+                else
+                {
+                    throw new Exception($"Failed to create training: {response.StatusCode}, {errorContent}");
+                }
             }
 
             var responseJson = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("Replicate training response: {Response}", responseJson);
+            
             var result = JsonSerializer.Deserialize<ReplicateTrainingResult>(
                 responseJson,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });

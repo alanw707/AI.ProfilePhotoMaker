@@ -12,6 +12,7 @@ import jsZip from 'jszip';
 import { ConfigService } from '../../services/config.service';
 import { LoggingService, LogLevel } from '../../services/logging.service';
 import { environment } from '../../../environments/environment';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-gallery',
@@ -75,7 +76,9 @@ export class GalleryComponent implements OnInit {
       if (!this._hasRunInitialRepair && !forceRefresh) {
         this._logger.info('Running initial image database repair...');
         try {
-          const repairResponse = await this._fileUploadService.repairImageDatabase().toPromise();
+          const repairResponse = await firstValueFrom(
+            this._fileUploadService.repairImageDatabase()
+          );
           if (repairResponse?.success) {
             this._logger.info('Image repair completed', repairResponse.message);
           }
@@ -85,7 +88,7 @@ export class GalleryComponent implements OnInit {
         this._hasRunInitialRepair = true;
       }
 
-      const response = await this._fileUploadService.getUserImages(forceRefresh).toPromise();
+      const response = await firstValueFrom(this._fileUploadService.getUserImages(forceRefresh));
 
       this._logger.conditionalLog(enableDebug, LogLevel.DEBUG, 'API Response received', {
         success: response?.success,

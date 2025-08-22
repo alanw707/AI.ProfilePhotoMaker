@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
 import { ConfigService } from './config.service';
 import { FileUploadService } from './file-upload.service';
@@ -157,7 +157,7 @@ export class FallbackOperationsService implements IFallbackOperationsService {
    */
   async debugDataDiscrepancy(): Promise<DataDiscrepancyResult> {
     try {
-      const freshData = await this._fileUploadService.getUserImages(true).toPromise();
+      const freshData = await firstValueFrom(this._fileUploadService.getUserImages(true));
       const userData = freshData?.success ? freshData.data : null;
 
       const result: DataDiscrepancyResult = {

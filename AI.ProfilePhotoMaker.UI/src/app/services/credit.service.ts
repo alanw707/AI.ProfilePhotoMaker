@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, firstValueFrom } from 'rxjs';
 import { ConfigService } from './config.service';
 
 export interface CreditPackage {
@@ -107,17 +107,21 @@ export class CreditService {
   /**
    * Create a payment intent for Stripe
    */
-  createPaymentIntent(request: { packageId: number }): Observable<{ success: boolean; data: { clientSecret: string; isSimulation: boolean } }> {
-    return this._http.post<{ success: boolean; data: { clientSecret: string; isSimulation: boolean } }>(
-      this._configService.buildApiEndpoint('credit/create-payment-intent'),
-      request
-    );
+  createPaymentIntent(request: {
+    packageId: number;
+  }): Observable<{ success: boolean; data: { clientSecret: string; isSimulation: boolean } }> {
+    return this._http.post<{
+      success: boolean;
+      data: { clientSecret: string; isSimulation: boolean };
+    }>(this._configService.buildApiEndpoint('credit/create-payment-intent'), request);
   }
 
   /**
    * Purchase a credit package
    */
-  purchaseCreditPackage(request: PurchaseCreditPackageRequest): Observable<ApiResponse<{ updatedCredits: UserCreditStatus }>> {
+  purchaseCreditPackage(
+    request: PurchaseCreditPackageRequest
+  ): Observable<ApiResponse<{ updatedCredits: UserCreditStatus }>> {
     return this._http.post<ApiResponse<{ updatedCredits: UserCreditStatus }>>(
       this._configService.buildApiEndpoint('credit/purchase'),
       request
@@ -148,7 +152,7 @@ export class CreditService {
   async getCreditCost(operation: string): Promise<number> {
     if (!this._creditCosts) {
       try {
-        const response = await this.getCreditCosts().toPromise();
+        const response = await firstValueFrom(this.getCreditCosts());
         if (response?.success) {
           this._creditCosts = response.data;
         }
@@ -199,7 +203,7 @@ export class CreditService {
   async canUseWeeklyCredits(operation: string): Promise<boolean> {
     if (!this._creditCosts) {
       try {
-        const response = await this.getCreditCosts().toPromise();
+        const response = await firstValueFrom(this.getCreditCosts());
         if (response?.success) {
           this._creditCosts = response.data;
         }
@@ -248,7 +252,7 @@ export class CreditService {
    */
   async loadCreditCosts(): Promise<void> {
     try {
-      const response = await this.getCreditCosts().toPromise();
+      const response = await firstValueFrom(this.getCreditCosts());
       if (response?.success) {
         this._creditCosts = response.data;
       }

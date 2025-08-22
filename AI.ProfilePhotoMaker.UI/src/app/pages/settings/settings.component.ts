@@ -10,6 +10,7 @@ import { NotificationService } from '../../services/notification.service';
 import { DashboardCoordinatorService } from '../../services/dashboard-coordinator.service';
 import { AccountInfoComponent } from '../../components/settings/account-info/account-info.component';
 import { CreditManagementComponent } from '../../components/settings/credit-management/credit-management.component';
+import { firstValueFrom } from 'rxjs';
 
 interface DataStats {
   inputPhotos: number;
@@ -153,7 +154,7 @@ export class SettingsComponent implements OnInit {
   async loadDataStats() {
     try {
       // Load data stats from API
-      const statsResponse = await this.profileService.getDataStats().toPromise();
+      const statsResponse = await firstValueFrom(this.profileService.getDataStats());
       if (statsResponse?.success) {
         this.dataStats = {
           inputPhotos: statsResponse.data.inputPhotos || 0,
@@ -168,7 +169,7 @@ export class SettingsComponent implements OnInit {
         await this.checkTrainedModelStatus();
       } else {
         // Fallback to existing method if API is not available
-        const imagesResponse = await this.fileUploadService.getUserImages().toPromise();
+        const imagesResponse = await firstValueFrom(this.fileUploadService.getUserImages());
         if (imagesResponse?.success && imagesResponse.data) {
           const originalImages = imagesResponse.data.images.filter(img => !img.isGenerated);
           const generatedImages = imagesResponse.data.images.filter(img => img.isGenerated);
@@ -305,7 +306,7 @@ export class SettingsComponent implements OnInit {
 
   private async deleteInputPhotos() {
     try {
-      const response = await this.profileService.deleteInputPhotos().toPromise();
+      const response = await firstValueFrom(this.profileService.deleteInputPhotos());
       if (response?.success) {
         this.notificationService.success(
           'Photos Deleted',
@@ -324,7 +325,7 @@ export class SettingsComponent implements OnInit {
 
   private async deleteAIModel() {
     try {
-      const response = await this.profileService.deleteAIModel().toPromise();
+      const response = await firstValueFrom(this.profileService.deleteAIModel());
       if (response?.success) {
         this.notificationService.success(
           'AI Model Deleted',
@@ -347,7 +348,7 @@ export class SettingsComponent implements OnInit {
 
   private async deleteAllData() {
     try {
-      const response = await this.profileService.deleteAllUserData().toPromise();
+      const response = await firstValueFrom(this.profileService.deleteAllUserData());
       if (response?.success) {
         this.notificationService.success(
           'All Data Deleted',
@@ -373,7 +374,7 @@ export class SettingsComponent implements OnInit {
 
   private async deleteAccount() {
     try {
-      const response = await this.profileService.deleteUserAccount().toPromise();
+      const response = await firstValueFrom(this.profileService.deleteUserAccount());
       if (response?.success) {
         this.notificationService.success(
           'Account Deleted',
@@ -397,7 +398,7 @@ export class SettingsComponent implements OnInit {
     this.isExporting = true;
 
     try {
-      const blob = await this.profileService.exportUserData().toPromise();
+      const blob = await firstValueFrom(this.profileService.exportUserData());
       if (blob) {
         // Create download link
         const url = window.URL.createObjectURL(blob);
@@ -474,7 +475,7 @@ export class SettingsComponent implements OnInit {
       );
 
       const response = (await Promise.race([
-        this.profileService.getCurrentUserProfile().toPromise(),
+        firstValueFrom(this.profileService.getCurrentUserProfile()),
         timeoutPromise,
       ])) as any;
 
@@ -562,7 +563,7 @@ export class SettingsComponent implements OnInit {
     try {
       // Method 1: Check training status endpoint
       try {
-        const trainingStatus = await this.fileUploadService.getTrainingStatus().toPromise();
+        const trainingStatus = await firstValueFrom(this.fileUploadService.getTrainingStatus());
         if (trainingStatus?.hasTrainedModel) {
           hasTrainedModel = true;
           statusSources.push('training-status');
@@ -573,7 +574,7 @@ export class SettingsComponent implements OnInit {
 
       // Method 2: Check user model requests endpoint
       try {
-        const modelRequests = await this.fileUploadService.getUserModelRequests().toPromise();
+        const modelRequests = await firstValueFrom(this.fileUploadService.getUserModelRequests());
         if (modelRequests?.success && modelRequests.data?.hasTrainedModel) {
           hasTrainedModel = true;
           statusSources.push('model-requests');

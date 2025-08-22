@@ -9,7 +9,7 @@
   },
   "Replicate": {
     "ApiToken": "STORED_IN_USER_SECRETS",
-    "FluxTrainingModelId": "ostris/flux-dev-lora-trainer",
+    "FluxTrainingModelId": "replicate/fast-flux-trainer:f463fbfc97389e10a2f443a8a84b6953b1058eafbf0c9af4d84457ff07cb04db",
     "FluxGenerationModelId": "black-forest-labs/flux-dev",
     "WebhookSecret": "STORED_IN_USER_SECRETS"
   },

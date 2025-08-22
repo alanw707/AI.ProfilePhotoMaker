@@ -14,6 +14,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 
 import { FileUploadService } from '../../../services/file-upload.service';
 import { NotificationService } from '../../../services/notification.service';
@@ -183,7 +184,9 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     // Validate each file with comprehensive security checks
     for (const file of files) {
       try {
-        const securityValidation = await this._fileSecurityService.validateFile(file).toPromise();
+        const securityValidation = await firstValueFrom(
+          this._fileSecurityService.validateFile(file)
+        );
 
         if (securityValidation?.isValid) {
           validationResults.validFiles.push(file);
@@ -324,7 +327,6 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
       );
     }
 
-
     this._notificationService.error(
       'Please Check File Format',
       errors.join('. ') + '. Supported formats: JPEG, PNG, WebP (max 7MB).',
@@ -363,15 +365,13 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     }
 
     // Add security-specific errors
-    const criticalFiles = results.errors.securityIssues.filter(
-      (s) => s.riskLevel === 'critical'
-    );
-    const highRiskFiles = results.errors.securityIssues.filter((s) => s.riskLevel === 'high');
+    const criticalFiles = results.errors.securityIssues.filter(s => s.riskLevel === 'critical');
+    const highRiskFiles = results.errors.securityIssues.filter(s => s.riskLevel === 'high');
 
     if (criticalFiles.length > 0) {
       const fileList = criticalFiles
         .slice(0, 2)
-        .map((s) => s.fileName)
+        .map(s => s.fileName)
         .join(', ');
       const more = criticalFiles.length > 2 ? ` and ${criticalFiles.length - 2} more` : '';
       errors.push(
@@ -382,7 +382,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     if (highRiskFiles.length > 0) {
       const fileList = highRiskFiles
         .slice(0, 2)
-        .map((s) => s.fileName)
+        .map(s => s.fileName)
         .join(', ');
       const more = highRiskFiles.length > 2 ? ` and ${highRiskFiles.length - 2} more` : '';
       errors.push(
@@ -399,14 +399,14 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   private _getSecurityErrorMessage(issue: string, riskLevel: string): string {
     // Map technical security issues to user-friendly messages
     const errorMap: Record<string, string> = {
-      'fileSize': 'File too large',
-      'fileType': 'Invalid file type',
-      'fileExtension': 'Invalid file extension',
-      'emptyFiles': 'Empty file not allowed',
-      'pathTraversal': 'Unsafe filename detected',
-      'dangerousPattern': 'Potentially harmful file',
-      'mismatch': 'File type mismatch detected',
-      'validationFailed': 'Security check failed',
+      fileSize: 'File too large',
+      fileType: 'Invalid file type',
+      fileExtension: 'Invalid file extension',
+      emptyFiles: 'Empty file not allowed',
+      pathTraversal: 'Unsafe filename detected',
+      dangerousPattern: 'Potentially harmful file',
+      mismatch: 'File type mismatch detected',
+      validationFailed: 'Security check failed',
     };
 
     // Find matching error message
@@ -1349,16 +1349,11 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   // Compact error message utility
   getCompactErrorMessage(message: string): string {
     const messageMap: Record<string, string> = {
-      noFaceDetected:
-        'No face detected',
-      unclearComposition:
-        'Unclear composition',
-      lowImageQuality:
-        'Low image quality',
-      fullBodyPhotoDetected:
-        'Full body photo detected',
-      multipleFacesDetected:
-        'Multiple faces detected',
+      noFaceDetected: 'No face detected',
+      unclearComposition: 'Unclear composition',
+      lowImageQuality: 'Low image quality',
+      fullBodyPhotoDetected: 'Full body photo detected',
+      multipleFacesDetected: 'Multiple faces detected',
       faceTooSmall: 'Face too small',
       imageTooBlurry: 'Image too blurry',
       poorLighting: 'Poor lighting',

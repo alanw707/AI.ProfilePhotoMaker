@@ -965,4 +965,145 @@ public class ReplicateController : ControllerBase
 
         return originalUrl;
     }
+
+    /// <summary>
+    /// Health check endpoint for Replicate API connectivity and configuration
+    /// </summary>
+    [HttpGet("health")]
+    public async Task<IActionResult> HealthCheck()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+
+        try
+        {
+            var healthData = new
+            {
+                apiConnected = false,
+                tokenValid = false,
+                canCreateModels = false,
+                accountStatus = "Unknown",
+                configurationValid = false,
+                externalUrlAccessible = false,
+                error = (string?)null
+            };
+
+            // Check basic configuration
+            var apiToken = Environment.GetEnvironmentVariable("REPLICATE_API_TOKEN") ?? _configuration["Replicate:ApiToken"];
+            var fluxModelId = _configuration["Replicate:FluxTrainingModelId"];
+            var externalApiBaseUrl = _configuration["ExternalApiBaseUrl"];
+
+            if (string.IsNullOrEmpty(apiToken))
+            {
+                return Ok(new
+                {
+                    success = true,
+                    data = healthData with { error = "REPLICATE_API_TOKEN not configured" }
+                });
+            }
+
+            if (string.IsNullOrEmpty(fluxModelId) || !fluxModelId.Contains(':'))
+            {
+                return Ok(new
+                {
+                    success = true,
+                    data = healthData with { error = "Replicate:FluxTrainingModelId not properly configured" }
+                });
+            }
+
+            // Test basic API connectivity
+            try
+            {
+                using var httpClient = new HttpClient();
+                httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Token", apiToken);
+                httpClient.Timeout = TimeSpan.FromSeconds(10);
+
+                var response = await httpClient.GetAsync("https://api.replicate.com/v1/account");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    healthData = healthData with 
+                    { 
+                        apiConnected = true, 
+                        tokenValid = true,
+                        accountStatus = "Active"
+                    };
+
+                    // Try to check if we can create models (this is a simplified check)
+                    var modelsResponse = await httpClient.GetAsync("https://api.replicate.com/v1/models");
+                    if (modelsResponse.IsSuccessStatusCode)
+                    {
+                        healthData = healthData with { canCreateModels = true };
+                    }
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    healthData = healthData with 
+                    { 
+                        apiConnected = true, 
+                        tokenValid = false,
+                        error = "Invalid or expired API token"
+                    };
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.PaymentRequired)
+                {
+                    healthData = healthData with 
+                    { 
+                        apiConnected = true, 
+                        tokenValid = true,
+                        accountStatus = "Payment Required",
+                        error = "Replicate account requires payment"
+                    };
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                healthData = healthData with { error = $"Network error: {ex.Message}" };
+            }
+            catch (TaskCanceledException)
+            {
+                healthData = healthData with { error = "Request timeout connecting to Replicate API" };
+            }
+
+            // Check configuration validity
+            healthData = healthData with 
+            { 
+                configurationValid = !string.IsNullOrEmpty(apiToken) && 
+                                   !string.IsNullOrEmpty(fluxModelId) && 
+                                   fluxModelId.Contains(':')
+            };
+
+            // Check external URL accessibility (basic check)
+            if (!string.IsNullOrEmpty(externalApiBaseUrl))
+            {
+                try
+                {
+                    using var httpClient = new HttpClient();
+                    httpClient.Timeout = TimeSpan.FromSeconds(5);
+                    var testResponse = await httpClient.GetAsync($"{externalApiBaseUrl.TrimEnd('/')}/api/image/health");
+                    healthData = healthData with { externalUrlAccessible = testResponse.IsSuccessStatusCode };
+                }
+                catch
+                {
+                    healthData = healthData with { externalUrlAccessible = false };
+                }
+            }
+
+            return Ok(new { success = true, data = healthData, error = (object?)null });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during Replicate health check for user {UserId}", userId);
+            return StatusCode(500, new
+            {
+                success = false,
+                error = new
+                {
+                    code = "HealthCheckFailed",
+                    message = "Failed to perform health check"
+                }
+            });
+        }
+    }
 }

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, combineLatest, forkJoin, Observable, of } from 'rxjs';
+import { BehaviorSubject, combineLatest, forkJoin, Observable, of, firstValueFrom } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { ProfileService, UserProfile } from './profile.service';
 import { ModelStateService } from './model-state.service';
@@ -261,45 +261,42 @@ export class DashboardCoordinatorService implements IDashboardStateService {
    */
   private async loadProfileData(): Promise<void> {
     try {
-      const initial = await this._profileService
-        .getCurrentUserProfile()
-        .pipe(
+      const initial = await firstValueFrom(
+        this._profileService.getCurrentUserProfile().pipe(
           catchError(error => {
             console.warn('⚠️ Profile API failed:', error);
             return of({ success: false, data: null as any, error });
           })
         )
-        .toPromise();
+      );
 
       let userProfile = initial?.success ? initial.data : null;
 
       // Auto-create profile on first login if none exists (backend returns 404)
       if (!userProfile) {
         try {
-          const created = await this._profileService
-            .createProfile({})
-            .pipe(
+          const created = await firstValueFrom(
+            this._profileService.createProfile({}).pipe(
               catchError(error => {
                 // If another parallel call already created it, ignore 400s
                 console.warn('⚠️ Create profile failed:', error);
                 return of({ success: false, data: null as any, error });
               })
             )
-            .toPromise();
+          );
 
           if (created?.success && created.data) {
             userProfile = created.data;
           } else {
             // Retry fetch once in case profile was created by another request
-            const refetch = await this._profileService
-              .getCurrentUserProfile()
-              .pipe(
+            const refetch = await firstValueFrom(
+              this._profileService.getCurrentUserProfile().pipe(
                 catchError(error => {
                   console.warn('⚠️ Profile re-fetch failed:', error);
                   return of({ success: false, data: null as any, error });
                 })
               )
-              .toPromise();
+            );
             userProfile = refetch?.success ? refetch.data : null;
           }
         } catch (creationError) {

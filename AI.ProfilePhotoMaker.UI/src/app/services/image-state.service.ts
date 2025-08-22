@@ -6,6 +6,7 @@ import { ConfigService } from './config.service';
 import { CacheManagerService } from './cache-manager.service';
 import { NotificationService } from './notification.service';
 import { UploadedImageThumbnail } from '../interfaces/service.interfaces';
+import { firstValueFrom } from 'rxjs';
 
 export interface ImageState {
   uploadedImages: number;
@@ -82,7 +83,7 @@ export class ImageStateService extends StateBaseService<ImageState> {
     this.setLoading(true);
 
     try {
-      const userImages = await this._fileUploadService.getUserImages(forceRefresh).toPromise();
+      const userImages = await firstValueFrom(this._fileUploadService.getUserImages(forceRefresh));
 
       if (userImages?.success && userImages.data) {
         const processed = this.processUserImagesData(userImages.data);
@@ -275,7 +276,7 @@ export class ImageStateService extends StateBaseService<ImageState> {
       this._imageValidation.clearCache();
 
       // Get fresh data from server
-      const userImages = await this._fileUploadService.getUserImages(true).toPromise();
+      const userImages = await firstValueFrom(this._fileUploadService.getUserImages(true));
 
       if (userImages?.success && userImages.data) {
         const processed = this.processUserImagesData(userImages.data);
@@ -298,7 +299,7 @@ export class ImageStateService extends StateBaseService<ImageState> {
    */
   async refreshGeneratedPhotosCount(): Promise<void> {
     try {
-      const userImages = await this._fileUploadService.getUserImages().toPromise();
+      const userImages = await firstValueFrom(this._fileUploadService.getUserImages());
 
       if (userImages?.success && userImages.data) {
         const userImagesData = userImages.data;
@@ -502,7 +503,7 @@ export class ImageStateService extends StateBaseService<ImageState> {
 
       // Perform actual repair
       console.log('🔧 Executing auto-repair...');
-      const repairResult = await this._fileUploadService.repairImageDatabase().toPromise();
+      const repairResult = await firstValueFrom(this._fileUploadService.repairImageDatabase());
 
       if (repairResult?.success) {
         console.log('✅ Auto-repair completed successfully');

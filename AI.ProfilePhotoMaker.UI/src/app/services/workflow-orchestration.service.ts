@@ -1,5 +1,5 @@
 import { Injectable, inject, Injector, NgZone } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
 import { NotificationService } from './notification.service';
 import { DashboardStateService } from './dashboard-state.service';
@@ -65,6 +65,8 @@ interface FileUploadService {
     data: { fileName: string; publicUrl: string; createdAt: string; sizeBytes: number };
     error?: any;
   }>;
+  listTrainingFiles(): Observable<{ success: boolean; data: string[]; error: any }>;
+  deleteAllTrainingFiles(): Observable<{ success: boolean; message: string }>;
   invalidateUserImagesCache(): void;
 }
 
@@ -368,8 +370,25 @@ export class WorkflowOrchestrationService {
       }
     } catch (error) {
       console.error('Error in training workflow:', error);
+
+      // Reset progress state
+      this._setProgress({
+        isTraining: false,
+        progressPercentage: 0,
+        progressMessage: '',
+      });
+
       const detail = error instanceof Error ? error.message : 'Failed to start training';
       this._deps.notificationService.error('Training Error', detail);
+
+      // Log detailed error information for debugging
+      if (error instanceof Error && error.message.includes('Authentication failed')) {
+        console.error('🔑 Authentication issue - check API tokens');
+      } else if (error instanceof Error && error.message.includes('Configuration error')) {
+        console.error('⚙️ Configuration issue - check settings');
+      } else if (error instanceof Error && error.message.includes('Payment required')) {
+        console.error('💳 Billing issue - check Replicate account');
+      }
     }
   }
 
@@ -405,7 +424,22 @@ export class WorkflowOrchestrationService {
     } catch (error: unknown) {
       console.error('Training startup error:', error);
       this._setProgress({ isTraining: false });
-      throw new Error(error instanceof Error ? error.message : 'Failed to start training');
+
+      // Provide more specific error messages based on the failure point
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+
+      if (errorMessage.includes('Failed to create training ZIP')) {
+        const detailedMessage = errorMessage.includes('after cleanup and retry')
+          ? 'Unable to prepare training files. Please ensure you have uploaded enough images and try again in a few minutes.'
+          : 'Unable to create training package. Please try again.';
+        throw new Error(detailedMessage);
+      } else if (errorMessage.includes('Failed to get training ZIP URL')) {
+        throw new Error('Training files were created but could not be accessed. Please try again.');
+      } else if (errorMessage.includes('User not authenticated')) {
+        throw new Error('Authentication expired. Please refresh the page and log in again.');
+      } else {
+        throw new Error(errorMessage);
+      }
     }
   }
 
@@ -426,29 +460,146 @@ export class WorkflowOrchestrationService {
   private async _createTrainingZip(): Promise<void> {
     this._setProgress({
       progressPercentage: 10,
-      progressMessage: 'Creating training package from your images...',
+      progressMessage: 'Preparing training environment...',
     });
 
     const fileUploadService = await this._loadFileUploadService();
-    const zipResult = await fileUploadService.createTrainingZip().toPromise();
+
+    // Clean up any existing training files to prevent conflicts
+    try {
+      this._setProgress({
+        progressPercentage: 12,
+        progressMessage: 'Cleaning up previous training files...',
+      });
+
+      await this._cleanupExistingTrainingFiles(fileUploadService);
+    } catch (cleanupError) {
+      console.warn('Non-critical cleanup warning:', cleanupError);
+      // Continue with training even if cleanup fails - the backend should handle it
+    }
+
+    // Create the new training ZIP
+    this._setProgress({
+      progressPercentage: 15,
+      progressMessage: 'Creating training package from your images...',
+    });
+
+    const zipResult = await this._createTrainingZipWithRetry(fileUploadService);
 
     if (!zipResult?.success || !zipResult.zipCreated) {
       throw new Error(
         (zipResult as any)?.error?.message ||
           (zipResult as any)?.message ||
-          'Failed to create training ZIP'
+          'Failed to create training ZIP after cleanup and retry'
       );
     }
   }
 
+  private async _cleanupExistingTrainingFiles(fileUploadService: FileUploadService): Promise<void> {
+    try {
+      // List existing training files
+      const existingFiles = (await firstValueFrom(fileUploadService.listTrainingFiles())) as {
+        success: boolean;
+        data: string[];
+        error: any;
+      };
+
+      if (existingFiles?.success && existingFiles.data && existingFiles.data.length > 0) {
+        console.log(
+          `🧹 Found ${existingFiles.data.length} existing training files, cleaning up...`
+        );
+
+        // Delete all existing training files to prevent conflicts
+        const deleteResult = (await firstValueFrom(fileUploadService.deleteAllTrainingFiles())) as {
+          success: boolean;
+          message: string;
+        };
+
+        if (deleteResult?.success) {
+          console.log('✅ Successfully cleaned up existing training files');
+        } else {
+          console.warn('⚠️ Cleanup completed with warnings:', deleteResult?.message);
+        }
+      } else {
+        console.log('ℹ️ No existing training files found, proceeding with creation');
+      }
+    } catch (error) {
+      console.warn('⚠️ Error during training file cleanup:', error);
+      // Don't throw - let the main creation attempt handle any remaining conflicts
+    }
+  }
+
+  private async _createTrainingZipWithRetry(
+    fileUploadService: FileUploadService,
+    maxRetries = 2
+  ): Promise<any> {
+    let lastError: any = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🚀 Training ZIP creation attempt ${attempt}/${maxRetries}`);
+
+        const zipResult = await firstValueFrom(fileUploadService.createTrainingZip());
+
+        if (zipResult?.success && zipResult.zipCreated) {
+          console.log('✅ Training ZIP created successfully');
+          return zipResult;
+        } else {
+          lastError = zipResult;
+          console.warn(`⚠️ Attempt ${attempt} failed:`, zipResult?.message || zipResult?.error);
+        }
+      } catch (error) {
+        lastError = error;
+        console.warn(`⚠️ Attempt ${attempt} threw error:`, error);
+
+        // If this is a file conflict error and not the last attempt, try cleanup again
+        if (attempt < maxRetries && this._isFileConflictError(error)) {
+          console.log('🔄 Detected file conflict, attempting additional cleanup...');
+
+          try {
+            await firstValueFrom(fileUploadService.deleteAllTrainingFiles());
+            // Brief delay to allow file system to settle
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } catch (cleanupError) {
+            console.warn('Additional cleanup failed:', cleanupError);
+          }
+        }
+      }
+
+      // Brief delay between retries
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+
+    // All attempts failed, return the last error
+    return lastError;
+  }
+
+  private _isFileConflictError(error: any): boolean {
+    const errorMessage = error?.message || error?.error?.message || '';
+    const conflictIndicators = [
+      'already exists',
+      'file conflict',
+      'cannot create',
+      'permission denied',
+      'access denied',
+      'file in use',
+    ];
+
+    return conflictIndicators.some(indicator =>
+      errorMessage.toLowerCase().includes(indicator.toLowerCase())
+    );
+  }
+
   private async _getTrainingZipUrl(): Promise<string> {
     this._setProgress({
-      progressPercentage: 20,
+      progressPercentage: 25,
       progressMessage: 'Uploading training data...',
     });
 
     const fileUploadService = await this._loadFileUploadService();
-    const latestZipResult = await fileUploadService.getLatestTrainingZip().toPromise();
+    const latestZipResult = await firstValueFrom(fileUploadService.getLatestTrainingZip());
 
     if (!latestZipResult?.success || !latestZipResult.data?.publicUrl) {
       throw new Error('Failed to get training ZIP URL');
@@ -467,25 +618,47 @@ export class WorkflowOrchestrationService {
     console.warn('Starting training for user ID:', userId);
 
     this._setProgress({
-      progressPercentage: 30,
+      progressPercentage: 35,
       progressMessage: 'Initializing AI model training...',
     });
 
     const trainRequest: TrainModelRequest = { userId, imageZipUrl: zipUrl };
     const replicateService = await this._loadReplicateService();
-    const trainResult = await replicateService.trainModel(trainRequest).toPromise();
+
+    console.log('🚀 Starting training request:', { userId, zipUrl });
+    const trainResult = await firstValueFrom(replicateService.trainModel(trainRequest));
 
     if (!trainResult?.success) {
-      throw new Error(trainResult?.error?.message || 'Failed to start model training');
+      console.error('❌ Training request failed:', trainResult);
+
+      // Provide specific error messages based on error codes
+      const errorCode = trainResult?.error?.code;
+      const errorMessage = trainResult?.error?.message || 'Failed to start model training';
+
+      let userMessage = errorMessage;
+      if (errorCode === 'ReplicateAuthFailed') {
+        userMessage = 'Authentication failed with Replicate API. Please contact support.';
+      } else if (errorCode === 'ReplicateConfigError') {
+        userMessage = 'Configuration error. Please contact support.';
+      } else if (errorCode === 'TrainingFailed') {
+        userMessage = 'Training service temporarily unavailable. Please try again later.';
+      } else if (errorCode === 'InsufficientCredits') {
+        userMessage = 'Insufficient credits for training. Please purchase more credits.';
+      } else if (errorCode === 'ModelAlreadyTrained') {
+        userMessage = 'You already have a trained model. Please use image generation instead.';
+      }
+
+      throw new Error(userMessage);
     }
 
+    console.log('✅ Training request successful:', trainResult);
     return trainResult.data.id;
   }
 
   private _finalizeTrainingSetup(trainingId: string): void {
     this._setProgress({
       trainingId,
-      progressPercentage: 40,
+      progressPercentage: 45,
       progressMessage: 'AI model is learning your features...',
     });
 
@@ -520,9 +693,9 @@ export class WorkflowOrchestrationService {
             }
 
             const replicateService = await this._loadReplicateService();
-            const statusResult = await replicateService
-              .getTrainingStatus(currentProgress.trainingId)
-              .toPromise();
+            const statusResult = await firstValueFrom(
+              replicateService.getTrainingStatus(currentProgress.trainingId)
+            );
 
             if (!statusResult?.success) {
               console.error('Failed to get training status:', statusResult?.error);
@@ -531,10 +704,10 @@ export class WorkflowOrchestrationService {
 
             const status = statusResult.data.status;
 
-            // Increment progress during training (40% to 90%)
+            // Increment progress during training (45% to 90%)
             if (status === 'processing' || status === 'starting') {
               progressIncrement += 2; // Increment by 2% every 30 seconds
-              const newProgress = Math.min(40 + progressIncrement, maxTrainingProgress);
+              const newProgress = Math.min(45 + progressIncrement, maxTrainingProgress);
 
               let message = 'AI is analyzing your facial features...';
               if (newProgress >= 60 && newProgress < 80) {
@@ -662,9 +835,9 @@ export class WorkflowOrchestrationService {
       const preciseGenerationStartTime = Date.now();
 
       const replicateService = await this._loadReplicateService();
-      const generateResult = await replicateService
-        .generateBatchImages(generateRequest)
-        .toPromise();
+      const generateResult = await firstValueFrom(
+        replicateService.generateBatchImages(generateRequest)
+      );
 
       if (!generateResult?.success) {
         throw new Error(generateResult?.error?.message || 'Batch generation failed');
@@ -781,9 +954,9 @@ export class WorkflowOrchestrationService {
               currentProgress.activePredictionIds.map(async predictionId => {
                 try {
                   const replicateService = await this._loadReplicateService();
-                  const result = await replicateService
-                    .getPredictionStatus(predictionId)
-                    .toPromise();
+                  const result = await firstValueFrom(
+                    replicateService.getPredictionStatus(predictionId)
+                  );
                   return {
                     id: predictionId,
                     status: result?.success ? result.data.status : 'unknown',

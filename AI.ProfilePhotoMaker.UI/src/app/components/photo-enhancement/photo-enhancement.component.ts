@@ -15,7 +15,7 @@ import { FileUploadService } from '../../services/file-upload.service';
 import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
 import { DashboardCoordinatorService } from '../../services/dashboard-coordinator.service';
 import { CreditService, UserCreditStatus } from '../../services/credit.service';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 
 interface EnhancedImage {
   url: string;
@@ -194,7 +194,9 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         enhancementType: this.enhancementType,
       };
 
-      const enhanceResponse = await this._replicateService.enhancePhoto(enhanceRequest).toPromise();
+      const enhanceResponse = await firstValueFrom(
+        this._replicateService.enhancePhoto(enhanceRequest)
+      );
 
       if (!enhanceResponse?.success) {
         const errorMsg = enhanceResponse?.error?.message || 'Enhancement failed';
@@ -333,9 +335,9 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
     while (attempts < maxAttempts) {
       try {
-        const statusResponse = await this._replicateService
-          .getPredictionStatus(predictionId)
-          .toPromise();
+        const statusResponse = await firstValueFrom(
+          this._replicateService.getPredictionStatus(predictionId)
+        );
 
         if (statusResponse?.success && statusResponse.data) {
           const prediction = statusResponse.data;
