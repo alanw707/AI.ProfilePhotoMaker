@@ -52,6 +52,9 @@ export class StyleSelectorComponent {
   @Output() continueInBackground = new EventEmitter<void>();
   @Output() dismissSuccessMessage = new EventEmitter<void>();
 
+  // Debouncing protection
+  public isProcessingTraining = false;
+
   onToggleStyle(style: StyleOption): void {
     this.styleToggled.emit(style);
   }
@@ -70,7 +73,18 @@ export class StyleSelectorComponent {
   }
 
   onStartTraining(): void {
+    // Prevent multiple rapid clicks
+    if (this.isProcessingTraining) {
+      return;
+    }
+
+    this.isProcessingTraining = true;
     this.startTraining.emit();
+
+    // Reset processing flag after reasonable timeout
+    setTimeout(() => {
+      this.isProcessingTraining = false;
+    }, 2000);
   }
 
   onContinueInBackground(): void {
