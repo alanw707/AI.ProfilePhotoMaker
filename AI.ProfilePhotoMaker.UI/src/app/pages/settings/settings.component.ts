@@ -11,6 +11,7 @@ import { DashboardCoordinatorService } from '../../services/dashboard-coordinato
 import { AccountInfoComponent } from '../../components/settings/account-info/account-info.component';
 import { CreditManagementComponent } from '../../components/settings/credit-management/credit-management.component';
 import { firstValueFrom } from 'rxjs';
+import { take } from 'rxjs/operators';
 
 interface DataStats {
   inputPhotos: number;
@@ -454,13 +455,10 @@ export class SettingsComponent implements OnInit {
         resolve();
       }, 5000);
 
-      const subscription = this.authService.currentUser$.subscribe(user => {
+      this.authService.currentUser$.pipe(take(1)).subscribe(user => {
         clearTimeout(timeout);
         if (user) {
           this.userEmail = user.email;
-        }
-        if (subscription) {
-          subscription.unsubscribe();
         }
         resolve();
       });
@@ -511,7 +509,7 @@ export class SettingsComponent implements OnInit {
       this.dashboardStateService.loadBasicDataForSettings();
 
       // Subscribe to dashboard state for credit information - take first emission
-      const subscription = this.dashboardStateService.state$.subscribe(state => {
+      this.dashboardStateService.state$.pipe(take(1)).subscribe(state => {
         clearTimeout(timeout);
         this.creditsInfo = state.creditsInfo;
         this.userCreditStatus = state.userCreditStatus;
@@ -521,9 +519,6 @@ export class SettingsComponent implements OnInit {
         }
         if (state.generatedPhotosCount !== undefined) {
           this.dataStats.generatedPhotos = state.generatedPhotosCount;
-        }
-        if (subscription) {
-          subscription.unsubscribe();
         }
         resolve();
       });
