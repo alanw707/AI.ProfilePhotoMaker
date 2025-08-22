@@ -545,16 +545,8 @@ export class DashboardStateService implements IDashboardStateService {
 
         // Execute fallback operations if needed
         if (fallbackCheck.shouldCheckFilesystem) {
-          this._fallbackOps.checkGeneratedImagesFromFilesystem().subscribe({
-            next: result => {
-              if (result.actualGeneratedCount) {
-                this.setState({ generatedPhotosCount: result.actualGeneratedCount });
-              }
-            },
-            error: _error => {
-              // Silent failure for filesystem check - intentionally empty
-            },
-          });
+          // Skip filesystem check as the backend endpoint doesn't exist
+          this._fallbackOps.markFilesystemCheckCompleted();
         }
 
         if (fallbackCheck.shouldDiscoverModels) {

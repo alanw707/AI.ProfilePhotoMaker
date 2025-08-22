@@ -26,34 +26,52 @@ public class TrainingPollingBackgroundService : BackgroundService
     {
         _logger.LogInformation("Training Polling Background Service starting up");
         
-        // Wait a bit after startup to let the application fully initialize
-        await Task.Delay(_initialDelay, stoppingToken);
-
-        // Check for any existing in-progress trainings on startup
-        await CheckExistingTrainings(stoppingToken);
-
-        // Main polling loop
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            try
-            {
-                await PollForTrainingCompletions(stoppingToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in training polling background service");
-            }
+            // Wait a bit after startup to let the application fully initialize
+            await Task.Delay(_initialDelay, stoppingToken);
 
-            // Wait for the next polling interval
-            try
+            // Check for any existing in-progress trainings on startup
+            await CheckExistingTrainings(stoppingToken);
+
+            // Main polling loop
+            while (!stoppingToken.IsCancellationRequested)
             {
-                await Task.Delay(_pollingInterval, stoppingToken);
+                try
+                {
+                    await PollForTrainingCompletions(stoppingToken);
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    // Expected when cancellation is requested during polling
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error in training polling background service");
+                }
+
+                // Wait for the next polling interval
+                try
+                {
+                    await Task.Delay(_pollingInterval, stoppingToken);
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    // Expected when cancellation is requested
+                    break;
+                }
             }
-            catch (OperationCanceledException)
-            {
-                // Expected when cancellation is requested
-                break;
-            }
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            // Expected when cancellation is requested during startup delay
+            _logger.LogInformation("Training Polling Background Service cancellation requested during startup");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error in Training Polling Background Service");
+            throw; // Re-throw unexpected exceptions
         }
 
         _logger.LogInformation("Training Polling Background Service shutting down");
