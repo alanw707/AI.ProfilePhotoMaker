@@ -344,6 +344,10 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
 });
+
+// Add SignalR for real-time prediction updates
+builder.Services.AddSignalR();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -573,6 +577,9 @@ if (app.Environment.IsDevelopment())
 
 // Map controllers BEFORE MapFallback to ensure API routes take precedence
 app.MapControllers();
+
+// Map SignalR hub for real-time prediction updates
+app.MapHub<AI.ProfilePhotoMaker.API.Hubs.PredictionHub>("/hubs/prediction");
 
 // Angular static files and fallback routing (only for non-API requests)
 var angularPath = Path.Combine(builder.Environment.ContentRootPath, "../AI.ProfilePhotoMaker.UI/dist/ai.profile-photo-maker.ui/browser");
