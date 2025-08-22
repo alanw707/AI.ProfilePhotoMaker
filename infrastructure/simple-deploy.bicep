@@ -400,6 +400,18 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               secretRef: 'replicate-webhook-secret'
             }
             {
+              name: 'Replicate__FluxTrainingModelId'
+              value: 'replicate/fast-flux-trainer:f463fbfc97389e10a2f443a8a84b6953b1058eafbf0c9af4d84457ff07cb04db'
+            }
+            {
+              name: 'Replicate__FluxGenerationModelId'
+              value: 'black-forest-labs/flux-dev'
+            }
+            {
+              name: 'Replicate__FluxKontextProModelId'
+              value: 'black-forest-labs/flux-kontext-pro'
+            }
+            {
               name: 'ConnectionStrings__AzureStorage'
               value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
             }
