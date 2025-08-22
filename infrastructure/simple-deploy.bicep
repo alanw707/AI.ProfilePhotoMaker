@@ -438,7 +438,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             }
             {
               name: 'Database__AutoMigrateOnStartup'
-              value: 'false'
+              value: 'true'
             }
             {
               name: 'Database__ValidateOnStartup'
