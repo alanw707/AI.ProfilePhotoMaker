@@ -42,7 +42,8 @@ AI.ProfilePhotoMaker is a web application that allows users to create profession
 - **User Authentication**: Secure registration and login
 - **Image Upload**: Upload up to 10 selfies for training
 - **Style Selection**: Choose from multiple professional photo styles
-- **AI Processing**: Custom model training and image generation
+- **AI Processing**: Custom model training and image generation with webhook-based processing
+- **Photo Enhancement**: Real-time photo enhancement with 75-85% faster response times
 - **Results Gallery**: View, download, and manage generated photos
 - **Subscription Plans**: Access features based on subscription level
 
@@ -70,7 +71,7 @@ AI.ProfilePhotoMaker is a web application that allows users to create profession
 - Application Insights (monitoring)
 
 ### External Services
-- Replicate.com FLUX AI
+- Replicate.com FLUX AI (webhook-based integration)
 - Stripe Payments (planned)
 
 ## Getting Started
@@ -161,8 +162,10 @@ Contributions are welcome! Before opening a PR, please review the repository gui
 
 ## Additional Documentation
 
+- [Enhanced Photo Webhook Migration](docs/ENHANCE_PHOTO_WEBHOOK_MIGRATION.md) - Migration summary and architecture improvements (August 22, 2025)
+- [API Webhook Integration Guide](docs/API_WEBHOOK_INTEGRATION.md) - Comprehensive webhook architecture and integration guide
 - [Refactoring Documentation](docs/REFACTOR.md) - Comprehensive refactoring process and architecture improvements
 - [OAuth Troubleshooting](docs/OAUTH_TROUBLESHOOTING.md) - OAuth implementation and troubleshooting guide
- - [Product Requirements (PRD)](docs/product/PRD.md) - Product goals, scope, and milestones
+- [Product Requirements (PRD)](docs/product/PRD.md) - Product goals, scope, and milestones
 
-*Last updated: June 28, 2025*
+*Last updated: August 22, 2025*
