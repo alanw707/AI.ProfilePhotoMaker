@@ -405,7 +405,7 @@ public class ReplicateApiClient : IReplicateApiClient
                 version = trainedModelVersion,
                 input = new
                 {
-                    prompt = stylePrompt,
+                    txt = stylePrompt, // Use 'txt' parameter for trained models instead of 'prompt'
                     negative_prompt = negativePrompt,
                     num_inference_steps = 40,
                     guidance_scale = 7.5,
@@ -948,49 +948,26 @@ public class ReplicateApiClient : IReplicateApiClient
 
             // Create enhancement prompt based on type
             string enhancementPrompt = GetEnhancementPrompt(enhancementType);
-
-            var baseUrl = _configuration["ExternalApiBaseUrl"];
-            var isHttps = baseUrl?.StartsWith("https://") == true;
             
-            var input = new Dictionary<string, object>
+            var predictionRequest = new
             {
-                ["input_image"] = imageUrl,
-                ["prompt"] = enhancementPrompt,
-                ["negative_prompt"] = "blurry, low quality, distorted, deformed, bad anatomy, poor lighting, overexposed, underexposed, artifact, noise",
-                ["num_inference_steps"] = 30,
-                ["guidance_scale"] = 7.5,
-                ["strength"] = 0.8,
-                ["output_format"] = "png",
-                ["width"] = 1024,
-                ["height"] = 1024
+                version = kontextProModel,
+                input = new
+                {
+                    input_image = imageUrl,
+                    prompt = enhancementPrompt,
+                    negative_prompt = "blurry, low quality, distorted, deformed, bad anatomy, poor lighting, overexposed, underexposed, artifact, noise",
+                    num_inference_steps = 30,
+                    guidance_scale = 7.5,
+                    strength = 0.8,
+                    output_format = "png",
+                    width = 1024,
+                    height = 1024,
+                    webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete"),
+                    webhook_events_filter = new[] { "completed" }
+                },
+                webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete")
             };
-            
-            // Only add webhook in production/HTTPS environments
-            if (isHttps)
-            {
-                input["webhook"] = $"{baseUrl}/api/webhooks/replicate/prediction-complete";
-                input["webhook_events_filter"] = new[] { "completed" };
-            }
-            
-            // Create prediction request object
-            object predictionRequest;
-            if (isHttps)
-            {
-                predictionRequest = new
-                {
-                    version = kontextProModel,
-                    input = input,
-                    webhook = $"{baseUrl}/api/webhooks/replicate/prediction-complete"
-                };
-            }
-            else
-            {
-                predictionRequest = new
-                {
-                    version = kontextProModel,
-                    input = input
-                };
-            }
 
             var content = new StringContent(
                 JsonSerializer.Serialize(predictionRequest),
@@ -1040,6 +1017,28 @@ public class ReplicateApiClient : IReplicateApiClient
 
             _logger.LogInformation("Kontext Pro enhancement started for user {UserId} with prediction ID {PredictionId}, type: {EnhancementType}",
                 userId, result.Id, enhancementType);
+
+            // Persist ownership for status checks (same pattern as GenerateImagesAsync)
+            try
+            {
+                if (!string.IsNullOrEmpty(result.Id))
+                {
+                    _context.Predictions.Add(new Prediction
+                    {
+                        Id = result.Id!,
+                        UserId = userId,
+                        Style = $"enhancement:{enhancementType}",
+                        CreatedAt = DateTime.UtcNow
+                    });
+                    await _context.SaveChangesAsync();
+                    _logger.LogDebug("Persisted enhancement prediction {PredictionId} for user {UserId}", result.Id, userId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to persist enhancement prediction ownership for {PredictionId} (user {UserId})", result.Id, userId);
+            }
+
             return result;
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))

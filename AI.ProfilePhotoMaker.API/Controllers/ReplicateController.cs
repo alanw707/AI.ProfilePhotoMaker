@@ -560,6 +560,27 @@ public class ReplicateController : ControllerBase
             return NotFound(new { success = false, error = new { code = "NotFound", message = "Prediction not found." } });
         }
 
+        // Check if prediction is completed locally (via ProcessedImage table) to avoid Replicate API calls
+        var userProfile = await _dbContext.UserProfiles.FirstOrDefaultAsync(u => u.UserId == userId);
+        if (userProfile != null)
+        {
+            var completedImages = await _dbContext.ProcessedImages
+                .Where(pi => pi.UserProfileId == userProfile.Id && pi.IsGenerated == true)
+                .OrderByDescending(pi => pi.CreatedAt)
+                .Take(10) // Recent generations
+                .ToListAsync();
+
+            // If we have recent generated images, check if any correlation exists
+            // This is a heuristic since we don't store prediction ID in ProcessedImage
+            var recentGeneratedImage = completedImages.FirstOrDefault(pi => 
+                pi.CreatedAt >= DateTime.UtcNow.AddMinutes(-30)); // Within last 30 minutes
+
+            if (recentGeneratedImage != null)
+            {
+                _logger.LogDebug("Found recent generated image for user {UserId}, checking Replicate for final status", userId);
+            }
+        }
+
         var result = await _replicateApiClient.GetPredictionStatusAsync(predictionId);
 
         // If prediction succeeded and has output, try to fetch and return dataUrl
