@@ -33,7 +33,7 @@ public class TrainingPollingService : ITrainingPollingService
     public async Task StartPollingForTraining(string trainingId, string userId)
     {
         _logger.LogInformation("Starting polling for training {TrainingId} for user {UserId}", trainingId, userId);
-        
+
         // Store the polling task info - we'll let the background service handle the actual polling
         // This method primarily exists for extensibility if we need immediate polling triggers
         await Task.CompletedTask;
@@ -83,7 +83,7 @@ public class TrainingPollingService : ITrainingPollingService
                 return;
             }
 
-            _logger.LogInformation("Found model creation request {RequestId} for training {TrainingId}", 
+            _logger.LogInformation("Found model creation request {RequestId} for training {TrainingId}",
                 modelRequest.Id, trainingId);
 
             // Update the model creation request based on training status
@@ -108,7 +108,7 @@ public class TrainingPollingService : ITrainingPollingService
                     modelRequest.CompletedAt = DateTime.UtcNow;
                     modelRequest.ErrorMessage = null;
 
-                    _logger.LogInformation("Model creation request {RequestId} marked as Ready with version {Version}", 
+                    _logger.LogInformation("Model creation request {RequestId} marked as Ready with version {Version}",
                         modelRequest.Id, trainedModelVersion);
 
                     // Save changes first
@@ -121,7 +121,7 @@ public class TrainingPollingService : ITrainingPollingService
             else if (trainingStatus.Status?.ToLower() == "failed" || trainingStatus.Status?.ToLower() == "canceled")
             {
                 _logger.LogWarning("Training {TrainingId} failed or was canceled with status {Status}", trainingId, trainingStatus.Status);
-                
+
                 modelRequest.Status = ModelCreationStatus.Failed;
                 modelRequest.ErrorMessage = trainingStatus.Error ?? $"Training failed with status: {trainingStatus.Status}";
                 modelRequest.CompletedAt = DateTime.UtcNow;
@@ -134,8 +134,8 @@ public class TrainingPollingService : ITrainingPollingService
 
             // Save the updated model creation request
             await scopedDbContext.SaveChangesAsync();
-            
-            _logger.LogInformation("Successfully processed training completion for {TrainingId}, status: {Status}", 
+
+            _logger.LogInformation("Successfully processed training completion for {TrainingId}, status: {Status}",
                 trainingId, modelRequest.Status);
         }
         catch (Exception ex)
@@ -156,7 +156,7 @@ public class TrainingPollingService : ITrainingPollingService
 
         try
         {
-            _logger.LogInformation("Generating automatic sample images for user {UserId} with model {ModelVersion}", 
+            _logger.LogInformation("Generating automatic sample images for user {UserId} with model {ModelVersion}",
                 userId, trainedModelVersion);
 
             // Get user profile for generation
@@ -178,17 +178,17 @@ public class TrainingPollingService : ITrainingPollingService
 
             // Generate a "professional" style image as the default sample
             var sampleStyle = "professional";
-            
+
             _logger.LogInformation("Starting automatic {Style} image generation for user {UserId}", sampleStyle, userId);
-            
+
             var result = await scopedReplicateClient.GenerateImagesAsync(
-                trainedModelVersion, 
-                userId, 
-                sampleStyle, 
-                userInfo, 
+                trainedModelVersion,
+                userId,
+                sampleStyle,
+                userInfo,
                 numOutputs: 2); // Generate 2 sample images
 
-            _logger.LogInformation("Automatic sample image generation initiated with prediction ID {PredictionId} for user {UserId}", 
+            _logger.LogInformation("Automatic sample image generation initiated with prediction ID {PredictionId} for user {UserId}",
                 result.Id, userId);
         }
         catch (Exception ex)

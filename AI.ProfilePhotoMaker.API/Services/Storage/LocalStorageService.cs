@@ -26,7 +26,7 @@ public class LocalStorageService : BaseStorageService
     {
         ValidateUserId(userId);
         ValidateFileName(fileName);
-        
+
         try
         {
             // Ensure the user's folder directory exists  
@@ -54,12 +54,12 @@ public class LocalStorageService : BaseStorageService
     public override async Task<string> SaveImageToPathAsync(Stream imageStream, string storagePath)
     {
         ValidateStoragePath(storagePath);
-        
+
         try
         {
             var fullPath = GetFullPath(storagePath);
             var directory = Path.GetDirectoryName(fullPath);
-            
+
             if (directory != null)
             {
                 await _asyncFileService.CreateDirectoryAsync(directory);
@@ -80,7 +80,7 @@ public class LocalStorageService : BaseStorageService
     public override async Task<Stream?> GetImageAsync(string storagePath)
     {
         ValidateStoragePath(storagePath);
-        
+
         try
         {
             var fullPath = GetFullPath(storagePath);
@@ -103,12 +103,12 @@ public class LocalStorageService : BaseStorageService
     public override async Task<bool> DeleteImageAsync(string storagePath)
     {
         ValidateStoragePath(storagePath);
-        
+
         try
         {
             var fullPath = GetFullPath(storagePath);
             var deleted = await _asyncFileService.DeleteFileAsync(fullPath);
-            
+
             if (deleted)
             {
                 LogOperation(LogLevel.Information, "DeleteImageAsync - success", storagePath);
@@ -117,7 +117,7 @@ public class LocalStorageService : BaseStorageService
             {
                 LogOperation(LogLevel.Warning, "DeleteImageAsync - not found", storagePath);
             }
-            
+
             return deleted;
         }
         catch (Exception ex)
@@ -130,7 +130,7 @@ public class LocalStorageService : BaseStorageService
     public override async Task<bool> ExistsAsync(string storagePath)
     {
         ValidateStoragePath(storagePath);
-        
+
         try
         {
             var fullPath = GetFullPath(storagePath);
@@ -146,7 +146,7 @@ public class LocalStorageService : BaseStorageService
     public override string GetImageUrl(string storagePath)
     {
         ValidateStoragePath(storagePath);
-        
+
         // Ensure storagePath starts with /
         if (!storagePath.StartsWith('/'))
         {
@@ -161,7 +161,7 @@ public class LocalStorageService : BaseStorageService
             Logger.LogDebug("GetImageUrl using ExternalApiBaseUrl: {BaseUrl}{Path}", externalApiBaseUrl, storagePath);
             return $"{externalApiBaseUrl.TrimEnd('/')}{storagePath}";
         }
-        
+
         var appBaseUrl = Configuration["AppBaseUrl"] ?? "https://localhost:5001";
         Logger.LogDebug("GetImageUrl using AppBaseUrl: {BaseUrl}{Path}", appBaseUrl, storagePath);
         return $"{appBaseUrl.TrimEnd('/')}{storagePath}";
@@ -170,7 +170,7 @@ public class LocalStorageService : BaseStorageService
     public override async Task<List<string>> ListUserImagesAsync(string userId)
     {
         ValidateUserId(userId);
-        
+
         try
         {
             var userDirectory = Path.Combine(_environment.ContentRootPath, "generated", userId);
@@ -180,7 +180,7 @@ public class LocalStorageService : BaseStorageService
             }
 
             var allFiles = await _asyncFileService.GetDirectoryFilesAsync(userDirectory, "*", false);
-            
+
             var imageFiles = allFiles
                 .Where(file => IsImageExtension(Path.GetExtension(file)))
                 .Select(file =>
@@ -202,12 +202,12 @@ public class LocalStorageService : BaseStorageService
     public override async Task<StorageFileInfo?> GetFileInfoAsync(string storagePath)
     {
         ValidateStoragePath(storagePath);
-        
+
         try
         {
             var fullPath = GetFullPath(storagePath);
             var fileInfo = await _asyncFileService.GetFileInfoAsync(fullPath);
-            
+
             if (fileInfo == null)
             {
                 return null;
@@ -246,7 +246,7 @@ public class LocalStorageService : BaseStorageService
     public override Task<string> GenerateSasUrlAsync(string storagePath, TimeSpan expiry, BlobSasPermissions permissions = BlobSasPermissions.Read)
     {
         ValidateStoragePath(storagePath);
-        
+
         // For local storage, we can't generate true SAS URLs, so return the regular URL
         // This is used in development where we're not actually using external APIs
         Logger.LogWarning("GenerateSasUrlAsync called on LocalStorageService - returning regular URL for development");
@@ -256,12 +256,12 @@ public class LocalStorageService : BaseStorageService
     public override async Task<string> SaveZipAsync(Stream zipStream, string storagePath)
     {
         ValidateStoragePath(storagePath);
-        
+
         try
         {
             var fullPath = GetFullPath(storagePath);
             var directory = Path.GetDirectoryName(fullPath);
-            
+
             if (directory != null)
             {
                 await _asyncFileService.CreateDirectoryAsync(directory);
@@ -282,11 +282,11 @@ public class LocalStorageService : BaseStorageService
     public override Task<bool> DeleteDirectoryAsync(string directoryPath)
     {
         ValidateStoragePath(directoryPath);
-        
+
         try
         {
             var fullPath = GetFullPath(directoryPath);
-            
+
             if (!Directory.Exists(fullPath))
             {
                 LogOperation(LogLevel.Warning, "DeleteDirectoryAsync - not found", directoryPath);
@@ -294,7 +294,7 @@ public class LocalStorageService : BaseStorageService
             }
 
             Directory.Delete(fullPath, recursive: true);
-            
+
             LogOperation(LogLevel.Information, "DeleteDirectoryAsync - success", directoryPath);
             return Task.FromResult(true);
         }
@@ -308,13 +308,13 @@ public class LocalStorageService : BaseStorageService
     public override async Task<List<string>> ListFilesAsync(string prefix)
     {
         ValidateStoragePath(prefix);
-        
+
         try
         {
             var fullPrefix = GetFullPath(prefix);
             var directory = Path.GetDirectoryName(fullPrefix);
             var pattern = Path.GetFileName(fullPrefix);
-            
+
             if (string.IsNullOrEmpty(pattern))
             {
                 pattern = "*";
@@ -326,7 +326,7 @@ public class LocalStorageService : BaseStorageService
             }
 
             var files = await _asyncFileService.GetDirectoryFilesAsync(directory, pattern, true);
-            
+
             return files.Select(file =>
             {
                 // Convert back to storage path format

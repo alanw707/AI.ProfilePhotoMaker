@@ -92,7 +92,7 @@ public class ReplicateController : ControllerBase
         {
             // Convert image ZIP URL to external API format before passing to Replicate
             var externalImageZipUrl = ConvertToExternalApiUrl(dto.ImageZipUrl);
-            _logger.LogInformation("Converted ZIP URL from {OriginalUrl} to {ExternalUrl} for Replicate API", 
+            _logger.LogInformation("Converted ZIP URL from {OriginalUrl} to {ExternalUrl} for Replicate API",
                 dto.ImageZipUrl, externalImageZipUrl);
 
             // Enforce user context: trust authenticated user over DTO
@@ -572,7 +572,7 @@ public class ReplicateController : ControllerBase
 
             // If we have recent generated images, check if any correlation exists
             // This is a heuristic since we don't store prediction ID in ProcessedImage
-            var recentGeneratedImage = completedImages.FirstOrDefault(pi => 
+            var recentGeneratedImage = completedImages.FirstOrDefault(pi =>
                 pi.CreatedAt >= DateTime.UtcNow.AddMinutes(-30)); // Within last 30 minutes
 
             if (recentGeneratedImage != null)
@@ -832,7 +832,7 @@ public class ReplicateController : ControllerBase
 
             // Convert image URL to external API format before passing to Replicate
             var externalImageUrl = ConvertToExternalApiUrl(dto.ImageUrl);
-            _logger.LogInformation("Converted image URL from {OriginalUrl} to {ExternalUrl} for Replicate API", 
+            _logger.LogInformation("Converted image URL from {OriginalUrl} to {ExternalUrl} for Replicate API",
                 dto.ImageUrl, externalImageUrl);
 
             // Enhance the uploaded photo
@@ -955,7 +955,7 @@ public class ReplicateController : ControllerBase
             {
                 var uri = new Uri(originalUrl);
                 var relativePath = uri.PathAndQuery;
-                
+
                 var externalBaseUrl = _configuration["ExternalApiBaseUrl"];
                 if (!string.IsNullOrEmpty(externalBaseUrl))
                 {
@@ -973,14 +973,14 @@ public class ReplicateController : ControllerBase
             {
                 return $"{externalBaseUrl.TrimEnd('/')}{originalUrl}";
             }
-            
+
             // Fallback to AppBaseUrl if ExternalApiBaseUrl not configured
             var appBaseUrl = _configuration["AppBaseUrl"];
             if (!string.IsNullOrEmpty(appBaseUrl) && appBaseUrl.StartsWith("https://"))
             {
                 return $"{appBaseUrl.TrimEnd('/')}{originalUrl}";
             }
-            
+
             _logger.LogWarning("No ExternalApiBaseUrl configured and AppBaseUrl is not HTTPS - external APIs may not be able to access: {Url}", originalUrl);
         }
 
@@ -1041,12 +1041,12 @@ public class ReplicateController : ControllerBase
                 httpClient.Timeout = TimeSpan.FromSeconds(10);
 
                 var response = await httpClient.GetAsync("https://api.replicate.com/v1/account");
-                
+
                 if (response.IsSuccessStatusCode)
                 {
-                    healthData = healthData with 
-                    { 
-                        apiConnected = true, 
+                    healthData = healthData with
+                    {
+                        apiConnected = true,
                         tokenValid = true,
                         accountStatus = "Active"
                     };
@@ -1060,18 +1060,18 @@ public class ReplicateController : ControllerBase
                 }
                 else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 {
-                    healthData = healthData with 
-                    { 
-                        apiConnected = true, 
+                    healthData = healthData with
+                    {
+                        apiConnected = true,
                         tokenValid = false,
                         error = "Invalid or expired API token"
                     };
                 }
                 else if (response.StatusCode == System.Net.HttpStatusCode.PaymentRequired)
                 {
-                    healthData = healthData with 
-                    { 
-                        apiConnected = true, 
+                    healthData = healthData with
+                    {
+                        apiConnected = true,
                         tokenValid = true,
                         accountStatus = "Payment Required",
                         error = "Replicate account requires payment"
@@ -1088,10 +1088,10 @@ public class ReplicateController : ControllerBase
             }
 
             // Check configuration validity
-            healthData = healthData with 
-            { 
-                configurationValid = !string.IsNullOrEmpty(apiToken) && 
-                                   !string.IsNullOrEmpty(fluxModelId) && 
+            healthData = healthData with
+            {
+                configurationValid = !string.IsNullOrEmpty(apiToken) &&
+                                   !string.IsNullOrEmpty(fluxModelId) &&
                                    fluxModelId.Contains(':')
             };
 

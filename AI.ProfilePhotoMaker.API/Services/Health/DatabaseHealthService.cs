@@ -34,11 +34,11 @@ public class DatabaseHealthService : IDatabaseHealthService
         {
             // More aggressive timeout and proper cancellation
             using var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(1));
-            
+
             // Use a task with explicit timeout to prevent hanging
             var connectTask = _context.Database.CanConnectAsync(cancellationToken.Token);
             var completedTask = await Task.WhenAny(connectTask, Task.Delay(1500, cancellationToken.Token));
-            
+
             if (completedTask == connectTask)
             {
                 return await connectTask;
@@ -61,7 +61,7 @@ public class DatabaseHealthService : IDatabaseHealthService
         try
         {
             var migrationStatus = await _migrationService.GetMigrationStatusAsync();
-            
+
             return new MigrationStatusDto
             {
                 AppliedCount = migrationStatus.AppliedCount,
@@ -87,7 +87,7 @@ public class DatabaseHealthService : IDatabaseHealthService
         try
         {
             var validation = await _migrationService.ValidateDatabaseAsync();
-            
+
             return new DataValidationDto
             {
                 IsValid = validation.IsValid,
@@ -111,26 +111,26 @@ public class DatabaseHealthService : IDatabaseHealthService
     public async Task<Dictionary<string, object>> GetMetricsAsync()
     {
         var metrics = new Dictionary<string, object>();
-        
+
         try
         {
             var stopwatch = Stopwatch.StartNew();
-            
+
             // Get provider information
             var providerConfig = _databaseProvider.GetProviderConfig();
             metrics["provider"] = providerConfig.Provider.ToString();
             metrics["commandTimeout"] = providerConfig.CommandTimeout;
-            
+
             // Test basic query performance
             var queryStopwatch = Stopwatch.StartNew();
             var userCount = await _context.Users.CountAsync();
             queryStopwatch.Stop();
             metrics["userCount"] = userCount;
             metrics["queryResponseTimeMs"] = queryStopwatch.ElapsedMilliseconds;
-            
+
             // Get table counts for monitoring
             var tableCounts = new Dictionary<string, int>();
-            
+
             try
             {
                 tableCounts["Users"] = await _context.Users.CountAsync();
@@ -138,7 +138,7 @@ public class DatabaseHealthService : IDatabaseHealthService
                 tableCounts["CreditPackages"] = await _context.CreditPackages.CountAsync();
                 tableCounts["ProcessedImages"] = await _context.ProcessedImages.CountAsync();
                 tableCounts["ModelCreationRequests"] = await _context.ModelCreationRequests.CountAsync();
-                
+
                 metrics["tableCounts"] = tableCounts;
             }
             catch (Exception ex)
@@ -146,7 +146,7 @@ public class DatabaseHealthService : IDatabaseHealthService
                 _logger.LogWarning(ex, "Failed to get some table counts");
                 metrics["tableCounts"] = tableCounts; // Include partial results
             }
-            
+
             // Database size information (if available)
             try
             {
@@ -169,10 +169,10 @@ public class DatabaseHealthService : IDatabaseHealthService
             {
                 _logger.LogDebug(ex, "Could not determine database size");
             }
-            
+
             stopwatch.Stop();
             metrics["metricsCollectionTimeMs"] = stopwatch.ElapsedMilliseconds;
-            
+
             return metrics;
         }
         catch (Exception ex)

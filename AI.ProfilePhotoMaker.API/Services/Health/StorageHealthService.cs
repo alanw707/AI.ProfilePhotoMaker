@@ -29,22 +29,22 @@ public class StorageHealthService : IStorageHealthService
         {
             // Test basic connectivity by attempting to list or check a simple operation
             // This is a generic test that should work with both Azure Blob Storage and Local Storage
-            
+
             using var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            
+
             // Try to perform a simple operation that tests connectivity
             // For Azure Blob Storage, this might test container access
             // For Local Storage, this tests file system access
-            
+
             var testFileName = $"health-check-{Guid.NewGuid()}.txt";
             var testContent = Encoding.UTF8.GetBytes("health check test");
-            
+
             try
             {
                 // Try to upload a small test file using the correct interface
                 using var testStream = new MemoryStream(testContent);
                 var uploadResult = await _storageService.SaveImageAsync(testStream, testFileName, "health-check");
-                
+
                 if (!string.IsNullOrEmpty(uploadResult))
                 {
                     // If upload succeeded, try to delete it to clean up
@@ -56,10 +56,10 @@ public class StorageHealthService : IStorageHealthService
                     {
                         _logger.LogWarning(deleteEx, "Could not delete health check test file {FileName}", testFileName);
                     }
-                    
+
                     return true;
                 }
-                
+
                 return false;
             }
             catch (Exception ex)
@@ -171,14 +171,14 @@ public class StorageHealthService : IStorageHealthService
             var config = new Dictionary<string, object>();
 
             // Determine storage type based on configuration
-            var azureStorageConnectionString = _configuration.GetConnectionString("AzureStorage") ?? 
+            var azureStorageConnectionString = _configuration.GetConnectionString("AzureStorage") ??
                                              _configuration["AzureStorage:ConnectionString"];
 
             if (!string.IsNullOrEmpty(azureStorageConnectionString))
             {
                 config["provider"] = "AzureBlobStorage";
                 config["hasConnectionString"] = true;
-                
+
                 // Parse connection string to get account name (without exposing sensitive data)
                 try
                 {
@@ -187,7 +187,7 @@ public class StorageHealthService : IStorageHealthService
                         var accountNamePart = azureStorageConnectionString.Split("AccountName=")[1].Split(';')[0];
                         config["accountName"] = accountNamePart;
                     }
-                    
+
                     config["isEmulator"] = azureStorageConnectionString.Contains("UseDevelopmentStorage=true");
                 }
                 catch (Exception ex)
@@ -199,19 +199,19 @@ public class StorageHealthService : IStorageHealthService
             {
                 config["provider"] = "LocalStorage";
                 config["hasConnectionString"] = false;
-                
+
                 // Get local storage path information
                 try
                 {
                     var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
                     config["uploadsPath"] = uploadsPath;
                     config["uploadsPathExists"] = Directory.Exists(uploadsPath);
-                    
+
                     if (Directory.Exists(uploadsPath))
                     {
                         var directoryInfo = new DirectoryInfo(uploadsPath);
                         config["uploadsPathWritable"] = directoryInfo.Exists;
-                        
+
                         // Get disk space information
                         var driveInfo = new DriveInfo(directoryInfo.Root.FullName);
                         config["availableSpaceGB"] = Math.Round(driveInfo.AvailableFreeSpace / 1024.0 / 1024.0 / 1024.0, 2);

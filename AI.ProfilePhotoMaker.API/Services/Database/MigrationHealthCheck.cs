@@ -21,7 +21,7 @@ public class MigrationHealthCheck : IHealthCheck
         try
         {
             var migrationStatus = await _migrationService.GetMigrationStatusAsync();
-            
+
             var data = new Dictionary<string, object>
             {
                 ["can_connect"] = migrationStatus.CanConnect,

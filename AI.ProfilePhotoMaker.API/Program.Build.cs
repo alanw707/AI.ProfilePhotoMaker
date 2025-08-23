@@ -36,8 +36,8 @@ public partial class Program
             // Look for .env files in the solution root directory (parent of API directory)
             var contentRoot = environment.ContentRootPath;
             var solutionRoot = Directory.GetParent(contentRoot)?.FullName ?? contentRoot;
-            
-            
+
+
             var envFiles = new[]
             {
                 ".env",
@@ -67,7 +67,7 @@ public partial class Program
                     }
                 }
             }
-            
+
             if (!anyFileFound)
             {
             }
@@ -126,7 +126,7 @@ public partial class Program
 
             // Get the webhook base URL
             var webhookBaseUrl = await webhookUrlResolver.GetWebhookBaseUrlAsync();
-            
+
             if (webhookBaseUrl == null)
             {
                 if (environment.IsDevelopment())
@@ -267,7 +267,7 @@ public partial class Program
                 {
                     logger.LogError("   • {Error}", error);
                 }
-                
+
                 if (environment.IsProduction())
                 {
                     logger.LogError("🚨 Production deployment detected with critical configuration errors!");

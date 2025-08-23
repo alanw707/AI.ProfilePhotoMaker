@@ -11,7 +11,7 @@ public class WebhookUrlResolver : IWebhookUrlResolver
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<WebhookUrlResolver> _logger;
     private readonly HttpClient _httpClient;
-    
+
     // Cache resolved URL to avoid repeated lookups
     private string? _cachedWebhookBaseUrl;
     private DateTime? _lastResolutionTime;
@@ -32,8 +32,8 @@ public class WebhookUrlResolver : IWebhookUrlResolver
     public async Task<string?> GetWebhookBaseUrlAsync()
     {
         // Use cached URL if still valid
-        if (_cachedWebhookBaseUrl != null && 
-            _lastResolutionTime.HasValue && 
+        if (_cachedWebhookBaseUrl != null &&
+            _lastResolutionTime.HasValue &&
             DateTime.UtcNow - _lastResolutionTime.Value < _cacheExpiration)
         {
             return _cachedWebhookBaseUrl;
@@ -63,7 +63,7 @@ public class WebhookUrlResolver : IWebhookUrlResolver
             _cachedWebhookBaseUrl = resolvedUrl;
             _lastResolutionTime = DateTime.UtcNow;
 
-            _logger.LogInformation("Resolved webhook base URL: {WebhookUrl} (Environment: {Environment})", 
+            _logger.LogInformation("Resolved webhook base URL: {WebhookUrl} (Environment: {Environment})",
                 resolvedUrl ?? "DISABLED", _environment.EnvironmentName);
 
             return resolvedUrl;
@@ -104,10 +104,10 @@ public class WebhookUrlResolver : IWebhookUrlResolver
         {
             using var response = await _httpClient.GetAsync(webhookUrl);
             var isValid = response.StatusCode != HttpStatusCode.NotFound; // Accept any response except 404
-            
-            _logger.LogInformation("Webhook URL validation: {WebhookUrl} -> {StatusCode} ({IsValid})", 
+
+            _logger.LogInformation("Webhook URL validation: {WebhookUrl} -> {StatusCode} ({IsValid})",
                 webhookUrl, response.StatusCode, isValid ? "VALID" : "INVALID");
-                
+
             return isValid;
         }
         catch (Exception ex)
@@ -176,9 +176,9 @@ public class WebhookUrlResolver : IWebhookUrlResolver
         {
             // ngrok API endpoint (default local)
             var ngrokApiUrl = _configuration["Webhooks:NgrokApiUrl"] ?? "http://localhost:4040/api/tunnels";
-            
+
             _logger.LogDebug("Attempting to detect ngrok tunnel via API: {NgrokApiUrl}", ngrokApiUrl);
-            
+
             using var response = await _httpClient.GetAsync(ngrokApiUrl);
             if (!response.IsSuccessStatusCode)
             {
@@ -193,7 +193,7 @@ public class WebhookUrlResolver : IWebhookUrlResolver
             });
 
             // Find HTTPS tunnel
-            var httpsTunnel = tunnelsData?.Tunnels?.FirstOrDefault(t => 
+            var httpsTunnel = tunnelsData?.Tunnels?.FirstOrDefault(t =>
                 t.Proto == "https" && t.PublicUrl?.StartsWith("https://") == true);
 
             if (httpsTunnel?.PublicUrl != null)

@@ -26,7 +26,7 @@ public class AzureBlobStorageService : BaseStorageService
     {
         ValidateUserId(userId);
         ValidateFileName(fileName);
-        
+
         try
         {
             var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
@@ -60,12 +60,12 @@ public class AzureBlobStorageService : BaseStorageService
     public override async Task<string> SaveImageToPathAsync(Stream imageStream, string storagePath)
     {
         ValidateStoragePath(storagePath);
-        
+
         try
         {
             string containerName;
             string blobPath;
-            
+
             if (storagePath.StartsWith("style-previews/"))
             {
                 containerName = "style-previews";
@@ -107,12 +107,12 @@ public class AzureBlobStorageService : BaseStorageService
     public override async Task<Stream?> GetImageAsync(string storagePath)
     {
         ValidateStoragePath(storagePath);
-        
+
         try
         {
             string containerName;
             string blobPath;
-            
+
             if (storagePath.StartsWith("style-previews/"))
             {
                 containerName = "style-previews";
@@ -146,12 +146,12 @@ public class AzureBlobStorageService : BaseStorageService
     public override async Task<bool> DeleteImageAsync(string storagePath)
     {
         ValidateStoragePath(storagePath);
-        
+
         try
         {
             string containerName;
             string blobPath;
-            
+
             if (storagePath.StartsWith("style-previews/"))
             {
                 containerName = "style-previews";
@@ -167,7 +167,7 @@ public class AzureBlobStorageService : BaseStorageService
             var blobClient = containerClient.GetBlobClient(blobPath.TrimStart('/'));
 
             var response = await blobClient.DeleteIfExistsAsync();
-            
+
             if (response.Value)
             {
                 LogOperation(LogLevel.Information, "DeleteImageAsync - success", storagePath);
@@ -176,7 +176,7 @@ public class AzureBlobStorageService : BaseStorageService
             {
                 LogOperation(LogLevel.Warning, "DeleteImageAsync - not found", storagePath);
             }
-            
+
             return response.Value;
         }
         catch (Exception ex)
@@ -189,12 +189,12 @@ public class AzureBlobStorageService : BaseStorageService
     public override async Task<bool> ExistsAsync(string storagePath)
     {
         ValidateStoragePath(storagePath);
-        
+
         try
         {
             string containerName;
             string blobPath;
-            
+
             if (storagePath.StartsWith("style-previews/"))
             {
                 containerName = "style-previews";
@@ -222,11 +222,11 @@ public class AzureBlobStorageService : BaseStorageService
     public override string GetImageUrl(string storagePath)
     {
         ValidateStoragePath(storagePath);
-        
+
         // Handle style-previews paths by using correct container
         string containerName;
         string blobPath;
-        
+
         if (storagePath.StartsWith("style-previews/"))
         {
             containerName = "style-previews";
@@ -252,7 +252,7 @@ public class AzureBlobStorageService : BaseStorageService
     public override async Task<List<string>> ListUserImagesAsync(string userId)
     {
         ValidateUserId(userId);
-        
+
         try
         {
             var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
@@ -280,12 +280,12 @@ public class AzureBlobStorageService : BaseStorageService
     public override async Task<StorageFileInfo?> GetFileInfoAsync(string storagePath)
     {
         ValidateStoragePath(storagePath);
-        
+
         try
         {
             string containerName;
             string blobPath;
-            
+
             if (storagePath.StartsWith("style-previews/"))
             {
                 containerName = "style-previews";
@@ -327,12 +327,12 @@ public class AzureBlobStorageService : BaseStorageService
     public override Task<string> GenerateSasUrlAsync(string storagePath, TimeSpan expiry, BlobSasPermissions permissions = BlobSasPermissions.Read)
     {
         ValidateStoragePath(storagePath);
-        
+
         try
         {
             string containerName;
             string blobPath;
-            
+
             if (storagePath.StartsWith("style-previews/"))
             {
                 containerName = "style-previews";
@@ -365,10 +365,10 @@ public class AzureBlobStorageService : BaseStorageService
             sasBuilder.SetPermissions(permissions);
 
             var sasUri = blobClient.GenerateSasUri(sasBuilder);
-            
-            Logger.LogDebug("Generated SAS URL for blob: {StoragePath}, expires: {ExpiresOn}", 
+
+            Logger.LogDebug("Generated SAS URL for blob: {StoragePath}, expires: {ExpiresOn}",
                 storagePath, sasBuilder.ExpiresOn);
-            
+
             return Task.FromResult(sasUri.ToString());
         }
         catch (Exception ex)
@@ -381,12 +381,12 @@ public class AzureBlobStorageService : BaseStorageService
     public override async Task<string> SaveZipAsync(Stream zipStream, string storagePath)
     {
         ValidateStoragePath(storagePath);
-        
+
         try
         {
             string containerName;
             string blobPath;
-            
+
             if (storagePath.StartsWith("style-previews/"))
             {
                 containerName = "style-previews";
@@ -428,12 +428,12 @@ public class AzureBlobStorageService : BaseStorageService
     public override async Task<bool> DeleteDirectoryAsync(string directoryPath)
     {
         ValidateStoragePath(directoryPath);
-        
+
         try
         {
             string containerName;
             string prefix;
-            
+
             if (directoryPath.StartsWith("style-previews/"))
             {
                 containerName = "style-previews";
@@ -447,7 +447,7 @@ public class AzureBlobStorageService : BaseStorageService
 
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
             var cleanPrefix = prefix.TrimStart('/').TrimEnd('/') + '/';
-            
+
             var deletedCount = 0;
             await foreach (var blobItem in containerClient.GetBlobsAsync(prefix: cleanPrefix))
             {
@@ -469,12 +469,12 @@ public class AzureBlobStorageService : BaseStorageService
     public override async Task<List<string>> ListFilesAsync(string prefix)
     {
         ValidateStoragePath(prefix);
-        
+
         try
         {
             string containerName;
             string searchPrefix;
-            
+
             if (prefix.StartsWith("style-previews/"))
             {
                 containerName = "style-previews";
@@ -493,7 +493,7 @@ public class AzureBlobStorageService : BaseStorageService
             await foreach (var blobItem in containerClient.GetBlobsAsync(prefix: cleanPrefix))
             {
                 // Return full storage path (including container prefix if applicable)
-                var fullPath = prefix.StartsWith("style-previews/") 
+                var fullPath = prefix.StartsWith("style-previews/")
                     ? $"style-previews/{blobItem.Name}"
                     : blobItem.Name;
                 files.Add(fullPath);

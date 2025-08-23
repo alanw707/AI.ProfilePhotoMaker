@@ -14,8 +14,8 @@ public class EnhancedStorageProxyMiddleware
     private readonly IWebHostEnvironment _environment;
 
     public EnhancedStorageProxyMiddleware(
-        RequestDelegate next, 
-        ILogger<EnhancedStorageProxyMiddleware> logger, 
+        RequestDelegate next,
+        ILogger<EnhancedStorageProxyMiddleware> logger,
         IHttpClientFactory httpClientFactory,
         IWebHostEnvironment environment)
     {
@@ -28,12 +28,12 @@ public class EnhancedStorageProxyMiddleware
     public async Task InvokeAsync(HttpContext context)
     {
         var path = context.Request.Path.Value?.ToLower();
-        
+
         _logger.LogDebug("Enhanced storage proxy processing path: {Path}", path);
-        
+
         // Get storage service from request scope
         var storageService = context.RequestServices.GetRequiredService<IStorageService>();
-        
+
         // Handle Azurite requests (development)
         if (path?.StartsWith("/devstoreaccount1/") == true)
         {
@@ -41,7 +41,7 @@ public class EnhancedStorageProxyMiddleware
             await ProxyAzuriteRequest(context, path);
             return;
         }
-        
+
         // Handle Azure Blob Storage requests (all environments)
         if (path?.StartsWith("/profile-images/") == true)
         {
@@ -63,14 +63,14 @@ public class EnhancedStorageProxyMiddleware
         {
             // Remove the leading slash and construct Azurite URL
             var azuriteUrl = $"http://127.0.0.1:10000{path}";
-            
+
             _logger.LogDebug("Proxying to Azurite: {Path} -> {AzuriteUrl}", path, azuriteUrl);
 
             using var httpClient = _httpClientFactory.CreateClient();
-            
+
             // Add ngrok header to skip browser warning page for Replicate API access
             httpClient.DefaultRequestHeaders.Add("ngrok-skip-browser-warning", "true");
-            
+
             var response = await httpClient.GetAsync(azuriteUrl);
 
             if (!response.IsSuccessStatusCode)
@@ -85,13 +85,13 @@ public class EnhancedStorageProxyMiddleware
 
             context.Response.ContentType = contentType;
             context.Response.StatusCode = 200;
-            
+
             // Add cache headers for performance
             context.Response.Headers["Cache-Control"] = "public, max-age=3600";
-            
+
             await context.Response.Body.WriteAsync(content);
 
-            _logger.LogDebug("Azurite proxy successful: {Path}, ContentType: {ContentType}, Size: {Size}", 
+            _logger.LogDebug("Azurite proxy successful: {Path}, ContentType: {ContentType}, Size: {Size}",
                 path, contentType, content.Length);
         }
         catch (Exception ex)
@@ -113,12 +113,12 @@ public class EnhancedStorageProxyMiddleware
             // URL: /profile-images/prod/uploads/userId/fileName.png
             // Storage Path: prod/uploads/userId/fileName.png
             var storagePath = path.Substring("/profile-images/".Length);
-            
+
             _logger.LogDebug("Serving image from storage: {Path} -> {StoragePath}", path, storagePath);
 
             // Fetch image from storage service (Azure Blob or Azurite)
             var imageStream = await storageService.GetImageAsync(storagePath);
-            
+
             if (imageStream == null)
             {
                 _logger.LogWarning("Image not found in storage: {StoragePath}", storagePath);
@@ -130,15 +130,15 @@ public class EnhancedStorageProxyMiddleware
             // Set appropriate content type based on file extension
             var contentType = GetContentType(path);
             context.Response.ContentType = contentType;
-            
+
             // Add cache headers for performance (1 year for images)
             context.Response.Headers["Cache-Control"] = "public, max-age=31536000, immutable";
             context.Response.Headers["ETag"] = $"\"{storagePath.GetHashCode():X}\"";
-            
+
             // Stream the image to the response
             await imageStream.CopyToAsync(context.Response.Body);
             await imageStream.DisposeAsync();
-            
+
             _logger.LogDebug("Successfully served image: {Path}, ContentType: {ContentType}", path, contentType);
         }
         catch (Exception ex)

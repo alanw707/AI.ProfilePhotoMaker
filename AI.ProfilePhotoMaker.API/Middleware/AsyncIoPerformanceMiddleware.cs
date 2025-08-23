@@ -13,7 +13,7 @@ public class AsyncIoPerformanceMiddleware
     private readonly AsyncIoPerformanceOptions _options;
 
     public AsyncIoPerformanceMiddleware(
-        RequestDelegate next, 
+        RequestDelegate next,
         ILogger<AsyncIoPerformanceMiddleware> logger,
         IConfiguration configuration)
     {
@@ -41,7 +41,7 @@ public class AsyncIoPerformanceMiddleware
         var threadPoolStatsBefore = GetThreadPoolStats();
 
         Exception? caughtException = null;
-        
+
         try
         {
             await _next(context);
@@ -62,13 +62,13 @@ public class AsyncIoPerformanceMiddleware
 
             // Log performance metrics
             await LogPerformanceMetricsAsync(
-                context, 
-                requestId, 
-                threadId, 
-                startTime, 
-                endTime, 
-                duration, 
-                threadPoolStatsBefore, 
+                context,
+                requestId,
+                threadId,
+                startTime,
+                endTime,
+                duration,
+                threadPoolStatsBefore,
                 threadPoolStatsAfter,
                 caughtException);
 
@@ -135,7 +135,7 @@ public class AsyncIoPerformanceMiddleware
 
         if (_options.EnableDetailedLogging)
         {
-            _logger.LogInformation("Async I/O Performance Metrics: {Metrics}", 
+            _logger.LogInformation("Async I/O Performance Metrics: {Metrics}",
                 JsonSerializer.Serialize(metrics, new JsonSerializerOptions { WriteIndented = false }));
         }
 

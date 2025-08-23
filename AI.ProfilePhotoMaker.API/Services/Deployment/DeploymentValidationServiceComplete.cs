@@ -426,7 +426,7 @@ public partial class DeploymentValidationService
             var stopwatch = Stopwatch.StartNew();
             await _healthCheckService.GetBasicHealthAsync();
             stopwatch.Stop();
-            
+
             if (stopwatch.ElapsedMilliseconds > 2000)
                 throw new Exception($"Response time too slow: {stopwatch.ElapsedMilliseconds}ms");
         }, "Medium"));
@@ -435,7 +435,7 @@ public partial class DeploymentValidationService
     }
 
     // Suppress CS1998 false positive in some analyzer contexts for this method
-    #pragma warning disable CS1998
+#pragma warning disable CS1998
     private async Task<List<RegressionTestResultDto>> RunSecurityRegressionTestsAsync()
     {
         await Task.Yield();
@@ -451,7 +451,7 @@ public partial class DeploymentValidationService
 
         return tests;
     }
-    #pragma warning restore CS1998
+#pragma warning restore CS1998
 
     private async Task<RegressionTestResultDto> RunSingleRegressionTestAsync(string testName, string category, Func<Task> testAction, string severity)
     {
@@ -493,7 +493,7 @@ public partial class DeploymentValidationService
 
         // Add API functionality tests
         tests.AddRange(await RunApiRegressionTestsAsync());
-        
+
         // Add database tests
         tests.AddRange(await RunDatabaseRegressionTestsAsync());
 
@@ -535,7 +535,7 @@ public partial class DeploymentValidationService
         var mitigationStrategies = new List<string>();
 
         var failedComponents = componentScores.Values.Where(c => c.Score < 80).ToList();
-        
+
         if (failedComponents.Any())
         {
             riskFactors.Add(new RiskFactorDto
@@ -581,7 +581,7 @@ public partial class DeploymentValidationService
         var riskLevel = totalRisk switch
         {
             <= 10 => "Low",
-            <= 30 => "Medium", 
+            <= 30 => "Medium",
             <= 60 => "High",
             _ => "Critical"
         };

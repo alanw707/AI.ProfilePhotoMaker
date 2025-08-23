@@ -101,10 +101,10 @@ public class AtomicImageService : IAtomicImageService
         {
             transaction = await _context.Database.BeginTransactionAsync();
         }
-        
+
         try
         {
-            _logger.LogInformation("Starting atomic upload for user {UserId} with {Count} images", 
+            _logger.LogInformation("Starting atomic upload for user {UserId} with {Count} images",
                 userId, images.Count);
 
             // Step 1: Get user profile within transaction
@@ -126,7 +126,7 @@ public class AtomicImageService : IAtomicImageService
                     // Generate clean filename
                     var extension = Path.GetExtension(image.FileName);
                     var fileName = $"{Guid.NewGuid()}_{filePrefix}{extension}";
-                    
+
                     // Get storage path
                     var storagePath = _pathResolver.GetPath(storageType, userId, fileName);
 
@@ -137,7 +137,7 @@ public class AtomicImageService : IAtomicImageService
                     uploadedStoragePaths.Add(storagePath);
                     result.FilesUploaded++;
 
-                    _logger.LogDebug("Uploaded file {FileName} to storage path {StoragePath}", 
+                    _logger.LogDebug("Uploaded file {FileName} to storage path {StoragePath}",
                         fileName, storagePath);
 
                     // Prepare database record if needed
@@ -162,12 +162,12 @@ public class AtomicImageService : IAtomicImageService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to upload file {FileName} for user {UserId}", 
+                    _logger.LogError(ex, "Failed to upload file {FileName} for user {UserId}",
                         image.FileName, userId);
-                    
+
                     // Cleanup already uploaded files
                     await CleanupStorageFilesAsync(uploadedStoragePaths);
-                    
+
                     result.ErrorMessage = $"Failed to upload file {image.FileName}: {ex.Message}";
                     return result;
                 }
@@ -186,16 +186,16 @@ public class AtomicImageService : IAtomicImageService
                     await _context.SaveChangesAsync();
                     result.DatabaseRecordsCreated = createdImages.Count;
 
-                    _logger.LogInformation("Created {Count} database records for user {UserId}", 
+                    _logger.LogInformation("Created {Count} database records for user {UserId}",
                         createdImages.Count, userId);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Failed to create database records for user {UserId}", userId);
-                    
+
                     // Cleanup uploaded files since database failed
                     await CleanupStorageFilesAsync(uploadedStoragePaths);
-                    
+
                     result.ErrorMessage = $"Failed to create database records: {ex.Message}";
                     return result;
                 }
@@ -213,7 +213,7 @@ public class AtomicImageService : IAtomicImageService
             result.StoragePaths = uploadedStoragePaths;
 
             _logger.LogInformation("Atomic upload completed successfully for user {UserId}. " +
-                "Files: {FileCount}, DB Records: {DbCount}", 
+                "Files: {FileCount}, DB Records: {DbCount}",
                 userId, result.FilesUploaded, result.DatabaseRecordsCreated);
 
             return result;
@@ -221,16 +221,16 @@ public class AtomicImageService : IAtomicImageService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Atomic upload failed for user {UserId}", userId);
-            
+
             // Rollback transaction (this also happens automatically on dispose)
             if (transaction != null)
             {
                 await transaction.RollbackAsync();
             }
-            
+
             // Cleanup storage files
             await CleanupStorageFilesAsync(uploadedStoragePaths);
-            
+
             result.ErrorMessage = $"Atomic upload failed: {ex.Message}";
             return result;
         }
@@ -260,10 +260,10 @@ public class AtomicImageService : IAtomicImageService
         {
             transaction = await _context.Database.BeginTransactionAsync();
         }
-        
+
         try
         {
-            _logger.LogInformation("Starting atomic delete for user {UserId} with {Count} images", 
+            _logger.LogInformation("Starting atomic delete for user {UserId} with {Count} images",
                 userId, imageIds.Count);
 
             // Step 1: Find and validate images within transaction
@@ -293,7 +293,7 @@ public class AtomicImageService : IAtomicImageService
                 {
                     storagePathsToDelete.Add(image.OriginalImageUrl);
                 }
-                if (!string.IsNullOrEmpty(image.ProcessedImageUrl) && 
+                if (!string.IsNullOrEmpty(image.ProcessedImageUrl) &&
                     image.ProcessedImageUrl != image.OriginalImageUrl)
                 {
                     storagePathsToDelete.Add(image.ProcessedImageUrl);
@@ -311,7 +311,7 @@ public class AtomicImageService : IAtomicImageService
                 await _context.SaveChangesAsync();
                 result.DatabaseRecordsDeleted = imagesToDelete.Count;
 
-                _logger.LogInformation("Removed {Count} database records for user {UserId}", 
+                _logger.LogInformation("Removed {Count} database records for user {UserId}",
                     imagesToDelete.Count, userId);
             }
             catch (Exception ex)
@@ -343,9 +343,9 @@ public class AtomicImageService : IAtomicImageService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to delete storage file {StoragePath} for user {UserId}", 
+                    _logger.LogError(ex, "Failed to delete storage file {StoragePath} for user {UserId}",
                         storagePath, userId);
-                    
+
                     // Storage deletion failed - rollback database changes
                     result.ErrorMessage = $"Failed to delete storage file {storagePath}: {ex.Message}";
                     // If no real transaction (e.g., InMemory provider), manually restore DB state
@@ -373,7 +373,7 @@ public class AtomicImageService : IAtomicImageService
             result.DeletedStoragePaths = deletedPaths;
 
             _logger.LogInformation("Atomic delete completed successfully for user {UserId}. " +
-                "DB Records: {DbCount}, Files: {FileCount}", 
+                "DB Records: {DbCount}, Files: {FileCount}",
                 userId, result.DatabaseRecordsDeleted, result.FilesDeleted);
 
             return result;
@@ -381,13 +381,13 @@ public class AtomicImageService : IAtomicImageService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Atomic delete failed for user {UserId}", userId);
-            
+
             // Rollback transaction
             if (transaction != null)
             {
                 await transaction.RollbackAsync();
             }
-            
+
             result.ErrorMessage = $"Atomic delete failed: {ex.Message}";
             return result;
         }

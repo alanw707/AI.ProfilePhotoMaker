@@ -224,16 +224,16 @@ public class ModelCreationStatusController : ControllerBase
         try
         {
             bool needsUpdate = false;
-            
+
             // First check database consistency
             if (modelRequest.Status == ModelCreationStatus.Ready)
             {
                 // Check for inconsistent "ready" status with missing trained model or error messages
                 if (string.IsNullOrEmpty(modelRequest.TrainedModelVersion) || !string.IsNullOrEmpty(modelRequest.ErrorMessage))
                 {
-                    _logger.LogWarning("Model {RequestId} marked as Ready but has inconsistent data: TrainedModelVersion={TrainedModelVersion}, ErrorMessage={ErrorMessage}", 
+                    _logger.LogWarning("Model {RequestId} marked as Ready but has inconsistent data: TrainedModelVersion={TrainedModelVersion}, ErrorMessage={ErrorMessage}",
                         modelRequest.Id, modelRequest.TrainedModelVersion ?? "NULL", modelRequest.ErrorMessage ?? "NULL");
-                    
+
                     modelRequest.Status = ModelCreationStatus.Failed;
                     if (string.IsNullOrEmpty(modelRequest.ErrorMessage))
                     {
@@ -242,19 +242,19 @@ public class ModelCreationStatusController : ControllerBase
                     needsUpdate = true;
                 }
             }
-            
+
             // Then check against Replicate API if we have a model ID and status is still ready
             if (modelRequest.Status == ModelCreationStatus.Ready && !string.IsNullOrEmpty(modelRequest.ReplicateModelId))
             {
                 _logger.LogInformation("Validating model {ModelId} against Replicate API", modelRequest.ReplicateModelId);
-                
+
                 bool modelExists = await _replicateApiClient.CheckModelExistsAsync(modelRequest.ReplicateModelId);
-                
-                
+
+
                 if (!modelExists)
                 {
                     _logger.LogWarning("Model {ModelId} no longer exists on Replicate, updating status to Failed", modelRequest.ReplicateModelId);
-                    
+
                     modelRequest.Status = ModelCreationStatus.Failed;
                     modelRequest.ErrorMessage = "Model was deleted from Replicate externally";
                     needsUpdate = true;
@@ -264,7 +264,7 @@ public class ModelCreationStatusController : ControllerBase
             {
                 _logger.LogWarning("Cannot validate model against Replicate API: ReplicateModelId is null or empty for request {RequestId}", modelRequest.Id);
             }
-            
+
             // Save changes if any updates were made
             if (needsUpdate)
             {

@@ -22,7 +22,7 @@ public class DatabaseHealthCheck : IHealthCheck
         {
             var canConnect = await _databaseProvider.CanConnectAsync();
             var providerConfig = _databaseProvider.GetProviderConfig();
-            
+
             var data = new Dictionary<string, object>
             {
                 ["provider"] = providerConfig.Provider.ToString(),
@@ -55,7 +55,7 @@ public class DatabaseHealthCheck : IHealthCheck
         var serverPart = parts.FirstOrDefault(p => p.StartsWith("Server=", StringComparison.OrdinalIgnoreCase))
                         ?? parts.FirstOrDefault(p => p.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
                         ?? "Unknown";
-        
+
         return $"{serverPart};...";
     }
 }

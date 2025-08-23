@@ -90,7 +90,7 @@ public class PerformanceMonitoringMiddleware
             // Log slow requests
             if (duration > _slowRequestThresholdMs)
             {
-                _logger.LogWarning("Slow request detected: {Method} {Endpoint} took {Duration}ms (User: {UserId})", 
+                _logger.LogWarning("Slow request detected: {Method} {Endpoint} took {Duration}ms (User: {UserId})",
                     method, endpoint, duration, userId ?? "anonymous");
 
                 // Track as custom event
@@ -112,7 +112,7 @@ public class PerformanceMonitoringMiddleware
 
             if (_enableDetailedLogging)
             {
-                _logger.LogInformation("Request completed: {Method} {Endpoint} -> {StatusCode} in {Duration}ms", 
+                _logger.LogInformation("Request completed: {Method} {Endpoint} -> {StatusCode} in {Duration}ms",
                     method, endpoint, statusCode, duration);
             }
         }
@@ -134,7 +134,7 @@ public class PerformanceMonitoringMiddleware
                 ["correlationId"] = requestId
             });
 
-            _logger.LogError(ex, "Request failed: {Method} {Endpoint} after {Duration}ms", 
+            _logger.LogError(ex, "Request failed: {Method} {Endpoint} after {Duration}ms",
                 method, endpoint, duration);
 
             throw;
@@ -175,7 +175,7 @@ public class PerformanceMonitoringMiddleware
         var user = context.User;
         if (user?.Identity?.IsAuthenticated == true)
         {
-            return user.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+            return user.FindFirst(ClaimTypes.NameIdentifier)?.Value
                 ?? user.FindFirst(ClaimTypes.Name)?.Value
                 ?? user.FindFirst("sub")?.Value;
         }
@@ -298,7 +298,7 @@ public class MonitoringHealthCheck : Microsoft.Extensions.Diagnostics.HealthChec
         {
             // Check if monitoring service can collect metrics
             var metrics = await _performanceMonitoring.GetCurrentMetricsAsync();
-            
+
             // Check for critical alerts
             var alerts = await _performanceMonitoring.CheckPerformanceAlertsAsync();
             var criticalAlerts = alerts.Where(a => a.Severity == "Critical").ToList();

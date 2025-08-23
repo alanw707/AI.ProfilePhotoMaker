@@ -32,15 +32,15 @@ var isTestingEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRO
 if (args.Length > 0 && !isTestingEnvironment)
 {
     var commandBuilder = WebApplication.CreateBuilder(args);
-    
+
     // Configure services for command-line operations
     commandBuilder.Services.AddDatabaseServices(commandBuilder.Configuration, commandBuilder.Environment);
     commandBuilder.Services.AddLogging();
-    
+
     // Add storage services for upload commands
-    var commandAzureStorageConnectionString = commandBuilder.Configuration.GetConnectionString("AzureStorage") ?? 
+    var commandAzureStorageConnectionString = commandBuilder.Configuration.GetConnectionString("AzureStorage") ??
                                       commandBuilder.Configuration["AzureStorage:ConnectionString"];
-    
+
     if (!string.IsNullOrEmpty(commandAzureStorageConnectionString))
     {
         // Register BlobServiceClient for command-line operations
@@ -48,33 +48,33 @@ if (args.Length > 0 && !isTestingEnvironment)
         {
             return new BlobServiceClient(commandAzureStorageConnectionString);
         });
-        
+
         commandBuilder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
     }
     else
     {
         commandBuilder.Services.AddScoped<IStorageService, LocalStorageService>();
     }
-    
+
     // Add upload service
     commandBuilder.Services.AddScoped<UploadStylePreviewsService>();
-    
+
     var commandApp = commandBuilder.Build();
-    
+
     // Try migration commands first
     var migrationExitCode = await MigrationCommandService.HandleMigrationCommand(args, commandApp.Services);
     if (migrationExitCode != 0 || IsMigrationCommand(args[0]))
     {
         Environment.Exit(migrationExitCode);
     }
-    
+
     // Try upload commands
     var uploadExitCode = await UploadCommandService.HandleUploadCommand(args, commandApp.Services);
     if (uploadExitCode != 0 || IsUploadCommand(args[0]))
     {
         Environment.Exit(uploadExitCode);
     }
-    
+
     // If we get here, it's not a recognized command, continue with normal startup
 }
 
@@ -436,20 +436,24 @@ if (!app.Environment.IsEnvironment("Testing"))
     }
 }
 
-    // Run validations in background after startup to prevent blocking
-    _ = Task.Run(async () => {
-        await Task.Delay(10000);
-        try {
-            using var scope = app.Services.CreateScope();
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-            logger.LogInformation("🔍 Running background startup validations...");
-            await ValidateWebhookConfigurationAsync(app);
-            await ValidateReplicateConfigurationAsync(app);
-            logger.LogInformation("✅ Background validations completed");
-        } catch (Exception ex) {
-            app.Logger.LogError(ex, "❌ Background validation failed: {Message}", ex.Message);
-        }
-    });
+// Run validations in background after startup to prevent blocking
+_ = Task.Run(async () =>
+{
+    await Task.Delay(10000);
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogInformation("🔍 Running background startup validations...");
+        await ValidateWebhookConfigurationAsync(app);
+        await ValidateReplicateConfigurationAsync(app);
+        logger.LogInformation("✅ Background validations completed");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "❌ Background validation failed: {Message}", ex.Message);
+    }
+});
 
 app.UseForwardedHeaders();
 app.UseResponseCompression();
@@ -590,12 +594,12 @@ if (Directory.Exists(angularPath))
         FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(angularPath),
         RequestPath = ""
     });
-    
+
     // FIXED: Only handle non-API requests in MapFallback to prevent authentication bypass
     app.MapFallback(context =>
     {
         var path = context.Request.Path.Value?.ToLower();
-        
+
         // CRITICAL FIX: Let API requests pass through to controllers and authentication middleware
         // Don't handle API requests in fallback - they should be handled by MapControllers
         if (path?.StartsWith("/api/") == true ||
@@ -607,7 +611,7 @@ if (Directory.Exists(angularPath))
             context.Response.StatusCode = 404;
             return context.Response.WriteAsync("API endpoint not found");
         }
-        
+
         // Serve Angular app for all other routes
         context.Response.ContentType = "text/html";
         return context.Response.SendFileAsync(Path.Combine(angularPath, "index.html"));

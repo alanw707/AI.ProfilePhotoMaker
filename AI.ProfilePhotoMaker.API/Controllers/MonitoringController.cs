@@ -297,15 +297,15 @@ public class MonitoringController : ControllerBase
 
             // Basic health check by attempting to get current metrics
             var metrics = await _performanceMonitoring.GetCurrentMetricsAsync();
-            
+
             return Ok(healthData);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Monitoring health check failed");
-            return StatusCode(500, new 
-            { 
-                status = "Unhealthy", 
+            return StatusCode(500, new
+            {
+                status = "Unhealthy",
                 timestamp = DateTime.UtcNow,
                 error = ex.Message
             });

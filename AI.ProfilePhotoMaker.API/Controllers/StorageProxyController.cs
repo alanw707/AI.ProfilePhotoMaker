@@ -28,12 +28,12 @@ public class StorageProxyController : ControllerBase
         {
             // Construct the full path for Azure Storage Emulator
             var azuriteUrl = $"http://127.0.0.1:10000/devstoreaccount1/{path}";
-            
+
             _logger.LogDebug("Proxying storage request: {Path} -> {AzuriteUrl}", path, azuriteUrl);
-            
+
             using var httpClient = _httpClientFactory.CreateClient();
             var response = await httpClient.GetAsync(azuriteUrl);
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("Storage proxy request failed: {StatusCode} for {Path}", response.StatusCode, path);
@@ -42,10 +42,10 @@ public class StorageProxyController : ControllerBase
 
             var content = await response.Content.ReadAsByteArrayAsync();
             var contentType = response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
-            
-            _logger.LogDebug("Storage proxy request successful: {Path}, ContentType: {ContentType}, Size: {Size}", 
+
+            _logger.LogDebug("Storage proxy request successful: {Path}, ContentType: {ContentType}, Size: {Size}",
                 path, contentType, content.Length);
-            
+
             return File(content, contentType);
         }
         catch (Exception ex)

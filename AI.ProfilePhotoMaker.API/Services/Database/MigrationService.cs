@@ -30,11 +30,11 @@ public class MigrationService : IMigrationService
     {
         var stopwatch = Stopwatch.StartNew();
         var result = new MigrationResult();
-        
+
         try
         {
             _logger.LogInformation("Starting database migration process");
-            
+
             // Check database connectivity
             if (!await _databaseProvider.CanConnectAsync())
             {
@@ -45,7 +45,7 @@ public class MigrationService : IMigrationService
             // Get pending migrations before applying
             var pendingMigrations = await _context.Database.GetPendingMigrationsAsync();
             result.AppliedMigrations.AddRange(pendingMigrations);
-            
+
             if (!pendingMigrations.Any())
             {
                 _logger.LogInformation("No pending migrations found");
@@ -54,12 +54,12 @@ public class MigrationService : IMigrationService
                 return result;
             }
 
-            _logger.LogInformation("Applying {Count} pending migrations: {Migrations}", 
+            _logger.LogInformation("Applying {Count} pending migrations: {Migrations}",
                 pendingMigrations.Count(), string.Join(", ", pendingMigrations));
 
             // Apply migrations with conflict resolution
             await ApplyMigrationsWithConflictResolutionAsync(pendingMigrations);
-            
+
             _logger.LogInformation("Successfully applied all migrations");
             result.Success = true;
             result.Message = $"Applied {pendingMigrations.Count()} migrations successfully";
@@ -68,7 +68,7 @@ public class MigrationService : IMigrationService
         {
             _logger.LogError(ex, "Migration failed: {Message}", ex.Message);
             result.Errors.Add($"Migration failed: {ex.Message}");
-            
+
             // Add inner exception details
             if (ex.InnerException != null)
             {
@@ -88,23 +88,23 @@ public class MigrationService : IMigrationService
     public async Task<MigrationStatus> GetMigrationStatusAsync()
     {
         var status = new MigrationStatus();
-        
+
         try
         {
             status.CanConnect = await _databaseProvider.CanConnectAsync();
-            
+
             if (!status.CanConnect)
             {
                 return status;
             }
 
             status.DatabaseExists = await _context.Database.CanConnectAsync();
-            
+
             if (status.DatabaseExists)
             {
                 var appliedMigrations = await _context.Database.GetAppliedMigrationsAsync();
                 var pendingMigrations = await _context.Database.GetPendingMigrationsAsync();
-                
+
                 status.AppliedMigrations.AddRange(appliedMigrations);
                 status.PendingMigrations.AddRange(pendingMigrations);
                 status.AppliedCount = appliedMigrations.Count();
@@ -122,7 +122,7 @@ public class MigrationService : IMigrationService
     public async Task<ValidationResult> ValidateDatabaseAsync()
     {
         var result = new ValidationResult();
-        
+
         try
         {
             if (!await _databaseProvider.CanConnectAsync())
@@ -136,7 +136,7 @@ public class MigrationService : IMigrationService
             await ValidateTable("CreditPackages", result, minExpectedCount: 3);
             await ValidateTable("AspNetRoles", result, minExpectedCount: 0);
             await ValidateTable("AspNetUsers", result, minExpectedCount: 0);
-            
+
             // Check for required seed data
             var activeStylesCount = await _context.Styles.CountAsync(s => s.IsActive);
             if (activeStylesCount < 20)
@@ -154,8 +154,8 @@ public class MigrationService : IMigrationService
 
             result.HasRequiredSeedData = result.MissingSeedData.Count == 0;
             result.IsValid = result.Issues.Count == 0;
-            
-            _logger.LogInformation("Database validation completed. Valid: {IsValid}, Issues: {IssueCount}", 
+
+            _logger.LogInformation("Database validation completed. Valid: {IsValid}, Issues: {IssueCount}",
                 result.IsValid, result.Issues.Count);
         }
         catch (Exception ex)
@@ -242,7 +242,7 @@ public class MigrationService : IMigrationService
             health.Metrics["DatabaseProvider"] = _databaseProvider.GetDatabaseProvider().ToString();
             health.Metrics["ConnectionString"] = MaskConnectionString(_databaseProvider.GetConnectionString());
             health.Metrics["Environment"] = _environment.EnvironmentName;
-            
+
             if (health.ValidationResult.TableCounts.Any())
             {
                 foreach (var tableCount in health.ValidationResult.TableCounts)
@@ -282,7 +282,7 @@ public class MigrationService : IMigrationService
             if (count >= 0)
             {
                 result.TableCounts[tableName] = count;
-                
+
                 if (count < minExpectedCount)
                 {
                     result.Issues.Add($"Table {tableName} has {count} records, expected at least {minExpectedCount}");
@@ -327,33 +327,33 @@ public class MigrationService : IMigrationService
     private async Task ApplyMigrationsWithConflictResolutionAsync(IEnumerable<string> pendingMigrations)
     {
         var pendingList = pendingMigrations.ToList();
-        
+
         // Check if this looks like a fresh deployment to existing database
-        if (pendingList.Contains("20250808170932_InitialSQLServerFixed") && 
+        if (pendingList.Contains("20250808170932_InitialSQLServerFixed") &&
             pendingList.Contains("20250821035813_AddPredictionsTable"))
         {
             _logger.LogInformation("Detected existing database scenario - checking if schema already exists");
-            
+
             // Check if the AspNetRoles table already exists
             var tableExistsQuery = @"
                 SELECT CASE 
                     WHEN EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'AspNetRoles') 
                     THEN 1 ELSE 0 
                 END";
-            
+
             using var connection = _context.Database.GetDbConnection();
             await connection.OpenAsync();
             using var command = connection.CreateCommand();
             command.CommandText = tableExistsQuery;
             var tableExists = Convert.ToBoolean(await command.ExecuteScalarAsync());
-            
+
             if (tableExists)
             {
                 _logger.LogInformation("AspNetRoles table exists - marking initial migration as applied and applying only new tables");
-                
+
                 // Mark the initial migration as applied without running it
                 await MarkMigrationAsAppliedAsync("20250808170932_InitialSQLServerFixed");
-                
+
                 // Now create only the Predictions table if it doesn't exist
                 var createPredictionsTableQuery = @"
                     IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Predictions')
@@ -368,23 +368,23 @@ public class MigrationService : IMigrationService
                         
                         CREATE NONCLUSTERED INDEX [IX_Predictions_UserId] ON [Predictions] ([UserId]);
                     END";
-                
+
                 command.CommandText = createPredictionsTableQuery;
                 await command.ExecuteNonQueryAsync();
-                
+
                 // Mark the Predictions table migration as applied
                 await MarkMigrationAsAppliedAsync("20250821035813_AddPredictionsTable");
-                
+
                 _logger.LogInformation("Successfully applied schema-safe migrations");
                 return;
             }
         }
-        
+
         // Default migration behavior for normal scenarios
         _logger.LogInformation("Applying migrations using standard Entity Framework approach");
         await _context.Database.MigrateAsync();
     }
-    
+
     /// <summary>
     /// Mark a migration as applied in the migration history without running it
     /// </summary>
@@ -396,21 +396,21 @@ public class MigrationService : IMigrationService
                 INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
                 VALUES (@migrationId, '8.0.7');
             END";
-        
+
         using var connection = _context.Database.GetDbConnection();
         if (connection.State != System.Data.ConnectionState.Open)
             await connection.OpenAsync();
-            
+
         using var command = connection.CreateCommand();
         command.CommandText = insertMigrationQuery;
-        
+
         var parameter = command.CreateParameter();
         parameter.ParameterName = "@migrationId";
         parameter.Value = migrationId;
         command.Parameters.Add(parameter);
-        
+
         await command.ExecuteNonQueryAsync();
-        
+
         _logger.LogInformation("Marked migration {MigrationId} as applied", migrationId);
     }
 }

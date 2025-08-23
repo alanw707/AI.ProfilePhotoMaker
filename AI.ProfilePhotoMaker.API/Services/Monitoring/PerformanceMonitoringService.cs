@@ -64,7 +64,7 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
         };
 
         var key = $"{method}:{endpoint}";
-        _apiMetrics.AddOrUpdate(key, new ConcurrentQueue<ApiRequestMetric>([metric]), 
+        _apiMetrics.AddOrUpdate(key, new ConcurrentQueue<ApiRequestMetric>([metric]),
             (_, queue) =>
             {
                 queue.Enqueue(metric);
@@ -138,8 +138,8 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
             ["recordsAffected"] = recordsAffected.ToString()
         };
 
-        _telemetryClient.TrackDependency("Database", tableName, queryType, 
-            $"{queryType} {tableName}", DateTime.UtcNow.AddMilliseconds(-duration), 
+        _telemetryClient.TrackDependency("Database", tableName, queryType,
+            $"{queryType} {tableName}", DateTime.UtcNow.AddMilliseconds(-duration),
             TimeSpan.FromMilliseconds(duration), "200", true);
 
         _telemetryClient.TrackMetric("DatabaseQueryDuration", duration, properties);
@@ -179,8 +179,8 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
             ["errorMessage"] = errorMessage ?? ""
         };
 
-        _telemetryClient.TrackDependency(serviceName, serviceName, operation, 
-            operation, DateTime.UtcNow.AddMilliseconds(-duration), 
+        _telemetryClient.TrackDependency(serviceName, serviceName, operation,
+            operation, DateTime.UtcNow.AddMilliseconds(-duration),
             TimeSpan.FromMilliseconds(duration), success ? "200" : "500", success);
 
         _telemetryClient.TrackMetric("ExternalServiceDuration", duration, properties);
@@ -365,9 +365,9 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
         {
             activity.SetTag("correlationId", correlationId);
         }
-        
+
         activity.Start();
-        
+
         // Track operation start in Application Insights
         _telemetryClient.TrackEvent($"{operationName}Started", new Dictionary<string, string>
         {
@@ -584,7 +584,7 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
         if (allMetrics.Any())
         {
             apiMetrics.AverageResponseTime = allMetrics.Average(m => m.Duration);
-            
+
             var sortedDurations = allMetrics.Select(m => m.Duration).OrderBy(d => d).ToList();
             apiMetrics.P50ResponseTime = GetPercentile(sortedDurations, 50);
             apiMetrics.P95ResponseTime = GetPercentile(sortedDurations, 95);
@@ -745,8 +745,8 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
                 PrivateMemory = _currentProcess.PrivateMemorySize64,
                 ManagedMemory = GC.GetTotalMemory(false),
                 PeakWorkingSet = _currentProcess.PeakWorkingSet64,
-                AvailableMemory = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) 
-                    ? (long)((_memoryCounter?.NextValue() ?? 0) * 1024 * 1024) 
+                AvailableMemory = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                    ? (long)((_memoryCounter?.NextValue() ?? 0) * 1024 * 1024)
                     : 0
             };
 
@@ -804,7 +804,7 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
     private void PopulateCustomMetrics(Dictionary<string, double> customMetrics, DateTime from, DateTime to)
     {
         var recentMetrics = _customMetrics.Where(m => m.Timestamp >= from && m.Timestamp <= to).ToList();
-        
+
         foreach (var group in recentMetrics.GroupBy(m => m.Name))
         {
             customMetrics[group.Key] = group.Average(m => m.Value);
@@ -814,13 +814,13 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
     private static double GetPercentile(List<long> sortedList, int percentile)
     {
         if (!sortedList.Any()) return 0;
-        
+
         var index = (percentile / 100.0) * (sortedList.Count - 1);
         var lower = (int)Math.Floor(index);
         var upper = (int)Math.Ceiling(index);
-        
+
         if (lower == upper) return sortedList[lower];
-        
+
         var weight = index - lower;
         return sortedList[lower] * (1 - weight) + sortedList[upper] * weight;
     }
@@ -856,16 +856,16 @@ public class PerformanceMonitoringService : IPerformanceMonitoringService
         {
             // Ignore errors and return 0
         }
-        
+
         return 0;
     }
 
     private static string GetResourceStatus(double current, double max, double warningThreshold, double criticalThreshold)
     {
         if (max <= 0) return "Unknown";
-        
+
         var utilization = current / max;
-        
+
         if (utilization >= criticalThreshold) return "Critical";
         if (utilization >= warningThreshold) return "Warning";
         return "Normal";

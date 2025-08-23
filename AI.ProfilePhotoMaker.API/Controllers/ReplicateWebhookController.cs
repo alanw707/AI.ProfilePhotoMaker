@@ -178,7 +178,7 @@ public class ReplicateWebhookController : ControllerBase
                                 imageIds = savedImageIds,
                                 style = style
                             });
-                        
+
                         await _hubContext.Clients.Group($"prediction_{payload.Id}")
                             .SendAsync("PredictionUpdated", new
                             {
@@ -186,7 +186,7 @@ public class ReplicateWebhookController : ControllerBase
                                 status = "succeeded",
                                 completedAt = DateTime.UtcNow
                             });
-                            
+
                         _logger.LogDebug("Sent real-time completion notification for prediction {PredictionId} to user {UserId}", payload.Id, userId);
                     }
                     catch (Exception ex)

@@ -12,12 +12,12 @@ public class DeploymentValidationResponseDto
     public string Version { get; set; } = string.Empty;
     public string Environment { get; set; } = string.Empty;
     public string DeploymentTarget { get; set; } = string.Empty;
-    
+
     public Dictionary<string, ValidationComponentDto> Components { get; set; } = new();
     public List<string> Errors { get; set; } = new();
     public List<string> Warnings { get; set; } = new();
     public List<string> Recommendations { get; set; } = new();
-    
+
     public DeploymentMetricsDto Metrics { get; set; } = new();
     public Dictionary<string, object> AdditionalData { get; set; } = new();
 }
@@ -295,12 +295,12 @@ public class DeploymentReadinessScoreDto
     public string ReadinessLevel { get; set; } = string.Empty;
     public bool IsReadyForDeployment { get; set; }
     public DateTime CalculatedAt { get; set; } = DateTime.UtcNow;
-    
+
     public Dictionary<string, ComponentScoreDto> ComponentScores { get; set; } = new();
     public List<string> BlockingIssues { get; set; } = new();
     public List<string> CriticalRecommendations { get; set; } = new();
     public List<string> OptionalRecommendations { get; set; } = new();
-    
+
     public DeploymentRiskAssessmentDto RiskAssessment { get; set; } = new();
     public string NextSteps { get; set; } = string.Empty;
 }

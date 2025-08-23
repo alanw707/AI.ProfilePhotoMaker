@@ -21,7 +21,7 @@ public class StoragePathResolver
     private readonly ILogger<StoragePathResolver> _logger;
 
     public StoragePathResolver(
-        IWebHostEnvironment environment, 
+        IWebHostEnvironment environment,
         IConfiguration configuration,
         ILogger<StoragePathResolver> logger)
     {
@@ -40,7 +40,7 @@ public class StoragePathResolver
     public string GetPath(StorageType type, string userId, string fileName)
     {
         var environmentPrefix = GetEnvironmentPrefix();
-        
+
         var path = type switch
         {
             StorageType.Upload => $"{environmentPrefix}/uploads/{userId}/{fileName}",
@@ -50,7 +50,7 @@ public class StoragePathResolver
             _ => throw new ArgumentException($"Unknown storage type: {type}")
         };
 
-        _logger.LogDebug("Generated storage path: {Path} for type: {Type}, user: {UserId}", 
+        _logger.LogDebug("Generated storage path: {Path} for type: {Type}, user: {UserId}",
             path, type, userId);
 
         return path;
@@ -65,7 +65,7 @@ public class StoragePathResolver
     public string GetDirectoryPrefix(StorageType type, string? userId = null)
     {
         var environmentPrefix = GetEnvironmentPrefix();
-        
+
         return type switch
         {
             StorageType.Upload when userId != null => $"{environmentPrefix}/uploads/{userId}/",
@@ -94,7 +94,7 @@ public class StoragePathResolver
 
         // Use environment name, normalized to lowercase
         var environmentName = _environment.EnvironmentName.ToLowerInvariant();
-        
+
         return environmentName switch
         {
             "development" => "dev",
@@ -112,7 +112,7 @@ public class StoragePathResolver
     public StoragePathInfo ParsePath(string storagePath)
     {
         var parts = storagePath.Trim('/').Split('/');
-        
+
         if (parts.Length < 2)
         {
             throw new ArgumentException($"Invalid storage path format: {storagePath}");
@@ -120,7 +120,7 @@ public class StoragePathResolver
 
         var environment = parts[0];
         var typeStr = parts[1];
-        
+
         if (!Enum.TryParse<StorageType>(typeStr, true, out var storageType))
         {
             throw new ArgumentException($"Unknown storage type in path: {typeStr}");

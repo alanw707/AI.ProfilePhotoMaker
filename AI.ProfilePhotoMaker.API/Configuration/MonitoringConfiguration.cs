@@ -18,7 +18,7 @@ public static class MonitoringConfiguration
     /// Configure comprehensive logging with Serilog and Application Insights
     /// </summary>
     public static IServiceCollection AddComprehensiveLogging(
-        this IServiceCollection services, 
+        this IServiceCollection services,
         IConfiguration configuration,
         IWebHostEnvironment environment)
     {
@@ -176,12 +176,12 @@ public class CustomTelemetryInitializer : ITelemetryInitializer
     {
         telemetry.Context.Cloud.RoleName = "AI.ProfilePhotoMaker.API";
         telemetry.Context.Cloud.RoleInstance = Environment.MachineName;
-        
+
         // Add custom properties
         telemetry.Context.GlobalProperties["Environment"] = _environment.EnvironmentName;
         telemetry.Context.GlobalProperties["Application"] = "AI.ProfilePhotoMaker.API";
         telemetry.Context.GlobalProperties["Version"] = GetType().Assembly.GetName().Version?.ToString() ?? "Unknown";
-        
+
         if (telemetry is RequestTelemetry requestTelemetry)
         {
             // Custom request telemetry processing
@@ -206,7 +206,7 @@ public class MemoryHealthCheck : IHealthCheck
     }
 
     public Task<HealthCheckResult> CheckHealthAsync(
-        HealthCheckContext context, 
+        HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
         try

@@ -9,32 +9,32 @@ public interface IMigrationService
     /// Apply all pending migrations
     /// </summary>
     Task<MigrationResult> ApplyMigrationsAsync();
-    
+
     /// <summary>
     /// Check if there are pending migrations
     /// </summary>
     Task<MigrationStatus> GetMigrationStatusAsync();
-    
+
     /// <summary>
     /// Validate database schema and seed data
     /// </summary>
     Task<ValidationResult> ValidateDatabaseAsync();
-    
+
     /// <summary>
     /// Get applied migrations
     /// </summary>
     Task<IEnumerable<string>> GetAppliedMigrationsAsync();
-    
+
     /// <summary>
     /// Get pending migrations
     /// </summary>
     Task<IEnumerable<string>> GetPendingMigrationsAsync();
-    
+
     /// <summary>
     /// Ensure database is created
     /// </summary>
     Task<bool> EnsureDatabaseCreatedAsync();
-    
+
     /// <summary>
     /// Get comprehensive database health status
     /// </summary>

@@ -49,10 +49,10 @@ public static class UploadCommandService
 
         // Validate Azure Storage configuration
         var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-        var azureStorageConnectionString = configuration.GetConnectionString("AzureStorage") ?? 
+        var azureStorageConnectionString = configuration.GetConnectionString("AzureStorage") ??
                                           configuration["AzureStorage:ConnectionString"];
 
-        if (string.IsNullOrEmpty(azureStorageConnectionString) || 
+        if (string.IsNullOrEmpty(azureStorageConnectionString) ||
             azureStorageConnectionString.StartsWith("REPLACE_WITH_"))
         {
             if (dryRun)
@@ -69,16 +69,16 @@ public static class UploadCommandService
             // Use a scope to resolve scoped services
             using var scope = serviceProvider.CreateScope();
             var scopedProvider = scope.ServiceProvider;
-            
+
             // Ensure we're using Azure Blob Storage
             var storageService = scopedProvider.GetService<IStorageService>();
             if (storageService is not AzureBlobStorageService)
             {
-                logger.LogError("Upload command attempted with non-Azure storage service: {ServiceType}", 
+                logger.LogError("Upload command attempted with non-Azure storage service: {ServiceType}",
                     storageService?.GetType().Name ?? "null");
                 return 1;
             }
-            
+
             logger.LogInformation("Starting style previews upload. DryRun: {DryRun}, Force: {Force}", dryRun, force);
 
             var uploadService = scopedProvider.GetRequiredService<UploadStylePreviewsService>();
@@ -97,10 +97,10 @@ public static class UploadCommandService
     {
         // Validate Azure Storage configuration
         var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-        var azureStorageConnectionString = configuration.GetConnectionString("AzureStorage") ?? 
+        var azureStorageConnectionString = configuration.GetConnectionString("AzureStorage") ??
                                           configuration["AzureStorage:ConnectionString"];
 
-        if (string.IsNullOrEmpty(azureStorageConnectionString) || 
+        if (string.IsNullOrEmpty(azureStorageConnectionString) ||
             azureStorageConnectionString.StartsWith("REPLACE_WITH_"))
         {
             Console.WriteLine("ERROR: Azure Storage connection string is not configured.");
@@ -112,13 +112,13 @@ public static class UploadCommandService
         // Use a scope to resolve scoped services
         using var scope = serviceProvider.CreateScope();
         var scopedProvider = scope.ServiceProvider;
-        
+
         // Ensure we're using Azure Blob Storage
         var storageService = scopedProvider.GetService<IStorageService>();
         if (storageService is not AzureBlobStorageService)
         {
             Console.WriteLine("ERROR: List command requires Azure Blob Storage configuration.");
-            logger.LogError("List command attempted with non-Azure storage service: {ServiceType}", 
+            logger.LogError("List command attempted with non-Azure storage service: {ServiceType}",
                 storageService?.GetType().Name ?? "null");
             return 1;
         }
@@ -133,7 +133,7 @@ public static class UploadCommandService
     {
         var environment = serviceProvider.GetRequiredService<IHostEnvironment>();
         var stylePreviewsPath = Path.Combine(environment.ContentRootPath, "style-previews");
-        
+
         Console.WriteLine("=== DEMO MODE: Style Previews Upload ===\n");
         Console.WriteLine("⚠️  Running in demo mode without Azure Storage configuration\n");
         Console.WriteLine($"Source Directory: {stylePreviewsPath}");
@@ -151,7 +151,7 @@ public static class UploadCommandService
 
         // Get all .jpg files
         var imageFiles = Directory.GetFiles(stylePreviewsPath, "*.jpg", SearchOption.TopDirectoryOnly);
-        
+
         if (!imageFiles.Any())
         {
             Console.WriteLine("No .jpg files found in style-previews directory");
@@ -170,23 +170,23 @@ public static class UploadCommandService
         Console.WriteLine("Demo Upload Simulation:");
         Console.WriteLine("STATUS   SIZE        FILE");
         Console.WriteLine("------   ---------   ----");
-        
+
         foreach (var filePath in imageFiles)
         {
             var fileName = Path.GetFileName(filePath);
             var fileInfo = new FileInfo(filePath);
-            
+
             await Task.Delay(100); // Simulate upload time
             Console.WriteLine($"🔍 DEMO  {fileInfo.Length,9:N0}   {fileName}");
         }
-        
+
         Console.WriteLine();
         Console.WriteLine("=== Demo Summary ===");
         Console.WriteLine($"Total Files: {imageFiles.Length}");
         Console.WriteLine($"Total Size: {imageFiles.Sum(f => new FileInfo(f).Length):N0} bytes");
         Console.WriteLine();
         Console.WriteLine("ℹ️  This was a demo simulation. Configure Azure Storage to perform actual uploads.");
-        
+
         return 0;
     }
 }

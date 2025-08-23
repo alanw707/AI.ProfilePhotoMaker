@@ -20,9 +20,9 @@ public class StorageProxyMiddleware
     {
         var originalPath = context.Request.Path.Value;
         var pathForCheck = originalPath?.ToLower();
-        
+
         _logger.LogDebug("Storage proxy middleware processing path: {Path}", originalPath);
-        
+
         // Check if this is a storage proxy request (case-insensitive check)
         if (pathForCheck?.StartsWith("/devstoreaccount1/") == true && originalPath != null)
         {
@@ -41,14 +41,14 @@ public class StorageProxyMiddleware
         {
             // Remove the leading slash and construct Azurite URL
             var azuriteUrl = $"http://127.0.0.1:10000{path}";
-            
+
             _logger.LogDebug("Proxying storage request: {Path} -> {AzuriteUrl}", path, azuriteUrl);
 
             using var httpClient = _httpClientFactory.CreateClient();
-            
+
             // Add ngrok header to skip browser warning page for Replicate API access
             httpClient.DefaultRequestHeaders.Add("ngrok-skip-browser-warning", "true");
-            
+
             var response = await httpClient.GetAsync(azuriteUrl);
 
             if (!response.IsSuccessStatusCode)
@@ -65,7 +65,7 @@ public class StorageProxyMiddleware
             context.Response.StatusCode = 200;
             await context.Response.Body.WriteAsync(content);
 
-            _logger.LogDebug("Storage proxy request successful: {Path}, ContentType: {ContentType}, Size: {Size}", 
+            _logger.LogDebug("Storage proxy request successful: {Path}, ContentType: {ContentType}, Size: {Size}",
                 path, contentType, content.Length);
         }
         catch (Exception ex)

@@ -44,7 +44,7 @@ public class DependencyHealthService : IDependencyHealthService
         });
 
         var completedTasks = await Task.WhenAll(tasks);
-        
+
         foreach (var result in completedTasks)
         {
             results[result.Key] = result.Value;
@@ -73,10 +73,10 @@ public class DependencyHealthService : IDependencyHealthService
             {
                 case DependencyType.Http:
                     return await CheckHttpDependencyAsync(config, stopwatch);
-                
+
                 case DependencyType.Service:
                     return await CheckServiceDependencyAsync(config, stopwatch);
-                
+
                 default:
                     stopwatch.Stop();
                     return new DependencyStatusDto
@@ -92,7 +92,7 @@ public class DependencyHealthService : IDependencyHealthService
         {
             stopwatch.Stop();
             _logger.LogWarning(ex, "Failed to check dependency {DependencyName}", dependencyName);
-            
+
             return new DependencyStatusDto
             {
                 Name = dependencyName,
@@ -156,9 +156,9 @@ public class DependencyHealthService : IDependencyHealthService
         }
 
         // Azure Blob Storage (if configured)
-        var azureStorageConnectionString = _configuration.GetConnectionString("AzureStorage") ?? 
+        var azureStorageConnectionString = _configuration.GetConnectionString("AzureStorage") ??
                                          _configuration["AzureStorage:ConnectionString"];
-        if (!string.IsNullOrEmpty(azureStorageConnectionString) && 
+        if (!string.IsNullOrEmpty(azureStorageConnectionString) &&
             !azureStorageConnectionString.Contains("UseDevelopmentStorage=true"))
         {
             // Extract account name from connection string for health check
@@ -198,7 +198,7 @@ public class DependencyHealthService : IDependencyHealthService
                     "DELETE" => HttpMethod.Delete,
                     "HEAD" => HttpMethod.Head,
                     _ => HttpMethod.Get
-                }, 
+                },
                 config.Url);
 
             // Add headers
@@ -210,7 +210,7 @@ public class DependencyHealthService : IDependencyHealthService
             using var response = await _httpClient.SendAsync(request);
             stopwatch.Stop();
 
-            var isHealthy = response.IsSuccessStatusCode || 
+            var isHealthy = response.IsSuccessStatusCode ||
                            response.StatusCode == HttpStatusCode.Unauthorized || // Expected for some APIs without proper auth
                            response.StatusCode == HttpStatusCode.Forbidden;     // Expected for some protected endpoints
 

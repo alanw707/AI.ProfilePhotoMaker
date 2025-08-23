@@ -235,7 +235,7 @@ public class AsyncZipService : IAsyncZipService
 
             if (result.Success)
             {
-                _logger.LogInformation("Successfully created streaming ZIP: {ZipPath} ({CompressedSize} bytes, {FileCount} files, {ProcessingTime}ms)", 
+                _logger.LogInformation("Successfully created streaming ZIP: {ZipPath} ({CompressedSize} bytes, {FileCount} files, {ProcessingTime}ms)",
                     zipFilePath, result.CompressedSize, result.FilesProcessed, stopwatch.ElapsedMilliseconds);
             }
             else
@@ -340,7 +340,7 @@ public class AsyncZipService : IAsyncZipService
                 result.IsValid = true;
             }
 
-            _logger.LogInformation("File validation completed: {ValidFiles} valid, {InvalidFiles} invalid files", 
+            _logger.LogInformation("File validation completed: {ValidFiles} valid, {InvalidFiles} invalid files",
                 result.ValidFiles, result.InvalidFiles);
 
             return result;

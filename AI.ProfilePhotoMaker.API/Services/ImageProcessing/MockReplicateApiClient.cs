@@ -61,15 +61,15 @@ public class MockReplicateApiClient : IReplicateApiClient
             var tr = Trainings[training.Id!];
             tr.Status = "processing";
             Trainings[training.Id!] = tr;
-            
+
             await Task.Delay(200); // Then complete
             tr = Trainings[training.Id!];
             tr.Status = "succeeded";
             tr.CompletedAt = DateTime.UtcNow;
             tr.Version = $"{request.ReplicateModelId}:mock-version";
             Trainings[training.Id!] = tr;
-            
-            _logger.LogInformation("[Mock] Training {TrainingId} completed with version {Version}", 
+
+            _logger.LogInformation("[Mock] Training {TrainingId} completed with version {Version}",
                 training.Id, tr.Version);
         });
 
@@ -95,7 +95,7 @@ public class MockReplicateApiClient : IReplicateApiClient
             _logger.LogInformation("[Mock] GetTrainingStatus {TrainingId} => {Status}", trainingId, tr.Status);
             return Task.FromResult(tr);
         }
-        
+
         // Unknown id: return succeeded for backwards compatibility
         _logger.LogWarning("[Mock] GetTrainingStatus unknown id {TrainingId}, returning succeeded", trainingId);
         return Task.FromResult(new ReplicateTrainingResult

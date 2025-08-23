@@ -61,11 +61,11 @@ public class ImageDownloadService : IImageDownloadService
                 if (response.IsSuccessStatusCode)
                 {
                     using var imageStream = await response.Content.ReadAsStreamAsync();
-                    
+
                     // Save directly to blob storage
                     var storagePath = _pathResolver.GetPath(StorageType.Generated, userId, fileName);
                     var savedStoragePath = await _storageService.SaveImageToPathAsync(imageStream, storagePath);
-                    
+
                     downloadResults.Add(new ImageDownloadResult
                     {
                         StoragePath = savedStoragePath,

@@ -7,36 +7,36 @@ public interface IUserProfileRepository
 {
     // Original method - use sparingly, only when all data truly needed
     Task<UserProfile?> GetByUserIdAsync(string userId);
-    
+
     // OPTIMIZED: Lightweight profile loading without ProcessedImages
     Task<UserProfile?> GetByUserIdLightAsync(string userId);
-    
+
     // OPTIMIZED: Paginated image loading with efficient queries
     Task<PagedResult<ProcessedImageDto>> GetUserImagesPagedAsync(string userId, int page = 1, int pageSize = 20);
-    
+
     // OPTIMIZED: Statistics without loading all images
     Task<UserProfileStatsDto?> GetUserProfileStatsAsync(string userId);
-    
+
     // OPTIMIZED: Profile with recent images only
     Task<UserProfileWithRecentImagesDto?> GetProfileWithRecentImagesAsync(string userId, int recentCount = 10);
-    
+
     // OPTIMIZED: Count operations without loading data
     Task<int> GetUserImageCountAsync(string userId);
     Task<int> GetUserOriginalUploadCountAsync(string userId);
     Task<int> GetUserGeneratedImageCountAsync(string userId);
-    
+
     // OPTIMIZED: Check if user has specific data without loading
     Task<bool> HasProcessedImagesAsync(string userId);
     Task<bool> HasOriginalUploadsAsync(string userId, int minimumCount = 1);
-    
+
     // OPTIMIZED: Get images by style with pagination
     Task<PagedResult<ProcessedImageDto>> GetUserImagesByStyleAsync(string userId, string style, int page = 1, int pageSize = 20);
-    
+
     // Standard CRUD operations
     Task AddAsync(UserProfile profile);
     Task UpdateAsync(UserProfile profile);
     Task DeleteAsync(UserProfile profile);
-    
+
     // OPTIMIZED: Bulk operations for data management
     Task<List<ProcessedImage>> GetUserProcessedImagesAsync(string userId, bool includeGenerated = true, bool includeOriginal = true);
     Task DeleteUserImageAsync(string userId, int imageId);
@@ -78,7 +78,7 @@ public class UserProfileStatsDto
     public DateTime UpdatedAt { get; set; }
     public int Credits { get; set; }
     public int PurchasedCredits { get; set; }
-    
+
     // Efficient statistics
     public int TotalProcessedImages { get; set; }
     public int OriginalUploads { get; set; }

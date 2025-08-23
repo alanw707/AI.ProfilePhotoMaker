@@ -202,8 +202,8 @@ public partial class DeploymentValidationService
             Name = "ConnectionStrings",
             IsValid = !string.IsNullOrEmpty(connectionStrings["DefaultConnection"]),
             Values = connectionStrings.AsEnumerable().Where(kv => kv.Value != null).ToDictionary(kv => kv.Key, kv => (object)kv.Value!),
-            Issues = string.IsNullOrEmpty(connectionStrings["DefaultConnection"]) 
-                ? new List<string> { "DefaultConnection not configured" } 
+            Issues = string.IsNullOrEmpty(connectionStrings["DefaultConnection"])
+                ? new List<string> { "DefaultConnection not configured" }
                 : new List<string>(),
             IsComplete = !string.IsNullOrEmpty(connectionStrings["DefaultConnection"])
         };
@@ -550,8 +550,8 @@ public partial class DeploymentValidationService
             ("ConnectionStrings:DefaultConnection", _configuration.GetConnectionString("DefaultConnection"))
         };
 
-        var secretsInConfig = secureConfigItems.Where(item => 
-            !string.IsNullOrEmpty(item.Item2) && 
+        var secretsInConfig = secureConfigItems.Where(item =>
+            !string.IsNullOrEmpty(item.Item2) &&
             string.IsNullOrEmpty(Environment.GetEnvironmentVariable(GetEnvironmentVariableName(item.Item1)))).ToList();
 
         checks.Add(new SecurityCheckDto

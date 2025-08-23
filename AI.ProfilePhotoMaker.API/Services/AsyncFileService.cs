@@ -154,7 +154,7 @@ public class AsyncFileService : IAsyncFileService
             return await Task.Run(() =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                
+
                 if (!File.Exists(filePath))
                 {
                     _logger.LogDebug("File not found for deletion: {FilePath}", filePath);
@@ -217,7 +217,7 @@ public class AsyncFileService : IAsyncFileService
 
             // Get files to compress
             var files = await GetDirectoryFilesAsync(sourceDirectory, "*", false, cancellationToken);
-            
+
             if (allowedExtensions != null)
             {
                 files = files.Where(f => allowedExtensions.Contains(Path.GetExtension(f).ToLowerInvariant())).ToArray();
@@ -250,7 +250,7 @@ public class AsyncFileService : IAsyncFileService
 
                 await using var entryStream = entry.Open();
                 await using var fileStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true);
-                
+
                 await fileStream.CopyToAsync(entryStream, 4096, cancellationToken);
             }
 
@@ -284,7 +284,7 @@ public class AsyncFileService : IAsyncFileService
             return await Task.Run(() =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                
+
                 if (!Directory.Exists(directoryPath))
                 {
                     return Array.Empty<string>();
@@ -312,7 +312,7 @@ public class AsyncFileService : IAsyncFileService
             return await Task.Run(() =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                
+
                 if (!File.Exists(filePath))
                 {
                     return null;
@@ -339,7 +339,7 @@ public class AsyncFileService : IAsyncFileService
             return await Task.Run(() =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                
+
                 if (access == FileAccess.Read && !File.Exists(filePath))
                 {
                     return null;
@@ -413,7 +413,7 @@ public class AsyncFileService : IAsyncFileService
             return await Task.Run(() =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                
+
                 if (!File.Exists(sourceFilePath))
                 {
                     _logger.LogWarning("Source file not found for move: {SourcePath}", sourceFilePath);

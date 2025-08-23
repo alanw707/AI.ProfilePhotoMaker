@@ -23,11 +23,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             try
             {
                 _logger.LogCritical("🚨 MANUAL MIGRATION: Starting database migration from API endpoint");
-                
+
                 // Check database connection
                 var canConnect = await _context.Database.CanConnectAsync();
                 _logger.LogCritical("Database connection status: {CanConnect}", canConnect);
-                
+
                 if (!canConnect)
                 {
                     return BadRequest("Cannot connect to database");
@@ -62,7 +62,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 _logger.LogCritical("❌ MANUAL MIGRATION FAILED: {Message}", ex.Message);
                 _logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
-                
+
                 return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
             }
         }
@@ -73,11 +73,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             try
             {
                 _logger.LogCritical("🚨 DATABASE RESET: Starting database reset (drop and recreate)");
-                
+
                 // Check database connection
                 var canConnect = await _context.Database.CanConnectAsync();
                 _logger.LogCritical("Database connection status: {CanConnect}", canConnect);
-                
+
                 if (!canConnect)
                 {
                     return BadRequest("Cannot connect to database");
@@ -116,7 +116,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 _logger.LogCritical("❌ DATABASE RESET FAILED: {Message}", ex.Message);
                 _logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
-                
+
                 return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
             }
         }
@@ -127,11 +127,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             try
             {
                 _logger.LogCritical("🚨 RAW SQL: Creating database tables with raw SQL commands");
-                
+
                 // Check database connection
                 var canConnect = await _context.Database.CanConnectAsync();
                 _logger.LogCritical("Database connection status: {CanConnect}", canConnect);
-                
+
                 if (!canConnect)
                 {
                     return BadRequest("Cannot connect to database");
@@ -288,7 +288,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 _logger.LogCritical("❌ RAW SQL FAILED: {Message}", ex.Message);
                 _logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
-                
+
                 return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
             }
         }
@@ -299,11 +299,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             try
             {
                 _logger.LogCritical("🚨 SCHEMA FIX: Adding missing columns to CreditPackages table");
-                
+
                 // Check database connection
                 var canConnect = await _context.Database.CanConnectAsync();
                 _logger.LogCritical("Database connection status: {CanConnect}", canConnect);
-                
+
                 if (!canConnect)
                 {
                     return BadRequest("Cannot connect to database");
@@ -314,19 +314,19 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 {
                     @"IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'CreditPackages' AND COLUMN_NAME = 'Description')
                       ALTER TABLE CreditPackages ADD Description nvarchar(500) NOT NULL DEFAULT ''",
-                    
+
                     @"IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'CreditPackages' AND COLUMN_NAME = 'DisplayOrder')
                       ALTER TABLE CreditPackages ADD DisplayOrder int NOT NULL DEFAULT 0",
-                    
+
                     @"IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'CreditPackages' AND COLUMN_NAME = 'BonusCredits')
                       ALTER TABLE CreditPackages ADD BonusCredits int NOT NULL DEFAULT 0",
-                    
+
                     @"IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'CreditPackages' AND COLUMN_NAME = 'StripeProductId')
                       ALTER TABLE CreditPackages ADD StripeProductId nvarchar(max) NULL",
-                    
+
                     @"IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'CreditPackages' AND COLUMN_NAME = 'StripePriceId')
                       ALTER TABLE CreditPackages ADD StripePriceId nvarchar(max) NULL",
-                    
+
                     @"IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'CreditPackages' AND COLUMN_NAME = 'UpdatedAt')
                       ALTER TABLE CreditPackages ADD UpdatedAt datetime2 NULL"
                 };
@@ -344,7 +344,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 {
                     var creditPackageCount = await _context.CreditPackages.CountAsync();
                     _logger.LogCritical("✅ SCHEMA FIX: CreditPackages query successful, count: {Count}", creditPackageCount);
-                    
+
                     return Ok(new
                     {
                         success = true,
@@ -362,7 +362,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 _logger.LogCritical("❌ SCHEMA FIX FAILED: {Message}", ex.Message);
                 _logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
-                
+
                 return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
             }
         }
@@ -373,11 +373,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             try
             {
                 _logger.LogCritical("🚨 COLUMN FIX: Adding missing columns to CreditPackages table");
-                
+
                 // Check database connection
                 var canConnect = await _context.Database.CanConnectAsync();
                 _logger.LogCritical("Database connection status: {CanConnect}", canConnect);
-                
+
                 if (!canConnect)
                 {
                     return BadRequest("Cannot connect to database");
@@ -414,7 +414,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 {
                     var creditPackageCount = await _context.CreditPackages.CountAsync();
                     _logger.LogCritical("✅ COLUMN FIX: CreditPackages query successful, count: {Count}", creditPackageCount);
-                    
+
                     return Ok(new
                     {
                         success = true,
@@ -439,7 +439,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 _logger.LogCritical("❌ COLUMN FIX FAILED: {Message}", ex.Message);
                 _logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
-                
+
                 return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
             }
         }
@@ -450,11 +450,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             try
             {
                 _logger.LogCritical("🚨 DATA MIGRATION: Starting description migration for CreditPackages and Styles");
-                
+
                 // Check database connection
                 var canConnect = await _context.Database.CanConnectAsync();
                 _logger.LogCritical("Database connection status: {CanConnect}", canConnect);
-                
+
                 if (!canConnect)
                 {
                     return BadRequest("Cannot connect to database");
@@ -464,7 +464,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 // Step 1: Update CreditPackages descriptions
                 _logger.LogCritical("🚨 DATA MIGRATION: Updating CreditPackages descriptions...");
-                
+
                 var creditPackageUpdates = new[]
                 {
                     @"UPDATE CreditPackages 
@@ -473,14 +473,14 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                           BonusCredits = 0,
                           UpdatedAt = GETUTCDATE()
                       WHERE Name LIKE '%Starter%' AND (Description = '' OR Description IS NULL)",
-                    
+
                     @"UPDATE CreditPackages 
                       SET Description = 'Most popular - great for professionals',
                           DisplayOrder = 2,
                           BonusCredits = 30,
                           UpdatedAt = GETUTCDATE()
                       WHERE Name LIKE '%Professional%' AND (Description = '' OR Description IS NULL)",
-                    
+
                     @"UPDATE CreditPackages 
                       SET Description = 'Best value for content creators and businesses',
                           DisplayOrder = 3,
@@ -506,15 +506,15 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 // Step 2: Add missing columns to Styles table if needed
                 _logger.LogCritical("🚨 DATA MIGRATION: Adding missing Styles columns...");
-                
+
                 var styleColumnUpdates = new[]
                 {
                     @"IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Styles' AND COLUMN_NAME = 'PromptTemplate')
                       ALTER TABLE Styles ADD PromptTemplate nvarchar(max) NULL",
-                    
+
                     @"IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Styles' AND COLUMN_NAME = 'NegativePromptTemplate')
                       ALTER TABLE Styles ADD NegativePromptTemplate nvarchar(max) NULL",
-                    
+
                     @"IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Styles' AND COLUMN_NAME = 'UpdatedAt')
                       ALTER TABLE Styles ADD UpdatedAt datetime2 NULL"
                 };
@@ -535,7 +535,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 // Step 3: Update key Styles with rich descriptions
                 _logger.LogCritical("🚨 DATA MIGRATION: Updating Styles descriptions...");
-                
+
                 var styleUpdates = new[]
                 {
                     @"UPDATE Styles 
@@ -544,28 +544,28 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                           NegativePromptTemplate = 'deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, casual clothing, inappropriate attire',
                           UpdatedAt = GETUTCDATE()
                       WHERE Name = 'corporate'",
-                    
+
                     @"UPDATE Styles 
                       SET Description = 'Professional LinkedIn-style headshot with confident and warm expression',
                           PromptTemplate = 'Professional LinkedIn-style headshot of a {gender}, neutral background, confident and warm smile, clean business-casual attire, high clarity',
                           NegativePromptTemplate = 'deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, full body shot, distracting background',
                           UpdatedAt = GETUTCDATE()
                       WHERE Name = 'linkedin'",
-                    
+
                     @"UPDATE Styles 
                       SET Description = 'Natural lifestyle photo in everyday clothing with warm lighting',
                           PromptTemplate = 'Natural lifestyle photo of a {gender} in everyday clothing, warm lighting, soft expression, home or park background, candid feel',
                           NegativePromptTemplate = 'deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, formal business attire',
                           UpdatedAt = GETUTCDATE()
                       WHERE Name = 'casual'",
-                    
+
                     @"UPDATE Styles 
                       SET Description = 'Fine art portrait with dramatic lighting and stylized clothing',
                           PromptTemplate = 'Fine art portrait of a {gender} in dramatic lighting, stylized clothing, moody background, painterly composition, thoughtful gaze',
                           NegativePromptTemplate = 'deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, plain background, conventional lighting',
                           UpdatedAt = GETUTCDATE()
                       WHERE Name = 'artistic'",
-                    
+
                     @"UPDATE Styles 
                       SET Description = 'Modern startup founder portrait in co-working space with confident energy',
                           PromptTemplate = 'Modern portrait of a {gender} startup founder in a co-working space or minimalist office, tech-savvy outfit, confident energy, natural lighting',
@@ -593,7 +593,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 // Verify the results
                 var creditPackageCount = await _context.CreditPackages.CountAsync();
                 var styleCount = await _context.Styles.CountAsync();
-                
+
                 // Get sample data to verify descriptions
                 var samplePackage = await _context.CreditPackages.FirstOrDefaultAsync();
                 var sampleStyle = await _context.Styles.FirstOrDefaultAsync();
@@ -619,7 +619,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 _logger.LogCritical("❌ DATA MIGRATION FAILED: {Message}", ex.Message);
                 _logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
-                
+
                 return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
             }
         }
@@ -630,7 +630,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             try
             {
                 _logger.LogCritical("🔍 INSPECT: Examining database table structures and data");
-                
+
                 var canConnect = await _context.Database.CanConnectAsync();
                 if (!canConnect)
                 {
@@ -638,7 +638,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 }
 
                 var result = new Dictionary<string, object>();
-                
+
                 // Check CreditPackages table structure
                 try
                 {
@@ -648,7 +648,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                           FROM INFORMATION_SCHEMA.COLUMNS 
                           WHERE TABLE_NAME = 'CreditPackages'
                           ORDER BY ORDINAL_POSITION").ToListAsync();
-                    
+
                     result["creditPackageColumns"] = creditPackageColumns;
                 }
                 catch (Exception ex)
@@ -665,7 +665,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                           FROM INFORMATION_SCHEMA.COLUMNS 
                           WHERE TABLE_NAME = 'Styles'
                           ORDER BY ORDINAL_POSITION").ToListAsync();
-                    
+
                     result["styleColumns"] = styleColumns;
                 }
                 catch (Exception ex)
@@ -676,7 +676,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 // Get sample data
                 try
                 {
-                    var creditPackages = await _context.CreditPackages.Take(3).Select(cp => new {
+                    var creditPackages = await _context.CreditPackages.Take(3).Select(cp => new
+                    {
                         cp.Id,
                         cp.Name,
                         cp.Credits,
@@ -685,7 +686,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                         DisplayOrder = (int?)null, // Will show if column exists
                         BonusCredits = (int?)null  // Will show if column exists
                     }).ToListAsync();
-                    
+
                     result["sampleCreditPackages"] = creditPackages;
                 }
                 catch (Exception ex)
@@ -695,13 +696,14 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 try
                 {
-                    var styles = await _context.Styles.Take(3).Select(s => new {
+                    var styles = await _context.Styles.Take(3).Select(s => new
+                    {
                         s.Id,
                         s.Name,
                         Description = s.Description ?? "NULL",
                         s.IsActive
                     }).ToListAsync();
-                    
+
                     result["sampleStyles"] = styles;
                 }
                 catch (Exception ex)
@@ -724,7 +726,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             try
             {
                 _logger.LogCritical("🚨 SIMPLE FIX: Adding missing columns and updating CreditPackages");
-                
+
                 var canConnect = await _context.Database.CanConnectAsync();
                 if (!canConnect)
                 {
@@ -759,7 +761,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 var updateCommands = new[]
                 {
                     "UPDATE CreditPackages SET Description = 'Perfect for trying out custom training and styled generations', DisplayOrder = 1, BonusCredits = 0 WHERE Id = 1",
-                    "UPDATE CreditPackages SET Description = 'Most popular - great for professionals', DisplayOrder = 2, BonusCredits = 30 WHERE Id = 2", 
+                    "UPDATE CreditPackages SET Description = 'Most popular - great for professionals', DisplayOrder = 2, BonusCredits = 30 WHERE Id = 2",
                     "UPDATE CreditPackages SET Description = 'Best value for content creators and businesses', DisplayOrder = 3, BonusCredits = 100 WHERE Id = 3"
                 };
 
@@ -791,7 +793,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             try
             {
                 _logger.LogCritical("🚨 CREDIT DESCRIPTION UPDATE: Starting simple description updates");
-                
+
                 var canConnect = await _context.Database.CanConnectAsync();
                 if (!canConnect)
                 {
@@ -829,21 +831,21 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     var packages = await _context.CreditPackages
                         .Select(p => new { p.Id, p.Name, p.Description })
                         .ToListAsync();
-                    
-                    return Ok(new 
-                    { 
-                        success = true, 
-                        message = "Description updates completed", 
+
+                    return Ok(new
+                    {
+                        success = true,
+                        message = "Description updates completed",
                         updateResults = results,
                         verificationData = packages
                     });
                 }
                 catch (Exception ex)
                 {
-                    return Ok(new 
-                    { 
-                        success = false, 
-                        message = "Updates executed but verification failed", 
+                    return Ok(new
+                    {
+                        success = false,
+                        message = "Updates executed but verification failed",
                         updateResults = results,
                         verificationError = ex.Message
                     });
@@ -862,7 +864,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             try
             {
                 _logger.LogCritical("🚨 STYLE POPULATION: Adding missing styles to database");
-                
+
                 var canConnect = await _context.Database.CanConnectAsync();
                 if (!canConnect)
                 {
@@ -966,7 +968,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 _logger.LogCritical("❌ STYLE POPULATION FAILED: {Message}", ex.Message);
                 _logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
-                
+
                 return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
             }
         }
@@ -977,11 +979,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             try
             {
                 _logger.LogCritical("🚨 STYLES POPULATION: Populating all 21 styles");
-                
+
                 // Check database connection
                 var canConnect = await _context.Database.CanConnectAsync();
                 _logger.LogCritical("Database connection status: {CanConnect}", canConnect);
-                
+
                 if (!canConnect)
                 {
                     return BadRequest("Cannot connect to database");
@@ -1019,7 +1021,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 // Verify population
                 var styleCount = await _context.Styles.CountAsync();
                 _logger.LogCritical("✅ STYLES POPULATION: Created {Count} styles", styleCount);
-                
+
                 return Ok(new
                 {
                     success = true,
@@ -1031,7 +1033,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 _logger.LogCritical("❌ STYLES POPULATION FAILED: {Message}", ex.Message);
                 _logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
-                
+
                 return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
             }
         }
@@ -1042,14 +1044,14 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             try
             {
                 var canConnect = await _context.Database.CanConnectAsync();
-                
+
                 if (!canConnect)
                 {
                     return Ok(new { canConnect = false, tables = "Cannot connect to check tables" });
                 }
 
                 var tables = new Dictionary<string, object>();
-                
+
                 try
                 {
                     tables["creditPackages"] = await _context.CreditPackages.CountAsync();

@@ -17,13 +17,13 @@ public static class DatabaseServiceExtensions
     {
         // Register enhanced database provider service with improved authentication handling
         services.AddSingleton<IDatabaseProviderService, EnhancedDatabaseProviderService>();
-        
+
         // Register DbContext with provider service
         services.AddDbContext<ApplicationDbContext>((serviceProvider, options) =>
         {
             var databaseProvider = serviceProvider.GetRequiredService<IDatabaseProviderService>();
             var connectionString = databaseProvider.GetConnectionString();
-            
+
             // Use SQL Server for all environments
             options.UseSqlServer(connectionString);
         });
@@ -51,13 +51,13 @@ public static class DatabaseServiceExtensions
         try
         {
             logger.LogInformation("Starting database migration process");
-            
+
             var result = await migrationService.ApplyMigrationsAsync();
-            
+
             if (result.Success)
             {
                 logger.LogInformation("Database migrations completed successfully: {Message}", result.Message);
-                
+
                 // Validate database after migration
                 var validation = await migrationService.ValidateDatabaseAsync();
                 if (!validation.IsValid)
@@ -106,7 +106,7 @@ public static class DatabaseServiceExtensions
                     }),
                     timestamp = DateTime.UtcNow
                 };
-                
+
                 await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(response));
             }
         });
@@ -122,7 +122,7 @@ public static class DatabaseServiceExtensions
                     status = report.Status.ToString(),
                     timestamp = DateTime.UtcNow
                 };
-                
+
                 await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(response));
             }
         });

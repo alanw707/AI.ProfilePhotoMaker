@@ -32,7 +32,7 @@ public class UploadStylePreviewsService
         try
         {
             var stylePreviewsPath = Path.Combine(_environment.ContentRootPath, "style-previews");
-            
+
             Console.WriteLine("=== Style Previews Upload ===");
             Console.WriteLine($"Source Directory: {stylePreviewsPath}");
             Console.WriteLine($"Target Container: style-previews");
@@ -50,7 +50,7 @@ public class UploadStylePreviewsService
 
             // Get all .jpg files
             var imageFiles = Directory.GetFiles(stylePreviewsPath, "*.jpg", SearchOption.TopDirectoryOnly);
-            
+
             if (!imageFiles.Any())
             {
                 Console.WriteLine("No .jpg files found in style-previews directory");
@@ -99,18 +99,18 @@ public class UploadStylePreviewsService
 
                     // Upload the file
                     Console.Write($"📤 Uploading {fileName}... ");
-                    
+
                     await using var fileStream = File.OpenRead(filePath);
                     var storagePath = await _storageService.SaveImageAsync(fileStream, fileName, "system");
-                    
+
                     // Verify the upload
                     var uploadExists = await _storageService.ExistsAsync(storagePath);
                     if (uploadExists)
                     {
                         var fileInfo = await _storageService.GetFileInfoAsync(storagePath);
                         Console.WriteLine($"✅ SUCCESS ({fileInfo?.Size ?? 0:N0} bytes)");
-                        
-                        _logger.LogInformation("Successfully uploaded style preview: {FileName} -> {StoragePath}", 
+
+                        _logger.LogInformation("Successfully uploaded style preview: {FileName} -> {StoragePath}",
                             fileName, storagePath);
                         uploadedCount++;
                     }
@@ -162,7 +162,7 @@ public class UploadStylePreviewsService
                 return 1;
             }
 
-            _logger.LogInformation("Style previews upload completed successfully. Uploaded: {UploadedCount}, Skipped: {SkippedCount}", 
+            _logger.LogInformation("Style previews upload completed successfully. Uploaded: {UploadedCount}, Skipped: {SkippedCount}",
                 uploadedCount, skippedCount);
             return 0;
         }
@@ -211,11 +211,11 @@ public class UploadStylePreviewsService
         try
         {
             Console.WriteLine("=== Azure Style Previews Inventory ===");
-            
+
             // Get local files for comparison
             var stylePreviewsPath = Path.Combine(_environment.ContentRootPath, "style-previews");
             var localFiles = new HashSet<string>();
-            
+
             if (Directory.Exists(stylePreviewsPath))
             {
                 var files = Directory.GetFiles(stylePreviewsPath, "*.jpg", SearchOption.TopDirectoryOnly);
@@ -239,17 +239,17 @@ public class UploadStylePreviewsService
                 foreach (var fileName in localFiles.OrderBy(f => f))
                 {
                     var targetPath = $"style-previews/{fileName}";
-                    
+
                     try
                     {
                         var exists = await _storageService.ExistsAsync(targetPath);
-                        
+
                         if (exists)
                         {
                             var fileInfo = await _storageService.GetFileInfoAsync(targetPath);
                             var size = fileInfo?.Size ?? 0;
                             totalSize += size;
-                            
+
                             Console.WriteLine($"✅ EXIST  {size,9:N0}   {fileName}");
                             existingCount++;
                         }

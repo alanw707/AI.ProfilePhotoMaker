@@ -42,12 +42,12 @@ public class DeploymentController : ControllerBase
     public async Task<ActionResult<DeploymentValidationResponseDto>> ValidatePreDeploymentAsync()
     {
         _logger.LogInformation("Pre-deployment validation requested");
-        
+
         try
         {
             var result = await _deploymentValidation.ValidatePreDeploymentAsync();
-            
-            _logger.LogInformation("Pre-deployment validation completed: {Status} with {ComponentCount} components in {Duration}ms", 
+
+            _logger.LogInformation("Pre-deployment validation completed: {Status} with {ComponentCount} components in {Duration}ms",
                 result.Status, result.Components.Count, result.Duration);
 
             // Always return 200 OK - the validation status is in the response body
@@ -57,7 +57,7 @@ public class DeploymentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Pre-deployment validation failed");
-            
+
             return StatusCode((int)HttpStatusCode.InternalServerError, new
             {
                 error = "Pre-deployment validation failed",
@@ -80,12 +80,12 @@ public class DeploymentController : ControllerBase
     public async Task<ActionResult<DeploymentValidationResponseDto>> ValidatePostDeploymentAsync()
     {
         _logger.LogInformation("Post-deployment validation requested");
-        
+
         try
         {
             var result = await _deploymentValidation.ValidatePostDeploymentAsync();
-            
-            _logger.LogInformation("Post-deployment validation completed: {Status} with {ComponentCount} components in {Duration}ms", 
+
+            _logger.LogInformation("Post-deployment validation completed: {Status} with {ComponentCount} components in {Duration}ms",
                 result.Status, result.Components.Count, result.Duration);
 
             return Ok(result);
@@ -93,7 +93,7 @@ public class DeploymentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Post-deployment validation failed");
-            
+
             return StatusCode((int)HttpStatusCode.InternalServerError, new
             {
                 error = "Post-deployment validation failed",
@@ -116,12 +116,12 @@ public class DeploymentController : ControllerBase
     public async Task<ActionResult<DeploymentReadinessScoreDto>> GetReadinessScoreAsync()
     {
         _logger.LogInformation("Deployment readiness score requested");
-        
+
         try
         {
             var result = await _deploymentValidation.GetDeploymentReadinessScoreAsync();
-            
-            _logger.LogInformation("Readiness score calculated: {Score}% ({Level}) - Ready: {IsReady}", 
+
+            _logger.LogInformation("Readiness score calculated: {Score}% ({Level}) - Ready: {IsReady}",
                 result.OverallScore, result.ReadinessLevel, result.IsReadyForDeployment);
 
             return Ok(result);
@@ -129,7 +129,7 @@ public class DeploymentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Readiness score calculation failed");
-            
+
             return StatusCode((int)HttpStatusCode.InternalServerError, new
             {
                 error = "Readiness score calculation failed",
@@ -152,12 +152,12 @@ public class DeploymentController : ControllerBase
     public async Task<ActionResult<ConfigurationValidationResponseDto>> ValidateConfigurationAsync()
     {
         _logger.LogInformation("Configuration validation requested");
-        
+
         try
         {
             var result = await _deploymentValidation.ValidateConfigurationAsync();
-            
-            _logger.LogInformation("Configuration validation completed: {Status} with {MissingCount} missing required variables", 
+
+            _logger.LogInformation("Configuration validation completed: {Status} with {MissingCount} missing required variables",
                 result.Status, result.MissingRequired.Count);
 
             return Ok(result);
@@ -165,7 +165,7 @@ public class DeploymentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Configuration validation failed");
-            
+
             return StatusCode((int)HttpStatusCode.InternalServerError, new
             {
                 error = "Configuration validation failed",
@@ -188,12 +188,12 @@ public class DeploymentController : ControllerBase
     public async Task<ActionResult<PerformanceValidationResponseDto>> ValidatePerformanceAsync()
     {
         _logger.LogInformation("Performance validation requested");
-        
+
         try
         {
             var result = await _deploymentValidation.ValidatePerformanceBaselinesAsync();
-            
-            _logger.LogInformation("Performance validation completed: {Status} - Meets requirements: {MeetsRequirements}, Issues: {IssueCount}", 
+
+            _logger.LogInformation("Performance validation completed: {Status} - Meets requirements: {MeetsRequirements}, Issues: {IssueCount}",
                 result.Status, result.MeetsRequirements, result.Issues.Count);
 
             return Ok(result);
@@ -201,7 +201,7 @@ public class DeploymentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Performance validation failed");
-            
+
             return StatusCode((int)HttpStatusCode.InternalServerError, new
             {
                 error = "Performance validation failed",
@@ -224,12 +224,12 @@ public class DeploymentController : ControllerBase
     public async Task<ActionResult<SecurityValidationResponseDto>> ValidateSecurityAsync()
     {
         _logger.LogInformation("Security validation requested");
-        
+
         try
         {
             var result = await _deploymentValidation.ValidateSecurityConfigurationAsync();
-            
-            _logger.LogInformation("Security validation completed: {Status} - Score: {Score}, Issues: {HasIssues}", 
+
+            _logger.LogInformation("Security validation completed: {Status} - Score: {Score}, Issues: {HasIssues}",
                 result.Status, result.SecurityScore, result.HasSecurityIssues);
 
             return Ok(result);
@@ -237,7 +237,7 @@ public class DeploymentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Security validation failed");
-            
+
             return StatusCode((int)HttpStatusCode.InternalServerError, new
             {
                 error = "Security validation failed",
@@ -260,12 +260,12 @@ public class DeploymentController : ControllerBase
     public async Task<ActionResult<AzureValidationResponseDto>> ValidateAzureServicesAsync()
     {
         _logger.LogInformation("Azure services validation requested");
-        
+
         try
         {
             var result = await _deploymentValidation.ValidateAzureServicesAsync();
-            
-            _logger.LogInformation("Azure services validation completed: {Status} - All healthy: {AllHealthy}, Failed services: {FailedCount}", 
+
+            _logger.LogInformation("Azure services validation completed: {Status} - All healthy: {AllHealthy}, Failed services: {FailedCount}",
                 result.Status, result.AllServicesHealthy, result.FailedServices.Count);
 
             return Ok(result);
@@ -273,7 +273,7 @@ public class DeploymentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Azure services validation failed");
-            
+
             return StatusCode((int)HttpStatusCode.InternalServerError, new
             {
                 error = "Azure services validation failed",
@@ -296,12 +296,12 @@ public class DeploymentController : ControllerBase
     public async Task<ActionResult<DatabaseValidationResponseDto>> ValidateDatabaseAsync()
     {
         _logger.LogInformation("Database validation requested");
-        
+
         try
         {
             var result = await _deploymentValidation.ValidateDatabaseReadinessAsync();
-            
-            _logger.LogInformation("Database validation completed: {Status} - Production ready: {IsReady}, Pending migrations: {PendingMigrations}", 
+
+            _logger.LogInformation("Database validation completed: {Status} - Production ready: {IsReady}, Pending migrations: {PendingMigrations}",
                 result.Status, result.IsProductionReady, result.Schema.PendingMigrations);
 
             return Ok(result);
@@ -309,7 +309,7 @@ public class DeploymentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Database validation failed");
-            
+
             return StatusCode((int)HttpStatusCode.InternalServerError, new
             {
                 error = "Database validation failed",
@@ -332,12 +332,12 @@ public class DeploymentController : ControllerBase
     public async Task<ActionResult<RegressionValidationResponseDto>> RunRegressionTestsAsync()
     {
         _logger.LogInformation("Regression tests requested");
-        
+
         try
         {
             var result = await _deploymentValidation.ValidateRegressionTestsAsync();
-            
-            _logger.LogInformation("Regression tests completed: {Status} - {Passed}/{Total} tests passed", 
+
+            _logger.LogInformation("Regression tests completed: {Status} - {Passed}/{Total} tests passed",
                 result.Status, result.PassedTests, result.TestResults.Count);
 
             return Ok(result);
@@ -345,7 +345,7 @@ public class DeploymentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Regression tests failed");
-            
+
             return StatusCode((int)HttpStatusCode.InternalServerError, new
             {
                 error = "Regression tests failed to execute",
@@ -368,12 +368,12 @@ public class DeploymentController : ControllerBase
     public async Task<ActionResult<DeploymentHealthDto>> GetDeploymentHealthAsync()
     {
         _logger.LogInformation("Deployment health check requested");
-        
+
         try
         {
             var result = await _deploymentMonitoring.GetDeploymentHealthAsync();
-            
-            _logger.LogInformation("Deployment health check completed: {Status} - Healthy: {IsHealthy}, Issues: {IssueCount}", 
+
+            _logger.LogInformation("Deployment health check completed: {Status} - Healthy: {IsHealthy}, Issues: {IssueCount}",
                 result.HealthStatus, result.IsHealthy, result.Issues.Count);
 
             return Ok(result);
@@ -381,7 +381,7 @@ public class DeploymentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Deployment health check failed");
-            
+
             return StatusCode((int)HttpStatusCode.InternalServerError, new
             {
                 error = "Deployment health check failed",
@@ -404,12 +404,12 @@ public class DeploymentController : ControllerBase
     public async Task<ActionResult<ConfigurationDriftResponseDto>> DetectConfigurationDriftAsync()
     {
         _logger.LogInformation("Configuration drift detection requested");
-        
+
         try
         {
             var result = await _deploymentMonitoring.DetectConfigurationDriftAsync();
-            
-            _logger.LogInformation("Configuration drift detection completed: Has drift: {HasDrift}, Severity: {Severity}, Items: {ItemCount}", 
+
+            _logger.LogInformation("Configuration drift detection completed: Has drift: {HasDrift}, Severity: {Severity}, Items: {ItemCount}",
                 result.HasDrift, result.DriftSeverity, result.DriftItems.Count);
 
             return Ok(result);
@@ -417,7 +417,7 @@ public class DeploymentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Configuration drift detection failed");
-            
+
             return StatusCode((int)HttpStatusCode.InternalServerError, new
             {
                 error = "Configuration drift detection failed",
@@ -440,12 +440,12 @@ public class DeploymentController : ControllerBase
     public async Task<ActionResult<ServiceAvailabilityResponseDto>> ValidateServiceAvailabilityAsync()
     {
         _logger.LogInformation("Service availability validation requested");
-        
+
         try
         {
             var result = await _deploymentMonitoring.ValidateServiceAvailabilityAsync();
-            
-            _logger.LogInformation("Service availability validation completed: All available: {AllAvailable}, Availability: {Availability}%, Unavailable: {UnavailableCount}", 
+
+            _logger.LogInformation("Service availability validation completed: All available: {AllAvailable}, Availability: {Availability}%, Unavailable: {UnavailableCount}",
                 result.AllServicesAvailable, result.OverallAvailabilityPercentage, result.UnavailableServices.Count);
 
             return Ok(result);
@@ -453,7 +453,7 @@ public class DeploymentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Service availability validation failed");
-            
+
             return StatusCode((int)HttpStatusCode.InternalServerError, new
             {
                 error = "Service availability validation failed",
@@ -476,12 +476,12 @@ public class DeploymentController : ControllerBase
     public async Task<ActionResult<PerformanceRegressionResponseDto>> CheckPerformanceRegressionAsync()
     {
         _logger.LogInformation("Performance regression check requested");
-        
+
         try
         {
             var result = await _deploymentMonitoring.CheckPerformanceRegressionAsync();
-            
-            _logger.LogInformation("Performance regression check completed: Has regression: {HasRegression}, Severity: {Severity}, Issues: {IssueCount}", 
+
+            _logger.LogInformation("Performance regression check completed: Has regression: {HasRegression}, Severity: {Severity}, Issues: {IssueCount}",
                 result.HasRegression, result.RegressionSeverity, result.Issues.Count);
 
             return Ok(result);
@@ -489,7 +489,7 @@ public class DeploymentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Performance regression check failed");
-            
+
             return StatusCode((int)HttpStatusCode.InternalServerError, new
             {
                 error = "Performance regression check failed",
@@ -513,16 +513,16 @@ public class DeploymentController : ControllerBase
     public async Task<ActionResult<object>> ResetConfigurationBaselineAsync()
     {
         _logger.LogInformation("Configuration baseline reset requested by user: {User}", User.Identity?.Name ?? "Unknown");
-        
+
         try
         {
             // First, get current configuration to establish new baseline
             var currentDrift = await _deploymentMonitoring.DetectConfigurationDriftAsync();
-            
+
             // In a real implementation, you would store the baseline in a persistent store
             // For now, we'll just trigger a new baseline detection
             var newBaseline = await _deploymentMonitoring.DetectConfigurationDriftAsync();
-            
+
             _logger.LogInformation("Configuration baseline reset completed");
 
             return Ok(new
@@ -536,7 +536,7 @@ public class DeploymentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Configuration baseline reset failed");
-            
+
             return StatusCode((int)HttpStatusCode.InternalServerError, new
             {
                 error = "Configuration baseline reset failed",
@@ -559,7 +559,7 @@ public class DeploymentController : ControllerBase
     public async Task<ActionResult<object>> GetDeploymentSummaryAsync()
     {
         _logger.LogInformation("Deployment validation summary requested");
-        
+
         try
         {
             // Run key validations concurrently
@@ -623,7 +623,7 @@ public class DeploymentController : ControllerBase
                 }
             };
 
-            _logger.LogInformation("Deployment summary generated: Readiness: {ReadinessScore}%, Health: {HealthStatus}, Issues: {IssueCount}", 
+            _logger.LogInformation("Deployment summary generated: Readiness: {ReadinessScore}%, Health: {HealthStatus}, Issues: {IssueCount}",
                 readiness.OverallScore, health.HealthStatus, health.Issues.Count);
 
             return Ok(summary);
@@ -631,7 +631,7 @@ public class DeploymentController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Deployment summary generation failed");
-            
+
             return StatusCode((int)HttpStatusCode.InternalServerError, new
             {
                 error = "Deployment summary generation failed",

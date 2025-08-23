@@ -14,7 +14,7 @@ public class UserProfileRepository : IUserProfileRepository
     }
 
     #region Original Methods (Use Sparingly)
-    
+
     /// <summary>
     /// ⚠️ PERFORMANCE WARNING: Eagerly loads ALL ProcessedImages
     /// Use GetByUserIdLightAsync() or GetProfileWithRecentImagesAsync() instead
@@ -25,7 +25,7 @@ public class UserProfileRepository : IUserProfileRepository
             .Include(p => p.ProcessedImages)
             .FirstOrDefaultAsync(p => p.UserId == userId);
     }
-    
+
     #endregion
 
     #region Optimized Profile Loading

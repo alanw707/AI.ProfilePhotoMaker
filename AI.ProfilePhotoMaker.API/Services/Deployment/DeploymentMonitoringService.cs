@@ -135,7 +135,7 @@ public class DeploymentMonitoringService : IDeploymentMonitoringService
 
             // Determine overall health
             var criticalIssues = issues.Count(i => i.Severity == "Critical");
-            var overallHealth = criticalIssues == 0 
+            var overallHealth = criticalIssues == 0
                 ? (issues.Count == 0 ? "Healthy" : "Degraded")
                 : "Unhealthy";
 
@@ -153,7 +153,7 @@ public class DeploymentMonitoringService : IDeploymentMonitoringService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Deployment health check failed");
-            
+
             return new DeploymentHealthDto
             {
                 HealthStatus = "Error",
@@ -183,7 +183,7 @@ public class DeploymentMonitoringService : IDeploymentMonitoringService
 
             // Get current configuration snapshot
             var currentSnapshot = await GetConfigurationSnapshotAsync();
-            
+
             // Initialize baseline if not set
             lock (_baselineLock)
             {
@@ -191,7 +191,7 @@ public class DeploymentMonitoringService : IDeploymentMonitoringService
                 {
                     _configurationBaseline = currentSnapshot;
                     _baselineTimestamp = DateTime.UtcNow;
-                    
+
                     return new ConfigurationDriftResponseDto
                     {
                         HasDrift = false,
@@ -224,7 +224,7 @@ public class DeploymentMonitoringService : IDeploymentMonitoringService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Configuration drift detection failed");
-            
+
             return new ConfigurationDriftResponseDto
             {
                 HasDrift = true,
@@ -256,7 +256,7 @@ public class DeploymentMonitoringService : IDeploymentMonitoringService
 
             // Check external dependencies
             var dependencies = await _dependencyHealthService.CheckDependenciesAsync();
-            
+
             foreach (var dependency in dependencies)
             {
                 var isAvailable = dependency.Value.Status.ToLower() == "healthy";
@@ -297,7 +297,7 @@ public class DeploymentMonitoringService : IDeploymentMonitoringService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Service availability validation failed");
-            
+
             return new ServiceAvailabilityResponseDto
             {
                 AllServicesAvailable = false,
@@ -318,7 +318,7 @@ public class DeploymentMonitoringService : IDeploymentMonitoringService
             // This would typically compare against stored baseline metrics
             // For now, we'll use simplified thresholds
             var currentMetrics = await _performanceMonitoring.GetCurrentMetricsAsync();
-            
+
             var comparisons = new Dictionary<string, PerformanceComparisonDto>();
             var issues = new List<PerformanceRegressionIssueDto>();
 
@@ -347,8 +347,8 @@ public class DeploymentMonitoringService : IDeploymentMonitoringService
                     Severity = "High",
                     RegressionPercentage = responseTimeChange,
                     Description = $"Response time increased by {responseTimeChange:F1}%",
-                    PossibleCauses = new List<string> 
-                    { 
+                    PossibleCauses = new List<string>
+                    {
                         "Increased database query time",
                         "External service latency",
                         "Resource constraints"
@@ -460,7 +460,7 @@ public class DeploymentMonitoringService : IDeploymentMonitoringService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Performance regression check failed");
-            
+
             return new PerformanceRegressionResponseDto
             {
                 HasRegression = true,
@@ -492,7 +492,7 @@ public class DeploymentMonitoringService : IDeploymentMonitoringService
             return "Critical";
         if (highPriorityServices.Contains(serviceName))
             return "High";
-        
+
         return "Medium";
     }
 
@@ -513,7 +513,7 @@ public class DeploymentMonitoringService : IDeploymentMonitoringService
         try
         {
             var metrics = await _performanceMonitoring.GetCurrentMetricsAsync();
-            
+
             return new Dictionary<string, object>
             {
                 ["responseTime"] = metrics.ApiMetrics.AverageResponseTime,
@@ -649,7 +649,7 @@ public class DeploymentMonitoringService : IDeploymentMonitoringService
             return "High";
         if (mediumImpactKeys.Any(key => configKey.Contains(key)))
             return "Medium";
-        
+
         return "Low";
     }
 
@@ -665,7 +665,7 @@ public class DeploymentMonitoringService : IDeploymentMonitoringService
             return "High";
         if (mediumImpactCount > 2)
             return "Medium";
-        
+
         return "Low";
     }
 

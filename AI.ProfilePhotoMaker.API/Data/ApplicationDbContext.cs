@@ -43,10 +43,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         ConfigureSubscriptionRelationships(builder);
         ConfigurePaymentTransactionRelationships(builder);
         ConfigureCreditPackageRelationships(builder);
-        
+
         // Configure indexes for performance - ENHANCED FOR OPTIMIZATION
         ConfigurePerformanceIndexes(builder);
-        
+
         // Configure decimal precision
         ConfigureDecimalPrecision(builder);
 

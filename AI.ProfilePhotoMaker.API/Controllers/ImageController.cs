@@ -132,7 +132,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     // Generate clean filename based on image type
                     var extension = Path.GetExtension(image.FileName);
                     var fileName = $"{Guid.NewGuid()}_{filePrefix}{extension}";
-                    
+
                     // Get storage path using path resolver
                     var storagePath = _pathResolver.GetPath(storageType, userId, fileName);
 
@@ -163,13 +163,13 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                         profile.ProcessedImages.Add(processedImage);
                         uploadedImages.Add(processedImage);
-                        
-                        Logger.LogInformation("Created database record for uploaded image {FileName} for user {UserId}", 
+
+                        Logger.LogInformation("Created database record for uploaded image {FileName} for user {UserId}",
                             fileName, userId);
                     }
                     else
                     {
-                        Logger.LogInformation("Skipped database record for enhanced image {FileName} for user {UserId} - temporary file only", 
+                        Logger.LogInformation("Skipped database record for enhanced image {FileName} for user {UserId} - temporary file only",
                             fileName, userId);
                     }
 
@@ -611,20 +611,20 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 if (imageFiles.Count < 10)
                 {
-                    Logger.LogWarning("User {UserId} has insufficient images for training ZIP ({Count}/10 required)", 
+                    Logger.LogWarning("User {UserId} has insufficient images for training ZIP ({Count}/10 required)",
                         userId, imageFiles.Count);
                     return null;
                 }
 
                 // Filter for valid image extensions
                 var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
-                var validImages = imageFiles.Where(file => 
+                var validImages = imageFiles.Where(file =>
                     allowedExtensions.Contains(Path.GetExtension(file).ToLowerInvariant())
                 ).ToList();
 
                 if (validImages.Count < 10)
                 {
-                    Logger.LogWarning("User {UserId} has insufficient valid images for training ZIP ({Count}/10 required)", 
+                    Logger.LogWarning("User {UserId} has insufficient valid images for training ZIP ({Count}/10 required)",
                         userId, validImages.Count);
                     return null;
                 }
@@ -639,7 +639,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     {
                         var fileName = Path.GetFileName(imagePath);
                         var imageStream = await _storageService.GetImageAsync(imagePath);
-                        
+
                         if (imageStream != null)
                         {
                             using (imageStream)
@@ -653,7 +653,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 }
 
                 memoryStream.Position = 0;
-                
+
                 // Save ZIP to blob storage
                 var zipFileName = $"{userId}.zip";
                 var zipStoragePath = _pathResolver.GetPath(StorageType.TrainingZip, userId, zipFileName);
@@ -661,23 +661,23 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 // Generate SAS URL for Replicate API access
                 var sasUrl = await _storageService.GenerateSasUrlAsync(zipStoragePath, TimeSpan.FromHours(2));
-                
+
                 // For development, replace localhost with ngrok domain to allow external access
                 if (sasUrl != null && sasUrl.Contains("127.0.0.1:10000"))
                 {
                     var ngrokDomain = _configuration["Webhooks:NgrokTunnelUrl"] ?? "https://clear-anteater-usually.ngrok-free.app";
                     sasUrl = sasUrl.Replace("http://127.0.0.1:10000", ngrokDomain);
-                    
+
                     // Add ngrok-skip-browser-warning parameter for API access
                     var separator = sasUrl.Contains("?") ? "&" : "?";
                     sasUrl += $"{separator}ngrok-skip-browser-warning=true";
-                    
+
                     Logger.LogInformation("Converted localhost URL to ngrok domain: {NgrokUrl}", sasUrl);
                 }
 
-                Logger.LogInformation("Created training ZIP for user {UserId} with {FileCount} images at {StoragePath}", 
+                Logger.LogInformation("Created training ZIP for user {UserId} with {FileCount} images at {StoragePath}",
                     userId, validImages.Count, zipStoragePath);
-                
+
                 return sasUrl;
             }
             catch (Exception ex)
@@ -888,7 +888,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 // Use StoragePathResolver to get the correct storage path for training ZIPs
                 var trainingZipPath = _pathResolver.GetPath(StorageType.TrainingZip, userId, $"{userId}.zip");
-                
+
                 var deleted = await _storageService.DeleteImageAsync(trainingZipPath);
                 var deletedCount = deleted ? 1 : 0;
 
@@ -914,9 +914,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
         }
 
-        
 
-        
+
+
 
         /// <summary>
         /// Helper method to classify images based on their flags and properties
@@ -975,21 +975,21 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             return issues;
         }
 
-        
 
-        
 
-        
 
-        
 
-        
 
-        
 
-        
 
-        
+
+
+
+
+
+
+
+
 
         #endregion
 

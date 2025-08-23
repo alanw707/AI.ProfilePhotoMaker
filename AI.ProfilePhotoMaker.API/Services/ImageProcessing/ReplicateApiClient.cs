@@ -91,7 +91,7 @@ public class ReplicateApiClient : IReplicateApiClient
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
                 _logger.LogError("Replicate model creation failed: {StatusCode} {ErrorContent}", response.StatusCode, errorContent);
-                
+
                 // Parse and handle specific error cases
                 if (response.StatusCode == HttpStatusCode.Unauthorized)
                 {
@@ -239,8 +239,8 @@ public class ReplicateApiClient : IReplicateApiClient
             }
             var versionId = modelVersion.Split(':')[1];
             var endpoint = $"models/replicate/fast-flux-trainer/versions/{versionId}/trainings";
-            
-            _logger.LogInformation("Creating training for user {UserId} at endpoint: {Endpoint} with ZIP URL: {ZipUrl}", 
+
+            _logger.LogInformation("Creating training for user {UserId} at endpoint: {Endpoint} with ZIP URL: {ZipUrl}",
                 userId, endpoint, imageZipUrl);
             var response = await _httpClient.PostAsync(endpoint, content);
 
@@ -248,7 +248,7 @@ public class ReplicateApiClient : IReplicateApiClient
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
                 _logger.LogError("Replicate training creation failed: {StatusCode} {ErrorContent}", response.StatusCode, errorContent);
-                
+
                 // Parse and handle specific error cases
                 if (response.StatusCode == HttpStatusCode.Unauthorized)
                 {
@@ -278,7 +278,7 @@ public class ReplicateApiClient : IReplicateApiClient
 
             var responseJson = await response.Content.ReadAsStringAsync();
             _logger.LogInformation("Replicate training response: {Response}", responseJson);
-            
+
             var result = JsonSerializer.Deserialize<ReplicateTrainingResult>(
                 responseJson,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
@@ -948,7 +948,7 @@ public class ReplicateApiClient : IReplicateApiClient
 
             // Create enhancement prompt based on type
             string enhancementPrompt = GetEnhancementPrompt(enhancementType);
-            
+
             var predictionRequest = new
             {
                 version = kontextProModel,

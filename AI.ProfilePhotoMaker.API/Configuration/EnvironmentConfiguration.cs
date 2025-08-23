@@ -20,16 +20,16 @@ public class EnvironmentConfiguration
     public const string APP_BASE_URL = "APP_BASE_URL";
     public const string JWT_VALID_AUDIENCE = "JWT_VALID_AUDIENCE";
     public const string JWT_VALID_ISSUER = "JWT_VALID_ISSUER";
-    
+
     // Google OAuth (required for authentication)
     public const string GOOGLE_CLIENT_ID = "GOOGLE_CLIENT_ID";
     public const string GOOGLE_CLIENT_SECRET = "GOOGLE_CLIENT_SECRET";
-    
+
     // Stripe Payment (required - referenced in infrastructure)
     public const string STRIPE_PUBLISHABLE_KEY = "STRIPE_PUBLISHABLE_KEY";
     public const string STRIPE_SECRET_KEY = "STRIPE_SECRET_KEY";
     public const string STRIPE_WEBHOOK_SECRET = "STRIPE_WEBHOOK_SECRET";
-    
+
     // Azure Storage (required in Production/Staging)
     public const string AZURE_STORAGE_CONNECTION_STRING = "AZURE_STORAGE_CONNECTION_STRING";
     public const string AZURE_STORAGE_CONTAINER_NAME = "AZURE_STORAGE_CONTAINER_NAME";
@@ -128,7 +128,7 @@ public class EnvironmentConfiguration
 
             _logger.LogInformation("✅ Database configuration validation completed (using configured connection string)");
         }
-        
+
         return Task.CompletedTask;
     }
 
@@ -136,7 +136,7 @@ public class EnvironmentConfiguration
     {
         // Accept either environment variable JWT_SECRET or configuration key JWT:Secret
         var jwtSecret = GetEnvironmentVariable(JWT_SECRET) ?? _configuration["JWT:Secret"] ?? _configuration["Jwt:Secret"];
-        
+
         if (string.IsNullOrEmpty(jwtSecret))
         {
             results.Add(new ValidationResult(false, JWT_SECRET, "JWT secret is required (set env JWT_SECRET or config JWT:Secret)"));
@@ -149,7 +149,7 @@ public class EnvironmentConfiguration
         }
 
         _logger.LogInformation("✅ JWT configuration validation completed");
-        
+
         return Task.CompletedTask;
     }
 
@@ -160,12 +160,12 @@ public class EnvironmentConfiguration
         var configToken = _configuration["Replicate:ApiToken"];
         var apiToken = envToken ?? configToken;
         var webhookSecret = GetEnvironmentVariable(REPLICATE_WEBHOOK_SECRET) ?? _configuration["Replicate:WebhookSecret"];
-        
+
         // Debug logging for development
         if (_environment.IsDevelopment())
         {
-            _logger.LogDebug("Validating Replicate token: '{TokenStart}...' (length: {Length})", 
-                string.IsNullOrEmpty(apiToken) ? "NULL" : apiToken.Substring(0, Math.Min(4, apiToken.Length)), 
+            _logger.LogDebug("Validating Replicate token: '{TokenStart}...' (length: {Length})",
+                string.IsNullOrEmpty(apiToken) ? "NULL" : apiToken.Substring(0, Math.Min(4, apiToken.Length)),
                 apiToken?.Length ?? 0);
         }
 
@@ -203,7 +203,7 @@ public class EnvironmentConfiguration
         }
 
         _logger.LogInformation("✅ Replicate configuration validation completed");
-        
+
         return Task.CompletedTask;
     }
 
@@ -216,7 +216,7 @@ public class EnvironmentConfiguration
         var stripeSecretKey = GetEnvironmentVariable(STRIPE_SECRET_KEY);
         var stripePublishableKey = GetEnvironmentVariable(STRIPE_PUBLISHABLE_KEY);
         var stripeWebhookSecret = GetEnvironmentVariable(STRIPE_WEBHOOK_SECRET);
-        
+
         if (string.IsNullOrEmpty(stripeSecretKey))
         {
             results.Add(new ValidationResult(false, STRIPE_SECRET_KEY, "Stripe Secret Key is REQUIRED (referenced in infrastructure and payment processing)"));
@@ -225,7 +225,7 @@ public class EnvironmentConfiguration
         {
             results.Add(new ValidationResult(false, STRIPE_SECRET_KEY, "Stripe Secret Key format appears invalid (should start with sk_)"));
         }
-        
+
         if (string.IsNullOrEmpty(stripePublishableKey))
         {
             results.Add(new ValidationResult(false, STRIPE_PUBLISHABLE_KEY, "Stripe Publishable Key is REQUIRED (referenced in infrastructure and frontend payment processing)"));
@@ -234,7 +234,7 @@ public class EnvironmentConfiguration
         {
             results.Add(new ValidationResult(false, STRIPE_PUBLISHABLE_KEY, "Stripe Publishable Key format appears invalid (should start with pk_)"));
         }
-        
+
         if (string.IsNullOrEmpty(stripeWebhookSecret))
         {
             results.Add(new ValidationResult(false, STRIPE_WEBHOOK_SECRET, "Stripe Webhook Secret is REQUIRED (referenced in infrastructure and webhook validation)"));
@@ -243,9 +243,9 @@ public class EnvironmentConfiguration
         {
             results.Add(new ValidationResult(false, STRIPE_WEBHOOK_SECRET, "Stripe Webhook Secret format appears invalid (should start with whsec_)"));
         }
-        
+
         _logger.LogInformation("✅ Stripe configuration validation completed");
-        
+
         return Task.CompletedTask;
     }
 
@@ -264,35 +264,35 @@ public class EnvironmentConfiguration
     {
         var googleClientId = GetEnvironmentVariable(GOOGLE_CLIENT_ID);
         var googleClientSecret = GetEnvironmentVariable(GOOGLE_CLIENT_SECRET);
-        
+
         // Google OAuth is REQUIRED - both secrets must be present
         if (string.IsNullOrEmpty(googleClientId))
         {
             results.Add(new ValidationResult(false, GOOGLE_CLIENT_ID, "Google Client ID is REQUIRED for authentication (referenced in infrastructure deployment)"));
         }
-        
+
         if (string.IsNullOrEmpty(googleClientSecret))
         {
             results.Add(new ValidationResult(false, GOOGLE_CLIENT_SECRET, "Google Client Secret is REQUIRED for authentication (referenced in infrastructure deployment)"));
         }
-        
+
         // Validate Google Client ID format and content
         if (!string.IsNullOrEmpty(googleClientId))
         {
             // Check for common misconfigurations
             if (googleClientId.Contains("Specify --help") || googleClientId.Contains("command") || googleClientId.Contains("options"))
             {
-                results.Add(new ValidationResult(false, GOOGLE_CLIENT_ID, 
+                results.Add(new ValidationResult(false, GOOGLE_CLIENT_ID,
                     "Google Client ID contains invalid text (appears to be help text or command output). Expected format: 123456789-abc123.apps.googleusercontent.com"));
             }
             else if (googleClientId.StartsWith("YOUR_") || googleClientId.Contains("REPLACE_WITH_") || googleClientId.Contains("placeholder"))
             {
-                results.Add(new ValidationResult(false, GOOGLE_CLIENT_ID, 
+                results.Add(new ValidationResult(false, GOOGLE_CLIENT_ID,
                     "Google Client ID contains placeholder text. Must be replaced with actual Google OAuth client ID"));
             }
             else if (!googleClientId.Contains(".apps.googleusercontent.com"))
             {
-                results.Add(new ValidationResult(false, GOOGLE_CLIENT_ID, 
+                results.Add(new ValidationResult(false, GOOGLE_CLIENT_ID,
                     "Google Client ID format appears invalid. Expected format: 123456789-abc123.apps.googleusercontent.com"));
             }
             else
@@ -300,23 +300,23 @@ public class EnvironmentConfiguration
                 _logger.LogInformation("✅ Google Client ID format appears valid");
             }
         }
-        
+
         // Validate Google Client Secret format
         if (!string.IsNullOrEmpty(googleClientSecret))
         {
             if (googleClientSecret.Contains("Specify --help") || googleClientSecret.Contains("command") || googleClientSecret.Contains("options"))
             {
-                results.Add(new ValidationResult(false, GOOGLE_CLIENT_SECRET, 
+                results.Add(new ValidationResult(false, GOOGLE_CLIENT_SECRET,
                     "Google Client Secret contains invalid text (appears to be help text or command output)"));
             }
             else if (googleClientSecret.StartsWith("YOUR_") || googleClientSecret.Contains("REPLACE_WITH_") || googleClientSecret.Contains("placeholder"))
             {
-                results.Add(new ValidationResult(false, GOOGLE_CLIENT_SECRET, 
+                results.Add(new ValidationResult(false, GOOGLE_CLIENT_SECRET,
                     "Google Client Secret contains placeholder text. Must be replaced with actual Google OAuth client secret"));
             }
             else if (!googleClientSecret.StartsWith("GOCSPX-"))
             {
-                results.Add(new ValidationResult(false, GOOGLE_CLIENT_SECRET, 
+                results.Add(new ValidationResult(false, GOOGLE_CLIENT_SECRET,
                     "Google Client Secret format appears invalid (should start with GOCSPX-)"));
             }
             else
@@ -324,7 +324,7 @@ public class EnvironmentConfiguration
                 _logger.LogInformation("✅ Google Client Secret format appears valid");
             }
         }
-        
+
         _logger.LogInformation("✅ Google OAuth configuration validation completed");
         return Task.CompletedTask;
     }
@@ -336,7 +336,7 @@ public class EnvironmentConfiguration
     {
         var azureStorage = GetEnvironmentVariable(AZURE_STORAGE_CONNECTION_STRING);
         var containerName = GetEnvironmentVariable(AZURE_STORAGE_CONTAINER_NAME);
-        
+
         // Azure Storage is REQUIRED in production and staging environments
         if (_environment.IsProduction() || _environment.IsStaging())
         {
@@ -408,7 +408,7 @@ public class EnvironmentConfiguration
     {
         // First check actual environment variable
         var value = Environment.GetEnvironmentVariable(key);
-        
+
         // If not found, check configuration (handles both appsettings and environment)
         if (string.IsNullOrEmpty(value))
         {
@@ -424,7 +424,7 @@ public class EnvironmentConfiguration
     public string GetRequiredVariable(string key)
     {
         var value = GetEnvironmentVariable(key);
-        
+
         if (string.IsNullOrEmpty(value))
         {
             throw new InvalidOperationException($"Required environment variable '{key}' is not set");
@@ -517,12 +517,12 @@ public static class EnvironmentConfigurationExtensions
             logger.LogCritical("❌ Application startup failed due to environment validation errors");
             logger.LogCritical("Please check your .env file or environment variable configuration");
             logger.LogCritical("See .env.example for required variables and correct format");
-            
+
             throw new InvalidOperationException("Environment validation failed. Application cannot start safely.");
         }
 
         logger.LogInformation("✅ Environment validation completed successfully");
-        
+
         return app;
     }
 }

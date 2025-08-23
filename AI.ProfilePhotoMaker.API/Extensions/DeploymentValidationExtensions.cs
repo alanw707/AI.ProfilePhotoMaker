@@ -31,7 +31,7 @@ public static class DeploymentValidationExtensions
     {
         // Add deployment validation endpoints are handled by the controller
         // This extension is for future middleware if needed
-        
+
         return app;
     }
 
@@ -105,7 +105,7 @@ public static class DeploymentValidationExtensions
 
             // Get overall readiness score
             var readinessResult = await deploymentValidation.GetDeploymentReadinessScoreAsync();
-            logger.LogInformation("📊 Deployment Readiness Score: {Score}% ({Level})", 
+            logger.LogInformation("📊 Deployment Readiness Score: {Score}% ({Level})",
                 readinessResult.OverallScore, readinessResult.ReadinessLevel);
 
             if (readinessResult.IsReadyForDeployment)
@@ -135,12 +135,12 @@ public static class DeploymentValidationExtensions
         catch (Exception ex)
         {
             logger.LogError(ex, "🚨 Deployment validation failed during startup");
-            
+
             if (app.Environment.IsProduction())
             {
                 logger.LogCritical("Production environment startup validation failed - this may indicate serious deployment issues");
             }
-            
+
             // Don't throw in startup validation to avoid preventing application start
             // Instead, log the error and allow the application to start with warnings
         }
@@ -154,8 +154,8 @@ public static class DeploymentValidationExtensions
     /// <param name="environment">Hosting environment</param>
     /// <returns>Service collection for chaining</returns>
     public static IServiceCollection ConfigureDeploymentValidation(
-        this IServiceCollection services, 
-        IConfiguration configuration, 
+        this IServiceCollection services,
+        IConfiguration configuration,
         IWebHostEnvironment environment)
     {
         // Add environment-specific configuration

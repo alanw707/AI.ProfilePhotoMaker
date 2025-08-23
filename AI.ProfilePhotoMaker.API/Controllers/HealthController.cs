@@ -42,9 +42,9 @@ public class HealthController : ControllerBase
     public async Task<ActionResult<HealthCheckResponseDto>> GetHealthAsync()
     {
         _logger.LogDebug("Basic health check requested");
-        
+
         var health = await _healthCheckService.GetBasicHealthAsync();
-        
+
         var httpStatusCode = health.Status.ToLower() switch
         {
             "healthy" => HttpStatusCode.OK,
@@ -52,7 +52,7 @@ public class HealthController : ControllerBase
             _ => HttpStatusCode.ServiceUnavailable
         };
 
-        _logger.LogDebug("Basic health check completed: {Status} in {Duration}ms", 
+        _logger.LogDebug("Basic health check completed: {Status} in {Duration}ms",
             health.Status, health.Duration);
 
         return StatusCode((int)httpStatusCode, health);
@@ -71,16 +71,16 @@ public class HealthController : ControllerBase
     public async Task<ActionResult<ComprehensiveHealthResponseDto>> GetComprehensiveHealthAsync()
     {
         _logger.LogDebug("Comprehensive health check requested");
-        
+
         var health = await _healthCheckService.GetComprehensiveHealthAsync();
-        
+
         var httpStatusCode = health.Status.ToLower() switch
         {
             "healthy" or "degraded" => HttpStatusCode.OK,
             _ => HttpStatusCode.ServiceUnavailable
         };
 
-        _logger.LogInformation("Comprehensive health check completed: {Status} in {Duration}ms with {ComponentCount} components", 
+        _logger.LogInformation("Comprehensive health check completed: {Status} in {Duration}ms with {ComponentCount} components",
             health.Status, health.Duration, health.Components.Count);
 
         return StatusCode((int)httpStatusCode, health);
@@ -99,16 +99,16 @@ public class HealthController : ControllerBase
     public async Task<ActionResult<DatabaseHealthResponseDto>> GetDatabaseHealthAsync()
     {
         _logger.LogDebug("Database health check requested");
-        
+
         var health = await _healthCheckService.GetDatabaseHealthAsync();
-        
+
         var httpStatusCode = health.Status.ToLower() switch
         {
             "healthy" => HttpStatusCode.OK,
             _ => HttpStatusCode.ServiceUnavailable
         };
 
-        _logger.LogDebug("Database health check completed: {Status}, CanConnect: {CanConnect}, PendingMigrations: {PendingMigrations}", 
+        _logger.LogDebug("Database health check completed: {Status}, CanConnect: {CanConnect}, PendingMigrations: {PendingMigrations}",
             health.Status, health.CanConnect, health.Migrations?.PendingCount ?? 0);
 
         return StatusCode((int)httpStatusCode, health);
@@ -127,16 +127,16 @@ public class HealthController : ControllerBase
     public async Task<ActionResult<StorageHealthResponseDto>> GetStorageHealthAsync()
     {
         _logger.LogDebug("Storage health check requested");
-        
+
         var health = await _healthCheckService.GetStorageHealthAsync();
-        
+
         var httpStatusCode = health.Status.ToLower() switch
         {
             "healthy" => HttpStatusCode.OK,
             _ => HttpStatusCode.ServiceUnavailable
         };
 
-        _logger.LogDebug("Storage health check completed: {Status}, CanConnect: {CanConnect}, Provider: {Provider}", 
+        _logger.LogDebug("Storage health check completed: {Status}, CanConnect: {CanConnect}, Provider: {Provider}",
             health.Status, health.CanConnect, health.Provider);
 
         return StatusCode((int)httpStatusCode, health);
@@ -155,9 +155,9 @@ public class HealthController : ControllerBase
     public async Task<ActionResult<DependenciesHealthResponseDto>> GetDependenciesHealthAsync()
     {
         _logger.LogDebug("Dependencies health check requested");
-        
+
         var health = await _healthCheckService.GetDependenciesHealthAsync();
-        
+
         // For dependencies, we're more lenient - only fail if ALL critical dependencies are down
         var httpStatusCode = health.Status.ToLower() switch
         {
@@ -165,7 +165,7 @@ public class HealthController : ControllerBase
             _ => HttpStatusCode.ServiceUnavailable
         };
 
-        _logger.LogDebug("Dependencies health check completed: {Status} with {DependencyCount} dependencies", 
+        _logger.LogDebug("Dependencies health check completed: {Status} with {DependencyCount} dependencies",
             health.Status, health.Dependencies.Count);
 
         return StatusCode((int)httpStatusCode, health);
@@ -184,9 +184,9 @@ public class HealthController : ControllerBase
     public async Task<ActionResult<HealthCheckResponseDto>> GetReadinessAsync()
     {
         _logger.LogDebug("Readiness probe requested");
-        
+
         var health = await _healthCheckService.GetReadinessAsync();
-        
+
         var httpStatusCode = health.Status.ToLower() switch
         {
             "ready" => HttpStatusCode.OK,
@@ -211,9 +211,9 @@ public class HealthController : ControllerBase
     public async Task<ActionResult<HealthCheckResponseDto>> GetLivenessAsync()
     {
         _logger.LogDebug("Liveness probe requested");
-        
+
         var health = await _healthCheckService.GetLivenessAsync();
-        
+
         var httpStatusCode = health.Status.ToLower() switch
         {
             "alive" => HttpStatusCode.OK,
@@ -238,11 +238,11 @@ public class HealthController : ControllerBase
     public async Task<ActionResult<object>> GetMigrationStatusAsync()
     {
         _logger.LogDebug("Migration status check requested");
-        
+
         try
         {
             var health = await _healthCheckService.GetDatabaseHealthAsync();
-            
+
             if (health.Migrations == null)
             {
                 return StatusCode((int)HttpStatusCode.ServiceUnavailable, new
@@ -266,7 +266,7 @@ public class HealthController : ControllerBase
                 timestamp = DateTime.UtcNow
             };
 
-            _logger.LogDebug("Migration status check completed: {Status}, Applied: {Applied}, Pending: {Pending}", 
+            _logger.LogDebug("Migration status check completed: {Status}, Applied: {Applied}, Pending: {Pending}",
                 status, health.Migrations.AppliedCount, health.Migrations.PendingCount);
 
             return StatusCode((int)httpStatusCode, response);
@@ -274,7 +274,7 @@ public class HealthController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Migration status check failed");
-            
+
             return StatusCode((int)HttpStatusCode.ServiceUnavailable, new
             {
                 status = "Error",
@@ -298,11 +298,11 @@ public class HealthController : ControllerBase
     public async Task<ActionResult<object>> GetDataValidationAsync()
     {
         _logger.LogDebug("Data validation check requested");
-        
+
         try
         {
             var health = await _healthCheckService.GetDatabaseHealthAsync();
-            
+
             if (health.Validation == null)
             {
                 return StatusCode((int)HttpStatusCode.ServiceUnavailable, new
@@ -333,7 +333,7 @@ public class HealthController : ControllerBase
                 timestamp = DateTime.UtcNow
             };
 
-            _logger.LogDebug("Data validation check completed: {Status}, HasRequiredSeedData: {HasSeedData}, Issues: {IssueCount}", 
+            _logger.LogDebug("Data validation check completed: {Status}, HasRequiredSeedData: {HasSeedData}, Issues: {IssueCount}",
                 status, health.Validation.HasRequiredSeedData, health.Validation.Issues.Count);
 
             return StatusCode((int)httpStatusCode, response);
@@ -341,7 +341,7 @@ public class HealthController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Data validation check failed");
-            
+
             return StatusCode((int)HttpStatusCode.ServiceUnavailable, new
             {
                 status = "Error",
@@ -365,12 +365,12 @@ public class HealthController : ControllerBase
     public async Task<ActionResult<object>> GetPerformanceHealthAsync()
     {
         _logger.LogDebug("Performance health check requested");
-        
+
         try
         {
             // Get basic health status
             var health = await _healthCheckService.GetComprehensiveHealthAsync();
-            
+
             // Get performance metrics
             var performanceMetrics = await _performanceMonitoring.GetCurrentMetricsAsync();
             var resourceUtilization = await _performanceMonitoring.GetResourceUtilizationAsync();
@@ -405,7 +405,7 @@ public class HealthController : ControllerBase
                 duration = health.Duration,
                 version = health.Version,
                 environment = health.Environment,
-                
+
                 // System health components
                 components = health.Components,
                 warnings = health.Warnings,
@@ -483,7 +483,7 @@ public class HealthController : ControllerBase
                 recommendations = GetHealthRecommendations(overallStatus, alerts, performanceMetrics)
             };
 
-            _logger.LogInformation("Performance health check completed: {Status} with {AlertCount} alerts and {ComponentCount} components", 
+            _logger.LogInformation("Performance health check completed: {Status} with {AlertCount} alerts and {ComponentCount} components",
                 overallStatus, alerts.Count, health.Components.Count);
 
             return StatusCode((int)httpStatusCode, response);
@@ -491,7 +491,7 @@ public class HealthController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Performance health check failed");
-            
+
             return StatusCode((int)HttpStatusCode.ServiceUnavailable, new
             {
                 status = "Error",
@@ -519,12 +519,12 @@ public class HealthController : ControllerBase
                 recommendations.Add("Check system resources and scale if necessary");
                 recommendations.Add("Review recent deployments for potential issues");
                 break;
-                
+
             case "degraded":
                 recommendations.Add("Monitor system closely - performance degradation detected");
                 recommendations.Add("Consider scaling resources proactively");
                 break;
-                
+
             case "warning":
                 recommendations.Add("Performance issues detected but system is functional");
                 recommendations.Add("Monitor trends and prepare for potential scaling");
@@ -598,7 +598,7 @@ public class HealthSimpleController : ControllerBase
         try
         {
             var health = await _healthCheckService.GetBasicHealthAsync();
-            
+
             var httpStatusCode = health.Status.ToLower() switch
             {
                 "healthy" => HttpStatusCode.OK,
@@ -616,7 +616,7 @@ public class HealthSimpleController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Simple health check failed");
-            
+
             return StatusCode((int)HttpStatusCode.ServiceUnavailable, new
             {
                 status = "Error",

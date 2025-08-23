@@ -304,7 +304,7 @@ public class ConfigController : ControllerBase
 
     private object ValidateAzureStorage()
     {
-        var connectionString = Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING") ?? 
+        var connectionString = Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING") ??
                               _configuration.GetConnectionString("AzureStorage");
 
         if (string.IsNullOrEmpty(connectionString))
@@ -332,9 +332,9 @@ public class ConfigController : ControllerBase
 
     private object ValidateGoogleAuth()
     {
-        var clientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") ?? 
+        var clientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") ??
                       _configuration["Authentication:Google:ClientId"];
-        var clientSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET") ?? 
+        var clientSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET") ??
                           _configuration["Authentication:Google:ClientSecret"];
 
         if (string.IsNullOrEmpty(clientId))

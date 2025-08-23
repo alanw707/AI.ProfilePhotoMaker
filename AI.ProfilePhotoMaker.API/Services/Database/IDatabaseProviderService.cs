@@ -10,24 +10,24 @@ public interface IDatabaseProviderService
     /// <summary>
     /// Configure DbContext options based on connection string and environment
     /// </summary>
-    void ConfigureDbContextOptions<TContext>(DbContextOptionsBuilder<TContext> options, string? connectionString = null) 
+    void ConfigureDbContextOptions<TContext>(DbContextOptionsBuilder<TContext> options, string? connectionString = null)
         where TContext : DbContext;
-    
+
     /// <summary>
     /// Get the appropriate connection string for the current environment
     /// </summary>
     string GetConnectionString();
-    
+
     /// <summary>
     /// Get database provider type for current configuration
     /// </summary>
     DatabaseProvider GetDatabaseProvider();
-    
+
     /// <summary>
     /// Test database connectivity
     /// </summary>
     Task<bool> CanConnectAsync();
-    
+
     /// <summary>
     /// Get database provider-specific configuration
     /// </summary>

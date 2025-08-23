@@ -25,7 +25,7 @@ public class TrainingPollingBackgroundService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Training Polling Background Service starting up");
-        
+
         try
         {
             // Wait a bit after startup to let the application fully initialize
@@ -88,18 +88,18 @@ public class TrainingPollingBackgroundService : BackgroundService
         try
         {
             var inProgressTrainings = await dbContext.ModelCreationRequests
-                .Where(r => r.Status == ModelCreationStatus.Creating && 
+                .Where(r => r.Status == ModelCreationStatus.Creating &&
                            !string.IsNullOrEmpty(r.PendingTrainingRequestId))
                 .ToListAsync(stoppingToken);
 
             if (inProgressTrainings.Any())
             {
-                _logger.LogInformation("Found {Count} in-progress trainings to monitor on startup", 
+                _logger.LogInformation("Found {Count} in-progress trainings to monitor on startup",
                     inProgressTrainings.Count);
-                
+
                 foreach (var training in inProgressTrainings)
                 {
-                    _logger.LogInformation("Resuming monitoring for training {TrainingId} for user {UserId}", 
+                    _logger.LogInformation("Resuming monitoring for training {TrainingId} for user {UserId}",
                         training.PendingTrainingRequestId, training.UserId);
                 }
             }
@@ -127,7 +127,7 @@ public class TrainingPollingBackgroundService : BackgroundService
         {
             // Get all model creation requests that are currently in Creating status
             var inProgressTrainings = await dbContext.ModelCreationRequests
-                .Where(r => r.Status == ModelCreationStatus.Creating && 
+                .Where(r => r.Status == ModelCreationStatus.Creating &&
                            !string.IsNullOrEmpty(r.PendingTrainingRequestId))
                 .ToListAsync(stoppingToken);
 
@@ -151,10 +151,10 @@ public class TrainingPollingBackgroundService : BackgroundService
 
                     // Check if this training is complete
                     var isComplete = await trainingPollingService.IsTrainingComplete(training.PendingTrainingRequestId);
-                    
+
                     if (isComplete)
                     {
-                        _logger.LogInformation("Training {TrainingId} for user {UserId} has completed, processing...", 
+                        _logger.LogInformation("Training {TrainingId} for user {UserId} has completed, processing...",
                             training.PendingTrainingRequestId, training.UserId);
 
                         // Process the completion
@@ -162,13 +162,13 @@ public class TrainingPollingBackgroundService : BackgroundService
                     }
                     else
                     {
-                        _logger.LogDebug("Training {TrainingId} for user {UserId} still in progress", 
+                        _logger.LogDebug("Training {TrainingId} for user {UserId} still in progress",
                             training.PendingTrainingRequestId, training.UserId);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error polling training {TrainingId} for user {UserId}", 
+                    _logger.LogError(ex, "Error polling training {TrainingId} for user {UserId}",
                         training.PendingTrainingRequestId, training.UserId);
                 }
             });

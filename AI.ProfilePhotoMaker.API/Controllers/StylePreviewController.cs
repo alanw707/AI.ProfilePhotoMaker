@@ -36,20 +36,20 @@ public class StylePreviewController : ControllerBase
         {
             // Convert style name to filename format
             var fileName = $"{styleName.ToLower().Replace(" ", "-").Replace("/", "-")}.jpg";
-            
+
             // Build the storage path for style previews
             var storagePath = $"style-previews/{fileName}";
-            
+
             // Check if the file exists in storage
             bool exists = await _storageService.ExistsAsync(storagePath);
-            
+
             if (exists)
             {
                 // Get the public URL from storage service
                 var url = _storageService.GetImageUrl(storagePath);
-                return Ok(new 
-                { 
-                    success = true, 
+                return Ok(new
+                {
+                    success = true,
                     styleName = styleName,
                     url = url,
                     fileName = fileName
@@ -60,9 +60,9 @@ public class StylePreviewController : ControllerBase
             var azureBlobUrl = GetDirectAzureBlobUrl(styleName);
             if (!string.IsNullOrEmpty(azureBlobUrl))
             {
-                return Ok(new 
-                { 
-                    success = true, 
+                return Ok(new
+                {
+                    success = true,
                     styleName = styleName,
                     url = azureBlobUrl,
                     fileName = fileName
@@ -70,9 +70,9 @@ public class StylePreviewController : ControllerBase
             }
 
             // Return placeholder URL as last resort
-            return Ok(new 
-            { 
-                success = true, 
+            return Ok(new
+            {
+                success = true,
                 styleName = styleName,
                 url = "/api/placeholder/style-preview",
                 fileName = "placeholder.jpg"
@@ -81,10 +81,10 @@ public class StylePreviewController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting style preview URL for {StyleName}", styleName);
-            return StatusCode(500, new 
-            { 
-                success = false, 
-                error = new { code = "InternalError", message = "Failed to get style preview URL" } 
+            return StatusCode(500, new
+            {
+                success = false,
+                error = new { code = "InternalError", message = "Failed to get style preview URL" }
             });
         }
     }
@@ -107,18 +107,18 @@ public class StylePreviewController : ControllerBase
             };
 
             var previews = new List<object>();
-            
+
             foreach (var style in knownStyles)
             {
                 var fileName = $"{style}.jpg";
                 var storagePath = $"style-previews/{fileName}";
-                
+
                 // Check if file exists and get its info
                 var fileInfo = await _storageService.GetFileInfoAsync(storagePath);
-                
+
                 string url;
                 long size = 0;
-                
+
                 if (fileInfo != null)
                 {
                     // File exists in storage, get its URL
@@ -130,7 +130,7 @@ public class StylePreviewController : ControllerBase
                     // Use direct Azure Blob URL as fallback
                     url = GetDirectAzureBlobUrl(style) ?? "/api/placeholder/style-preview";
                 }
-                
+
                 previews.Add(new
                 {
                     style = style,
@@ -141,9 +141,9 @@ public class StylePreviewController : ControllerBase
                 });
             }
 
-            return Ok(new 
-            { 
-                success = true, 
+            return Ok(new
+            {
+                success = true,
                 count = previews.Count,
                 previews = previews
             });
@@ -151,10 +151,10 @@ public class StylePreviewController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error listing style previews");
-            return StatusCode(500, new 
-            { 
-                success = false, 
-                error = new { code = "InternalError", message = "Failed to list style previews" } 
+            return StatusCode(500, new
+            {
+                success = false,
+                error = new { code = "InternalError", message = "Failed to list style previews" }
             });
         }
     }
@@ -169,28 +169,28 @@ public class StylePreviewController : ControllerBase
 
         // Convert style name to filename format
         var fileName = $"{styleName.ToLower().Replace(" ", "-").Replace("/", "-")}.jpg";
-        
+
         // Use the correct Azure storage account from configuration
-        var azureStorageConnection = _configuration.GetConnectionString("AzureStorage") ?? 
+        var azureStorageConnection = _configuration.GetConnectionString("AzureStorage") ??
                                     _configuration["AzureStorage:ConnectionString"];
-        
+
         // Extract storage account name from connection string if available
         string storageAccountName = "aipmstv16j74jubocuukg"; // Default known account
-        
+
         if (!string.IsNullOrEmpty(azureStorageConnection))
         {
             // Parse storage account name from connection string
             var accountNameMatch = System.Text.RegularExpressions.Regex.Match(
-                azureStorageConnection, 
-                @"AccountName=([^;]+)", 
+                azureStorageConnection,
+                @"AccountName=([^;]+)",
                 System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            
+
             if (accountNameMatch.Success)
             {
                 storageAccountName = accountNameMatch.Groups[1].Value;
             }
         }
-        
+
         // Direct Azure Blob Storage URL
         return $"https://{storageAccountName}.blob.core.windows.net/style-previews/{fileName}";
     }

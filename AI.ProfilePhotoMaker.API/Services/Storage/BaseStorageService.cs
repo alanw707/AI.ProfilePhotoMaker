@@ -162,7 +162,7 @@ public abstract class BaseStorageService : IStorageService
     {
         ValidateUserId(userId);
         ValidateFileName(fileName);
-        
+
         return $"{folderType}/{userId}/{fileName}";
     }
 }

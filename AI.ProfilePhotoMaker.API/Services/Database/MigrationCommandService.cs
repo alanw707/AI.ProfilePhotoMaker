@@ -106,7 +106,7 @@ public static class MigrationCommandService
         {
             Console.WriteLine($"SUCCESS: {result.Message}");
             Console.WriteLine($"Duration: {result.Duration:c}");
-            
+
             if (result.AppliedMigrations.Any())
             {
                 Console.WriteLine("Applied migrations:");
@@ -248,7 +248,7 @@ public static class MigrationCommandService
         var serverPart = parts.FirstOrDefault(p => p.StartsWith("Server=", StringComparison.OrdinalIgnoreCase))
                         ?? parts.FirstOrDefault(p => p.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
                         ?? "Unknown";
-        
+
         return $"{serverPart};...";
     }
 }

@@ -94,7 +94,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             // Generate state parameter for security
             var state = Guid.NewGuid().ToString();
-            
+
             try
             {
                 HttpContext.Session.SetString("oauth_state", state);
@@ -104,12 +104,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 // Environment-aware session error handling
                 _logger.LogWarning(ex, "Session initialization failed in OAuth URL generation: {ErrorMessage}", ex.Message);
-                
+
                 if (_environment.IsDevelopment())
                 {
                     // In development, log but continue without session - reduced security but functional OAuth
                     _logger.LogWarning("Development environment: Continuing OAuth flow without session state (reduced CSRF protection)");
-                    
+
                     // Continue without session - skip setting session state
                     // OAuth will work but with reduced CSRF protection in development
                 }
@@ -117,7 +117,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 {
                     // In production, session failure is a configuration issue that should be addressed
                     _logger.LogError("Production environment: Session initialization failed - this indicates a configuration issue");
-                    return BadRequest(new { 
+                    return BadRequest(new
+                    {
                         error = "Session initialization failed. Please check HTTPS and session configuration.",
                         details = _environment.IsDevelopment() ? ex.Message : "Contact support if this issue persists"
                     });
@@ -151,7 +152,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             // Generate state parameter for security
             var state = Guid.NewGuid().ToString();
-            
+
             try
             {
                 HttpContext.Session.SetString("oauth_state", state);
@@ -161,12 +162,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 // Environment-aware session error handling
                 _logger.LogWarning(ex, "Session initialization failed in external login: {ErrorMessage}", ex.Message);
-                
+
                 if (_environment.IsDevelopment())
                 {
                     // In development, log but continue without session - reduced security but functional OAuth
                     _logger.LogWarning("Development environment: Continuing OAuth flow without session state (reduced CSRF protection)");
-                    
+
                     // Continue without session - skip setting session state
                     // OAuth will work but with reduced CSRF protection in development
                 }
@@ -174,7 +175,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 {
                     // In production, session failure is a configuration issue that should be addressed
                     _logger.LogError("Production environment: Session initialization failed - this indicates a configuration issue");
-                    return BadRequest(new { 
+                    return BadRequest(new
+                    {
                         error = "Session initialization failed. Please check HTTPS and session configuration.",
                         details = _environment.IsDevelopment() ? ex.Message : "Contact support if this issue persists"
                     });
@@ -200,10 +202,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         {
 
             var frontendBaseUrl = _configuration["AppBaseUrl"] ?? "http://localhost:4200";
-            
+
             string? returnUrl = null;
             string? sessionState = null;
-            
+
             try
             {
                 returnUrl = HttpContext.Session.GetString("oauth_return_url") ?? "/app/dashboard";
@@ -223,7 +225,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             // Validate state parameter - CRITICAL SECURITY CHECK
             // sessionState is already retrieved above with error handling
-            
+
             // SECURITY: Always validate state parameter to prevent Login CSRF attacks
             // Environment-aware state validation
             if (string.IsNullOrEmpty(sessionState))
@@ -232,14 +234,14 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 {
                     // In development, session might not be available - log warning but continue
                     _logger.LogWarning("Development environment: Session state missing - OAuth callback continuing with reduced CSRF protection");
-                    
+
                     // Still validate that state parameter was provided by OAuth provider
                     if (string.IsNullOrEmpty(state))
                     {
                         _logger.LogError("OAuth callback missing state parameter entirely - rejecting");
                         return Redirect($"{frontendBaseUrl}/auth/login?error=missing_state");
                     }
-                    
+
                     // Continue with reduced security - log this for visibility
                     _logger.LogWarning("Development OAuth callback proceeding without session state validation (CSRF protection reduced)");
                 }
@@ -253,22 +255,22 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             else
             {
                 // Session state available - perform full validation
-                
+
                 // If state parameter is missing from callback, this is suspicious - reject
                 if (string.IsNullOrEmpty(state))
                 {
                     _logger.LogError("OAuth callback missing state parameter - potential CSRF attack");
                     return Redirect($"{frontendBaseUrl}/auth/login?error=missing_state");
                 }
-                
+
                 // Compare state values - must match exactly
                 if (state != sessionState)
                 {
-                    _logger.LogError("OAuth state mismatch - potential CSRF attack. Expected: {ExpectedState}, Received: {ReceivedState}", 
+                    _logger.LogError("OAuth state mismatch - potential CSRF attack. Expected: {ExpectedState}, Received: {ReceivedState}",
                         sessionState, state);
                     return Redirect($"{frontendBaseUrl}/auth/login?error=invalid_state");
                 }
-                
+
                 _logger.LogInformation("OAuth state validation passed successfully");
             }
 
@@ -385,12 +387,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         {
             // First check if we're in Azure production environment
             var azureWebsiteName = Environment.GetEnvironmentVariable("WEBSITE_SITE_NAME");
-            
+
             if (!string.IsNullOrEmpty(azureWebsiteName))
             {
                 // We're definitely in Azure - use the production OAuth base URL
                 var productionOAuthBase = _configuration["Authentication:OAuth:BaseUrl"];
-                
+
                 if (!string.IsNullOrWhiteSpace(productionOAuthBase))
                 {
                     return productionOAuthBase;
@@ -400,7 +402,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             // If forwarded headers are present, prefer them
             var forwardedProto = Request.Headers["X-Forwarded-Proto"].FirstOrDefault();
             var forwardedHost = Request.Headers["X-Forwarded-Host"].FirstOrDefault();
-            
+
             if (!string.IsNullOrEmpty(forwardedProto) && !string.IsNullOrEmpty(forwardedHost))
             {
                 var forwardedUrl = $"{forwardedProto}://{forwardedHost}";
@@ -409,7 +411,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             // Prefer explicit env override
             var envBase = Environment.GetEnvironmentVariable("OAUTH_BASE_URL") ?? _configuration["OAUTH_BASE_URL"];
-            
+
             if (!string.IsNullOrWhiteSpace(envBase))
             {
                 return envBase;
@@ -417,7 +419,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             // Check if we're clearly in development (localhost)
             var isLocal = Request.Host.Host.Contains("localhost") || Request.Host.Host.Contains("127.0.0.1");
-            
+
             if (isLocal)
             {
                 // Use current request URL for local development
@@ -427,7 +429,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             // For any other environment, try to use the configured OAuth base URL
             var cfgBase = _configuration["Authentication:OAuth:BaseUrl"];
-            
+
             if (!string.IsNullOrWhiteSpace(cfgBase))
             {
                 return cfgBase;
@@ -509,7 +511,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 // CRITICAL FIX: Check if existing user has a profile (for migration cases)
                 var hasProfile = await _context.UserProfiles.AnyAsync(p => p.UserId == user.Id);
-                
+
                 if (!hasProfile)
                 {
                     try
