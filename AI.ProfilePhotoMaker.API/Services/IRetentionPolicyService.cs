@@ -56,4 +56,11 @@ public interface IRetentionPolicyService
     /// Sets retention dates for existing images that don't have them
     /// </summary>
     Task SetRetentionDatesForExistingImagesAsync();
+
+    /// <summary>
+    /// Cleans up orphaned enhanced image files older than specified age
+    /// </summary>
+    /// <param name="maxAge">Maximum age of files to keep (older files will be deleted) - typically 1 hour for enhanced images</param>
+    /// <returns>Number of enhanced images cleaned up</returns>
+    Task<int> CleanupOrphanedEnhancedImagesAsync(TimeSpan maxAge);
 }

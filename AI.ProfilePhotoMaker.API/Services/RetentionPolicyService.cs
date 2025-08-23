@@ -9,15 +9,18 @@ public class RetentionPolicyService : IRetentionPolicyService
 {
     private readonly ApplicationDbContext _context;
     private readonly IStorageService _storageService;
+    private readonly StoragePathResolver _pathResolver;
     private readonly ILogger<RetentionPolicyService> _logger;
 
     public RetentionPolicyService(
         ApplicationDbContext context,
         IStorageService storageService,
+        StoragePathResolver pathResolver,
         ILogger<RetentionPolicyService> logger)
     {
         _context = context;
         _storageService = storageService;
+        _pathResolver = pathResolver;
         _logger = logger;
     }
 
@@ -231,5 +234,101 @@ public class RetentionPolicyService : IRetentionPolicyService
         return await _context.ProcessedImages
             .Include(img => img.UserProfile)
             .FirstOrDefaultAsync(img => img.Id == imageId && img.UserProfile.UserId == userId);
+    }
+
+    public async Task<int> CleanupOrphanedEnhancedImagesAsync(TimeSpan maxAge)
+    {
+        var deletedCount = 0;
+        var cutoffTime = DateTime.UtcNow.Subtract(maxAge);
+
+        try
+        {
+            // Get the enhanced directory prefix for all users
+            var enhancedPrefix = _pathResolver.GetDirectoryPrefix(StorageType.Enhanced);
+            _logger.LogDebug("Starting enhanced image cleanup for prefix: {Prefix}, cutoff time: {CutoffTime}",
+                enhancedPrefix, cutoffTime);
+
+            // List all files in the enhanced directory
+            var enhancedFiles = await _storageService.ListFilesAsync(enhancedPrefix);
+            
+            // Also check for legacy enhanced files without environment prefix (for backward compatibility)
+            var legacyEnhancedFiles = await _storageService.ListFilesAsync("enhanced/");
+            
+            // Combine both lists and remove duplicates
+            var allEnhancedFiles = enhancedFiles.Concat(legacyEnhancedFiles).Distinct().ToList();
+
+            if (!allEnhancedFiles.Any())
+            {
+                _logger.LogDebug("No enhanced files found for cleanup in either prefixed ({Prefix}) or legacy (enhanced/) paths", enhancedPrefix);
+                return 0;
+            }
+            
+            _logger.LogInformation("Found {PrefixedCount} enhanced files in prefixed path and {LegacyCount} in legacy path for cleanup", 
+                enhancedFiles.Count, legacyEnhancedFiles.Count);
+
+            // Use combined list for processing
+            var filesToProcess = allEnhancedFiles;
+
+            foreach (var filePath in filesToProcess)
+            {
+                try
+                {
+                    // Get file info to check creation date
+                    var fileInfo = await _storageService.GetFileInfoAsync(filePath);
+
+                    if (fileInfo == null)
+                    {
+                        _logger.LogWarning("Could not get file info for enhanced image: {FilePath}", filePath);
+                        continue;
+                    }
+
+                    // Check if file is older than the cutoff time
+                    if (fileInfo.CreatedAt <= cutoffTime)
+                    {
+                        var deleted = await _storageService.DeleteImageAsync(filePath);
+
+                        if (deleted)
+                        {
+                            deletedCount++;
+                            _logger.LogInformation(
+                                "Deleted orphaned enhanced image: {FilePath} (created: {CreatedAt}, age: {Age})",
+                                filePath,
+                                fileInfo.CreatedAt,
+                                DateTime.UtcNow.Subtract(fileInfo.CreatedAt));
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Failed to delete enhanced image: {FilePath}", filePath);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogDebug("Enhanced image {FilePath} is too recent (created: {CreatedAt})",
+                            filePath, fileInfo.CreatedAt);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing enhanced image {FilePath}: {Error}", filePath, ex.Message);
+                    // Continue with next file
+                }
+            }
+
+            if (deletedCount > 0)
+            {
+                _logger.LogInformation("Enhanced image cleanup completed: deleted {DeletedCount} orphaned files", deletedCount);
+            }
+            else
+            {
+                _logger.LogDebug("Enhanced image cleanup completed: no files deleted");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to perform enhanced image cleanup: {Error}", ex.Message);
+            throw;
+        }
+
+        return deletedCount;
     }
 }
