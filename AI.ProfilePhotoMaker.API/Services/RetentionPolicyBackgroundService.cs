@@ -46,7 +46,7 @@ public class RetentionPolicyBackgroundService : BackgroundService
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error occurred during retention policy check");
-                    
+
                     // Check if we should still continue
                     if (!stoppingToken.IsCancellationRequested)
                     {
@@ -120,15 +120,18 @@ public class RetentionPolicyBackgroundService : BackgroundService
             // Delete expired images
             var deletedCount = await retentionService.DeleteExpiredImagesAsync();
 
-            if (deletedCount > 0)
+            // Clean up orphaned enhanced images older than 1 hour
+            var enhancedCleanupCount = await retentionService.CleanupOrphanedEnhancedImagesAsync(TimeSpan.FromHours(1));
+
+            if (deletedCount > 0 || enhancedCleanupCount > 0)
             {
                 _logger.LogInformation(
-                    "Retention policy check completed: deleted {DeletedCount} expired images",
-                    deletedCount);
+                    "Retention policy check completed: deleted {DeletedCount} expired images and {EnhancedCleanupCount} orphaned enhanced images",
+                    deletedCount, enhancedCleanupCount);
             }
             else
             {
-                _logger.LogDebug("Retention policy check completed: no expired images found");
+                _logger.LogDebug("Retention policy check completed: no expired images or orphaned enhanced images found");
             }
         }
         catch (Exception ex)
