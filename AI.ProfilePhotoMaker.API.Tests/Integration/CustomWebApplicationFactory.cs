@@ -38,7 +38,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
     // Use a static database name to ensure all scopes share the same in-memory database
     private readonly string _databaseName = $"TestDb_{Guid.NewGuid()}_{DateTime.UtcNow.Ticks}";
-    
+
     protected override IHostBuilder CreateHostBuilder()
     {
         // Set test environment variables
@@ -52,7 +52,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable("GOOGLE_CLIENT_ID", "1234567890-test.apps.googleusercontent.com");
         Environment.SetEnvironmentVariable("GOOGLE_CLIENT_SECRET", "GOCSPX-dummy-secret-1234567890");
         Environment.SetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING", "UseDevelopmentStorage=true");
-        
+
         return Host.CreateDefaultBuilder()
             .ConfigureWebHostDefaults(webBuilder =>
             {
@@ -63,7 +63,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             })
             .ConfigureLogging(logging => logging.ClearProviders().AddConsole());
     }
-    
+
     private void ConfigureTestServices(IServiceCollection services)
     {
         // Add basic ASP.NET Core services
@@ -73,18 +73,18 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             {
                 options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
             });
-        
+
         // Add InMemory database with shared name for test consistency
         services.AddDbContext<ApplicationDbContext>(options =>
         {
             options.UseInMemoryDatabase(_databaseName);
         });
-        
+
         // Add Identity
         services.AddIdentity<ApplicationUser, IdentityRole>()
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
-            
+
         // Configure Identity options
         services.Configure<IdentityOptions>(options =>
         {
@@ -95,45 +95,45 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             options.Password.RequiredLength = 6;
             options.User.RequireUniqueEmail = true;
         });
-        
+
         // Add test authentication
         services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = TestAuthHandler.SchemeName;
             options.DefaultChallengeScheme = TestAuthHandler.SchemeName;
         }).AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, options => { });
-        
+
         // Add essential services
         services.AddHttpContextAccessor();
         services.AddMemoryCache();
         services.AddDistributedMemoryCache();
-        
+
         // Add application services with mocks
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<AI.ProfilePhotoMaker.API.Services.IBasicTierService, AI.ProfilePhotoMaker.API.Services.BasicTierService>();
         services.AddScoped<AI.ProfilePhotoMaker.API.Services.IUserContextService, AI.ProfilePhotoMaker.API.Services.UserContextService>();
         services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository, AI.ProfilePhotoMaker.API.Data.UserProfileRepository>();
-        
+
         // Add mock Replicate services
         services.AddScoped<IReplicateApiClient, MockReplicateApiClient>();
         services.AddScoped<AI.ProfilePhotoMaker.API.Services.IModelDiscoveryService, FakeModelDiscoveryService>();
         services.AddSingleton(new Replicate.ReplicateApi("r8_dummy_token_for_tests"));
-        
+
         // Add polling services for testing (with faster intervals)
         services.AddScoped<ITrainingPollingService, TestTrainingPollingService>();
         // Don't add the background service in tests - it would interfere with test timing
-        
+
         // Add fake services to satisfy dependencies
         services.AddScoped<IStorageService, FakeStorageService>();
         services.AddSingleton<AI.ProfilePhotoMaker.API.Services.Database.IDatabaseProviderService, FakeDatabaseProviderService>();
-        
+
         // Seed initial data after services are built
         var sp = services.BuildServiceProvider();
         using var scope = sp.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         db.Database.EnsureCreated();
     }
-    
+
     private void ConfigureTestPipeline(IApplicationBuilder app)
     {
         // Add essential middleware for testing
@@ -186,7 +186,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         });
 
         await db.SaveChangesAsync();
-        
+
         // Verify the data was saved correctly
         var savedProfile = await db.UserProfiles.FirstOrDefaultAsync(u => u.UserId == userId);
         if (savedProfile?.PurchasedCredits != purchasedCredits)
@@ -221,22 +221,22 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     {
         public Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId, string folderType = "generated")
             => Task.FromResult($"https://fake-storage.com/{userId}/{folderType}/{fileName}");
-        
+
         public Task<string> SaveImageToPathAsync(Stream imageStream, string storagePath)
             => Task.FromResult(storagePath);
-        
-        public Task<Stream?> GetImageAsync(string storagePath) 
+
+        public Task<Stream?> GetImageAsync(string storagePath)
             => Task.FromResult<Stream?>(new MemoryStream());
-        
+
         public Task<bool> DeleteImageAsync(string storagePath) => Task.FromResult(true);
-        
+
         public Task<bool> ExistsAsync(string storagePath) => Task.FromResult(true);
-        
+
         public string GetImageUrl(string storagePath) => $"https://fake-storage.com/{storagePath}";
-        
+
         public Task<List<string>> ListUserImagesAsync(string userId)
             => Task.FromResult(new List<string> { $"https://fake-storage.com/{userId}/generated/sample.jpg" });
-        
+
         public Task<StorageFileInfo?> GetFileInfoAsync(string storagePath)
             => Task.FromResult<StorageFileInfo?>(new StorageFileInfo
             {
@@ -246,19 +246,19 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 ModifiedAt = DateTime.UtcNow,
                 ContentType = "image/jpeg"
             });
-        
+
         public Task<string> GenerateSasUrlAsync(string storagePath, TimeSpan expiry, Azure.Storage.Sas.BlobSasPermissions permissions = Azure.Storage.Sas.BlobSasPermissions.Read)
             => Task.FromResult($"https://fake-storage.com/{storagePath}?sas=fake-sas-token");
-        
+
         public Task<string> SaveZipAsync(Stream zipStream, string storagePath)
             => Task.FromResult(storagePath);
-        
+
         public Task<bool> DeleteDirectoryAsync(string directoryPath) => Task.FromResult(true);
-        
+
         public Task<List<string>> ListFilesAsync(string prefix)
             => Task.FromResult(new List<string> { $"{prefix}/sample-file.jpg" });
     }
-    
+
     private sealed class FakeModelDiscoveryService : AI.ProfilePhotoMaker.API.Services.IModelDiscoveryService
     {
         public Task<AI.ProfilePhotoMaker.API.Services.ModelSyncResult> DiscoverAndSyncUserModelsAsync(string userId)
@@ -303,11 +303,11 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         public async Task StartPollingForTraining(string trainingId, string userId)
         {
             _logger.LogInformation("Starting test polling for training {TrainingId} for user {UserId}", trainingId, userId);
-            
+
             // In tests, we can immediately check and process since MockReplicateApiClient
             // sets up completion after 300ms delay
             await Task.Delay(500); // Wait for mock completion
-            
+
             if (await IsTrainingComplete(trainingId))
             {
                 await ProcessTrainingCompletion(trainingId);
@@ -319,14 +319,14 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             try
             {
                 var status = await _replicateApiClient.GetTrainingStatusAsync(trainingId);
-                var completed = status.IsCompleted || 
+                var completed = status.IsCompleted ||
                                status.Status?.ToLower() == "succeeded" ||
-                               status.Status?.ToLower() == "failed" || 
+                               status.Status?.ToLower() == "failed" ||
                                status.Status?.ToLower() == "canceled";
-                
-                _logger.LogInformation("Training {TrainingId} status: {Status}, completed: {Completed}", 
+
+                _logger.LogInformation("Training {TrainingId} status: {Status}, completed: {Completed}",
                     trainingId, status.Status, completed);
-                
+
                 return completed;
             }
             catch (Exception ex)
@@ -359,7 +359,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                     return;
                 }
 
-                _logger.LogInformation("Found model creation request {RequestId} for training {TrainingId}", 
+                _logger.LogInformation("Found model creation request {RequestId} for training {TrainingId}",
                     modelRequest.Id, trainingId);
 
                 // Update the model creation request based on training status
@@ -384,14 +384,14 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                         modelRequest.CompletedAt = DateTime.UtcNow;
                         modelRequest.ErrorMessage = null;
 
-                        _logger.LogInformation("Model creation request {RequestId} marked as Ready with version {Version}", 
+                        _logger.LogInformation("Model creation request {RequestId} marked as Ready with version {Version}",
                             modelRequest.Id, trainedModelVersion);
                     }
                 }
                 else if (trainingStatus.Status?.ToLower() == "failed" || trainingStatus.Status?.ToLower() == "canceled")
                 {
                     _logger.LogWarning("Training {TrainingId} failed or was canceled with status {Status}", trainingId, trainingStatus.Status);
-                    
+
                     modelRequest.Status = ModelCreationStatus.Failed;
                     modelRequest.ErrorMessage = trainingStatus.Error ?? $"Training failed with status: {trainingStatus.Status}";
                     modelRequest.CompletedAt = DateTime.UtcNow;
@@ -404,8 +404,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
                 // Save the updated model creation request
                 await scopedDbContext.SaveChangesAsync();
-                
-                _logger.LogInformation("Successfully processed training completion for {TrainingId}, status: {Status}", 
+
+                _logger.LogInformation("Successfully processed training completion for {TrainingId}, status: {Status}",
                     trainingId, modelRequest.Status);
             }
             catch (Exception ex)

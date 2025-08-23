@@ -25,7 +25,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
     public async Task Setup_CreateTestData_ForPerformanceTesting()
     {
         _output.WriteLine("Setting up performance test data...");
-        
+
         // Create test data - different user scenarios
         var scenarios = new[]
         {
@@ -41,7 +41,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         }
 
         _output.WriteLine($"Created {_testUsers.Count} test users with {_testUsers.Sum(u => u.ProcessedImages.Count)} total images");
-        
+
         // Verify test data was created successfully
         _testUsers.Should().NotBeEmpty();
         _testUsers.Should().HaveCountGreaterThan(15);
@@ -56,7 +56,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         // Arrange
         await Setup_CreateTestData_ForPerformanceTesting();
         var heavyUser = _testUsers.OrderByDescending(u => u.ProcessedImages.Count).First();
-        
+
         _output.WriteLine($"Testing N+1 potential with user having {heavyUser.ProcessedImages.Count} images");
 
         // Act - This method SHOULD be slow as it loads all images
@@ -68,9 +68,9 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         // Assert
         result.Should().NotBeNull();
         result!.ProcessedImages.Should().HaveCount(heavyUser.ProcessedImages.Count);
-        
+
         _output.WriteLine($"GetByUserIdAsync (N+1): {elapsed.TotalMilliseconds}ms, Memory: {memoryAfter - memoryBefore} bytes");
-        
+
         // This method is EXPECTED to be slow - it's the "bad" method that loads everything
         // We document this for comparison with optimized methods
         if (heavyUser.ProcessedImages.Count > 100)
@@ -85,7 +85,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         // Arrange
         await Setup_CreateTestData_ForPerformanceTesting();
         var heavyUser = _testUsers.OrderByDescending(u => u.ProcessedImages.Count).First();
-        
+
         // Act - Measure both methods
         var (lightResult, lightElapsed, lightMemoryBefore, lightMemoryAfter) = await MeasurePerformanceAsync(async () =>
         {
@@ -101,14 +101,14 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         lightResult.Should().NotBeNull();
         lightResult!.UserId.Should().Be(heavyUser.UserId);
         lightResult.ProcessedImages.Should().BeEmpty(); // Should not load images
-        
+
         fullResult.Should().NotBeNull();
         fullResult!.ProcessedImages.Should().HaveCountGreaterThan(0);
-        
+
         // Performance comparison
         var lightMemoryUsed = lightMemoryAfter - lightMemoryBefore;
         var fullMemoryUsed = fullMemoryAfter - fullMemoryBefore;
-        
+
         _output.WriteLine($"Light method: {lightElapsed.TotalMilliseconds}ms, Memory: {lightMemoryUsed} bytes");
         _output.WriteLine($"Full method: {fullElapsed.TotalMilliseconds}ms, Memory: {fullMemoryUsed} bytes");
         _output.WriteLine($"Performance improvement: {((fullElapsed.TotalMilliseconds - lightElapsed.TotalMilliseconds) / fullElapsed.TotalMilliseconds * 100):F1}% time, {((fullMemoryUsed - lightMemoryUsed) / (double)fullMemoryUsed * 100):F1}% memory");
@@ -116,7 +116,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         // Assertions
         lightElapsed.Should().BeLessThan(SimpleQueryThreshold);
         lightElapsed.Should().BeLessThan(fullElapsed); // Should be faster
-        
+
         if (fullMemoryUsed > 0)
         {
             lightMemoryUsed.Should().BeLessThan(fullMemoryUsed); // Should use less memory
@@ -133,7 +133,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         // Arrange
         await Setup_CreateTestData_ForPerformanceTesting();
         var testUser = _testUsers.First(u => u.ProcessedImages.Count > 10);
-        
+
         // Act
         var (averageTime, averageMemoryIncrease, successfulRuns) = await MeasureAveragePerformanceAsync(
             async () => await _repository.GetUserProfileStatsAsync(testUser.UserId),
@@ -144,7 +144,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         // Assert
         successfulRuns.Should().Be(20);
         AssertPerformanceTargets(averageTime, ComplexQueryThreshold, averageMemoryIncrease, "GetUserProfileStatsAsync");
-        
+
         // Verify functionality
         var stats = await _repository.GetUserProfileStatsAsync(testUser.UserId);
         stats.Should().NotBeNull();
@@ -159,7 +159,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         // Arrange
         await Setup_CreateTestData_ForPerformanceTesting();
         var testUser = _testUsers.First(u => u.ProcessedImages.Count > 20);
-        
+
         // Act
         var (averageTime, averageMemoryIncrease, successfulRuns) = await MeasureAveragePerformanceAsync(
             async () => await _repository.GetProfileWithRecentImagesAsync(testUser.UserId, 10),
@@ -170,7 +170,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         // Assert
         successfulRuns.Should().Be(15);
         AssertPerformanceTargets(averageTime, ComplexQueryThreshold, averageMemoryIncrease, "GetProfileWithRecentImagesAsync");
-        
+
         // Verify functionality
         var profileWithImages = await _repository.GetProfileWithRecentImagesAsync(testUser.UserId, 10);
         profileWithImages.Should().NotBeNull();
@@ -188,10 +188,10 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         // Arrange
         await Setup_CreateTestData_ForPerformanceTesting();
         var heavyUser = _testUsers.OrderByDescending(u => u.ProcessedImages.Count).First();
-        
+
         var pageSizes = new[] { 10, 20, 50, 100 };
         var results = new List<PerformanceTestResult>();
-        
+
         foreach (var pageSize in pageSizes)
         {
             // Act
@@ -204,7 +204,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
             // Assert
             successfulRuns.Should().Be(10);
             AssertPerformanceTargets(averageTime, SimpleQueryThreshold, averageMemoryIncrease, $"Pagination PageSize {pageSize}");
-            
+
             results.Add(new PerformanceTestResult
             {
                 TestName = nameof(GetUserImagesPagedAsync_Should_MeetPerformanceTargetsForAllPageSizes),
@@ -217,23 +217,23 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
                 DataSetSize = heavyUser.ProcessedImages.Count
             });
         }
-        
+
         // Verify pagination functionality
         var page1 = await _repository.GetUserImagesPagedAsync(heavyUser.UserId, 1, 20);
         var page2 = await _repository.GetUserImagesPagedAsync(heavyUser.UserId, 2, 20);
-        
+
         page1.Should().NotBeNull();
         page1.Items.Should().HaveCount(Math.Min(20, heavyUser.ProcessedImages.Count));
         page1.TotalCount.Should().Be(heavyUser.ProcessedImages.Count);
         page1.Page.Should().Be(1);
         page1.PageSize.Should().Be(20);
-        
+
         if (heavyUser.ProcessedImages.Count > 20)
         {
             page2.Items.Should().NotBeEmpty();
             page1.Items.Should().NotIntersectWith(page2.Items); // No duplicate items
         }
-        
+
         _output.WriteLine($"Pagination performance results:");
         foreach (var result in results)
         {
@@ -248,7 +248,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         await Setup_CreateTestData_ForPerformanceTesting();
         var testUser = _testUsers.First(u => u.ProcessedImages.Count > 50);
         var testStyle = testUser.ProcessedImages.FirstOrDefault()?.Style ?? "corporate";
-        
+
         // Act
         var (averageTime, averageMemoryIncrease, successfulRuns) = await MeasureAveragePerformanceAsync(
             async () => await _repository.GetUserImagesByStyleAsync(testUser.UserId, testStyle, 1, 20),
@@ -259,7 +259,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         // Assert
         successfulRuns.Should().Be(15);
         AssertPerformanceTargets(averageTime, SimpleQueryThreshold, averageMemoryIncrease, "GetUserImagesByStyleAsync");
-        
+
         // Verify filtering functionality
         var styleImages = await _repository.GetUserImagesByStyleAsync(testUser.UserId, testStyle, 1, 20);
         styleImages.Should().NotBeNull();
@@ -276,7 +276,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         // Arrange
         await Setup_CreateTestData_ForPerformanceTesting();
         var testUser = _testUsers.First(u => u.ProcessedImages.Count > 20);
-        
+
         var countOperations = new Dictionary<string, Func<Task<object>>>
         {
             ["GetUserImageCountAsync"] = async () => await _repository.GetUserImageCountAsync(testUser.UserId),
@@ -298,15 +298,15 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
             // Assert
             successfulRuns.Should().Be(20);
             AssertPerformanceTargets(averageTime, SimpleQueryThreshold, averageMemoryIncrease, operationName);
-            
+
             _output.WriteLine($"{operationName}: {averageTime.TotalMilliseconds:F1}ms");
         }
-        
+
         // Verify results are accurate
         var totalImages = await _repository.GetUserImageCountAsync(testUser.UserId);
         var originalUploads = await _repository.GetUserOriginalUploadCountAsync(testUser.UserId);
         var generatedImages = await _repository.GetUserGeneratedImageCountAsync(testUser.UserId);
-        
+
         totalImages.Should().Be(testUser.ProcessedImages.Count);
         originalUploads.Should().Be(testUser.ProcessedImages.Count(i => i.IsOriginalUpload));
         generatedImages.Should().Be(testUser.ProcessedImages.Count(i => i.IsGenerated));
@@ -323,7 +323,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         // Arrange
         await Setup_CreateTestData_ForPerformanceTesting();
         var heavyUser = _testUsers.OrderByDescending(u => u.ProcessedImages.Count).First();
-        
+
         _output.WriteLine($"Testing memory usage with user having {heavyUser.ProcessedImages.Count} images");
 
         // Measure memory usage of different methods
@@ -343,7 +343,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
             var (result, elapsed, memoryBefore, memoryAfter) = await MeasurePerformanceAsync(method);
             var memoryUsed = memoryAfter - memoryBefore;
             memoryResults[methodName] = memoryUsed;
-            
+
             _output.WriteLine($"{methodName}: {memoryUsed} bytes, {elapsed.TotalMilliseconds:F1}ms");
         }
 
@@ -377,23 +377,23 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         // Arrange
         await Setup_CreateTestData_ForPerformanceTesting();
         var testUser = _testUsers.First(u => u.ProcessedImages.Count > 100);
-        
+
         // Test queries that should benefit from indexes
         var indexedQueries = new Dictionary<string, Func<Task<object?>>>
         {
-            ["UserProfile by UserId (IX_UserProfiles_UserId)"] = 
+            ["UserProfile by UserId (IX_UserProfiles_UserId)"] =
                 async () => await _repository.GetByUserIdLightAsync(testUser.UserId),
-            
-            ["Images by UserProfileId (IX_ProcessedImages_UserProfileId)"] = 
+
+            ["Images by UserProfileId (IX_ProcessedImages_UserProfileId)"] =
                 async () => await _repository.GetUserImageCountAsync(testUser.UserId),
-            
-            ["Images paginated (IX_ProcessedImages_UserProfileId_CreatedAt_Desc)"] = 
+
+            ["Images paginated (IX_ProcessedImages_UserProfileId_CreatedAt_Desc)"] =
                 async () => await _repository.GetUserImagesPagedAsync(testUser.UserId, 1, 10),
-            
-            ["Images by type (IX_ProcessedImages_UserProfileId_IsOriginalUpload)"] = 
+
+            ["Images by type (IX_ProcessedImages_UserProfileId_IsOriginalUpload)"] =
                 async () => await _repository.GetUserOriginalUploadCountAsync(testUser.UserId),
-                
-            ["Images by style (IX_ProcessedImages_UserProfileId_Style_CreatedAt_Desc)"] = 
+
+            ["Images by style (IX_ProcessedImages_UserProfileId_Style_CreatedAt_Desc)"] =
                 async () => await _repository.GetUserImagesByStyleAsync(testUser.UserId, "corporate", 1, 10)
         };
 
@@ -409,7 +409,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
             // Assert - Indexed queries should be fast
             successfulRuns.Should().Be(10);
             AssertPerformanceTargets(averageTime, SimpleQueryThreshold, averageMemoryIncrease, queryDescription);
-            
+
             _output.WriteLine($"{queryDescription}: {averageTime.TotalMilliseconds:F2}ms average");
         }
     }
@@ -425,14 +425,14 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         await Setup_CreateTestData_ForPerformanceTesting();
         var testUser = _testUsers.First(u => u.ProcessedImages.Count > 20);
         var imagesToDelete = testUser.ProcessedImages.Take(5).Select(i => i.Id).ToList();
-        
+
         // Test bulk operations
         var bulkOperations = new Dictionary<string, Func<Task<object>>>
         {
-            ["GetUserProcessedImagesAsync (filtered)"] = 
+            ["GetUserProcessedImagesAsync (filtered)"] =
                 async () => await _repository.GetUserProcessedImagesAsync(testUser.UserId, includeGenerated: true, includeOriginal: false),
-            
-            ["DeleteUserImagesAsync (bulk delete)"] = 
+
+            ["DeleteUserImagesAsync (bulk delete)"] =
                 async () => { await _repository.DeleteUserImagesAsync(testUser.UserId, imagesToDelete); return true; }
         };
 
@@ -443,7 +443,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
                 // Only test delete performance once to avoid affecting other tests
                 var (result, elapsed, memoryBefore, memoryAfter) = await MeasurePerformanceAsync(operation);
                 var memoryUsed = memoryAfter - memoryBefore;
-                
+
                 AssertPerformanceTargets(elapsed, ComplexQueryThreshold, memoryUsed, operationName);
                 _output.WriteLine($"{operationName}: {elapsed.TotalMilliseconds:F2}ms");
             }
@@ -473,12 +473,12 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         await Setup_CreateTestData_ForPerformanceTesting();
         var concurrentUsers = _testUsers.Take(10).ToList();
         var concurrency = 5; // Simulate 5 concurrent requests
-        
+
         _output.WriteLine($"Testing concurrent access with {concurrency} simultaneous operations");
 
         // Act - Simulate concurrent read operations
         var concurrentTasks = new List<Task<(string UserId, TimeSpan Elapsed, bool Success)>>();
-        
+
         foreach (var user in concurrentUsers.Take(concurrency))
         {
             var task = Task.Run(async () =>
@@ -493,7 +493,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
                         var count = await _repository.GetUserImageCountAsync(user.UserId);
                         return new { stats, images, count };
                     });
-                    
+
                     return (user.UserId, elapsed, true);
                 }
                 catch (Exception ex)
@@ -502,7 +502,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
                     return (user.UserId, TimeSpan.Zero, false);
                 }
             });
-            
+
             concurrentTasks.Add(task);
         }
 
@@ -512,11 +512,11 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         var successfulOperations = results.Count(r => r.Success);
         var averageResponseTime = TimeSpan.FromTicks((long)results.Where(r => r.Success).Select(r => r.Elapsed.Ticks).Average());
         var maxResponseTime = results.Where(r => r.Success).Max(r => r.Elapsed);
-        
+
         successfulOperations.Should().Be(concurrency, "All concurrent operations should succeed");
         averageResponseTime.Should().BeLessThan(ApiResponseThreshold, "Average response time should meet API targets");
         maxResponseTime.Should().BeLessThan(TimeSpan.FromMilliseconds(500), "Maximum response time should be reasonable");
-        
+
         _output.WriteLine($"Concurrent operations results:");
         _output.WriteLine($"- Success rate: {successfulOperations}/{concurrency}");
         _output.WriteLine($"- Average response time: {averageResponseTime.TotalMilliseconds:F1}ms");
@@ -535,17 +535,17 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
                 var userIds = _testUsers.Select(u => u.Id).ToList();
                 var imagesToDelete = _context.ProcessedImages.Where(i => userIds.Contains(i.UserProfileId)).ToList();
                 var usersToDelete = _context.UserProfiles.Where(u => userIds.Contains(u.Id)).ToList();
-                
+
                 if (imagesToDelete.Any())
                 {
                     _context.ProcessedImages.RemoveRange(imagesToDelete);
                 }
-                
+
                 if (usersToDelete.Any())
                 {
                     _context.UserProfiles.RemoveRange(usersToDelete);
                 }
-                
+
                 _context.SaveChanges();
             }
         }
@@ -553,7 +553,7 @@ public class UserProfileRepositoryPerformanceTests : PerformanceTestBase
         {
             _output.WriteLine($"Warning: Error during test cleanup: {ex.Message}");
         }
-        
+
         base.Dispose();
     }
 }

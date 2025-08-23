@@ -36,7 +36,7 @@ public class PerformanceTestRunner : PerformanceTestBase
 
             // Execute all performance tests
             await RunQueryPerformanceTests();
-            await RunMemoryUsageTests(); 
+            await RunMemoryUsageTests();
             await RunPaginationTests();
             await RunIndexEffectivenessTests();
             await RunConcurrentAccessTests();
@@ -82,7 +82,7 @@ public class PerformanceTestRunner : PerformanceTestBase
             var batchUsers = await CreateTestDataAsync(users, maxImages);
             totalUsers += batchUsers.Count;
             totalImages += batchUsers.Sum(u => u.ProcessedImages.Count);
-            
+
             _output.WriteLine($"  Created {description}: {batchUsers.Count} users, {batchUsers.Sum(u => u.ProcessedImages.Count)} images");
         }
 
@@ -120,8 +120,8 @@ public class PerformanceTestRunner : PerformanceTestBase
             var (averageTime, averageMemory, successfulRuns) = await MeasureAveragePerformanceAsync(
                 method, runs: 15, operationName: methodName);
 
-            var expectedThreshold = methodName.Contains("Count") || methodName.Contains("Has") 
-                ? SimpleQueryThreshold 
+            var expectedThreshold = methodName.Contains("Count") || methodName.Contains("Has")
+                ? SimpleQueryThreshold
                 : ComplexQueryThreshold;
 
             var result = new PerformanceTestResult
@@ -179,7 +179,7 @@ public class PerformanceTestRunner : PerformanceTestBase
         }
 
         // Calculate memory improvements
-        if (memoryResults.ContainsKey("EagerLoading (GetByUserIdAsync)") && 
+        if (memoryResults.ContainsKey("EagerLoading (GetByUserIdAsync)") &&
             memoryResults.ContainsKey("OptimizedLight (GetByUserIdLightAsync)"))
         {
             var eagerMemory = memoryResults["EagerLoading (GetByUserIdAsync)"].Memory;
@@ -501,8 +501,8 @@ public class PerformanceTestRunner : PerformanceTestBase
                 })
             };
 
-            var json = JsonSerializer.Serialize(reportData, new JsonSerializerOptions 
-            { 
+            var json = JsonSerializer.Serialize(reportData, new JsonSerializerOptions
+            {
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
@@ -513,7 +513,7 @@ public class PerformanceTestRunner : PerformanceTestBase
 
             var fileName = $"database-performance-test-{DateTime.Now:yyyyMMdd-HHmmss}.json";
             var filePath = Path.Combine(claudeDocsPath, fileName);
-            
+
             await File.WriteAllTextAsync(filePath, json);
             _output.WriteLine($"Detailed performance report saved to: {filePath}");
         }
@@ -530,19 +530,19 @@ public class PerformanceTestRunner : PerformanceTestBase
     private void ValidateOverallPerformanceTargets()
     {
         var overallSuccessRate = (_testResults.Count(r => r.PassedTimeTarget && r.PassedMemoryTarget) / (double)_testResults.Count * 100);
-        
+
         // Assert that at least 85% of tests pass (allowing for some variation in test environments)
-        overallSuccessRate.Should().BeGreaterThan(85.0, 
+        overallSuccessRate.Should().BeGreaterThan(85.0,
             "At least 85% of performance tests should meet their targets");
 
         // Assert that no critical operations fail
         var criticalOperations = new[] { "GetByUserIdLightAsync", "GetUserProfileStatsAsync", "GetUserImagesPagedAsync" };
         var criticalResults = _testResults.Where(r => criticalOperations.Any(op => r.Operation.Contains(op))).ToList();
-        
+
         if (criticalResults.Any())
         {
             var criticalSuccessRate = (criticalResults.Count(r => r.PassedTimeTarget && r.PassedMemoryTarget) / (double)criticalResults.Count * 100);
-            criticalSuccessRate.Should().Be(100.0, 
+            criticalSuccessRate.Should().Be(100.0,
                 "All critical database operations should meet performance targets");
         }
 
@@ -550,7 +550,7 @@ public class PerformanceTestRunner : PerformanceTestBase
         var memoryComparisonResults = _testResults.Where(r => r.TestName.Contains("MemoryUsageTest")).ToList();
         if (memoryComparisonResults.Any())
         {
-            memoryComparisonResults.Should().OnlyContain(r => r.PassedMemoryTarget, 
+            memoryComparisonResults.Should().OnlyContain(r => r.PassedMemoryTarget,
                 "Memory usage optimizations should achieve expected reductions");
         }
     }

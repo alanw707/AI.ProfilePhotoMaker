@@ -40,34 +40,34 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
         public AtomicImageServiceTests()
         {
             _fixture = new Fixture();
-            
+
             // Setup in-memory database
             var options = new DbContextOptionsBuilder<ApplicationDbContext>()
                 .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
                 .Options;
             _context = new ApplicationDbContext(options);
-            
+
             // Setup test directories
             _testContentRoot = Path.Combine(Path.GetTempPath(), "AtomicImageServiceTests", Guid.NewGuid().ToString());
             Directory.CreateDirectory(_testContentRoot);
-            
+
             // Setup mocks
             _mockStorageService = new Mock<IStorageService>();
             _mockLogger = new Mock<ILogger<AtomicImageService>>();
             _mockEnvironment = new Mock<IWebHostEnvironment>();
             _mockConfiguration = new Mock<IConfiguration>();
             _mockPathResolverLogger = new Mock<ILogger<StoragePathResolver>>();
-            
+
             // Setup mock environment
             _mockEnvironment.Setup(e => e.ContentRootPath).Returns(_testContentRoot);
             _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Development");
-            
+
             // Setup path resolver
             _pathResolver = new StoragePathResolver(
                 _mockEnvironment.Object,
                 _mockConfiguration.Object,
                 _mockPathResolverLogger.Object);
-            
+
             // Create service
             _service = new AtomicImageService(
                 _context,
@@ -75,7 +75,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
                 _pathResolver,
                 _mockLogger.Object
             );
-            
+
             // Setup test user profile
             _testUserProfile = new UserProfile
             {
@@ -85,7 +85,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
                 LastName = "User",
                 ProcessedImages = new List<ProcessedImage>()
             };
-            
+
             _context.UserProfiles.Add(_testUserProfile);
             _context.SaveChanges();
         }
@@ -98,7 +98,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
             // Arrange
             var files = CreateMockFiles(new[] { "test1.jpg", "test2.png" });
             var storagePaths = new List<string>();
-            
+
             _mockStorageService.Setup(s => s.SaveImageToPathAsync(It.IsAny<Stream>(), It.IsAny<string>()))
                 .Callback<Stream, string>((stream, path) => storagePaths.Add(path))
                 .ReturnsAsync((Stream stream, string path) => path);
@@ -124,7 +124,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
             var profile = await _context.UserProfiles
                 .Include(p => p.ProcessedImages)
                 .FirstAsync(p => p.UserId == _testUserId);
-            
+
             profile.ProcessedImages.Should().HaveCount(2);
             profile.ProcessedImages.All(i => i.IsOriginalUpload).Should().BeTrue();
             profile.ProcessedImages.All(i => !i.IsGenerated).Should().BeTrue();
@@ -140,7 +140,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
             // Arrange
             var files = CreateMockFiles(new[] { "test1.jpg", "test2.png" });
             var savedPaths = new List<string>();
-            
+
             // First file succeeds, second file fails
             var firstCall = true;
             _mockStorageService.Setup(s => s.SaveImageToPathAsync(It.IsAny<Stream>(), It.IsAny<string>()))
@@ -183,7 +183,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
             var profile = await _context.UserProfiles
                 .Include(p => p.ProcessedImages)
                 .FirstAsync(p => p.UserId == _testUserId);
-            
+
             profile.ProcessedImages.Should().BeEmpty();
 
             // Verify cleanup was called for successfully uploaded file
@@ -196,7 +196,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
         {
             // Arrange
             var files = CreateMockFiles(new[] { "test1.jpg" });
-            
+
             _mockStorageService.Setup(s => s.SaveImageToPathAsync(It.IsAny<Stream>(), It.IsAny<string>()))
                 .ReturnsAsync((Stream stream, string path) => path);
 
@@ -234,7 +234,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
         {
             // Arrange
             var files = CreateMockFiles(new[] { "test1.jpg" });
-            
+
             _mockStorageService.Setup(s => s.SaveImageToPathAsync(It.IsAny<Stream>(), It.IsAny<string>()))
                 .ReturnsAsync((Stream stream, string path) => path);
 
@@ -257,7 +257,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
             var profile = await _context.UserProfiles
                 .Include(p => p.ProcessedImages)
                 .FirstAsync(p => p.UserId == _testUserId);
-            
+
             profile.ProcessedImages.Should().BeEmpty();
 
             // Verify storage call was made
@@ -317,7 +317,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
             var profile = await _context.UserProfiles
                 .Include(p => p.ProcessedImages)
                 .FirstAsync(p => p.UserId == _testUserId);
-            
+
             profile.ProcessedImages.Should().BeEmpty();
 
             // Verify storage delete was called
@@ -349,7 +349,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
             var profile = await _context.UserProfiles
                 .Include(p => p.ProcessedImages)
                 .FirstAsync(p => p.UserId == _testUserId);
-            
+
             profile.ProcessedImages.Should().BeEmpty();
 
             // Verify storage deletes were called
@@ -378,7 +378,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
             var profile = await _context.UserProfiles
                 .Include(p => p.ProcessedImages)
                 .FirstAsync(p => p.UserId == _testUserId);
-            
+
             profile.ProcessedImages.Should().HaveCount(1);
             profile.ProcessedImages.First().Id.Should().Be(imageId);
         }
@@ -406,7 +406,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
             var profile = await _context.UserProfiles
                 .Include(p => p.ProcessedImages)
                 .FirstAsync(p => p.UserId == _testUserId);
-            
+
             profile.ProcessedImages.Should().BeEmpty();
         }
 
@@ -434,7 +434,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
         {
             // Arrange
             var imageId = await SetupTestImageWithBothUrls(
-                "original.jpg", 
+                "original.jpg",
                 "/uploads/test-user/original.jpg",
                 "/processed/test-user/processed.jpg"
             );
@@ -483,7 +483,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
         private List<IFormFile> CreateMockFiles(string[] fileNames)
         {
             var files = new List<IFormFile>();
-            
+
             foreach (var fileName in fileNames)
             {
                 var content = "fake image content";
@@ -495,7 +495,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
                 };
                 files.Add(file);
             }
-            
+
             return files;
         }
 
@@ -514,7 +514,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
 
             _testUserProfile.ProcessedImages.Add(image);
             await _context.SaveChangesAsync();
-            
+
             return image.Id;
         }
 
@@ -533,7 +533,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
 
             _testUserProfile.ProcessedImages.Add(image);
             await _context.SaveChangesAsync();
-            
+
             return image.Id;
         }
 
@@ -542,7 +542,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
         public void Dispose()
         {
             _context?.Dispose();
-            
+
             // Clean up test directories
             if (Directory.Exists(_testContentRoot))
             {

@@ -24,7 +24,7 @@ public class ReplicateMockIntegrationTests : IClassFixture<CustomWebApplicationF
     {
         // Ensure fresh user setup with sufficient credits
         await _factory.EnsureTestUserWithCreditsAsync("test-user-1", 100);
-        
+
         var client = _factory.CreateAuthenticatedClient();
 
         // Clear any existing models for clean test state
@@ -42,14 +42,14 @@ public class ReplicateMockIntegrationTests : IClassFixture<CustomWebApplicationF
             UserId = "test-user-1", // Will be overridden by claims, but DTO expects this field
             ImageZipUrl = "https://example.com/mock-dataset.zip"
         });
-        
+
         // Debug: Log the response content if it's not OK
         if (trainResponse.StatusCode != HttpStatusCode.OK)
         {
             var errorContent = await trainResponse.Content.ReadAsStringAsync();
             throw new Exception($"Training failed with {trainResponse.StatusCode}: {errorContent}");
         }
-        
+
         trainResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var trainPayload = await trainResponse.Content.ReadFromJsonAsync<Dictionary<string, object>>();
@@ -93,7 +93,7 @@ public class ReplicateMockIntegrationTests : IClassFixture<CustomWebApplicationF
             .Where(m => m.UserId == "test-user-1")
             .OrderByDescending(m => m.CreatedAt)
             .FirstOrDefaultAsync();
-        
+
         modelReq.Should().NotBeNull();
         modelReq!.Status.Should().Be(ModelCreationStatus.Ready);
         modelReq.TrainedModelVersion.Should().NotBeNullOrEmpty();
@@ -105,7 +105,7 @@ public class ReplicateMockIntegrationTests : IClassFixture<CustomWebApplicationF
     {
         // Ensure fresh user setup with sufficient credits
         await _factory.EnsureTestUserWithCreditsAsync("test-user-1", 100);
-        
+
         var client = _factory.CreateAuthenticatedClient();
 
         // Clear existing models and ensure there is a Ready model for this test
@@ -113,12 +113,12 @@ public class ReplicateMockIntegrationTests : IClassFixture<CustomWebApplicationF
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var userId = "test-user-1";
-            
+
             // Clear any existing models first
             var existingModels = db.ModelCreationRequests.Where(m => m.UserId == userId).ToList();
             db.ModelCreationRequests.RemoveRange(existingModels);
             await db.SaveChangesAsync();
-            
+
             // Now seed a Ready model for this test
             db.ModelCreationRequests.Add(new ModelCreationRequest
             {
@@ -141,14 +141,14 @@ public class ReplicateMockIntegrationTests : IClassFixture<CustomWebApplicationF
             Style = "corporate",
             NumOutputs = 2
         });
-        
+
         // Debug: Log the response content if it's not OK
         if (genResp.StatusCode != HttpStatusCode.OK)
         {
             var errorContent = await genResp.Content.ReadAsStringAsync();
             throw new Exception($"Generation failed with {genResp.StatusCode}: {errorContent}");
         }
-        
+
         genResp.StatusCode.Should().Be(HttpStatusCode.OK);
         var genPayload = await genResp.Content.ReadFromJsonAsync<Dictionary<string, object>>();
         var genData = (System.Text.Json.JsonElement)genPayload!["data"];

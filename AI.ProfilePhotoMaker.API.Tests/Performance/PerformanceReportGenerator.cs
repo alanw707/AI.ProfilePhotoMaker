@@ -23,13 +23,13 @@ public class PerformanceReportGenerator
         // Create ClaudeDocs directory structure
         var claudeDocsPath = "/home/alanw/projects/AI.ProfilePhotoMaker/ClaudeDocs/Analysis/Performance";
         var metadataPath = Path.Combine(claudeDocsPath, "metadata");
-        
+
         Directory.CreateDirectory(claudeDocsPath);
         Directory.CreateDirectory(metadataPath);
 
         // Generate main performance audit report
         await GenerateMainAuditReport(claudeDocsPath);
-        
+
         // Generate metadata files
         await GenerateMetadataFiles(metadataPath);
 
@@ -41,7 +41,7 @@ public class PerformanceReportGenerator
         var reportContent = GenerateMarkdownReport();
         var fileName = $"database-performance-audit-{DateTime.Now:yyyy-MM-dd-HHmmss}.md";
         var filePath = Path.Combine(outputPath, fileName);
-        
+
         await File.WriteAllTextAsync(filePath, reportContent);
         _output.WriteLine($"Main audit report: {filePath}");
     }
@@ -49,7 +49,7 @@ public class PerformanceReportGenerator
     private string GenerateMarkdownReport()
     {
         var sb = new StringBuilder();
-        
+
         sb.AppendLine("---");
         sb.AppendLine("title: \"Database Performance Audit: AI Profile Photo Maker\"");
         sb.AppendLine("analysis_type: \"optimization\"");
@@ -431,7 +431,7 @@ public class PerformanceReportGenerator
         sb.AppendLine();
         sb.AppendLine("Key achievements:");
         sb.AppendLine("- **N+1 Query Elimination:** Reduced queries from 1-50+ to 1-5 per request");
-        sb.AppendLine("- **Strategic Indexing:** 60-80% query performance improvement");  
+        sb.AppendLine("- **Strategic Indexing:** 60-80% query performance improvement");
         sb.AppendLine("- **Memory Optimization:** 80% reduction in memory usage per request");
         sb.AppendLine("- **Scalability:** 1000% increase in concurrent user capacity");
         sb.AppendLine();

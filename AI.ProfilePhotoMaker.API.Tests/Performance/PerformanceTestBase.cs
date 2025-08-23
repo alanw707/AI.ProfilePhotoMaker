@@ -15,7 +15,7 @@ public abstract class PerformanceTestBase : IDisposable
     protected readonly ApplicationDbContext _context;
     protected readonly IServiceProvider _serviceProvider;
     protected readonly ILogger<PerformanceTestBase> _logger;
-    
+
     // Performance thresholds (configurable)
     protected readonly TimeSpan SimpleQueryThreshold = TimeSpan.FromMilliseconds(100);
     protected readonly TimeSpan ComplexQueryThreshold = TimeSpan.FromMilliseconds(150);
@@ -34,7 +34,7 @@ public abstract class PerformanceTestBase : IDisposable
         var services = new ServiceCollection();
         ConfigureServices(services);
         _serviceProvider = services.BuildServiceProvider();
-        
+
         _context = _serviceProvider.GetRequiredService<ApplicationDbContext>();
         _logger = _serviceProvider.GetRequiredService<ILogger<PerformanceTestBase>>();
 
@@ -46,7 +46,7 @@ public abstract class PerformanceTestBase : IDisposable
     {
         // Use SQL Server for realistic performance testing
         var connectionString = GetConnectionString();
-        
+
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(connectionString, sqlOptions =>
             {
@@ -79,7 +79,7 @@ public abstract class PerformanceTestBase : IDisposable
         {
             // Ensure database exists and is migrated
             _context.Database.EnsureCreated();
-            
+
             // Clear existing test data
             _context.ProcessedImages.RemoveRange(_context.ProcessedImages);
             _context.UserProfiles.RemoveRange(_context.UserProfiles);
@@ -100,15 +100,15 @@ public abstract class PerformanceTestBase : IDisposable
             options.UseInMemoryDatabase($"TestDb_{Guid.NewGuid()}"));
         services.AddScoped<IUserProfileRepository, UserProfileRepository>();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
-        
+
         var newServiceProvider = services.BuildServiceProvider();
         var newContext = newServiceProvider.GetRequiredService<ApplicationDbContext>();
-        
+
         // Replace the current context
         _context?.Dispose();
         typeof(PerformanceTestBase).GetField("_context", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
             .SetValue(this, newContext);
-        
+
         if (_serviceProvider is IDisposable disposableProvider)
         {
             disposableProvider.Dispose();
@@ -174,7 +174,7 @@ public abstract class PerformanceTestBase : IDisposable
             users.Add(user);
         }
 
-        _logger.LogInformation("Created {UserCount} test users with total {ImageCount} images", 
+        _logger.LogInformation("Created {UserCount} test users with total {ImageCount} images",
             userCount, users.Sum(u => u.ProcessedImages.Count));
 
         return users;
@@ -232,7 +232,7 @@ public abstract class PerformanceTestBase : IDisposable
     /// Measures average performance over multiple runs
     /// </summary>
     protected async Task<(TimeSpan AverageTime, long AverageMemoryIncrease, int SuccessfulRuns)> MeasureAveragePerformanceAsync<T>(
-        Func<Task<T>> operation, 
+        Func<Task<T>> operation,
         int runs = 10,
         string operationName = "Operation")
     {
@@ -253,7 +253,7 @@ public abstract class PerformanceTestBase : IDisposable
 
                 if (i % (runs / 10) == 0) // Log every 10%
                 {
-                    _logger.LogInformation("Completed {Current}/{Total} runs, last run: {Time}ms", 
+                    _logger.LogInformation("Completed {Current}/{Total} runs, last run: {Time}ms",
                         i + 1, runs, elapsed.TotalMilliseconds);
                 }
             }
@@ -276,8 +276,8 @@ public abstract class PerformanceTestBase : IDisposable
     /// Validates that performance metrics meet the defined targets
     /// </summary>
     protected void AssertPerformanceTargets(
-        TimeSpan actualTime, 
-        TimeSpan expectedTime, 
+        TimeSpan actualTime,
+        TimeSpan expectedTime,
         long memoryIncrease = 0,
         string operationName = "Operation")
     {
