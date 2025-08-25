@@ -6,8 +6,8 @@ import {
   Router,
   RouterStateSnapshot,
 } from '@angular/router';
-import { Observable } from 'rxjs';
-import { map, tap } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { map, switchMap, tap, catchError } from 'rxjs/operators';
 import { AuthService } from '../services/auth.service';
 
 @Injectable({
@@ -35,7 +35,7 @@ export class AppGuard implements CanActivate, CanActivateChild {
 
   private _checkAuth(redirectUrl: string): Observable<boolean> {
     return this._authService.isAuthenticated$.pipe(
-      tap(isAuthenticated => {
+      switchMap(isAuthenticated => {
         if (!isAuthenticated) {
           // Store the attempted URL for redirecting after login
           sessionStorage.setItem('redirectUrl', redirectUrl);
@@ -47,9 +47,31 @@ export class AppGuard implements CanActivate, CanActivateChild {
               returnUrl: redirectUrl,
             },
           });
+          return of(false);
         }
-      }),
-      map(isAuthenticated => isAuthenticated)
+
+        // Skip profile completion check for the profile completion route itself
+        if (redirectUrl.includes('/auth/complete-profile')) {
+          return of(true);
+        }
+
+        // User is authenticated, now check profile completion
+        return this._authService.checkProfileCompletion().pipe(
+          tap(profileStatus => {
+            if (!profileStatus.isCompleted) {
+              // Profile is incomplete, redirect to completion page
+              console.log('🔒 Profile incomplete, redirecting to profile completion');
+              this._router.navigate(['/auth/complete-profile']);
+            }
+          }),
+          map(profileStatus => profileStatus.isCompleted),
+          catchError(error => {
+            // If profile completion check fails, allow access but log error
+            console.error('🔒 Profile completion check failed:', error);
+            return of(true); // Allow access on error
+          })
+        );
+      })
     );
   }
 }

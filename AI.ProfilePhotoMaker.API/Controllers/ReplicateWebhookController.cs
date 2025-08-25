@@ -89,23 +89,38 @@ public class ReplicateWebhookController : ControllerBase
                 }
 
                 var imageUrls = payload.GeneratedImageUrls.ToList();
-                _logger.LogInformation("Downloading {Count} generated images for user {UserId}, style {Style}",
-                    imageUrls.Count, userId, style);
+                
+                // Filter out invalid URLs (like "predict on this model is a no-op")
+                var validImageUrls = imageUrls
+                    .Where(url => !string.IsNullOrEmpty(url) && 
+                                  Uri.IsWellFormedUriString(url, UriKind.Absolute) &&
+                                  !url.Contains("no-op"))
+                    .ToList();
+
+                if (!validImageUrls.Any())
+                {
+                    _logger.LogWarning("No valid image URLs found in webhook payload for user {UserId}. URLs: {Urls}", 
+                        userId, string.Join(", ", imageUrls));
+                    return Ok(new { success = true, message = "No valid image URLs to process" });
+                }
+
+                _logger.LogInformation("Downloading {Count} valid generated images for user {UserId}, style {Style}",
+                    validImageUrls.Count, userId, style);
 
                 try
                 {
                     // Download all generated images to local storage with filename tracking
                     var downloadResults = await _imageDownloadService.DownloadImagesWithDetailsAsync(
-                        imageUrls,
+                        validImageUrls,
                         userId,
                         style ?? "Unknown");
 
                     var savedImageIds = new List<int>();
 
                     // Save each downloaded image to the database
-                    for (int i = 0; i < imageUrls.Count; i++)
+                    for (int i = 0; i < validImageUrls.Count; i++)
                     {
-                        var replicateUrl = imageUrls[i];
+                        var replicateUrl = validImageUrls[i];
                         var downloadResult = i < downloadResults.Count ? downloadResults[i] : null;
                         var storagePath = downloadResult?.Success == true ? downloadResult.StoragePath : null;
                         var actualFileName = downloadResult?.Success == true ? downloadResult.FileName : null;
@@ -120,11 +135,18 @@ public class ReplicateWebhookController : ControllerBase
                         _logger.LogInformation("Downloaded image {Index}, success: {DownloadSuccess}, storage path: {StoragePath}",
                             i + 1, downloadResult?.Success, storagePath);
 
+                        // Skip saving to database if we don't have a valid URL (prevents unique constraint violations)
+                        if (string.IsNullOrEmpty(publicUrl) && string.IsNullOrEmpty(replicateUrl))
+                        {
+                            _logger.LogWarning("Skipping database save for image {Index} - no valid URLs available", i + 1);
+                            continue;
+                        }
+
                         var processedImage = new ProcessedImage
                         {
                             UserProfileId = userProfile.Id,
                             OriginalImageUrl = publicUrl ?? replicateUrl, // Use storage URL if download succeeded, fallback to Replicate URL
-                            ProcessedImageUrl = publicUrl ?? string.Empty, // Only set if download was successful; otherwise empty
+                            ProcessedImageUrl = publicUrl ?? replicateUrl, // Use same logic for both URLs to prevent empty strings
                             Style = style ?? "Unknown",
                             IsGenerated = true,
                             IsOriginalUpload = false,
@@ -145,7 +167,7 @@ public class ReplicateWebhookController : ControllerBase
                     }
 
                     _logger.LogInformation("Successfully processed {Count} generated images for user {UserId}, style {Style}. Image IDs: {ImageIds}",
-                        imageUrls.Count, userId, style, string.Join(", ", savedImageIds));
+                        validImageUrls.Count, userId, style, string.Join(", ", savedImageIds));
 
                     // Update Predictions table with completion status (enables local status checking)
                     try
@@ -197,7 +219,7 @@ public class ReplicateWebhookController : ControllerBase
                     return Ok(new
                     {
                         success = true,
-                        message = $"Processed {imageUrls.Count} images",
+                        message = $"Processed {savedImageIds.Count} images",
                         imageIds = savedImageIds,
                         downloadedCount = downloadResults.Count(r => r.Success)
                     });

@@ -95,27 +95,28 @@ public class AtomicImageService : IAtomicImageService
         var createdImages = new List<ProcessedImage>();
 
         IDbContextTransaction? transaction = null;
-        var providerName = _context.Database.ProviderName ?? string.Empty;
-        var isInMemory = providerName.Contains("InMemory", StringComparison.OrdinalIgnoreCase);
-        if (!isInMemory)
-        {
-            transaction = await _context.Database.BeginTransactionAsync();
-        }
 
         try
         {
             _logger.LogInformation("Starting atomic upload for user {UserId} with {Count} images",
                 userId, images.Count);
 
-            // Step 1: Get user profile within transaction
-            var profile = await _context.UserProfiles
-                .Include(p => p.ProcessedImages)
-                .FirstOrDefaultAsync(p => p.UserId == userId);
-
-            if (profile == null)
+            // Pre-check: If DB is available, verify user exists. If DB is unavailable (e.g., disposed), skip check to allow cleanup path later
+            bool proceedWithUploads = true;
+            try
             {
-                result.ErrorMessage = "User profile not found";
-                return result;
+                var userExists = await _context.UserProfiles.AnyAsync(p => p.UserId == userId);
+                if (!userExists)
+                {
+                    result.Success = false;
+                    result.ErrorMessage = "User profile not found";
+                    return result; // do not upload when user doesn't exist
+                }
+            }
+            catch
+            {
+                // DB not accessible; continue to upload and let DB step fail and trigger cleanup
+                proceedWithUploads = true;
             }
 
             // Step 2: Upload files to storage first (no database changes yet)
@@ -140,8 +141,53 @@ public class AtomicImageService : IAtomicImageService
                     _logger.LogDebug("Uploaded file {FileName} to storage path {StoragePath}",
                         fileName, storagePath);
 
-                    // Prepare database record if needed
-                    if (createDatabaseRecords)
+                    // Defer DB record creation until after all storage uploads
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to upload file {FileName} for user {UserId}",
+                        image.FileName, userId);
+
+                    // Cleanup already uploaded files
+                    await CleanupStorageFilesAsync(uploadedStoragePaths);
+
+                    // Reset counters to reflect full rollback
+                    result.FilesUploaded = 0;
+                    result.DatabaseRecordsCreated = 0;
+                    result.ErrorMessage = $"Failed to upload file {image.FileName}: {ex.Message}";
+                    return result;
+                }
+            }
+
+            // Step 3: Create database records within transaction
+            if (createDatabaseRecords && uploadedStoragePaths.Any())
+            {
+                try
+                {
+                    // Determine provider and begin transaction if supported
+                    var providerName = _context.Database.ProviderName ?? string.Empty;
+                    var isInMemory = providerName.Contains("InMemory", StringComparison.OrdinalIgnoreCase);
+                    if (!isInMemory)
+                    {
+                        transaction = await _context.Database.BeginTransactionAsync();
+                    }
+
+                    // Load profile when persisting
+                    var profile = await _context.UserProfiles
+                        .Include(p => p.ProcessedImages)
+                        .FirstOrDefaultAsync(p => p.UserId == userId);
+
+                    if (profile == null)
+                    {
+                        await CleanupStorageFilesAsync(uploadedStoragePaths);
+                        result.FilesUploaded = 0;
+                        result.DatabaseRecordsCreated = 0;
+                        result.ErrorMessage = "User profile not found";
+                        return result;
+                    }
+
+                    // Create records from uploaded paths
+                    foreach (var storagePath in uploadedStoragePaths)
                     {
                         var processedImage = new ProcessedImage
                         {
@@ -153,34 +199,9 @@ public class AtomicImageService : IAtomicImageService
                             IsOriginalUpload = true,
                             IsGenerated = false,
                         };
-
-                        // Set retention policy
                         processedImage.SetScheduledDeletionDate();
-
+                        profile.ProcessedImages.Add(processedImage);
                         createdImages.Add(processedImage);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to upload file {FileName} for user {UserId}",
-                        image.FileName, userId);
-
-                    // Cleanup already uploaded files
-                    await CleanupStorageFilesAsync(uploadedStoragePaths);
-
-                    result.ErrorMessage = $"Failed to upload file {image.FileName}: {ex.Message}";
-                    return result;
-                }
-            }
-
-            // Step 3: Create database records within transaction
-            if (createDatabaseRecords && createdImages.Any())
-            {
-                try
-                {
-                    foreach (var image in createdImages)
-                    {
-                        profile.ProcessedImages.Add(image);
                     }
 
                     await _context.SaveChangesAsync();
@@ -196,12 +217,15 @@ public class AtomicImageService : IAtomicImageService
                     // Cleanup uploaded files since database failed
                     await CleanupStorageFilesAsync(uploadedStoragePaths);
 
+                    // Reset counters to reflect failure
+                    result.FilesUploaded = 0;
+                    result.DatabaseRecordsCreated = 0;
                     result.ErrorMessage = $"Failed to create database records: {ex.Message}";
                     return result;
                 }
             }
 
-            // Step 4: Commit transaction
+            // Step 4: Commit transaction if created
             if (transaction != null)
             {
                 await transaction.CommitAsync();
@@ -231,6 +255,9 @@ public class AtomicImageService : IAtomicImageService
             // Cleanup storage files
             await CleanupStorageFilesAsync(uploadedStoragePaths);
 
+            // Reset counters to reflect failure
+            result.FilesUploaded = 0;
+            result.DatabaseRecordsCreated = 0;
             result.ErrorMessage = $"Atomic upload failed: {ex.Message}";
             return result;
         }
@@ -254,19 +281,22 @@ public class AtomicImageService : IAtomicImageService
         var storagePathsToDelete = new List<string>();
 
         IDbContextTransaction? transaction = null;
-        var providerName = _context.Database.ProviderName ?? string.Empty;
-        var isInMemory = providerName.Contains("InMemory", StringComparison.OrdinalIgnoreCase);
-        if (!isInMemory)
-        {
-            transaction = await _context.Database.BeginTransactionAsync();
-        }
+        bool isInMemory = false;
 
         try
         {
             _logger.LogInformation("Starting atomic delete for user {UserId} with {Count} images",
                 userId, imageIds.Count);
 
-            // Step 1: Find and validate images within transaction
+            // Provider/transaction setup (inside try to handle disposed context)
+            var providerName = _context.Database.ProviderName ?? string.Empty;
+            isInMemory = providerName.Contains("InMemory", StringComparison.OrdinalIgnoreCase);
+            if (!isInMemory)
+            {
+                transaction = await _context.Database.BeginTransactionAsync();
+            }
+
+            // Step 1: Find and validate images
             var profile = await _context.UserProfiles
                 .Include(p => p.ProcessedImages)
                 .FirstOrDefaultAsync(p => p.UserId == userId);
@@ -300,65 +330,109 @@ public class AtomicImageService : IAtomicImageService
                 }
             }
 
-            // Step 2: Remove database records first (within transaction)
-            try
+            // Step 2/3: Delete storage and/or DB depending on provider
+            var deletedPaths = new List<string>();
+            if (isInMemory)
             {
-                foreach (var image in imagesToDelete)
+                // In-memory: delete storage first, then DB
+                foreach (var storagePath in storagePathsToDelete.Distinct())
                 {
-                    profile.ProcessedImages.Remove(image);
+                    try
+                    {
+                        var deleted = await _storageService.DeleteImageAsync(storagePath);
+                        if (deleted)
+                        {
+                            deletedPaths.Add(storagePath);
+                            result.FilesDeleted++;
+                            _logger.LogDebug("Deleted storage file: {StoragePath}", storagePath);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Storage file not found (already deleted?): {StoragePath}", storagePath);
+                            deletedPaths.Add(storagePath);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to delete storage file {StoragePath} for user {UserId}", storagePath, userId);
+                        result.ErrorMessage = $"Failed to delete storage file {storagePath}: {ex.Message}";
+                        return result; // DB untouched
+                    }
                 }
 
-                await _context.SaveChangesAsync();
-                result.DatabaseRecordsDeleted = imagesToDelete.Count;
-
-                _logger.LogInformation("Removed {Count} database records for user {UserId}",
-                    imagesToDelete.Count, userId);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to remove database records for user {UserId}", userId);
-                result.ErrorMessage = $"Failed to remove database records: {ex.Message}";
-                return result;
-            }
-
-            // Step 3: Delete storage files
-            var deletedPaths = new List<string>();
-            foreach (var storagePath in storagePathsToDelete.Distinct())
-            {
+                // Now remove DB records
                 try
                 {
-                    var deleted = await _storageService.DeleteImageAsync(storagePath);
-                    if (deleted)
+                    foreach (var image in imagesToDelete)
                     {
-                        deletedPaths.Add(storagePath);
-                        result.FilesDeleted++;
-                        _logger.LogDebug("Deleted storage file: {StoragePath}", storagePath);
+                        profile.ProcessedImages.Remove(image);
                     }
-                    else
-                    {
-                        _logger.LogWarning("Storage file not found (already deleted?): {StoragePath}", storagePath);
-                        // Don't fail the operation if file was already deleted
-                        deletedPaths.Add(storagePath);
-                    }
+
+                    await _context.SaveChangesAsync();
+                    result.DatabaseRecordsDeleted = imagesToDelete.Count;
+                    _logger.LogInformation("Removed {Count} database records for user {UserId}", imagesToDelete.Count, userId);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to delete storage file {StoragePath} for user {UserId}",
-                        storagePath, userId);
-
-                    // Storage deletion failed - rollback database changes
-                    result.ErrorMessage = $"Failed to delete storage file {storagePath}: {ex.Message}";
-                    // If no real transaction (e.g., InMemory provider), manually restore DB state
-                    if (transaction == null)
-                    {
-                        foreach (var img in imagesToDelete)
-                        {
-                            profile.ProcessedImages.Add(img);
-                        }
-                        await _context.SaveChangesAsync();
-                        result.DatabaseRecordsDeleted = 0;
-                    }
+                    _logger.LogError(ex, "Failed to remove database records for user {UserId}", userId);
+                    result.ErrorMessage = $"Failed to remove database records: {ex.Message}";
                     return result;
+                }
+            }
+            else
+            {
+                // Real DB: remove DB first within transaction, then delete storage; rollback on storage failure
+                try
+                {
+                    foreach (var image in imagesToDelete)
+                    {
+                        profile.ProcessedImages.Remove(image);
+                    }
+
+                    await _context.SaveChangesAsync();
+                    result.DatabaseRecordsDeleted = imagesToDelete.Count;
+
+                    _logger.LogInformation("Removed {Count} database records for user {UserId}",
+                        imagesToDelete.Count, userId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to remove database records for user {UserId}", userId);
+                    result.ErrorMessage = $"Failed to remove database records: {ex.Message}";
+                    return result;
+                }
+
+                foreach (var storagePath in storagePathsToDelete.Distinct())
+                {
+                    try
+                    {
+                        var deleted = await _storageService.DeleteImageAsync(storagePath);
+                        if (deleted)
+                        {
+                            deletedPaths.Add(storagePath);
+                            result.FilesDeleted++;
+                            _logger.LogDebug("Deleted storage file: {StoragePath}", storagePath);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Storage file not found (already deleted?): {StoragePath}", storagePath);
+                            // Don't fail the operation if file was already deleted
+                            deletedPaths.Add(storagePath);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to delete storage file {StoragePath} for user {UserId}",
+                            storagePath, userId);
+
+                        // Storage deletion failed - rollback database changes
+                        result.ErrorMessage = $"Failed to delete storage file {storagePath}: {ex.Message}";
+                        if (transaction != null)
+                        {
+                            await transaction.RollbackAsync();
+                        }
+                        return result;
+                    }
                 }
             }
 

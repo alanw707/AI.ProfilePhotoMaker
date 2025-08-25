@@ -106,6 +106,11 @@ public class LocalStorageService : BaseStorageService
 
         try
         {
+            // Normalize if a full URL was provided
+            if (Uri.TryCreate(storagePath, UriKind.Absolute, out var uri))
+            {
+                storagePath = uri.AbsolutePath; // keep leading '/'
+            }
             var fullPath = GetFullPath(storagePath);
             var deleted = await _asyncFileService.DeleteFileAsync(fullPath);
 

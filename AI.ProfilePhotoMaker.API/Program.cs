@@ -664,7 +664,41 @@ static async Task ValidateReplicateConfigurationAsync(WebApplication app)
 
 static void LoadEnvironmentVariables(IWebHostEnvironment environment)
 {
-    // Implementation would go here
+    var envFile = Path.Combine(environment.ContentRootPath, $".env.{environment.EnvironmentName.ToLower()}");
+    
+    if (File.Exists(envFile))
+    {
+        Console.WriteLine($"Loading environment variables from: {envFile}");
+        
+        var lines = File.ReadAllLines(envFile);
+        foreach (var line in lines)
+        {
+            if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#") || line.StartsWith("//"))
+                continue;
+                
+            var parts = line.Split('=', 2);
+            if (parts.Length == 2)
+            {
+                var key = parts[0].Trim();
+                var value = parts[1].Trim();
+                
+                // Remove quotes if present
+                if ((value.StartsWith("\"") && value.EndsWith("\"")) || 
+                    (value.StartsWith("'") && value.EndsWith("'")))
+                {
+                    value = value.Substring(1, value.Length - 2);
+                }
+                
+                Environment.SetEnvironmentVariable(key, value);
+            }
+        }
+        
+        Console.WriteLine($"✅ Loaded environment variables from .env.{environment.EnvironmentName.ToLower()}");
+    }
+    else
+    {
+        Console.WriteLine($"No environment file found at: {envFile}");
+    }
 }
 
 // Expose Program class for WebApplicationFactory in tests

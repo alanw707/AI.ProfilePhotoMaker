@@ -106,12 +106,28 @@ sleep 3
 echo "🗄️  Starting SQL Server container..."
 docker-compose up sql-server -d
 
+# Start Azurite container (Azure Storage emulator)
+echo "☁️  Starting Azurite (Azure Storage emulator)..."
+docker-compose up azurite -d
+
 # Wait for SQL Server container health
 echo "⏳ Waiting for SQL Server to be healthy..."
 for i in {1..60}; do
   STATUS=$(docker inspect --format '{{.State.Health.Status}}' aipm-sqlserver 2>/dev/null || echo "unknown")
   if [ "$STATUS" = "healthy" ]; then
     echo " ✅ SQL Server healthy!"
+    break
+  fi
+  echo -n "."
+  sleep 2
+done
+
+# Wait for Azurite container health
+echo "⏳ Waiting for Azurite to be healthy..."
+for i in {1..30}; do
+  STATUS=$(docker inspect --format '{{.State.Health.Status}}' aipm-azurite 2>/dev/null || echo "unknown")
+  if [ "$STATUS" = "healthy" ]; then
+    echo " ✅ Azurite healthy!"
     break
   fi
   echo -n "."
@@ -175,6 +191,7 @@ echo "🔧 API:       http://localhost:5032"
 echo "🔧 API Docs:  http://localhost:5032/swagger"
 echo "🔗 Ngrok:     https://clear-anteater-usually.ngrok-free.app"
 echo "🗄️  Database: localhost:1433 (sa/<hidden>)"
+echo "☁️  Azurite:  http://localhost:10000 (blob), :10001 (queue), :10002 (table)"
 echo ""
 echo "📊 Process IDs saved in logs/ directory"
 echo "📝 Logs available in logs/ directory"

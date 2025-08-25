@@ -1,0 +1,28 @@
+// Profile completion specific styles
+.profile-completion-container
+  @apply min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-indigo-900
+
+// Form field focus states
+input:focus, select:focus
+  @apply ring-2 ring-indigo-500 border-transparent
+
+// Loading states
+.loading-spinner
+  @apply animate-spin
+
+// Theme toggle button
+.theme-toggle
+  @apply transition-colors duration-200
+
+// Error states
+.error-field
+  @apply border-red-300 dark:border-red-600
+
+// Success states  
+.success-field
+  @apply border-green-300 dark:border-green-600
+
+// Responsive adjustments
+@media (max-width: 640px)
+  .profile-completion-container
+    @apply p-2

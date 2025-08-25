@@ -233,58 +233,51 @@ public class ReplicateController : ControllerBase
             // Get user info from database for prompt generation
             var userProfile = await _dbContext.UserProfiles.FirstOrDefaultAsync(u => u.UserId == userId);
 
-            // Get user's trained model from ModelCreationRequest
-            var trainedModel = await _dbContext.ModelCreationRequests
-                .Where(m => m.UserId == userId && m.Status == ModelCreationStatus.Ready)
-                .OrderByDescending(m => m.CompletedAt)
-                .FirstOrDefaultAsync();
-
-            // Check if the model is still available on Replicate
-            if (trainedModel != null && !string.IsNullOrEmpty(trainedModel.ReplicateModelId))
-            {
-                var modelAvailable = await _replicateApiClient.CheckModelAvailabilityAsync(trainedModel.ReplicateModelId);
-                if (!modelAvailable)
-                {
-                    _logger.LogWarning("Model {ModelId} is no longer available on Replicate for user {UserId}",
-                        trainedModel.ReplicateModelId, userId);
-
-                    // Mark the model as failed instead of deleting it
-                    trainedModel.Status = ModelCreationStatus.Failed;
-                    trainedModel.ErrorMessage = "Model no longer available on Replicate";
-                    await _dbContext.SaveChangesAsync();
-
-                    return BadRequest(new
-                    {
-                        success = false,
-                        error = new
-                        {
-                            code = "ModelExpired",
-                            message = "Your trained model has expired or been deleted. Please train a new model to generate styled images."
-                        }
-                    });
-                }
-            }
-
-            // Ensure we have a model to use for generation
-            var modelVersionToUse = dto.TrainedModelVersion;
-            if (string.IsNullOrEmpty(modelVersionToUse) && trainedModel != null)
-            {
-                modelVersionToUse = trainedModel.TrainedModelVersion;
-                _logger.LogInformation("Using model version from database: {ModelVersion}", modelVersionToUse);
-            }
-
-            if (string.IsNullOrEmpty(modelVersionToUse))
+            // Validate trained model using database as single source of truth
+            var (success, trainedModel, errorCode, errorMessage) = await ValidateTrainedModelAsync(userId);
+            if (!success)
             {
                 return BadRequest(new
                 {
                     success = false,
                     error = new
                     {
-                        code = "NoModelAvailable",
-                        message = "No trained model available for generation. Please train a model first."
+                        code = errorCode,
+                        message = errorMessage
                     }
                 });
             }
+
+            // trainedModel is guaranteed to be non-null after successful validation
+            var model = trainedModel!;
+
+            // Check if the model is still available on Replicate                        
+            var modelAvailable = await _replicateApiClient.CheckModelAvailabilityAsync(model.ReplicateModelId!);
+            if (!modelAvailable)
+            {
+                _logger.LogWarning("Model {ModelId} is no longer available on Replicate for user {UserId}",
+                    model.ReplicateModelId, userId);
+
+                // Mark the model as failed instead of deleting it
+                model.Status = ModelCreationStatus.Failed;
+                model.ErrorMessage = "Model no longer available on Replicate";
+                await _dbContext.SaveChangesAsync();
+
+                return BadRequest(new
+                {
+                    success = false,
+                    error = new
+                    {
+                        code = "ModelExpired",
+                        message = "Your trained model has expired or been deleted. Please train a new model to generate styled images."
+                    }
+                });
+            }
+            
+            // Use trained model from database as single source of truth
+            var modelVersionToUse = FormatModelVersion(model.ReplicateModelId!, model.TrainedModelVersion!);
+            _logger.LogInformation("Using trained model version from database: ModelId={ModelId}, Version={Version}", 
+                model.ReplicateModelId, modelVersionToUse);
 
             var userInfo = userProfile != null ? new UserInfo
             {
@@ -391,58 +384,51 @@ public class ReplicateController : ControllerBase
             // Get user info from database for prompt generation
             var userProfile = await _dbContext.UserProfiles.FirstOrDefaultAsync(u => u.UserId == userId);
 
-            // Get user's trained model from ModelCreationRequest
-            var trainedModel = await _dbContext.ModelCreationRequests
-                .Where(m => m.UserId == userId && m.Status == ModelCreationStatus.Ready)
-                .OrderByDescending(m => m.CompletedAt)
-                .FirstOrDefaultAsync();
-
-            // Check if the model is still available on Replicate
-            if (trainedModel != null && !string.IsNullOrEmpty(trainedModel.ReplicateModelId))
-            {
-                var modelAvailable = await _replicateApiClient.CheckModelAvailabilityAsync(trainedModel.ReplicateModelId);
-                if (!modelAvailable)
-                {
-                    _logger.LogWarning("Model {ModelId} is no longer available on Replicate for user {UserId}",
-                        trainedModel.ReplicateModelId, userId);
-
-                    // Mark the model as failed instead of deleting it
-                    trainedModel.Status = ModelCreationStatus.Failed;
-                    trainedModel.ErrorMessage = "Model no longer available on Replicate";
-                    await _dbContext.SaveChangesAsync();
-
-                    return BadRequest(new
-                    {
-                        success = false,
-                        error = new
-                        {
-                            code = "ModelExpired",
-                            message = "Your trained model has expired or been deleted. Please train a new model to generate styled images."
-                        }
-                    });
-                }
-            }
-
-            // Ensure we have a model to use for generation
-            var modelVersionToUse = dto.TrainedModelVersion;
-            if (string.IsNullOrEmpty(modelVersionToUse) && trainedModel != null)
-            {
-                modelVersionToUse = trainedModel.TrainedModelVersion;
-                _logger.LogInformation("Using model version from database: {ModelVersion}", modelVersionToUse);
-            }
-
-            if (string.IsNullOrEmpty(modelVersionToUse))
+            // Validate trained model using database as single source of truth
+            var (success, trainedModel, errorCode, errorMessage) = await ValidateTrainedModelAsync(userId);
+            if (!success)
             {
                 return BadRequest(new
                 {
                     success = false,
                     error = new
                     {
-                        code = "NoModelAvailable",
-                        message = "No trained model available for generation. Please train a model first."
+                        code = errorCode,
+                        message = errorMessage
                     }
                 });
             }
+
+            // trainedModel is guaranteed to be non-null after successful validation
+            var model = trainedModel!;
+
+            // Check if the model is still available on Replicate
+            var modelAvailable = await _replicateApiClient.CheckModelAvailabilityAsync(model.ReplicateModelId!);
+            if (!modelAvailable)
+            {
+                _logger.LogWarning("Model {ModelId} is no longer available on Replicate for user {UserId}",
+                    model.ReplicateModelId, userId);
+
+                // Mark the model as failed instead of deleting it
+                model.Status = ModelCreationStatus.Failed;
+                model.ErrorMessage = "Model no longer available on Replicate";
+                await _dbContext.SaveChangesAsync();
+
+                return BadRequest(new
+                {
+                    success = false,
+                    error = new
+                    {
+                        code = "ModelExpired",
+                        message = "Your trained model has expired or been deleted. Please train a new model to generate styled images."
+                    }
+                });
+            }
+
+            // Use trained model from database as single source of truth
+            var modelVersionToUse = FormatModelVersion(model.ReplicateModelId!, model.TrainedModelVersion!);
+            _logger.LogInformation("Using trained model version from database: ModelId={ModelId}, Version={Version}", 
+                model.ReplicateModelId, modelVersionToUse);
 
             var userInfo = userProfile != null ? new UserInfo
             {
@@ -1126,5 +1112,101 @@ public class ReplicateController : ControllerBase
                 }
             });
         }
+    }
+
+    /// <summary>
+    /// Validates and retrieves trained model from database as single source of truth
+    /// </summary>
+    private async Task<(bool Success, ModelCreationRequest? Model, string? ErrorCode, string? ErrorMessage)> 
+        ValidateTrainedModelAsync(string userId)
+    {
+        // Get user's trained model from database
+        var trainedModel = await _dbContext.ModelCreationRequests
+            .Where(m => m.UserId == userId && m.Status == ModelCreationStatus.Ready)
+            .OrderByDescending(m => m.CompletedAt)
+            .FirstOrDefaultAsync();
+
+        if (trainedModel == null)
+        {
+            return (false, null, "NoTrainedModel", "No trained model found. Please train a model before generating styled images.");
+        }
+
+        if (string.IsNullOrEmpty(trainedModel.ReplicateModelId))
+        {
+            _logger.LogError("User {UserId} has trained model without ReplicateModelId", userId);
+            return (false, null, "IncompleteModel", "Your trained model data is incomplete. Please contact support or retrain your model.");
+        }
+
+        if (string.IsNullOrEmpty(trainedModel.TrainedModelVersion))
+        {
+            _logger.LogError("User {UserId} has trained model without TrainedModelVersion", userId);
+            return (false, null, "IncompleteModel", "Your trained model data is incomplete. Please contact support or retrain your model.");
+        }
+
+        return (true, trainedModel, null, null);
+    }
+
+    /// <summary>
+    /// TEMP DEBUG: Check user's model status for troubleshooting
+    /// </summary>
+    [HttpGet("debug/models/{userId}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> DebugUserModels(string userId)
+    {
+        try
+        {
+            var models = await _dbContext.ModelCreationRequests
+                .Where(m => m.UserId == userId)
+                .OrderByDescending(m => m.CreatedAt)
+                .Select(m => new {
+                    m.ModelName,
+                    m.ReplicateModelId,
+                    m.TrainedModelVersion,
+                    m.Status,
+                    m.CreatedAt,
+                    m.CompletedAt
+                })
+                .ToListAsync();
+
+            return Ok(new { success = true, data = models });
+        }
+        catch (Exception ex)
+        {
+            return Ok(new { success = false, error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Formats model version for Replicate API calls.
+    /// Converts stored components into required format: "owner/modelId:versionHash"
+    /// </summary>
+    private static string FormatModelVersion(string replicateModelId, string trainedModelVersion)
+    {
+        // If already in fully qualified format (owner/model:version), return as-is
+        if (!string.IsNullOrEmpty(trainedModelVersion) && trainedModelVersion.Contains(":"))
+        {
+            var beforeColon = trainedModelVersion.Split(':')[0];
+            if (beforeColon.Contains('/'))
+            {
+                return trainedModelVersion;
+            }
+        }
+
+        // Standardize to canonical owner and extracted model name
+        // replicateModelId can be "owner/model" or just "model"; always use canonical owner
+        const string canonicalOwner = "alanw707";
+        if (string.IsNullOrEmpty(replicateModelId))
+        {
+            return trainedModelVersion; // fallback; let caller handle upstream validation
+        }
+
+        var modelName = replicateModelId;
+        var slashIdx = replicateModelId.IndexOf('/');
+        if (slashIdx >= 0 && slashIdx < replicateModelId.Length - 1)
+        {
+            modelName = replicateModelId.Substring(slashIdx + 1);
+        }
+
+        return $"{canonicalOwner}/{modelName}:{trainedModelVersion}";
     }
 }

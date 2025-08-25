@@ -16,6 +16,7 @@ interface TrainingZipResponse {
   error?: any;
 }
 
+// Used for polling training status
 interface TrainingStatusResponse {
   success: boolean;
   data: {
@@ -28,6 +29,25 @@ interface TrainingStatusResponse {
     logs?: string;
   };
   error?: any;
+}
+
+// Used for starting training (includes credits info and wraps prediction)
+interface TrainingStartApiResponse {
+  success: boolean;
+  data: {
+    prediction: {
+      id: string;
+      status: string;
+      created_at: string;
+      completed_at?: string;
+      version?: string;
+      error?: string;
+      logs?: string;
+    };
+    creditsRemaining: number;
+    creditsCost: number;
+  } | null;
+  error?: { code?: string; message?: string } | any;
 }
 
 interface BatchGenerationResponse {
@@ -71,7 +91,7 @@ interface FileUploadService {
 }
 
 interface ReplicateService {
-  trainModel(request: TrainModelRequest): Observable<TrainingStatusResponse>;
+  trainModel(request: TrainModelRequest): Observable<TrainingStartApiResponse>;
   getTrainingStatus(trainingId: string): Observable<TrainingStatusResponse>;
   generateBatchImages(request: GenerateBatchImagesRequest): Observable<BatchGenerationResponse>;
   getPredictionStatus(predictionId: string): Observable<PredictionStatusResponse>;
@@ -338,34 +358,52 @@ export class WorkflowOrchestrationService {
     }
 
     try {
+      // CRITICAL FIX: Ensure data is fully loaded before making routing decisions
+      if (
+        currentState.modelStatus === 'Loading...' ||
+        currentState.modelStatus === '' ||
+        !currentState.modelStatus
+      ) {
+        console.log('⏳ WAITING FOR DATA: Model status not loaded yet, refreshing...');
+        await this._deps.stateService.loadInitialDashboardData();
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Allow time for state updates
+
+        // Get refreshed state
+        const refreshedState = this._deps.stateService.getState();
+        console.log('🔄 REFRESHED STATE:', {
+          modelStatus: refreshedState.modelStatus,
+          hasLatestModel: !!refreshedState.latestTrainedModel,
+        });
+
+        // Use refreshed state
+        Object.assign(currentState, refreshedState);
+      }
+
       const modelStatus = currentState.modelStatus;
       const latestTrainedModel = currentState.latestTrainedModel;
 
-      if (modelStatus === 'Model Ready') {
-        const modelVersion =
-          latestTrainedModel?.trainedModelVersion || latestTrainedModel?.versionId;
-        const modelId = latestTrainedModel?.replicateModelId || latestTrainedModel?.modelId;
+      // CRITICAL FIX: Determine if user has ANY trained model, regardless of status
+      const hasTrainedModel = this._checkForExistingTrainedModel(latestTrainedModel, modelStatus);
 
-        if (modelVersion) {
-          this._deps.notificationService.info(
-            'Using Existing Model',
-            'Using your previously trained model for generation'
-          );
-          await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, modelVersion);
-        } else if (modelId) {
-          this._deps.notificationService.info(
-            'Using Existing Model',
-            'Using your previously trained model for generation'
-          );
-          await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, modelId);
-        } else {
-          this._deps.notificationService.error(
-            'Model Error',
-            'Model data not found. Please refresh and try again.'
-          );
-          return;
-        }
+      console.log('🚨 WORKFLOW ROUTING DECISION:', {
+        modelStatus,
+        hasTrainedModel,
+        latestTrainedModel: !!latestTrainedModel,
+        modelVersion: latestTrainedModel?.trainedModelVersion || latestTrainedModel?.versionId,
+        modelId: latestTrainedModel?.replicateModelId || latestTrainedModel?.modelId,
+      });
+
+      if (hasTrainedModel) {
+        // User has a trained model - always use generation, never training
+        console.log('🎯 ROUTING TO GENERATION: User has trained model');
+        await this._handleExistingModelGeneration(
+          selectedStyles,
+          imagesPerStyle,
+          latestTrainedModel
+        );
       } else {
+        // User needs a new model - start training process
+        console.log('🔄 ROUTING TO TRAINING: User needs new model');
         await this._startModelTraining(selectedStyles, imagesPerStyle);
       }
     } catch (error) {
@@ -388,6 +426,122 @@ export class WorkflowOrchestrationService {
         console.error('⚙️ Configuration issue - check settings');
       } else if (error instanceof Error && error.message.includes('Payment required')) {
         console.error('💳 Billing issue - check Replicate account');
+      }
+    }
+  }
+
+  /**
+   * CRITICAL FIX: Determine if user has ANY trained model available
+   * This prevents incorrect fallback to training when generation should be used
+   */
+  private _checkForExistingTrainedModel(latestTrainedModel: any, modelStatus: string): boolean {
+    // Check 1: Explicit model status indicates ready
+    if (modelStatus === 'Model Ready') {
+      return true;
+    }
+
+    // Check 2: We have trained model data with version/ID
+    if (latestTrainedModel) {
+      const hasModelVersion = !!(
+        latestTrainedModel.trainedModelVersion || latestTrainedModel.versionId
+      );
+      const hasModelId = !!(latestTrainedModel.replicateModelId || latestTrainedModel.modelId);
+
+      if (hasModelVersion || hasModelId) {
+        return true;
+      }
+    }
+
+    // Check 3: Model status suggests training exists (even if not fully ready)
+    const statusesWithModel = ['Training', 'ModelReady', 'Completed', 'Ready'];
+    if (statusesWithModel.some(status => modelStatus?.includes(status))) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * CRITICAL FIX: Handle generation for users with existing trained models
+   * This ensures we NEVER create training ZIPs for existing model users
+   */
+  private async _handleExistingModelGeneration(
+    selectedStyles: StyleOption[],
+    imagesPerStyle: number,
+    latestTrainedModel: any
+  ): Promise<void> {
+    try {
+      // Attempt to get model version for generation
+      const modelVersion = latestTrainedModel?.trainedModelVersion || latestTrainedModel?.versionId;
+      const modelId = latestTrainedModel?.replicateModelId || latestTrainedModel?.modelId;
+
+      this._deps.notificationService.info(
+        'Using Existing Model',
+        'Using your previously trained model for generation'
+      );
+
+      // Priority 1: Use explicit model version
+      if (modelVersion) {
+        console.log('✅ Using model version:', modelVersion);
+        await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, modelVersion);
+        return;
+      }
+
+      // Priority 2: Use model ID if available
+      if (modelId) {
+        console.log('✅ Using model ID:', modelId);
+        await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, modelId);
+        return;
+      }
+
+      // Priority 3: Attempt to refresh state and try again
+      console.log('🔄 No version/ID found, refreshing state...');
+      this._deps.stateService.forceRefresh();
+      await this._deps.stateService.loadInitialDashboardData();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const refreshedState = this._deps.stateService.getState();
+      const refreshedModel = refreshedState?.latestTrainedModel;
+      if (refreshedModel) {
+        const refreshedVersion = refreshedModel.trainedModelVersion || refreshedModel.versionId;
+        const refreshedId = refreshedModel.replicateModelId || refreshedModel.modelId;
+
+        if (refreshedVersion) {
+          console.log('✅ Found version after refresh:', refreshedVersion);
+          await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, refreshedVersion);
+          return;
+        }
+
+        if (refreshedId) {
+          console.log('✅ Found ID after refresh:', refreshedId);
+          await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, refreshedId);
+          return;
+        }
+      }
+
+      // Priority 4: Last resort - let backend resolve from database
+      console.log('🎯 Using backend resolution with empty version');
+      await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, '');
+    } catch (error: any) {
+      console.error('❌ Generation with existing model failed:', error);
+
+      // Handle specific error cases
+      const errorMsg = error?.message || error?.error?.message || '';
+
+      if (
+        errorMsg.toLowerCase().includes('model not found') ||
+        errorMsg.toLowerCase().includes('version not found')
+      ) {
+        // Model data is stale, let backend resolve
+        console.log('🔄 Model data stale, using backend resolution');
+        await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, '');
+      } else if (errorMsg.toLowerCase().includes('already have a trained model')) {
+        // Backend says model exists but we couldn't find version - use backend resolution
+        this._deps.notificationService.info('Model Found', 'Using your existing trained model');
+        await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, '');
+      } else {
+        // Other errors - propagate up
+        throw error;
       }
     }
   }
@@ -427,6 +581,14 @@ export class WorkflowOrchestrationService {
 
       // Provide more specific error messages based on the failure point
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+
+      // Auto-fallback: if user already has a trained model, skip training and start generation
+      if (errorMessage.toLowerCase().includes('already have a trained model')) {
+        this._deps.notificationService.modelAlreadyTrained();
+        // Use empty modelVersion to let backend resolve the latest Ready model
+        await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, '');
+        return;
+      }
 
       if (errorMessage.includes('Failed to create training ZIP')) {
         const detailedMessage = errorMessage.includes('after cleanup and retry')
@@ -652,7 +814,8 @@ export class WorkflowOrchestrationService {
     }
 
     console.log('✅ Training request successful:', trainResult);
-    return trainResult.data.id;
+    // API returns the training result under data.prediction
+    return trainResult.data!.prediction.id;
   }
 
   private _finalizeTrainingSetup(trainingId: string): void {
@@ -747,25 +910,20 @@ export class WorkflowOrchestrationService {
                 this._ngZone.runOutsideAngular(() => setTimeout(resolve, 500))
               );
 
-              // Start generation with the new model
-              const userProfile = this._deps.stateService.getState().userProfile;
-              if (userProfile?.trainedModelVersionId) {
+              // Start generation only with the actual user model version
+              // Avoid using training status version (which is the trainer's version)
+              const resolvedVersion = await this._waitForUserModelVersionId(6, 1000);
+              if (resolvedVersion) {
                 await this._generateImagesWithStyles(
                   selectedStyles,
                   imagesPerStyle,
-                  userProfile.trainedModelVersionId
+                  resolvedVersion
                 );
               } else {
-                // If model version not found, try to extract from training result
-                const versionId = statusResult.data.version;
-                if (versionId) {
-                  await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, versionId);
-                } else {
-                  this._deps.notificationService.error(
-                    'Generation Error',
-                    'Could not find trained model version. Please refresh and try again.'
-                  );
-                }
+                this._deps.notificationService.error(
+                  'Generation Delayed',
+                  "Your model is trained, but the version isn't available yet. Please wait a few seconds and try again."
+                );
               }
             } else if (status === 'failed') {
               clearInterval(this._pollingInterval);
@@ -922,6 +1080,29 @@ export class WorkflowOrchestrationService {
         error instanceof Error ? error.message : 'Failed to generate images'
       );
     }
+  }
+
+  // Waits for the user's custom model version to be available in state (poll + refresh)
+  // Returns the version string when found, otherwise null
+  private async _waitForUserModelVersionId(attempts = 5, delayMs = 1000): Promise<string | null> {
+    for (let i = 0; i < attempts; i++) {
+      const state = this._deps.stateService.getState();
+      const version =
+        state.userProfile?.trainedModelVersionId ||
+        state.latestTrainedModel?.trainedModelVersion ||
+        state.latestTrainedModel?.versionId;
+      if (version) {
+        return version;
+      }
+      // Reload dashboard data to pick up DB updates, then wait briefly
+      try {
+        await this._deps.stateService.loadInitialDashboardData();
+      } catch {}
+      await new Promise(resolve =>
+        this._ngZone.runOutsideAngular(() => setTimeout(resolve, delayMs))
+      );
+    }
+    return null;
   }
 
   // Prediction completion polling - tracks specific prediction IDs

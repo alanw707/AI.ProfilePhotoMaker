@@ -388,37 +388,42 @@ public class ReplicateApiClient : IReplicateApiClient
             // Get style template from database and create prompt
             var stylePrompts = await GetStylePromptsFromDatabase(style);
             string stylePrompt = CreateFluxStylePrompt(stylePrompts.PromptTemplate, userInfo, userId);
-            string negativePrompt = stylePrompts.NegativePromptTemplate;
 
-            // Log the model version being used for generation
             _logger.LogInformation("Generating images with model version: {ModelVersion} for user: {UserId}, style: {Style}",
                 trainedModelVersion, userId, style);
-
-            // Debug logging for prompt generation
-            _logger.LogInformation("Style template from DB: {Template}", stylePrompts.PromptTemplate);
-            _logger.LogInformation("UserInfo passed: Gender={Gender}, Ethnicity={Ethnicity}",
-                userInfo?.Gender ?? "NULL", userInfo?.Ethnicity ?? "NULL");
             _logger.LogInformation("Generated prompt: {Prompt}", stylePrompt);
 
+            // Get webhook URL for async processing
+            var webhookUrl = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete");
+
+            // Build standardized Replicate API request payload for trained model
             var predictionRequest = new
             {
-                version = trainedModelVersion,
-                input = new
+                version = trainedModelVersion, // Trained model version: "owner/model:versionHash"
+                input = new Dictionary<string, object?>
                 {
-                    txt = stylePrompt, // Use 'txt' parameter for trained models instead of 'prompt'
-                    negative_prompt = negativePrompt,
-                    num_inference_steps = 40,
-                    guidance_scale = 7.5,
-                    num_outputs = Math.Max(1, Math.Min(4, numOutputs)), // Clamp between 1-4
-                    scheduler = "K_EULER_ANCESTRAL",
-                    output_format = "png",
-                    webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete"),
-                    webhook_events_filter = new[] { "completed" },
-                    // Add metadata for webhook processing
-                    user_id = userId,
-                    style = style
+                    ["model"] = "dev",
+                    ["width"] = 520,
+                    ["height"] = 520,
+                    ["prompt"] = stylePrompt,
+                    ["txt"] = stylePrompt, // Required by trained LoRA models
+                    ["go_fast"] = false,
+                    ["lora_scale"] = 1,
+                    ["megapixels"] = "1",
+                    ["num_outputs"] = Math.Max(1, Math.Min(4, numOutputs)), // Clamp between 1-4
+                    ["aspect_ratio"] = "1:1",
+                    ["output_format"] = "png",
+                    ["guidance_scale"] = 3,
+                    ["output_quality"] = 80,
+                    ["prompt_strength"] = 0.8,
+                    ["extra_lora_scale"] = 1,
+                    ["num_inference_steps"] = 28,
+                    // Metadata for webhook processing
+                    ["user_id"] = userId,
+                    ["style"] = style
                 },
-                webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete")
+                webhook = webhookUrl,
+                webhook_events_filter = new[] { "completed" }
             };
 
             var content = new StringContent(
@@ -426,6 +431,7 @@ public class ReplicateApiClient : IReplicateApiClient
                 Encoding.UTF8,
                 "application/json");
 
+            // Always use predictions endpoint - single execution path
             var response = await _httpClient.PostAsync("predictions", content);
 
             if (!response.IsSuccessStatusCode)
@@ -590,10 +596,7 @@ public class ReplicateApiClient : IReplicateApiClient
     /// </summary>
     private string CreateFluxStylePrompt(string promptTemplate, UserInfo? userInfo, string userId)
     {
-        // Get base subject description
-        string subject = GetSubjectDescription(userInfo);
-
-        // Add trigger word (user_ + user ID) to activate the trained model
+        // For trained models, use the trigger word as the subject to activate the trained model
         string triggerWord = $"user_{userId}";
 
         // Replace all placeholders in the template
@@ -604,8 +607,7 @@ public class ReplicateApiClient : IReplicateApiClient
         string genderEthnicityCombo = !string.IsNullOrEmpty(ethnicity) ? $"{gender} {ethnicity}" : gender;
 
         string result = promptTemplate
-            .Replace("{trigger}", triggerWord)
-            .Replace("{subject}", subject)
+            .Replace("{subject}", triggerWord)  // Use trigger word as subject for trained models
             .Replace("{gender} {ethnicity}", genderEthnicityCombo)
             .Replace("{gender}", gender)
             .Replace("{ethnicity}", ethnicity);
@@ -844,20 +846,21 @@ public class ReplicateApiClient : IReplicateApiClient
 
             var predictionRequest = new
             {
-                version = baseFluxModel,
-                input = new
+                // For public/base models, prefer specifying the model id explicitly
+                model = baseFluxModel,
+                input = new Dictionary<string, object?>
                 {
-                    prompt = stylePrompt,
-                    negative_prompt = negativePrompt,
-                    num_inference_steps = 30, // Slightly lower for basic tier
-                    guidance_scale = 7.0,
-                    num_outputs = 1, // Only 1 image for basic tier
-                    scheduler = "K_EULER_ANCESTRAL",
-                    output_format = "png",
-                    width = 1024,
-                    height = 1024,
-                    webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete"),
-                    webhook_events_filter = new[] { "completed" }
+                    ["prompt"] = stylePrompt,
+                    ["negative_prompt"] = negativePrompt,
+                    ["num_inference_steps"] = 30, // Slightly lower for basic tier
+                    ["guidance_scale"] = 7.0,
+                    ["num_outputs"] = 1, // Only 1 image for basic tier
+                    ["scheduler"] = "K_EULER_ANCESTRAL",
+                    ["output_format"] = "png",
+                    ["width"] = 1024,
+                    ["height"] = 1024,
+                    ["webhook"] = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete"),
+                    ["webhook_events_filter"] = new[] { "completed" }
                 },
                 webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete")
             };
@@ -951,20 +954,21 @@ public class ReplicateApiClient : IReplicateApiClient
 
             var predictionRequest = new
             {
-                version = kontextProModel,
-                input = new
+                // Kontext Pro is a public model; specify by model id for clarity
+                model = kontextProModel,
+                input = new Dictionary<string, object?>
                 {
-                    input_image = imageUrl,
-                    prompt = enhancementPrompt,
-                    negative_prompt = "blurry, low quality, distorted, deformed, bad anatomy, poor lighting, overexposed, underexposed, artifact, noise",
-                    num_inference_steps = 30,
-                    guidance_scale = 7.5,
-                    strength = 0.8,
-                    output_format = "png",
-                    width = 1024,
-                    height = 1024,
-                    webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete"),
-                    webhook_events_filter = new[] { "completed" }
+                    ["input_image"] = imageUrl,
+                    ["prompt"] = enhancementPrompt,
+                    ["negative_prompt"] = "blurry, low quality, distorted, deformed, bad anatomy, poor lighting, overexposed, underexposed, artifact, noise",
+                    ["num_inference_steps"] = 30,
+                    ["guidance_scale"] = 7.5,
+                    ["strength"] = 0.8,
+                    ["output_format"] = "png",
+                    ["width"] = 1024,
+                    ["height"] = 1024,
+                    ["webhook"] = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete"),
+                    ["webhook_events_filter"] = new[] { "completed" }
                 },
                 webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete")
             };

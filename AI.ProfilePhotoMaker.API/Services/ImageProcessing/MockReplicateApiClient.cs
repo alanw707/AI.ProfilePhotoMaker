@@ -224,7 +224,11 @@ public class MockReplicateApiClient : IReplicateApiClient
         return Task.FromResult(list);
     }
 
-    public Task<string?> GetModelVersionAsync(string modelId) => Task.FromResult<string?>("mock-version");
+    public Task<string?> GetModelVersionAsync(string modelId)
+    {
+        // Return just the version hash - the calling code will format it properly
+        return Task.FromResult<string?>("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
+    }
 
     public Task<bool> CheckModelAvailabilityAsync(string modelId) => Task.FromResult(true);
 }
