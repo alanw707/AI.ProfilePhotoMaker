@@ -173,6 +173,73 @@ public class ModelCreationStatusController : ControllerBase
     }
 
     /// <summary>
+    /// Debug endpoint to get current user model requests without auth
+    /// </summary>
+    [HttpGet("debug/user/{userId}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetCurrentUserModelRequestsDebug(string userId)
+    {
+        try
+        {
+            var modelRequests = await _context.ModelCreationRequests
+                .Where(r => r.UserId == userId)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            // Find the most recent model marked as Ready (regardless of TrainedModelVersion) and validate against Replicate
+            var readyModel = modelRequests
+                .FirstOrDefault(r => r.Status == ModelCreationStatus.Ready);
+
+            return Ok(new
+            {
+                success = true,
+                message = $"Found {modelRequests.Count} model creation requests for user {userId}",
+                data = new
+                {
+                    totalRequests = modelRequests.Count,
+                    hasTrainedModel = readyModel != null && !string.IsNullOrEmpty(readyModel.TrainedModelVersion),
+                    latestTrainedModel = (readyModel != null && !string.IsNullOrEmpty(readyModel.TrainedModelVersion)) ? new
+                    {
+                        requestId = readyModel.Id,
+                        modelName = readyModel.ModelName,
+                        replicateModelId = readyModel.ReplicateModelId,
+                        trainedModelVersion = readyModel.TrainedModelVersion,
+                        completedAt = readyModel.CompletedAt
+                    } : null,
+                    readyModelDebug = readyModel != null ? new 
+                    {
+                        id = readyModel.Id,
+                        status = readyModel.Status,
+                        trainedModelVersionIsNull = string.IsNullOrEmpty(readyModel.TrainedModelVersion),
+                        trainedModelVersionValue = readyModel.TrainedModelVersion
+                    } : null,
+                    allRequests = modelRequests.Select(r => new
+                    {
+                        requestId = r.Id,
+                        modelName = r.ModelName,
+                        replicateModelId = r.ReplicateModelId,
+                        trainedModelVersion = r.TrainedModelVersion,
+                        status = r.Status.ToString().ToLower(),
+                        createdAt = r.CreatedAt,
+                        completedAt = r.CompletedAt,
+                        errorMessage = r.ErrorMessage
+                    })
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving model creation requests for user {UserId}", userId);
+            return StatusCode(500, new
+            {
+                success = false,
+                message = "Error retrieving model creation requests",
+                error = new { code = "InternalError", message = ex.Message }
+            });
+        }
+    }
+
+    /// <summary>
     /// Get all model creation requests for a user
     /// </summary>
     [HttpGet("user/{userId}")]

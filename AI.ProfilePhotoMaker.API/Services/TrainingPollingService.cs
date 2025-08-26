@@ -91,13 +91,30 @@ public class TrainingPollingService : ITrainingPollingService
             {
                 _logger.LogInformation("Training {TrainingId} completed successfully", trainingId);
 
-                // Extract the trained model version from the training result
-                var trainedModelVersion = trainingStatus.Version;
+                // Extract the trained model version for the user's custom model
+                // Note: Replicate training status "version" may point to the trainer model (no-op for predictions)
+                // So we resolve the actual latest version of the created destination model in Replicate
+                string? resolvedVersionId = null;
+
+                try
+                {
+                    if (!string.IsNullOrEmpty(modelRequest.ReplicateModelId))
+                    {
+                        resolvedVersionId = await scopedReplicateClient.GetModelVersionAsync(modelRequest.ReplicateModelId);
+                        _logger.LogInformation("Resolved model version for {ModelId}: {VersionId}", modelRequest.ReplicateModelId, resolvedVersionId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to resolve version for model {ModelId}; will fall back to trainingStatus.Version", modelRequest.ReplicateModelId);
+                }
+
+                var trainedModelVersion = resolvedVersionId ?? trainingStatus.Version;
                 if (string.IsNullOrEmpty(trainedModelVersion))
                 {
-                    _logger.LogError("Training completed but no model version found in response for training {TrainingId}", trainingId);
+                    _logger.LogError("Training completed but no resolvable model version for training {TrainingId}", trainingId);
                     modelRequest.Status = ModelCreationStatus.Failed;
-                    modelRequest.ErrorMessage = "Training completed but no model version found in response";
+                    modelRequest.ErrorMessage = "Training completed but could not determine trained model version";
                     modelRequest.CompletedAt = DateTime.UtcNow;
                 }
                 else

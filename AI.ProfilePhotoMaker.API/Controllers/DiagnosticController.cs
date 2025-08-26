@@ -1,25 +1,62 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Models;
 
 namespace AI.ProfilePhotoMaker.API.Controllers
 {
+#if DEBUG || DEVELOPMENT
+    /// <summary>
+    /// SECURITY WARNING: This controller provides direct database access and is ONLY available in DEBUG/Development builds.
+    /// It will be completely excluded from Production builds for security.
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class DiagnosticController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<DiagnosticController> _logger;
+        private readonly IWebHostEnvironment _environment;
 
-        public DiagnosticController(ApplicationDbContext context, ILogger<DiagnosticController> logger)
+        public DiagnosticController(
+            ApplicationDbContext context, 
+            ILogger<DiagnosticController> logger,
+            IWebHostEnvironment environment)
         {
             _context = context;
             _logger = logger;
+            _environment = environment;
+
+            // Double-check: Even if compiled in, refuse to work in production
+            if (_environment.IsProduction())
+            {
+                _logger.LogCritical("🚨 SECURITY: DiagnosticController accessed in Production environment - this should never happen!");
+                throw new InvalidOperationException("DiagnosticController is not available in Production environment");
+            }
+
+            _logger.LogWarning("⚠️ DiagnosticController initialized in {Environment} environment", _environment.EnvironmentName);
+        }
+
+        /// <summary>
+        /// Security gate: All endpoints first check environment to prevent accidental production exposure
+        /// </summary>
+        private ActionResult ValidateEnvironment()
+        {
+            if (_environment.IsProduction())
+            {
+                _logger.LogCritical("🚨 SECURITY: Diagnostic endpoint accessed in Production environment!");
+                return NotFound("Diagnostic endpoints are not available in Production");
+            }
+            return null; // Continue with operation
         }
 
         [HttpPost("run-migrations")]
         public async Task<IActionResult> RunMigrations()
         {
+            // Security gate: Validate environment before any database operations
+            var envCheck = ValidateEnvironment();
+            if (envCheck != null) return envCheck;
+
             try
             {
                 _logger.LogCritical("🚨 MANUAL MIGRATION: Starting database migration from API endpoint");
@@ -70,6 +107,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         [HttpPost("reset-database")]
         public async Task<IActionResult> ResetDatabase()
         {
+            // CRITICAL Security gate: This operation DESTROYS ALL DATA
+            var envCheck = ValidateEnvironment();
+            if (envCheck != null) return envCheck;
+
             try
             {
                 _logger.LogCritical("🚨 DATABASE RESET: Starting database reset (drop and recreate)");
@@ -124,6 +165,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         [HttpPost("create-tables-sql")]
         public async Task<IActionResult> CreateTablesWithRawSql()
         {
+            // Security gate: Raw SQL execution requires validation
+            var envCheck = ValidateEnvironment();
+            if (envCheck != null) return envCheck;
+
             try
             {
                 _logger.LogCritical("🚨 RAW SQL: Creating database tables with raw SQL commands");
@@ -976,6 +1021,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         [HttpPost("populate-all-styles")]
         public async Task<IActionResult> PopulateAllStyles()
         {
+            // Security gate: Data modification requires validation
+            var envCheck = ValidateEnvironment();
+            if (envCheck != null) return envCheck;
+
             try
             {
                 _logger.LogCritical("🚨 STYLES POPULATION: Populating all 21 styles");
@@ -1086,5 +1135,205 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+
+        [HttpPost("update-prompt-templates")]
+        public async Task<IActionResult> UpdatePromptTemplates()
+        {
+            try
+            {
+                var styles = await _context.Styles.ToListAsync();
+                int updatedCount = 0;
+
+                foreach (var style in styles)
+                {
+                    // Only update if template doesn't already start with "A photo of {subject}"
+                    if (!style.PromptTemplate.StartsWith("A photo of {subject}"))
+                    {
+                        style.PromptTemplate = $"A photo of {"{subject}"}, {style.PromptTemplate}";
+                        style.UpdatedAt = DateTime.UtcNow;
+                        updatedCount++;
+                    }
+                }
+
+                if (updatedCount > 0)
+                {
+                    await _context.SaveChangesAsync();
+                }
+
+                return Ok(new { 
+                    success = true, 
+                    updatedCount, 
+                    totalStyles = styles.Count,
+                    message = $"Updated {updatedCount} prompt templates to include 'A photo of {{subject}}' format"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("fix-duplicate-subject")]
+        public async Task<IActionResult> FixDuplicateSubject()
+        {
+            try
+            {
+                var styles = await _context.Styles.ToListAsync();
+                int fixedCount = 0;
+
+                foreach (var style in styles)
+                {
+                    // Fix duplicate {subject} placeholders
+                    if (style.PromptTemplate.Contains("A photo of {subject}, {subject},"))
+                    {
+                        style.PromptTemplate = style.PromptTemplate.Replace("A photo of {subject}, {subject},", "A photo of {subject},");
+                        style.UpdatedAt = DateTime.UtcNow;
+                        fixedCount++;
+                    }
+                }
+
+                if (fixedCount > 0)
+                {
+                    await _context.SaveChangesAsync();
+                }
+
+                return Ok(new { 
+                    success = true, 
+                    fixedCount, 
+                    totalStyles = styles.Count,
+                    message = $"Fixed {fixedCount} templates with duplicate {{subject}} placeholders"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("model-requests")]
+        public async Task<IActionResult> GetModelRequests()
+        {
+            // Security gate: validate environment
+            var envCheck = ValidateEnvironment();
+            if (envCheck != null) return envCheck;
+
+            try
+            {
+                _logger.LogCritical("🔍 MODEL REQUESTS: Querying ModelCreationRequests table");
+
+                var canConnect = await _context.Database.CanConnectAsync();
+                if (!canConnect)
+                {
+                    return BadRequest("Cannot connect to database");
+                }
+
+                var modelRequests = await _context.ModelCreationRequests
+                    .OrderByDescending(m => m.CreatedAt)
+                    .Select(m => new
+                    {
+                        m.Id,
+                        m.UserId,
+                        m.ModelName,
+                        m.ReplicateModelId,
+                        m.TrainedModelVersion,
+                        m.Status,
+                        m.TrainingImageZipUrl,
+                        m.CreatedAt,
+                        m.CompletedAt,
+                        m.ErrorMessage,
+                        m.PendingTrainingRequestId
+                    })
+                    .ToListAsync();
+
+                _logger.LogCritical("Found {Count} model requests", modelRequests.Count);
+
+                return Ok(new
+                {
+                    success = true,
+                    totalCount = modelRequests.Count,
+                    modelRequests = modelRequests
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical("❌ MODEL REQUESTS FAILED: {Message}", ex.Message);
+                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+            }
+        }
+
+        [HttpPost("cleanup-model-requests")]
+        public async Task<IActionResult> CleanupModelRequests()
+        {
+            // Security gate: validate environment
+            var envCheck = ValidateEnvironment();
+            if (envCheck != null) return envCheck;
+
+            try
+            {
+                _logger.LogCritical("🚨 MODEL CLEANUP: Deleting non-ready models and updating ready model version");
+
+                var canConnect = await _context.Database.CanConnectAsync();
+                if (!canConnect)
+                {
+                    return BadRequest("Cannot connect to database");
+                }
+
+                // First, get all model requests to see current state
+                var allRequests = await _context.ModelCreationRequests.ToListAsync();
+                _logger.LogCritical("Found {Count} total model requests", allRequests.Count);
+
+                // Delete non-ready models
+                var nonReadyModels = allRequests.Where(m => m.Status != ModelCreationStatus.Ready).ToList();
+                _logger.LogCritical("Found {Count} non-ready models to delete", nonReadyModels.Count);
+
+                foreach (var model in nonReadyModels)
+                {
+                    _logger.LogCritical("Deleting model {Id} with status {Status}", model.Id, model.Status.ToString());
+                    _context.ModelCreationRequests.Remove(model);
+                }
+
+                // Update ready model with correct version
+                var readyModels = allRequests.Where(m => m.Status == ModelCreationStatus.Ready).ToList();
+                _logger.LogCritical("Found {Count} ready models", readyModels.Count);
+
+                var correctVersion = "1c4af7f02bb6e1815b6f0d7baf9e188b96d79af3d0a97d0e5e1e81148d447b40";
+
+                foreach (var readyModel in readyModels)
+                {
+                    _logger.LogCritical("Updating ready model {Id} version from '{OldVersion}' to '{NewVersion}'", 
+                        readyModel.Id, readyModel.TrainedModelVersion, correctVersion);
+                    readyModel.TrainedModelVersion = correctVersion;
+                }
+
+                // Save changes
+                await _context.SaveChangesAsync();
+                _logger.LogCritical("✅ MODEL CLEANUP: Cleanup completed successfully");
+
+                // Get final state
+                var finalRequests = await _context.ModelCreationRequests.ToListAsync();
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Model cleanup completed",
+                    deletedCount = nonReadyModels.Count,
+                    updatedCount = readyModels.Count,
+                    remainingModels = finalRequests.Select(m => new
+                    {
+                        Id = m.Id,
+                        Status = m.Status.ToString(),
+                        TrainedModelVersion = m.TrainedModelVersion,
+                        ReplicateModelId = m.ReplicateModelId
+                    }).ToList()
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical("❌ MODEL CLEANUP FAILED: {Message}", ex.Message);
+                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+            }
+        }
+
     }
+#endif
 }

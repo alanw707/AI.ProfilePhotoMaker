@@ -25,6 +25,21 @@ export interface AuthResponseDto {
   lastName: string;
 }
 
+export interface ProfileCompletionDto {
+  firstName: string;
+  lastName: string;
+  gender: string;
+  ethnicity: string;
+}
+
+export interface ProfileCompletionCheckDto {
+  isCompleted: boolean;
+  hasFirstName: boolean;
+  hasLastName: boolean;
+  hasGender: boolean;
+  hasEthnicity: boolean;
+}
+
 export interface ApiAuthResponseDto {
   isSuccess: boolean;
   message: string;
@@ -571,5 +586,21 @@ export class AuthService {
       console.error('🔒 Error checking token expiry:', error);
       return true; // If we can't parse the token, consider it expired
     }
+  }
+
+  // Profile Completion Methods
+  checkProfileCompletion(): Observable<ProfileCompletionCheckDto> {
+    return this._http.get<ProfileCompletionCheckDto>(
+      this._config.buildApiEndpoint('auth/profile-completion-status')
+    );
+  }
+
+  completeProfile(
+    profileData: ProfileCompletionDto
+  ): Observable<{ success: boolean; message: string }> {
+    return this._http.post<{ success: boolean; message: string }>(
+      this._config.buildApiEndpoint('auth/complete-profile'),
+      profileData
+    );
   }
 }

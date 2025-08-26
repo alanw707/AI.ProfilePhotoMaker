@@ -50,6 +50,15 @@ export const routes: Routes = [
         redirectTo: 'register',
         pathMatch: 'full',
       },
+      {
+        path: 'complete-profile',
+        loadComponent: () =>
+          import('./auth/complete-profile/complete-profile.component').then(
+            m => m.CompleteProfileComponent
+          ),
+        title: 'Complete Profile - AI Profile Photo Maker',
+        data: { hideNavigation: false },
+      },
     ],
   },
   // Legacy auth routes (for backwards compatibility)

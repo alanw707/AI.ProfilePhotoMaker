@@ -125,7 +125,7 @@ public class ReplicateMockIntegrationTests : IClassFixture<CustomWebApplicationF
                 UserId = userId,
                 ModelName = "user-test",
                 ReplicateModelId = "mock/user-test",
-                TrainedModelVersion = "mock-version",
+                TrainedModelVersion = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
                 Status = ModelCreationStatus.Ready,
                 CreatedAt = DateTime.UtcNow,
                 CompletedAt = DateTime.UtcNow

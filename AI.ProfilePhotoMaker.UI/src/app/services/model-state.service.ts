@@ -139,6 +139,18 @@ export class ModelStateService implements IModelStateService {
         modelStatus = normalized;
         return { modelStatus, hasTrainedModel, latestTrainedModel };
       }
+      // Normalize server message indicating trained model to unified display
+      // e.g. "Model trained - ready for generation"
+      if (
+        normalized.startsWith('Model trained') ||
+        normalized.toLowerCase().includes('ready for generation')
+      ) {
+        modelStatus = 'Model Ready';
+        // We can't guarantee latestTrainedModel details from this endpoint
+        // but we can safely reflect readiness in the dashboard
+        hasTrainedModel = true;
+        return { modelStatus, hasTrainedModel, latestTrainedModel };
+      }
     }
 
     // If no trained model yet, look at the most recent request first to avoid stale entries influencing status

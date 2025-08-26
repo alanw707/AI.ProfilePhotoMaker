@@ -152,15 +152,46 @@ public class AzureBlobStorageService : BaseStorageService
             string containerName;
             string blobPath;
 
-            if (storagePath.StartsWith("style-previews/"))
+            // Normalize if a full URL was provided (e.g., Azurite or Azure Blob URL)
+            if (Uri.TryCreate(storagePath, UriKind.Absolute, out var uri))
             {
-                containerName = "style-previews";
-                blobPath = storagePath.Substring("style-previews/".Length);
+                var path = uri.AbsolutePath.TrimStart('/');
+                // Azurite format: /devstoreaccount1/{container}/{blob...}
+                // Azure format: /{container}/{blob...}
+                var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                if (segments.Length >= 2)
+                {
+                    if (string.Equals(segments[0], "devstoreaccount1", StringComparison.OrdinalIgnoreCase))
+                    {
+                        containerName = segments[1];
+                        blobPath = string.Join('/', segments.Skip(2));
+                    }
+                    else
+                    {
+                        containerName = segments[0];
+                        blobPath = string.Join('/', segments.Skip(1));
+                    }
+                }
+                else
+                {
+                    // Fallback to configured container and raw path
+                    containerName = _containerName;
+                    blobPath = path;
+                }
             }
             else
             {
-                containerName = _containerName;
-                blobPath = storagePath;
+                // Relative storage path
+                if (storagePath.StartsWith("style-previews/"))
+                {
+                    containerName = "style-previews";
+                    blobPath = storagePath.Substring("style-previews/".Length);
+                }
+                else
+                {
+                    containerName = _containerName;
+                    blobPath = storagePath;
+                }
             }
 
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);

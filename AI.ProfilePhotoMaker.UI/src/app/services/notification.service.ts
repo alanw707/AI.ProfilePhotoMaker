@@ -11,7 +11,7 @@ export interface Notification {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class NotificationService {
   private notificationsSubject = new BehaviorSubject<Notification[]>([]);
@@ -29,7 +29,7 @@ export class NotificationService {
       ...notification,
       id,
       timestamp: new Date(),
-      duration: notification.duration ?? 5000 // 5 seconds default
+      duration: notification.duration ?? 5000, // 5 seconds default
     };
 
     const currentNotifications = this.notificationsSubject.value;
@@ -54,7 +54,7 @@ export class NotificationService {
       type: 'success',
       title,
       message,
-      duration
+      duration,
     });
   }
 
@@ -63,7 +63,7 @@ export class NotificationService {
       type: 'error',
       title,
       message,
-      duration: duration ?? 0 // Errors stay until manually dismissed
+      duration: duration ?? 0, // Errors stay until manually dismissed
     });
   }
 
@@ -72,7 +72,7 @@ export class NotificationService {
       type: 'warning',
       title,
       message,
-      duration
+      duration,
     });
   }
 
@@ -81,7 +81,7 @@ export class NotificationService {
       type: 'info',
       title,
       message,
-      duration
+      duration,
     });
   }
 
@@ -104,24 +104,28 @@ export class NotificationService {
   }
 
   uploadError(error: string): string {
-    return this.error(
-      'Upload Failed',
-      error || 'Failed to upload images. Please try again.'
-    );
+    return this.error('Upload Failed', error || 'Failed to upload images. Please try again.');
   }
 
   generationSuccess(creditsRemaining?: number): string {
-    const message = creditsRemaining !== undefined 
-      ? `Image generated successfully! You have ${creditsRemaining} credits remaining.`
-      : 'Image generated successfully!';
-    
+    const message =
+      creditsRemaining !== undefined
+        ? `Image generated successfully! You have ${creditsRemaining} credits remaining.`
+        : 'Image generated successfully!';
+
     return this.success('Generation Complete', message);
   }
 
   generationError(error: string): string {
-    return this.error(
-      'Generation Failed',
-      error || 'Failed to generate image. Please try again.'
+    return this.error('Generation Failed', error || 'Failed to generate image. Please try again.');
+  }
+
+  // Friendly toast when user already has a trained model
+  modelAlreadyTrained(): string {
+    return this.info(
+      'Model Already Trained',
+      "Great news! You already have a trained model. We'll use it to generate your photos now.",
+      6000
     );
   }
 
@@ -133,10 +137,7 @@ export class NotificationService {
   }
 
   profileUpdateSuccess(): string {
-    return this.success(
-      'Profile Updated',
-      'Your profile has been successfully updated.'
-    );
+    return this.success('Profile Updated', 'Your profile has been successfully updated.');
   }
 
   profileUpdateError(error: string): string {

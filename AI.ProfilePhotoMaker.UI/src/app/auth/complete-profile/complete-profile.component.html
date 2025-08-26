@@ -1,0 +1,179 @@
+<div
+  class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-indigo-900 flex items-center justify-center p-4">
+  <div class="max-w-md w-full space-y-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
+    <!-- Header -->
+    <div class="text-center">
+      <div class="flex justify-center items-center gap-3 mb-4">
+        <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center">
+          <svg
+            class="w-7 h-7 text-white"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+          </svg>
+        </div>
+        <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Complete Profile</h2>
+        <button
+          type="button"
+          (click)="toggleTheme()"
+          class="ml-2 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+          title="Toggle theme">
+          <svg
+            class="w-5 h-5"
+            [ngClass]="{
+              hidden: (themeService.theme$ | async) === 'dark',
+              block: (themeService.theme$ | async) === 'light',
+            }"
+            fill="currentColor"
+            viewBox="0 0 20 20">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+          </svg>
+          <svg
+            class="w-5 h-5"
+            [ngClass]="{
+              block: (themeService.theme$ | async) === 'dark',
+              hidden: (themeService.theme$ | async) === 'light',
+            }"
+            fill="currentColor"
+            viewBox="0 0 20 20">
+            <path
+              fill-rule="evenodd"
+              d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+              clip-rule="evenodd"></path>
+          </svg>
+        </button>
+      </div>
+      <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+        Please provide additional information to complete your profile
+      </p>
+    </div>
+
+    <!-- Error Alert -->
+    <div
+      *ngIf="error"
+      class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
+      {{ error }}
+    </div>
+
+    <!-- Form -->
+    <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" class="mt-8 space-y-6">
+      <!-- First Name -->
+      <div>
+        <label for="firstName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          First Name *
+        </label>
+        <input
+          id="firstName"
+          name="firstName"
+          type="text"
+          formControlName="firstName"
+          class="appearance-none relative block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+          placeholder="Enter your first name" />
+        <div *ngIf="shouldShowFirstNameError()" class="mt-1 text-sm text-red-600 dark:text-red-400">
+          <span *ngIf="f['firstName'].errors?.['required']">First name is required</span>
+          <span *ngIf="f['firstName'].errors?.['minlength']">First name must be at least 2 characters</span>
+        </div>
+      </div>
+
+      <!-- Last Name -->
+      <div>
+        <label for="lastName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Last Name *
+        </label>
+        <input
+          id="lastName"
+          name="lastName"
+          type="text"
+          formControlName="lastName"
+          class="appearance-none relative block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+          placeholder="Enter your last name" />
+        <div *ngIf="shouldShowLastNameError()" class="mt-1 text-sm text-red-600 dark:text-red-400">
+          <span *ngIf="f['lastName'].errors?.['required']">Last name is required</span>
+          <span *ngIf="f['lastName'].errors?.['minlength']">Last name must be at least 2 characters</span>
+        </div>
+      </div>
+
+      <!-- Gender -->
+      <div>
+        <label for="gender" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Gender *</label>
+        <select
+          id="gender"
+          name="gender"
+          formControlName="gender"
+          class="appearance-none relative block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white bg-white dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors">
+          <option value="">Select your gender</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Non-binary">Non-binary</option>
+          <option value="Prefer not to say">Prefer not to say</option>
+        </select>
+        <div *ngIf="shouldShowGenderError()" class="mt-1 text-sm text-red-600 dark:text-red-400">
+          <span *ngIf="f['gender'].errors?.['required']">Gender is required</span>
+        </div>
+      </div>
+
+      <!-- Ethnicity -->
+      <div>
+        <label for="ethnicity" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Ethnicity *
+        </label>
+        <select
+          id="ethnicity"
+          name="ethnicity"
+          formControlName="ethnicity"
+          class="appearance-none relative block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white bg-white dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors">
+          <option value="">Select your ethnicity</option>
+          <option value="Asian">Asian</option>
+          <option value="Black or African American">Black or African American</option>
+          <option value="Hispanic or Latino">Hispanic or Latino</option>
+          <option value="Native American">Native American</option>
+          <option value="Pacific Islander">Pacific Islander</option>
+          <option value="White">White</option>
+          <option value="Mixed">Mixed</option>
+          <option value="Other">Other</option>
+          <option value="Prefer not to say">Prefer not to say</option>
+        </select>
+        <div *ngIf="shouldShowEthnicityError()" class="mt-1 text-sm text-red-600 dark:text-red-400">
+          <span *ngIf="f['ethnicity'].errors?.['required']">Ethnicity is required</span>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <div>
+        <button
+          type="submit"
+          [disabled]="loading"
+          class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+          <span *ngIf="!loading">Complete Profile</span>
+          <span *ngIf="loading" class="flex items-center">
+            <svg
+              class="animate-spin -ml-1 mr-3 h-4 w-4 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Completing...
+          </span>
+        </button>
+      </div>
+    </form>
+
+    <!-- Footer Note -->
+    <div class="text-center">
+      <p class="text-xs text-gray-600 dark:text-gray-400">
+        This information helps us provide personalized AI photo generation
+      </p>
+    </div>
+  </div>
+</div>
