@@ -102,7 +102,6 @@ public class AtomicImageService : IAtomicImageService
                 userId, images.Count);
 
             // Pre-check: If DB is available, verify user exists. If DB is unavailable (e.g., disposed), skip check to allow cleanup path later
-            bool proceedWithUploads = true;
             try
             {
                 var userExists = await _context.UserProfiles.AnyAsync(p => p.UserId == userId);
@@ -116,7 +115,7 @@ public class AtomicImageService : IAtomicImageService
             catch
             {
                 // DB not accessible; continue to upload and let DB step fail and trigger cleanup
-                proceedWithUploads = true;
+                // No action needed - proceeding with uploads by default
             }
 
             // Step 2: Upload files to storage first (no database changes yet)

@@ -621,79 +621,7 @@ public class ReplicateController : ControllerBase
         }
         return Ok(new { success = true, data = result, error = (object?)null });
     }
-
-    /// <summary>
-    /// Generates a basic casual headshot using base FLUX model (no custom training)
-    /// </summary>
-    [HttpPost("generate/basic")]
-    public async Task<IActionResult> GenerateBasicImage([FromBody] GenerateBasicImageRequestDto dto)
-    {
-        if (!ModelState.IsValid)
-            return BadRequest(new { success = false, error = new { code = "InvalidModel", message = "Invalid input." } });
-
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userId))
-            return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
-
-        // Check if user has available credits
-        var hasCredits = await _basicTierService.HasAvailableCreditsAsync(userId);
-        if (!hasCredits)
-        {
-            var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
-            return BadRequest(new
-            {
-                success = false,
-                error = new
-                {
-                    code = "InsufficientCredits",
-                    message = $"No credits available. You have {availableCredits} credits remaining. Credits reset weekly."
-                }
-            });
-        }
-
-        try
-        {
-            // Use base FLUX model for basic tier - no custom training required
-            var result = await _replicateApiClient.GenerateBasicImageAsync(userId, dto.UserInfo, dto.Gender);
-
-            // Consume a credit only after successful prediction creation
-            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "casual_headshot_generation");
-            if (!creditConsumed)
-            {
-                _logger.LogError("Successfully created Replicate basic prediction but failed to consume credit for user {UserId}", userId);
-                // Prediction already created; do not fail the request
-            }
-
-            var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
-
-            return Ok(new
-            {
-                success = true,
-                data = new
-                {
-                    prediction = result,
-                    creditsRemaining = remainingCredits
-                },
-                error = (object?)null
-            });
-        }
-        catch (Exception ex)
-        {
-            // If generation fails, we should consider refunding the credit
-            // For now, we'll log the error and return failure
-            _logger.LogError(ex, "Image generation failed for user {UserId}", userId);
-            return StatusCode(500, new
-            {
-                success = false,
-                error = new
-                {
-                    code = "GenerationFailed",
-                    message = "Failed to generate image. Please try again later."
-                }
-            });
-        }
-    }
-
+    
     /// <summary>
     /// Checks if a model is available on Replicate
     /// </summary>
@@ -947,6 +875,15 @@ public class ReplicateController : ControllerBase
                 {
                     return $"{externalBaseUrl.TrimEnd('/')}{relativePath}";
                 }
+
+                // Fallback to AppBaseUrl if ExternalApiBaseUrl not configured and AppBaseUrl is HTTPS
+                var appBaseUrl = _configuration["AppBaseUrl"];
+                if (!string.IsNullOrEmpty(appBaseUrl) && appBaseUrl.StartsWith("https://"))
+                {
+                    return $"{appBaseUrl.TrimEnd('/')}{relativePath}";
+                }
+
+                _logger.LogWarning("No ExternalApiBaseUrl configured and AppBaseUrl is not HTTPS - external APIs may not be able to access: {Url}", originalUrl);
             }
             return originalUrl;
         }

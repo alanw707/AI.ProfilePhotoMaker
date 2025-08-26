@@ -126,15 +126,14 @@ public class ReplicateApiClient : IReplicateApiClient
                 responseJson,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-            // Extract the full model name (owner/model-name) from the response
+            // Extract the model name (without owner prefix) from the response
             if (modelResult.TryGetProperty("name", out var nameProperty) &&
                 modelResult.TryGetProperty("owner", out var ownerProperty))
             {
                 var extractedModelName = nameProperty.GetString() ?? throw new Exception("Model name not found in response");
                 var owner = ownerProperty.GetString() ?? throw new Exception("Owner not found in response");
-                var fullModelName = $"{owner}/{extractedModelName}";
-                _logger.LogInformation("Model created with full name: {FullModelName}", fullModelName);
-                return fullModelName;
+                _logger.LogInformation("Model created: owner={Owner}, name={ModelName}", owner, extractedModelName);
+                return extractedModelName; // Return model name only, owner is hardcoded
             }
 
             // Fallback: try to get the URL and extract the name from it
@@ -149,9 +148,8 @@ public class ReplicateApiClient : IReplicateApiClient
                     {
                         var owner = urlParts[^2];
                         var name = urlParts[^1];
-                        var fullModelName = $"{owner}/{name}";
-                        _logger.LogInformation("Model created with name extracted from URL: {ModelName}", fullModelName);
-                        return fullModelName;
+                        _logger.LogInformation("Model created with name extracted from URL: owner={Owner}, name={ModelName}", owner, name);
+                        return name; // Return model name only, owner is hardcoded
                     }
                 }
             }
@@ -809,130 +807,6 @@ public class ReplicateApiClient : IReplicateApiClient
         return result.Id ?? ""; // Return prediction ID
     }
 
-    /// <summary>
-    /// Generates a basic casual headshot using base FLUX model (no custom training required)
-    /// </summary>
-    /// <param name="userId">The user ID</param>
-    /// <param name="userInfo">User information for generation</param>
-    /// <param name="gender">User's gender for better generation</param>
-    /// <returns>The prediction result</returns>
-    public async Task<ReplicatePredictionResult> GenerateBasicImageAsync(string userId, UserInfo? userInfo, string gender)
-    {
-        try
-        {
-            // Use the base FLUX model for basic tier generations
-            string baseFluxModel = _configuration["Replicate:FluxGenerationModelId"] ?? "black-forest-labs/flux-dev";
-
-            // Create a casual style prompt for basic tier
-            var casualStylePrompts = await GetStylePromptsFromDatabase("casual");
-
-            // If casual style not found, use a hardcoded casual prompt
-            string stylePrompt;
-            string negativePrompt;
-
-            if (casualStylePrompts.PromptTemplate != "")
-            {
-                // For basic tier, no trigger word needed (no custom trained model)
-                stylePrompt = CreateFluxStylePromptBasic(casualStylePrompts.PromptTemplate, userInfo);
-                negativePrompt = casualStylePrompts.NegativePromptTemplate;
-            }
-            else
-            {
-                // Fallback casual prompt for basic tier
-                string subject = GetSubjectDescription(userInfo);
-                stylePrompt = $"{subject}, casual lifestyle portrait, headshot, composition: rule of thirds with natural framing, lighting: soft natural sunlight with gentle diffusion, color palette: warm earthy tones with vibrant accents, mood: relaxed, friendly and authentic, technical details: shot with 50mm lens at f/2.0, medium depth of field, additional elements: simple clean background, casual stylish clothing, genuine smile";
-                negativePrompt = "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, inappropriate attire, nudity, nsfw";
-            }
-
-            var predictionRequest = new
-            {
-                // For public/base models, prefer specifying the model id explicitly
-                model = baseFluxModel,
-                input = new Dictionary<string, object?>
-                {
-                    ["prompt"] = stylePrompt,
-                    ["negative_prompt"] = negativePrompt,
-                    ["num_inference_steps"] = 30, // Slightly lower for basic tier
-                    ["guidance_scale"] = 7.0,
-                    ["num_outputs"] = 1, // Only 1 image for basic tier
-                    ["scheduler"] = "K_EULER_ANCESTRAL",
-                    ["output_format"] = "png",
-                    ["width"] = 1024,
-                    ["height"] = 1024,
-                    ["webhook"] = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete"),
-                    ["webhook_events_filter"] = new[] { "completed" }
-                },
-                webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete")
-            };
-
-            var content = new StringContent(
-                JsonSerializer.Serialize(predictionRequest),
-                Encoding.UTF8,
-                "application/json");
-
-            var response = await _httpClient.PostAsync("predictions", content);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Replicate basic image generation failed: {ErrorContent}", errorContent);
-                throw new Exception($"Failed to create basic image prediction: {response.StatusCode}, {errorContent}");
-            }
-
-            var responseJson = await response.Content.ReadAsStringAsync();
-            var result = JsonSerializer.Deserialize<ReplicatePredictionResult>(
-                responseJson,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            if (result == null)
-            {
-                throw new Exception("Failed to deserialize basic image prediction response");
-            }
-
-            _logger.LogInformation("Basic image generation started for user {UserId} with prediction ID {PredictionId}", userId, result.Id);
-
-            // Persist ownership for status checks
-            try
-            {
-                if (!string.IsNullOrEmpty(result.Id))
-                {
-                    _context.Predictions.Add(new Prediction
-                    {
-                        Id = result.Id!,
-                        UserId = userId,
-                        Style = "basic",
-                        CreatedAt = DateTime.UtcNow
-                    });
-                    await _context.SaveChangesAsync();
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to persist basic prediction ownership for {PredictionId} (user {UserId})", result.Id, userId);
-            }
-            return result;
-        }
-        catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
-        {
-            _logger.LogError(ex, "Replicate API authentication failed for basic generation for user {UserId}", userId);
-            throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
-        }
-        catch (HttpRequestException ex) when (ex.Message.Contains("429") || ex.Message.Contains("rate limit"))
-        {
-            _logger.LogWarning(ex, "Replicate API rate limit reached for basic generation for user {UserId}", userId);
-            throw new InvalidOperationException("Replicate API rate limit reached. Please try again later.", ex);
-        }
-        catch (HttpRequestException ex) when (ex.Message.Contains("402") || ex.Message.Contains("payment"))
-        {
-            _logger.LogError(ex, "Replicate API payment required for basic generation for user {UserId}", userId);
-            throw new InvalidOperationException("Replicate API payment required. Please check your billing.", ex);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error generating basic image for user {UserId}", userId);
-            throw;
-        }
-    }
 
     /// <summary>
     /// Enhances a user's uploaded photo using Flux Kontext Pro for text-based image editing
@@ -946,39 +820,48 @@ public class ReplicateApiClient : IReplicateApiClient
     {
         try
         {
-            // Use Flux Kontext Pro for text-based photo enhancement
+            // Use Flux Kontext Pro for text-based photo enhancement (model-specific predictions endpoint)
             string kontextProModel = _configuration["Replicate:FluxKontextProModelId"] ?? "black-forest-labs/flux-kontext-pro";
+
+            // Extract owner/model; ignore any version suffix as model endpoint doesn't need it
+            string modelPartOnly = kontextProModel.Contains(":") ? kontextProModel.Split(':', 2)[0] : kontextProModel;
+            var modelParts = modelPartOnly.Split('/', 2);
+            if (modelParts.Length != 2)
+            {
+                throw new InvalidOperationException("Invalid FluxKontextProModelId configuration. Expected 'owner/model' or 'owner/model:version'.");
+            }
+            var owner = modelParts[0];
+            var modelName = modelParts[1];
 
             // Create enhancement prompt based on type
             string enhancementPrompt = GetEnhancementPrompt(enhancementType);
 
-            var predictionRequest = new
+            // Build input payload (webhook only at top-level, not inside input)
+            var input = new Dictionary<string, object?>
             {
-                // Kontext Pro is a public model; specify by model id for clarity
-                model = kontextProModel,
-                input = new Dictionary<string, object?>
-                {
-                    ["input_image"] = imageUrl,
-                    ["prompt"] = enhancementPrompt,
-                    ["negative_prompt"] = "blurry, low quality, distorted, deformed, bad anatomy, poor lighting, overexposed, underexposed, artifact, noise",
-                    ["num_inference_steps"] = 30,
-                    ["guidance_scale"] = 7.5,
-                    ["strength"] = 0.8,
-                    ["output_format"] = "png",
-                    ["width"] = 1024,
-                    ["height"] = 1024,
-                    ["webhook"] = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete"),
-                    ["webhook_events_filter"] = new[] { "completed" }
-                },
-                webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete")
+                ["input_image"] = imageUrl,
+                ["prompt"] = enhancementPrompt,
+                ["negative_prompt"] = "blurry, low quality, distorted, deformed, bad anatomy, poor lighting, overexposed, underexposed, artifact, noise",
+                ["num_inference_steps"] = 30,
+                ["guidance_scale"] = 7.5,
+                ["strength"] = 0.8,
+                ["output_format"] = "png",
+                ["width"] = 1024,
+                ["height"] = 1024,
             };
 
-            var content = new StringContent(
-                JsonSerializer.Serialize(predictionRequest),
-                Encoding.UTF8,
-                "application/json");
+            var webhookUrl = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete");
+            var requestPayload = new Dictionary<string, object?>
+            {
+                ["input"] = input,
+                ["webhook"] = webhookUrl,
+                ["webhook_events_filter"] = new[] { "completed" }
+            };
 
-            var response = await _httpClient.PostAsync("predictions", content);
+            // Use model-specific predictions endpoint per Replicate API (no version required)
+            var endpoint = $"models/{owner}/{modelName}/predictions";
+            var content = new StringContent(JsonSerializer.Serialize(requestPayload), Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync(endpoint, content);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -1003,6 +886,10 @@ public class ReplicateApiClient : IReplicateApiClient
                         // Surface common bad request scenario: inaccessible input image URL
                         throw new ArgumentException(
                             $"Invalid enhancement request. Replicate responded 400. Details: {errorContent}");
+                    case HttpStatusCode.UnprocessableEntity:
+                        // Common schema errors: missing version, unexpected fields
+                        throw new InvalidOperationException(
+                            $"Enhancement request validation failed (422). Details: {errorContent}");
                     default:
                         throw new Exception(
                             $"Failed to create Kontext Pro enhancement prediction: {(int)response.StatusCode} {response.StatusCode}, {errorContent}");
@@ -1149,49 +1036,110 @@ public class ReplicateApiClient : IReplicateApiClient
     }
 
     /// <summary>
-    /// Deletes a model from Replicate
+    /// Deletes a model and all its versions from Replicate.
     /// </summary>
-    /// <param name="modelId">The model ID (owner/model-name)</param>
-    /// <returns>True if deletion was successful, false otherwise</returns>
+    /// <param name="modelId">The model ID in the format "owner/model-name".</param>
+    /// <returns>True if deletion was successful, false otherwise.</returns>
     public async Task<bool> DeleteModelAsync(string modelId)
     {
         try
         {
-            _logger.LogInformation("Attempting to delete model {ModelId} from Replicate", modelId);
+            _logger.LogInformation("Starting deletion process for model {ModelId}", modelId);
 
-            var response = await _httpClient.DeleteAsync($"models/{modelId}");
+            // Step 1: Get model details to find all versions
+            var modelDetailsResponse = await _httpClient.GetAsync($"models/{modelId}");
 
-            if (response.IsSuccessStatusCode)
+            if (modelDetailsResponse.StatusCode == HttpStatusCode.NotFound)
             {
-                _logger.LogInformation("Successfully deleted model {ModelId} from Replicate", modelId);
-                return true;
+                _logger.LogInformation("Model {ModelId} not found. Assuming already deleted.", modelId);
+                return true; // Model doesn't exist, so it's "deleted"
             }
-            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+
+            if (!modelDetailsResponse.IsSuccessStatusCode)
             {
-                _logger.LogInformation("Model {ModelId} not found for deletion (may already be deleted)", modelId);
-                return true; // Consider this a success since the model is gone
-            }
-            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
-            {
-                _logger.LogWarning("Forbidden to delete model {ModelId} - may not be owned by this account", modelId);
+                var errorContent = await modelDetailsResponse.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to get model details for {ModelId}: {StatusCode}, {ErrorContent}",
+                    modelId, modelDetailsResponse.StatusCode, errorContent);
                 return false;
+            }
+
+            var jsonResponse = await modelDetailsResponse.Content.ReadAsStringAsync();
+            using var document = JsonDocument.Parse(jsonResponse);
+            var root = document.RootElement;
+
+            if (root.TryGetProperty("versions", out var versionsElement) && versionsElement.ValueKind == JsonValueKind.Array)
+            {
+                var versionIds = versionsElement.EnumerateArray()
+                    .Select(v => v.TryGetProperty("id", out var idElement) ? idElement.GetString() : null)
+                    .Where(id => !string.IsNullOrEmpty(id))
+                    .ToList();
+
+                _logger.LogInformation("Found {VersionCount} versions for model {ModelId}. Deleting them now.", versionIds.Count, modelId);
+
+                // Step 2: Delete each version
+                foreach (var versionId in versionIds)
+                {
+                    _logger.LogInformation("Deleting version {VersionId} from model {ModelId}", versionId, modelId);
+                    var deleteVersionResponse = await _httpClient.DeleteAsync($"models/{modelId}/versions/{versionId}");
+
+                    if (deleteVersionResponse.IsSuccessStatusCode)
+                    {
+                        _logger.LogInformation("Successfully deleted version {VersionId}", versionId);
+                    }
+                    else if (deleteVersionResponse.StatusCode == HttpStatusCode.NotFound)
+                    {
+                        _logger.LogInformation("Version {VersionId} not found, skipping.", versionId);
+                    }
+                    else
+                    {
+                        var errorContent = await deleteVersionResponse.Content.ReadAsStringAsync();
+                        _logger.LogWarning("Failed to delete version {VersionId}: {StatusCode}, {ErrorContent}. Halting deletion process for this model.",
+                            versionId, deleteVersionResponse.StatusCode, errorContent);
+                        // Depending on requirements, you might want to continue or stop. Stopping is safer.
+                        return false;
+                    }
+                }
             }
             else
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Failed to delete model {ModelId}: {StatusCode}, {ErrorContent}",
-                    modelId, response.StatusCode, errorContent);
+                _logger.LogInformation("No versions found for model {ModelId} or versions property is not an array.", modelId);
+            }
+
+            // Step 3: Delete the model itself
+            _logger.LogInformation("All versions deleted. Now deleting the model shell {ModelId}", modelId);
+            var deleteModelResponse = await _httpClient.DeleteAsync($"models/{modelId}");
+
+            if (deleteModelResponse.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Successfully deleted model shell {ModelId}", modelId);
+                return true;
+            }
+            else if (deleteModelResponse.StatusCode == HttpStatusCode.NotFound)
+            {
+                _logger.LogInformation("Model shell {ModelId} was not found for final deletion (may have been deleted concurrently).", modelId);
+                return true; // Success, as the end state is that the model is gone.
+            }
+            else
+            {
+                var errorContent = await deleteModelResponse.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to delete model shell {ModelId}: {StatusCode}, {ErrorContent}",
+                    modelId, deleteModelResponse.StatusCode, errorContent);
                 return false;
             }
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
         {
-            _logger.LogError(ex, "Replicate API authentication failed when deleting model {ModelId}", modelId);
+            _logger.LogError(ex, "Replicate API authentication failed during model deletion process for {ModelId}", modelId);
+            return false;
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to parse JSON response during model deletion for {ModelId}", modelId);
             return false;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting model {ModelId} from Replicate", modelId);
+            _logger.LogError(ex, "An unexpected error occurred while deleting model {ModelId}", modelId);
             return false;
         }
     }
@@ -1358,71 +1306,92 @@ public class ReplicateApiClient : IReplicateApiClient
     }
 
     /// <summary>
-    /// Gets the latest version ID for a specific model from Replicate API
+    /// Gets the latest version ID for a specific model from Replicate API with retry logic
     /// </summary>
     /// <param name="modelId">The model ID in format owner/model-name</param>
     /// <returns>The latest version ID hash or null if not found</returns>
     public async Task<string?> GetModelVersionAsync(string modelId)
     {
-        try
+        const int maxRetries = 3;
+        var delayMs = 2000; // Start with 2 seconds
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
-            if (string.IsNullOrEmpty(modelId))
+            try
             {
-                return null;
-            }
-
-            // Parse model ID to get owner and name
-            var parts = modelId.Split('/');
-            if (parts.Length != 2)
-            {
-                _logger.LogWarning("Invalid model ID format: {ModelId}", modelId);
-                return null;
-            }
-
-            var owner = parts[0];
-            var modelName = parts[1];
-
-            // Get model details from Replicate API
-            var response = await _httpClient.GetAsync($"models/{owner}/{modelName}");
-
-            if (response.IsSuccessStatusCode)
-            {
-                var jsonResponse = await response.Content.ReadAsStringAsync();
-                _logger.LogInformation("Got model details for {ModelId}", modelId);
-
-                // Parse the response to extract latest version ID
-                using var document = JsonDocument.Parse(jsonResponse);
-                var root = document.RootElement;
-
-                if (root.TryGetProperty("latest_version", out var latestVersionElement) &&
-                    latestVersionElement.TryGetProperty("id", out var versionIdElement))
+                if (string.IsNullOrEmpty(modelId))
                 {
-                    var versionId = versionIdElement.GetString();
-                    _logger.LogInformation("Found version ID {VersionId} for model {ModelId}", versionId, modelId);
-                    return versionId;
+                    return null;
+                }
+
+                // Parse model ID to get owner and name
+                var parts = modelId.Split('/');
+                if (parts.Length != 2)
+                {
+                    _logger.LogWarning("Invalid model ID format: {ModelId}", modelId);
+                    return null;
+                }
+
+                var owner = parts[0];
+                var modelName = parts[1];
+
+                // Get model details from Replicate API
+                var response = await _httpClient.GetAsync($"models/{owner}/{modelName}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var jsonResponse = await response.Content.ReadAsStringAsync();
+                    _logger.LogInformation("Got model details for {ModelId} on attempt {Attempt}", modelId, attempt);
+
+                    // Parse the response to extract latest version ID
+                    using var document = JsonDocument.Parse(jsonResponse);
+                    var root = document.RootElement;
+
+                    if (root.TryGetProperty("latest_version", out var latestVersionElement) &&
+                        latestVersionElement.TryGetProperty("id", out var versionIdElement))
+                    {
+                        var versionId = versionIdElement.GetString();
+                        if (!string.IsNullOrEmpty(versionId))
+                        {
+                            _logger.LogInformation("Found version ID {VersionId} for model {ModelId} on attempt {Attempt}", 
+                                versionId, modelId, attempt);
+                            return versionId;
+                        }
+                    }
+                    
+                    _logger.LogWarning("No valid latest_version.id found in response for model {ModelId} on attempt {Attempt}", 
+                        modelId, attempt);
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    _logger.LogInformation("Model {ModelId} not found on Replicate (attempt {Attempt})", modelId, attempt);
+                    // Don't retry for 404 - model doesn't exist
+                    return null;
                 }
                 else
                 {
-                    _logger.LogWarning("No latest_version.id found in response for model {ModelId}", modelId);
-                    return null;
+                    _logger.LogWarning("Failed to get model details for {ModelId} on attempt {Attempt}: {StatusCode}", 
+                        modelId, attempt, response.StatusCode);
                 }
             }
-            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            catch (Exception ex)
             {
-                _logger.LogInformation("Model {ModelId} not found on Replicate", modelId);
-                return null;
+                _logger.LogWarning(ex, "Error getting model version for {ModelId} on attempt {Attempt}/{MaxRetries}", 
+                    modelId, attempt, maxRetries);
             }
-            else
+
+            // If not the last attempt, wait before retrying
+            if (attempt < maxRetries)
             {
-                _logger.LogWarning("Failed to get model details for {ModelId}: {StatusCode}", modelId, response.StatusCode);
-                return null;
+                _logger.LogInformation("Retrying GetModelVersionAsync for {ModelId} in {Delay}ms (attempt {NextAttempt}/{MaxRetries})", 
+                    modelId, delayMs, attempt + 1, maxRetries);
+                await Task.Delay(delayMs);
+                delayMs *= 2; // Exponential backoff: 2s, 4s, 8s
             }
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting model version for {ModelId}", modelId);
-            return null;
-        }
+
+        _logger.LogError("Failed to get model version for {ModelId} after {MaxRetries} attempts", modelId, maxRetries);
+        return null;
     }
 
     /// <summary>
