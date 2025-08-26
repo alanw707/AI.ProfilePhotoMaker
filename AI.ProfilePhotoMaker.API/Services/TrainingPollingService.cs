@@ -92,48 +92,64 @@ public class TrainingPollingService : ITrainingPollingService
                 _logger.LogInformation("Training {TrainingId} completed successfully", trainingId);
 
                 // Extract the trained model version for the user's custom model
-                // Note: Replicate training status "version" may point to the trainer model (no-op for predictions)
-                // So we resolve the actual latest version of the created destination model in Replicate
+                // Note: Replicate training status "version" points to the trainer model (fast-flux-trainer)
+                // We MUST resolve the actual latest version of the created destination model
                 string? resolvedVersionId = null;
 
                 try
                 {
                     if (!string.IsNullOrEmpty(modelRequest.ReplicateModelId))
                     {
-                        resolvedVersionId = await scopedReplicateClient.GetModelVersionAsync(modelRequest.ReplicateModelId);
-                        _logger.LogInformation("Resolved model version for {ModelId}: {VersionId}", modelRequest.ReplicateModelId, resolvedVersionId);
+                        // Construct full model ID for API call (add owner prefix for API)
+                        var fullModelId = $"alanw707/{modelRequest.ReplicateModelId}";
+                        resolvedVersionId = await scopedReplicateClient.GetModelVersionAsync(fullModelId);
+                        _logger.LogInformation("Resolved model version for {ModelId}: {VersionId}", fullModelId, resolvedVersionId);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to resolve version for model {ModelId}; will fall back to trainingStatus.Version", modelRequest.ReplicateModelId);
+                    _logger.LogError(ex, "Failed to resolve version for model {ModelId}", modelRequest.ReplicateModelId);
                 }
 
-                var trainedModelVersion = resolvedVersionId ?? trainingStatus.Version;
-                if (string.IsNullOrEmpty(trainedModelVersion))
+                // Critical: Do NOT fall back to trainingStatus.Version (it's the trainer model's version)
+                if (string.IsNullOrEmpty(resolvedVersionId))
                 {
-                    _logger.LogError("Training completed but no resolvable model version for training {TrainingId}", trainingId);
+                    _logger.LogError("Could not resolve model version for {ModelId}. Training marked as failed.", modelRequest.ReplicateModelId);
                     modelRequest.Status = ModelCreationStatus.Failed;
-                    modelRequest.ErrorMessage = "Training completed but could not determine trained model version";
+                    modelRequest.ErrorMessage = "Could not determine trained model version";
                     modelRequest.CompletedAt = DateTime.UtcNow;
-                }
-                else
-                {
-                    // Update model creation request to Ready status
-                    modelRequest.Status = ModelCreationStatus.Ready;
-                    modelRequest.TrainedModelVersion = trainedModelVersion;
-                    modelRequest.CompletedAt = DateTime.UtcNow;
-                    modelRequest.ErrorMessage = null;
-
-                    _logger.LogInformation("Model creation request {RequestId} marked as Ready with version {Version}",
-                        modelRequest.Id, trainedModelVersion);
-
-                    // Save changes first
                     await scopedDbContext.SaveChangesAsync();
-
-                    // Generate automatic sample images with the trained model
-                    _ = Task.Run(async () => await GenerateAutomaticSampleImages(modelRequest.UserId, trainedModelVersion));
+                    return;
                 }
+
+                var trainedModelVersion = resolvedVersionId;
+                
+                // Validate version format (should be 64-character hex string)
+                if (!System.Text.RegularExpressions.Regex.IsMatch(trainedModelVersion, @"^[a-fA-F0-9]{64}$"))
+                {
+                    _logger.LogError("Invalid version format received: {Version} for model {ModelId}. Expected 64-character hex string.", 
+                        trainedModelVersion, modelRequest.ReplicateModelId);
+                    modelRequest.Status = ModelCreationStatus.Failed;
+                    modelRequest.ErrorMessage = $"Invalid version format received: {trainedModelVersion}";
+                    modelRequest.CompletedAt = DateTime.UtcNow;
+                    await scopedDbContext.SaveChangesAsync();
+                    return;
+                }
+                
+                // Update model creation request to Ready status
+                modelRequest.Status = ModelCreationStatus.Ready;
+                modelRequest.TrainedModelVersion = trainedModelVersion;
+                modelRequest.CompletedAt = DateTime.UtcNow;
+                modelRequest.ErrorMessage = null;
+
+                _logger.LogInformation("Model creation request {RequestId} marked as Ready with version {Version}",
+                    modelRequest.Id, trainedModelVersion);
+
+                // Save changes first
+                await scopedDbContext.SaveChangesAsync();
+
+                // Generate automatic sample images with the trained model
+                _ = Task.Run(async () => await GenerateAutomaticSampleImages(modelRequest.UserId, trainedModelVersion));
             }
             else if (trainingStatus.Status?.ToLower() == "failed" || trainingStatus.Status?.ToLower() == "canceled")
             {

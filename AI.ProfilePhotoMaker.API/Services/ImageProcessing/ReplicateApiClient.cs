@@ -126,15 +126,14 @@ public class ReplicateApiClient : IReplicateApiClient
                 responseJson,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-            // Extract the full model name (owner/model-name) from the response
+            // Extract the model name (without owner prefix) from the response
             if (modelResult.TryGetProperty("name", out var nameProperty) &&
                 modelResult.TryGetProperty("owner", out var ownerProperty))
             {
                 var extractedModelName = nameProperty.GetString() ?? throw new Exception("Model name not found in response");
                 var owner = ownerProperty.GetString() ?? throw new Exception("Owner not found in response");
-                var fullModelName = $"{owner}/{extractedModelName}";
-                _logger.LogInformation("Model created with full name: {FullModelName}", fullModelName);
-                return fullModelName;
+                _logger.LogInformation("Model created: owner={Owner}, name={ModelName}", owner, extractedModelName);
+                return extractedModelName; // Return model name only, owner is hardcoded
             }
 
             // Fallback: try to get the URL and extract the name from it
@@ -149,9 +148,8 @@ public class ReplicateApiClient : IReplicateApiClient
                     {
                         var owner = urlParts[^2];
                         var name = urlParts[^1];
-                        var fullModelName = $"{owner}/{name}";
-                        _logger.LogInformation("Model created with name extracted from URL: {ModelName}", fullModelName);
-                        return fullModelName;
+                        _logger.LogInformation("Model created with name extracted from URL: owner={Owner}, name={ModelName}", owner, name);
+                        return name; // Return model name only, owner is hardcoded
                     }
                 }
             }
@@ -946,39 +944,48 @@ public class ReplicateApiClient : IReplicateApiClient
     {
         try
         {
-            // Use Flux Kontext Pro for text-based photo enhancement
+            // Use Flux Kontext Pro for text-based photo enhancement (model-specific predictions endpoint)
             string kontextProModel = _configuration["Replicate:FluxKontextProModelId"] ?? "black-forest-labs/flux-kontext-pro";
+
+            // Extract owner/model; ignore any version suffix as model endpoint doesn't need it
+            string modelPartOnly = kontextProModel.Contains(":") ? kontextProModel.Split(':', 2)[0] : kontextProModel;
+            var modelParts = modelPartOnly.Split('/', 2);
+            if (modelParts.Length != 2)
+            {
+                throw new InvalidOperationException("Invalid FluxKontextProModelId configuration. Expected 'owner/model' or 'owner/model:version'.");
+            }
+            var owner = modelParts[0];
+            var modelName = modelParts[1];
 
             // Create enhancement prompt based on type
             string enhancementPrompt = GetEnhancementPrompt(enhancementType);
 
-            var predictionRequest = new
+            // Build input payload (webhook only at top-level, not inside input)
+            var input = new Dictionary<string, object?>
             {
-                // Kontext Pro is a public model; specify by model id for clarity
-                model = kontextProModel,
-                input = new Dictionary<string, object?>
-                {
-                    ["input_image"] = imageUrl,
-                    ["prompt"] = enhancementPrompt,
-                    ["negative_prompt"] = "blurry, low quality, distorted, deformed, bad anatomy, poor lighting, overexposed, underexposed, artifact, noise",
-                    ["num_inference_steps"] = 30,
-                    ["guidance_scale"] = 7.5,
-                    ["strength"] = 0.8,
-                    ["output_format"] = "png",
-                    ["width"] = 1024,
-                    ["height"] = 1024,
-                    ["webhook"] = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete"),
-                    ["webhook_events_filter"] = new[] { "completed" }
-                },
-                webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete")
+                ["input_image"] = imageUrl,
+                ["prompt"] = enhancementPrompt,
+                ["negative_prompt"] = "blurry, low quality, distorted, deformed, bad anatomy, poor lighting, overexposed, underexposed, artifact, noise",
+                ["num_inference_steps"] = 30,
+                ["guidance_scale"] = 7.5,
+                ["strength"] = 0.8,
+                ["output_format"] = "png",
+                ["width"] = 1024,
+                ["height"] = 1024,
             };
 
-            var content = new StringContent(
-                JsonSerializer.Serialize(predictionRequest),
-                Encoding.UTF8,
-                "application/json");
+            var webhookUrl = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete");
+            var requestPayload = new Dictionary<string, object?>
+            {
+                ["input"] = input,
+                ["webhook"] = webhookUrl,
+                ["webhook_events_filter"] = new[] { "completed" }
+            };
 
-            var response = await _httpClient.PostAsync("predictions", content);
+            // Use model-specific predictions endpoint per Replicate API (no version required)
+            var endpoint = $"models/{owner}/{modelName}/predictions";
+            var content = new StringContent(JsonSerializer.Serialize(requestPayload), Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync(endpoint, content);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -1003,6 +1010,10 @@ public class ReplicateApiClient : IReplicateApiClient
                         // Surface common bad request scenario: inaccessible input image URL
                         throw new ArgumentException(
                             $"Invalid enhancement request. Replicate responded 400. Details: {errorContent}");
+                    case HttpStatusCode.UnprocessableEntity:
+                        // Common schema errors: missing version, unexpected fields
+                        throw new InvalidOperationException(
+                            $"Enhancement request validation failed (422). Details: {errorContent}");
                     default:
                         throw new Exception(
                             $"Failed to create Kontext Pro enhancement prediction: {(int)response.StatusCode} {response.StatusCode}, {errorContent}");
@@ -1358,71 +1369,92 @@ public class ReplicateApiClient : IReplicateApiClient
     }
 
     /// <summary>
-    /// Gets the latest version ID for a specific model from Replicate API
+    /// Gets the latest version ID for a specific model from Replicate API with retry logic
     /// </summary>
     /// <param name="modelId">The model ID in format owner/model-name</param>
     /// <returns>The latest version ID hash or null if not found</returns>
     public async Task<string?> GetModelVersionAsync(string modelId)
     {
-        try
+        const int maxRetries = 3;
+        var delayMs = 2000; // Start with 2 seconds
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
-            if (string.IsNullOrEmpty(modelId))
+            try
             {
-                return null;
-            }
-
-            // Parse model ID to get owner and name
-            var parts = modelId.Split('/');
-            if (parts.Length != 2)
-            {
-                _logger.LogWarning("Invalid model ID format: {ModelId}", modelId);
-                return null;
-            }
-
-            var owner = parts[0];
-            var modelName = parts[1];
-
-            // Get model details from Replicate API
-            var response = await _httpClient.GetAsync($"models/{owner}/{modelName}");
-
-            if (response.IsSuccessStatusCode)
-            {
-                var jsonResponse = await response.Content.ReadAsStringAsync();
-                _logger.LogInformation("Got model details for {ModelId}", modelId);
-
-                // Parse the response to extract latest version ID
-                using var document = JsonDocument.Parse(jsonResponse);
-                var root = document.RootElement;
-
-                if (root.TryGetProperty("latest_version", out var latestVersionElement) &&
-                    latestVersionElement.TryGetProperty("id", out var versionIdElement))
+                if (string.IsNullOrEmpty(modelId))
                 {
-                    var versionId = versionIdElement.GetString();
-                    _logger.LogInformation("Found version ID {VersionId} for model {ModelId}", versionId, modelId);
-                    return versionId;
+                    return null;
+                }
+
+                // Parse model ID to get owner and name
+                var parts = modelId.Split('/');
+                if (parts.Length != 2)
+                {
+                    _logger.LogWarning("Invalid model ID format: {ModelId}", modelId);
+                    return null;
+                }
+
+                var owner = parts[0];
+                var modelName = parts[1];
+
+                // Get model details from Replicate API
+                var response = await _httpClient.GetAsync($"models/{owner}/{modelName}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var jsonResponse = await response.Content.ReadAsStringAsync();
+                    _logger.LogInformation("Got model details for {ModelId} on attempt {Attempt}", modelId, attempt);
+
+                    // Parse the response to extract latest version ID
+                    using var document = JsonDocument.Parse(jsonResponse);
+                    var root = document.RootElement;
+
+                    if (root.TryGetProperty("latest_version", out var latestVersionElement) &&
+                        latestVersionElement.TryGetProperty("id", out var versionIdElement))
+                    {
+                        var versionId = versionIdElement.GetString();
+                        if (!string.IsNullOrEmpty(versionId))
+                        {
+                            _logger.LogInformation("Found version ID {VersionId} for model {ModelId} on attempt {Attempt}", 
+                                versionId, modelId, attempt);
+                            return versionId;
+                        }
+                    }
+                    
+                    _logger.LogWarning("No valid latest_version.id found in response for model {ModelId} on attempt {Attempt}", 
+                        modelId, attempt);
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    _logger.LogInformation("Model {ModelId} not found on Replicate (attempt {Attempt})", modelId, attempt);
+                    // Don't retry for 404 - model doesn't exist
+                    return null;
                 }
                 else
                 {
-                    _logger.LogWarning("No latest_version.id found in response for model {ModelId}", modelId);
-                    return null;
+                    _logger.LogWarning("Failed to get model details for {ModelId} on attempt {Attempt}: {StatusCode}", 
+                        modelId, attempt, response.StatusCode);
                 }
             }
-            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            catch (Exception ex)
             {
-                _logger.LogInformation("Model {ModelId} not found on Replicate", modelId);
-                return null;
+                _logger.LogWarning(ex, "Error getting model version for {ModelId} on attempt {Attempt}/{MaxRetries}", 
+                    modelId, attempt, maxRetries);
             }
-            else
+
+            // If not the last attempt, wait before retrying
+            if (attempt < maxRetries)
             {
-                _logger.LogWarning("Failed to get model details for {ModelId}: {StatusCode}", modelId, response.StatusCode);
-                return null;
+                _logger.LogInformation("Retrying GetModelVersionAsync for {ModelId} in {Delay}ms (attempt {NextAttempt}/{MaxRetries})", 
+                    modelId, delayMs, attempt + 1, maxRetries);
+                await Task.Delay(delayMs);
+                delayMs *= 2; // Exponential backoff: 2s, 4s, 8s
             }
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting model version for {ModelId}", modelId);
-            return null;
-        }
+
+        _logger.LogError("Failed to get model version for {ModelId} after {MaxRetries} attempts", modelId, maxRetries);
+        return null;
     }
 
     /// <summary>

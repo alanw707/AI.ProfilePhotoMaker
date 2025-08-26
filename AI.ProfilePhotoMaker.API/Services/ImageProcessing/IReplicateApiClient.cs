@@ -78,16 +78,7 @@ public interface IReplicateApiClient
     /// </summary>
     /// <param name="request">The generate images request</param>
     /// <returns>The prediction result URL</returns>
-    Task<string> GenerateImagesAsync(GenerateImagesRequestDto request);
-
-    /// <summary>
-    /// Generates a basic casual headshot using base FLUX model (no custom training required)
-    /// </summary>
-    /// <param name="userId">The user ID</param>
-    /// <param name="userInfo">User information for generation</param>
-    /// <param name="gender">User's gender for better generation</param>
-    /// <returns>The prediction result</returns>
-    Task<ReplicatePredictionResult> GenerateBasicImageAsync(string userId, UserInfo? userInfo, string gender);
+    Task<string> GenerateImagesAsync(GenerateImagesRequestDto request);    
 
     /// <summary>
     /// Enhances a user's uploaded photo using Flux Kontext Pro for text-based image editing
