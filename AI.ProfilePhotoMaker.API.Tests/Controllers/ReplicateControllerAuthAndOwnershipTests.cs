@@ -223,37 +223,4 @@ public class ReplicateControllerAuthAndOwnershipTests
         mockBasic.VerifyNoOtherCalls();
     }
 
-    [Fact]
-    public async Task GenerateBasicImage_ConsumesCreditAfterCreation()
-    {
-        using var db = CreateInMemoryDb();
-
-        var mockReplicate = new Mock<IReplicateApiClient>(MockBehavior.Strict);
-        var mockBasic = new Mock<IBasicTierService>(MockBehavior.Strict);
-
-        // Available credits
-        mockBasic.Setup(s => s.HasAvailableCreditsAsync("user-123")).ReturnsAsync(true);
-
-        // Validate ordering: first Replicate call, then ConsumeCredits
-        var sequence = new MockSequence();
-        mockReplicate.InSequence(sequence)
-                     .Setup(c => c.GenerateBasicImageAsync("user-123", It.IsAny<UserInfo?>(), "male"))
-                     .ReturnsAsync(new ReplicatePredictionResult { Id = "pred-xyz", Status = "starting", CreatedAt = DateTime.UtcNow });
-
-        mockBasic.InSequence(sequence)
-                 .Setup(s => s.ConsumeCreditsAsync("user-123", "casual_headshot_generation"))
-                 .ReturnsAsync(true);
-
-        mockBasic.Setup(s => s.GetAvailableCreditsAsync("user-123")).ReturnsAsync(99);
-
-        var controller = CreateController("user-123", db, mockReplicate, mockBasic);
-
-        var dto = new GenerateBasicImageRequestDto { Gender = "male" };
-        var result = await controller.GenerateBasicImage(dto) as ObjectResult;
-        result.Should().NotBeNull();
-        result!.StatusCode.Should().Be(200);
-
-        mockReplicate.VerifyAll();
-        mockBasic.VerifyAll();
-    }
 }

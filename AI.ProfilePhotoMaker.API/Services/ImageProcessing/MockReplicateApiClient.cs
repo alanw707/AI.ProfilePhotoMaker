@@ -164,10 +164,6 @@ public class MockReplicateApiClient : IReplicateApiClient
         return Task.FromResult(Guid.NewGuid().ToString());
     }
 
-    public async Task<ReplicatePredictionResult> GenerateBasicImageAsync(string userId, UserInfo? userInfo, string gender)
-    {
-        return await GenerateImagesAsync("mock/basic-model", userId, "basic", userInfo, 1);
-    }
 
     public async Task<ReplicatePredictionResult> EnhancePhotoAsync(string userId, string imageUrl, string enhancementType = "professional")
     {
