@@ -1096,15 +1096,17 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 {
                     profile.ProcessedImages.Remove(img);
                     // Ensure persistence even if repository mock isn't configured in tests
-                    Context.ProcessedImages.Remove(img);
+                    Context?.ProcessedImages.Remove(img);
                 }
 
                 if (orphaned.Count > 0)
                 {
-                    await Context.SaveChangesAsync();
+                    await Context!.SaveChangesAsync();
                     // Update repo/caches as well for real application behavior
-                    await _userProfileRepository.UpdateAsync(profile);
-                    await _userContextService.InvalidateUserCacheAsync(userId);
+                    if (_userProfileRepository != null)
+                        await _userProfileRepository.UpdateAsync(profile);
+                    if (_userContextService != null)
+                        await _userContextService.InvalidateUserCacheAsync(userId);
                     LogInfo($"Removed {orphaned.Count} orphaned image records for user {userId}");
                 }
 

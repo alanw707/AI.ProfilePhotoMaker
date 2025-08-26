@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -36,7 +36,7 @@ type DeletionType = 'photos' | 'model' | 'all' | 'account';
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.sass'],
 })
-export class SettingsComponent implements OnInit {
+export class SettingsComponent implements OnInit, OnDestroy {
   // Constants
   readonly MAX_PHOTOS_LIMIT = 200;
 
@@ -68,6 +68,9 @@ export class SettingsComponent implements OnInit {
   // Credit Management State
   creditsInfo: any = null;
   userCreditStatus: any = null;
+
+  // Subscription Management
+  private subscriptions: any[] = [];
 
   constructor(
     private authService: AuthService,
@@ -107,18 +110,31 @@ export class SettingsComponent implements OnInit {
     }
   }
 
+  ngOnDestroy() {
+    // Clean up all subscriptions to prevent memory leaks
+    this.subscriptions.forEach(subscription => {
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe();
+      }
+    });
+    this.subscriptions = [];
+  }
+
   loadUserInfo() {
-    // Get user email from auth service
-    this.authService.currentUser$.subscribe(user => {
+    // Get user email from auth service with proper subscription handling
+    const subscription = this.authService.currentUser$.subscribe(user => {
       if (user) {
         this.userEmail = user.email;
       }
     });
+
+    // Store subscription for cleanup
+    this.subscriptions.push(subscription);
   }
 
   loadUserProfile() {
     // Load user profile from API
-    this.profileService.getCurrentUserProfile().subscribe({
+    const subscription = this.profileService.getCurrentUserProfile().subscribe({
       next: response => {
         if (response.success) {
           this.userProfile = response.data;
@@ -149,6 +165,9 @@ export class SettingsComponent implements OnInit {
         );
       },
     });
+
+    // Store subscription for cleanup
+    this.subscriptions.push(subscription);
   }
 
   async loadDataStats() {
@@ -435,11 +454,14 @@ export class SettingsComponent implements OnInit {
 
   // Credit Management Methods
   loadCreditInfo() {
-    // Subscribe to dashboard state for credit information
-    this.dashboardStateService.state$.subscribe(state => {
+    // Subscribe to dashboard state for credit information with proper cleanup
+    const subscription = this.dashboardStateService.state$.subscribe(state => {
       this.creditsInfo = state.creditsInfo;
       this.userCreditStatus = state.userCreditStatus;
     });
+
+    // Store subscription for cleanup
+    this.subscriptions.push(subscription);
 
     // Load initial credit data
     this.dashboardStateService.loadInitialDashboardData();
@@ -454,7 +476,8 @@ export class SettingsComponent implements OnInit {
         resolve();
       }, 5000);
 
-      const subscription = this.authService.currentUser$.subscribe(user => {
+      let subscription: any; // Declare first to avoid temporal dead zone
+      subscription = this.authService.currentUser$.subscribe(user => {
         clearTimeout(timeout);
         if (user) {
           this.userEmail = user.email;
@@ -511,7 +534,8 @@ export class SettingsComponent implements OnInit {
       this.dashboardStateService.loadBasicDataForSettings();
 
       // Subscribe to dashboard state for credit information - take first emission
-      const subscription = this.dashboardStateService.state$.subscribe(state => {
+      let subscription: any; // Declare first to avoid temporal dead zone
+      subscription = this.dashboardStateService.state$.subscribe(state => {
         clearTimeout(timeout);
         this.creditsInfo = state.creditsInfo;
         this.userCreditStatus = state.userCreditStatus;

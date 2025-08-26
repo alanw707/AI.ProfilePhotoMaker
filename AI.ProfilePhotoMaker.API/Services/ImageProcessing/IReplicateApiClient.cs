@@ -132,4 +132,13 @@ public interface IReplicateApiClient
     /// <param name="modelId">The model ID in format owner/model-name</param>
     /// <returns>True if model exists and is available</returns>
     Task<bool> CheckModelAvailabilityAsync(string modelId);
+
+    /// <summary>
+    /// Generates basic images for users without trained models
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="userInfo">Optional user info for generation</param>
+    /// <param name="gender">Gender for basic image generation</param>
+    /// <returns>The prediction result</returns>
+    Task<ReplicatePredictionResult> GenerateBasicImageAsync(string userId, UserInfo? userInfo, string gender);
 }

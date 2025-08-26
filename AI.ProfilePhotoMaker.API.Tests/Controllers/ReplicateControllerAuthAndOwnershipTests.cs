@@ -68,7 +68,7 @@ public class ReplicateControllerAuthAndOwnershipTests
 
         // Credits sufficient so code reaches our InvalidUserContext gate
         mockBasic.Setup(s => s.GetCreditBreakdownAsync("user-123"))
-                 .ReturnsAsync((weekly: 999, purchased: 999));
+                 .ReturnsAsync((999, 999));
 
         var controller = CreateController("user-123", db, mockReplicate, mockBasic);
 
@@ -94,7 +94,7 @@ public class ReplicateControllerAuthAndOwnershipTests
 
         // Enough credits
         mockBasic.Setup(s => s.GetCreditBreakdownAsync("user-123"))
-                 .ReturnsAsync((weekly: 999, purchased: 999));
+                 .ReturnsAsync((999, 999));
 
         var controller = CreateController("user-123", db, mockReplicate, mockBasic);
 
@@ -122,7 +122,7 @@ public class ReplicateControllerAuthAndOwnershipTests
 
         // Credits sufficient
         mockBasic.Setup(s => s.GetCreditBreakdownAsync("user-123"))
-                 .ReturnsAsync((weekly: 999, purchased: 999));
+                 .ReturnsAsync((999, 999));
 
         var controller = CreateController("user-123", db, mockReplicate, mockBasic);
 
