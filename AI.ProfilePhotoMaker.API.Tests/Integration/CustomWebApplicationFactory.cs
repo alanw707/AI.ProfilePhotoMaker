@@ -13,7 +13,6 @@ using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Payment;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using Azure.Storage.Sas;
-using AI.ProfilePhotoMaker.API.Services.Monitoring;
 using AI.ProfilePhotoMaker.API.Middleware;
 using AI.ProfilePhotoMaker.API.Configuration;
 using Microsoft.AspNetCore.Authentication;
@@ -271,6 +270,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             => Task.FromResult(new AI.ProfilePhotoMaker.API.Services.ModelVersionRepairResult { Success = true });
 
         public Task<bool> SyncSpecificModelAsync(string userId, string modelId, string versionId)
+            => Task.FromResult(true);
+
+        public Task<bool> OverrideModelDeletionAsync(string userId, string modelId, string reason, string overriddenBy)
             => Task.FromResult(true);
 
         public Task<AI.ProfilePhotoMaker.API.Services.QuickModelCheckResult> QuickDatabaseCheckAsync(string userId)

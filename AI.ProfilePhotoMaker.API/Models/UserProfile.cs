@@ -12,6 +12,7 @@ public class UserProfile
     public string? Gender { get; set; }
     public string? Ethnicity { get; set; }
     public DateTime? LastModelSyncCheck { get; set; }
+    // Removed LastModelDeletedAt to avoid schema dependency
 
 
     // Basic tier and subscription management

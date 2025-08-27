@@ -10,7 +10,7 @@ using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Payment;
 using AI.ProfilePhotoMaker.API.Services.Storage;
-using AI.ProfilePhotoMaker.API.Services.Monitoring;
+// using AI.ProfilePhotoMaker.API.Services.Monitoring; // Removed monitoring dependency
 using AI.ProfilePhotoMaker.API.Middleware;
 using AI.ProfilePhotoMaker.API.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -292,12 +292,26 @@ if (!enableReplicateMock)
 if (enableReplicateMock)
 {
     builder.Services.AddScoped<IReplicateApiClient, MockReplicateApiClient>();
+    // Skip ModelDiscoveryService in mock mode since it needs ReplicateApi
+    Console.WriteLine("Mock mode enabled - skipping ModelDiscoveryService registration");
 }
 else
 {
     builder.Services.AddHttpClient<IReplicateApiClient, ReplicateApiClient>();
+    
+    // Configure robustness service with options
+    builder.Services.Configure<ModelDiscoveryRobustnessOptions>(options =>
+    {
+        options.MaxRetryAttempts = 3;
+        options.BaseRetryDelayMs = 1000;
+        options.MaxRetryDelayMs = 10000;
+        options.CircuitBreakerFailureThreshold = 5;
+        options.CircuitBreakerTimeoutMs = 60000;
+    });
+    
+    builder.Services.AddSingleton<ModelDiscoveryRobustnessService>();
+    builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IModelDiscoveryService, AI.ProfilePhotoMaker.API.Services.ModelDiscoveryService>();
 }
-builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IModelDiscoveryService, AI.ProfilePhotoMaker.API.Services.ModelDiscoveryService>();
 
 builder.Services.AddScoped<IWebhookUrlResolver, WebhookUrlResolver>();
 builder.Services.AddHttpClient<WebhookUrlResolver>();
@@ -325,7 +339,7 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IDatabaseHea
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IStorageHealthService, AI.ProfilePhotoMaker.API.Services.Health.StorageHealthService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IDependencyHealthService, AI.ProfilePhotoMaker.API.Services.Health.DependencyHealthService>();
 
-builder.Services.AddPerformanceMonitoring(builder.Configuration);
+// builder.Services.AddPerformanceMonitoring(builder.Configuration); // Removed monitoring service
 builder.Services.AddScoped<IAsyncFileService, AsyncFileService>();
 builder.Services.AddScoped<IAsyncZipService, AsyncZipService>();
 
@@ -339,6 +353,9 @@ builder.Services.AddHostedService<TrainingPollingBackgroundService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.BasicTierBackgroundService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelExpirationBackgroundService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.RetentionPolicyBackgroundService>();
+
+// Model sync health monitoring - removed dependency
+// builder.Services.AddModelSyncHealthMonitoring();
 
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
@@ -499,7 +516,7 @@ app.Use(async (context, next) =>
     }
 });
 app.UseCors(corsPolicy);
-app.UsePerformanceMonitoring();
+// app.UsePerformanceMonitoring(); // Removed monitoring middleware
 app.Use(async (context, next) => { await next(); });
 app.UseAuthentication();
 app.UseAuthorization();

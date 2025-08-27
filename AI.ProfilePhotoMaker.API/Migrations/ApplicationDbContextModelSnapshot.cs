@@ -153,7 +153,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.HasIndex("IsActive", "DisplayOrder")
                         .HasDatabaseName("IX_CreditPackages_IsActive_DisplayOrder");
 
-                    b.ToTable("CreditPackages");
+                    b.ToTable("CreditPackages", (string)null);
 
                     b.HasData(
                         new
@@ -247,7 +247,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.HasIndex("UserId")
                         .HasDatabaseName("IX_CreditPurchases_UserId");
 
-                    b.ToTable("CreditPurchases");
+                    b.ToTable("CreditPurchases", (string)null);
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.ModelCreationRequest", b =>
@@ -299,7 +299,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .IsDescending(false, false, true)
                         .HasDatabaseName("IX_ModelCreationRequests_UserId_Status_CompletedAt");
 
-                    b.ToTable("ModelCreationRequests");
+                    b.ToTable("ModelCreationRequests", (string)null);
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.PaymentTransaction", b =>
@@ -366,7 +366,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.HasIndex("UserId")
                         .HasDatabaseName("IX_PaymentTransactions_UserId");
 
-                    b.ToTable("PaymentTransactions");
+                    b.ToTable("PaymentTransactions", (string)null);
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.Prediction", b =>
@@ -393,7 +393,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .IsDescending(false, true)
                         .HasDatabaseName("IX_Predictions_UserId_CreatedAt_Desc");
 
-                    b.ToTable("Predictions");
+                    b.ToTable("Predictions", (string)null);
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.ProcessedImage", b =>
@@ -463,7 +463,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .IsDescending(false, false, false, true)
                         .HasDatabaseName("IX_ProcessedImages_UserProfileId_Flags_CreatedAt");
 
-                    b.ToTable("ProcessedImages");
+                    b.ToTable("ProcessedImages", (string)null);
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.Style", b =>
@@ -515,7 +515,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.HasIndex("IsActive", "Name")
                         .HasDatabaseName("IX_Styles_IsActive_Name");
 
-                    b.ToTable("Styles");
+                    b.ToTable("Styles", (string)null);
 
                     b.HasData(
                         new
@@ -811,7 +811,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.HasIndex("StartDate", "EndDate")
                         .HasDatabaseName("IX_Subscriptions_DateRange");
 
-                    b.ToTable("Subscriptions");
+                    b.ToTable("Subscriptions", (string)null);
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.SubscriptionPlan", b =>
@@ -873,7 +873,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SubscriptionPlans");
+                    b.ToTable("SubscriptionPlans", (string)null);
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UsageLog", b =>
@@ -914,7 +914,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.HasIndex("UserId")
                         .HasDatabaseName("IX_UsageLogs_UserId");
 
-                    b.ToTable("UsageLogs");
+                    b.ToTable("UsageLogs", (string)null);
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UserProfile", b =>
@@ -972,7 +972,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.HasIndex("UserId")
                         .HasDatabaseName("IX_UserProfiles_UserId");
 
-                    b.ToTable("UserProfiles");
+                    b.ToTable("UserProfiles", (string)null);
                 });
 
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.UserStyleSelection", b =>
@@ -1004,7 +1004,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_UserStyleSelections_UserProfile_Style_Unique");
 
-                    b.ToTable("UserStyleSelections");
+                    b.ToTable("UserStyleSelections", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
