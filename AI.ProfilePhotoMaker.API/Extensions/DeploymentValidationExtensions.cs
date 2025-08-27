@@ -17,7 +17,7 @@ public static class DeploymentValidationExtensions
     {
         // Register deployment validation services
         services.AddScoped<IDeploymentValidationService, DeploymentValidationService>();
-        services.AddScoped<IDeploymentMonitoringService, DeploymentMonitoringService>();
+        // services.AddScoped<IDeploymentMonitoringService, DeploymentMonitoringService>(); // Removed monitoring dependency
 
         return services;
     }

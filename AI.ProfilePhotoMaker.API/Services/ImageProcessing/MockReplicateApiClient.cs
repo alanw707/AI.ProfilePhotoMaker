@@ -10,6 +10,8 @@ public class MockReplicateApiClient : IReplicateApiClient
 {
     private static readonly Dictionary<string, ReplicateTrainingResult> Trainings = new();
     private static readonly Dictionary<string, ReplicatePredictionResult> Predictions = new();
+    private static readonly HashSet<string> CreatedModels = new();
+    private static readonly HashSet<string> DeletedModels = new();
     private readonly ApplicationDbContext _context;
     private readonly ILogger<MockReplicateApiClient> _logger;
 
@@ -22,7 +24,8 @@ public class MockReplicateApiClient : IReplicateApiClient
     public Task<string> CreateModelAsync(string userId, string modelName, string? description = null)
     {
         var full = $"mock/{modelName}";
-        _logger.LogInformation("[Mock] CreateModel => {Model}", full);
+        CreatedModels.Add(full);
+        _logger.LogInformation("[Mock] CreateModel => {Model} (tracking {CreatedCount} models)", full, CreatedModels.Count);
         return Task.FromResult(full);
     }
 
@@ -191,9 +194,33 @@ public class MockReplicateApiClient : IReplicateApiClient
         return result;
     }
 
-    public Task<bool> CheckModelExistsAsync(string modelId) => Task.FromResult(true);
+    public Task<bool> CheckModelExistsAsync(string modelId)
+    {
+        bool exists = CreatedModels.Contains(modelId) && !DeletedModels.Contains(modelId);
+        _logger.LogInformation("[Mock] CheckModelExists => {ModelId} exists: {Exists}", modelId, exists);
+        return Task.FromResult(exists);
+    }
 
-    public Task<bool> DeleteModelAsync(string modelId) => Task.FromResult(true);
+    public Task<bool> DeleteModelAsync(string modelId)
+    {
+        // Check if model exists and hasn't been deleted
+        if (!CreatedModels.Contains(modelId))
+        {
+            _logger.LogWarning("[Mock] DeleteModel => {ModelId} not found in created models", modelId);
+            return Task.FromResult(false);
+        }
+        
+        if (DeletedModels.Contains(modelId))
+        {
+            _logger.LogWarning("[Mock] DeleteModel => {ModelId} already deleted", modelId);
+            return Task.FromResult(false);
+        }
+        
+        // Mark as deleted
+        DeletedModels.Add(modelId);
+        _logger.LogInformation("[Mock] DeleteModel => {ModelId} successfully deleted ({DeletedCount} total deleted)", modelId, DeletedModels.Count);
+        return Task.FromResult(true);
+    }
 
     public Task<ReplicatePredictionResult> CreatePredictionAsync(string modelId, Dictionary<string, object> input)
     {
@@ -227,4 +254,5 @@ public class MockReplicateApiClient : IReplicateApiClient
     }
 
     public Task<bool> CheckModelAvailabilityAsync(string modelId) => Task.FromResult(true);
+
 }

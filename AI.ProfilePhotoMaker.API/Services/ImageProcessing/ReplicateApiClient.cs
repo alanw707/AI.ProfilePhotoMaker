@@ -1036,110 +1036,47 @@ public class ReplicateApiClient : IReplicateApiClient
     }
 
     /// <summary>
-    /// Deletes a model and all its versions from Replicate.
+    /// Deletes a model from Replicate
     /// </summary>
-    /// <param name="modelId">The model ID in the format "owner/model-name".</param>
-    /// <returns>True if deletion was successful, false otherwise.</returns>
+    /// <param name="modelId">The model ID (owner/model-name)</param>
+    /// <returns>True if deletion was successful, false otherwise</returns>
     public async Task<bool> DeleteModelAsync(string modelId)
     {
         try
         {
-            _logger.LogInformation("Starting deletion process for model {ModelId}", modelId);
+            _logger.LogInformation("Deleting model {ModelId}", modelId);
 
-            // Step 1: Get model details to find all versions
-            var modelDetailsResponse = await _httpClient.GetAsync($"models/{modelId}");
-
-            if (modelDetailsResponse.StatusCode == HttpStatusCode.NotFound)
+            // Check if model exists first
+            var modelResponse = await _httpClient.GetAsync($"models/{modelId}");
+            if (modelResponse.StatusCode == HttpStatusCode.NotFound)
             {
-                _logger.LogInformation("Model {ModelId} not found. Assuming already deleted.", modelId);
-                return true; // Model doesn't exist, so it's "deleted"
-            }
-
-            if (!modelDetailsResponse.IsSuccessStatusCode)
-            {
-                var errorContent = await modelDetailsResponse.Content.ReadAsStringAsync();
-                _logger.LogError("Failed to get model details for {ModelId}: {StatusCode}, {ErrorContent}",
-                    modelId, modelDetailsResponse.StatusCode, errorContent);
-                return false;
-            }
-
-            var jsonResponse = await modelDetailsResponse.Content.ReadAsStringAsync();
-            using var document = JsonDocument.Parse(jsonResponse);
-            var root = document.RootElement;
-
-            if (root.TryGetProperty("versions", out var versionsElement) && versionsElement.ValueKind == JsonValueKind.Array)
-            {
-                var versionIds = versionsElement.EnumerateArray()
-                    .Select(v => v.TryGetProperty("id", out var idElement) ? idElement.GetString() : null)
-                    .Where(id => !string.IsNullOrEmpty(id))
-                    .ToList();
-
-                _logger.LogInformation("Found {VersionCount} versions for model {ModelId}. Deleting them now.", versionIds.Count, modelId);
-
-                // Step 2: Delete each version
-                foreach (var versionId in versionIds)
-                {
-                    _logger.LogInformation("Deleting version {VersionId} from model {ModelId}", versionId, modelId);
-                    var deleteVersionResponse = await _httpClient.DeleteAsync($"models/{modelId}/versions/{versionId}");
-
-                    if (deleteVersionResponse.IsSuccessStatusCode)
-                    {
-                        _logger.LogInformation("Successfully deleted version {VersionId}", versionId);
-                    }
-                    else if (deleteVersionResponse.StatusCode == HttpStatusCode.NotFound)
-                    {
-                        _logger.LogInformation("Version {VersionId} not found, skipping.", versionId);
-                    }
-                    else
-                    {
-                        var errorContent = await deleteVersionResponse.Content.ReadAsStringAsync();
-                        _logger.LogWarning("Failed to delete version {VersionId}: {StatusCode}, {ErrorContent}. Halting deletion process for this model.",
-                            versionId, deleteVersionResponse.StatusCode, errorContent);
-                        // Depending on requirements, you might want to continue or stop. Stopping is safer.
-                        return false;
-                    }
-                }
-            }
-            else
-            {
-                _logger.LogInformation("No versions found for model {ModelId} or versions property is not an array.", modelId);
-            }
-
-            // Step 3: Delete the model itself
-            _logger.LogInformation("All versions deleted. Now deleting the model shell {ModelId}", modelId);
-            var deleteModelResponse = await _httpClient.DeleteAsync($"models/{modelId}");
-
-            if (deleteModelResponse.IsSuccessStatusCode)
-            {
-                _logger.LogInformation("Successfully deleted model shell {ModelId}", modelId);
+                _logger.LogInformation("Model {ModelId} not found, considering deletion successful", modelId);
                 return true;
             }
-            else if (deleteModelResponse.StatusCode == HttpStatusCode.NotFound)
+
+            if (!modelResponse.IsSuccessStatusCode)
             {
-                _logger.LogInformation("Model shell {ModelId} was not found for final deletion (may have been deleted concurrently).", modelId);
-                return true; // Success, as the end state is that the model is gone.
+                _logger.LogError("Failed to check model {ModelId}: {StatusCode}", modelId, modelResponse.StatusCode);
+                return false;
+            }
+
+            // Delete the model
+            var deleteResponse = await _httpClient.DeleteAsync($"models/{modelId}");
+            if (deleteResponse.IsSuccessStatusCode || deleteResponse.StatusCode == HttpStatusCode.NotFound)
+            {
+                _logger.LogInformation("Successfully deleted model {ModelId}", modelId);
+                return true;
             }
             else
             {
-                var errorContent = await deleteModelResponse.Content.ReadAsStringAsync();
-                _logger.LogError("Failed to delete model shell {ModelId}: {StatusCode}, {ErrorContent}",
-                    modelId, deleteModelResponse.StatusCode, errorContent);
+                var error = await deleteResponse.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to delete model {ModelId}: {StatusCode} - {Error}", modelId, deleteResponse.StatusCode, error);
                 return false;
             }
-        }
-        catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
-        {
-            _logger.LogError(ex, "Replicate API authentication failed during model deletion process for {ModelId}", modelId);
-            return false;
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogError(ex, "Failed to parse JSON response during model deletion for {ModelId}", modelId);
-            return false;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An unexpected error occurred while deleting model {ModelId}", modelId);
+            _logger.LogError(ex, "Error deleting model {ModelId}", modelId);
             return false;
         }
     }
@@ -1157,9 +1094,7 @@ public class ReplicateApiClient : IReplicateApiClient
             var predictionRequest = new
             {
                 version = modelId,
-                input = input,
-                webhook = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete"),
-                webhook_events_filter = new[] { "completed" }
+                input = input
             };
 
             var content = new StringContent(
@@ -1172,7 +1107,7 @@ public class ReplicateApiClient : IReplicateApiClient
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Replicate prediction creation failed: {ErrorContent}", errorContent);
+                _logger.LogError("Prediction creation failed: {ErrorContent}", errorContent);
                 throw new Exception($"Failed to create prediction: {response.StatusCode}, {errorContent}");
             }
 
@@ -1186,27 +1121,11 @@ public class ReplicateApiClient : IReplicateApiClient
                 throw new Exception("Failed to deserialize prediction response");
             }
 
-            _logger.LogInformation("Prediction created successfully with ID {PredictionId} using model {ModelId}", result.Id, modelId);
             return result;
-        }
-        catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
-        {
-            _logger.LogError(ex, "Replicate API authentication failed for model {ModelId}", modelId);
-            throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
-        }
-        catch (HttpRequestException ex) when (ex.Message.Contains("429") || ex.Message.Contains("rate limit"))
-        {
-            _logger.LogWarning(ex, "Replicate API rate limit reached for model {ModelId}", modelId);
-            throw new InvalidOperationException("Replicate API rate limit reached. Please try again later.", ex);
-        }
-        catch (HttpRequestException ex) when (ex.Message.Contains("402") || ex.Message.Contains("payment"))
-        {
-            _logger.LogError(ex, "Replicate API payment required for model {ModelId}", modelId);
-            throw new InvalidOperationException("Replicate API payment required. Please check your billing.", ex);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating prediction for model {ModelId}", modelId);
+            _logger.LogError(ex, "Error creating prediction with model {ModelId}", modelId);
             throw;
         }
     }
@@ -1220,232 +1139,100 @@ public class ReplicateApiClient : IReplicateApiClient
     {
         try
         {
-            _logger.LogInformation("Searching for models matching pattern 'user-{UserId}-*'", userId);
-
-            // Get the owner name from configuration
-            string owner = _configuration["Replicate:OwnerName"] ?? "alanw707"; // Default to known owner
-            _logger.LogInformation("Using owner: {Owner} for model search", owner);
-
-            // Call Replicate API to list models for the owner
-            string requestUrl = $"models?cursor=&owner={owner}";
-            _logger.LogInformation("Making Replicate API request: {RequestUrl}", requestUrl);
-
-            var response = await _httpClient.GetAsync(requestUrl);
-
-            _logger.LogInformation("Replicate API response status: {StatusCode}", response.StatusCode);
+            var models = new List<ReplicateModelInfo>();
+            var response = await _httpClient.GetAsync("models");
 
             if (!response.IsSuccessStatusCode)
             {
-                string errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Failed to list models from Replicate API: {StatusCode}, Content: {ErrorContent}",
-                                 response.StatusCode, errorContent);
-                return new List<ReplicateModelInfo>();
+                _logger.LogError("Failed to get models list: {StatusCode}", response.StatusCode);
+                return models;
             }
 
-            var jsonResponse = await response.Content.ReadAsStringAsync();
-            _logger.LogInformation("Replicate API raw response: {JsonResponse}", jsonResponse);
+            var responseJson = await response.Content.ReadAsStringAsync();
+            using var document = JsonDocument.Parse(responseJson);
+            var root = document.RootElement;
 
-            var apiResponse = JsonSerializer.Deserialize<ReplicateModelsResponse>(jsonResponse, new JsonSerializerOptions
+            if (root.TryGetProperty("results", out var resultsElement) && resultsElement.ValueKind == JsonValueKind.Array)
             {
-                PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
-            });
-
-            if (apiResponse?.Results == null)
-            {
-                _logger.LogWarning("No models returned from Replicate API. ApiResponse: {ApiResponse}", apiResponse);
-                return new List<ReplicateModelInfo>();
-            }
-
-            _logger.LogInformation("Found {TotalModels} total models from Replicate API", apiResponse.Results.Count);
-
-            // Filter models matching the user pattern
-            string userPattern = $"user-{userId}";
-            _logger.LogInformation("Filtering models with pattern: {UserPattern}", userPattern);
-
-            // Log all model names for debugging
-            foreach (var model in apiResponse.Results)
-            {
-                _logger.LogInformation("Available model: {ModelName} (Owner: {Owner})", model.Name, model.Owner);
-            }
-
-            var userModels = apiResponse.Results
-                .Where(model => model.Name.StartsWith(userPattern, StringComparison.OrdinalIgnoreCase))
-                .Select(model => new ReplicateModelInfo
+                foreach (var modelElement in resultsElement.EnumerateArray())
                 {
-                    Name = model.Name,
-                    Owner = model.Owner,
-                    Description = model.Description,
-                    CreatedAt = model.CreatedAt,
-                    UpdatedAt = model.UpdatedAt,
-                    LatestVersion = model.LatestVersion?.Id,
-                    Visibility = model.Visibility,
-                    CoverImageUrl = model.CoverImageUrl,
-                    RunCount = model.RunCount
-                })
-                .OrderByDescending(m => m.UpdatedAt)
-                .ToList();
+                    if (modelElement.TryGetProperty("name", out var nameProperty) &&
+                        modelElement.TryGetProperty("owner", out var ownerProperty))
+                    {
+                        var name = nameProperty.GetString();
+                        var owner = ownerProperty.GetString();
 
-            _logger.LogInformation("Found {Count} models matching pattern 'user-{UserId}-*'", userModels.Count, userId);
-
-            if (userModels.Count > 0)
-            {
-                foreach (var userModel in userModels)
-                {
-                    _logger.LogInformation("Matched user model: {ModelName} (Updated: {UpdatedAt})",
-                                         userModel.Name, userModel.UpdatedAt);
+                        if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(owner) &&
+                            name.Contains($"user-{userId}"))
+                        {
+                            models.Add(new ReplicateModelInfo
+                            {
+                                Name = name,
+                                Owner = owner
+                            });
+                        }
+                    }
                 }
             }
 
-            return userModels;
+            _logger.LogInformation("Found {Count} models for user {UserId}", models.Count, userId);
+            return models;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error searching for user models for userId {UserId}", userId);
-            throw;
+            _logger.LogError(ex, "Error finding models for user {UserId}", userId);
+            return new List<ReplicateModelInfo>();
         }
     }
 
     /// <summary>
-    /// Gets the latest version ID for a specific model from Replicate API with retry logic
+    /// Gets the latest version ID for a specific model from Replicate API
     /// </summary>
     /// <param name="modelId">The model ID in format owner/model-name</param>
     /// <returns>The latest version ID hash or null if not found</returns>
     public async Task<string?> GetModelVersionAsync(string modelId)
     {
-        const int maxRetries = 3;
-        var delayMs = 2000; // Start with 2 seconds
-
-        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        try
         {
-            try
+            var response = await _httpClient.GetAsync($"models/{modelId}");
+
+            if (!response.IsSuccessStatusCode)
             {
-                if (string.IsNullOrEmpty(modelId))
-                {
-                    return null;
-                }
-
-                // Parse model ID to get owner and name
-                var parts = modelId.Split('/');
-                if (parts.Length != 2)
-                {
-                    _logger.LogWarning("Invalid model ID format: {ModelId}", modelId);
-                    return null;
-                }
-
-                var owner = parts[0];
-                var modelName = parts[1];
-
-                // Get model details from Replicate API
-                var response = await _httpClient.GetAsync($"models/{owner}/{modelName}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var jsonResponse = await response.Content.ReadAsStringAsync();
-                    _logger.LogInformation("Got model details for {ModelId} on attempt {Attempt}", modelId, attempt);
-
-                    // Parse the response to extract latest version ID
-                    using var document = JsonDocument.Parse(jsonResponse);
-                    var root = document.RootElement;
-
-                    if (root.TryGetProperty("latest_version", out var latestVersionElement) &&
-                        latestVersionElement.TryGetProperty("id", out var versionIdElement))
-                    {
-                        var versionId = versionIdElement.GetString();
-                        if (!string.IsNullOrEmpty(versionId))
-                        {
-                            _logger.LogInformation("Found version ID {VersionId} for model {ModelId} on attempt {Attempt}", 
-                                versionId, modelId, attempt);
-                            return versionId;
-                        }
-                    }
-                    
-                    _logger.LogWarning("No valid latest_version.id found in response for model {ModelId} on attempt {Attempt}", 
-                        modelId, attempt);
-                }
-                else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    _logger.LogInformation("Model {ModelId} not found on Replicate (attempt {Attempt})", modelId, attempt);
-                    // Don't retry for 404 - model doesn't exist
-                    return null;
-                }
-                else
-                {
-                    _logger.LogWarning("Failed to get model details for {ModelId} on attempt {Attempt}: {StatusCode}", 
-                        modelId, attempt, response.StatusCode);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Error getting model version for {ModelId} on attempt {Attempt}/{MaxRetries}", 
-                    modelId, attempt, maxRetries);
+                _logger.LogError("Failed to get model {ModelId}: {StatusCode}", modelId, response.StatusCode);
+                return null;
             }
 
-            // If not the last attempt, wait before retrying
-            if (attempt < maxRetries)
+            var responseJson = await response.Content.ReadAsStringAsync();
+            using var document = JsonDocument.Parse(responseJson);
+            var root = document.RootElement;
+
+            if (root.TryGetProperty("latest_version", out var latestVersionElement) &&
+                latestVersionElement.TryGetProperty("id", out var idElement))
             {
-                _logger.LogInformation("Retrying GetModelVersionAsync for {ModelId} in {Delay}ms (attempt {NextAttempt}/{MaxRetries})", 
-                    modelId, delayMs, attempt + 1, maxRetries);
-                await Task.Delay(delayMs);
-                delayMs *= 2; // Exponential backoff: 2s, 4s, 8s
+                return idElement.GetString();
             }
+
+            _logger.LogWarning("No latest version found for model {ModelId}", modelId);
+            return null;
         }
-
-        _logger.LogError("Failed to get model version for {ModelId} after {MaxRetries} attempts", modelId, maxRetries);
-        return null;
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting model version for {ModelId}", modelId);
+            return null;
+        }
     }
 
     /// <summary>
     /// Checks if a model exists and is available on Replicate
     /// </summary>
+    /// <param name="modelId">The model ID in format owner/model-name</param>
+    /// <returns>True if model exists and is available</returns>
     public async Task<bool> CheckModelAvailabilityAsync(string modelId)
     {
         try
         {
-            if (string.IsNullOrEmpty(modelId))
-            {
-                return false;
-            }
-
-            // Parse model ID to get owner and name
-            var parts = modelId.Split('/');
-            if (parts.Length != 2)
-            {
-                _logger.LogWarning("Invalid model ID format: {ModelId}", modelId);
-                return false;
-            }
-
-            var owner = parts[0];
-            var modelName = parts[1];
-
-            // Try to get the model
-            var response = await _httpClient.GetAsync($"models/{owner}/{modelName}");
-
-            if (response.IsSuccessStatusCode)
-            {
-                var jsonResponse = await response.Content.ReadAsStringAsync();
-                var modelData = JsonSerializer.Deserialize<JsonElement>(jsonResponse);
-
-                // Check if model has a latest version (required for predictions)
-                if (modelData.TryGetProperty("latest_version", out var latestVersion))
-                {
-                    var versionId = latestVersion.GetProperty("id").GetString();
-                    _logger.LogInformation("Model {ModelId} is available with version {VersionId}", modelId, versionId);
-                    return !string.IsNullOrEmpty(versionId);
-                }
-
-                _logger.LogWarning("Model {ModelId} exists but has no latest version", modelId);
-                return false;
-            }
-            else if (response.StatusCode == HttpStatusCode.NotFound)
-            {
-                _logger.LogWarning("Model {ModelId} not found on Replicate", modelId);
-                return false;
-            }
-            else
-            {
-                _logger.LogError("Failed to check model availability: {StatusCode}", response.StatusCode);
-                return false;
-            }
+            var response = await _httpClient.GetAsync($"models/{modelId}");
+            return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
         {

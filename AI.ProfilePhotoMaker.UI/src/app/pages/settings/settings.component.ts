@@ -185,6 +185,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
         // Even if primary API succeeded, verify trained model status using comprehensive check
         // This ensures accuracy since model status might be inconsistent across systems
+        // Wait for user profile to be loaded first to check trainedModelId
+        if (!this.userProfile) {
+          await this.loadUserProfileAsync();
+        }
         await this.checkTrainedModelStatus();
       } else {
         // Fallback to existing method if API is not available
@@ -206,6 +210,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
         }
 
         // Check if user has trained model using multiple data sources for accuracy
+        // Wait for user profile to be loaded first to check trainedModelId
+        if (!this.userProfile) {
+          await this.loadUserProfileAsync();
+        }
         await this.checkTrainedModelStatus();
       }
     } catch (error) {
@@ -241,7 +249,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       case 'model':
         this.confirmationTitle = 'Delete AI Model';
         this.confirmationMessage =
-          'Are you sure you want to delete your trained AI model? You will need to re-upload photos and retrain to generate new styled photos.';
+          'Are you sure you want to delete your AI model? This includes trained models and any failed training attempts stored on our servers. You will need to re-upload photos and retrain to generate new styled photos.';
         break;
       case 'all':
         this.confirmationTitle = 'Delete All Data';
@@ -476,7 +484,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
         resolve();
       }, 5000);
 
-      let subscription: any; // Declare first to avoid temporal dead zone
+       
+      let subscription: any;
       subscription = this.authService.currentUser$.subscribe(user => {
         clearTimeout(timeout);
         if (user) {
@@ -534,7 +543,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
       this.dashboardStateService.loadBasicDataForSettings();
 
       // Subscribe to dashboard state for credit information - take first emission
-      let subscription: any; // Declare first to avoid temporal dead zone
+       
+      let subscription: any;
       subscription = this.dashboardStateService.state$.subscribe(state => {
         clearTimeout(timeout);
         this.creditsInfo = state.creditsInfo;
@@ -577,15 +587,40 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Check if we can delete AI models (includes Failed models that exist on Replicate)
+   */
+  canDeleteAIModel(): boolean {
+    const canDelete = this.dataStats.hasTrainedModel || !!this.userProfile?.trainedModelId;
+
+    if (canDelete) {
+      console.log('🗑️ Model deletion enabled:', {
+        hasTrainedModel: this.dataStats.hasTrainedModel,
+        trainedModelId: this.userProfile?.trainedModelId,
+        reason: this.dataStats.hasTrainedModel ? 'hasTrainedModel=true' : 'trainedModelId exists',
+      });
+    }
+
+    return canDelete;
+  }
+
+  /**
    * Comprehensive check for trained model status using multiple data sources
    * This addresses the issue where model status might be inconsistent across different endpoints
+   * Updated to properly detect Failed models that exist on Replicate for deletion purposes
    */
   private async checkTrainedModelStatus(): Promise<void> {
     let hasTrainedModel = false;
     const statusSources: string[] = [];
 
     try {
-      // Method 1: Check training status endpoint
+      // Method 1: Check user profile for model IDs (primary source - includes Failed models with ReplicateModelId)
+      if (this.userProfile?.trainedModelId) {
+        hasTrainedModel = true;
+        statusSources.push('user-profile');
+        console.log('✅ Model found in user profile:', this.userProfile.trainedModelId);
+      }
+
+      // Method 2: Check training status endpoint (for Ready models only)
       try {
         const trainingStatus = await firstValueFrom(this.fileUploadService.getTrainingStatus());
         if (trainingStatus?.hasTrainedModel) {
@@ -596,7 +631,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
         console.warn('⚠️ Training status endpoint failed:', error);
       }
 
-      // Method 2: Check user model requests endpoint
+      // Method 3: Check user model requests endpoint (fallback)
       try {
         const modelRequests = await firstValueFrom(this.fileUploadService.getUserModelRequests());
         if (modelRequests?.success && modelRequests.data?.hasTrainedModel) {
@@ -607,16 +642,15 @@ export class SettingsComponent implements OnInit, OnDestroy {
         console.warn('⚠️ Model requests endpoint failed:', error);
       }
 
-      // Method 3: Check user profile for model IDs
-      if (this.userProfile?.trainedModelId) {
-        hasTrainedModel = true;
-        statusSources.push('user-profile');
-      }
-
-      // Debug endpoint removed: no longer used as a fallback
-
-      // Update the status
+      // Update the status - now includes Failed models that exist on Replicate
       this.dataStats.hasTrainedModel = hasTrainedModel;
+
+      console.log(`🔍 Model status check complete:`, {
+        hasTrainedModel,
+        sources: statusSources,
+        trainedModelId: this.userProfile?.trainedModelId,
+        trainedModelVersionId: this.userProfile?.trainedModelVersionId,
+      });
 
       // Log warning if no model found but expected
       if (!hasTrainedModel && statusSources.length === 0) {

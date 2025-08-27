@@ -138,9 +138,10 @@ public partial class DeploymentValidationService
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            // Check if monitoring services are available
-            var metrics = await _performanceMonitoring.GetCurrentMetricsAsync();
-            var isMonitoringActive = metrics != null;
+            // Check if monitoring services are available - simplified without monitoring service
+            // var metrics = await _performanceMonitoring.GetCurrentMetricsAsync();
+            // var isMonitoringActive = metrics != null;
+            var isMonitoringActive = false; // Monitoring service not available
 
             stopwatch.Stop();
 
@@ -153,7 +154,7 @@ public partial class DeploymentValidationService
                 Data = new Dictionary<string, object>
                 {
                     ["monitoringActive"] = isMonitoringActive,
-                    ["metricsAvailable"] = metrics != null
+                    ["metricsAvailable"] = false
                 }
             };
         }

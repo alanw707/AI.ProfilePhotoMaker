@@ -8,6 +8,7 @@ namespace AI.ProfilePhotoMaker.API.Services;
 
 /// <summary>
 /// Service for discovering and syncing user models between Replicate and database using tryAGI.Replicate SDK
+/// Enhanced with reliability patterns to prevent false negative detections
 /// </summary>
 public class ModelDiscoveryService : IModelDiscoveryService
 {
@@ -15,17 +16,20 @@ public class ModelDiscoveryService : IModelDiscoveryService
     private readonly IReplicateApiClient _replicateApiClient;
     private readonly ApplicationDbContext _context;
     private readonly ILogger<ModelDiscoveryService> _logger;
+    private readonly ModelDiscoveryRobustnessService _robustnessService;
 
     public ModelDiscoveryService(
         ReplicateApi replicateApi,
         IReplicateApiClient replicateApiClient,
         ApplicationDbContext context,
-        ILogger<ModelDiscoveryService> logger)
+        ILogger<ModelDiscoveryService> logger,
+        ModelDiscoveryRobustnessService robustnessService)
     {
         _replicateApi = replicateApi;
         _replicateApiClient = replicateApiClient;
         _context = context;
         _logger = logger;
+        _robustnessService = robustnessService;
     }
 
     /// <summary>
@@ -115,12 +119,14 @@ public class ModelDiscoveryService : IModelDiscoveryService
 
                 _logger.LogInformation("Using simplified pattern prefix matching for user {UserId}", userId);
 
-                // Method 1: Use efficient ReplicateApiClient pattern discovery FIRST
+                // Method 1: Use efficient ReplicateApiClient pattern discovery FIRST with retry logic
                 try
                 {
-                    _logger.LogInformation("Using ReplicateApiClient to find models for user {UserId}", userId);
+                    _logger.LogInformation("Using ReplicateApiClient to find models for user {UserId} with robustness layer", userId);
 
-                    var apiClientModels = await _replicateApiClient.FindUserModelsByPatternAsync(userId);
+                    var apiClientModels = await _robustnessService.ExecuteWithRetryAsync(
+                        () => _replicateApiClient.FindUserModelsByPatternAsync(userId),
+                        $"FindUserModelsByPattern-{userId}");
 
                     foreach (var apiModel in apiClientModels)
                     {
@@ -141,7 +147,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "ReplicateApiClient pattern discovery failed for user {UserId}", userId);
+                    _logger.LogWarning(ex, "ReplicateApiClient pattern discovery failed for user {UserId} after retries", userId);
                 }
 
                 // Method 2: Check for the specific known model (only if not found above)
@@ -430,6 +436,74 @@ public class ModelDiscoveryService : IModelDiscoveryService
     }
 
     /// <summary>
+    /// Manual override for suspected false negative model deletion
+    /// Restores a model that was incorrectly marked as deleted
+    /// </summary>
+    public async Task<bool> OverrideModelDeletionAsync(string userId, string modelId, string reason, string overriddenBy)
+    {
+        try
+        {
+            _logger.LogWarning(
+                "Manual override requested for model {ModelId} by {OverriddenBy}. " +
+                "User: {UserId}, Reason: {Reason}",
+                modelId, overriddenBy, userId, reason);
+
+            // Record the override using robustness service
+            await _robustnessService.OverrideModelExistenceAsync(userId, modelId, reason, overriddenBy);
+
+            // Find the failed model in database
+            var failedModel = await _context.ModelCreationRequests
+                .Where(m => m.UserId == userId && 
+                           m.ReplicateModelId == modelId && 
+                           m.Status == ModelCreationStatus.Failed)
+                .OrderByDescending(m => m.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (failedModel == null)
+            {
+                _logger.LogWarning("No failed model found for override: {ModelId}, User: {UserId}", modelId, userId);
+                return false;
+            }
+
+            // Verify the model still exists on Replicate before restoring
+            var verificationResult = await _robustnessService.VerifyModelExistenceAsync(
+                userId,
+                modelId,
+                null);
+
+            if (!verificationResult.ModelExists)
+            {
+                _logger.LogError(
+                    "Override rejected: Model {ModelId} verification failed. " +
+                    "Confidence: {Confidence}, User: {UserId}",
+                    modelId, verificationResult.ConfidenceLevel, userId);
+                return false;
+            }
+
+            // Restore the model
+            failedModel.Status = ModelCreationStatus.Ready;
+            failedModel.ErrorMessage = $"Restored via manual override by {overriddenBy}. Reason: {reason}";
+            // UpdatedAt field doesn't exist in ModelCreationRequest, using CompletedAt for restoration timestamp
+            failedModel.CompletedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Successfully restored model {ModelId} for user {UserId} via manual override by {OverriddenBy}",
+                modelId, userId, overriddenBy);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, 
+                "Error during manual override for model {ModelId}, User: {UserId}, Override by: {OverriddenBy}",
+                modelId, userId, overriddenBy);
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Checks for the specific known model based on debug output
     /// </summary>
     private async Task<UserModelInfo?> CheckKnownModel(string userId, string owner)
@@ -598,23 +672,55 @@ public class ModelDiscoveryService : IModelDiscoveryService
                     mostRecentModel.ModelId, mostRecentModel.VersionId);
             }
 
-            // If database has a model but it's not found on Replicate, mark it as failed
+            // If database has a model but it's not found on Replicate, verify before marking as failed
+            // This is the CRITICAL section that was causing false negative detections
             if (hasModelInDb && currentModelId != null)
             {
                 var modelExistsOnReplicate = replicateModels.Any(m => m.ModelId == currentModelId);
                 if (!modelExistsOnReplicate)
                 {
-                    _logger.LogWarning("Model {ModelId} found in database but not on Replicate, marking as failed", currentModelId);
+                    _logger.LogWarning("Model {ModelId} not found in discovery results. Starting verification process to prevent false negative", currentModelId);
 
-                    // Mark the model as failed instead of deleting it (preserve history)
-                    if (latestModelInDb != null)
+                    // ENHANCED: Multi-method verification before marking as deleted
+                    var verificationResult = await _robustnessService.VerifyModelExistenceAsync(
+                        userId,
+                        currentModelId,
+                        null);
+
+                    _logger.LogInformation(
+                        "Model verification completed for {ModelId}. Exists: {Exists}, Confidence: {Confidence}, Duration: {Duration}ms",
+                        currentModelId, verificationResult.ModelExists, verificationResult.ConfidenceLevel, 
+                        verificationResult.VerificationDuration.TotalMilliseconds);
+
+                    // Only mark as failed if verification confirms model doesn't exist with high confidence
+                    if (!verificationResult.ModelExists && (verificationResult.ConfidenceLevel == ModelExistenceConfidence.High || verificationResult.ConfidenceLevel == ModelExistenceConfidence.Medium))
                     {
-                        latestModelInDb.Status = ModelCreationStatus.Failed;
-                        latestModelInDb.ErrorMessage = "Model not found on Replicate during sync";
-                    }
+                        _logger.LogWarning(
+                            "Model {ModelId} verified as deleted externally with {Confidence} confidence. Marking as failed", 
+                            currentModelId, verificationResult.ConfidenceLevel);
 
-                    result.ModelsRemoved++;
-                    result.RemovedModelIds.Add(currentModelId);
+                        // Mark the model as failed instead of deleting it (preserve history)
+                        if (latestModelInDb != null)
+                        {
+                            latestModelInDb.Status = ModelCreationStatus.Failed;
+                            latestModelInDb.ErrorMessage = $"Model verified as deleted externally. Confidence: {verificationResult.ConfidenceLevel}";
+                        }
+
+                        result.ModelsRemoved++;
+                        result.RemovedModelIds.Add(currentModelId);
+                    }
+                    else
+                    {
+                        _logger.LogInformation(
+                            "Model {ModelId} verification suggests it still exists or verification failed. NOT marking as failed. " +
+                            "Exists: {Exists}, Confidence: {Confidence}",
+                            currentModelId, verificationResult.ModelExists, verificationResult.ConfidenceLevel);
+
+                        // Log this as a potential discovery issue for monitoring
+                        _logger.LogWarning(
+                            "Potential discovery reliability issue: Model {ModelId} exists but was not found in discovery. " +
+                            "This may indicate API reliability problems.", currentModelId);
+                    }
                 }
             }
 

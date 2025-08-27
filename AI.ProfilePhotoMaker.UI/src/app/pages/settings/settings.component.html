@@ -178,7 +178,7 @@
                 <button
                   class="btn btn-outline-danger"
                   (click)="confirmDeleteData('model')"
-                  [disabled]="isDeleting || !dataStats.hasTrainedModel">
+                  [disabled]="isDeleting || !canDeleteAIModel()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <polyline
                       points="3,6 5,6 21,6"

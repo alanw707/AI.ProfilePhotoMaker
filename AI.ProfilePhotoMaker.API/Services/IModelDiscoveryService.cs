@@ -43,6 +43,16 @@ public interface IModelDiscoveryService
     /// <param name="userId">The user ID</param>
     /// <returns>Quick check result with model info if found</returns>
     Task<QuickModelCheckResult> QuickDatabaseCheckAsync(string userId);
+
+    /// <summary>
+    /// Manual override for suspected false negative model deletion
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="modelId">The model ID to restore</param>
+    /// <param name="reason">Reason for the override</param>
+    /// <param name="overriddenBy">Who is performing the override</param>
+    /// <returns>True if override was successful</returns>
+    Task<bool> OverrideModelDeletionAsync(string userId, string modelId, string reason, string overriddenBy);
 }
 
 /// <summary>

@@ -202,6 +202,79 @@ public class ModelDiscoveryController : ControllerBase
             });
         }
     }
+
+    /// <summary>
+    /// Manual override for restoring a model that was incorrectly marked as deleted
+    /// Admin/Support endpoint for handling false negative detections
+    /// </summary>
+    [HttpPost("override-deletion")]
+    public async Task<IActionResult> OverrideModelDeletion([FromBody] OverrideModelDeletionRequest request)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { success = false, error = "User not authenticated" });
+            }
+
+            if (string.IsNullOrEmpty(request.ModelId))
+            {
+                return BadRequest(new { success = false, error = "ModelId is required" });
+            }
+
+            if (string.IsNullOrEmpty(request.Reason))
+            {
+                return BadRequest(new { success = false, error = "Reason is required for audit trail" });
+            }
+
+            var overriddenBy = User.Identity?.Name ?? userId;
+            
+            _logger.LogWarning(
+                "Manual override deletion request for model {ModelId} by {OverriddenBy}. " +
+                "Target User: {UserId}, Reason: {Reason}",
+                request.ModelId, overriddenBy, request.UserId ?? userId, request.Reason);
+
+            var targetUserId = request.UserId ?? userId; // Allow admin to override for other users
+
+            var success = await _modelDiscoveryService.OverrideModelDeletionAsync(
+                targetUserId, request.ModelId, request.Reason, overriddenBy);
+
+            if (success)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    message = $"Successfully restored model {request.ModelId} for user {targetUserId}",
+                    auditInfo = new
+                    {
+                        modelId = request.ModelId,
+                        userId = targetUserId,
+                        overriddenBy = overriddenBy,
+                        reason = request.Reason,
+                        timestamp = DateTime.UtcNow
+                    }
+                });
+            }
+            else
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    error = $"Failed to restore model {request.ModelId}. Model may not exist or verification failed."
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during model deletion override for {ModelId}", request.ModelId);
+            return StatusCode(500, new
+            {
+                success = false,
+                error = "Internal server error during model deletion override"
+            });
+        }
+    }
 }
 
 /// <summary>
@@ -211,4 +284,14 @@ public class SyncSpecificModelRequest
 {
     public string ModelId { get; set; } = string.Empty;
     public string VersionId { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Request model for overriding model deletion
+/// </summary>
+public class OverrideModelDeletionRequest
+{
+    public string ModelId { get; set; } = string.Empty;
+    public string Reason { get; set; } = string.Empty;
+    public string? UserId { get; set; } // Optional - for admin override of other users
 }

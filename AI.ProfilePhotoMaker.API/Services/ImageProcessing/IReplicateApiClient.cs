@@ -132,4 +132,5 @@ public interface IReplicateApiClient
     /// <param name="modelId">The model ID in format owner/model-name</param>
     /// <returns>True if model exists and is available</returns>
     Task<bool> CheckModelAvailabilityAsync(string modelId);
+
 }
