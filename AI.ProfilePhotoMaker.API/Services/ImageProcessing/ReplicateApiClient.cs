@@ -1089,7 +1089,7 @@ public class ReplicateApiClient : IReplicateApiClient
             {
                 _logger.LogInformation("Model {ModelId} has existing versions, starting cascade deletion", modelId);
                 
-                // Get all model versions
+                // Get all model versions with enhanced error handling
                 var versions = await GetModelVersionsAsync(modelId);
                 if (versions.Count == 0)
                 {
@@ -1314,6 +1314,11 @@ public class ReplicateApiClient : IReplicateApiClient
         }
     }
 
+    /// <summary>
+    /// Gets all versions for a model from Replicate API with enhanced error handling
+    /// </summary>
+    /// <param name="modelId">The model ID in format owner/model-name</param>
+    /// <returns>List of version IDs</returns>
     public async Task<List<string>> GetModelVersionsAsync(string modelId)
     {
         try
@@ -1328,7 +1333,26 @@ public class ReplicateApiClient : IReplicateApiClient
             }
 
             var responseContent = await response.Content.ReadAsStringAsync();
-            var versionData = JsonDocument.Parse(responseContent);
+            
+            // CRITICAL FIX: Validate response content before JSON parsing
+            if (string.IsNullOrWhiteSpace(responseContent))
+            {
+                _logger.LogWarning("Empty response when fetching versions for model {ModelId}", modelId);
+                return new List<string>();
+            }
+            
+            // CRITICAL FIX: Robust JSON parsing with specific error handling
+            JsonDocument versionData;
+            try
+            {
+                versionData = JsonDocument.Parse(responseContent);
+            }
+            catch (JsonException jsonEx)
+            {
+                _logger.LogError(jsonEx, "Invalid JSON response when fetching versions for model {ModelId}. Response: {Response}", 
+                    modelId, responseContent);
+                return new List<string>();
+            }
             
             var versions = new List<string>();
             if (versionData.RootElement.TryGetProperty("results", out var resultsElement) && resultsElement.ValueKind == JsonValueKind.Array)
@@ -1352,6 +1376,7 @@ public class ReplicateApiClient : IReplicateApiClient
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching versions for model {ModelId}", modelId);
+            // CRITICAL FIX: Always return empty list instead of throwing to prevent cascade deletion from failing
             return new List<string>();
         }
     }
