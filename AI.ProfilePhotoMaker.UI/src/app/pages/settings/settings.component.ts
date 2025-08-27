@@ -319,15 +319,19 @@ export class SettingsComponent implements OnInit, OnDestroy {
           await this.deleteAccount();
           break;
       }
+
+      // Success - close modal after operation completes
+      this.isDeleting = false;
+      this.showConfirmationModal = false;
     } catch (error) {
       console.error('Delete operation failed:', error);
       this.notificationService.error(
         'Delete Failed',
         'The delete operation failed. Please try again.'
       );
-    } finally {
+
+      // Error - just reset loading state, keep modal open
       this.isDeleting = false;
-      this.showConfirmationModal = false;
     }
   }
 
@@ -340,7 +344,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
           `Successfully deleted ${response.data.deletedCount} input photos.`
         );
         this.dataStats.inputPhotos = 0;
-        await this.loadDataStats(); // Refresh stats
+        // Refresh stats, but don't fail the overall delete if this errors
+        try {
+          await this.loadDataStats();
+        } catch (refreshErr) {
+          console.warn('Post-delete stats refresh failed:', refreshErr);
+        }
       } else {
         throw new Error(response?.error?.message || 'Failed to delete photos');
       }
@@ -363,7 +372,15 @@ export class SettingsComponent implements OnInit, OnDestroy {
           this.userProfile.trainedModelId = undefined;
           this.userProfile.trainedModelVersionId = undefined;
         }
-        await this.loadDataStats(); // Refresh stats
+        // Close modal and reset state immediately so the UI doesn't feel stuck
+        this.isDeleting = false;
+        this.showConfirmationModal = false;
+        this.cdr.detectChanges();
+
+        // Refresh stats in the background; don't block UI/closing
+        this.loadDataStats().catch(refreshErr => {
+          console.warn('Post-delete stats refresh failed:', refreshErr);
+        });
       } else {
         throw new Error(response?.error?.message || 'Failed to delete AI model');
       }
@@ -389,7 +406,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
           totalDataSize: 0,
           accountAge: this.dataStats.accountAge,
         };
-        await this.loadDataStats(); // Refresh stats
+        // Refresh stats, but don't fail the overall delete if this errors
+        try {
+          await this.loadDataStats();
+        } catch (refreshErr) {
+          console.warn('Post-delete stats refresh failed:', refreshErr);
+        }
       } else {
         throw new Error(response?.error?.message || 'Failed to delete all data');
       }
@@ -484,7 +506,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
         resolve();
       }, 5000);
 
-       
       let subscription: any;
       subscription = this.authService.currentUser$.subscribe(user => {
         clearTimeout(timeout);
@@ -543,7 +564,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       this.dashboardStateService.loadBasicDataForSettings();
 
       // Subscribe to dashboard state for credit information - take first emission
-       
+
       let subscription: any;
       subscription = this.dashboardStateService.state$.subscribe(state => {
         clearTimeout(timeout);

@@ -101,8 +101,8 @@ public interface IReplicateApiClient
     /// Deletes a model from Replicate
     /// </summary>
     /// <param name="modelId">The model ID (owner/model-name)</param>
-    /// <returns>True if deletion was successful, false otherwise</returns>
-    Task<bool> DeleteModelAsync(string modelId);
+    /// <returns>Success status and error message if failed</returns>
+    Task<(bool Success, string? ErrorMessage)> DeleteModelAsync(string modelId);
 
     /// <summary>
     /// Creates a prediction using a specific model and input parameters
@@ -132,5 +132,20 @@ public interface IReplicateApiClient
     /// <param name="modelId">The model ID in format owner/model-name</param>
     /// <returns>True if model exists and is available</returns>
     Task<bool> CheckModelAvailabilityAsync(string modelId);
+
+    /// <summary>
+    /// Gets all versions for a specific model from Replicate API
+    /// </summary>
+    /// <param name="modelId">The model ID in format owner/model-name</param>
+    /// <returns>List of version IDs for the model</returns>
+    Task<List<string>> GetModelVersionsAsync(string modelId);
+
+    /// <summary>
+    /// Deletes a specific version of a model from Replicate
+    /// </summary>
+    /// <param name="modelId">The model ID in format owner/model-name</param>
+    /// <param name="versionId">The version ID to delete</param>
+    /// <returns>Success status and error message if failed</returns>
+    Task<(bool Success, string? ErrorMessage)> DeleteModelVersionAsync(string modelId, string versionId);
 
 }

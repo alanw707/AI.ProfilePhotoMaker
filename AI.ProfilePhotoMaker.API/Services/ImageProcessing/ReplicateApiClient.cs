@@ -1039,45 +1039,118 @@ public class ReplicateApiClient : IReplicateApiClient
     /// Deletes a model from Replicate
     /// </summary>
     /// <param name="modelId">The model ID (owner/model-name)</param>
-    /// <returns>True if deletion was successful, false otherwise</returns>
-    public async Task<bool> DeleteModelAsync(string modelId)
+    /// <returns>Success status and error message if failed</returns>
+    public async Task<(bool Success, string? ErrorMessage)> DeleteModelAsync(string modelId)
     {
         try
         {
-            _logger.LogInformation("Deleting model {ModelId}", modelId);
-
+            _logger.LogInformation("Deleting model {ModelId} with automatic version cleanup", modelId);
+            
             // Check if model exists first
             var modelResponse = await _httpClient.GetAsync($"models/{modelId}");
             if (modelResponse.StatusCode == HttpStatusCode.NotFound)
             {
                 _logger.LogInformation("Model {ModelId} not found, considering deletion successful", modelId);
-                return true;
+                return (true, null);
             }
-
             if (!modelResponse.IsSuccessStatusCode)
             {
+                var checkError = await modelResponse.Content.ReadAsStringAsync();
                 _logger.LogError("Failed to check model {ModelId}: {StatusCode}", modelId, modelResponse.StatusCode);
-                return false;
+                return (false, $"Unable to access model: {checkError}");
             }
 
-            // Delete the model
+            // Attempt direct model deletion first
             var deleteResponse = await _httpClient.DeleteAsync($"models/{modelId}");
             if (deleteResponse.IsSuccessStatusCode || deleteResponse.StatusCode == HttpStatusCode.NotFound)
             {
                 _logger.LogInformation("Successfully deleted model {ModelId}", modelId);
-                return true;
+                return (true, null);
+            }
+
+            // Check if deletion failed due to existing versions
+            var error = await deleteResponse.Content.ReadAsStringAsync();
+            string? errorDetail = null;
+            
+            try
+            {
+                var errorObj = JsonDocument.Parse(error);
+                errorDetail = errorObj.RootElement.GetProperty("detail").GetString();
+            }
+            catch
+            {
+                errorDetail = error;
+            }
+
+            // If error indicates model has versions, attempt cascade deletion
+            if (errorDetail != null && (
+                errorDetail.Contains("existing versions", StringComparison.OrdinalIgnoreCase) ||
+                errorDetail.Contains("cannot be deleted", StringComparison.OrdinalIgnoreCase)))
+            {
+                _logger.LogInformation("Model {ModelId} has existing versions, starting cascade deletion", modelId);
+                
+                // Get all model versions
+                var versions = await GetModelVersionsAsync(modelId);
+                if (versions.Count == 0)
+                {
+                    _logger.LogWarning("No versions found for model {ModelId}, but deletion failed due to versions", modelId);
+                    return (false, errorDetail ?? "Model has versions but none could be retrieved");
+                }
+
+                _logger.LogInformation("Found {VersionCount} versions for model {ModelId}, deleting each version", versions.Count, modelId);
+
+                // Delete each version
+                var failedVersions = new List<string>();
+                foreach (var versionId in versions)
+                {
+                    var (versionDeleteSuccess, versionError) = await DeleteModelVersionAsync(modelId, versionId);
+                    if (!versionDeleteSuccess)
+                    {
+                        _logger.LogWarning("Failed to delete version {VersionId} of model {ModelId}: {Error}", 
+                            versionId, modelId, versionError);
+                        failedVersions.Add(versionId);
+                    }
+                }
+
+                // Check if any versions failed to delete
+                if (failedVersions.Count > 0)
+                {
+                    _logger.LogError("Failed to delete {FailedCount} versions of model {ModelId}: {FailedVersions}", 
+                        failedVersions.Count, modelId, string.Join(", ", failedVersions));
+                    return (false, $"Failed to delete {failedVersions.Count} model versions. Cannot proceed with model deletion.");
+                }
+
+                _logger.LogInformation("Successfully deleted all {VersionCount} versions of model {ModelId}, retrying model deletion", 
+                    versions.Count, modelId);
+
+                // Retry model deletion after clearing all versions
+                var retryDeleteResponse = await _httpClient.DeleteAsync($"models/{modelId}");
+                if (retryDeleteResponse.IsSuccessStatusCode || retryDeleteResponse.StatusCode == HttpStatusCode.NotFound)
+                {
+                    _logger.LogInformation("Successfully deleted model {ModelId} after clearing {VersionCount} versions", 
+                        modelId, versions.Count);
+                    return (true, null);
+                }
+                else
+                {
+                    var retryError = await retryDeleteResponse.Content.ReadAsStringAsync();
+                    _logger.LogError("Failed to delete model {ModelId} even after clearing versions: {StatusCode} - {Error}", 
+                        modelId, retryDeleteResponse.StatusCode, retryError);
+                    return (false, $"Model deletion failed even after clearing versions: {retryError}");
+                }
             }
             else
             {
-                var error = await deleteResponse.Content.ReadAsStringAsync();
-                _logger.LogError("Failed to delete model {ModelId}: {StatusCode} - {Error}", modelId, deleteResponse.StatusCode, error);
-                return false;
+                // Different error - not related to versions
+                _logger.LogError("Failed to delete model {ModelId}: {StatusCode} - {Error}", 
+                    modelId, deleteResponse.StatusCode, error);
+                return (false, errorDetail ?? $"Delete failed: {error}");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting model {ModelId}", modelId);
-            return false;
+            _logger.LogError(ex, "Error deleting model {ModelId} with cascade deletion", modelId);
+            return (false, $"Network or API error: {ex.Message}");
         }
     }
 
@@ -1238,6 +1311,85 @@ public class ReplicateApiClient : IReplicateApiClient
         {
             _logger.LogError(ex, "Error checking model availability for {ModelId}", modelId);
             return false;
+        }
+    }
+
+    public async Task<List<string>> GetModelVersionsAsync(string modelId)
+    {
+        try
+        {
+            _logger.LogInformation("Fetching versions for model {ModelId}", modelId);
+            var response = await _httpClient.GetAsync($"models/{modelId}/versions");
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to fetch versions for model {ModelId}: {StatusCode}", modelId, response.StatusCode);
+                return new List<string>();
+            }
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+            var versionData = JsonDocument.Parse(responseContent);
+            
+            var versions = new List<string>();
+            if (versionData.RootElement.TryGetProperty("results", out var resultsElement) && resultsElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var version in resultsElement.EnumerateArray())
+                {
+                    if (version.TryGetProperty("id", out var idElement))
+                    {
+                        var versionId = idElement.GetString();
+                        if (!string.IsNullOrEmpty(versionId))
+                        {
+                            versions.Add(versionId);
+                        }
+                    }
+                }
+            }
+            
+            _logger.LogInformation("Found {Count} versions for model {ModelId}", versions.Count, modelId);
+            return versions;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching versions for model {ModelId}", modelId);
+            return new List<string>();
+        }
+    }
+
+    public async Task<(bool Success, string? ErrorMessage)> DeleteModelVersionAsync(string modelId, string versionId)
+    {
+        try
+        {
+            _logger.LogInformation("Deleting version {VersionId} of model {ModelId}", versionId, modelId);
+            var response = await _httpClient.DeleteAsync($"models/{modelId}/versions/{versionId}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Successfully deleted version {VersionId} of model {ModelId}", versionId, modelId);
+                return (true, null);
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to delete version {VersionId} of model {ModelId}: {StatusCode} - {Error}", versionId, modelId, response.StatusCode, error);
+                
+                // Parse and return user-friendly error message
+                try
+                {
+                    var errorObj = JsonDocument.Parse(error);
+                    var detail = errorObj.RootElement.GetProperty("detail").GetString();
+                    return (false, detail ?? error);
+                }
+                catch
+                {
+                    return (false, $"Delete version failed: {error}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting version {VersionId} of model {ModelId}", versionId, modelId);
+            return (false, $"Network or API error: {ex.Message}");
         }
     }
 }

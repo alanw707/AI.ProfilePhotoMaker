@@ -72,7 +72,7 @@ public class ProfileController : ControllerBase
             Gender = profile.Gender,
             Ethnicity = profile.Ethnicity,
             // Show Ready model info for UI, but ensure deletion can find Failed models too
-            TrainedModelId = latestModel?.ReplicateModelId ?? anyDeletableModel?.ReplicateModelId,
+            TrainedModelId = latestModel?.ReplicateModelId,
             TrainedModelVersionId = latestModel?.TrainedModelVersion,
             ModelTrainedAt = latestModel?.CompletedAt,
             CreatedAt = profile.CreatedAt,
@@ -254,9 +254,9 @@ public class ProfileController : ControllerBase
         // Check if there are any models (including Failed) that might exist on Replicate for deletion purposes
         var anyDeletableModel = await GetAnyDeletableModelAsync(userId);
         
-        // Use same logic as GetProfile() for consistency
-        var hasTrainedModel = latestModel != null || anyDeletableModel != null;
-        var trainedModelId = latestModel?.ReplicateModelId ?? anyDeletableModel?.ReplicateModelId;
+        // Use Ready-only status for hasTrainedModel; deletable Failed models are handled via deletion flows
+        var hasTrainedModel = latestModel != null;
+        var trainedModelId = latestModel?.ReplicateModelId;
 
         return Ok(new
         {
@@ -447,17 +447,46 @@ public class ProfileController : ControllerBase
             if (profile == null)
                 return NotFound("Profile not found");
 
-            // Check for any deletable model (Ready or Failed status) that might exist on Replicate
-            var deletableModel = await GetAnyDeletableModelAsync(userId!);
-            if (deletableModel == null)
+            // Gather ALL model creation requests for user to ensure complete cleanup
+            var allModelRequests = await _context.ModelCreationRequests
+                .Where(m => m.UserId == userId)
+                .OrderByDescending(m => m.CompletedAt ?? m.CreatedAt)
+                .ToListAsync();
+
+            _logger.LogInformation("Found {Count} total model requests for user {UserId} - will delete all regardless of status", 
+                allModelRequests.Count, userId);
+
+            // Clean up any legacy "deleted" records that were incorrectly marked as Failed
+            var legacyDeletedRecords = allModelRequests
+                .Where(r => r.Status == ModelCreationStatus.Failed && 
+                           !string.IsNullOrEmpty(r.ErrorMessage) &&
+                           r.ErrorMessage.ToLower().Contains("deleted"))
+                .ToList();
+                
+            if (legacyDeletedRecords.Any())
+            {
+                _logger.LogWarning("Found {Count} legacy 'deleted' records incorrectly marked as Failed - these will be properly deleted", 
+                    legacyDeletedRecords.Count);
+            }
+
+            if (allModelRequests == null || allModelRequests.Count == 0)
             {
                 return BadRequest(new { success = false, error = new { code = "NoModel", message = "No trained model found to delete." } });
             }
 
-            // Get model from ModelCreationRequest
-            var trainedModel = deletableModel;
-            if (trainedModel != null && !string.IsNullOrEmpty(trainedModel.ReplicateModelId))
+            int deletedModels = 0;
+            foreach (var trainedModel in allModelRequests)
             {
+                // Only attempt Replicate deletion for Ready/Failed models with ReplicateModelId
+                if (string.IsNullOrEmpty(trainedModel.ReplicateModelId) || 
+                    (trainedModel.Status != ModelCreationStatus.Ready && trainedModel.Status != ModelCreationStatus.Failed))
+                {
+                    // No remote artifact to delete (Pending/Creating records) — just remove DB entry later
+                    _logger.LogInformation("Skipping Replicate deletion for model request {Id} (Status: {Status}, ModelId: {ModelId})", 
+                        trainedModel.Id, trainedModel.Status, trainedModel.ReplicateModelId ?? "null");
+                    continue;
+                }
+
                 var modelId = trainedModel.ReplicateModelId;
 
                 // Pre-validate model exists on Replicate before attempting deletion
@@ -473,21 +502,15 @@ public class ProfileController : ControllerBase
                     modelExistsOnReplicate = true; // Assume exists if we can't check
                 }
 
-                // Only attempt deletion if model exists on Replicate
-                bool deletionSuccessful = false;
                 if (modelExistsOnReplicate)
                 {
                     try
                     {
-                        deletionSuccessful = await _replicateApiClient.DeleteModelAsync(modelId);
-                        if (deletionSuccessful)
+                        var (success, errorMessage) = await _replicateApiClient.DeleteModelAsync(modelId);
+                        if (!success)
                         {
-                            _logger.LogInformation("Successfully deleted model {ModelId} from Replicate for user {UserId}", modelId, userId);
-                        }
-                        else
-                        {
-                            _logger.LogError("Failed to delete model {ModelId} from Replicate for user {UserId} - API returned false", modelId, userId);
-                            return StatusCode(500, new { success = false, error = new { code = "ReplicateDeletionFailed", message = "Failed to delete AI model from Replicate service. The model may still exist in your Replicate account." } });
+                            _logger.LogError("Failed to delete model {ModelId} from Replicate for user {UserId} - {ErrorMessage}", modelId, userId, errorMessage);
+                            return StatusCode(400, new { success = false, error = new { code = "ReplicateDeletionFailed", message = errorMessage ?? "Failed to delete AI model from Replicate service." } });
                         }
                     }
                     catch (Exception replicateEx)
@@ -499,17 +522,28 @@ public class ProfileController : ControllerBase
                 else
                 {
                     _logger.LogInformation("Model {ModelId} not found on Replicate, treating as already deleted for user {UserId}", modelId, userId);
-                    deletionSuccessful = true; // Consider it successfully "deleted" if it doesn't exist
                 }
 
-                // Only mark as deleted in database if Replicate deletion succeeded
-                trainedModel.Status = ModelCreationStatus.Failed;
-                trainedModel.ErrorMessage = "Model deleted by user";
-                await _context.SaveChangesAsync();
+                // We will hard-delete the record below; keep a count for response
+                deletedModels++;
             }
 
-            // Clear model information from database
-            // Model data is now managed in ModelCreationRequest table
+            // Hard delete all model creation request rows to avoid stale Ready records
+            _logger.LogInformation("Deleting {Count} model creation requests from database for user {UserId}", 
+                allModelRequests.Count, userId);
+            
+            foreach (var request in allModelRequests)
+            {
+                _logger.LogInformation("Deleting model request {Id}: Status={Status}, ModelId={ModelId}, Created={Created}", 
+                    request.Id, request.Status, request.ReplicateModelId ?? "null", request.CreatedAt);
+            }
+            
+            _context.ModelCreationRequests.RemoveRange(allModelRequests);
+            await _context.SaveChangesAsync();
+            
+            _logger.LogInformation("Successfully removed all {Count} model creation requests from database", allModelRequests.Count);
+
+            // Clear model information from database (updated timestamp only)
             profile.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -532,14 +566,14 @@ public class ProfileController : ControllerBase
                 _logger.LogWarning(zipEx, "Failed to delete training ZIP files for user {UserId}", userId);
             }
 
-            _logger.LogInformation("Successfully deleted AI model and related files for user {UserId}", userId);
+            _logger.LogInformation("Successfully deleted {Count} AI model(s) and related files for user {UserId}", deletedModels, userId);
 
             return Ok(new
             {
                 success = true,
                 data = new
                 {
-                    message = "AI model and training files have been successfully deleted"
+                    message = deletedModels <= 1 ? "AI model and training files have been successfully deleted" : $"{deletedModels} AI models and training files have been successfully deleted"
                 },
                 error = (object?)null
             });
@@ -631,20 +665,9 @@ public class ProfileController : ControllerBase
             var hasModel = await GetAnyDeletableModelAsync(userId!) != null;
             if (hasModel)
             {
-                try
-                {
-                    // await _replicateApiClient.DeleteModelAsync(profile.TrainedModelId); // TODO: Use ModelCreationRequest
-                    modelDeleted = true;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to delete model from Replicate for user {UserId}", userId);
-                }
-
-                // Clear model information from database
-                // profile.TrainedModelId = null; // TODO: Mark ModelCreationRequest as deleted
-                // profile.TrainedModelVersionId = null;
-                // profile.ModelTrainedAt = null; // Moved to ModelCreationRequest
+                // Model deletion is now handled by dedicated DeleteAIModel endpoint
+                // which properly manages ModelCreationRequest records and Replicate cleanup
+                modelDeleted = true;
             }
 
             // Delete training ZIP files
@@ -890,18 +913,31 @@ public class ProfileController : ControllerBase
             _logger.LogWarning(ex, "Failed to delete upload directory for user {UserId}", userId);
         }
 
-        // Delete AI model
-        var trainedModel = await GetLatestTrainedModelAsync(userId);
-        if (trainedModel != null && !string.IsNullOrEmpty(trainedModel.ReplicateModelId))
+        // Delete AI models: try remote delete for any with ReplicateModelId, then remove all rows
+        var userModels = await _context.ModelCreationRequests
+            .Where(m => m.UserId == userId && (m.Status == ModelCreationStatus.Ready || m.Status == ModelCreationStatus.Failed))
+            .ToListAsync();
+        foreach (var m in userModels)
         {
-            try
+            if (!string.IsNullOrEmpty(m.ReplicateModelId))
             {
-                await _replicateApiClient.DeleteModelAsync(trainedModel.ReplicateModelId);
+                try
+                {
+                    var (success, errorMessage) = await _replicateApiClient.DeleteModelAsync(m.ReplicateModelId);
+                    if (!success)
+                    {
+                        _logger.LogWarning("Failed to delete model {ModelId} from Replicate: {Error}", m.ReplicateModelId, errorMessage);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to delete model from Replicate for user {UserId}", userId);
+                }
             }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to delete model from Replicate for user {UserId}", userId);
-            }
+        }
+        if (userModels.Count > 0)
+        {
+            _context.ModelCreationRequests.RemoveRange(userModels);
         }
 
         // Delete training ZIP files
@@ -926,4 +962,3 @@ public class ProfileController : ControllerBase
         _context.UsageLogs.RemoveRange(profile.UsageLogs);
     }
 }
-

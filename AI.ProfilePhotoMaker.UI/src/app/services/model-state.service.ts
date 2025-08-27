@@ -118,6 +118,25 @@ export class ModelStateService implements IModelStateService {
 
     // Use ModelCreationRequest as single source of truth when a trained model exists
     if (modelRequestsData?.hasTrainedModel && modelRequestsData?.latestTrainedModel) {
+      // Check if the "trained" model was actually deleted by user
+      const all = Array.isArray(modelRequestsData?.allRequests)
+        ? [...modelRequestsData.allRequests]
+        : [];
+      const wasDeleted = all.some(
+        (req: any) =>
+          req.status === 'failed' &&
+          (req.errorMessage?.toLowerCase().includes('deleted from replicate') ||
+            req.errorMessage?.toLowerCase().includes('deleted by user'))
+      );
+
+      if (wasDeleted) {
+        // Model was deleted, don't show as ready
+        modelStatus = 'Ready for training';
+        hasTrainedModel = false;
+        latestTrainedModel = null;
+        return { modelStatus, hasTrainedModel, latestTrainedModel };
+      }
+
       hasTrainedModel = true;
       modelStatus = 'Model Ready';
       latestTrainedModel = modelRequestsData.latestTrainedModel;
@@ -176,10 +195,12 @@ export class ModelStateService implements IModelStateService {
     ) {
       modelStatus = 'Ready for training';
     } else if (
-      // If a model was deleted from Replicate, surface an actionable state
+      // If a model was deleted (by user or externally), surface an actionable state
       all.some(
         (req: any) =>
-          req.status === 'failed' && req.errorMessage?.includes('deleted from Replicate')
+          req.status === 'failed' &&
+          (req.errorMessage?.toLowerCase().includes('deleted from replicate') ||
+            req.errorMessage?.toLowerCase().includes('deleted by user'))
       )
     ) {
       modelStatus = 'Ready for training';
