@@ -255,6 +255,7 @@ public class ReplicateController : ControllerBase
             });
         }
 
+        AI.ProfilePhotoMaker.API.Models.ModelCreationRequest? model = null;
         try
         {
             // Get user info from database for prompt generation
@@ -276,7 +277,7 @@ public class ReplicateController : ControllerBase
             }
 
             // trainedModel is guaranteed to be non-null after successful validation
-            var model = trainedModel!;
+            model = trainedModel!;
 
             // Check if the model is still available on Replicate                        
             var modelAvailable = await _replicateApiClient.CheckModelAvailabilityAsync(model.ReplicateModelId!);
