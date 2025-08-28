@@ -148,4 +148,15 @@ public interface IReplicateApiClient
     /// <returns>Success status and error message if failed</returns>
     Task<(bool Success, string? ErrorMessage)> DeleteModelVersionAsync(string modelId, string versionId);
 
+    /// <summary>
+    /// Waits until a specific model version is visible/available via Replicate API.
+    /// Polls the versions list until the target version id appears or timeout is reached.
+    /// </summary>
+    /// <param name="modelId">The model id in format owner/model-name</param>
+    /// <param name="versionId">The 64-character version hash</param>
+    /// <param name="timeout">Maximum time to wait (defaults to 120 seconds)</param>
+    /// <param name="maxBackoff">Maximum backoff between polls (defaults to 20 seconds)</param>
+    /// <returns>True if version appeared before timeout; otherwise false</returns>
+    Task<bool> WaitForModelVersionAvailabilityAsync(string modelId, string versionId, TimeSpan? timeout = null, TimeSpan? maxBackoff = null);
+
 }

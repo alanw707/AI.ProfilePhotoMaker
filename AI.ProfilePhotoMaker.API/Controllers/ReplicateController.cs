@@ -255,6 +255,7 @@ public class ReplicateController : ControllerBase
             });
         }
 
+        AI.ProfilePhotoMaker.API.Models.ModelCreationRequest? model = null;
         try
         {
             // Get user info from database for prompt generation
@@ -276,7 +277,7 @@ public class ReplicateController : ControllerBase
             }
 
             // trainedModel is guaranteed to be non-null after successful validation
-            var model = trainedModel!;
+            model = trainedModel!;
 
             // Check if the model is still available on Replicate                        
             var modelAvailable = await _replicateApiClient.CheckModelAvailabilityAsync(model.ReplicateModelId!);
@@ -305,6 +306,34 @@ public class ReplicateController : ControllerBase
             var modelVersionToUse = FormatModelVersion(model.ReplicateModelId!, model.TrainedModelVersion!);
             _logger.LogInformation("Using trained model version from database: ModelId={ModelId}, Version={Version}", 
                 model.ReplicateModelId, modelVersionToUse);
+
+            // If model was very recently completed, proactively wait a short time for version finalization
+            if (model.CompletedAt.HasValue && DateTime.UtcNow - model.CompletedAt.Value < TimeSpan.FromMinutes(2))
+            {
+                try
+                {
+                    _logger.LogInformation("Model completed recently; waiting briefly for version finalization: {ModelId} {Version}",
+                        model.ReplicateModelId, model.TrainedModelVersion);
+                    var start = DateTime.UtcNow;
+                    var finalized = await _replicateApiClient.WaitForModelVersionAvailabilityAsync(
+                        model.ReplicateModelId!, model.TrainedModelVersion!, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(15));
+                    var elapsed = DateTime.UtcNow - start;
+                    if (finalized)
+                    {
+                        _logger.LogInformation("Proactive version wait succeeded in {ElapsedSec:F1}s for {ModelId}:{Version}",
+                            elapsed.TotalSeconds, model.ReplicateModelId, model.TrainedModelVersion);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Proactive version wait finished without confirmation after {ElapsedSec:F1}s; proceeding",
+                            elapsed.TotalSeconds);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Non-fatal error while waiting for version finalization prior to generation");
+                }
+            }
 
             var userInfo = userProfile != null ? new UserInfo
             {
@@ -348,6 +377,23 @@ public class ReplicateController : ControllerBase
                     creditsCost = requiredCredits
                 },
                 error = (object?)null
+            });
+        }
+        catch (AI.ProfilePhotoMaker.API.Services.ImageProcessing.ReplicateApiException ex) when (ex.ErrorCode == "ReplicateVersionNotAvailable" || (int)ex.StatusCode == 422)
+        {
+            double? ageSec = null;
+            try { ageSec = model?.CompletedAt.HasValue == true ? (double?)(DateTime.UtcNow - model!.CompletedAt!.Value).TotalSeconds : null; } catch { }
+            _logger.LogWarning(ex, "Replicate reports version not available yet for user {UserId}{Age}", userId,
+                ageSec.HasValue ? $", model age ~{ageSec.Value:F1}s" : string.Empty);
+            return StatusCode(409, new
+            {
+                success = false,
+                error = new
+                {
+                    code = "ModelVersionFinalizing",
+                    message = "Your model version is finalizing on Replicate. Please try again shortly.",
+                    retryAfterSeconds = 20
+                }
             });
         }
         catch (Exception ex)

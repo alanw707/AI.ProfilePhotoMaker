@@ -321,4 +321,11 @@ public class MockReplicateApiClient : IReplicateApiClient
 
     public Task<bool> CheckModelAvailabilityAsync(string modelId) => Task.FromResult(true);
 
+    public async Task<bool> WaitForModelVersionAvailabilityAsync(string modelId, string versionId, TimeSpan? timeout = null, TimeSpan? maxBackoff = null)
+    {
+        // In mock, simulate immediate availability after a tiny delay for realism
+        await Task.Delay(50);
+        return true;
+    }
+
 }

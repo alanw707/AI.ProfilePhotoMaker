@@ -138,6 +138,38 @@ public class TrainingPollingService : ITrainingPollingService
                     return;
                 }
                 
+                // Wait for version to become visible/available on Replicate before marking Ready
+                var modelIdForApi = modelRequest.ReplicateModelId!;
+                var waitStart = DateTime.UtcNow;
+                var completedAtUtc = trainingStatus.CompletedAt;
+                var waitSucceeded = await scopedReplicateClient.WaitForModelVersionAvailabilityAsync(
+                    modelIdForApi, trainedModelVersion, TimeSpan.FromSeconds(120), TimeSpan.FromSeconds(20));
+
+                if (!waitSucceeded)
+                {
+                    // Defer flipping to Ready; allow background poller to try again next cycle
+                    var waited = DateTime.UtcNow - waitStart;
+                    double? sinceCompletion = completedAtUtc.HasValue ? (DateTime.UtcNow - completedAtUtc.Value).TotalSeconds : null;
+                    _logger.LogWarning(
+                        "Version {Version} for model {ModelId} not visible yet after {WaitedSec:F1}s{SinceCompletion}",
+                        trainedModelVersion,
+                        modelIdForApi,
+                        waited.TotalSeconds,
+                        sinceCompletion.HasValue ? $", ~{sinceCompletion.Value:F1}s since training completion" : string.Empty);
+                    return;
+                }
+                else
+                {
+                    var waited = DateTime.UtcNow - waitStart;
+                    double? sinceCompletion = completedAtUtc.HasValue ? (DateTime.UtcNow - completedAtUtc.Value).TotalSeconds : null;
+                    _logger.LogInformation(
+                        "Version {Version} for model {ModelId} became available after {WaitedSec:F1}s{SinceCompletion}",
+                        trainedModelVersion,
+                        modelIdForApi,
+                        waited.TotalSeconds,
+                        sinceCompletion.HasValue ? $", ~{sinceCompletion.Value:F1}s since training completion" : string.Empty);
+                }
+
                 // Update model creation request to Ready status
                 modelRequest.Status = ModelCreationStatus.Ready;
                 modelRequest.TrainedModelVersion = trainedModelVersion;
