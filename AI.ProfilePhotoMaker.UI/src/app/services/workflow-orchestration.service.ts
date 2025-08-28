@@ -382,7 +382,7 @@ export class WorkflowOrchestrationService {
       const modelStatus = currentState.modelStatus;
       const latestTrainedModel = currentState.latestTrainedModel;
 
-      // CRITICAL FIX: Determine if user has ANY trained model, regardless of status
+      // CRITICAL FIX: Determine if user has ANY trained model using proper data validation
       const hasTrainedModel = this._checkForExistingTrainedModel(latestTrainedModel, modelStatus);
 
       console.log('🚨 WORKFLOW ROUTING DECISION:', {
@@ -391,6 +391,7 @@ export class WorkflowOrchestrationService {
         latestTrainedModel: !!latestTrainedModel,
         modelVersion: latestTrainedModel?.trainedModelVersion || latestTrainedModel?.versionId,
         modelId: latestTrainedModel?.replicateModelId || latestTrainedModel?.modelId,
+        routingDecision: hasTrainedModel ? 'GENERATION' : 'TRAINING',
       });
 
       if (hasTrainedModel) {
@@ -407,7 +408,16 @@ export class WorkflowOrchestrationService {
         await this._startModelTraining(selectedStyles, imagesPerStyle);
       }
     } catch (error) {
-      console.error('Error in training workflow:', error);
+      console.error('🚨 Training workflow error:', {
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        stackTrace: error instanceof Error ? error.stack?.substring(0, 500) : undefined,
+        currentState: {
+          modelStatus: currentState?.modelStatus,
+          hasLatestModel: !!currentState?.latestTrainedModel,
+          userAuth: this._deps.authService.isAuthenticated(),
+        },
+      });
 
       // Reset progress state
       this._setProgress({
@@ -416,54 +426,84 @@ export class WorkflowOrchestrationService {
         progressMessage: '',
       });
 
-      const detail = error instanceof Error ? error.message : 'Failed to start training';
-      this._deps.notificationService.error('Training Error', detail);
+      // Enhanced error categorization and user feedback
+      const errorDetails = this._categorizeWorkflowError(error);
+      this._deps.notificationService.error(errorDetails.title, errorDetails.message);
 
-      // Log detailed error information for debugging
-      if (error instanceof Error && error.message.includes('Authentication failed')) {
-        console.error('🔑 Authentication issue - check API tokens');
-      } else if (error instanceof Error && error.message.includes('Configuration error')) {
-        console.error('⚙️ Configuration issue - check settings');
-      } else if (error instanceof Error && error.message.includes('Payment required')) {
-        console.error('💳 Billing issue - check Replicate account');
-      }
+      // Log specific debugging information
+      this._logErrorDiagnostics(error, errorDetails.category);
     }
   }
 
   /**
    * CRITICAL FIX: Determine if user has ANY trained model available
    * This prevents incorrect fallback to training when generation should be used
+   * UPDATED: Now properly validates actual model data exists, matching backend validation
    */
   private _checkForExistingTrainedModel(latestTrainedModel: any, modelStatus: string): boolean {
-    // Check 1: Explicit model status indicates ready
-    if (modelStatus === 'Model Ready') {
-      return true;
-    }
-
-    // Check 2: We have trained model data with version/ID
+    // PRIMARY VALIDATION: Check actual model data first (matches backend requirements)
     if (latestTrainedModel) {
       const hasModelVersion = !!(
-        latestTrainedModel.trainedModelVersion || latestTrainedModel.versionId
+        latestTrainedModel.trainedModelVersion ||
+        latestTrainedModel.versionId ||
+        latestTrainedModel.TrainedModelVersion // Handle different casing
       );
-      const hasModelId = !!(latestTrainedModel.replicateModelId || latestTrainedModel.modelId);
+      const hasModelId = !!(
+        latestTrainedModel.replicateModelId ||
+        latestTrainedModel.modelId ||
+        latestTrainedModel.ReplicateModelId || // Handle different casing
+        latestTrainedModel.ModelId
+      );
 
+      // If we have actual model data with version/ID, this is a valid trained model
       if (hasModelVersion || hasModelId) {
+        console.log('✅ Found trained model with data:', {
+          hasModelVersion,
+          hasModelId,
+          modelVersion: hasModelVersion
+            ? latestTrainedModel.trainedModelVersion ||
+              latestTrainedModel.versionId ||
+              latestTrainedModel.TrainedModelVersion
+            : null,
+          modelId: hasModelId
+            ? latestTrainedModel.replicateModelId ||
+              latestTrainedModel.modelId ||
+              latestTrainedModel.ReplicateModelId ||
+              latestTrainedModel.ModelId
+            : null,
+        });
         return true;
       }
+    }
+
+    // SECONDARY VALIDATION: Only trust status if we also need to check API data
+    // Note: Status alone is not sufficient - backend requires actual model version data
+    if (modelStatus === 'Model Ready') {
+      console.log(
+        '⚠️ Model status shows "Ready" but no model data found - need to verify with API'
+      );
+      // This suggests we need to fetch fresh data from the API endpoint
+      // Do not assume model exists based on status alone
+      return false;
     }
 
     // Check 3: Model status suggests training exists (even if not fully ready)
     const statusesWithModel = ['Training', 'ModelReady', 'Completed', 'Ready'];
     if (statusesWithModel.some(status => modelStatus?.includes(status))) {
-      return true;
+      console.log(
+        '⚠️ Model status suggests trained model exists but no data found - need fresh API call'
+      );
+      return false;
     }
 
+    console.log('❌ No trained model found - will initiate training workflow');
     return false;
   }
 
   /**
    * CRITICAL FIX: Handle generation for users with existing trained models
    * This ensures we NEVER create training ZIPs for existing model users
+   * UPDATED: Only show "Using Existing Model" toast when model data actually exists
    */
   private async _handleExistingModelGeneration(
     selectedStyles: StyleOption[],
@@ -475,10 +515,13 @@ export class WorkflowOrchestrationService {
       const modelVersion = latestTrainedModel?.trainedModelVersion || latestTrainedModel?.versionId;
       const modelId = latestTrainedModel?.replicateModelId || latestTrainedModel?.modelId;
 
-      this._deps.notificationService.info(
-        'Using Existing Model',
-        'Using your previously trained model for generation'
-      );
+      // FIXED: Only show toast if we actually have model data
+      if (modelVersion || modelId) {
+        this._deps.notificationService.info(
+          'Using Existing Model',
+          'Using your previously trained model for generation'
+        );
+      }
 
       // Priority 1: Use explicit model version
       if (modelVersion) {
@@ -777,7 +820,7 @@ export class WorkflowOrchestrationService {
       console.warn('Authentication status:', this._deps.authService.isAuthenticated());
       throw new Error('User not authenticated - unable to extract user ID from token');
     }
-    console.warn('Starting training for user ID:', userId);
+    console.log('🚀 Starting training for user ID:', userId);
 
     this._setProgress({
       progressPercentage: 35,
@@ -787,35 +830,46 @@ export class WorkflowOrchestrationService {
     const trainRequest: TrainModelRequest = { userId, imageZipUrl: zipUrl };
     const replicateService = await this._loadReplicateService();
 
-    console.log('🚀 Starting training request:', { userId, zipUrl });
-    const trainResult = await firstValueFrom(replicateService.trainModel(trainRequest));
+    console.log('📤 Training request details:', {
+      userId,
+      zipUrl: zipUrl.substring(0, 50) + '...',
+    });
 
-    if (!trainResult?.success) {
-      console.error('❌ Training request failed:', trainResult);
+    try {
+      const trainResult = await firstValueFrom(replicateService.trainModel(trainRequest));
 
-      // Provide specific error messages based on error codes
-      const errorCode = trainResult?.error?.code;
-      const errorMessage = trainResult?.error?.message || 'Failed to start model training';
+      if (!trainResult?.success) {
+        console.error('❌ Training API response failed:', {
+          success: trainResult?.success,
+          errorCode: trainResult?.error?.code,
+          errorMessage: trainResult?.error?.message,
+          fullResponse: trainResult,
+        });
 
-      let userMessage = errorMessage;
-      if (errorCode === 'ReplicateAuthFailed') {
-        userMessage = 'Authentication failed with Replicate API. Please contact support.';
-      } else if (errorCode === 'ReplicateConfigError') {
-        userMessage = 'Configuration error. Please contact support.';
-      } else if (errorCode === 'TrainingFailed') {
-        userMessage = 'Training service temporarily unavailable. Please try again later.';
-      } else if (errorCode === 'InsufficientCredits') {
-        userMessage = 'Insufficient credits for training. Please purchase more credits.';
-      } else if (errorCode === 'ModelAlreadyTrained') {
-        userMessage = 'You already have a trained model. Please use image generation instead.';
+        const errorDetails = this._parseTrainingError(trainResult);
+        throw new Error(errorDetails.userMessage);
       }
 
-      throw new Error(userMessage);
-    }
+      console.log('✅ Training request successful:', {
+        predictionId: trainResult.data?.prediction?.id,
+        success: true,
+      });
+      return trainResult.data!.prediction.id;
+    } catch (error: any) {
+      // Enhanced error logging for debugging
+      console.error('🚨 Training request error details:', {
+        errorType: error.constructor.name,
+        errorMessage: error.message,
+        errorStack: error.stack?.substring(0, 500),
+        httpStatus: error.status,
+        httpStatusText: error.statusText,
+        apiResponse: error.error,
+      });
 
-    console.log('✅ Training request successful:', trainResult);
-    // API returns the training result under data.prediction
-    return trainResult.data!.prediction.id;
+      // Parse and enhance error for user display
+      const enhancedError = this._enhanceTrainingError(error);
+      throw new Error(enhancedError.userMessage);
+    }
   }
 
   private _finalizeTrainingSetup(trainingId: string): void {
@@ -1312,6 +1366,334 @@ export class WorkflowOrchestrationService {
       showLastGenerationMessage: false,
       lastGenerationCount: 0,
     });
+  }
+
+  // Enhanced error handling methods
+  private _parseTrainingError(trainResult: any): {
+    userMessage: string;
+    category: string;
+    isRetryable: boolean;
+  } {
+    const errorCode = trainResult?.error?.code;
+    const errorMessage = trainResult?.error?.message || 'Failed to start model training';
+
+    switch (errorCode) {
+      case 'ReplicateAuthFailed':
+      case 'Unauthorized':
+        return {
+          userMessage:
+            'API authentication issue detected. Our team has been notified and is working on a fix. Please try again in a few minutes.',
+          category: 'authentication',
+          isRetryable: false,
+        };
+
+      case 'ReplicateConfigError':
+        return {
+          userMessage:
+            'Service configuration needs attention. Our team has been notified. Please try again in a few minutes.',
+          category: 'configuration',
+          isRetryable: false,
+        };
+
+      case 'TrainingFailed':
+        return {
+          userMessage:
+            'Training service is temporarily experiencing issues. Please try again in a few minutes, or contact support if the problem persists.',
+          category: 'service_unavailable',
+          isRetryable: true,
+        };
+
+      case 'InsufficientCredits':
+        return {
+          userMessage:
+            'Insufficient credits for training. Please purchase more credits to continue.',
+          category: 'billing',
+          isRetryable: false,
+        };
+
+      case 'ModelAlreadyTrained':
+        return {
+          userMessage:
+            "You already have a trained model available. We'll use your existing model for image generation.",
+          category: 'business_logic',
+          isRetryable: false,
+        };
+
+      case 'ServiceUnavailable':
+      case 'ServerError':
+        return {
+          userMessage:
+            'Training service is temporarily unavailable. Please try again in a few minutes.',
+          category: 'service_unavailable',
+          isRetryable: true,
+        };
+
+      default:
+        return {
+          userMessage:
+            errorMessage.includes('API') ||
+            errorMessage.includes('authentication') ||
+            errorMessage.includes('token')
+              ? 'Service authentication needs attention. Our team has been notified. Please try again in a few minutes.'
+              : 'Training service encountered an issue. Please try again, or contact support if the problem persists.',
+          category: 'unknown',
+          isRetryable: true,
+        };
+    }
+  }
+
+  private _enhanceTrainingError(error: any): {
+    userMessage: string;
+    category: string;
+    isRetryable: boolean;
+  } {
+    // Network/HTTP errors
+    if (error.status === 401) {
+      return {
+        userMessage:
+          'API authentication issue detected. Our team has been notified and is working on a fix. Please try again in a few minutes.',
+        category: 'authentication',
+        isRetryable: false,
+      };
+    }
+
+    if (error.status === 403) {
+      return {
+        userMessage: 'Access permission issue detected. Please contact support for assistance.',
+        category: 'authorization',
+        isRetryable: false,
+      };
+    }
+
+    if (error.status >= 500) {
+      return {
+        userMessage:
+          'Training service is temporarily experiencing issues. Please try again in a few minutes.',
+        category: 'server_error',
+        isRetryable: true,
+      };
+    }
+
+    if (error.status === 429) {
+      return {
+        userMessage: 'Service is busy. Please wait a moment and try again.',
+        category: 'rate_limit',
+        isRetryable: true,
+      };
+    }
+
+    // Network connectivity issues
+    if (error.name === 'NetworkError' || error.message?.includes('network')) {
+      return {
+        userMessage:
+          'Network connection issue. Please check your internet connection and try again.',
+        category: 'network',
+        isRetryable: true,
+      };
+    }
+
+    // Timeout errors
+    if (error.name === 'TimeoutError' || error.message?.includes('timeout')) {
+      return {
+        userMessage: 'Request timed out. Please try again.',
+        category: 'timeout',
+        isRetryable: true,
+      };
+    }
+
+    // Parse API-specific errors from response
+    const apiErrorMessage = error.error?.message || error.message || 'Unknown error occurred';
+
+    if (apiErrorMessage.includes('authentication') || apiErrorMessage.includes('token')) {
+      return {
+        userMessage:
+          'API authentication issue detected. Our team has been notified and is working on a fix. Please try again in a few minutes.',
+        category: 'authentication',
+        isRetryable: false,
+      };
+    }
+
+    if (apiErrorMessage.includes('configuration') || apiErrorMessage.includes('config')) {
+      return {
+        userMessage:
+          'Service configuration needs attention. Our team has been notified. Please try again in a few minutes.',
+        category: 'configuration',
+        isRetryable: false,
+      };
+    }
+
+    return {
+      userMessage:
+        'Training service encountered an issue. Please try again, or contact support if the problem persists.',
+      category: 'unknown',
+      isRetryable: true,
+    };
+  }
+
+  private _categorizeWorkflowError(error: unknown): {
+    title: string;
+    message: string;
+    category: string;
+  } {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+
+    // Authentication/Authorization errors
+    if (
+      errorMessage.includes('Authentication failed') ||
+      errorMessage.includes('User not authenticated')
+    ) {
+      return {
+        title: 'Authentication Issue',
+        message: 'Your session has expired. Please refresh the page and try again.',
+        category: 'authentication',
+      };
+    }
+
+    // API/Service errors
+    if (
+      errorMessage.includes('API authentication issue') ||
+      errorMessage.includes('authentication issue detected')
+    ) {
+      return {
+        title: 'Service Issue',
+        message:
+          'Our training service needs attention. The team has been notified and is working on a fix. Please try again in a few minutes.',
+        category: 'service_authentication',
+      };
+    }
+
+    if (
+      errorMessage.includes('Configuration error') ||
+      errorMessage.includes('configuration needs attention')
+    ) {
+      return {
+        title: 'Service Configuration',
+        message:
+          'Our service configuration needs updating. The team has been notified. Please try again in a few minutes.',
+        category: 'configuration',
+      };
+    }
+
+    // Training-specific errors
+    if (errorMessage.includes('Failed to create training ZIP')) {
+      return {
+        title: 'Training Preparation Failed',
+        message:
+          'Unable to prepare your images for training. Please ensure you have uploaded at least 10 clear photos and try again.',
+        category: 'training_preparation',
+      };
+    }
+
+    if (errorMessage.includes('Failed to get training ZIP URL')) {
+      return {
+        title: 'Training Upload Failed',
+        message:
+          "Your images were prepared but couldn't be uploaded. Please try again in a few minutes.",
+        category: 'training_upload',
+      };
+    }
+
+    // Credit/billing errors
+    if (errorMessage.includes('Insufficient credits')) {
+      return {
+        title: 'Insufficient Credits',
+        message:
+          "You don't have enough credits for training. Please purchase more credits to continue.",
+        category: 'billing',
+      };
+    }
+
+    // Model status errors
+    if (errorMessage.includes('already have a trained model')) {
+      return {
+        title: 'Model Already Available',
+        message:
+          "Great news! You already have a trained model. We'll use it to generate your photos.",
+        category: 'business_logic',
+      };
+    }
+
+    // Network/service unavailable
+    if (
+      errorMessage.includes('temporarily unavailable') ||
+      errorMessage.includes('service is busy')
+    ) {
+      return {
+        title: 'Service Temporarily Unavailable',
+        message: 'Our training service is temporarily busy. Please try again in a few minutes.',
+        category: 'service_unavailable',
+      };
+    }
+
+    // Generic fallback with more helpful messaging
+    return {
+      title: 'Training Error',
+      message:
+        'We encountered an issue starting your training. Please try again, or contact support if the problem continues.',
+      category: 'unknown',
+    };
+  }
+
+  private _logErrorDiagnostics(error: unknown, category: string): void {
+    const diagnostics = {
+      category,
+      timestamp: new Date().toISOString(),
+      userAuthenticated: this._deps.authService.isAuthenticated(),
+      hasToken: !!this._deps.authService.getToken(),
+      currentState: this._deps.stateService.getState()?.modelStatus,
+    };
+
+    switch (category) {
+      case 'authentication':
+      case 'service_authentication':
+        console.error('🔑 Authentication Diagnostics:', {
+          ...diagnostics,
+          tokenExists: !!this._deps.authService.getToken(),
+          tokenValid: this._deps.authService.isAuthenticated(),
+          userId: this._deps.authService.getCurrentUserId(),
+          suggestedAction: 'Check API token configuration and user session',
+        });
+        break;
+
+      case 'configuration':
+        console.error('⚙️ Configuration Diagnostics:', {
+          ...diagnostics,
+          configService: this._deps.config.constructor.name,
+          suggestedAction: 'Verify Replicate API configuration and environment variables',
+        });
+        break;
+
+      case 'service_unavailable':
+      case 'server_error':
+        console.error('🌐 Service Diagnostics:', {
+          ...diagnostics,
+          suggestedAction: 'Check Replicate API status and network connectivity',
+        });
+        break;
+
+      case 'training_preparation':
+        console.error('📦 Training Preparation Diagnostics:', {
+          ...diagnostics,
+          suggestedAction: 'Check file upload service and user uploaded images count',
+        });
+        break;
+
+      case 'billing':
+        console.error('💳 Billing Diagnostics:', {
+          ...diagnostics,
+          userCredits: this._getTotalAvailableCredits(),
+          suggestedAction: 'Check user credit balance and subscription status',
+        });
+        break;
+
+      default:
+        console.error('🔍 General Error Diagnostics:', {
+          ...diagnostics,
+          errorDetails: error,
+          suggestedAction: 'Review full error context and network logs',
+        });
+        break;
+    }
   }
 
   // Cleanup method
