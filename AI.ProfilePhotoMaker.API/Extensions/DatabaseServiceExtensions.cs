@@ -89,7 +89,8 @@ public static class DatabaseServiceExtensions
     /// </summary>
     public static IApplicationBuilder UseHealthCheckEndpoints(this IApplicationBuilder app)
     {
-        app.UseHealthChecks("/health", new HealthCheckOptions
+        // Expose health endpoints under /api prefix to match infra
+        app.UseHealthChecks("/api/health", new HealthCheckOptions
         {
             ResponseWriter = async (context, report) =>
             {
@@ -111,7 +112,7 @@ public static class DatabaseServiceExtensions
             }
         });
 
-        app.UseHealthChecks("/health/ready", new HealthCheckOptions
+        app.UseHealthChecks("/api/health/ready", new HealthCheckOptions
         {
             Predicate = check => check.Tags.Contains("ready"),
             ResponseWriter = async (context, report) =>
@@ -127,7 +128,7 @@ public static class DatabaseServiceExtensions
             }
         });
 
-        app.UseHealthChecks("/health/live", new HealthCheckOptions
+        app.UseHealthChecks("/api/health/live", new HealthCheckOptions
         {
             Predicate = _ => false, // Exclude all checks for liveness
             ResponseWriter = async (context, report) =>

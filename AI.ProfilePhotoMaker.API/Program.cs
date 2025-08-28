@@ -8,7 +8,6 @@ using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
 using AI.ProfilePhotoMaker.API.Services.Database;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
-using AI.ProfilePhotoMaker.API.Services.Payment;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 // using AI.ProfilePhotoMaker.API.Services.Monitoring; // Removed monitoring dependency
 using AI.ProfilePhotoMaker.API.Middleware;
@@ -513,6 +512,9 @@ app.UseCors(corsPolicy);
 app.Use(async (context, next) => { await next(); });
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Map health endpoints for liveness/readiness checks
+app.UseHealthCheckEndpoints();
 
 if (app.Environment.IsDevelopment())
 {

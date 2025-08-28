@@ -36,8 +36,8 @@ COPY --from=publish /app/publish .
 # Create required directories for static file serving
 RUN mkdir -p uploads training-zips style-previews enhanced generated
 
-# Health check
+# Health check (use lightweight liveness endpoint)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/api/health || exit 1
+    CMD curl -f http://localhost:8080/api/health/live || exit 1
 
 ENTRYPOINT ["dotnet", "AI.ProfilePhotoMaker.API.dll"]
