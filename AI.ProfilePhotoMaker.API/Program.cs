@@ -68,14 +68,7 @@ if (args.Length > 0 && !isTestingEnvironment)
         Environment.Exit(migrationExitCode);
     }
 
-    // Try upload commands
-    var uploadExitCode = await UploadCommandService.HandleUploadCommand(args, commandApp.Services);
-    if (uploadExitCode != 0 || IsUploadCommand(args[0]))
-    {
-        Environment.Exit(uploadExitCode);
-    }
-
-    // If we get here, it's not a recognized command, continue with normal startup
+    // Upload command functionality removed for MVP - development tooling should be separate
 }
 
 // Create the application using the standard pattern that WebApplicationFactory expects
@@ -332,7 +325,7 @@ else
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Storage.StoragePathResolver>();
 
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.ICreditPackageService, AI.ProfilePhotoMaker.API.Services.CreditPackageService>();
-builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Payment.IPaymentService, AI.ProfilePhotoMaker.API.Services.Payment.StripePaymentService>();
+// Payment service removed - YAGNI principle (was never used by any controllers)
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IRetentionPolicyService, AI.ProfilePhotoMaker.API.Services.RetentionPolicyService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IHealthCheckService, AI.ProfilePhotoMaker.API.Services.Health.HealthCheckService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IDatabaseHealthService, AI.ProfilePhotoMaker.API.Services.Health.DatabaseHealthService>();
@@ -351,7 +344,7 @@ builder.Services.AddScoped<ITrainingPollingService, TrainingPollingService>();
 builder.Services.AddHostedService<TrainingPollingBackgroundService>();
 
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.BasicTierBackgroundService>();
-builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.ModelExpirationBackgroundService>();
+// ModelExpirationBackgroundService removed - YAGNI principle (was doing nothing but logging)
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.RetentionPolicyBackgroundService>();
 
 // Model sync health monitoring - removed dependency
@@ -656,15 +649,7 @@ static bool IsMigrationCommand(string command)
     };
 }
 
-static bool IsUploadCommand(string command)
-{
-    return command switch
-    {
-        "upload-previews" => true,
-        "list-previews" => true,
-        _ => false
-    };
-}
+// IsUploadCommand removed with upload functionality
 
 // Method signatures for validation functions - these would need to be implemented
 static async Task ValidateWebhookConfigurationAsync(WebApplication app)

@@ -14,6 +14,8 @@ public class EnvironmentConfiguration
     public const string JWT_SECRET = "JWT_SECRET";
     public const string REPLICATE_API_TOKEN = "REPLICATE_API_TOKEN";
     public const string REPLICATE_WEBHOOK_SECRET = "REPLICATE_WEBHOOK_SECRET";
+    public const string REPLICATE_OWNER = "REPLICATE_OWNER";
+    public const string REPLICATE_HARDWARE = "REPLICATE_HARDWARE";
 
     // Optional environment variables with defaults
     public const string ASPNETCORE_ENVIRONMENT = "ASPNETCORE_ENVIRONMENT";
@@ -160,6 +162,8 @@ public class EnvironmentConfiguration
         var configToken = _configuration["Replicate:ApiToken"];
         var apiToken = envToken ?? configToken;
         var webhookSecret = GetEnvironmentVariable(REPLICATE_WEBHOOK_SECRET) ?? _configuration["Replicate:WebhookSecret"];
+        var replicateOwner = GetEnvironmentVariable(REPLICATE_OWNER) ?? _configuration["Replicate:Owner"];
+        var replicateHardware = GetEnvironmentVariable(REPLICATE_HARDWARE) ?? _configuration["Replicate:Hardware"];
 
         // Debug logging for development
         if (_environment.IsDevelopment())
@@ -200,6 +204,16 @@ public class EnvironmentConfiguration
         if (string.IsNullOrEmpty(webhookSecret))
         {
             results.Add(new ValidationResult(false, REPLICATE_WEBHOOK_SECRET, "Replicate webhook secret is required"));
+        }
+
+        // Owner and hardware are now required by Replicate when creating models
+        if (string.IsNullOrWhiteSpace(replicateOwner))
+        {
+            results.Add(new ValidationResult(false, REPLICATE_OWNER, "Replicate owner is required (set REPLICATE_OWNER or Replicate:Owner)"));
+        }
+        if (string.IsNullOrWhiteSpace(replicateHardware))
+        {
+            results.Add(new ValidationResult(false, REPLICATE_HARDWARE, "Replicate hardware is required (set REPLICATE_HARDWARE or Replicate:Hardware)"));
         }
 
         _logger.LogInformation("✅ Replicate configuration validation completed");

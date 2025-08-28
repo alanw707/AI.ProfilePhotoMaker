@@ -101,7 +101,9 @@ public class TrainingPollingService : ITrainingPollingService
                     if (!string.IsNullOrEmpty(modelRequest.ReplicateModelId))
                     {
                         // Construct full model ID for API call (add owner prefix for API)
-                        var fullModelId = $"alanw707/{modelRequest.ReplicateModelId}";
+                        var fullModelId = modelRequest.ReplicateModelId!.Contains("/")
+                            ? modelRequest.ReplicateModelId!
+                            : $"alanw707/{modelRequest.ReplicateModelId}";
                         resolvedVersionId = await scopedReplicateClient.GetModelVersionAsync(fullModelId);
                         _logger.LogInformation("Resolved model version for {ModelId}: {VersionId}", fullModelId, resolvedVersionId);
                     }
@@ -148,8 +150,7 @@ public class TrainingPollingService : ITrainingPollingService
                 // Save changes first
                 await scopedDbContext.SaveChangesAsync();
 
-                // Generate automatic sample images with the trained model
-                _ = Task.Run(async () => await GenerateAutomaticSampleImages(modelRequest.UserId, trainedModelVersion));
+                // Note: Removed automatic sample generation - users should only get what they explicitly request
             }
             else if (trainingStatus.Status?.ToLower() == "failed" || trainingStatus.Status?.ToLower() == "canceled")
             {
@@ -177,56 +178,4 @@ public class TrainingPollingService : ITrainingPollingService
         }
     }
 
-    /// <summary>
-    /// Generate automatic sample images after training completion
-    /// This matches the behavior that was expected after webhook training completion
-    /// </summary>
-    private async Task GenerateAutomaticSampleImages(string userId, string trainedModelVersion)
-    {
-        using var scope = _serviceScopeFactory.CreateScope();
-        var scopedDbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var scopedReplicateClient = scope.ServiceProvider.GetRequiredService<IReplicateApiClient>();
-
-        try
-        {
-            _logger.LogInformation("Generating automatic sample images for user {UserId} with model {ModelVersion}",
-                userId, trainedModelVersion);
-
-            // Get user profile for generation
-            var userProfile = await scopedDbContext.UserProfiles
-                .FirstOrDefaultAsync(up => up.UserId == userId);
-
-            if (userProfile == null)
-            {
-                _logger.LogWarning("No user profile found for user {UserId} for automatic image generation", userId);
-                return;
-            }
-
-            // Create UserInfo for generation
-            var userInfo = new UserInfo
-            {
-                Gender = userProfile.Gender,
-                Ethnicity = userProfile.Ethnicity
-            };
-
-            // Generate a "professional" style image as the default sample
-            var sampleStyle = "professional";
-
-            _logger.LogInformation("Starting automatic {Style} image generation for user {UserId}", sampleStyle, userId);
-
-            var result = await scopedReplicateClient.GenerateImagesAsync(
-                trainedModelVersion,
-                userId,
-                sampleStyle,
-                userInfo,
-                numOutputs: 2); // Generate 2 sample images
-
-            _logger.LogInformation("Automatic sample image generation initiated with prediction ID {PredictionId} for user {UserId}",
-                result.Id, userId);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to generate automatic sample images for user {UserId}", userId);
-        }
-    }
 }
