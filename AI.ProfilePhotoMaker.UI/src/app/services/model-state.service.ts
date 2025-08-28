@@ -189,11 +189,11 @@ export class ModelStateService implements IModelStateService {
     if (latest?.status === 'creating' || latest?.status === 'pending') {
       modelStatus = 'training';
     } else if (
-      // If DB shows a 'ready' request but no trained version exists (edge-case), treat as ready to (re)train
-      all.some((req: any) => req.status === 'ready') &&
-      !modelRequestsData?.hasTrainedModel
+      // If DB shows a 'ready' request but unified flags lag behind, reflect readiness in UI
+      // This avoids confusing "Ready for training" when the server has a Ready entry
+      all.some((req: any) => req.status === 'ready')
     ) {
-      modelStatus = 'Ready for training';
+      modelStatus = 'Model Ready';
     } else if (
       // If a model was deleted (by user or externally), surface an actionable state
       all.some(
