@@ -440,63 +440,25 @@ export class WorkflowOrchestrationService {
    * This prevents incorrect fallback to training when generation should be used
    * UPDATED: Now properly validates actual model data exists, matching backend validation
    */
-  private _checkForExistingTrainedModel(latestTrainedModel: any, modelStatus: string): boolean {
-    // PRIMARY VALIDATION: Check actual model data first (matches backend requirements)
-    if (latestTrainedModel) {
-      const hasModelVersion = !!(
-        latestTrainedModel.trainedModelVersion ||
-        latestTrainedModel.versionId ||
-        latestTrainedModel.TrainedModelVersion // Handle different casing
-      );
-      const hasModelId = !!(
-        latestTrainedModel.replicateModelId ||
-        latestTrainedModel.modelId ||
-        latestTrainedModel.ReplicateModelId || // Handle different casing
-        latestTrainedModel.ModelId
-      );
-
-      // If we have actual model data with version/ID, this is a valid trained model
-      if (hasModelVersion || hasModelId) {
-        console.log('✅ Found trained model with data:', {
-          hasModelVersion,
-          hasModelId,
-          modelVersion: hasModelVersion
-            ? latestTrainedModel.trainedModelVersion ||
-              latestTrainedModel.versionId ||
-              latestTrainedModel.TrainedModelVersion
-            : null,
-          modelId: hasModelId
-            ? latestTrainedModel.replicateModelId ||
-              latestTrainedModel.modelId ||
-              latestTrainedModel.ReplicateModelId ||
-              latestTrainedModel.ModelId
-            : null,
-        });
-        return true;
-      }
-    }
-
-    // SECONDARY VALIDATION: Only trust status if we also need to check API data
-    // Note: Status alone is not sufficient - backend requires actual model version data
+  private _checkForExistingTrainedModel(_latestTrainedModel: any, modelStatus: string): boolean {
+    // Single source of truth: Trust API status
     if (modelStatus === 'Model Ready') {
-      console.log(
-        '⚠️ Model status shows "Ready" but no model data found - need to verify with API'
-      );
-      // This suggests we need to fetch fresh data from the API endpoint
-      // Do not assume model exists based on status alone
+      console.log('✅ Model Ready - routing to generation workflow');
+      return true;
+    }
+
+    // Only check for training states that require different handling
+    const trainingInProgress = ['Training', 'training', 'creating', 'pending'].some(status =>
+      modelStatus?.toLowerCase().includes(status.toLowerCase())
+    );
+
+    if (trainingInProgress) {
+      console.log('🔄 Training in progress - will poll for completion');
       return false;
     }
 
-    // Check 3: Model status suggests training exists (even if not fully ready)
-    const statusesWithModel = ['Training', 'ModelReady', 'Completed', 'Ready'];
-    if (statusesWithModel.some(status => modelStatus?.includes(status))) {
-      console.log(
-        '⚠️ Model status suggests trained model exists but no data found - need fresh API call'
-      );
-      return false;
-    }
-
-    console.log('❌ No trained model found - will initiate training workflow');
+    // Default: No model available
+    console.log('❌ No trained model available - initiating training workflow');
     return false;
   }
 
@@ -510,83 +472,17 @@ export class WorkflowOrchestrationService {
     imagesPerStyle: number,
     latestTrainedModel: any
   ): Promise<void> {
-    try {
-      // Attempt to get model version for generation
-      const modelVersion = latestTrainedModel?.trainedModelVersion || latestTrainedModel?.versionId;
-      const modelId = latestTrainedModel?.replicateModelId || latestTrainedModel?.modelId;
+    // Try model version first, fall back to backend resolution
+    const modelVersion =
+      latestTrainedModel?.trainedModelVersion || latestTrainedModel?.versionId || '';
 
-      // FIXED: Only show toast if we actually have model data
-      if (modelVersion || modelId) {
-        this._deps.notificationService.info(
-          'Using Existing Model',
-          'Using your previously trained model for generation'
-        );
-      }
+    this._deps.notificationService.info(
+      'Using Existing Model',
+      'Generating with your trained model'
+    );
 
-      // Priority 1: Use explicit model version
-      if (modelVersion) {
-        console.log('✅ Using model version:', modelVersion);
-        await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, modelVersion);
-        return;
-      }
-
-      // Priority 2: Use model ID if available
-      if (modelId) {
-        console.log('✅ Using model ID:', modelId);
-        await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, modelId);
-        return;
-      }
-
-      // Priority 3: Attempt to refresh state and try again
-      console.log('🔄 No version/ID found, refreshing state...');
-      this._deps.stateService.forceRefresh();
-      await this._deps.stateService.loadInitialDashboardData();
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const refreshedState = this._deps.stateService.getState();
-      const refreshedModel = refreshedState?.latestTrainedModel;
-      if (refreshedModel) {
-        const refreshedVersion = refreshedModel.trainedModelVersion || refreshedModel.versionId;
-        const refreshedId = refreshedModel.replicateModelId || refreshedModel.modelId;
-
-        if (refreshedVersion) {
-          console.log('✅ Found version after refresh:', refreshedVersion);
-          await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, refreshedVersion);
-          return;
-        }
-
-        if (refreshedId) {
-          console.log('✅ Found ID after refresh:', refreshedId);
-          await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, refreshedId);
-          return;
-        }
-      }
-
-      // Priority 4: Last resort - let backend resolve from database
-      console.log('🎯 Using backend resolution with empty version');
-      await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, '');
-    } catch (error: any) {
-      console.error('❌ Generation with existing model failed:', error);
-
-      // Handle specific error cases
-      const errorMsg = error?.message || error?.error?.message || '';
-
-      if (
-        errorMsg.toLowerCase().includes('model not found') ||
-        errorMsg.toLowerCase().includes('version not found')
-      ) {
-        // Model data is stale, let backend resolve
-        console.log('🔄 Model data stale, using backend resolution');
-        await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, '');
-      } else if (errorMsg.toLowerCase().includes('already have a trained model')) {
-        // Backend says model exists but we couldn't find version - use backend resolution
-        this._deps.notificationService.info('Model Found', 'Using your existing trained model');
-        await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, '');
-      } else {
-        // Other errors - propagate up
-        throw error;
-      }
-    }
+    // Let backend resolve model details if version not available
+    await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, modelVersion);
   }
 
   // Lazy loading methods

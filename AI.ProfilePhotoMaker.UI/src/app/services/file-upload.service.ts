@@ -266,7 +266,7 @@ export class FileUploadService {
 
   getUnifiedModelStatus(): Observable<UnifiedModelStatusResponse> {
     return this.http.get<any>(this.config.getFullUrl('/model-status')).pipe(
-      timeout({ first: 1500 }),
+      timeout({ first: 5000 }),
       map(raw => {
         const normalized: UnifiedModelStatusResponse = {
           statusCode: (raw?.statusCode ??
