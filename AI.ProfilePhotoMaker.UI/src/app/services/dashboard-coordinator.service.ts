@@ -339,6 +339,12 @@ export class DashboardCoordinatorService implements IDashboardStateService {
    */
   private loadRemainingDataAsync(): void {
     forkJoin({
+      unifiedStatus: this._fileUploadService.getUnifiedModelStatus().pipe(
+        catchError(error => {
+          console.warn('⚠️ Unified Model Status API failed:', error);
+          return of(null);
+        })
+      ),
       trainingStatus: this._fileUploadService.getTrainingStatus().pipe(
         catchError(error => {
           console.warn('⚠️ Training Status API failed:', error);
@@ -352,15 +358,54 @@ export class DashboardCoordinatorService implements IDashboardStateService {
         })
       ),
     }).subscribe({
-      next: ({ trainingStatus, modelRequests }) => {
+      next: ({ unifiedStatus, trainingStatus, modelRequests }) => {
         const modelRequestsData = modelRequests?.success ? modelRequests.data : null;
         const trainingStatusData = trainingStatus;
 
-        // Get model status using ModelStateService
-        const modelInfo = this._modelState.getModelStatusFromData(
-          modelRequestsData,
-          trainingStatusData
-        );
+        // Prefer unified server status if available
+        let modelInfo: { modelStatus: string; latestTrainedModel: any } = {
+          modelStatus: 'Not Started',
+          latestTrainedModel: null,
+        };
+        if (unifiedStatus) {
+          const display = this._modelState['mapUnifiedStatusToDisplay']
+            ? (this._modelState as any).mapUnifiedStatusToDisplay(
+                unifiedStatus.statusCode,
+                unifiedStatus.reason
+              )
+            : ((): string => {
+                switch (unifiedStatus.statusCode) {
+                  case 'ModelReady':
+                    return 'Model Ready';
+                  case 'Training':
+                    return 'training';
+                  case 'ReadyForTraining':
+                    return 'Ready for training';
+                  case 'Failed':
+                    return unifiedStatus.reason && unifiedStatus.reason.includes('deleted')
+                      ? 'Ready for training'
+                      : 'Training failed';
+                  case 'NotStarted':
+                  default:
+                    return 'Not Started';
+                }
+              })();
+          modelInfo = {
+            modelStatus: display,
+            latestTrainedModel: unifiedStatus.hasTrainedModel
+              ? {
+                  trainedModelVersion: unifiedStatus.trainedModelVersion,
+                  replicateModelId: unifiedStatus.trainedModelId,
+                }
+              : null,
+          };
+        } else {
+          // Fallback to legacy combination of endpoints
+          modelInfo = this._modelState.getModelStatusFromData(
+            modelRequestsData,
+            trainingStatusData
+          );
+        }
 
         const currentState = this._coordinatorState.getValue();
         this._coordinatorState.next({

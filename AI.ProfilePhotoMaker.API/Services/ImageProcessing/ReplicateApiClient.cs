@@ -76,8 +76,9 @@ public class ReplicateApiClient : IReplicateApiClient
             }
             // Build model creation request.
             // As of recent Replicate API changes, 'owner' and 'hardware' are required.
-            var configuredOwner = _configuration["Replicate:Owner"] ?? Environment.GetEnvironmentVariable("REPLICATE_OWNER");
-            var configuredHardware = _configuration["Replicate:Hardware"] ?? Environment.GetEnvironmentVariable("REPLICATE_HARDWARE");
+            // Prefer environment variables so container settings override static appsettings
+            var configuredOwner = Environment.GetEnvironmentVariable("REPLICATE_OWNER") ?? _configuration["Replicate:Owner"];
+            var configuredHardware = Environment.GetEnvironmentVariable("REPLICATE_HARDWARE") ?? _configuration["Replicate:Hardware"];
 
             if (string.IsNullOrWhiteSpace(configuredOwner))
             {

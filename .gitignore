@@ -105,14 +105,23 @@ package-lock.json
 # Test artifacts - screenshots and results
 **/screenshots/*.png
 **/results/*.json
+e2e-*.png
+inspection-*.png
+*.spec.ts
+monitor-*.sh
+test-*.sh
 AI.ProfilePhotoMaker.API/tests/playwright/screenshots/
 AI.ProfilePhotoMaker.API/tests/playwright/results/
 
 # Generated documentation and reports
+**/ClaudeDocs/
+**/claudedocs/
 **/ClaudeDocs/Report/*.md
 **/playwright-report/data/*.md
 **/*-validation-report.md
 **/*-test-report.md
+claude-*.md
+*-analysis.md
 .serena/
 
 # General build results
