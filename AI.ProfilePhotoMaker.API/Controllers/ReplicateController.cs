@@ -130,6 +130,33 @@ public class ReplicateController : ControllerBase
                 error = (object?)null
             });
         }
+        catch (ReplicateApiException ex)
+        {
+            _logger.LogError(ex, "Replicate API error during training for user {UserId}: {Status} {Code}", userId, (int)ex.StatusCode, ex.ErrorCode);
+            var status = ex.StatusCode switch
+            {
+                System.Net.HttpStatusCode.UnprocessableEntity => 400,
+                System.Net.HttpStatusCode.Forbidden => 500,
+                System.Net.HttpStatusCode.TooManyRequests => 429,
+                _ => 500
+            };
+
+            // Truncate raw details to avoid excessively large payloads
+            var raw = ex.RawContent ?? string.Empty;
+            if (raw.Length > 800) raw = raw.Substring(0, 800) + "...";
+
+            return StatusCode(status, new
+            {
+                success = false,
+                error = new
+                {
+                    code = ex.ErrorCode,
+                    message = ex.Message,
+                    statusCode = (int)ex.StatusCode,
+                    details = raw
+                }
+            });
+        }
         catch (UnauthorizedAccessException ex)
         {
             _logger.LogError(ex, "Replicate auth failed during training for user {UserId}", userId);
@@ -1129,21 +1156,16 @@ public class ReplicateController : ControllerBase
             }
         }
 
-        // Standardize to canonical owner and extracted model name
-        // replicateModelId can be "owner/model" or just "model"; always use canonical owner
-        const string canonicalOwner = "alanw707";
         if (string.IsNullOrEmpty(replicateModelId))
         {
             return trainedModelVersion; // fallback; let caller handle upstream validation
         }
 
-        var modelName = replicateModelId;
-        var slashIdx = replicateModelId.IndexOf('/');
-        if (slashIdx >= 0 && slashIdx < replicateModelId.Length - 1)
-        {
-            modelName = replicateModelId.Substring(slashIdx + 1);
-        }
+        // If we have an owner/model id, use it as-is; otherwise, we only have a model name
+        var ownerAndModel = replicateModelId.Contains('/')
+            ? replicateModelId
+            : replicateModelId; // Preserve as-is; upstream should ensure full id when possible
 
-        return $"{canonicalOwner}/{modelName}:{trainedModelVersion}";
+        return $"{ownerAndModel}:{trainedModelVersion}";
     }
 }

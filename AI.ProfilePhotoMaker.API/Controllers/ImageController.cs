@@ -820,6 +820,17 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 // Generate SAS URL for access (valid for 2 hours for Replicate)
                 var publicUrl = await _storageService.GenerateSasUrlAsync(zipStoragePath, TimeSpan.FromHours(2));
 
+                // For development, replace localhost with ngrok domain to allow external access
+                if (publicUrl != null && publicUrl.Contains("127.0.0.1:10000"))
+                {
+                    var ngrokDomain = _configuration["Webhooks:NgrokTunnelUrl"] ?? "https://clear-anteater-usually.ngrok-free.app";
+                    publicUrl = publicUrl.Replace("http://127.0.0.1:10000", ngrokDomain);
+
+                    // Add ngrok-skip-browser-warning parameter for API access
+                    var separator = publicUrl.Contains("?") ? "&" : "?";
+                    publicUrl += $"{separator}ngrok-skip-browser-warning=true";
+                }
+
                 return SuccessResponse(new
                 {
                     fileName = zipFileName,

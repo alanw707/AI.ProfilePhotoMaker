@@ -74,13 +74,27 @@ public class ReplicateApiClient : IReplicateApiClient
                 _logger.LogInformation("[Mock] Returning model name {Model}", fullModelName);
                 return fullModelName;
             }
+            // Build model creation request.
+            // As of recent Replicate API changes, 'owner' and 'hardware' are required.
+            var configuredOwner = _configuration["Replicate:Owner"] ?? Environment.GetEnvironmentVariable("REPLICATE_OWNER");
+            var configuredHardware = _configuration["Replicate:Hardware"] ?? Environment.GetEnvironmentVariable("REPLICATE_HARDWARE");
+
+            if (string.IsNullOrWhiteSpace(configuredOwner))
+            {
+                throw new InvalidOperationException("Replicate owner is required. Set 'Replicate:Owner' in appsettings or REPLICATE_OWNER env var.");
+            }
+            if (string.IsNullOrWhiteSpace(configuredHardware))
+            {
+                throw new InvalidOperationException("Replicate hardware is required. Set 'Replicate:Hardware' in appsettings or REPLICATE_HARDWARE env var.");
+            }
+
             var modelRequest = new
             {
-                owner = "alanw707",
+                owner = configuredOwner,
                 name = modelName,
                 description = description ?? $"Custom trained model for user {userId}",
                 visibility = "private",
-                hardware = "gpu-h100"
+                hardware = configuredHardware
             };
 
             var content = new StringContent(JsonSerializer.Serialize(modelRequest), Encoding.UTF8, "application/json");
@@ -90,32 +104,31 @@ public class ReplicateApiClient : IReplicateApiClient
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Replicate model creation failed: {StatusCode} {ErrorContent}", response.StatusCode, errorContent);
+                _logger.LogError("Replicate model creation failed: {StatusCode} {Error}", response.StatusCode, errorContent);
 
-                // Parse and handle specific error cases
-                if (response.StatusCode == HttpStatusCode.Unauthorized)
+                switch (response.StatusCode)
                 {
-                    _logger.LogError("Replicate API authentication failed during model creation for user {UserId}", userId);
-                    throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.");
-                }
-                else if (response.StatusCode == HttpStatusCode.PaymentRequired)
-                {
-                    _logger.LogError("Replicate API payment required during model creation for user {UserId}", userId);
-                    throw new InvalidOperationException("Replicate API payment required. Please check your billing.");
-                }
-                else if (response.StatusCode == HttpStatusCode.UnprocessableEntity)
-                {
-                    _logger.LogError("Replicate API validation error during model creation for user {UserId}: {Error}", userId, errorContent);
-                    throw new InvalidOperationException($"Invalid model creation request: {errorContent}");
-                }
-                else if (response.StatusCode == HttpStatusCode.Conflict)
-                {
-                    _logger.LogError("Model name conflict for user {UserId}: {ModelName}", userId, modelName);
-                    throw new InvalidOperationException($"Model name already exists: {modelName}");
-                }
-                else
-                {
-                    throw new Exception($"Failed to create model: {response.StatusCode}, {errorContent}");
+                    case HttpStatusCode.Unauthorized:
+                        throw new ReplicateApiException(response.StatusCode, "ReplicateAuthFailed",
+                            "Replicate API authentication failed. Check your API token.", errorContent);
+                    case HttpStatusCode.PaymentRequired:
+                        throw new ReplicateApiException(response.StatusCode, "ReplicatePaymentRequired",
+                            "Replicate account requires payment.", errorContent);
+                    case HttpStatusCode.Forbidden:
+                        throw new ReplicateApiException(response.StatusCode, "ReplicatePermissionDenied",
+                            "Replicate denied permission to create the model for this token.", errorContent);
+                    case HttpStatusCode.Conflict:
+                        throw new ReplicateApiException(response.StatusCode, "ReplicateNameConflict",
+                            $"Model name already exists: {modelName}", errorContent);
+                    case HttpStatusCode.UnprocessableEntity:
+                        throw new ReplicateApiException(response.StatusCode, "ReplicateValidationError",
+                            "Invalid model creation request.", errorContent);
+                    case HttpStatusCode.TooManyRequests:
+                        throw new ReplicateApiException(response.StatusCode, "ReplicateRateLimited",
+                            "Replicate API rate limit reached.", errorContent);
+                    default:
+                        throw new ReplicateApiException(response.StatusCode, "ReplicateServiceError",
+                            $"Model creation failed with status {(int)response.StatusCode}.", errorContent);
                 }
             }
 
@@ -126,14 +139,15 @@ public class ReplicateApiClient : IReplicateApiClient
                 responseJson,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-            // Extract the model name (without owner prefix) from the response
+            // Extract the full model identifier (owner/name) from the response
             if (modelResult.TryGetProperty("name", out var nameProperty) &&
                 modelResult.TryGetProperty("owner", out var ownerProperty))
             {
                 var extractedModelName = nameProperty.GetString() ?? throw new Exception("Model name not found in response");
                 var owner = ownerProperty.GetString() ?? throw new Exception("Owner not found in response");
-                _logger.LogInformation("Model created: owner={Owner}, name={ModelName}", owner, extractedModelName);
-                return extractedModelName; // Return model name only, owner is hardcoded
+                var fullModel = $"{owner}/{extractedModelName}";
+                _logger.LogInformation("Model created: {FullModel}", fullModel);
+                return fullModel; // Return full model path: owner/name
             }
 
             // Fallback: try to get the URL and extract the name from it
@@ -148,8 +162,9 @@ public class ReplicateApiClient : IReplicateApiClient
                     {
                         var owner = urlParts[^2];
                         var name = urlParts[^1];
-                        _logger.LogInformation("Model created with name extracted from URL: owner={Owner}, name={ModelName}", owner, name);
-                        return name; // Return model name only, owner is hardcoded
+                        var fullModel = $"{owner}/{name}";
+                        _logger.LogInformation("Model created (from URL): {FullModel}", fullModel);
+                        return fullModel; // Return full model path: owner/name
                     }
                 }
             }
@@ -245,32 +260,31 @@ public class ReplicateApiClient : IReplicateApiClient
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Replicate training creation failed: {StatusCode} {ErrorContent}", response.StatusCode, errorContent);
+                _logger.LogError("Replicate training creation failed: {StatusCode} {Error}", response.StatusCode, errorContent);
 
-                // Parse and handle specific error cases
-                if (response.StatusCode == HttpStatusCode.Unauthorized)
+                switch (response.StatusCode)
                 {
-                    _logger.LogError("Replicate API authentication failed during training for user {UserId}", userId);
-                    throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.");
-                }
-                else if (response.StatusCode == HttpStatusCode.PaymentRequired)
-                {
-                    _logger.LogError("Replicate API payment required during training for user {UserId}", userId);
-                    throw new InvalidOperationException("Replicate API payment required. Please check your billing.");
-                }
-                else if (response.StatusCode == HttpStatusCode.UnprocessableEntity)
-                {
-                    _logger.LogError("Replicate API validation error during training for user {UserId}: {Error}", userId, errorContent);
-                    throw new InvalidOperationException($"Invalid training request: {errorContent}");
-                }
-                else if (response.StatusCode == HttpStatusCode.TooManyRequests)
-                {
-                    _logger.LogWarning("Replicate API rate limit reached for user {UserId}", userId);
-                    throw new InvalidOperationException("Replicate API rate limit reached. Please try again later.");
-                }
-                else
-                {
-                    throw new Exception($"Failed to create training: {response.StatusCode}, {errorContent}");
+                    case HttpStatusCode.Unauthorized:
+                        throw new ReplicateApiException(response.StatusCode, "ReplicateAuthFailed",
+                            "Replicate API authentication failed. Check your API token.", errorContent);
+                    case HttpStatusCode.PaymentRequired:
+                        throw new ReplicateApiException(response.StatusCode, "ReplicatePaymentRequired",
+                            "Replicate account requires payment.", errorContent);
+                    case HttpStatusCode.Forbidden:
+                        throw new ReplicateApiException(response.StatusCode, "ReplicatePermissionDenied",
+                            "Your token is not permitted to create trainings for this model.", errorContent);
+                    case HttpStatusCode.NotFound:
+                        throw new ReplicateApiException(response.StatusCode, "ReplicateResourceNotFound",
+                            "The specified training resource or destination was not found.", errorContent);
+                    case HttpStatusCode.UnprocessableEntity:
+                        throw new ReplicateApiException(response.StatusCode, "ReplicateValidationError",
+                            "Invalid training request. Check input_images URL and parameters.", errorContent);
+                    case HttpStatusCode.TooManyRequests:
+                        throw new ReplicateApiException(response.StatusCode, "ReplicateRateLimited",
+                            "Replicate API rate limit reached. Please try again later.", errorContent);
+                    default:
+                        throw new ReplicateApiException(response.StatusCode, "ReplicateServiceError",
+                            $"Training creation failed with status {(int)response.StatusCode}.", errorContent);
                 }
             }
 
@@ -568,9 +582,9 @@ public class ReplicateApiClient : IReplicateApiClient
 
         if (style == null)
         {
-            // Fallback to default professional style
+            // Fallback to corporate style (exists in database)
             var defaultStyle = await _context.Styles
-                .Where(s => s.Name.ToLower() == "professional" && s.IsActive)
+                .Where(s => s.Name.ToLower() == "corporate" && s.IsActive)
                 .Select(s => new { s.PromptTemplate, s.NegativePromptTemplate })
                 .FirstOrDefaultAsync();
 
@@ -578,7 +592,7 @@ public class ReplicateApiClient : IReplicateApiClient
             {
                 // Ultimate fallback if no styles exist in database
                 return (
-                    "{subject}, professional portrait, composition: well-balanced frame with subject focus, lighting: flattering soft light with subtle highlighting, color palette: balanced natural tones, mood: confident and approachable, technical details: high resolution with excellent clarity, additional elements: simple professional background, appropriate attire for industry",
+                    "professional portrait of a {gender} {ethnicity}, {subject}, composition: well-balanced frame with subject focus, lighting: flattering soft light with subtle highlighting, color palette: balanced natural tones, mood: confident and approachable, technical details: high resolution with excellent clarity, additional elements: simple professional background, appropriate attire for industry",
                     "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation"
                 );
             }
