@@ -450,8 +450,36 @@ public class ReplicateApiClient : IReplicateApiClient
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Replicate prediction creation failed: {ErrorContent}", errorContent);
-                throw new Exception($"Failed to create prediction: {response.StatusCode}, {errorContent}");
+                _logger.LogError("Replicate prediction creation failed: {Status} {Error}", response.StatusCode, errorContent);
+
+                if (response.StatusCode == HttpStatusCode.UnprocessableEntity &&
+                    (errorContent.Contains("Version not available yet", StringComparison.OrdinalIgnoreCase) ||
+                     errorContent.Contains("not available yet", StringComparison.OrdinalIgnoreCase)))
+                {
+                    throw new ReplicateApiException(response.StatusCode, "ReplicateVersionNotAvailable",
+                        "Model version is not available yet on Replicate. Please try again shortly.", errorContent);
+                }
+
+                if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    throw new ReplicateApiException(response.StatusCode, "ReplicateRateLimited",
+                        "Replicate API rate limit reached. Please try again later.", errorContent);
+                }
+
+                if (response.StatusCode == HttpStatusCode.PaymentRequired)
+                {
+                    throw new ReplicateApiException(response.StatusCode, "ReplicatePaymentRequired",
+                        "Replicate account requires payment.", errorContent);
+                }
+
+                if (response.StatusCode == HttpStatusCode.Forbidden)
+                {
+                    throw new ReplicateApiException(response.StatusCode, "ReplicatePermissionDenied",
+                        "Your token is not permitted for this prediction.", errorContent);
+                }
+
+                throw new ReplicateApiException(response.StatusCode, "ReplicateServiceError",
+                    $"Prediction creation failed with status {(int)response.StatusCode}.", errorContent);
             }
 
             var responseJson = await response.Content.ReadAsStringAsync();
@@ -1376,6 +1404,46 @@ public class ReplicateApiClient : IReplicateApiClient
             // CRITICAL FIX: Always return empty list instead of throwing to prevent cascade deletion from failing
             return new List<string>();
         }
+    }
+
+    public async Task<bool> WaitForModelVersionAvailabilityAsync(string modelId, string versionId, TimeSpan? timeout = null, TimeSpan? maxBackoff = null)
+    {
+        var effectiveTimeout = timeout ?? TimeSpan.FromSeconds(120);
+        var effectiveMaxBackoff = maxBackoff ?? TimeSpan.FromSeconds(20);
+        var deadline = DateTime.UtcNow.Add(effectiveTimeout);
+
+        int attempt = 0;
+        while (DateTime.UtcNow < deadline)
+        {
+            try
+            {
+                var versions = await GetModelVersionsAsync(modelId);
+                if (versions.Any(v => string.Equals(v, versionId, StringComparison.OrdinalIgnoreCase)))
+                {
+                    _logger.LogInformation("Model version {VersionId} is now available for {ModelId}", versionId, modelId);
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error while polling versions for {ModelId}; continuing to retry", modelId);
+            }
+
+            // Exponential backoff with cap
+            attempt++;
+            var backoffSeconds = Math.Min(Math.Pow(2, attempt) * 1.5, effectiveMaxBackoff.TotalSeconds);
+            var delay = TimeSpan.FromSeconds(backoffSeconds);
+            var remaining = deadline - DateTime.UtcNow;
+            if (remaining <= TimeSpan.Zero)
+            {
+                break;
+            }
+            await Task.Delay(delay < remaining ? delay : remaining);
+        }
+
+        _logger.LogWarning("Timed out waiting for version {VersionId} of model {ModelId} to become available (timeout {Timeout}s)",
+            versionId, modelId, (int)effectiveTimeout.TotalSeconds);
+        return false;
     }
 
     public async Task<(bool Success, string? ErrorMessage)> DeleteModelVersionAsync(string modelId, string versionId)
