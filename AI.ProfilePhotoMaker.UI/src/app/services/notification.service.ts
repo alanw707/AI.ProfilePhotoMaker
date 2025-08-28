@@ -146,4 +146,106 @@ export class NotificationService {
       error || 'Failed to update profile. Please try again.'
     );
   }
+
+  // Enhanced training error notifications with actionable guidance
+  trainingConfigurationError(): string {
+    return this.error(
+      'Service Configuration Issue',
+      'Our training service needs attention. The team has been notified and is working on a fix. Please try again in a few minutes.',
+      0 // Stay visible until dismissed
+    );
+  }
+
+  trainingAuthenticationError(): string {
+    return this.error(
+      'Service Authentication Issue',
+      'API authentication needs attention. Our team has been notified and is working on a fix. Please try again in a few minutes.',
+      0 // Stay visible until dismissed
+    );
+  }
+
+  trainingServiceUnavailable(): string {
+    return this.warning(
+      'Service Temporarily Unavailable',
+      'Our training service is temporarily busy. This usually resolves quickly - please try again in a few minutes.',
+      8000 // 8 seconds for service issues
+    );
+  }
+
+  trainingRetryableError(message: string): string {
+    return this.warning(
+      'Training Issue',
+      `${message} Please try again in a few minutes, or contact support if the problem persists.`,
+      8000
+    );
+  }
+
+  trainingNonRetryableError(message: string): string {
+    return this.error(
+      'Training Configuration',
+      `${message} Please contact support for assistance.`,
+      0 // Stay visible until dismissed
+    );
+  }
+
+  // Credit-related errors with purchase guidance
+  insufficientCreditsForTraining(required: number, available: number): string {
+    return this.error(
+      'Insufficient Credits',
+      `Training requires ${required} credits, but you have ${available}. Please purchase more credits or upgrade your plan.`,
+      0 // Stay visible until dismissed
+    );
+  }
+
+  // Network and connectivity errors
+  networkConnectionError(): string {
+    return this.warning(
+      'Connection Issue',
+      'Network connection problem detected. Please check your internet connection and try again.',
+      6000
+    );
+  }
+
+  requestTimeoutError(): string {
+    return this.warning(
+      'Request Timeout',
+      'The request took too long to complete. Please try again.',
+      6000
+    );
+  }
+
+  // User-friendly retry suggestions
+  trainingErrorWithRetry(title: string, message: string, isRetryable = true): string {
+    const enhancedMessage = isRetryable
+      ? `${message} You can try again, or contact support if the issue continues.`
+      : `${message} Please contact support for assistance.`;
+
+    return isRetryable
+      ? this.warning(title, enhancedMessage, 8000)
+      : this.error(title, enhancedMessage, 0);
+  }
+
+  // Development/debugging helper (only shows in dev mode)
+  debugError(title: string, technicalDetails: string): string {
+    // Only show technical details in development
+    const isDevelopment =
+      !!(window as any)?.['ng']?.['development'] ||
+      location.hostname === 'localhost' ||
+      location.hostname.includes('ngrok');
+
+    if (isDevelopment) {
+      return this.error(
+        `${title} (Debug)`,
+        `${technicalDetails}\n\nThis detailed error is only shown in development mode.`,
+        0
+      );
+    }
+
+    // In production, show user-friendly message
+    return this.error(
+      title,
+      'We encountered a technical issue. Please try again or contact support.',
+      0
+    );
+  }
 }
