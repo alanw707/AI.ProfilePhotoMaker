@@ -441,9 +441,12 @@ export class WorkflowOrchestrationService {
    * UPDATED: Now properly validates actual model data exists, matching backend validation
    */
   private _checkForExistingTrainedModel(_latestTrainedModel: any, modelStatus: string): boolean {
-    // Single source of truth: Trust API status
-    if (modelStatus === 'Model Ready') {
-      console.log('✅ Model Ready - routing to generation workflow');
+    // Single source of truth: Trust API status for ready models
+    const readyStatuses = ['Model Ready', 'Ready', 'Done', 'Completed', 'ModelReady'];
+    if (readyStatuses.some(status => modelStatus === status || modelStatus?.includes(status))) {
+      console.log('✅ Model ready for generation - routing to generation workflow', {
+        modelStatus,
+      });
       return true;
     }
 
