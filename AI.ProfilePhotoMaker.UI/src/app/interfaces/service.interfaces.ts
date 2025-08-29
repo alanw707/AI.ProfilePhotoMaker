@@ -152,7 +152,8 @@ export interface DashboardState {
   uploadedImages: number;
   uploadedImageThumbnails: UploadedImageThumbnail[];
   generatedPhotosCount: number;
-  modelStatus: string;
+  modelStatus: string; // Legacy string status (to be deprecated)
+  modelStatusSemantic?: import('../models/dashboard.types').ModelStatus; // New semantic status
   isPremiumWorkflow: boolean;
   isLoading: boolean;
   latestTrainedModel?: any;

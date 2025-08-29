@@ -3,6 +3,7 @@ import { BehaviorSubject, combineLatest, forkJoin, Observable, of, firstValueFro
 import { catchError, map } from 'rxjs/operators';
 import { ProfileService, UserProfile } from './profile.service';
 import { ModelStateService } from './model-state.service';
+import { ModelStatusService } from './model-status.service';
 import { FallbackOperationsService } from './fallback-operations.service';
 import { CacheManagerService } from './cache-manager.service';
 import { NotificationService } from './notification.service';
@@ -40,6 +41,7 @@ export class DashboardCoordinatorService implements IDashboardStateService {
   constructor(
     private _profileService: ProfileService,
     private _modelState: ModelStateService,
+    private _modelStatus: ModelStatusService,
     private _fallbackOps: FallbackOperationsService,
     private _cacheManager: CacheManagerService,
     private _notificationService: NotificationService,
@@ -374,21 +376,14 @@ export class DashboardCoordinatorService implements IDashboardStateService {
                 unifiedStatus.reason
               )
             : ((): string => {
-                switch (unifiedStatus.statusCode) {
-                  case 'ModelReady':
-                    return 'Model Ready';
-                  case 'Training':
-                    return 'training';
-                  case 'ReadyForTraining':
-                    return 'Ready for training';
-                  case 'Failed':
-                    return unifiedStatus.reason && unifiedStatus.reason.includes('deleted')
-                      ? 'Ready for training'
-                      : 'Training failed';
-                  case 'NotStarted':
-                  default:
-                    return 'Not Started';
+                // Delegate to centralized status service for consistent display logic
+                if (
+                  unifiedStatus.statusCode === 'Failed' &&
+                  unifiedStatus.reason?.includes('deleted')
+                ) {
+                  return 'Ready for training'; // Special case for deleted models
                 }
+                return this._modelStatus.getStatusInfo(unifiedStatus.statusCode).displayText;
               })();
           modelInfo = {
             modelStatus: display,

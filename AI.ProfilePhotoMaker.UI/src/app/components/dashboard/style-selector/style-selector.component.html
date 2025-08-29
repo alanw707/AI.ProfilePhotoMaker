@@ -177,23 +177,16 @@
     *ngIf="!isTrainingStarted && !isTraining && !isGenerating"
     (click)="onStartTraining()"
     [disabled]="
-      isProcessingTraining ||
-      modelStatus === 'training' ||
-      (modelStatus !== 'Model Ready' && uploadedImageCount < 10) ||
-      !hasEnoughCredits
+      isProcessingTraining || isModelTraining || (!isModelReady && uploadedImageCount < 10) || !hasEnoughCredits
     ">
     <div class="btn-content">
-      <div class="btn-icon" *ngIf="modelStatus !== 'training'">🚀</div>
-      <div class="btn-icon spinning" *ngIf="modelStatus === 'training'">⏳</div>
+      <div class="btn-icon" *ngIf="!isModelTraining">🚀</div>
+      <div class="btn-icon spinning" *ngIf="isModelTraining">⏳</div>
       <div class="btn-text">
-        <span class="btn-title" *ngIf="modelStatus === 'training'">Starting Training...</span>
-        <span class="btn-title" *ngIf="modelStatus === 'Model Ready'">
-          Generate {{ selectedStyles * imagesPerStyle }} Photos
-        </span>
-        <span class="btn-title" *ngIf="modelStatus !== 'training' && modelStatus !== 'Model Ready'">
-          Start Training & Generate Photos
-        </span>
-        <span class="btn-subtitle" *ngIf="modelStatus !== 'training'">
+        <span class="btn-title" *ngIf="isModelTraining">Starting Training...</span>
+        <span class="btn-title" *ngIf="isModelReady">Generate {{ selectedStyles * imagesPerStyle }} Photos</span>
+        <span class="btn-title" *ngIf="!isModelTraining && !isModelReady">Start Training & Generate Photos</span>
+        <span class="btn-subtitle" *ngIf="!isModelTraining">
           {{ selectedStyles }} styles • {{ selectedStyles * imagesPerStyle }} total images
         </span>
       </div>
@@ -210,8 +203,8 @@
         </svg>
       </div>
       <div class="progress-title">
-        <h4 *ngIf="isTraining && !modelStatus.includes('Model Ready')">🤖 Training Your AI Model</h4>
-        <h4 *ngIf="isGenerating || modelStatus === 'Model Ready'">🎨 Generating Your Photos</h4>
+        <h4 *ngIf="isTraining && !isModelReady">🤖 Training Your AI Model</h4>
+        <h4 *ngIf="isGenerating || isModelReady">🎨 Generating Your Photos</h4>
         <p class="progress-subtitle">{{ progressMessage }}</p>
       </div>
     </div>
@@ -248,7 +241,7 @@
   <p>Select at least one style above to proceed with training</p>
 </div>
 
-<div class="training-note" *ngIf="selectedStyles > 0 && uploadedImageCount < 10 && modelStatus !== 'Model Ready'">
+<div class="training-note" *ngIf="selectedStyles > 0 && uploadedImageCount < 10 && !isModelReady">
   <div class="note-icon">📸</div>
   <p>Upload at least 10 images to enable training (currently: {{ uploadedImageCount }})</p>
 </div>

@@ -25,6 +25,7 @@ import { StyleService } from '../services/style.service';
 import { NotificationService } from '../services/notification.service';
 import { CreditService } from '../services/credit.service';
 import { DashboardCoordinatorService } from '../services/dashboard-coordinator.service';
+import { ModelStatusService } from '../services/model-status.service';
 import { ConfigService } from '../services/config.service';
 import { StylePreviewService } from '../services/style-preview.service';
 import { WorkflowStepService, ImageThumbnail } from '../services/workflow-step.service';
@@ -148,6 +149,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private readonly _notificationService: NotificationService,
     public readonly creditService: CreditService,
     public readonly stateService: DashboardCoordinatorService,
+    private readonly _modelStatus: ModelStatusService,
     private readonly _config: ConfigService,
     private readonly _stylePreviewService: StylePreviewService,
     private readonly _workflowStepService: WorkflowStepService,
@@ -478,11 +480,39 @@ export class DashboardComponent implements OnInit, OnDestroy {
     };
   }
 
-  private _calculateTrainingCreditsLocally(modelStatus: string): number {
-    if (modelStatus === 'Model Ready') {
-      return 0; // Model already trained, no additional cost
-    }
-    return 15; // Training required - 15 credits
+  private _calculateTrainingCreditsLocally(_modelStatus: string): number {
+    // Use semantic status for cleaner logic
+    const semantic = this.getSemanticStatus();
+    return semantic?.canGenerate ? 0 : 15;
+  }
+
+  // Helper method to get semantic status from current state
+  private getSemanticStatus() {
+    const currentState = this.stateService.getState();
+    return currentState.modelStatusSemantic;
+  }
+
+  // Template helper methods using semantic status instead of string comparisons
+  // These replace complex ngIf conditions with semantic capability checks
+
+  get canStartTraining(): boolean {
+    const semantic = this.getSemanticStatus();
+    return semantic?.canTrain ?? false;
+  }
+
+  get canGenerateImages(): boolean {
+    const semantic = this.getSemanticStatus();
+    return semantic?.canGenerate ?? false;
+  }
+
+  get isModelTraining(): boolean {
+    const semantic = this.getSemanticStatus();
+    return semantic ? semantic.state === 'TRAINING' : false;
+  }
+
+  get modelDisplayText(): string {
+    const semantic = this.getSemanticStatus();
+    return semantic?.displayText ?? 'Loading...';
   }
 
   private _calculateGenerationCreditsLocally(
