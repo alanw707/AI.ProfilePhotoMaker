@@ -159,14 +159,23 @@ public class WebhookUrlResolver : IWebhookUrlResolver
 
     private string? ResolveProductionWebhookUrl()
     {
-        // In production, always use the app base URL
+        // In production, webhook should hit the API domain, not the frontend app domain
+        var apiBaseUrl = _configuration["ExternalApiBaseUrl"];
+        if (!string.IsNullOrWhiteSpace(apiBaseUrl))
+        {
+            _logger.LogDebug("Using ExternalApiBaseUrl for webhooks in production: {ApiBaseUrl}", apiBaseUrl);
+            return apiBaseUrl.TrimEnd('/');
+        }
+
+        // Fallback to AppBaseUrl only if API base URL is not configured (legacy)
         var appBaseUrl = _configuration["AppBaseUrl"];
         if (string.IsNullOrWhiteSpace(appBaseUrl))
         {
-            _logger.LogError("AppBaseUrl not configured for production environment");
+            _logger.LogError("ExternalApiBaseUrl/AppBaseUrl not configured for production environment");
             return null;
         }
 
+        _logger.LogWarning("Falling back to AppBaseUrl for webhook base in production. Consider setting ExternalApiBaseUrl to the API domain.");
         return appBaseUrl.TrimEnd('/');
     }
 

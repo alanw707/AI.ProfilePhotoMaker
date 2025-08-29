@@ -448,6 +448,15 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               name: 'CORS_ALLOWED_ORIGINS'
               value: 'https://app.aiprofilephotomaker.com,https://aiprofilephotomaker.com'
             }
+            // Application URLs for webhook resolution
+            {
+              name: 'ExternalApiBaseUrl'
+              value: 'https://api.aiprofilephotomaker.com'
+            }
+            {
+              name: 'AppBaseUrl'
+              value: 'https://app.aiprofilephotomaker.com'
+            }
             // OAuth Configuration
             {
               name: 'GOOGLE_CLIENT_ID'
