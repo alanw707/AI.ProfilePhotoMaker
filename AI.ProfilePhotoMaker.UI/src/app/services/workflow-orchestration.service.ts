@@ -423,6 +423,45 @@ export class WorkflowOrchestrationService {
         },
       });
 
+      // CRITICAL FIX: Handle ModelAlreadyTrained error by routing to generation
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const apiError = (error as any)?.error;
+
+      if (
+        apiError?.code === 'ModelAlreadyTrained' ||
+        errorMessage.includes('ModelAlreadyTrained')
+      ) {
+        console.log(
+          '🔄 FALLBACK RECOVERY: ModelAlreadyTrained detected, attempting generation route'
+        );
+
+        try {
+          // Force refresh model status to get latest data
+          await this._deps.stateService.loadInitialDashboardData();
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          const refreshedState = this._deps.stateService.getState();
+
+          // Route to generation using any available model data
+          await this._handleExistingModelGeneration(
+            selectedStyles,
+            imagesPerStyle,
+            refreshedState.latestTrainedModel
+          );
+
+          // Show success message instead of error
+          this._deps.notificationService.success(
+            'Model Available!',
+            "Great news! You already have a trained model. We're using it to generate your photos."
+          );
+
+          return; // Exit successfully
+        } catch (fallbackError) {
+          console.error('🚨 Fallback generation also failed:', fallbackError);
+          // Continue to normal error handling below
+        }
+      }
+
       // Reset progress state
       this._setProgress({
         isTraining: false,
@@ -1434,6 +1473,7 @@ export class WorkflowOrchestrationService {
     category: string;
   } {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const apiError = (error as any)?.error;
 
     // Authentication/Authorization errors
     if (
@@ -1501,12 +1541,16 @@ export class WorkflowOrchestrationService {
       };
     }
 
-    // Model status errors
-    if (errorMessage.includes('already have a trained model')) {
+    // ENHANCED: Model status errors - handle both API error codes and message content
+    if (
+      apiError?.code === 'ModelAlreadyTrained' ||
+      errorMessage.includes('ModelAlreadyTrained') ||
+      errorMessage.includes('already have a trained model')
+    ) {
       return {
         title: 'Model Already Available',
         message:
-          "Great news! You already have a trained model. We'll use it to generate your photos.",
+          "You already have a trained model available. We'll use your existing model for image generation.",
         category: 'business_logic',
       };
     }
