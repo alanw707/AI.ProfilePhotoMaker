@@ -10,6 +10,14 @@ using System.Security.Claims;
 
 namespace AI.ProfilePhotoMaker.API.Controllers;
 
+public class StyleGenerationResult
+{
+    public string Style { get; set; } = string.Empty;
+    public bool Success { get; set; }
+    public object? Result { get; set; }
+    public string? Error { get; set; }
+}
+
 [Route("api/[controller]")]
 [ApiController]
 [Authorize]
@@ -523,21 +531,36 @@ public class ReplicateController : ControllerBase
                 });
             }
 
-            var generationTasks = dto.Styles.Select<string, Task<dynamic>>(async (style) =>
+            // Process styles sequentially to avoid race conditions with Replicate API
+            // when using the same model version for multiple concurrent requests
+            var results = new List<StyleGenerationResult>();
+            
+            foreach (var style in dto.Styles)
             {
                 try
                 {
+                    _logger.LogInformation("Starting generation for style {Style} for user {UserId}", style, userId);
                     var result = await _replicateApiClient.GenerateImagesAsync(modelVersionToUse, userId, style, userInfo, dto.NumOutputsPerStyle);
-                    return new { Style = style, Success = true, Result = result, Error = (string?)null };
+                    results.Add(new StyleGenerationResult 
+                    { 
+                        Style = style, 
+                        Success = true, 
+                        Result = result, 
+                        Error = null 
+                    });
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error generating images for style {Style} for user {UserId}", style, userId);
-                    return new { Style = style, Success = false, Result = (object?)null, Error = ex.Message };
+                    results.Add(new StyleGenerationResult 
+                    { 
+                        Style = style, 
+                        Success = false, 
+                        Result = null, 
+                        Error = ex.Message 
+                    });
                 }
-            });
-
-            var results = await Task.WhenAll(generationTasks);
+            }
 
             // Count successful generations
             var successfulGenerations = results.Where(r => r.Success).ToList();
