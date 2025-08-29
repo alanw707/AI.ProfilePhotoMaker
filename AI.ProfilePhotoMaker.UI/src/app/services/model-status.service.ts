@@ -26,11 +26,21 @@ export class ModelStatusService {
 
     // Legacy display strings (transitional support)
     const normalizedStatus = status.trim();
-    return (
-      normalizedStatus === 'Model Ready' ||
+    // Tight legacy handling: allow only explicit known-good readiness phrases
+    if (normalizedStatus === 'Model Ready' || normalizedStatus === 'ModelReady') {
+      return true;
+    }
+    const inferredReady =
       normalizedStatus.toLowerCase().includes('ready for generation') ||
-      normalizedStatus.startsWith('Model trained')
-    );
+      normalizedStatus.startsWith('Model trained');
+    if (inferredReady) {
+      // Lightweight diagnostic to observe legacy path usage in prod
+      try {
+        console.debug('canGenerate: legacy readiness match', normalizedStatus);
+      } catch {}
+      return true;
+    }
+    return false;
   }
 
   /**

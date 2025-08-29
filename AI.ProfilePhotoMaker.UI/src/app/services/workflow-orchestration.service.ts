@@ -90,6 +90,18 @@ interface FileUploadService {
   listTrainingFiles(): Observable<{ success: boolean; data: string[]; error: any }>;
   deleteAllTrainingFiles(): Observable<{ success: boolean; message: string }>;
   invalidateUserImagesCache(): void;
+  // Additional methods used at runtime (declared here to satisfy type checker)
+  getUnifiedModelStatus(): Observable<any>;
+  getUserModelRequests(): Observable<{
+    success: boolean;
+    data?: {
+      totalRequests: number;
+      hasTrainedModel: boolean;
+      latestTrainedModel: any;
+      allRequests: any[];
+    };
+    error?: any;
+  }>;
 }
 
 interface ReplicateService {
@@ -383,8 +395,28 @@ export class WorkflowOrchestrationService {
         Object.assign(currentState, refreshedState);
       }
 
-      const modelStatus = currentState.modelStatus;
-      const latestTrainedModel = currentState.latestTrainedModel;
+      let modelStatus = currentState.modelStatus;
+      let latestTrainedModel = currentState.latestTrainedModel;
+
+      // Force a fresh unified status read to avoid stale cache
+      try {
+        const fileUploadService = await this._loadFileUploadService();
+        const unified = await firstValueFrom(fileUploadService.getUnifiedModelStatus());
+        if (unified?.statusCode === 'ModelReady' && unified.hasTrainedModel) {
+          modelStatus = 'ModelReady';
+          if (!latestTrainedModel || !latestTrainedModel.trainedModelVersion) {
+            const requests = await firstValueFrom(fileUploadService.getUserModelRequests());
+            if (requests?.success && requests.data?.latestTrainedModel) {
+              latestTrainedModel = requests.data.latestTrainedModel;
+            }
+          }
+        }
+      } catch (freshErr) {
+        console.warn(
+          'Unified model status refresh failed; proceeding with existing state',
+          freshErr
+        );
+      }
 
       // CRITICAL FIX: Determine if user has ANY trained model using proper data validation
       const hasTrainedModel = this._checkForExistingTrainedModel(latestTrainedModel, modelStatus);
@@ -549,6 +581,29 @@ export class WorkflowOrchestrationService {
     imagesPerStyle: number
   ): Promise<void> {
     try {
+      // Safety guard: never train if model already ready (race conditions, stale state)
+      try {
+        const fileUploadService = await this._loadFileUploadService();
+        const unified = await firstValueFrom(fileUploadService.getUnifiedModelStatus());
+        if (unified?.statusCode === 'ModelReady' && unified.hasTrainedModel) {
+          console.log('✅ Model already ready at training start; routing to generation');
+          // Try to get latest model details
+          let latestTrainedModel: any = null;
+          try {
+            const requests = await firstValueFrom(fileUploadService.getUserModelRequests());
+            latestTrainedModel = requests?.success ? requests.data?.latestTrainedModel : null;
+          } catch {}
+          await this._handleExistingModelGeneration(
+            selectedStyles,
+            imagesPerStyle,
+            latestTrainedModel
+          );
+          return;
+        }
+      } catch (guardErr) {
+        console.warn('Pre-training readiness guard failed; proceeding with training', guardErr);
+      }
+
       this._initializeTrainingProgress();
       await this._createTrainingZip();
       const zipUrl = await this._getTrainingZipUrl();
