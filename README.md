@@ -28,10 +28,10 @@ git push origin main
 ## 📖 Documentation
 
 - **[Local Build Workflow](docs/LOCAL-BUILD-WORKFLOW.md)** - Complete guide to the local build process
-- [Project Plan](docs/PROJECT_PLAN.md) - Overall plan and milestones
-- [Tasks](docs/TASKS.md) - Detailed task list and status
-- [Setup Guide](docs/SETUP.md) - Development environment setup
-- [Architecture](docs/ARCHITECTURE.md) - System architecture and design
+- [Project Plan](docs/development/PROJECT_PLAN.md) - Overall plan and milestones
+- [Development Backlog](docs/development/DEVELOPMENT_BACKLOG.md) - Detailed task list and status
+- [Setup Guide](docs/ENVIRONMENT_SETUP.md) - Development environment setup
+- [Architecture Overview](docs/architecture/ARCHITECTURE_OVERVIEW.md) - System architecture and design
 
 ## Overview
 
@@ -57,9 +57,9 @@ AI.ProfilePhotoMaker is a web application that allows users to create profession
 - JWT Authentication
 
 ### Frontend
-- React 18 + TypeScript
-- Vite build system
-- Modern CSS with modules
+- Angular 19 + TypeScript
+- Angular CLI build system
+- Modern CSS with Angular styling
 - Responsive design
 
 ### Cloud Infrastructure
