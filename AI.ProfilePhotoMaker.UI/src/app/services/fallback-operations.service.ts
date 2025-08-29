@@ -4,6 +4,7 @@ import { Observable, firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
 import { ConfigService } from './config.service';
 import { FileUploadService } from './file-upload.service';
+import { ModelStatusService } from './model-status.service';
 import {
   DashboardStateForFallback,
   DataDiscrepancyResult,
@@ -28,7 +29,8 @@ export class FallbackOperationsService implements IFallbackOperationsService {
     private _http: HttpClient,
     private _authService: AuthService,
     private _config: ConfigService,
-    private _fileUploadService: FileUploadService
+    private _fileUploadService: FileUploadService,
+    private _modelStatus: ModelStatusService
   ) {}
 
   /**
@@ -127,7 +129,7 @@ export class FallbackOperationsService implements IFallbackOperationsService {
     // Check filesystem if we have 0 photos but evidence of a trained model
     const shouldCheckFilesystem =
       state.generatedPhotosCount === 0 &&
-      (state.latestTrainedModel || state.modelStatus === 'Model Ready') &&
+      (state.latestTrainedModel || this._modelStatus.canGenerate(state.modelStatus)) &&
       state.hasUserProfile && // User has been active
       !this.fallbackOperationsRun.filesystemCheck;
 

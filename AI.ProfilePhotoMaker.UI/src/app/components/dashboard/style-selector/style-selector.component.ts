@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { ConfigService } from '../../../services/config.service';
+import { ModelStatusService } from '../../../services/model-status.service';
 
 export interface StyleOption {
   id: string;
@@ -23,7 +24,8 @@ export interface StyleOption {
 export class StyleSelectorComponent {
   constructor(
     private _router: Router,
-    private _config: ConfigService
+    private _config: ConfigService,
+    private _modelStatus: ModelStatusService
   ) {}
   @Input() availableStyles: StyleOption[] = [];
   @Input() imagesPerStyle = 2;
@@ -54,6 +56,19 @@ export class StyleSelectorComponent {
 
   // Debouncing protection
   public isProcessingTraining = false;
+
+  // Semantic status getters for template usage
+  get isModelReady(): boolean {
+    return this._modelStatus.canGenerate(this.modelStatus);
+  }
+
+  get isModelTraining(): boolean {
+    return this._modelStatus.isTraining(this.modelStatus);
+  }
+
+  get canStartTraining(): boolean {
+    return this._modelStatus.canStartTraining(this.modelStatus);
+  }
 
   onToggleStyle(style: StyleOption): void {
     this.styleToggled.emit(style);

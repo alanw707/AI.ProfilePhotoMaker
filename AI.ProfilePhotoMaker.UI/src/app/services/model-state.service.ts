@@ -3,6 +3,8 @@ import { forkJoin, firstValueFrom } from 'rxjs';
 import { ProfileService } from './profile.service';
 import { FileUploadService } from './file-upload.service';
 import { IModelStateService } from '../interfaces/service.interfaces';
+import { ModelStatusService } from './model-status.service';
+import { ModelStatus, ModelStatusHelper } from '../models/dashboard.types';
 
 @Injectable({
   providedIn: 'root',
@@ -10,7 +12,8 @@ import { IModelStateService } from '../interfaces/service.interfaces';
 export class ModelStateService implements IModelStateService {
   constructor(
     private profileService: ProfileService,
-    private fileUploadService: FileUploadService
+    private fileUploadService: FileUploadService,
+    private modelStatus: ModelStatusService
   ) {}
 
   /**
@@ -138,7 +141,7 @@ export class ModelStateService implements IModelStateService {
       }
 
       hasTrainedModel = true;
-      modelStatus = 'Model Ready';
+      modelStatus = 'ModelReady'; // Use unified status code
       latestTrainedModel = modelRequestsData.latestTrainedModel;
       return { modelStatus, hasTrainedModel, latestTrainedModel };
     }
@@ -164,7 +167,7 @@ export class ModelStateService implements IModelStateService {
         normalized.startsWith('Model trained') ||
         normalized.toLowerCase().includes('ready for generation')
       ) {
-        modelStatus = 'Model Ready';
+        modelStatus = 'ModelReady'; // Use unified status code
         // We can't guarantee latestTrainedModel details from this endpoint
         // but we can safely reflect readiness in the dashboard
         hasTrainedModel = true;
@@ -187,7 +190,7 @@ export class ModelStateService implements IModelStateService {
     const latest = all[0];
 
     if (latest?.status === 'creating' || latest?.status === 'pending') {
-      modelStatus = 'training';
+      modelStatus = 'Training'; // Use unified status code
     } else if (
       // Only treat as Model Ready if we have usable model data from a 'ready' request
       all.some((req: any) => req.status === 'ready')
@@ -196,7 +199,7 @@ export class ModelStateService implements IModelStateService {
         (req: any) => req.status === 'ready' && (req.trainedModelVersion || req.replicateModelId)
       );
       if (latestReady) {
-        modelStatus = 'Model Ready';
+        modelStatus = 'ModelReady'; // Use unified status code
         hasTrainedModel = true;
         latestTrainedModel = {
           requestId: latestReady.requestId,
@@ -228,6 +231,34 @@ export class ModelStateService implements IModelStateService {
   }
 
   /**
+   * Generate semantic status from legacy string status
+   */
+  getSemanticStatus(legacyStatus: string, progress?: number, error?: string): ModelStatus {
+    return ModelStatusHelper.fromLegacyStatus(legacyStatus, progress, error);
+  }
+
+  /**
+   * Enhanced model status that includes both legacy and semantic status
+   */
+  getEnhancedModelStatusFromData(
+    modelRequestsData: any,
+    trainingStatus: any
+  ): {
+    modelStatus: string;
+    modelStatusSemantic: ModelStatus;
+    hasTrainedModel: boolean;
+    latestTrainedModel: any;
+  } {
+    const legacyResult = this.getModelStatusFromData(modelRequestsData, trainingStatus);
+    const semanticStatus = this.getSemanticStatus(legacyResult.modelStatus);
+
+    return {
+      ...legacyResult,
+      modelStatusSemantic: semanticStatus,
+    };
+  }
+
+  /**
    * Notify dashboard state service of model status updates
    * This would be implemented to communicate with DashboardStateService
    */
@@ -237,18 +268,10 @@ export class ModelStateService implements IModelStateService {
   }
 
   private mapUnifiedStatusToDisplay(statusCode: string, reason?: string | null): string {
-    switch (statusCode) {
-      case 'ModelReady':
-        return 'Model Ready';
-      case 'Training':
-        return 'training';
-      case 'ReadyForTraining':
-        return 'Ready for training';
-      case 'Failed':
-        return reason && reason.includes('deleted') ? 'Ready for training' : 'Training failed';
-      case 'NotStarted':
-      default:
-        return 'Not Started';
+    // Delegate to centralized status service for consistent display logic
+    if (statusCode === 'Failed' && reason?.includes('deleted')) {
+      return 'Ready for training'; // Special case for deleted models
     }
+    return this.modelStatus.getStatusInfo(statusCode).displayText;
   }
 }

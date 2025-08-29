@@ -5,7 +5,9 @@ import { NotificationService } from './notification.service';
 import { DashboardStateService } from './dashboard-state.service';
 import { SubscriptionStateService } from './subscription-state.service';
 import { ConfigService } from './config.service';
+import { ModelStatusService } from './model-status.service';
 import { StyleOption } from '../components/dashboard/style-selector/style-selector.component';
+import { ModelStatus, ModelStatusHelper } from '../models/dashboard.types';
 
 // Lazy-loaded service types
 interface TrainingZipResponse {
@@ -199,7 +201,8 @@ export class WorkflowOrchestrationService {
     notificationService: NotificationService,
     stateService: DashboardStateService,
     subscriptionState: SubscriptionStateService,
-    config: ConfigService
+    config: ConfigService,
+    private readonly _modelStatus: ModelStatusService
   ) {
     this._deps = {
       authService,
@@ -265,7 +268,7 @@ export class WorkflowOrchestrationService {
   }
 
   private _calculateTrainingCredits(modelStatus: string): number {
-    if (modelStatus === 'Model Ready') {
+    if (this._modelStatus.canGenerate(modelStatus)) {
       return 0; // Model already trained, no additional cost
     }
     return 15; // Training required - 15 credits
@@ -359,11 +362,12 @@ export class WorkflowOrchestrationService {
 
     try {
       // CRITICAL FIX: Ensure data is fully loaded before making routing decisions
-      if (
+      const isLoadingState =
         currentState.modelStatus === 'Loading...' ||
         currentState.modelStatus === '' ||
-        !currentState.modelStatus
-      ) {
+        !currentState.modelStatus;
+
+      if (isLoadingState) {
         console.log('⏳ WAITING FOR DATA: Model status not loaded yet, refreshing...');
         await this._deps.stateService.loadInitialDashboardData();
         await new Promise(resolve => setTimeout(resolve, 1000)); // Allow time for state updates
@@ -441,9 +445,8 @@ export class WorkflowOrchestrationService {
    * UPDATED: Now properly validates actual model data exists, matching backend validation
    */
   private _checkForExistingTrainedModel(_latestTrainedModel: any, modelStatus: string): boolean {
-    // Single source of truth: Trust API status for ready models
-    const readyStatuses = ['Model Ready', 'Ready', 'Done', 'Completed', 'ModelReady'];
-    if (readyStatuses.some(status => modelStatus === status || modelStatus?.includes(status))) {
+    // Single source of truth: Use semantic status validation
+    if (this._modelStatus.canGenerate(modelStatus)) {
       console.log('✅ Model ready for generation - routing to generation workflow', {
         modelStatus,
       });
@@ -451,11 +454,7 @@ export class WorkflowOrchestrationService {
     }
 
     // Only check for training states that require different handling
-    const trainingInProgress = ['Training', 'training', 'creating', 'pending'].some(status =>
-      modelStatus?.toLowerCase().includes(status.toLowerCase())
-    );
-
-    if (trainingInProgress) {
+    if (this._modelStatus.isTraining(modelStatus)) {
       console.log('🔄 Training in progress - will poll for completion');
       return false;
     }

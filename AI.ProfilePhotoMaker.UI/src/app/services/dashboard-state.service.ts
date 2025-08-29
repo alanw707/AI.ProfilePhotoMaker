@@ -20,6 +20,7 @@ import {
   IDashboardStateService,
   UploadedImageThumbnail,
 } from '../interfaces/service.interfaces';
+import { ModelStatus } from '../models/dashboard.types';
 
 @Injectable({
   providedIn: 'root',
@@ -516,17 +517,18 @@ export class DashboardStateService implements IDashboardStateService {
         // Training status is either TrainingStatusResponse or null
         const trainingStatusData = trainingStatus; // Use directly since it's not wrapped
 
-        // Get model status using ModelStateService
-        const modelInfo = this._modelState.getModelStatusFromData(
+        // Get enhanced model status with semantic status
+        const modelInfo = this._modelState.getEnhancedModelStatusFromData(
           modelRequestsData,
           trainingStatusData
         );
-        const { modelStatus, latestTrainedModel } = modelInfo;
+        const { modelStatus, modelStatusSemantic, latestTrainedModel } = modelInfo;
 
         // Update state with additional data
         this.setState({
           uploadedImages: trainingStatusData?.totalUploadedImages || currentState.uploadedImages,
           modelStatus,
+          modelStatusSemantic,
           latestTrainedModel,
         });
 
