@@ -213,8 +213,8 @@ public class CreditController : BaseController
         {
             PaymentSimulation = new
             {
-                Enabled = _configuration.GetValue<bool>("PaymentSimulation:Enabled", false),
-                SkipStripeIntegration = _configuration.GetValue<bool>("PaymentSimulation:SkipStripeIntegration", false)
+                Enabled = true, // Always enabled in MVP - no real payment processing
+                SkipStripeIntegration = true // Always skip Stripe in MVP
             }
         };
 

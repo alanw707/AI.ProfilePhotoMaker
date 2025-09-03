@@ -124,22 +124,7 @@ public class DependencyHealthService : IDependencyHealthService
             };
         }
 
-        // Stripe API (if configured)
-        var stripeApiKey = _configuration["Stripe:SecretKey"];
-        if (!string.IsNullOrEmpty(stripeApiKey))
-        {
-            dependencies["stripe"] = new DependencyConfig
-            {
-                Name = "Stripe API",
-                Type = DependencyType.Http,
-                Url = "https://api.stripe.com/v1/account",
-                Required = false,
-                Headers = new Dictionary<string, string>
-                {
-                    ["Authorization"] = $"Bearer {stripeApiKey}"
-                }
-            };
-        }
+        // Stripe API removed - MVP uses payment simulation only
 
         // Google OAuth (if configured)
         var googleClientId = _configuration["Authentication:Google:ClientId"];

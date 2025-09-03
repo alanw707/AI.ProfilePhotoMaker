@@ -19,15 +19,15 @@ public class ProcessedImage
 
     /// <summary>
     /// Calculates the scheduled deletion date based on image type:
-    /// - Original uploads (input photos): 7 days from creation
+    /// - Original uploads (input photos): 30 days from creation
     /// - AI generated headshots: 30 days from creation
     /// </summary>
     public void SetScheduledDeletionDate()
     {
         if (IsOriginalUpload)
         {
-            // Input photos (original uploads): Delete after 7 days
-            ScheduledDeletionDate = CreatedAt.AddDays(7);
+            // Input photos (original uploads): Delete after 30 days (aligned with AI-generated)
+            ScheduledDeletionDate = CreatedAt.AddDays(30);
         }
         else if (IsGenerated)
         {

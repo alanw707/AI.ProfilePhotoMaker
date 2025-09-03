@@ -10,22 +10,13 @@
     </div>
   </div>
 
-  <!-- Payment Element -->
-  <div class="payment-container" *ngIf="selectedPackage">
-    <h3>
-      {{ paymentConfig?.paymentSimulation?.enabled ? 'Simulating Payment' : 'Completing Purchase' }} for
-      {{ selectedPackage.name }}
-    </h3>
-    <div class="simulation-payment" *ngIf="paymentConfig?.paymentSimulation?.enabled">
+  <!-- Payment Simulation Modal -->
+  <div class="payment-container" *ngIf="selectedPackage && isPurchasing">
+    <h3>Simulating Payment for {{ selectedPackage.name }}</h3>
+    <div class="simulation-payment">
       <p>Payment simulation in progress...</p>
       <p><small>This is a simulated payment - no real money will be charged.</small></p>
-    </div>
-    <div #paymentElement></div>
-    <div class="payment-actions">
-      <button (click)="confirmPurchase()" [disabled]="isPurchasing">
-        {{ isPurchasing ? 'Processing...' : 'Pay $' + selectedPackage.price }}
-      </button>
-      <button (click)="cancelPurchase()" [disabled]="isPurchasing">Cancel</button>
+      <div class="loading-spinner">⏳ Processing...</div>
     </div>
   </div>
 
@@ -42,7 +33,10 @@
 
   <!-- Credit Packages -->
   <div class="packages-grid" *ngIf="!isLoadingPackages && packages.length > 0 && !selectedPackage">
-    <div class="package-card" [class.recommended]="isPackageRecommended(pkg)" *ngFor="let pkg of packages; trackBy: trackByPackageId">
+    <div
+      class="package-card"
+      [class.recommended]="isPackageRecommended(pkg)"
+      *ngFor="let pkg of packages; trackBy: trackByPackageId">
       <!-- Recommended Badge -->
       <div class="recommended-badge" *ngIf="isPackageRecommended(pkg)">Most Popular</div>
 

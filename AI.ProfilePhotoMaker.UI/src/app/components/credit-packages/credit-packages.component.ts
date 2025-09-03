@@ -2,12 +2,10 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
-  ElementRef,
   EventEmitter,
   OnDestroy,
   OnInit,
   Output,
-  ViewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
@@ -17,9 +15,7 @@ import {
   UserCreditStatus,
 } from '../../services/credit.service';
 import { NotificationService } from '../../services/notification.service';
-import { StripeService } from '../../services/stripe.service';
 import { ThemeService } from '../../services/theme.service';
-import { Stripe, StripeElements } from '@stripe/stripe-js';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -32,7 +28,7 @@ import { Subscription } from 'rxjs';
 })
 export class CreditPackagesComponent implements OnInit, OnDestroy {
   @Output() packagePurchased = new EventEmitter<UserCreditStatus>();
-  @ViewChild('paymentElement') paymentElementRef!: ElementRef;
+  // Payment element removed - MVP uses simulation only
 
   packages: CreditPackage[] = [];
   userCreditStatus: UserCreditStatus | null = null;
@@ -42,8 +38,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
   isLoadingStatus = false;
   isPurchasing = false;
 
-  stripe: Stripe | null = null;
-  elements: StripeElements | undefined;
+  // Stripe objects removed - MVP uses simulation only
   selectedPackage: CreditPackage | null = null;
 
   private _themeSubscription: Subscription | null = null;
@@ -51,7 +46,6 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
   constructor(
     private _creditService: CreditService,
     private _notificationService: NotificationService,
-    private _stripeService: StripeService,
     private _themeService: ThemeService,
     private _cdr: ChangeDetectorRef
   ) {}
@@ -69,12 +63,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     this.loadPackages();
     this.loadCreditStatus();
     this.loadPaymentConfig();
-    this._stripeService.getStripe().then(stripe => {
-      this.stripe = stripe;
-      if (!stripe && this.paymentConfig?.paymentSimulation?.enabled) {
-        console.warn('Stripe.js not loaded - using payment simulation mode');
-      }
-    });
+    console.log('Payment simulation mode active - no external payment processing');
   }
 
   ngOnDestroy(): void {
@@ -96,7 +85,11 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     });
   }
 
-  private _handlePackagesResponse(response: { success?: boolean; data?: unknown; error?: unknown }): void {
+  private _handlePackagesResponse(response: {
+    success?: boolean;
+    data?: unknown;
+    error?: unknown;
+  }): void {
     if (response?.success) {
       this.packages = Array.isArray(response.data) ? response.data : [];
       if (this.packages.length === 0) {
@@ -115,7 +108,11 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     }
   }
 
-  private _handlePackagesError(error: { status?: number; message?: string; error?: { message?: string } }): void {
+  private _handlePackagesError(error: {
+    status?: number;
+    message?: string;
+    error?: { message?: string };
+  }): void {
     console.error('Error loading packages:', error);
     this.packages = [];
 
@@ -123,34 +120,36 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     this._notificationService.error(errorMessage.title, errorMessage.message);
   }
 
-  private _getErrorMessage(
-    error: { status?: number; message?: string; error?: { message?: string } }
-  ): { title: string; message: string } {
+  private _getErrorMessage(error: {
+    status?: number;
+    message?: string;
+    error?: { message?: string };
+  }): { title: string; message: string } {
     if (error.status === 0) {
       return {
         title: 'Connection Error',
-        message: 'Unable to connect to the server. Please check if the server is running.'
+        message: 'Unable to connect to the server. Please check if the server is running.',
       };
     }
-    
+
     if (error.status === 401) {
       console.warn('Unexpected 401 error - API endpoint should allow anonymous access');
       return {
         title: 'Access Error',
-        message: 'Unable to load packages. Please try again later.'
+        message: 'Unable to load packages. Please try again later.',
       };
     }
-    
+
     if (error.status === 500) {
       return {
         title: 'Server Error',
-        message: 'Server error while loading packages. Please try again later.'
+        message: 'Server error while loading packages. Please try again later.',
       };
     }
-    
+
     return {
       title: 'Network Error',
-      message: `Error ${error.status}: ${error.message || 'Please try again.'}`
+      message: `Error ${error.status}: ${error.message || 'Please try again.'}`,
     };
   }
 
@@ -200,13 +199,8 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this._isStripeReady()) {
-      this._notificationService.error('Payment Error', 'Stripe is not loaded yet.');
-      this.isPurchasing = false;
-      return;
-    }
-
-    this._processStripePayment(pkg);
+    // Always use payment simulation in MVP
+    this.simulatePayment(pkg);
   }
 
   private _shouldUsePaymentSimulation(): boolean {
@@ -216,66 +210,14 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     );
   }
 
-  private _isStripeReady(): boolean {
-    return !!(this.stripe || this.paymentConfig?.paymentSimulation?.enabled);
-  }
-
-  private _processStripePayment(pkg: CreditPackage): void {
-    this._creditService.createPaymentIntent({ packageId: pkg.id }).subscribe({
-      next: async (response: { success: boolean; data: { isSimulation: boolean; clientSecret: string } }) => {
-        if (response.success) {
-          if (response.data.isSimulation) {
-            this.simulatePayment(pkg);
-          } else {
-            this._setupStripeElements(response.data.clientSecret);
-          }
-        } else {
-          this._handlePaymentError('Could not create payment intent.');
-        }
-      },
-      error: (_error: Error) => this._handlePaymentError('Could not create payment intent.'),
-    });
-  }
-
-  private _setupStripeElements(clientSecret: string): void {
-    this.elements = this.stripe?.elements({ clientSecret });
-    const paymentElement = this.elements?.create('payment');
-    paymentElement?.mount(this.paymentElementRef.nativeElement);
-  }
+  // Stripe payment methods removed - MVP uses simulation only
 
   private _handlePaymentError(message: string): void {
     this._notificationService.error('Payment Error', message);
     this.isPurchasing = false;
   }
 
-  async confirmPurchase(): Promise<void> {
-    if (!this.stripe || !this.elements) {
-      return;
-    }
-
-    this.isPurchasing = true;
-    const { error } = await this.stripe.confirmPayment({
-      elements: this.elements,
-      redirect: 'if_required',
-    });
-
-    if (error) {
-      this._notificationService.error(
-        'Payment Failed',
-        error.message || 'An unknown error occurred.'
-      );
-      this.isPurchasing = false;
-    } else {
-      this._notificationService.success(
-        'Payment Successful!',
-        'Your payment was successful. Updating your credits...'
-      );
-      this.isPurchasing = false;
-      this.selectedPackage = null;
-      // The backend will handle the credit update via webhooks, so we just need to reload the status.
-      this.loadCreditStatus();
-    }
-  }
+  // confirmPurchase method removed - MVP uses simulation only
 
   simulatePayment(pkg: CreditPackage): void {
     // Simulate payment processing delay
