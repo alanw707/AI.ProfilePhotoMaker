@@ -4,6 +4,13 @@
 - rememeber we're build a MVP production, doesn't need enterprise grade solutions yet
 - use Playwright tests instead of curl for web applications whenever possible
 
+## Data Retention Policy
+
+### Image Retention
+- **All Images**: 30-day retention period (aligned with Replicate model persistence)
+- **Rationale**: Since Replicate custom models don't auto-expire, we set consistent 30-day retention for both uploaded and generated images
+- **Background Service**: RetentionPolicyBackgroundService runs every 6 hours for automatic cleanup
+
 ## Development Environment
 
 ### Ngrok Setup
