@@ -1267,40 +1267,10 @@ public class ReplicateController : ControllerBase
     }
 
     /// <summary>
-    /// TEMP DEBUG: Check user's model status for troubleshooting
-    /// </summary>
-    [HttpGet("debug/models/{userId}")]
-    [AllowAnonymous]
-    public async Task<IActionResult> DebugUserModels(string userId)
-    {
-        try
-        {
-            var models = await _dbContext.ModelCreationRequests
-                .Where(m => m.UserId == userId)
-                .OrderByDescending(m => m.CreatedAt)
-                .Select(m => new {
-                    m.ModelName,
-                    m.ReplicateModelId,
-                    m.TrainedModelVersion,
-                    m.Status,
-                    m.CreatedAt,
-                    m.CompletedAt
-                })
-                .ToListAsync();
-
-            return Ok(new { success = true, data = models });
-        }
-        catch (Exception ex)
-        {
-            return Ok(new { success = false, error = ex.Message });
-        }
-    }
-
-    /// <summary>
     /// Formats model version for Replicate API calls.
     /// Converts stored components into required format: "owner/modelId:versionHash"
     /// </summary>
-    private static string FormatModelVersion(string replicateModelId, string trainedModelVersion)
+    private string FormatModelVersion(string replicateModelId, string trainedModelVersion)
     {
         // If already in fully qualified format (owner/model:version), return as-is
         if (!string.IsNullOrEmpty(trainedModelVersion) && trainedModelVersion.Contains(":"))
@@ -1318,7 +1288,8 @@ public class ReplicateController : ControllerBase
         }
 
         // Normalize owner/model
-        string owner = "alanw707"; // default expected owner in tests
+        // Prefer configured owner, fallback to project default
+        string owner = _configuration["Replicate:Owner"] ?? Environment.GetEnvironmentVariable("REPLICATE_OWNER") ?? "alanw707";
         string modelName = replicateModelId;
         if (replicateModelId.Contains('/'))
         {
