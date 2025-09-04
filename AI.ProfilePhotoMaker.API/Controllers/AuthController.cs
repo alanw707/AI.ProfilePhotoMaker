@@ -67,6 +67,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 HttpOnly = true,
                 Secure = !_environment.IsDevelopment(),
                 SameSite = _environment.IsDevelopment() ? SameSiteMode.Lax : SameSiteMode.None,
+                Domain = _environment.IsDevelopment() ? null : ".aiprofilephotomaker.com",
                 Expires = DateTimeOffset.UtcNow.AddHours(12),
                 Path = "/"
             };
@@ -99,6 +100,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 HttpOnly = true,
                 Secure = !_environment.IsDevelopment(),
                 SameSite = _environment.IsDevelopment() ? SameSiteMode.Lax : SameSiteMode.None,
+                Domain = _environment.IsDevelopment() ? null : ".aiprofilephotomaker.com",
                 Expires = DateTimeOffset.UtcNow.AddHours(12),
                 Path = "/"
             };
@@ -343,6 +345,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     HttpOnly = true,
                     Secure = !_environment.IsDevelopment(),
                     SameSite = _environment.IsDevelopment() ? SameSiteMode.Lax : SameSiteMode.None,
+                    Domain = _environment.IsDevelopment() ? null : ".aiprofilephotomaker.com",
                     Expires = DateTimeOffset.UtcNow.AddHours(12),
                     Path = "/"
                 };
@@ -695,6 +698,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     HttpOnly = true,
                     Secure = false,
                     SameSite = SameSiteMode.Lax,
+                    Domain = null, // Development-only endpoint, keep local
                     Expires = DateTimeOffset.UtcNow.AddHours(12),
                     Path = "/"
                 };

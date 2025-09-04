@@ -130,8 +130,8 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
     options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None; // Allow cross-site for OAuth
     options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
-    // Don't specify domain - let browser handle same-origin cookies
-    options.Cookie.Domain = null;
+    // Set domain for production to allow cross-subdomain sharing
+    options.Cookie.Domain = builder.Environment.IsDevelopment() ? null : ".aiprofilephotomaker.com";
 });
 
 // Add environment configuration with validation
