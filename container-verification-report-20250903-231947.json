@@ -1,0 +1,51 @@
+{
+    "verificationTimestamp": "2025-09-03T23:19:56+00:00",
+    "environment": "v1",
+    "resourceGroup": "aiprofilemaker-v1",
+    "expectedImageTag": "229-17448412793",
+    "overallSuccess": true,
+    "failedApps": [""],
+    "configuration": {
+        "maxWaitTime": 300,
+        "checkInterval": 30,
+        "rollbackOnFailure": true,
+        "waitForHealth": true
+    },
+    "containerApps": [{
+            "appName": "aipm-api-v1",
+            "currentImageTag": "229-17448412793",
+            "expectedImageTag": "229-17448412793",
+            "tagMatches": true,
+            "isHealthy": true,
+            "activeRevisions": 2,
+            "revisionDetails": [
+  {
+    "name": "aipm-api-v1--0000191",
+    "provisioning": "Provisioned",
+    "replicas": 1,
+    "traffic": 0
+  },
+  {
+    "name": "aipm-api-v1--0000192",
+    "provisioning": "Provisioned",
+    "replicas": 1,
+    "traffic": 100
+  }
+]
+        },{
+            "appName": "aipm-web-v1",
+            "currentImageTag": "229-17448412793",
+            "expectedImageTag": "229-17448412793",
+            "tagMatches": true,
+            "isHealthy": true,
+            "activeRevisions": 1,
+            "revisionDetails": [
+  {
+    "name": "aipm-web-v1--0000077",
+    "provisioning": "Provisioned",
+    "replicas": 1,
+    "traffic": 100
+  }
+]
+        }]
+}

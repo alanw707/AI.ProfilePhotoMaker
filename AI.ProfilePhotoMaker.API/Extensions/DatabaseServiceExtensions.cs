@@ -24,8 +24,27 @@ public static class DatabaseServiceExtensions
             var databaseProvider = serviceProvider.GetRequiredService<IDatabaseProviderService>();
             var connectionString = databaseProvider.GetConnectionString();
 
-            // Use SQL Server for all environments
-            options.UseSqlServer(connectionString);
+            var maxRetryCount = configuration.GetValue<int?>("Database:MaxRetryCount") ?? 5;
+            var maxRetryDelaySeconds = configuration.GetValue<int?>("Database:MaxRetryDelaySeconds") ?? 30;
+            var commandTimeoutSeconds = configuration.GetValue<int?>("Database:CommandTimeoutSeconds") ?? 30;
+            var enableSensitive = configuration.GetValue<bool?>("Database:EnableSensitiveDataLogging") ?? false;
+            var enableDetailed = configuration.GetValue<bool?>("Database:EnableDetailedErrors") ?? false;
+
+            // Use SQL Server with resiliency and timeouts
+            options.UseSqlServer(connectionString, sql =>
+            {
+                sql.CommandTimeout(commandTimeoutSeconds);
+                sql.EnableRetryOnFailure(maxRetryCount, TimeSpan.FromSeconds(maxRetryDelaySeconds), null);
+            });
+
+            if (enableSensitive)
+            {
+                options.EnableSensitiveDataLogging();
+            }
+            if (enableDetailed)
+            {
+                options.EnableDetailedErrors();
+            }
         });
 
         // Register migration service
