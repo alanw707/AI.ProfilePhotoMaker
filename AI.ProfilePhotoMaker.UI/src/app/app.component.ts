@@ -22,29 +22,18 @@ export class AppComponent implements OnInit {
     // Initialize theme service to ensure proper theme application
     this._themeService.setTheme(this._themeService.getCurrentTheme());
 
-    // Check for OAuth token in URL on app initialization
+    // Clean up OAuth URL token if present and navigate
     this._handleOAuthCallback();
   }
 
   private _handleOAuthCallback(): void {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
-    const expiration = urlParams.get('expiration');
-
     if (token) {
-      try {
-        // Handle OAuth callback
-        this._authService.handleOAuthCallback(token, expiration || undefined);
-
-        // Clean up URL parameters
-        const cleanUrl = window.location.origin + window.location.pathname;
-        window.history.replaceState({}, document.title, cleanUrl);
-
-        // Navigate to dashboard
-        this._router.navigate(['/app/dashboard']);
-      } catch (error) {
-        console.error('Error handling OAuth callback:', error);
-      }
+      // Clean URL parameters to avoid token leakage and navigate to dashboard
+      const cleanUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+      this._router.navigate(['/app/dashboard']);
     }
   }
 }

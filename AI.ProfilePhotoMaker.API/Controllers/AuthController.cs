@@ -60,6 +60,21 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return BadRequest(result);
             }
 
+            // Set secure JWT cookie for session
+            var cookieName = _configuration["Authentication:TokenCookieName"] ?? "AuthToken";
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = !_environment.IsDevelopment(),
+                SameSite = _environment.IsDevelopment() ? SameSiteMode.Lax : SameSiteMode.None,
+                Expires = DateTimeOffset.UtcNow.AddHours(12),
+                Path = "/"
+            };
+            if (!string.IsNullOrEmpty(result.Token))
+            {
+                Response.Cookies.Append(cookieName, result.Token, cookieOptions);
+            }
+
             return Ok(result);
         }
 
@@ -75,6 +90,21 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             if (!result.IsSuccess)
             {
                 return BadRequest(result);
+            }
+
+            // Set secure JWT cookie for session
+            var cookieName = _configuration["Authentication:TokenCookieName"] ?? "AuthToken";
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = !_environment.IsDevelopment(),
+                SameSite = _environment.IsDevelopment() ? SameSiteMode.Lax : SameSiteMode.None,
+                Expires = DateTimeOffset.UtcNow.AddHours(12),
+                Path = "/"
+            };
+            if (!string.IsNullOrEmpty(result.Token))
+            {
+                Response.Cookies.Append(cookieName, result.Token, cookieOptions);
             }
 
             return Ok(result);

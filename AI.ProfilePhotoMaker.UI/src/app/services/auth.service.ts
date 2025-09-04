@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, map, Observable, tap } from 'rxjs';
+import { BehaviorSubject, map, Observable, tap, catchError, of } from 'rxjs';
 import { Router } from '@angular/router';
 import { ConfigService } from './config.service';
 
@@ -56,7 +56,7 @@ export interface ApiAuthResponseDto {
 export class AuthService {
   private readonly TOKEN_KEY = 'auth_token';
 
-  private _isAuthenticatedSubject = new BehaviorSubject<boolean>(this.hasToken());
+  private _isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
   public isAuthenticated$ = this._isAuthenticatedSubject.asObservable();
 
   private _currentUserSubject = new BehaviorSubject<AuthResponseDto | null>(this.getCurrentUser());
@@ -75,18 +75,13 @@ export class AuthService {
    * Initialize secure authentication with improved session management
    */
   private initializeSecureAuth(): void {
-    // Check existing token validity
-    this.checkTokenValidity();
-
-    // Set up periodic token validation (reduced frequency for better performance)
-    setInterval(
-      () => {
-        if (localStorage.getItem(this.TOKEN_KEY)) {
-          this.checkTokenValidity();
-        }
-      },
-      10 * 60 * 1000
-    ); // Check every 10 minutes instead of 5
+    // On startup, probe the server to determine auth status (cookie-based)
+    this.checkProfileCompletion()
+      .pipe(
+        map(() => true),
+        catchError(() => of(false))
+      )
+      .subscribe({ next: (isAuth: boolean) => this._isAuthenticatedSubject.next(isAuth) });
   }
 
   /**
@@ -109,37 +104,14 @@ export class AuthService {
     }
   }
 
-  handleOAuthCallback(token: string, expiration?: string): void {
-    if (token) {
-      try {
-        // Store the token using consistent key
-        localStorage.setItem(this.TOKEN_KEY, token);
-        localStorage.setItem('authToken', token); // Keep both for compatibility
-
-        if (expiration) {
-          localStorage.setItem('tokenExpiration', expiration);
-        }
-
-        // Extract user info from token
-        const user = this.extractUserFromToken(token);
-
-        if (user && user.firstName && user.lastName) {
-          // Complete user data from JWT
-          localStorage.setItem('currentUser', JSON.stringify(user));
-          this._currentUserSubject.next(user);
-          this._isAuthenticatedSubject.next(true);
-        } else {
-          // Incomplete JWT data, fetch from profile API
-          this._isAuthenticatedSubject.next(true);
-
-          // Fetch user profile data from API to get complete firstName/lastName
-          this.fetchUserProfileForOAuth(token);
-        }
-      } catch (error) {
-        console.error('Error in OAuth callback handling:', error);
-        this._isAuthenticatedSubject.next(false);
-      }
-    }
+  handleOAuthCallback(_token: string, _expiration?: string): void {
+    // Token is handled by HttpOnly cookie; update auth state based on server
+    this.checkProfileCompletion()
+      .pipe(
+        map(() => true),
+        catchError(() => of(false))
+      )
+      .subscribe({ next: (isAuth: boolean) => this._isAuthenticatedSubject.next(isAuth) });
   }
 
   private fetchUserProfileForOAuth(token: string): void {
@@ -451,11 +423,11 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    return localStorage.getItem(this.TOKEN_KEY);
+    return null;
   }
 
   isAuthenticated(): boolean {
-    return this.hasToken();
+    return this._isAuthenticatedSubject.value;
   }
 
   getCurrentUserId(): string | null {
@@ -497,8 +469,7 @@ export class AuthService {
    */
   private setSecureSession(authResult: AuthResponseDto): void {
     try {
-      // Store token and user data
-      localStorage.setItem(this.TOKEN_KEY, authResult.token);
+      // Do not store token; rely on HttpOnly cookie set by API
       localStorage.setItem('currentUser', JSON.stringify(authResult));
 
       // Clean up old storage keys for security
@@ -517,21 +488,7 @@ export class AuthService {
   }
 
   private hasToken(): boolean {
-    const token = localStorage.getItem(this.TOKEN_KEY);
-
-    if (!token) {
-      return false;
-    }
-
-    const isExpired = this.isTokenExpired(token);
-
-    if (isExpired) {
-      console.warn('🔒 Auth token has expired');
-      this.logout();
-      return false;
-    }
-
-    return true;
+    return false;
   }
 
   private getCurrentUser(): AuthResponseDto | null {
