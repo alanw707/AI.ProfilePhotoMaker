@@ -32,6 +32,7 @@ git push origin main
 - [Development Backlog](docs/development/DEVELOPMENT_BACKLOG.md) - Detailed task list and status
 - [Setup Guide](docs/ENVIRONMENT_SETUP.md) - Development environment setup
 - [Architecture Overview](docs/architecture/ARCHITECTURE_OVERVIEW.md) - System architecture and design
+- [Private Blob Storage via API Proxy](docs/PRIVATE_BLOB_STORAGE.md) - Switch to private containers using the API proxy
 
 ## Overview
 
