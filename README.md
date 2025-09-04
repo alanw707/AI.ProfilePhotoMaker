@@ -70,6 +70,14 @@ AI.ProfilePhotoMaker is a web application that allows users to create profession
 - Azure Key Vault (secrets)
 - Application Insights (monitoring)
 
+### Blob Storage Access Modes
+- Default (public blob): Images are served directly from Azure Blob URLs. No API proxy is used; CORS for blobs must allow the frontend domains. This is the current production setup.
+- Private (API proxy): To serve images via the API (supporting private containers and unified caching), enable `Storage:ProxyBlobRequests`.
+  - Set `Storage:ProxyBlobRequests=true` in configuration (env var `Storage__ProxyBlobRequests=true`).
+  - The API will expose images at `/profile-images/{storagePath}` and return proxied URLs based on `AppBaseUrl`.
+  - Consider turning off public access on the storage account/containers and using SAS only for backend-to-backend flows.
+  - Enhanced proxy adds cache headers (`Cache-Control: immutable`) for better client performance.
+
 ### External Services
 - Replicate.com FLUX AI (webhook-based integration)
 - Stripe Payments (planned)
