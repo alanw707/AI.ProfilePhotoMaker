@@ -1,5 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
-import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit } from '@angular/core';
+import {
+  AbstractControl,
+  FormBuilder,
+  FormGroup,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService, LoginDto } from '../../services/auth.service';
@@ -14,11 +20,12 @@ import { ConfigService } from '../../services/config.service';
   styleUrls: ['./login.component.sass'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class LoginComponent implements OnInit {
+export class LoginComponent implements OnInit, OnDestroy {
   loginForm: FormGroup;
   loading = false;
   error = '';
   returnUrl = '';
+  private _authSub?: any;
 
   // Use inject function to reduce constructor parameters
   private readonly _formBuilder = inject(FormBuilder);
@@ -39,23 +46,47 @@ export class LoginComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Check if user is already logged in
+    // 1) If we already have client state, go straight to returnUrl
     const isAuthenticated = this._authService.isAuthenticated();
     if (isAuthenticated) {
       this._router.navigate([this.returnUrl]);
       return;
     }
 
+    // 2) Production cookie-session case: proactively probe the session and
+    //    auto-redirect once the guard updates auth state from a valid cookie.
+    //    Without this, users with a valid cookie can get stuck on the login page
+    //    because the initial auth state comes from localStorage only.
+    this._authService.probeSession();
+    this._authSub = this._authService.isAuthenticated$.subscribe(flag => {
+      if (flag) {
+        this._router.navigate([this.returnUrl]);
+      }
+    });
+
     // Handle OAuth callbacks
     this._route.queryParams.subscribe(params => {
-      if (this._handleDirectTokenParams(params)) {return;}
-      if (this._handleTokenInReturnUrl(params)) {return;}
-      if (this._handleTokenInFragment()) {return;}
+      if (this._handleDirectTokenParams(params)) {
+        return;
+      }
+      if (this._handleTokenInReturnUrl(params)) {
+        return;
+      }
+      if (this._handleTokenInFragment()) {
+        return;
+      }
 
       if (params['error']) {
         this.error = 'OAuth login failed: ' + params['error'];
       }
     });
+  }
+
+  // Ensure we don't leak the subscription
+  ngOnDestroy(): void {
+    if (this._authSub) {
+      this._authSub.unsubscribe?.();
+    }
   }
 
   private _handleDirectTokenParams(params: Record<string, string>): boolean {
@@ -113,7 +144,9 @@ export class LoginComponent implements OnInit {
     return false;
   }
 
-  private _extractUserFromToken(token: string): { email: string; firstName: string; lastName: string } | null {
+  private _extractUserFromToken(
+    token: string
+  ): { email: string; firstName: string; lastName: string } | null {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       return {
