@@ -26,6 +26,49 @@ public class ConfigController : ControllerBase
     }
 
     /// <summary>
+    /// Development-only: surface effective Replicate configuration (safe fields)
+    /// </summary>
+    [HttpGet("replicate/status")]
+    public IActionResult GetReplicateStatus()
+    {
+        if (!_environment.IsDevelopment())
+        {
+            return NotFound();
+        }
+
+        try
+        {
+            var envOwner = Environment.GetEnvironmentVariable("REPLICATE_OWNER");
+            var cfgOwner = _configuration["Replicate:Owner"];
+            var owner = envOwner ?? cfgOwner ?? string.Empty;
+
+            var envHardware = Environment.GetEnvironmentVariable("REPLICATE_HARDWARE");
+            var cfgHardware = _configuration["Replicate:Hardware"];
+            var hardware = envHardware ?? cfgHardware ?? string.Empty;
+
+            var trainingModelId = _configuration["Replicate:FluxTrainingModelId"] ?? string.Empty;
+
+            var status = new
+            {
+                environment = _environment.EnvironmentName,
+                owner = owner,
+                ownerSource = string.IsNullOrEmpty(envOwner) ? "config:Replicate:Owner" : "env:REPLICATE_OWNER",
+                hardware = hardware,
+                hardwareSource = string.IsNullOrEmpty(envHardware) ? "config:Replicate:Hardware" : "env:REPLICATE_HARDWARE",
+                fluxTrainingModelId = trainingModelId,
+                note = "Tokens and secrets are intentionally not exposed in this endpoint"
+            };
+
+            return Ok(new { success = true, data = status, error = (object?)null });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving Replicate configuration status");
+            return StatusCode(500, new { success = false, error = "Failed to retrieve Replicate configuration status" });
+        }
+    }
+
+    /// <summary>
     /// Get client-safe configuration for frontend applications
     /// </summary>
     [HttpGet("client")]
