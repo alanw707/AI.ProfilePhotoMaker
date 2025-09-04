@@ -806,13 +806,12 @@ export class WorkflowOrchestrationService {
   }
 
   private async _startReplicateTraining(zipUrl: string): Promise<string> {
-    const userId = this._deps.authService.getCurrentUserId();
-    if (!userId) {
-      console.warn('Failed to get user ID. Token exists:', !!this._deps.authService.getToken());
-      console.warn('Authentication status:', this._deps.authService.isAuthenticated());
-      throw new Error('User not authenticated - unable to extract user ID from token');
-    }
-    console.log('🚀 Starting training for user ID:', userId);
+    // With HttpOnly-cookie auth, the client does not have access to JWT claims.
+    // Backend derives the user from the cookie; the DTO `UserId` is optional and
+    // validated against the authenticated user when present. Send an empty
+    // string here and rely on server-side user context.
+    const userId = '';
+    console.log('🚀 Starting training (server-enforced user context)');
 
     this._setProgress({
       progressPercentage: 35,
@@ -998,10 +997,8 @@ export class WorkflowOrchestrationService {
     modelVersion: string
   ): Promise<void> {
     try {
-      const userId = this._deps.authService.getCurrentUserId();
-      if (!userId) {
-        throw new Error('User not authenticated - unable to extract user ID from token');
-      }
+      // Cookie-based auth: do not depend on client-side JWT for user ID
+      const userId = '';
 
       // Clear previous generation state and caches
       this._clearAllIntervals();
