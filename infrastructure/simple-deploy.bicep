@@ -374,6 +374,11 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               name: 'ASPNETCORE_ENVIRONMENT'
               value: 'Production'
             }
+            // Replicate owner is constant across environments to prevent drift
+            {
+              name: 'Replicate__Owner'
+              value: 'alanw707'
+            }
             // Map both ASP.NET Core config pattern and plain env var to the same secret
             {
               name: 'ConnectionStrings__DefaultConnection'
