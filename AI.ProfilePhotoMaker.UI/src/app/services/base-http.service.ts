@@ -210,10 +210,8 @@ export class BaseHttpService {
       'Content-Type': 'application/json',
     });
 
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      headers = headers.set('Authorization', `Bearer ${token}`);
-    }
+    // Authorization header is not set from client storage; rely on HttpOnly cookie
+    headers = headers.set('X-Requested-With', 'XMLHttpRequest');
 
     return headers;
   }
@@ -225,10 +223,7 @@ export class BaseHttpService {
     let headers = new HttpHeaders();
     // Don't set Content-Type for file uploads - let browser set it with boundary
 
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      headers = headers.set('Authorization', `Bearer ${token}`);
-    }
+    headers = headers.set('X-Requested-With', 'XMLHttpRequest');
 
     return headers;
   }
@@ -237,6 +232,7 @@ export class BaseHttpService {
    * Utility method to check if user is authenticated
    */
   protected isAuthenticated(): boolean {
-    return !!localStorage.getItem('auth_token');
+    // Delegate to cookie-based session; client cannot inspect HttpOnly cookie
+    return true;
   }
 }

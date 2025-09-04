@@ -212,8 +212,20 @@ var authBuilder = builder.Services.AddAuthentication(options =>
             ValidIssuer = builder.Configuration["Jwt:ValidIssuer"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"] ?? string.Empty))
         };
+        var cookieName = builder.Configuration["Authentication:TokenCookieName"] ?? "AuthToken";
         options.Events = new JwtBearerEvents
         {
+            OnMessageReceived = context =>
+            {
+                // If no Authorization header, try JWT from HttpOnly cookie
+                if (!context.Request.Headers.ContainsKey("Authorization") &&
+                    context.Request.Cookies.TryGetValue(cookieName, out var jwt) &&
+                    !string.IsNullOrWhiteSpace(jwt))
+                {
+                    context.Token = jwt;
+                }
+                return Task.CompletedTask;
+            },
             OnChallenge = context =>
             {
                 context.HandleResponse();
@@ -470,6 +482,8 @@ if (app.Environment.IsDevelopment())
 {
     app.UseMiddleware<AI.ProfilePhotoMaker.API.Middleware.StorageProxyMiddleware>();
 }
+// Inject JWT from secure cookie into Authorization header if present
+app.UseMiddleware<AI.ProfilePhotoMaker.API.Middleware.JwtCookieAuthMiddleware>();
 // Optional: serve images via API proxy (supports private blob containers)
 if (app.Configuration.GetValue<bool>("Storage:ProxyBlobRequests"))
 {

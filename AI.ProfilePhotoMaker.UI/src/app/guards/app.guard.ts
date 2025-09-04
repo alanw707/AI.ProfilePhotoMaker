@@ -55,20 +55,34 @@ export class AppGuard implements CanActivate, CanActivateChild {
           return of(true);
         }
 
-        // User is authenticated, now check profile completion
-        return this._authService.checkProfileCompletion().pipe(
-          tap(profileStatus => {
-            if (!profileStatus.isCompleted) {
-              // Profile is incomplete, redirect to completion page
-              console.log('🔒 Profile incomplete, redirecting to profile completion');
-              this._router.navigate(['/auth/complete-profile']);
-            }
-          }),
-          map(profileStatus => profileStatus.isCompleted),
-          catchError(error => {
-            // If profile completion check fails, allow access but log error
-            console.error('🔒 Profile completion check failed:', error);
-            return of(true); // Allow access on error
+        // Server-validate session first to avoid 401s, then check profile completion
+        return this._authService.validateSession().pipe(
+          switchMap(() =>
+            this._authService.checkProfileCompletion().pipe(
+              tap(profileStatus => {
+                if (!profileStatus.isCompleted) {
+                  console.log('🔒 Profile incomplete, redirecting to profile completion');
+                  this._router.navigate(['/auth/complete-profile']);
+                }
+              }),
+              map(profileStatus => profileStatus.isCompleted),
+              catchError(error => {
+                // If profile completion check fails, allow access but log error
+                console.error('🔒 Profile completion check failed:', error);
+                return of(true);
+              })
+            )
+          ),
+          catchError(() => {
+            // Session not valid on server; force login
+            sessionStorage.setItem('redirectUrl', redirectUrl);
+            this._router.navigate(['/auth/login'], {
+              queryParams: {
+                message: 'Please log in to access this feature',
+                returnUrl: redirectUrl,
+              },
+            });
+            return of(false);
           })
         );
       })

@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
-import { Router, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { AuthService } from './services/auth.service';
 import { ThemeService } from './services/theme.service';
 import { NotificationComponent } from './components/shared/notification/notification.component';
+import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
@@ -22,29 +24,30 @@ export class AppComponent implements OnInit {
     // Initialize theme service to ensure proper theme application
     this._themeService.setTheme(this._themeService.getCurrentTheme());
 
-    // Check for OAuth token in URL on app initialization
+    // Clean up OAuth URL token if present and navigate
     this._handleOAuthCallback();
+
+    // Probe session only when navigating to protected routes
+    this._router.events
+      .pipe(filter(e => e instanceof NavigationEnd))
+      .subscribe(e => this._authService.probeSessionForUrl((e as NavigationEnd).urlAfterRedirects));
   }
 
   private _handleOAuthCallback(): void {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
-    const expiration = urlParams.get('expiration');
-
-    if (token) {
-      try {
-        // Handle OAuth callback
-        this._authService.handleOAuthCallback(token, expiration || undefined);
-
-        // Clean up URL parameters
+    if (token && !environment.production) {
+      // In development OAuth flow, set cookie via same-origin endpoint then clean URL
+      fetch('/api/auth/set-cookie', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+        credentials: 'include',
+      }).finally(() => {
         const cleanUrl = window.location.origin + window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
-
-        // Navigate to dashboard
         this._router.navigate(['/app/dashboard']);
-      } catch (error) {
-        console.error('Error handling OAuth callback:', error);
-      }
+      });
     }
   }
 }
