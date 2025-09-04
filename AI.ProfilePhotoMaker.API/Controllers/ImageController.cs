@@ -1019,6 +1019,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             try
             {
+                // Safety guard: never allow destructive reconcile in Production environment
+                if (_environment.IsProduction() && !dryRun)
+                {
+                    return ErrorResponse("Forbidden", "Destructive reconciliation is disabled in production", 403);
+                }
+
                 var profile = await _userProfileRepository.GetByUserIdAsync(userId);
                 if (profile == null)
                     return ErrorResponse("ProfileNotFound", "Profile not found", 404);

@@ -536,23 +536,7 @@ export class FileUploadService {
       );
   }
 
-  repairImageDatabase(): Observable<{ success: boolean; message: string; data?: any }> {
-    return this.http
-      .post<{
-        success: boolean;
-        message: string;
-        data?: any;
-      }>(this.config.getFullUrl('/api/image/reconcile-database?dryRun=false'), {})
-      .pipe(
-        tap(response => {
-          if (response.success) {
-            // Invalidate cache after repair to reload fresh data
-            this.invalidateUserImagesCache();
-            console.log('🔧 Image database repair completed:', response.message);
-          }
-        })
-      );
-  }
+  // UI-initiated image database repair removed to avoid unintended deletions.
 
   /**
    * Delete temporary enhanced image file after successful enhancement

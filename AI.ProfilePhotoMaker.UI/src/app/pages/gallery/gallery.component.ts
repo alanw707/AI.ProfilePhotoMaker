@@ -72,21 +72,7 @@ export class GalleryComponent implements OnInit {
 
     this.isLoading = true;
     try {
-      // Run image database repair on first load only to sync filesystem with database
-      if (!this._hasRunInitialRepair && !forceRefresh) {
-        this._logger.info('Running initial image database repair...');
-        try {
-          const repairResponse = await firstValueFrom(
-            this._fileUploadService.repairImageDatabase()
-          );
-          if (repairResponse?.success) {
-            this._logger.info('Image repair completed', repairResponse.message);
-          }
-        } catch (repairError) {
-          this._logger.warn('Image repair failed, continuing with normal load', repairError);
-        }
-        this._hasRunInitialRepair = true;
-      }
+      // UI-triggered repair removed to prevent unintended deletions.
 
       const response = await firstValueFrom(this._fileUploadService.getUserImages(forceRefresh));
 
