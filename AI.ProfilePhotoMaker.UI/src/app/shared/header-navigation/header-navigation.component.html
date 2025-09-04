@@ -96,7 +96,7 @@
         Gallery
       </a>
       <a
-        *ngIf="userName"
+        *ngIf="isAuthenticated"
         routerLink="/app/settings"
         routerLinkActive="active"
         class="nav-link"
@@ -124,7 +124,7 @@
         </div>
 
         <div class="user-info">
-          <span class="user-name">Welcome, {{ userName }}!</span>
+          <span class="user-name">Welcome, {{ userName || 'User' }}!</span>
           <span class="user-email">{{ userEmail }}</span>
         </div>
         <button class="btn btn-logout" (click)="logout()">

@@ -48,8 +48,12 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
     this._userSubscription = this._authService.currentUser$.subscribe(user => {
       if (user) {
         this.userEmail = user.email;
-        this.userName =
-          `${user.firstName || ''} ${user.lastName || ''}`.trim() || this.userEmail.split('@')[0];
+        // Prefer first + last; then email prefix; finally a safe placeholder
+        const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        const emailPrefix = (this.userEmail || '').includes('@')
+          ? this.userEmail.split('@')[0]
+          : (this.userEmail || '').trim();
+        this.userName = fullName || emailPrefix || 'User';
 
         // Only load credit status when authenticated - add small delay for auth token
         setTimeout(() => {

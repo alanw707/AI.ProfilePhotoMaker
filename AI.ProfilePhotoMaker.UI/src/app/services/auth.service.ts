@@ -674,6 +674,7 @@ export class AuthService {
     const req$ = this._http
       .get(this._config.buildApiEndpoint('auth/validate-session'), {
         responseType: 'text' as any,
+        withCredentials: true,
       })
       .pipe(
         shareReplay(1),
