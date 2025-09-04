@@ -111,15 +111,25 @@ public class AuthService : IAuthService
                 new Claim(ClaimTypes.Surname, user.LastName ?? "")
             };
 
-            var authSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(_configuration["JWT:Secret"] ?? throw new InvalidOperationException("Missing JWT Secret in config file"))
-            );
+            // Read JWT configuration using the same key casing used by validation ("Jwt")
+            // Fall back to legacy "JWT" keys if present for robustness
+            string? secret = _configuration["Jwt:Secret"] ?? _configuration["JWT:Secret"];
+            if (string.IsNullOrWhiteSpace(secret))
+            {
+                throw new InvalidOperationException("Missing JWT Secret in configuration (Jwt:Secret)");
+            }
+
+            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
 
             var expires = DateTime.UtcNow.AddHours(1);
 
+            // Ensure issuer/audience match the casing used by JwtBearer validation (Program.cs uses "Jwt")
+            var issuer = _configuration["Jwt:ValidIssuer"] ?? _configuration["JWT:ValidIssuer"];
+            var audience = _configuration["Jwt:ValidAudience"] ?? _configuration["JWT:ValidAudience"];
+
             var token = new JwtSecurityToken(
-                issuer: _configuration["JWT:ValidIssuer"],
-                audience: _configuration["JWT:ValidAudience"],
+                issuer: issuer,
+                audience: audience,
                 expires: expires,
                 claims: authClaims,
                 signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
