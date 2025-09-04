@@ -46,27 +46,56 @@ public class StorageProxyMiddleware
 
             using var httpClient = _httpClientFactory.CreateClient();
 
-            // Add ngrok header to skip browser warning page for Replicate API access
-            httpClient.DefaultRequestHeaders.Add("ngrok-skip-browser-warning", "true");
+            // Build a proxied request that mirrors the original method and headers
+            using var proxiedRequest = new HttpRequestMessage(new HttpMethod(context.Request.Method), azuriteUrl);
 
-            var response = await httpClient.GetAsync(azuriteUrl);
-
-            if (!response.IsSuccessStatusCode)
+            // Copy request headers (skip Host which is set by HttpClient)
+            foreach (var header in context.Request.Headers)
             {
-                _logger.LogWarning("Storage proxy request failed: {StatusCode} for {Path}", response.StatusCode, path);
-                context.Response.StatusCode = (int)response.StatusCode;
+                if (string.Equals(header.Key, "Host", StringComparison.OrdinalIgnoreCase)) continue;
+                proxiedRequest.Headers.TryAddWithoutValidation(header.Key, (IEnumerable<string>)header.Value);
+            }
+            // Add header used to bypass ngrok browser warning when applicable
+            proxiedRequest.Headers.TryAddWithoutValidation("ngrok-skip-browser-warning", "true");
+
+            // Forward body only for methods that typically have one
+            if (HttpMethods.IsPost(context.Request.Method) || HttpMethods.IsPut(context.Request.Method) || HttpMethods.IsPatch(context.Request.Method))
+            {
+                proxiedRequest.Content = new StreamContent(context.Request.Body);
+                if (!string.IsNullOrEmpty(context.Request.ContentType))
+                {
+                    proxiedRequest.Content.Headers.TryAddWithoutValidation("Content-Type", context.Request.ContentType);
+                }
+            }
+
+            using var response = await httpClient.SendAsync(proxiedRequest, HttpCompletionOption.ResponseHeadersRead, context.RequestAborted);
+
+            // Propagate status code and headers
+            context.Response.StatusCode = (int)response.StatusCode;
+            foreach (var header in response.Headers)
+            {
+                context.Response.Headers[header.Key] = new Microsoft.Extensions.Primitives.StringValues(header.Value.ToArray());
+            }
+            foreach (var header in response.Content.Headers)
+            {
+                context.Response.Headers[header.Key] = new Microsoft.Extensions.Primitives.StringValues(header.Value.ToArray());
+            }
+            // Remove transfer-encoding header to avoid chunking issues
+            context.Response.Headers.Remove("transfer-encoding");
+
+            // For HEAD, do not write a response body
+            if (HttpMethods.IsHead(context.Request.Method))
+            {
+                _logger.LogDebug("Storage proxy HEAD request successful: {Path}, Status: {StatusCode}", path, context.Response.StatusCode);
                 return;
             }
 
+            // Stream body to the client for non-HEAD methods
             var content = await response.Content.ReadAsByteArrayAsync();
-            var contentType = response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
-
-            context.Response.ContentType = contentType;
-            context.Response.StatusCode = 200;
             await context.Response.Body.WriteAsync(content);
 
-            _logger.LogDebug("Storage proxy request successful: {Path}, ContentType: {ContentType}, Size: {Size}",
-                path, contentType, content.Length);
+            _logger.LogDebug("Storage proxy request successful: {Path}, Status: {StatusCode}, Size: {Size}",
+                path, context.Response.StatusCode, content.Length);
         }
         catch (Exception ex)
         {

@@ -10,27 +10,15 @@ export const environment = {
     enableImageValidation: true, // Enable validation to test auto-repair
     enableReplicateCredits: false, // Disable Replicate API when TestController is disabled
 
-    // NEW: Auto-Repair Feature Flags (Development Configuration)
-    enableAutoRepair: true, // Enable for testing in development
-    autoRepairDryRunOnly: false, // Allow actual repairs for dev testing
-    autoRepairThreshold: 1, // Lower threshold for easier testing
-    autoRepairCooldown: 5 * 60 * 1000, // 5-minute cooldown for rapid testing
-    autoRepairMaxAttempts: 3, // Standard attempt limit
-    autoRepairTimeoutMs: 30000, // 30-second timeout
-    autoRepairNotifications: true, // Show notifications for debugging
-    autoRepairTelemetry: true, // Enable telemetry for analysis
-    autoRepairValidationLevel: 'lenient', // Less strict for dev data
-
     // Granular Logging Controls (Development - Reduced Noise)
     logging: {
-      enableApiDebug: false, // Disable API call noise
-      enableStateDebug: false, // Disable state change noise
-      enableWorkflowDebug: false, // Disable workflow debugging
-      enableAuthDebug: false, // Disable auth noise
-      enableFileDebug: false, // Disable file operation noise
-      enableGalleryDebug: false, // Disable gallery operation noise
-      enableDashboardDebug: false, // Disable dashboard state noise
-      enableAutoRepairDebug: false, // Disable auto-repair debug (can enable when needed)
+      enableApiDebug: false,
+      enableStateDebug: false,
+      enableWorkflowDebug: false,
+      enableAuthDebug: false,
+      enableFileDebug: false,
+      enableGalleryDebug: false,
+      enableDashboardDebug: false,
     },
   },
   ngrok: {

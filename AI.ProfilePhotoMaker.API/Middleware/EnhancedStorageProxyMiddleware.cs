@@ -68,10 +68,23 @@ public class EnhancedStorageProxyMiddleware
 
             using var httpClient = _httpClientFactory.CreateClient();
 
-            // Add ngrok header to skip browser warning page for Replicate API access
-            httpClient.DefaultRequestHeaders.Add("ngrok-skip-browser-warning", "true");
+            using var proxiedRequest = new HttpRequestMessage(new HttpMethod(context.Request.Method), azuriteUrl);
+            foreach (var header in context.Request.Headers)
+            {
+                if (string.Equals(header.Key, "Host", StringComparison.OrdinalIgnoreCase)) continue;
+                proxiedRequest.Headers.TryAddWithoutValidation(header.Key, (IEnumerable<string>)header.Value);
+            }
+            proxiedRequest.Headers.TryAddWithoutValidation("ngrok-skip-browser-warning", "true");
 
-            var response = await httpClient.GetAsync(azuriteUrl);
+            // Forward body when appropriate
+            if (HttpMethods.IsPost(context.Request.Method) || HttpMethods.IsPut(context.Request.Method) || HttpMethods.IsPatch(context.Request.Method))
+            {
+                proxiedRequest.Content = new StreamContent(context.Request.Body);
+                if (!string.IsNullOrEmpty(context.Request.ContentType))
+                    proxiedRequest.Content.Headers.TryAddWithoutValidation("Content-Type", context.Request.ContentType);
+            }
+
+            using var response = await httpClient.SendAsync(proxiedRequest, HttpCompletionOption.ResponseHeadersRead, context.RequestAborted);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -80,11 +93,24 @@ public class EnhancedStorageProxyMiddleware
                 return;
             }
 
-            var content = await response.Content.ReadAsByteArrayAsync();
-            var contentType = response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
+            // Copy headers to response
+            foreach (var header in response.Headers)
+                context.Response.Headers[header.Key] = new Microsoft.Extensions.Primitives.StringValues(header.Value.ToArray());
+            foreach (var header in response.Content.Headers)
+                context.Response.Headers[header.Key] = new Microsoft.Extensions.Primitives.StringValues(header.Value.ToArray());
+            context.Response.Headers.Remove("transfer-encoding");
 
-            context.Response.ContentType = contentType;
-            context.Response.StatusCode = 200;
+            // For HEAD requests, do not write a body
+            if (HttpMethods.IsHead(context.Request.Method))
+            {
+                context.Response.StatusCode = (int)response.StatusCode;
+                _logger.LogDebug("Azurite proxy HEAD successful: {Path}, Status: {Status}", path, context.Response.StatusCode);
+                return;
+            }
+
+            var content = await response.Content.ReadAsByteArrayAsync();
+            context.Response.ContentType = response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
+            context.Response.StatusCode = (int)response.StatusCode;
 
             // Add cache headers for performance
             context.Response.Headers["Cache-Control"] = "public, max-age=3600";
@@ -92,7 +118,7 @@ public class EnhancedStorageProxyMiddleware
             await context.Response.Body.WriteAsync(content);
 
             _logger.LogDebug("Azurite proxy successful: {Path}, ContentType: {ContentType}, Size: {Size}",
-                path, contentType, content.Length);
+                path, context.Response.ContentType, content.Length);
         }
         catch (Exception ex)
         {
@@ -115,6 +141,21 @@ public class EnhancedStorageProxyMiddleware
             var storagePath = path.Substring("/profile-images/".Length);
 
             _logger.LogDebug("Serving image from storage: {Path} -> {StoragePath}", path, storagePath);
+
+            // For HEAD requests, just verify existence and return headers without a body
+            if (HttpMethods.IsHead(context.Request.Method))
+            {
+                var exists = await storageService.ExistsAsync(storagePath);
+                context.Response.StatusCode = exists ? 200 : 404;
+                if (exists)
+                {
+                    // Minimal headers for caching
+                    context.Response.Headers["Cache-Control"] = "public, max-age=31536000, immutable";
+                    context.Response.Headers["ETag"] = $"\"{storagePath.GetHashCode():X}\"";
+                }
+                _logger.LogDebug("HEAD check for {StoragePath}: {Status}", storagePath, context.Response.StatusCode);
+                return;
+            }
 
             // Fetch image from storage service (Azure Blob or Azurite)
             var imageStream = await storageService.GetImageAsync(storagePath);
