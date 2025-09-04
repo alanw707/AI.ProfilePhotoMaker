@@ -10,7 +10,7 @@ This project uses a simplified local build approach for faster development and m
 - Docker Desktop installed and running
 - Azure CLI installed (`az --version`) 
 - Logged in to Azure (`az login`)
-- Node.js 18+ and .NET 8
+- Node.js 20.x (LTS) and .NET 8
 
 ### Deploy in 3 Steps
 
