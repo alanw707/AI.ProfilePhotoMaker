@@ -127,7 +127,8 @@ public abstract class PerformanceTestBase : IDisposable
 
         for (int i = 0; i < userCount; i++)
         {
-            var userId = $"test-user-{i + 1}";
+            // Ensure globally unique user IDs across multiple invocations
+            var userId = $"test-user-{Guid.NewGuid():N}-{i + 1}";
             var user = new UserProfile
             {
                 UserId = userId,

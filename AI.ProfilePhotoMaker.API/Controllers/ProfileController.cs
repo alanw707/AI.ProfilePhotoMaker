@@ -506,7 +506,8 @@ public class ProfileController : ControllerBase
                 {
                     try
                     {
-                        var (success, errorMessage) = await _replicateApiClient.DeleteModelAsync(modelId);
+                        // Ensure proper tuple destructuring with trainedModel reference (regression check)
+                        var (success, errorMessage) = await _replicateApiClient.DeleteModelAsync(trainedModel.ReplicateModelId);
                         if (!success)
                         {
                             _logger.LogError("Failed to delete model {ModelId} from Replicate for user {UserId} - {ErrorMessage}", modelId, userId, errorMessage);

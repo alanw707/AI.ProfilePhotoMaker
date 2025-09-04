@@ -348,9 +348,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 };
                 Response.Cookies.Append(cookieName, tokenInfo.Token, cookieOptions);
 
-                // Maintain current behavior by also including token in URL (safe transition)
-                // Note: Once UI fully relies on cookie, we can remove this token query parameter (production first).
-                return Redirect($"{frontendBaseUrl}{returnUrl}?token={tokenInfo.Token}");
+                // Redirect without token in URL; UI relies on HttpOnly cookie
+                return Redirect($"{frontendBaseUrl}{returnUrl}");
             }
             catch (Exception)
             {

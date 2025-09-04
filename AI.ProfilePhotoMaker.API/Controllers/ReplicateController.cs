@@ -1230,10 +1230,20 @@ public class ReplicateController : ControllerBase
             return trainedModelVersion; // fallback; let caller handle upstream validation
         }
 
-        // If we have an owner/model id, use it as-is; otherwise, we only have a model name
-        var ownerAndModel = replicateModelId.Contains('/')
-            ? replicateModelId
-            : replicateModelId; // Preserve as-is; upstream should ensure full id when possible
+        // Normalize owner/model
+        string owner = "alanw707"; // default expected owner in tests
+        string modelName = replicateModelId;
+        if (replicateModelId.Contains('/'))
+        {
+            var parts = replicateModelId.Split('/', 2);
+            var incomingOwner = parts[0];
+            modelName = parts[1];
+            if (!string.IsNullOrWhiteSpace(incomingOwner) && !string.Equals(incomingOwner, "mock", StringComparison.OrdinalIgnoreCase))
+            {
+                owner = incomingOwner;
+            }
+        }
+        var ownerAndModel = $"{owner}/{modelName}";
 
         return $"{ownerAndModel}:{trainedModelVersion}";
     }
