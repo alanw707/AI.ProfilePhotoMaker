@@ -231,6 +231,93 @@ public class ReplicateController : ControllerBase
     }
 
     /// <summary>
+    /// Finalizes a completed training by resolving and persisting the user's trained model version.
+    /// This accelerates the background poller by performing the same work on-demand.
+    /// </summary>
+    [HttpPost("train/finalize/{trainingId}")]
+    public async Task<IActionResult> FinalizeTraining(string trainingId)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+
+        // Verify the training belongs to the current user
+        var modelRequest = await _dbContext.ModelCreationRequests
+            .FirstOrDefaultAsync(m => m.UserId == userId && m.PendingTrainingRequestId == trainingId);
+
+        if (modelRequest == null)
+        {
+            return NotFound(new { success = false, error = new { code = "NotFound", message = "Training not found." } });
+        }
+
+        try
+        {
+            // Resolve service on-demand to avoid changing constructor signature
+            var trainingPollingService = HttpContext.RequestServices.GetRequiredService<ITrainingPollingService>();
+            // Run the same completion processing used by the background poller
+            await trainingPollingService.ProcessTrainingCompletion(trainingId);
+
+            // Re-read current state
+            await _dbContext.Entry(modelRequest).ReloadAsync();
+
+            if (modelRequest.Status == ModelCreationStatus.Ready &&
+                !string.IsNullOrEmpty(modelRequest.TrainedModelVersion) &&
+                !string.IsNullOrEmpty(modelRequest.ReplicateModelId))
+            {
+                return Ok(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        ready = true,
+                        modelId = modelRequest.ReplicateModelId,
+                        version = modelRequest.TrainedModelVersion,
+                        status = modelRequest.Status.ToString(),
+                        completedAt = modelRequest.CompletedAt
+                    },
+                    error = (object?)null
+                });
+            }
+
+            if (modelRequest.Status == ModelCreationStatus.Failed)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    error = new
+                    {
+                        code = "TrainingFinalizeFailed",
+                        message = modelRequest.ErrorMessage ?? "Training finalized with failure. Please retry training.",
+                        status = modelRequest.Status.ToString()
+                    }
+                });
+            }
+
+            // Still finalizing; advise client to retry shortly
+            return StatusCode(202, new
+            {
+                success = true,
+                data = new
+                {
+                    ready = false,
+                    status = modelRequest.Status.ToString(),
+                    retryAfterSeconds = 15
+                },
+                error = (object?)null
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error finalizing training {TrainingId} for user {UserId}", trainingId, userId);
+            return StatusCode(500, new
+            {
+                success = false,
+                error = new { code = "FinalizeError", message = ex.Message }
+            });
+        }
+    }
+
+    /// <summary>
     /// Generates images using a trained model and style (requires purchased credits)
     /// </summary>
     [HttpPost("generate")]

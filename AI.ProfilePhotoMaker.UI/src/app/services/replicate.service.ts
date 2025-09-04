@@ -66,6 +66,15 @@ export interface ReplicatePredictionResult {
   dataUrl?: string;
 }
 
+export interface FinalizeTrainingData {
+  ready: boolean;
+  modelId?: string;
+  version?: string;
+  status?: string;
+  retryAfterSeconds?: number;
+  completedAt?: string;
+}
+
 export interface CreditsInfo {
   availableCredits: number;
   subscriptionTier: string;
@@ -117,6 +126,15 @@ export class ReplicateService {
   ): Observable<{ success: boolean; data: ReplicateTrainingResult; error: any }> {
     return this.http.get<{ success: boolean; data: ReplicateTrainingResult; error: any }>(
       this.config.getFullUrl(`/replicate/train/status/${trainingId}`)
+    );
+  }
+
+  finalizeTraining(
+    trainingId: string
+  ): Observable<{ success: boolean; data: FinalizeTrainingData; error: any }> {
+    return this.http.post<{ success: boolean; data: FinalizeTrainingData; error: any }>(
+      this.config.getFullUrl(`/replicate/train/finalize/${trainingId}`),
+      {}
     );
   }
 

@@ -107,6 +107,7 @@ interface FileUploadService {
 interface ReplicateService {
   trainModel(request: TrainModelRequest): Observable<TrainingStartApiResponse>;
   getTrainingStatus(trainingId: string): Observable<TrainingStatusResponse>;
+  finalizeTraining(trainingId: string): Observable<{ success: boolean; data: any; error: any }>;
   generateBatchImages(request: GenerateBatchImagesRequest): Observable<BatchGenerationResponse>;
   getPredictionStatus(predictionId: string): Observable<PredictionStatusResponse>;
 }
@@ -934,13 +935,13 @@ export class WorkflowOrchestrationService {
               clearInterval(this._pollingInterval);
               this._setProgress({
                 progressPercentage: maxTrainingProgress,
-                progressMessage: 'Model training complete! Starting image generation...',
+                progressMessage: 'Model training complete! Finalizing your model...',
                 isTraining: false,
               });
 
               this._deps.notificationService.success(
                 'Training Complete',
-                'Model training finished! Starting image generation...'
+                'Model training finished! Getting your model ready for generation...'
               );
 
               // Force reload dashboard data to get updated model status
@@ -955,20 +956,37 @@ export class WorkflowOrchestrationService {
                 this._ngZone.runOutsideAngular(() => setTimeout(resolve, 500))
               );
 
-              // Start generation only with the actual user model version
-              // Avoid using training status version (which is the trainer's version)
-              const resolvedVersion = await this._waitForUserModelVersionId(6, 1000);
-              if (resolvedVersion) {
-                await this._generateImagesWithStyles(
-                  selectedStyles,
-                  imagesPerStyle,
-                  resolvedVersion
-                );
+              // Actively finalize training to resolve the user's model version,
+              // then automatically start generation as soon as it's ready.
+              const finalVersion = await this._attemptFinalizeTraining(
+                this.getProgress().trainingId
+              );
+              if (finalVersion) {
+                await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, finalVersion);
               } else {
-                this._deps.notificationService.error(
-                  'Generation Delayed',
-                  "Your model is trained, but the version isn't available yet. Please wait a few seconds and try again."
+                // If we somehow still couldn't resolve, inform user but avoid hard stop
+                this._deps.notificationService.warning(
+                  'Model Finalizing',
+                  'Your model is finalizing on Replicate. We will start generation automatically once ready.'
                 );
+                // Soft fallback: continue trying in background for a bit
+                this._ngZone.runOutsideAngular(() => {
+                  setTimeout(async () => {
+                    this._ngZone.run(async () => {
+                      const laterVersion = await this._attemptFinalizeTraining(
+                        this.getProgress().trainingId,
+                        60000
+                      );
+                      if (laterVersion) {
+                        await this._generateImagesWithStyles(
+                          selectedStyles,
+                          imagesPerStyle,
+                          laterVersion
+                        );
+                      }
+                    });
+                  }, 15000);
+                });
               }
             } else if (status === 'failed') {
               clearInterval(this._pollingInterval);
@@ -1145,6 +1163,52 @@ export class WorkflowOrchestrationService {
         this._ngZone.runOutsideAngular(() => setTimeout(resolve, delayMs))
       );
     }
+    return null;
+  }
+
+  // Finalize training by calling the backend finalize endpoint with retries and backoff.
+  // Returns the resolved version string when available, otherwise null.
+  private async _attemptFinalizeTraining(
+    trainingId: string,
+    maxWaitMs = 120000
+  ): Promise<string | null> {
+    if (!trainingId) {
+      return null;
+    }
+    const replicateService = await this._loadReplicateService();
+
+    const start = Date.now();
+    let attempt = 0;
+    let nextDelay = 5000; // initial 5s
+
+    while (Date.now() - start < maxWaitMs) {
+      attempt++;
+      try {
+        // Update UI message while waiting
+        this._setProgress({
+          progressMessage: 'Finalizing your model on Replicate...',
+        });
+
+        const resp = await firstValueFrom(replicateService.finalizeTraining(trainingId));
+        if (resp?.success && resp?.data?.ready && resp?.data?.version) {
+          return resp.data.version;
+        }
+
+        // Use server-provided retry hint if present
+        const retryAfter = (resp?.data?.retryAfterSeconds ?? 15) * 1000;
+        nextDelay = Math.max(nextDelay, retryAfter);
+      } catch (err) {
+        // Non-fatal; proceed with backoff
+        console.warn('Finalize training attempt failed', { attempt, err });
+      }
+
+      await new Promise(resolve =>
+        this._ngZone.runOutsideAngular(() => setTimeout(resolve, nextDelay))
+      );
+      // Exponential backoff with cap ~20s
+      nextDelay = Math.min(Math.floor(nextDelay * 1.5), 20000);
+    }
+
     return null;
   }
 
