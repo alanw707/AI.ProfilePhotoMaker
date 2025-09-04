@@ -305,6 +305,21 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 // Generate JWT token
                 var tokenInfo = _authService.GenerateJwtToken(user);
+
+                // Set secure, HttpOnly cookie for JWT so the browser can send it on subsequent API requests
+                var cookieName = _configuration["Authentication:TokenCookieName"] ?? "AuthToken";
+                var cookieOptions = new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = !_environment.IsDevelopment(),
+                    SameSite = _environment.IsDevelopment() ? SameSiteMode.Lax : SameSiteMode.None,
+                    Expires = DateTimeOffset.UtcNow.AddHours(12),
+                    Path = "/"
+                };
+                Response.Cookies.Append(cookieName, tokenInfo.Token, cookieOptions);
+
+                // Maintain current behavior by also including token in URL (safe transition)
+                // Note: Once UI fully relies on cookie, we can remove this token query parameter (production first).
                 return Redirect($"{frontendBaseUrl}{returnUrl}?token={tokenInfo.Token}");
             }
             catch (Exception)

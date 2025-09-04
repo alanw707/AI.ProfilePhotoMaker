@@ -470,6 +470,8 @@ if (app.Environment.IsDevelopment())
 {
     app.UseMiddleware<AI.ProfilePhotoMaker.API.Middleware.StorageProxyMiddleware>();
 }
+// Inject JWT from secure cookie into Authorization header if present
+app.UseMiddleware<AI.ProfilePhotoMaker.API.Middleware.JwtCookieAuthMiddleware>();
 // Optional: serve images via API proxy (supports private blob containers)
 if (app.Configuration.GetValue<bool>("Storage:ProxyBlobRequests"))
 {
