@@ -470,6 +470,11 @@ if (app.Environment.IsDevelopment())
 {
     app.UseMiddleware<AI.ProfilePhotoMaker.API.Middleware.StorageProxyMiddleware>();
 }
+// Optional: serve images via API proxy (supports private blob containers)
+if (app.Configuration.GetValue<bool>("Storage:ProxyBlobRequests"))
+{
+    app.UseMiddleware<AI.ProfilePhotoMaker.API.Middleware.EnhancedStorageProxyMiddleware>();
+}
 
 app.Use(async (context, next) =>
 {

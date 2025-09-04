@@ -254,6 +254,18 @@ public class AzureBlobStorageService : BaseStorageService
     {
         ValidateStoragePath(storagePath);
 
+        // Optional proxy: when enabled, serve images via API to support private containers and caching
+        var proxyEnabled = bool.TryParse(Configuration["Storage:ProxyBlobRequests"], out var flag) && flag;
+        if (proxyEnabled)
+        {
+            var appBaseUrl = Configuration["AppBaseUrl"]?.TrimEnd('/') ?? "https://localhost:5001";
+            var proxyPath = "/profile-images/" + storagePath.TrimStart('/');
+            var proxiedUrl = appBaseUrl + proxyPath;
+            Logger.LogDebug("GetImageUrl (Proxy Enabled): {Url}", proxiedUrl);
+            return proxiedUrl;
+        }
+
+        // Default: return direct Azure Blob URL (public blob access)
         // Handle style-previews paths by using correct container
         string containerName;
         string blobPath;
@@ -269,8 +281,6 @@ public class AzureBlobStorageService : BaseStorageService
             blobPath = storagePath;
         }
 
-        // For Azure Blob Storage in production, always return direct Azure Blob URLs
-        // These are publicly accessible URLs since containers have public blob access
         var cleanPath = blobPath.TrimStart('/');
         var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
         var blobClient = containerClient.GetBlobClient(cleanPath);
