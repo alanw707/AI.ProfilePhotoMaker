@@ -7,7 +7,7 @@ import { SubscriptionStateService } from './subscription-state.service';
 import { ConfigService } from './config.service';
 import { ModelStatusService } from './model-status.service';
 import { StyleOption } from '../components/dashboard/style-selector/style-selector.component';
-import { ModelStatus, ModelStatusHelper } from '../models/dashboard.types';
+// Removed unused imports to reduce lint noise
 
 // Lazy-loaded service types
 interface TrainingZipResponse {
