@@ -203,14 +203,14 @@ var authBuilder = builder.Services.AddAuthentication(options =>
     .AddJwtBearer(options =>
     {
         options.SaveToken = true;
-        options.RequireHttpsMetadata = false;
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
         options.TokenValidationParameters = new TokenValidationParameters()
         {
             ValidateIssuer = true,
             ValidateAudience = true,
-            ValidAudience = builder.Configuration["JWT:ValidAudience"],
-            ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"] ?? string.Empty))
+            ValidAudience = builder.Configuration["Jwt:ValidAudience"],
+            ValidIssuer = builder.Configuration["Jwt:ValidIssuer"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"] ?? string.Empty))
         };
         options.Events = new JwtBearerEvents
         {
@@ -247,7 +247,7 @@ if (!string.IsNullOrEmpty(googleClientId) && !string.IsNullOrEmpty(googleClientS
 }
 
 // Validate JWT Secret
-var jwtSecret = builder.Configuration["JWT:Secret"];
+var jwtSecret = builder.Configuration["Jwt:Secret"];
 if (string.IsNullOrEmpty(jwtSecret) || jwtSecret.Length < 32)
 {
     Console.WriteLine("Warning: JWT Secret is not configured or is not long enough. Please configure a secret of at least 32 characters in your application settings.");
@@ -466,7 +466,10 @@ _ = Task.Run(async () =>
 
 app.UseForwardedHeaders();
 app.UseResponseCompression();
-app.UseMiddleware<AI.ProfilePhotoMaker.API.Middleware.StorageProxyMiddleware>();
+if (app.Environment.IsDevelopment())
+{
+    app.UseMiddleware<AI.ProfilePhotoMaker.API.Middleware.StorageProxyMiddleware>();
+}
 
 app.Use(async (context, next) =>
 {
@@ -492,21 +495,24 @@ if (!app.Environment.IsDevelopment())
 
 var corsPolicy = app.Environment.IsDevelopment() ? "AllowDevelopment" : "V1Production";
 app.Logger.LogInformation($"🌐 CORS Policy Selected: {corsPolicy} (Environment: {app.Environment.EnvironmentName})");
-app.Use(async (context, next) =>
+if (app.Environment.IsDevelopment())
 {
-    var isOptionsRequest = context.Request.Method == "OPTIONS";
-    var hasOrigin = context.Request.Headers.ContainsKey("Origin");
-    if (isOptionsRequest || hasOrigin)
+    app.Use(async (context, next) =>
     {
-        app.Logger.LogInformation($"🌐 CORS Request: {context.Request.Method} {context.Request.Path} | Origin: {context.Request.Headers.Origin} | Environment: {app.Environment.EnvironmentName}");
-    }
-    await next();
-    if (isOptionsRequest || hasOrigin)
-    {
-        var responseHeaders = string.Join(", ", context.Response.Headers.Where(h => h.Key.StartsWith("Access-Control")).Select(h => $"{h.Key}: {h.Value}"));
-        app.Logger.LogInformation($"🌐 CORS Response Headers: {(string.IsNullOrEmpty(responseHeaders) ? "NONE" : responseHeaders)}");
-    }
-});
+        var isOptionsRequest = context.Request.Method == "OPTIONS";
+        var hasOrigin = context.Request.Headers.ContainsKey("Origin");
+        if (isOptionsRequest || hasOrigin)
+        {
+            app.Logger.LogDebug($"🌐 CORS Request: {context.Request.Method} {context.Request.Path} | Origin: {context.Request.Headers.Origin} | Environment: {app.Environment.EnvironmentName}");
+        }
+        await next();
+        if (isOptionsRequest || hasOrigin)
+        {
+            var responseHeaders = string.Join(", ", context.Response.Headers.Where(h => h.Key.StartsWith("Access-Control")).Select(h => $"{h.Key}: {h.Value}"));
+            app.Logger.LogDebug($"🌐 CORS Response Headers: {(string.IsNullOrEmpty(responseHeaders) ? "NONE" : responseHeaders)}");
+        }
+    });
+}
 app.UseCors(corsPolicy);
 // app.UsePerformanceMonitoring(); // Removed monitoring middleware
 app.Use(async (context, next) => { await next(); });

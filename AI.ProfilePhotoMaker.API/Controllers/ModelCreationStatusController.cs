@@ -19,15 +19,18 @@ public class ModelCreationStatusController : ControllerBase
     private readonly ApplicationDbContext _context;
     private readonly ILogger<ModelCreationStatusController> _logger;
     private readonly IReplicateApiClient _replicateApiClient;
+    private readonly IWebHostEnvironment _environment;
 
     public ModelCreationStatusController(
         ApplicationDbContext context,
         ILogger<ModelCreationStatusController> logger,
-        IReplicateApiClient replicateApiClient)
+        IReplicateApiClient replicateApiClient,
+        IWebHostEnvironment environment)
     {
         _context = context;
         _logger = logger;
         _replicateApiClient = replicateApiClient;
+        _environment = environment;
     }
 
     private string? GetCurrentUserId()
@@ -176,9 +179,23 @@ public class ModelCreationStatusController : ControllerBase
     /// Debug endpoint to get current user model requests without auth
     /// </summary>
     [HttpGet("debug/user/{userId}")]
-    [AllowAnonymous]
+    [Authorize]
+    [ApiExplorerSettings(IgnoreApi = true)]
     public async Task<IActionResult> GetCurrentUserModelRequestsDebug(string userId)
     {
+        // Restrict this debug endpoint to development only
+        if (!_environment.IsDevelopment())
+        {
+            return NotFound();
+        }
+
+        // Only allow the current user to query their own data in dev
+        var currentUserId = GetCurrentUserId();
+        if (string.IsNullOrEmpty(currentUserId) || !string.Equals(currentUserId, userId, StringComparison.Ordinal))
+        {
+            return Forbid();
+        }
+
         try
         {
             var modelRequests = await _context.ModelCreationRequests
