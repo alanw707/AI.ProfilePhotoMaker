@@ -28,6 +28,10 @@ export class ConfigService {
     return this.buildEndpointUrl('/auth/profile-completion-status');
   }
 
+  get authValidateSessionUrl(): string {
+    return this.buildEndpointUrl('/auth/validate-session');
+  }
+
   get profileUrl(): string {
     return this.buildEndpointUrl('/profile');
   }

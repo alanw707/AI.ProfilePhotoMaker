@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  OnDestroy,
+  OnInit,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
@@ -19,8 +25,10 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
   userEmail = '';
   userCreditStatus: UserCreditStatus | null = null;
   isMobileMenuOpen = false;
+  isAuthenticated = false;
   private _userSubscription?: Subscription;
   private _creditSubscription?: Subscription;
+  private _authSubscription?: Subscription;
 
   constructor(
     private _authService: AuthService,
@@ -31,6 +39,12 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    // Track authentication state explicitly to control header UI
+    this._authSubscription = this._authService.isAuthenticated$.subscribe(isAuth => {
+      this.isAuthenticated = isAuth;
+      this._cdr.markForCheck();
+    });
+
     this._userSubscription = this._authService.currentUser$.subscribe(user => {
       if (user) {
         this.userEmail = user.email;
@@ -41,9 +55,13 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
         setTimeout(() => {
           this.loadCreditStatus();
         }, 100);
+        this._cdr.markForCheck();
       } else {
         // Clear credit status when not authenticated
         this.userCreditStatus = null;
+        this.userName = '';
+        this.userEmail = '';
+        this._cdr.markForCheck();
       }
     });
   }
@@ -54,6 +72,9 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
     }
     if (this._creditSubscription) {
       this._creditSubscription.unsubscribe();
+    }
+    if (this._authSubscription) {
+      this._authSubscription.unsubscribe();
     }
   }
 

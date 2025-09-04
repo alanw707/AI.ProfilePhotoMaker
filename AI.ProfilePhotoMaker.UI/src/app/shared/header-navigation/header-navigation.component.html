@@ -20,9 +20,9 @@
 </button>
 
 <!-- Mobile Menu Overlay -->
-<div 
-  class="mobile-menu-overlay" 
-  [class.active]="isMobileMenuOpen" 
+<div
+  class="mobile-menu-overlay"
+  [class.active]="isMobileMenuOpen"
   (click)="closeMobileMenu()"
   (keydown.enter)="closeMobileMenu()"
   (keydown.space)="closeMobileMenu()"
@@ -112,7 +112,7 @@
 
     <div class="user-section">
       <!-- Authenticated User Section -->
-      <ng-container *ngIf="userName; else guestSection">
+      <ng-container *ngIf="isAuthenticated; else guestSection">
         <!-- Credit Display -->
         <div
           class="credit-display"

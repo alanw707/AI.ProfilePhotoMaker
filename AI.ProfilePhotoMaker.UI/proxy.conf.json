@@ -3,7 +3,10 @@
     "target": "http://localhost:5032",
     "secure": false,
     "changeOrigin": true,
-    "logLevel": "debug"
+    "logLevel": "debug",
+    "cookieDomainRewrite": "localhost",
+    "cookiePathRewrite": "/",
+    "ws": false
   },
   "/debug": {
     "target": "http://localhost:5032",

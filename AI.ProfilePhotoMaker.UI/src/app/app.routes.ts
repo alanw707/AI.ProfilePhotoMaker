@@ -81,7 +81,6 @@ export const routes: Routes = [
   // Protected Application Routes
   {
     path: 'app',
-    canActivate: [AppGuard],
     canActivateChild: [AppGuard],
     children: [
       {

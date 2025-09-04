@@ -15,8 +15,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController : ControllerBase
-    {
+        public class AuthController : ControllerBase
+        {
         private readonly IAuthService _authService;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
@@ -348,7 +348,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 };
                 Response.Cookies.Append(cookieName, tokenInfo.Token, cookieOptions);
 
-                // Redirect without token in URL; UI relies on HttpOnly cookie
+                // In development, include token for frontend to set cookie on 4200 origin via proxy
+                if (_environment.IsDevelopment())
+                {
+                    return Redirect($"{frontendBaseUrl}{returnUrl}?token={tokenInfo.Token}");
+                }
+                // In production, cookie-only flow
                 return Redirect($"{frontendBaseUrl}{returnUrl}");
             }
             catch (Exception)
@@ -590,6 +595,15 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             return user;
         }
 
+        [HttpGet("validate-session")]
+        [Authorize]
+        public IActionResult ValidateSession()
+        {
+            // If the request is authenticated via JWT (cookie-based), return 204.
+            // Otherwise the [Authorize] attribute will result in 401.
+            return NoContent();
+        }
+
         [HttpGet("profile-completion-status")]
         [Authorize]
         public async Task<IActionResult> GetProfileCompletionStatus()
@@ -657,9 +671,49 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             // Default to localhost for development
             return "http://localhost:4200";
         }
+        
+        [HttpPost("set-cookie")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        public IActionResult SetCookie([FromBody] SetCookieRequest payload)
+        {
+            if (!_environment.IsDevelopment())
+            {
+                return NotFound();
+            }
+            try
+            {
+                // Use strongly-typed binding to avoid dynamic runtime binder issues
+                var token = payload?.Token ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    return BadRequest(new { error = "Missing token" });
+                }
+
+                var cookieName = _configuration["Authentication:TokenCookieName"] ?? "AuthToken";
+                var cookieOptions = new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = false,
+                    SameSite = SameSiteMode.Lax,
+                    Expires = DateTimeOffset.UtcNow.AddHours(12),
+                    Path = "/"
+                };
+                Response.Cookies.Append(cookieName, token, cookieOptions);
+                return Ok(new { success = true });
+            }
+            catch
+            {
+                return StatusCode(500, new { error = "Failed to set cookie" });
+            }
+        }
     }
 
     // DTOs for Google OAuth
+    public class SetCookieRequest
+    {
+        // Accept both "token" and "Token" JSON names (case-insensitive by default)
+        public string Token { get; set; } = string.Empty;
+    }
     public class GoogleTokenResponse
     {
         public string AccessToken { get; set; } = "";

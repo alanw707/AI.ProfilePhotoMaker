@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
-import { Router, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { AuthService } from './services/auth.service';
 import { ThemeService } from './services/theme.service';
 import { NotificationComponent } from './components/shared/notification/notification.component';
+import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
@@ -24,16 +26,28 @@ export class AppComponent implements OnInit {
 
     // Clean up OAuth URL token if present and navigate
     this._handleOAuthCallback();
+
+    // Probe session only when navigating to protected routes
+    this._router.events
+      .pipe(filter(e => e instanceof NavigationEnd))
+      .subscribe(e => this._authService.probeSessionForUrl((e as NavigationEnd).urlAfterRedirects));
   }
 
   private _handleOAuthCallback(): void {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
-    if (token) {
-      // Clean URL parameters to avoid token leakage and navigate to dashboard
-      const cleanUrl = window.location.origin + window.location.pathname;
-      window.history.replaceState({}, document.title, cleanUrl);
-      this._router.navigate(['/app/dashboard']);
+    if (token && !environment.production) {
+      // In development OAuth flow, set cookie via same-origin endpoint then clean URL
+      fetch('/api/auth/set-cookie', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+        credentials: 'include',
+      }).finally(() => {
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+        this._router.navigate(['/app/dashboard']);
+      });
     }
   }
 }

@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, map, Observable, tap, catchError, of } from 'rxjs';
+import { BehaviorSubject, map, Observable, tap, catchError, of, shareReplay, finalize } from 'rxjs';
 import { Router } from '@angular/router';
 import { ConfigService } from './config.service';
+import { environment } from '../../environments/environment';
 
 export interface LoginDto {
   email: string;
@@ -62,26 +63,58 @@ export class AuthService {
   private _currentUserSubject = new BehaviorSubject<AuthResponseDto | null>(this.getCurrentUser());
   public currentUser$ = this._currentUserSubject.asObservable();
 
+  // De-duplication holder for profile completion checks
+  private _profileStatusInFlight$?: Observable<ProfileCompletionCheckDto>;
+
   constructor(
     private _http: HttpClient,
     private _config: ConfigService,
     private _router: Router
   ) {
-    // Initialize with secure session check
+    // Initialize with secure session check (only on protected routes)
     this.initializeSecureAuth();
   }
 
   /**
    * Initialize secure authentication with improved session management
    */
+  private _sessionProbed = false;
+
   private initializeSecureAuth(): void {
-    // On startup, probe the server to determine auth status (cookie-based)
-    this.checkProfileCompletion()
+    // Only probe on protected areas; skip on the public home page
+    const path = window.location.pathname || '';
+    if (this._isProtectedPath(path)) {
+      this.probeSession();
+    }
+  }
+
+  // Idempotent probe; safe to call multiple times
+  public probeSession(): void {
+    if (this._sessionProbed) {
+      return;
+    }
+    this._sessionProbed = true;
+
+    this.validateSession()
       .pipe(
         map(() => true),
         catchError(() => of(false))
       )
       .subscribe({ next: (isAuth: boolean) => this._isAuthenticatedSubject.next(isAuth) });
+  }
+
+  public probeSessionForUrl(url: string): void {
+    if (this._sessionProbed) {
+      return;
+    }
+    const path = url.split('?')[0];
+    if (this._isProtectedPath(path)) {
+      this.probeSession();
+    }
+  }
+
+  private _isProtectedPath(path: string): boolean {
+    return path.startsWith('/app') || path.startsWith('/account') || path.startsWith('/admin');
   }
 
   /**
@@ -105,13 +138,50 @@ export class AuthService {
   }
 
   handleOAuthCallback(_token: string, _expiration?: string): void {
-    // Token is handled by HttpOnly cookie; update auth state based on server
-    this.checkProfileCompletion()
+    // Token is handled by HttpOnly cookie; update auth state and hydrate minimal user
+    this.validateSession()
       .pipe(
         map(() => true),
         catchError(() => of(false))
       )
-      .subscribe({ next: (isAuth: boolean) => this._isAuthenticatedSubject.next(isAuth) });
+      .subscribe({
+        next: isAuth => {
+          this._isAuthenticatedSubject.next(isAuth);
+          if (isAuth) {
+            // Seed a minimal user so header switches from Guest immediately
+            const existing = this.getCurrentUser();
+            const placeholder: AuthResponseDto = existing || {
+              token: '',
+              email: '',
+              firstName: '',
+              lastName: '',
+            };
+            localStorage.setItem('currentUser', JSON.stringify(placeholder));
+            this._currentUserSubject.next(placeholder);
+
+            // Hydrate display name from server profile
+            this._http
+              .get<{
+                firstName?: string;
+                lastName?: string;
+              }>(this._config.buildApiEndpoint('profile'))
+              .subscribe({
+                next: resp => {
+                  const updated: AuthResponseDto = {
+                    ...placeholder,
+                    firstName: resp.firstName || placeholder.firstName,
+                    lastName: resp.lastName || placeholder.lastName,
+                  };
+                  localStorage.setItem('currentUser', JSON.stringify(updated));
+                  this._currentUserSubject.next(updated);
+                },
+                error: () => {
+                  // Ignore; header will still show authenticated state
+                },
+              });
+          }
+        },
+      });
   }
 
   private fetchUserProfileForOAuth(token: string): void {
@@ -271,39 +341,68 @@ export class AuthService {
   }
 
   login(credentials: LoginDto): Observable<AuthResponseDto> {
-    return this._http.post<ApiAuthResponseDto>(this._config.authLoginUrl, credentials).pipe(
-      map(apiResponse => {
-        if (!apiResponse.isSuccess) {
-          throw new Error(apiResponse.message);
-        }
-        // Use API response data directly (firstName/lastName come from the API response, not JWT)
-        const authResponse = {
-          token: apiResponse.token,
-          email: apiResponse.email || '',
-          firstName: apiResponse.firstName || '',
-          lastName: apiResponse.lastName || '',
-        } as AuthResponseDto;
-        return authResponse;
-      }),
-      tap(response => this.setSecureSession(response))
-    );
+    return this._http
+      .post<ApiAuthResponseDto>(this._config.authLoginUrl, credentials, { withCredentials: true })
+      .pipe(
+        map(apiResponse => {
+          if (!apiResponse.isSuccess) {
+            throw new Error(apiResponse.message);
+          }
+          // Use API response data directly (firstName/lastName come from the API response, not JWT)
+          const authResponse = {
+            token: apiResponse.token,
+            email: apiResponse.email || '',
+            firstName: apiResponse.firstName || '',
+            lastName: apiResponse.lastName || '',
+          } as AuthResponseDto;
+          return authResponse;
+        }),
+        tap(async response => {
+          // In development only, ensure cookie is set via same-origin endpoint (proxy)
+          if (!environment.production && response.token) {
+            try {
+              await fetch('/api/auth/set-cookie', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: response.token }),
+                credentials: 'include',
+              });
+            } catch {}
+          }
+          this.setSecureSession(response);
+        })
+      );
   }
 
   register(userData: RegisterDto): Observable<AuthResponseDto> {
-    return this._http.post<ApiAuthResponseDto>(this._config.authRegisterUrl, userData).pipe(
-      map(apiResponse => {
-        if (!apiResponse.isSuccess) {
-          throw new Error(apiResponse.message);
-        }
-        return {
-          token: apiResponse.token,
-          email: apiResponse.email || '',
-          firstName: apiResponse.firstName || '',
-          lastName: apiResponse.lastName || '',
-        } as AuthResponseDto;
-      }),
-      tap(response => this.setSecureSession(response))
-    );
+    return this._http
+      .post<ApiAuthResponseDto>(this._config.authRegisterUrl, userData, { withCredentials: true })
+      .pipe(
+        map(apiResponse => {
+          if (!apiResponse.isSuccess) {
+            throw new Error(apiResponse.message);
+          }
+          return {
+            token: apiResponse.token,
+            email: apiResponse.email || '',
+            firstName: apiResponse.firstName || '',
+            lastName: apiResponse.lastName || '',
+          } as AuthResponseDto;
+        }),
+        tap(async response => {
+          if (!environment.production && response.token) {
+            try {
+              await fetch('/api/auth/set-cookie', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: response.token }),
+                credentials: 'include',
+              });
+            } catch {}
+          }
+          this.setSecureSession(response);
+        })
+      );
   }
 
   /**
@@ -546,10 +645,32 @@ export class AuthService {
   }
 
   // Profile Completion Methods
+  validateSession(): Observable<any> {
+    // Lightweight session probe: 204 = authenticated; errors bubble up
+    return this._http.get(this._config.buildApiEndpoint('auth/validate-session'), {
+      responseType: 'text' as any,
+    });
+  }
+
   checkProfileCompletion(): Observable<ProfileCompletionCheckDto> {
-    return this._http.get<ProfileCompletionCheckDto>(
-      this._config.buildApiEndpoint('auth/profile-completion-status')
-    );
+    // De-duplicate in-flight requests to avoid multiple consecutive calls
+    if (this._profileStatusInFlight$) {
+      return this._profileStatusInFlight$;
+    }
+
+    const req$ = this._http
+      .get<ProfileCompletionCheckDto>(
+        this._config.buildApiEndpoint('auth/profile-completion-status')
+      )
+      .pipe(
+        // Share the result among subscribers and cache the latest
+        shareReplay(1),
+        // Clear the in-flight reference when it completes or errors
+        finalize(() => (this._profileStatusInFlight$ = undefined))
+      );
+
+    this._profileStatusInFlight$ = req$;
+    return req$;
   }
 
   completeProfile(

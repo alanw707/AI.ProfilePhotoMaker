@@ -30,7 +30,6 @@ function isPublicEndpoint(url: string): boolean {
     '/auth/login',
     '/auth/register',
     '/auth/refresh-token',
-    '/auth/validate-session',
     '/health',
     '/api/public',
     '/swagger',
