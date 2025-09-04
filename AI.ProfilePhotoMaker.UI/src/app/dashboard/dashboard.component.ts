@@ -480,10 +480,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     };
   }
 
-  private _calculateTrainingCreditsLocally(_modelStatus: string): number {
-    // Use semantic status for cleaner logic
+  private _calculateTrainingCreditsLocally(modelStatusStr: string): number {
+    // Prefer semantic status when available
     const semantic = this.getSemanticStatus();
-    return semantic?.canGenerate ? 0 : 15;
+    if (semantic) {
+      return semantic.canGenerate ? 0 : 15;
+    }
+    // Fallback immediately to string-based readiness to avoid charging training when model is ready
+    return this._modelStatus.canGenerate(modelStatusStr) ? 0 : 15;
   }
 
   // Helper method to get semantic status from current state
