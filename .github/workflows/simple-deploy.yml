@@ -631,6 +631,54 @@ jobs:
           echo "  Backend: $BACKEND_URL"
           echo "✅ [SUCCESS] Infrastructure deployment completed successfully!"
           
+      - name: 🔒 Enforce private storage when API proxy enabled
+        run: |
+          echo "🔒 [CHECK] Enforcing private storage when API proxy is enabled"
+          
+          # Determine if proxy flag is enabled from container app env or appsettings
+          echo "🔍 [INFO] Checking container app for Storage__ProxyBlobRequests flag..."
+          PROXY_ENV=$(az containerapp show --name aipm-api-v1 --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --query "properties.template.containers[0].env[] | [?name=='Storage__ProxyBlobRequests'].value | [0]" -o tsv 2>/dev/null || echo "")
+          
+          if [[ -z "$PROXY_ENV" ]]; then
+            echo "ℹ️  [INFO] Flag not set in container env; checking repository appsettings.json..."
+            if command -v jq >/dev/null 2>&1; then
+              PROXY_ENV=$(jq -r '.Storage.ProxyBlobRequests // false' AI.ProfilePhotoMaker.API/appsettings.json)
+            else
+              PROXY_ENV=$(grep -E '"ProxyBlobRequests"\s*:\s*true' -q AI.ProfilePhotoMaker.API/appsettings.json && echo true || echo false)
+            fi
+          fi
+          
+          echo "📌 [INFO] Storage:ProxyBlobRequests = ${PROXY_ENV:-false}"
+          
+          if [[ "$PROXY_ENV" == "true" ]]; then
+            echo "🔍 [VALIDATE] Proxy is enabled: verifying storage account and container are private"
+            if [[ -z "${STORAGE_ACCOUNT}" ]]; then
+              echo "❌ [ERROR] STORAGE_ACCOUNT is not set in environment"
+              exit 1
+            fi
+            
+            # Check account-level public access setting
+            ACCOUNT_PUBLIC=$(az storage account show --name "$STORAGE_ACCOUNT" --resource-group "${{ env.RESOURCE_GROUP }}" --query "allowBlobPublicAccess" -o tsv)
+            echo "📊 [INFO] allowBlobPublicAccess=$ACCOUNT_PUBLIC"
+            
+            # Get key and check container ACL
+            STORAGE_KEY=$(az storage account keys list --account-name "$STORAGE_ACCOUNT" --resource-group "${{ env.RESOURCE_GROUP }}" --query "[0].value" --output tsv)
+            CONTAINER_PUBLIC=$(az storage container show --name profile-images --account-name "$STORAGE_ACCOUNT" --account-key "$STORAGE_KEY" --query "properties.publicAccess" -o tsv 2>/dev/null || echo "None")
+            echo "📊 [INFO] profile-images publicAccess=${CONTAINER_PUBLIC:-None}"
+            
+            if [[ "$ACCOUNT_PUBLIC" != "false" ]] || [[ "$CONTAINER_PUBLIC" != "None" && -n "$CONTAINER_PUBLIC" ]]; then
+              echo "❌ [POLICY] Proxy mode requires private storage (no public blob access)."
+              echo "   • Storage account allowBlobPublicAccess must be false"
+              echo "   • Container publicAccess must be 'None'"
+              exit 1
+            else
+              echo "✅ [SUCCESS] Storage is private and compatible with proxy mode"
+            fi
+          else
+            echo "ℹ️  [INFO] Proxy flag disabled; skipping private storage enforcement"
+          fi
+
       - name: 🔍 Post-Deployment Storage Validation
         run: |
           echo "🔍 [VALIDATE] Performing post-deployment Azure Storage validation..."
