@@ -1,6 +1,15 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, map, Observable, tap, catchError, of, shareReplay, finalize } from 'rxjs';
+import {
+  BehaviorSubject,
+  map,
+  Observable,
+  catchError,
+  of,
+  shareReplay,
+  finalize,
+  switchMap,
+} from 'rxjs';
 import { Router } from '@angular/router';
 import { ConfigService } from './config.service';
 import { environment } from '../../environments/environment';
@@ -57,7 +66,7 @@ export interface ApiAuthResponseDto {
 export class AuthService {
   private readonly TOKEN_KEY = 'auth_token';
 
-  private _isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
+  private _isAuthenticatedSubject = new BehaviorSubject<boolean>(this.hasValidSession());
   public isAuthenticated$ = this._isAuthenticatedSubject.asObservable();
 
   private _currentUserSubject = new BehaviorSubject<AuthResponseDto | null>(this.getCurrentUser());
@@ -65,6 +74,8 @@ export class AuthService {
 
   // De-duplication holder for profile completion checks
   private _profileStatusInFlight$?: Observable<ProfileCompletionCheckDto>;
+  // De-duplication holder for session validation checks
+  private _validateSessionInFlight$?: Observable<any>;
 
   constructor(
     private _http: HttpClient,
@@ -357,7 +368,7 @@ export class AuthService {
           } as AuthResponseDto;
           return authResponse;
         }),
-        tap(async response => {
+        switchMap(async response => {
           // In development only, ensure cookie is set via same-origin endpoint (proxy)
           if (!environment.production && response.token) {
             try {
@@ -370,6 +381,7 @@ export class AuthService {
             } catch {}
           }
           this.setSecureSession(response);
+          return response;
         })
       );
   }
@@ -389,7 +401,7 @@ export class AuthService {
             lastName: apiResponse.lastName || '',
           } as AuthResponseDto;
         }),
-        tap(async response => {
+        switchMap(async response => {
           if (!environment.production && response.token) {
             try {
               await fetch('/api/auth/set-cookie', {
@@ -401,6 +413,7 @@ export class AuthService {
             } catch {}
           }
           this.setSecureSession(response);
+          return response;
         })
       );
   }
@@ -590,6 +603,13 @@ export class AuthService {
     return false;
   }
 
+  private hasValidSession(): boolean {
+    // Quick check: if we have user data in localStorage, likely authenticated
+    // This prevents false logouts on page refresh while probeSession() runs async
+    const user = this.getCurrentUser();
+    return user !== null && !!(user.email || user.firstName || user.lastName);
+  }
+
   private getCurrentUser(): AuthResponseDto | null {
     // Try both storage keys for backwards compatibility
     let userStr = localStorage.getItem('currentUser');
@@ -646,10 +666,23 @@ export class AuthService {
 
   // Profile Completion Methods
   validateSession(): Observable<any> {
-    // Lightweight session probe: 204 = authenticated; errors bubble up
-    return this._http.get(this._config.buildApiEndpoint('auth/validate-session'), {
-      responseType: 'text' as any,
-    });
+    // De-duplicate in-flight requests to avoid multiple consecutive calls
+    if (this._validateSessionInFlight$) {
+      return this._validateSessionInFlight$;
+    }
+
+    const req$ = this._http
+      .get(this._config.buildApiEndpoint('auth/validate-session'), {
+        responseType: 'text' as any,
+      })
+      .pipe(
+        shareReplay(1),
+        // Clear the in-flight reference when it completes or errors
+        finalize(() => (this._validateSessionInFlight$ = undefined))
+      );
+
+    this._validateSessionInFlight$ = req$;
+    return req$;
   }
 
   checkProfileCompletion(): Observable<ProfileCompletionCheckDto> {
