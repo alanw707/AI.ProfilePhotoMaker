@@ -111,7 +111,19 @@ export class AuthService {
         map(() => true),
         catchError(() => of(false))
       )
-      .subscribe({ next: (isAuth: boolean) => this._isAuthenticatedSubject.next(isAuth) });
+      .subscribe({
+        next: (isAuth: boolean) => {
+          this._isAuthenticatedSubject.next(isAuth);
+          if (isAuth) {
+            // If we don't have a hydrated user yet, fetch profile details
+            const current = this._currentUserSubject.value;
+            const needsHydration = !current || (!current.firstName && !current.lastName);
+            if (needsHydration) {
+              this.hydrateUserFromProfile();
+            }
+          }
+        },
+      });
   }
 
   public probeSessionForUrl(url: string): void {
@@ -171,25 +183,7 @@ export class AuthService {
             this._currentUserSubject.next(placeholder);
 
             // Hydrate display name from server profile
-            this._http
-              .get<{
-                firstName?: string;
-                lastName?: string;
-              }>(this._config.buildApiEndpoint('profile'))
-              .subscribe({
-                next: resp => {
-                  const updated: AuthResponseDto = {
-                    ...placeholder,
-                    firstName: resp.firstName || placeholder.firstName,
-                    lastName: resp.lastName || placeholder.lastName,
-                  };
-                  localStorage.setItem('currentUser', JSON.stringify(updated));
-                  this._currentUserSubject.next(updated);
-                },
-                error: () => {
-                  // Ignore; header will still show authenticated state
-                },
-              });
+            this.hydrateUserFromProfile();
           }
         },
       });
@@ -287,6 +281,40 @@ export class AuthService {
           };
           localStorage.setItem('currentUser', JSON.stringify(fallbackUser));
           this._currentUserSubject.next(fallbackUser);
+        },
+      });
+  }
+
+  // Fetch profile details and update current user state/localStorage
+  private _profileHydrationInFlight = false;
+  private hydrateUserFromProfile(): void {
+    if (this._profileHydrationInFlight) {
+      return;
+    }
+    this._profileHydrationInFlight = true;
+
+    this._http
+      .get<{ firstName?: string; lastName?: string }>(this._config.buildApiEndpoint('profile'))
+      .pipe(finalize(() => (this._profileHydrationInFlight = false)))
+      .subscribe({
+        next: resp => {
+          const prior = this.getCurrentUser() || {
+            token: '',
+            email: '',
+            firstName: '',
+            lastName: '',
+          };
+          const updated: AuthResponseDto = {
+            token: prior.token,
+            email: prior.email,
+            firstName: resp.firstName || prior.firstName,
+            lastName: resp.lastName || prior.lastName,
+          };
+          localStorage.setItem('currentUser', JSON.stringify(updated));
+          this._currentUserSubject.next(updated);
+        },
+        error: () => {
+          // Non-fatal; keep placeholder
         },
       });
   }
