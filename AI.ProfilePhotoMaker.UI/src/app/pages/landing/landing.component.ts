@@ -636,6 +636,51 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   getCategoryFromStyleName(styleName: string): string {
     const name = styleName.toLowerCase();
+
+    // Lifestyle and fun styles
+    if (name.includes('beach') || name.includes('vibes')) {
+      return 'Lifestyle';
+    }
+    if (name.includes('fresh') || name.includes('energetic')) {
+      return 'Fresh';
+    }
+    if (name.includes('retro') || name.includes('wave') || name.includes('vintage')) {
+      return 'Retro';
+    }
+    if (name.includes('night') || name.includes('out') || name.includes('evening')) {
+      return 'Social';
+    }
+    if (name.includes('digital') && (name.includes('native') || name.includes('creator'))) {
+      return 'Digital';
+    }
+
+    // Industry-specific styles
+    if (name.includes('medical') || name.includes('healthcare')) {
+      return 'Healthcare';
+    }
+    if (name.includes('academic') || name.includes('scholar')) {
+      return 'Academic';
+    }
+    if (name.includes('fitness') || name.includes('athletic')) {
+      return 'Fitness';
+    }
+    if (name.includes('influencer') || name.includes('social media')) {
+      return 'Influencer';
+    }
+    if (name.includes('entrepreneur') || name.includes('startup')) {
+      return 'Business';
+    }
+    if (name.includes('nomad') || name.includes('remote')) {
+      return 'Remote';
+    }
+    if (name.includes('glamour') || name.includes('glamorous')) {
+      return 'Glamour';
+    }
+    if (name.includes('edgy') || name.includes('urban')) {
+      return 'Urban';
+    }
+
+    // Professional styles
     if (name.includes('professional') || name.includes('linkedin')) {
       return 'Business';
     }

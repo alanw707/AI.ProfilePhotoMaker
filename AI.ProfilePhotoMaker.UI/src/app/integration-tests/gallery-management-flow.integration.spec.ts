@@ -7,18 +7,21 @@ import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { GalleryComponent } from '../pages/gallery/gallery.component';
-import { GalleryImage, PhotoGalleryComponent } from '../components/photo-gallery/photo-gallery.component';
+import {
+  GalleryImage,
+  PhotoGalleryComponent,
+} from '../components/photo-gallery/photo-gallery.component';
 import { AuthService } from '../services/auth.service';
 import { FileUploadService, ProcessedImage } from '../services/file-upload.service';
 import { HeaderNavigationComponent } from '../shared/header-navigation/header-navigation.component';
 
 // Mock child components
 @Component({ selector: 'app-header-navigation', template: '' })
-class MockHeaderNavigationComponent { }
+class MockHeaderNavigationComponent {}
 
-@Component({ 
-  selector: 'app-photo-gallery', 
-  template: '<div>Mock Gallery</div>'
+@Component({
+  selector: 'app-photo-gallery',
+  template: '<div>Mock Gallery</div>',
 })
 class MockPhotoGalleryComponent {
   @Input() images: GalleryImage[] = [];
@@ -34,7 +37,9 @@ class MockPhotoGalleryComponent {
   @Output() sortChange = new EventEmitter<any>();
 
   clearSelections() {}
-  getSelectedImages(): GalleryImage[] { return []; }
+  getSelectedImages(): GalleryImage[] {
+    return [];
+  }
 }
 
 // Mock JSZip for testing
@@ -42,7 +47,7 @@ class MockJSZip {
   constructor() {}
   folder(_name: string) {
     return {
-      file: (_filename: string, _data: any) => {}
+      file: (_filename: string, _data: any) => {},
     };
   }
   file(_filename: string, _data: any) {}
@@ -68,7 +73,7 @@ describe('Gallery Management Flow Integration Tests', () => {
       isGenerated: true,
       isOriginalUpload: false,
       createdAt: new Date('2024-01-01'),
-      userId: 'user-123'
+      userId: 'user-123',
     },
     {
       id: 2,
@@ -78,7 +83,7 @@ describe('Gallery Management Flow Integration Tests', () => {
       isGenerated: true,
       isOriginalUpload: false,
       createdAt: new Date('2024-01-02'),
-      userId: 'user-123'
+      userId: 'user-123',
     },
     {
       id: 3,
@@ -88,14 +93,15 @@ describe('Gallery Management Flow Integration Tests', () => {
       isGenerated: false,
       isOriginalUpload: true,
       createdAt: new Date('2024-01-03'),
-      userId: 'user-123'
-    }
+      userId: 'user-123',
+    },
   ];
 
   beforeEach(async () => {
     const authSpy = jasmine.createSpyObj('AuthService', ['isAuthenticated']);
     const fileUploadSpy = jasmine.createSpyObj('FileUploadService', [
-      'getUserImages', 'repairImageDatabase', 'deleteImage'
+      'getUserImages',
+      'deleteImage',
     ]);
 
     // Mock JSZip globally
@@ -106,18 +112,20 @@ describe('Gallery Management Flow Integration Tests', () => {
         CommonModule,
         HttpClientTestingModule,
         RouterTestingModule.withRoutes([
-          { path: 'login', component: MockHeaderNavigationComponent }
+          { path: 'login', component: MockHeaderNavigationComponent },
         ]),
-        GalleryComponent
+        GalleryComponent,
       ],
       providers: [
         { provide: AuthService, useValue: authSpy },
-        { provide: FileUploadService, useValue: fileUploadSpy }
-      ]
-    }).overrideComponent(GalleryComponent, {
-      remove: { imports: [PhotoGalleryComponent, HeaderNavigationComponent] },
-      add: { imports: [MockPhotoGalleryComponent, MockHeaderNavigationComponent] }
-    }).compileComponents();
+        { provide: FileUploadService, useValue: fileUploadSpy },
+      ],
+    })
+      .overrideComponent(GalleryComponent, {
+        remove: { imports: [PhotoGalleryComponent, HeaderNavigationComponent] },
+        add: { imports: [MockPhotoGalleryComponent, MockHeaderNavigationComponent] },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(GalleryComponent);
     component = fixture.componentInstance;
@@ -128,14 +136,12 @@ describe('Gallery Management Flow Integration Tests', () => {
 
     // Setup default mocks
     authService.isAuthenticated.and.returnValue(true);
-    fileUploadService.getUserImages.and.returnValue(of({
-      images: mockProcessedImages,
-      generatedImages: 2
-    }));
-    fileUploadService.repairImageDatabase.and.returnValue(of({
-      success: true,
-      message: 'Database repaired successfully'
-    }));
+    fileUploadService.getUserImages.and.returnValue(
+      of({
+        images: mockProcessedImages,
+        generatedImages: 2,
+      })
+    );
   });
 
   afterEach(() => {
@@ -164,26 +170,6 @@ describe('Gallery Management Flow Integration Tests', () => {
       expect(fileUploadService.getUserImages).toHaveBeenCalled();
       expect(component.galleryImages).toHaveLength(3);
     });
-
-    it('should run database repair on first load', () => {
-      component.ngOnInit();
-
-      expect(fileUploadService.repairImageDatabase).toHaveBeenCalled();
-    });
-
-    it('should handle repair failure gracefully', () => {
-      fileUploadService.repairImageDatabase.and.returnValue(
-        throwError(() => new Error('Repair failed'))
-      );
-      spyOn(console, 'warn');
-
-      component.ngOnInit();
-
-      expect(console.warn).toHaveBeenCalledWith(
-        '⚠️ Image repair failed, continuing with normal load:', 
-        jasmine.any(Error)
-      );
-    });
   });
 
   describe('Image Loading and Display', () => {
@@ -200,7 +186,7 @@ describe('Gallery Management Flow Integration Tests', () => {
         createdAt: new Date('2024-01-01'),
         status: 'completed',
         type: 'generated',
-        downloadUrl: '/generated/user-123/prof1.jpg'
+        downloadUrl: '/generated/user-123/prof1.jpg',
       });
     });
 
@@ -216,13 +202,15 @@ describe('Gallery Management Flow Integration Tests', () => {
     it('should deduplicate images by ID', () => {
       const duplicateImages = [
         ...mockProcessedImages,
-        mockProcessedImages[0] // Duplicate
+        mockProcessedImages[0], // Duplicate
       ];
 
-      fileUploadService.getUserImages.and.returnValue(of({
-        images: duplicateImages,
-        generatedImages: 2
-      }));
+      fileUploadService.getUserImages.and.returnValue(
+        of({
+          images: duplicateImages,
+          generatedImages: 2,
+        })
+      );
 
       component.ngOnInit();
 
@@ -230,10 +218,12 @@ describe('Gallery Management Flow Integration Tests', () => {
     });
 
     it('should handle empty image response', () => {
-      fileUploadService.getUserImages.and.returnValue(of({
-        images: [],
-        generatedImages: 0
-      }));
+      fileUploadService.getUserImages.and.returnValue(
+        of({
+          images: [],
+          generatedImages: 0,
+        })
+      );
 
       component.ngOnInit();
 
@@ -241,9 +231,7 @@ describe('Gallery Management Flow Integration Tests', () => {
     });
 
     it('should handle loading errors', () => {
-      fileUploadService.getUserImages.and.returnValue(
-        throwError(() => new Error('Load failed'))
-      );
+      fileUploadService.getUserImages.and.returnValue(throwError(() => new Error('Load failed')));
       spyOn(console, 'error');
 
       component.ngOnInit();
@@ -268,10 +256,12 @@ describe('Gallery Management Flow Integration Tests', () => {
     });
 
     it('should handle image deletion', () => {
-      fileUploadService.deleteImage.and.returnValue(of({
-        success: true,
-        message: 'Image deleted successfully'
-      }));
+      fileUploadService.deleteImage.and.returnValue(
+        of({
+          success: true,
+          message: 'Image deleted successfully',
+        })
+      );
       spyOn(window, 'confirm').and.returnValue(true);
 
       const testImage = component.galleryImages[0];
@@ -297,9 +287,7 @@ describe('Gallery Management Flow Integration Tests', () => {
     });
 
     it('should handle deletion errors', () => {
-      fileUploadService.deleteImage.and.returnValue(
-        throwError(() => new Error('Delete failed'))
-      );
+      fileUploadService.deleteImage.and.returnValue(throwError(() => new Error('Delete failed')));
       spyOn(window, 'confirm').and.returnValue(true);
       spyOn(console, 'error');
 
@@ -318,7 +306,7 @@ describe('Gallery Management Flow Integration Tests', () => {
       expect(mockShare).toHaveBeenCalledWith({
         title: testImage.title,
         text: testImage.description,
-        url: testImage.url
+        url: testImage.url,
       });
     });
 
@@ -346,7 +334,7 @@ describe('Gallery Management Flow Integration Tests', () => {
       const mockResponse = {
         ok: true,
         headers: new Map([['content-type', 'image/jpeg']]),
-        blob: () => Promise.resolve(new Blob(['mock image data'], { type: 'image/jpeg' }))
+        blob: () => Promise.resolve(new Blob(['mock image data'], { type: 'image/jpeg' })),
       };
       mockFetch.and.returnValue(Promise.resolve(mockResponse));
 
@@ -354,7 +342,7 @@ describe('Gallery Management Flow Integration Tests', () => {
         href: '',
         download: '',
         click: jasmine.createSpy('click'),
-        style: { display: '' }
+        style: { display: '' },
       };
       spyOn(document, 'createElement').and.returnValue(mockLink as any);
       spyOn(document.body, 'appendChild');
@@ -384,36 +372,36 @@ describe('Gallery Management Flow Integration Tests', () => {
 
     it('should test image accessibility before download', async () => {
       const testImage = component.galleryImages[0];
-      
+
       // Mock successful fetch for accessibility test
       mockFetch.and.returnValue(Promise.resolve({ ok: true }));
-      
+
       const isAccessible = await component.testImageAccess(testImage);
-      
+
       expect(isAccessible).toBe(true);
     });
 
     it('should handle inaccessible images', async () => {
       const testImage = component.galleryImages[0];
-      
+
       // Mock failed fetch for accessibility test
       mockFetch.and.returnValue(Promise.reject(new Error('Network error')));
-      
+
       // Mock image element fallback
       const mockImage = {
         onload: null as any,
         onerror: null as any,
-        src: ''
+        src: '',
       };
       spyOn(window, 'Image').and.returnValue(mockImage as any);
-      
+
       const accessibilityPromise = component.testImageAccess(testImage);
-      
+
       // Simulate image load failure
       setTimeout(() => {
         mockImage.onerror();
       }, 0);
-      
+
       const isAccessible = await accessibilityPromise;
       expect(isAccessible).toBe(false);
     });
@@ -421,13 +409,13 @@ describe('Gallery Management Flow Integration Tests', () => {
     it('should skip enhanced images for download', async () => {
       const enhancedImage = {
         ...component.galleryImages[0],
-        style: 'Background Remover'
+        style: 'Background Remover',
       };
-      
+
       spyOn(window, 'alert');
-      
+
       await component.onImageDownload(enhancedImage);
-      
+
       expect(window.alert).toHaveBeenCalledWith(
         jasmine.stringContaining('Enhanced image downloads are not yet implemented')
       );
@@ -441,21 +429,21 @@ describe('Gallery Management Flow Integration Tests', () => {
 
     it('should handle bulk download with multiple images', async () => {
       const selectedImages = component.galleryImages.slice(0, 2);
-      
+
       spyOn(component, 'createZipDownload').and.returnValue(Promise.resolve());
-      
+
       await component.onBulkDownload(selectedImages);
-      
+
       expect(component.createZipDownload).toHaveBeenCalledWith(selectedImages);
     });
 
     it('should handle single image bulk download', async () => {
       const selectedImages = [component.galleryImages[0]];
-      
+
       spyOn(component, 'onImageDownload').and.returnValue(Promise.resolve());
-      
+
       await component.onBulkDownload(selectedImages);
-      
+
       expect(component.onImageDownload).toHaveBeenCalledWith(selectedImages[0]);
     });
 
@@ -463,14 +451,14 @@ describe('Gallery Management Flow Integration Tests', () => {
       const mixedImages = [
         component.galleryImages[0],
         { ...component.galleryImages[1], style: 'Background Remover' },
-        component.galleryImages[2]
+        component.galleryImages[2],
       ];
-      
+
       spyOn(window, 'alert');
       spyOn(component, 'createZipDownload').and.returnValue(Promise.resolve());
-      
+
       await component.onBulkDownload(mixedImages);
-      
+
       expect(window.alert).toHaveBeenCalledWith(
         jasmine.stringContaining('Skipping 1 enhanced images')
       );
@@ -478,9 +466,9 @@ describe('Gallery Management Flow Integration Tests', () => {
 
     it('should handle empty selection', async () => {
       spyOn(console, 'warn');
-      
+
       await component.onBulkDownload([]);
-      
+
       expect(console.warn).toHaveBeenCalledWith('No images selected for download');
     });
   });
@@ -495,19 +483,21 @@ describe('Gallery Management Flow Integration Tests', () => {
 
     it('should create ZIP file with multiple images', async () => {
       const selectedImages = component.galleryImages.slice(0, 2);
-      
+
       // Mock successful fetch responses
-      mockFetch.and.returnValue(Promise.resolve({
-        ok: true,
-        headers: new Map([['content-type', 'image/jpeg']]),
-        blob: () => Promise.resolve(new Blob(['mock image data'], { type: 'image/jpeg' }))
-      }));
+      mockFetch.and.returnValue(
+        Promise.resolve({
+          ok: true,
+          headers: new Map([['content-type', 'image/jpeg']]),
+          blob: () => Promise.resolve(new Blob(['mock image data'], { type: 'image/jpeg' })),
+        })
+      );
 
       const mockLink = {
         href: '',
         download: '',
         click: jasmine.createSpy('click'),
-        style: { display: '' }
+        style: { display: '' },
       };
       spyOn(document, 'createElement').and.returnValue(mockLink as any);
       spyOn(document.body, 'appendChild');
@@ -526,7 +516,7 @@ describe('Gallery Management Flow Integration Tests', () => {
 
     it('should handle ZIP creation errors', async () => {
       const selectedImages = component.galleryImages.slice(0, 2);
-      
+
       mockFetch.and.returnValue(Promise.reject(new Error('Network error')));
       spyOn(window, 'alert');
 
@@ -540,29 +530,31 @@ describe('Gallery Management Flow Integration Tests', () => {
 
     it('should track progress during ZIP creation', async () => {
       const selectedImages = component.galleryImages.slice(0, 3);
-      
-      mockFetch.and.returnValue(Promise.resolve({
-        ok: true,
-        headers: new Map([['content-type', 'image/jpeg']]),
-        blob: () => Promise.resolve(new Blob(['mock image data'], { type: 'image/jpeg' }))
-      }));
+
+      mockFetch.and.returnValue(
+        Promise.resolve({
+          ok: true,
+          headers: new Map([['content-type', 'image/jpeg']]),
+          blob: () => Promise.resolve(new Blob(['mock image data'], { type: 'image/jpeg' })),
+        })
+      );
 
       const progressValues: number[] = [];
-      
-      spyOn(component, 'createZipDownload').and.callFake(async (images) => {
+
+      spyOn(component, 'createZipDownload').and.callFake(async images => {
         component.isDownloading = true;
-        
+
         for (let i = 0; i < images.length; i++) {
           component.downloadProgress = Math.round(((i + 1) / images.length) * 90);
           progressValues.push(component.downloadProgress);
         }
-        
+
         component.downloadProgress = 100;
         progressValues.push(component.downloadProgress);
-        
+
         component.isDownloading = false;
         component.downloadProgress = 0;
-        
+
         return Promise.resolve();
       });
 
@@ -575,26 +567,26 @@ describe('Gallery Management Flow Integration Tests', () => {
   describe('Gallery Refresh', () => {
     it('should refresh gallery images', () => {
       spyOn(component, 'loadImages');
-      
+
       component.refreshGallery();
-      
+
       expect(component.loadImages).toHaveBeenCalledWith(true);
     });
 
     it('should handle refresh query parameter', () => {
       spyOn(component, 'loadImages');
-      
+
       // Mock ActivatedRoute with refresh param
       const mockRoute = TestBed.inject(Router);
       spyOn(mockRoute, 'navigate');
-      
+
       component.ngOnInit();
-      
+
       // Simulate navigation with refresh parameter
       component['route'].queryParams = of({ refresh: 'true' });
-      
+
       component.ngOnInit();
-      
+
       expect(component.loadImages).toHaveBeenCalledWith(true);
     });
   });
@@ -616,7 +608,7 @@ describe('Gallery Management Flow Integration Tests', () => {
   describe('Fallback Download', () => {
     it('should provide fallback download method', () => {
       const testImage = component.galleryImages[0];
-      
+
       const mockLink = {
         href: '',
         download: '',
@@ -624,7 +616,7 @@ describe('Gallery Management Flow Integration Tests', () => {
         style: { display: '' },
         target: '',
         rel: '',
-        setAttribute: jasmine.createSpy('setAttribute')
+        setAttribute: jasmine.createSpy('setAttribute'),
       };
       spyOn(document, 'createElement').and.returnValue(mockLink as any);
       spyOn(document.body, 'appendChild');
@@ -643,7 +635,7 @@ describe('Gallery Management Flow Integration Tests', () => {
 
     it('should handle fallback download errors', () => {
       const testImage = component.galleryImages[0];
-      
+
       spyOn(document, 'createElement').and.throwError('DOM error');
       spyOn(window, 'alert');
 
@@ -657,16 +649,20 @@ describe('Gallery Management Flow Integration Tests', () => {
 
   describe('Performance and Memory Management', () => {
     it('should handle large image sets efficiently', () => {
-      const largeImageSet = Array(100).fill(null).map((_, i) => ({
-        ...mockProcessedImages[0],
-        id: i,
-        url: `/generated/user-123/image${i}.jpg`
-      }));
+      const largeImageSet = Array(100)
+        .fill(null)
+        .map((_, i) => ({
+          ...mockProcessedImages[0],
+          id: i,
+          url: `/generated/user-123/image${i}.jpg`,
+        }));
 
-      fileUploadService.getUserImages.and.returnValue(of({
-        images: largeImageSet,
-        generatedImages: 100
-      }));
+      fileUploadService.getUserImages.and.returnValue(
+        of({
+          images: largeImageSet,
+          generatedImages: 100,
+        })
+      );
 
       const startTime = performance.now();
       component.ngOnInit();
@@ -678,7 +674,7 @@ describe('Gallery Management Flow Integration Tests', () => {
 
     it('should clean up resources on destroy', () => {
       component.ngOnDestroy();
-      
+
       // Verify cleanup (would need actual cleanup implementation)
       expect(component.isLoading).toBe(false);
       expect(component.isDownloading).toBe(false);
@@ -687,9 +683,7 @@ describe('Gallery Management Flow Integration Tests', () => {
 
   describe('Error Recovery', () => {
     it('should recover from network errors', () => {
-      fileUploadService.getUserImages.and.returnValue(
-        throwError(() => new Error('Network error'))
-      );
+      fileUploadService.getUserImages.and.returnValue(throwError(() => new Error('Network error')));
 
       component.ngOnInit();
 
@@ -702,14 +696,16 @@ describe('Gallery Management Flow Integration Tests', () => {
         {
           ...mockProcessedImages[0],
           processedImageUrl: null,
-          originalImageUrl: null
-        }
+          originalImageUrl: null,
+        },
       ];
 
-      fileUploadService.getUserImages.and.returnValue(of({
-        images: corruptedImages,
-        generatedImages: 0
-      }));
+      fileUploadService.getUserImages.and.returnValue(
+        of({
+          images: corruptedImages,
+          generatedImages: 0,
+        })
+      );
 
       component.ngOnInit();
 
