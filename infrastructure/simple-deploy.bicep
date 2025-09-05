@@ -443,7 +443,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             }
             {
               name: 'Database__AutoMigrateOnStartup'
-              value: 'true'
+              value: 'false'
             }
             {
               name: 'Database__ValidateOnStartup'
