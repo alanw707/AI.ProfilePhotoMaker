@@ -11,31 +11,26 @@ namespace AI.ProfilePhotoMaker.API.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            var updateTime = new DateTime(2025, 9, 5, 4, 0, 0, 0, DateTimeKind.Utc);
-
-            // Add digital-native style as a new entry (don't try to update ID 20 which is academic)
-            migrationBuilder.InsertData(
-                table: "Styles",
-                columns: new[] { "Name", "Description", "PromptTemplate", "NegativePromptTemplate", "IsActive", "CreatedAt", "UpdatedAt" },
-                values: new object[] { 
-                    "digital-native", 
-                    "Modern tech creator portrait",
-                    "{subject}, professional portrait of {gender} {ethnicity}, modern digital creator aesthetic, subtle RGB accent lighting, clean tech-inspired background, confident creative expression, contemporary casual style, soft purple and cyan color accents, approachable online personality",
-                    "outdated technology, old fashioned, formal business, analog aesthetic, traditional office",
-                    true,
-                    updateTime,
-                    updateTime
-                });
+            // Add digital-native style as a new entry using direct SQL to avoid seeding issues
+            migrationBuilder.Sql(@"
+                INSERT INTO Styles (Name, Description, PromptTemplate, NegativePromptTemplate, IsActive, CreatedAt, UpdatedAt)
+                VALUES (
+                    'digital-native', 
+                    'Modern tech creator portrait',
+                    '{subject}, professional portrait of {gender} {ethnicity}, modern digital creator aesthetic, subtle RGB accent lighting, clean tech-inspired background, confident creative expression, contemporary casual style, soft purple and cyan color accents, approachable online personality',
+                    'outdated technology, old fashioned, formal business, analog aesthetic, traditional office',
+                    1,
+                    GETUTCDATE(),
+                    GETUTCDATE()
+                )
+            ");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // Remove digital-native style
-            migrationBuilder.DeleteData(
-                table: "Styles",
-                keyColumn: "Name",
-                keyValue: "digital-native");
+            // Remove digital-native style using direct SQL
+            migrationBuilder.Sql("DELETE FROM Styles WHERE Name = 'digital-native'");
         }
     }
 }
