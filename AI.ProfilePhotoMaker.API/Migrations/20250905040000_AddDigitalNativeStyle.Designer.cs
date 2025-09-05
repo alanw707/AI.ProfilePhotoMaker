@@ -12,14 +12,19 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AI.ProfilePhotoMaker.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250904200128_RestoreDigitalNativeStyle")]
-    partial class RestoreDigitalNativeStyle
+    [Migration("20250905040000_AddDigitalNativeStyle")]
+    partial class AddDigitalNativeStyle
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
-            // This migration only updates existing data, no model changes required
-            // Model snapshot remains the same as previous migration
+#pragma warning disable 612, 618
+            modelBuilder
+                .HasAnnotation("ProductVersion", "8.0.8")
+                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+#pragma warning restore 612, 618
         }
     }
 }
