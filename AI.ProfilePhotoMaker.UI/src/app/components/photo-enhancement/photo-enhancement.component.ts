@@ -35,7 +35,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
   selectedFile: File | null = null;
   imagePreview: string | null = null;
-  enhancementType = 'background';
+  enhancementType = 'chibi';
   isProcessing = false;
   processingProgress = 0;
   processingStatus = '';
@@ -64,10 +64,10 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     );
   }
 
-  // Check if user has enough credits for enhancement
+  // Check if user has enough credits for enhancement (2 credits required for OpenAI)
   hasEnoughCredits(): boolean {
     const totalCredits = this.getTotalAvailableCredits();
-    return totalCredits > 0;
+    return totalCredits >= 2;
   }
 
   ngOnInit() {

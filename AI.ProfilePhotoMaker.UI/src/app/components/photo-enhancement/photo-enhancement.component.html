@@ -74,42 +74,31 @@
         <div class="enhancement-options">
           <h3>Enhancement Options</h3>
           <div class="options-grid">
-            <label class="option-card" [class.selected]="enhancementType === 'background'">
-              <input type="radio" name="enhancement" value="background" [(ngModel)]="enhancementType" />
+            <label class="option-card" [class.selected]="enhancementType === 'chibi'">
+              <input type="radio" name="enhancement" value="chibi" [(ngModel)]="enhancementType" />
               <div class="option-content">
-                <div class="option-icon">🖼️</div>
+                <div class="option-icon">🌸</div>
                 <div class="option-text">
-                  <h4>Background Remover</h4>
-                  <p>Remove/replace background with professional backdrop</p>
+                  <h4>Chibi Style</h4>
+                  <p>Super cute anime style with oversized head and tiny body</p>
                 </div>
               </div>
             </label>
 
-            <label class="option-card" [class.selected]="enhancementType === 'social'">
-              <input type="radio" name="enhancement" value="social" [(ngModel)]="enhancementType" />
+            <label class="option-card" [class.selected]="enhancementType === 'pixar_3d'">
+              <input type="radio" name="enhancement" value="pixar_3d" [(ngModel)]="enhancementType" />
               <div class="option-content">
-                <div class="option-icon">📱</div>
+                <div class="option-icon">🎬</div>
                 <div class="option-text">
-                  <h4>Social Media</h4>
-                  <p>Perfect for Instagram, bright and engaging, iPhone 16 Pro quality</p>
-                </div>
-              </div>
-            </label>
-
-            <label class="option-card" [class.selected]="enhancementType === 'cartoon'">
-              <input type="radio" name="enhancement" value="cartoon" [(ngModel)]="enhancementType" />
-              <div class="option-content">
-                <div class="option-icon">🎨</div>
-                <div class="option-text">
-                  <h4>Cartoon Mode</h4>
-                  <p>Fun animated style transformation</p>
+                  <h4>Pixar 3D</h4>
+                  <p>Professional 3D animation style with cinematic quality</p>
                 </div>
               </div>
             </label>
           </div>
 
           <button class="btn btn-primary enhance-btn" (click)="startEnhancement()" [disabled]="!hasEnoughCredits()">
-            <span *ngIf="hasEnoughCredits()">Enhance Photo (1 credit)</span>
+            <span *ngIf="hasEnoughCredits()">Enhance Photo (2 credits)</span>
             <span *ngIf="!hasEnoughCredits()">No Credits Available</span>
           </button>
         </div>
