@@ -218,7 +218,7 @@ export class ReplicateService {
     );
   }
 
-  // Photo Enhancement
+  // Photo Enhancement - Routes to correct provider based on enhancement type
   enhancePhoto(request: EnhancePhotoRequest): Observable<{
     success: boolean;
     data: {
@@ -228,6 +228,12 @@ export class ReplicateService {
     };
     error: any;
   }> {
+    // OpenAI enhancement types
+    const openAIStyles = ['chibi', 'pixar_3d', 'studio_ghibli'];
+    const isOpenAI = openAIStyles.includes(request.enhancementType || '');
+
+    const endpoint = isOpenAI ? '/api/enhancement/enhance' : '/replicate/enhance';
+
     return this.http.post<{
       success: boolean;
       data: {
@@ -236,7 +242,7 @@ export class ReplicateService {
         enhancementType: string;
       };
       error: any;
-    }>(this.config.getFullUrl('/api/enhancement/enhance'), request);
+    }>(this.config.getFullUrl(endpoint), request);
   }
 }
 

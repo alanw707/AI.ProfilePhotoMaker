@@ -478,7 +478,7 @@ detect_naming_mismatches() {
         local correct_name="${mismatch##*:}"
         
         # Check if wrong name appears in infrastructure
-        if echo "$BICEP_ENV_VARS$BICEP_CONFIG_VARS" | grep -q "$wrong_name"; then
+        if echo "$BICEP_ENV_VARS$BICEP_CONFIG_VARS" | grep -q "^$wrong_name$"; then
             log_critical "Naming mismatch detected: $wrong_name should be $correct_name"
             add_remediation "Rename $wrong_name to $correct_name in infrastructure configuration"
         fi
