@@ -236,7 +236,7 @@ export class ReplicateService {
         enhancementType: string;
       };
       error: any;
-    }>(this.config.getFullUrl('/replicate/enhance'), request);
+    }>(this.config.getFullUrl('/api/enhancement/enhance'), request);
   }
 }
 

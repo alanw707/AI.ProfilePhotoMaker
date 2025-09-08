@@ -733,7 +733,7 @@ compare_configuration_snapshots() {
         log_item "🆕 New configuration variables detected:"
         echo "$added_vars" | while read -r var; do
             [[ -n "$var" ]] && log_item "  + $var"
-        done
+        done || true
     fi
     
     # Check for removed variables
@@ -742,7 +742,7 @@ compare_configuration_snapshots() {
         log_warning "🗑️  Configuration variables removed:"
         echo "$removed_vars" | while read -r var; do
             [[ -n "$var" ]] && log_warning "  - $var"
-        done
+        done || true
     fi
 }
 
