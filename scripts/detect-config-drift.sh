@@ -150,7 +150,7 @@ extract_app_environment_variables() {
     
     # Extract required environment variables
     REQUIRED_APP_VARS=$(grep -E "^\s*public const string [A-Z_]+ = \"[A-Z_]+\";" "$env_config_file" | \
-        sed -E 's/.*= "([^"]+)".*/\1/' | sort -u)
+        sed -E 's/.*= "([^"]+)".*/\1/' | sort -u || true)
     
     log_verbose "Required variables from EnvironmentConfiguration.cs:"
     echo "$REQUIRED_APP_VARS" | while read -r var; do
@@ -161,7 +161,7 @@ extract_app_environment_variables() {
     OPTIONAL_APP_VARS=$(grep -E "GetEnvironmentVariable\(.*\)" "$env_config_file" | \
         grep -v "GetRequiredVariable" | \
         sed -E 's/.*GetEnvironmentVariable\(([^)]+)\).*/\1/' | \
-        tr -d '"' | sort -u)
+        tr -d '"' | sort -u || true)
     
     log_verbose "Optional variables from EnvironmentConfiguration.cs:"
     echo "$OPTIONAL_APP_VARS" | while read -r var; do
