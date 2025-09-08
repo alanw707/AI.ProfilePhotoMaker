@@ -36,13 +36,11 @@ jobs:
   config-drift-detection:
     name: 🔍 Detect Configuration Drift
     runs-on: ubuntu-latest
-    if: ${{ matrix.environment != '' }}
     
     strategy:
       matrix:
-        environment: 
-          - ${{ github.event.inputs.environment || 'Production' }}
-          - ${{ github.event_name == 'schedule' && 'Staging' || '' }}
+        # Build the environment list dynamically and avoid empty entries
+        environment: ${{ fromJSON(format('["{0}"{1}]', (github.event.inputs.environment || 'Production'), (github.event_name == 'schedule' && '","Staging"' || ''))) }}
       fail-fast: false
     
     steps:
