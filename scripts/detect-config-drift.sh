@@ -641,7 +641,6 @@ check_production_staging_drift() {
         "JWT_SECRET"
         "REPLICATE_API_TOKEN"
         "REPLICATE_WEBHOOK_SECRET"
-        "AZURE_STORAGE_CONNECTION_STRING"
     )
     
     for secret in "${production_required_secrets[@]}"; do
