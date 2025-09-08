@@ -14,7 +14,8 @@
 # and distinguishes between secret-based vs infrastructure-generated patterns.
 # =============================================================================
 
-set -euo pipefail
+# Use -u and pipefail for safety, avoid -e so analysis continues even if a subcommand returns non-zero
+set -uo pipefail
 
 # Script version for tracking changes
 SCRIPT_VERSION="1.0.0"
