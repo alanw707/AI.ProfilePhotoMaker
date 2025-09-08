@@ -36,6 +36,7 @@ jobs:
   config-drift-detection:
     name: 🔍 Detect Configuration Drift
     runs-on: ubuntu-latest
+    if: ${{ matrix.environment != '' }}
     
     strategy:
       matrix:
@@ -57,25 +58,32 @@ jobs:
           export TARGET_ENV="${{ matrix.environment }}"
           export OUTPUT_FORMAT="github-actions"
           export VERBOSE="${{ github.event.inputs.verbose || 'false' }}"
-          export EXIT_ON_DRIFT="false"  # Don't exit on drift, we'll handle it
+          # Let the script's exit code reflect drift severity so status matches counts
+          export EXIT_ON_DRIFT="true"
           
           # Run the drift detection script
           chmod +x scripts/detect-config-drift.sh
           
           if ./scripts/detect-config-drift.sh "${{ matrix.environment }}"; then
+            # Script already wrote drift-critical and drift-warnings to $GITHUB_OUTPUT
             echo "drift-status=success" >> $GITHUB_OUTPUT
-            echo "drift-critical=0" >> $GITHUB_OUTPUT
-            echo "drift-warnings=0" >> $GITHUB_OUTPUT
           else
             exit_code=$?
             if [[ $exit_code -eq 1 ]]; then
               echo "drift-status=critical" >> $GITHUB_OUTPUT
+              # Fallback counts if script couldn't emit outputs
+              grep -q '^drift-critical=' "$GITHUB_OUTPUT" || echo "drift-critical=1" >> "$GITHUB_OUTPUT"
+              grep -q '^drift-warnings=' "$GITHUB_OUTPUT" || echo "drift-warnings=0" >> "$GITHUB_OUTPUT"
               echo "Critical configuration drift detected!"
             elif [[ $exit_code -eq 2 ]]; then
               echo "drift-status=warning" >> $GITHUB_OUTPUT
+              grep -q '^drift-warnings=' "$GITHUB_OUTPUT" || echo "drift-warnings=1" >> "$GITHUB_OUTPUT"
+              grep -q '^drift-critical=' "$GITHUB_OUTPUT" || echo "drift-critical=0" >> "$GITHUB_OUTPUT"
               echo "Warning-level configuration drift detected!"
             else
               echo "drift-status=error" >> $GITHUB_OUTPUT
+              grep -q '^drift-critical=' "$GITHUB_OUTPUT" || echo "drift-critical=0" >> "$GITHUB_OUTPUT"
+              grep -q '^drift-warnings=' "$GITHUB_OUTPUT" || echo "drift-warnings=0" >> "$GITHUB_OUTPUT"
               echo "Script execution error occurred!"
             fi
           fi
@@ -340,7 +348,7 @@ jobs:
           echo "## Weekly Configuration Drift Monitor Completed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Monitoring Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
-          echo "**Environments Checked:** ${{ matrix.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Environments Checked:** See individual matrix jobs above" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           # Check job results
