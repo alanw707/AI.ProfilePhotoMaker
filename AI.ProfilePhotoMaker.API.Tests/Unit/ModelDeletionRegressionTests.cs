@@ -122,7 +122,7 @@ public class ModelDeletionRegressionTests : IDisposable
             x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("proactive version cleanup")),
+                It.Is<It.IsAnyType>((v, t) => string.Concat(v).Contains("proactive version cleanup")),
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -132,7 +132,7 @@ public class ModelDeletionRegressionTests : IDisposable
             x => x.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains($"Empty response when fetching versions for model {modelId}")),
+                It.Is<It.IsAnyType>((v, t) => string.Concat(v).Contains($"Empty response when fetching versions for model {modelId}")),
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -210,7 +210,7 @@ public class ModelDeletionRegressionTests : IDisposable
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Invalid JSON response when fetching versions")),
+                It.Is<It.IsAnyType>((v, t) => string.Concat(v).Contains("Invalid JSON response when fetching versions")),
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -282,7 +282,7 @@ public class ModelDeletionRegressionTests : IDisposable
             x => x.Log(
                 LogLevel.Debug,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("No versions found for model") && v.ToString().Contains("proceeding to model deletion")),
+                It.Is<It.IsAnyType>((v, t) => (string.Concat(v).Contains("No versions found for model") && string.Concat(v).Contains("proceeding to model deletion"))),
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -403,7 +403,7 @@ public class ModelDeletionRegressionTests : IDisposable
             x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Found 2 versions for model") && v.ToString().Contains("cleaning up proactively")),
+                It.Is<It.IsAnyType>((v, t) => (string.Concat(v).Contains("Found 2 versions for model") && string.Concat(v).Contains("cleaning up proactively"))),
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -413,7 +413,7 @@ public class ModelDeletionRegressionTests : IDisposable
             x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Version cleanup complete: 2 versions deleted")),
+                It.Is<It.IsAnyType>((v, t) => string.Concat(v).Contains("Version cleanup complete: 2 versions deleted")),
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -510,7 +510,7 @@ public class ModelDeletionRegressionTests : IDisposable
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Version cleanup incomplete: 1/1 failed")),
+                It.Is<It.IsAnyType>((v, t) => string.Concat(v).Contains("Version cleanup incomplete: 1/1 failed")),
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -595,7 +595,7 @@ public class ModelDeletionRegressionTests : IDisposable
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Unexpected deletion failure for") && v.ToString().Contains(modelId)),
+                It.Is<It.IsAnyType>((v, t) => (string.Concat(v).Contains("Unexpected deletion failure for") && string.Concat(v).Contains(modelId))),
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -633,7 +633,7 @@ public class ProfileControllerDeletionRegressionTests
         var controllerCode = File.ReadAllText(controllerPath);
         
         // Assert - Verify the controller uses proper tuple destructuring
-        Assert.True(controllerCode.Contains("var (success, errorMessage) = await _replicateApiClient.DeleteModelAsync(trainedModel.ReplicateModelId)"), 
+        Assert.True(controllerCode.Contains(expectedTuplePattern), 
             "ProfileController should use proper tuple destructuring for DeleteModelAsync call");
     }
 }

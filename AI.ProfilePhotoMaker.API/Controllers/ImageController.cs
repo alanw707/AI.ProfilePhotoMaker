@@ -141,37 +141,29 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     await _storageService.SaveImageToPathAsync(imageStream, storagePath);
 
                     // Store storage path in DB; URLs are generated per-request
-                    // This keeps deletion/storage operations reliable across environments
-
-                    // Only create database records for non-enhanced images
-                    // Enhanced images are temporary files and should NOT be counted in dashboard
-                    if (!dto.IsEnhanced)
+                    // Persist both original uploads and enhanced images so they appear in the gallery
+                    var processedImage = new ProcessedImage
                     {
-                        var processedImage = new ProcessedImage
-                        {
-                            OriginalImageUrl = storagePath,
-                            ProcessedImageUrl = storagePath,
-                            Style = ImageConstants.OriginalStyle,
-                            UserProfileId = profile.Id,
-                            CreatedAt = DateTime.UtcNow,
-                            IsOriginalUpload = true,
-                            IsGenerated = false,
-                        };
+                        OriginalImageUrl = dto.IsEnhanced ? string.Empty : storagePath,
+                        ProcessedImageUrl = storagePath,
+                        Style = dto.IsEnhanced ? "Enhanced" : ImageConstants.OriginalStyle,
+                        UserProfileId = profile.Id,
+                        CreatedAt = DateTime.UtcNow,
+                        IsOriginalUpload = !dto.IsEnhanced,
+                        IsGenerated = dto.IsEnhanced,
+                    };
 
-                        // Set scheduled deletion date based on retention policy
-                        processedImage.SetScheduledDeletionDate();
+                    // Set scheduled deletion date based on retention policy
+                    processedImage.SetScheduledDeletionDate();
 
-                        profile.ProcessedImages.Add(processedImage);
-                        uploadedImages.Add(processedImage);
+                    profile.ProcessedImages.Add(processedImage);
+                    uploadedImages.Add(processedImage);
 
-                        Logger.LogInformation("Created database record for uploaded image {FileName} for user {UserId}",
-                            fileName, userId);
-                    }
-                    else
-                    {
-                        Logger.LogInformation("Skipped database record for enhanced image {FileName} for user {UserId} - temporary file only",
-                            fileName, userId);
-                    }
+                    Logger.LogInformation(
+                        dto.IsEnhanced
+                            ? "Created database record for enhanced image {FileName} for user {UserId}"
+                            : "Created database record for uploaded image {FileName} for user {UserId}",
+                        fileName, userId);
 
                     // Return a public URL for the client while keeping storagePath in DB
                     var publicUrl = _storageService.GetImageUrl(storagePath);
@@ -183,25 +175,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     });
                 }
 
-                // For enhanced images, deduct credits (weekly credits first, then purchased)
-                if (dto.IsEnhanced && uploadedImages.Count > 0)
-                {
-                    int creditsNeeded = uploadedImages.Count; // 1 credit per enhanced image
-                    bool hasCredits = await _basicTierService.ConsumeCreditsAsync(userId, creditsNeeded, "enhanced_image_upload");
-
-                    if (!hasCredits)
-                    {
-                        // Cleanup uploaded files if credit deduction failed - use storage service for cleanup
-                        foreach (var uploadedImage in uploadedImages)
-                        {
-                            await _storageService.DeleteImageAsync(uploadedImage.OriginalImageUrl);
-                        }
-
-                        return ErrorResponse("InsufficientCredits",
-                            $"Insufficient credits for enhanced image upload. Required: {creditsNeeded} credit(s). " +
-                            "Enhanced images consume weekly credits first, then purchased credits if available.");
-                    }
-                }
+                // Note: Do NOT consume credits here for enhanced images.
+                // Credits are handled by the enhancement workflow (e.g., OpenAI/Replicate controllers).
 
                 // Save uploaded image records to database (only if non-enhanced images were uploaded)
                 if (uploadedImages.Any())
@@ -442,69 +417,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Delete enhanced image file from temporary storage
-        /// </summary>
-        [HttpDelete("enhanced/{fileName}")]
-        public async Task<IActionResult> DeleteEnhancedImage(string fileName)
-        {
-            var authCheck = ValidateAuthentication();
-            if (authCheck != null) return authCheck;
-            var userId = GetCurrentUserId()!;
-
-            try
-            {
-                Logger.LogInformation("Attempting to delete enhanced image file {FileName} for user {UserId}", fileName, userId);
-
-                // Validate fileName to prevent path traversal attacks
-                if (string.IsNullOrEmpty(fileName) ||
-                    fileName.Contains("..") ||
-                    fileName.Contains("/") ||
-                    fileName.Contains("\\") ||
-                    Path.GetDirectoryName(fileName) != "")
-                {
-                    Logger.LogWarning("Invalid file name provided for enhanced image deletion: {FileName}", fileName);
-                    return ErrorResponse("InvalidFileName", "Invalid file name", 400);
-                }
-
-                // Get storage path for enhanced image
-                var storagePath = _pathResolver.GetPath(StorageType.Enhanced, userId, fileName);
-
-                Logger.LogDebug("Checking for enhanced image file at storage path: {StoragePath}", storagePath);
-
-                // Check if file exists and delete using blob storage
-                var exists = await _storageService.ExistsAsync(storagePath);
-                if (!exists)
-                {
-                    Logger.LogInformation("Enhanced image file already cleaned up: {StoragePath}", storagePath);
-                    return SuccessResponse(new
-                    {
-                        fileName = fileName,
-                        message = "Enhanced image file already cleaned up (idempotent delete)"
-                    });
-                }
-
-                var deleted = await _storageService.DeleteImageAsync(storagePath);
-                if (!deleted)
-                {
-                    Logger.LogWarning("Failed to delete enhanced image file: {StoragePath}", storagePath);
-                    return ErrorResponse("DeletionFailed", "Failed to delete enhanced image file", 500);
-                }
-
-                Logger.LogInformation("Successfully deleted enhanced image file {FileName} for user {UserId}", fileName, userId);
-
-                return SuccessResponse(new
-                {
-                    fileName = fileName,
-                    message = "Enhanced image file deleted successfully"
-                });
-            }
-            catch (Exception ex)
-            {
-                LogError(ex, $"Error deleting enhanced image file {fileName} for user {userId}");
-                return ErrorResponse("DeletionFailed", "Failed to delete enhanced image file", 500);
-            }
-        }
 
         #region Helper Methods
 
@@ -1007,15 +919,84 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         #endregion
 
         /// <summary>
+        /// Diagnostic endpoint to show database records vs storage files for generated photos
+        /// </summary>
+        [HttpGet("diagnostic")]
+        [AllowAnonymous] // Allow unauthenticated access for debugging
+        public async Task<IActionResult> DiagnosticInfo([FromQuery] string? userId = null)
+        {
+            // For debugging - allow bypassing auth if userId provided, otherwise require auth
+            if (string.IsNullOrEmpty(userId))
+            {
+                var authCheck = ValidateAuthentication();
+                if (authCheck != null) return authCheck;
+                userId = GetCurrentUserId()!;
+            }
+
+            try
+            {
+                var profile = await _userProfileRepository.GetByUserIdAsync(userId);
+                if (profile == null)
+                    return ErrorResponse("ProfileNotFound", "Profile not found", 404);
+
+                var allImages = profile.ProcessedImages.OrderByDescending(i => i.CreatedAt).ToList();
+                var generatedImages = allImages.Where(i => i.IsGenerated).ToList();
+                
+                var diagnosticInfo = new
+                {
+                    totalImages = allImages.Count,
+                    generatedImages = generatedImages.Count,
+                    uploadedImages = allImages.Count(i => i.IsOriginalUpload),
+                    styleBreakdown = allImages.GroupBy(i => i.Style).Select(g => new
+                    {
+                        style = g.Key,
+                        count = g.Count(),
+                        generatedCount = g.Count(i => i.IsGenerated)
+                    }).ToList(),
+                    recentImages = allImages.Take(20).Select(img => new
+                    {
+                        id = img.Id,
+                        style = img.Style,
+                        isGenerated = img.IsGenerated,
+                        isOriginalUpload = img.IsOriginalUpload,
+                        createdAt = img.CreatedAt,
+                        originalImageUrl = img.OriginalImageUrl,
+                        processedImageUrl = img.ProcessedImageUrl,
+                        hasOriginalUrl = !string.IsNullOrEmpty(img.OriginalImageUrl),
+                        hasProcessedUrl = !string.IsNullOrEmpty(img.ProcessedImageUrl),
+                        classification = GetImageClassification(img)
+                    }).ToList()
+                };
+
+                return SuccessResponse(diagnosticInfo);
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, "Error getting diagnostic info");
+                return ErrorResponse("DiagnosticError", "Failed to get diagnostic info", 500);
+            }
+        }
+
+        /// <summary>
         /// Reconcile database image records with backing storage.
         /// Removes records that reference non-existent files. When dryRun=true, only reports counts.
         /// </summary>
         [HttpPost("reconcile-database")]
         public async Task<IActionResult> ReconcileDatabase([FromQuery] bool dryRun = true)
         {
-            var authCheck = ValidateAuthentication();
-            if (authCheck != null) return authCheck;
-            var userId = GetCurrentUserId()!;
+            // Allow anonymous access in development for database maintenance
+            string? userId = null;
+            if (_environment.IsProduction())
+            {
+                var authCheck = ValidateAuthentication();
+                if (authCheck != null) return authCheck;
+                userId = GetCurrentUserId()!;
+            }
+            else 
+            {
+                // In development, we'll process all images for cleanup
+                LogInfo("Running reconcile-database in development mode (anonymous access)");
+            }
 
             try
             {
@@ -1025,11 +1006,26 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     return ErrorResponse("Forbidden", "Destructive reconciliation is disabled in production", 403);
                 }
 
-                var profile = await _userProfileRepository.GetByUserIdAsync(userId);
-                if (profile == null)
-                    return ErrorResponse("ProfileNotFound", "Profile not found", 404);
-
-                var allImages = profile.ProcessedImages.ToList();
+                List<ProcessedImage> allImages;
+                UserProfile? profile = null;
+                
+                if (userId != null)
+                {
+                    // Production mode: process images for specific user
+                    profile = await _userProfileRepository.GetByUserIdAsync(userId);
+                    if (profile == null)
+                        return ErrorResponse("ProfileNotFound", "Profile not found", 404);
+                    allImages = profile.ProcessedImages.ToList();
+                }
+                else
+                {
+                    // Development mode: process all images for cleanup
+                    if (Context == null)
+                    {
+                        return ErrorResponse("ServerError", "Database context unavailable", 500);
+                    }
+                    allImages = await Context.ProcessedImages.ToListAsync();
+                }
                 var orphaned = new List<ProcessedImage>();
                 var skippedAmbiguous = 0;
 
@@ -1111,20 +1107,22 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 foreach (var img in orphaned)
                 {
-                    profile.ProcessedImages.Remove(img);
-                    // Ensure persistence even if repository mock isn't configured in tests
+                    // Only remove from profile if we have a profile (production mode)
+                    if (profile != null)
+                        profile.ProcessedImages.Remove(img);
+                    // Always remove from context in both modes
                     Context?.ProcessedImages.Remove(img);
                 }
 
                 if (orphaned.Count > 0)
                 {
                     await Context!.SaveChangesAsync();
-                    // Update repo/caches as well for real application behavior
-                    if (_userProfileRepository != null)
+                    // Update repo/caches as well for real application behavior (production mode only)
+                    if (profile != null && _userProfileRepository != null)
                         await _userProfileRepository.UpdateAsync(profile);
-                    if (_userContextService != null)
+                    if (userId != null && _userContextService != null)
                         await _userContextService.InvalidateUserCacheAsync(userId);
-                    LogInfo($"Removed {orphaned.Count} orphaned image records for user {userId}");
+                    LogInfo($"Removed {orphaned.Count} orphaned image records" + (userId != null ? $" for user {userId}" : " (development cleanup)"));
                 }
 
                 return SuccessResponse(new
@@ -1142,6 +1140,110 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             {
                 LogError(ex, "Error reconciling image database", userId);
                 return ErrorResponse("ReconciliationFailed", "Failed to reconcile image database", 500);
+            }
+        }
+
+        /// <summary>
+        /// Saves enhanced image from base64 data to storage and creates database record
+        /// </summary>
+        [HttpPost("save-enhanced")]
+        public async Task<IActionResult> SaveEnhancedImage([FromBody] SaveEnhancedImageDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // Validate authentication
+            var authCheck = ValidateAuthentication();
+            if (authCheck != null) return authCheck;
+            var userId = GetCurrentUserId()!;
+
+            var profile = await _userContextService.GetUserProfileAsync(userId);
+            if (profile == null)
+            {
+                return ErrorResponse("ProfileNotFound", "User profile not found");
+            }
+
+            try
+            {
+                // Validate and parse base64 data
+                if (string.IsNullOrEmpty(dto.Base64ImageData))
+                {
+                    return ErrorResponse("InvalidData", "Base64 image data is required");
+                }
+
+                // Remove data URL prefix if present (e.g., "data:image/png;base64,")
+                var base64Data = dto.Base64ImageData;
+                if (base64Data.StartsWith("data:image/"))
+                {
+                    var commaIndex = base64Data.IndexOf(',');
+                    if (commaIndex >= 0)
+                    {
+                        base64Data = base64Data.Substring(commaIndex + 1);
+                    }
+                }
+
+                // Convert base64 to byte array
+                byte[] imageBytes;
+                try
+                {
+                    imageBytes = Convert.FromBase64String(base64Data);
+                }
+                catch (FormatException)
+                {
+                    return ErrorResponse("InvalidBase64", "Invalid base64 image data format");
+                }
+
+                // Generate filename with appropriate extension
+                var fileExtension = ".png"; // Default to PNG for enhanced images
+                var fileName = $"{Guid.NewGuid()}_enhanced{fileExtension}";
+
+                // Get storage path using path resolver
+                var storagePath = _pathResolver.GetPath(StorageType.Enhanced, userId, fileName);
+
+                // Save to blob storage
+                using var imageStream = new MemoryStream(imageBytes);
+                await _storageService.SaveImageToPathAsync(imageStream, storagePath);
+
+                // Create database record
+                var processedImage = new ProcessedImage
+                {
+                    OriginalImageUrl = string.Empty,
+                    ProcessedImageUrl = storagePath,
+                    Style = $"Enhanced-{dto.EnhancementType ?? "professional"}",
+                    UserProfileId = profile.Id,
+                    CreatedAt = DateTime.UtcNow,
+                    IsOriginalUpload = false,
+                    IsGenerated = true, // Enhanced images are AI-generated content
+                };
+
+                // Set scheduled deletion date based on retention policy
+                processedImage.SetScheduledDeletionDate();
+
+                profile.ProcessedImages.Add(processedImage);
+                await _userProfileRepository.UpdateAsync(profile);
+
+                Logger.LogInformation("Saved enhanced image {FileName} for user {UserId} with type {EnhancementType}", 
+                    fileName, userId, dto.EnhancementType);
+
+                // Return the saved image URL
+                var publicUrl = _storageService.GetImageUrl(storagePath);
+                
+                return SuccessResponse(new
+                {
+                    Id = processedImage.Id,
+                    FileName = fileName,
+                    Url = publicUrl,
+                    EnhancementType = dto.EnhancementType,
+                    CreatedAt = processedImage.CreatedAt,
+                    Message = "Enhanced image saved successfully to gallery"
+                });
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, "Error saving enhanced image", userId);
+                return ErrorResponse("SaveFailed", "Failed to save enhanced image", 500);
             }
         }
 

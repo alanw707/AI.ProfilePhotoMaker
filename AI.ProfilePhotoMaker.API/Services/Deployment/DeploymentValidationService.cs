@@ -251,7 +251,7 @@ public partial class DeploymentValidationService : IDeploymentValidationService
         }
     }
 
-    public async Task<PerformanceValidationResponseDto> ValidatePerformanceBaselinesAsync()
+    public Task<PerformanceValidationResponseDto> ValidatePerformanceBaselinesAsync()
     {
         var stopwatch = Stopwatch.StartNew();
         var response = new PerformanceValidationResponseDto
@@ -316,7 +316,7 @@ public partial class DeploymentValidationService : IDeploymentValidationService
             _logger.LogInformation("Performance validation completed: {Status} in {Duration}ms",
                 response.Status, response.Duration);
 
-            return response;
+            return Task.FromResult(response);
         }
         catch (Exception ex)
         {
@@ -328,7 +328,7 @@ public partial class DeploymentValidationService : IDeploymentValidationService
             response.Duration = stopwatch.ElapsedMilliseconds;
             response.Errors.Add($"Performance validation failed: {ex.Message}");
 
-            return response;
+            return Task.FromResult(response);
         }
     }
 

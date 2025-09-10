@@ -133,7 +133,7 @@ public partial class DeploymentValidationService
         }
     }
 
-    private async Task<ValidationComponentDto> ValidateMonitoringComponentAsync()
+    private Task<ValidationComponentDto> ValidateMonitoringComponentAsync()
     {
         var stopwatch = Stopwatch.StartNew();
         try
@@ -145,7 +145,7 @@ public partial class DeploymentValidationService
 
             stopwatch.Stop();
 
-            return new ValidationComponentDto
+            return Task.FromResult(new ValidationComponentDto
             {
                 Status = isMonitoringActive ? "Active" : "Inactive",
                 IsValid = isMonitoringActive,
@@ -156,19 +156,19 @@ public partial class DeploymentValidationService
                     ["monitoringActive"] = isMonitoringActive,
                     ["metricsAvailable"] = false
                 }
-            };
+            });
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            return new ValidationComponentDto
+            return Task.FromResult(new ValidationComponentDto
             {
                 Status = "Error",
                 IsValid = false,
                 Description = "Monitoring and metrics collection validation",
                 Duration = stopwatch.ElapsedMilliseconds,
                 Error = ex.Message
-            };
+            });
         }
     }
 
