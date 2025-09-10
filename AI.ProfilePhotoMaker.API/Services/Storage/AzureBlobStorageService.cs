@@ -374,7 +374,51 @@ public class AzureBlobStorageService : BaseStorageService
             string containerName;
             string blobPath;
 
-            if (storagePath.StartsWith("style-previews/"))
+            // Accept absolute Azure/Azurite URLs or relative paths
+            if (Uri.TryCreate(storagePath, UriKind.Absolute, out var uri))
+            {
+                // Azurite format: /devstoreaccount1/{container}/{blob...}
+                // Azure format: /{container}/{blob...}
+                var path = uri.AbsolutePath.TrimStart('/');
+                var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                if (segments.Length >= 2)
+                {
+                    if (string.Equals(segments[0], "devstoreaccount1", StringComparison.OrdinalIgnoreCase))
+                    {
+                        containerName = segments[1];
+                        blobPath = string.Join('/', segments.Skip(2));
+                    }
+                    else
+                    {
+                        containerName = segments[0];
+                        blobPath = string.Join('/', segments.Skip(1));
+                    }
+                }
+                else
+                {
+                    containerName = _containerName;
+                    blobPath = path;
+                }
+            }
+            else if (storagePath.Contains('/'))
+            {
+                // Allow "container/blobPath" style input
+                var idx = storagePath.IndexOf('/');
+                var possibleContainer = storagePath.Substring(0, idx);
+                var rest = storagePath.Substring(idx + 1);
+                // When the provided prefix matches the style-previews container, use it; otherwise accept as container
+                if (string.Equals(possibleContainer, "style-previews", StringComparison.OrdinalIgnoreCase))
+                {
+                    containerName = "style-previews";
+                    blobPath = rest;
+                }
+                else
+                {
+                    containerName = possibleContainer;
+                    blobPath = rest;
+                }
+            }
+            else if (storagePath.StartsWith("style-previews/"))
             {
                 containerName = "style-previews";
                 blobPath = storagePath.Substring("style-previews/".Length);
