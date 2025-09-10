@@ -16,25 +16,28 @@ namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 /// </summary>
 public class OpenAIImageGenerationService : IImageProcessingService
 {
-    private readonly HttpClient _httpClient;
+    private readonly HttpClient _openAiClient;
+    private readonly HttpClient _downloadClient;
     private readonly IConfiguration _configuration;
     private readonly ILogger<OpenAIImageGenerationService> _logger;
     private readonly IStorageService _storageService;
 
     public OpenAIImageGenerationService(
         HttpClient httpClient,
+        IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
         ILogger<OpenAIImageGenerationService> logger,
         IStorageService storageService)
     {
-        _httpClient = httpClient;
+        _openAiClient = httpClient;
+        _downloadClient = httpClientFactory.CreateClient(); // plain client: no OpenAI Authorization
         _configuration = configuration;
         _logger = logger;
         _storageService = storageService;
 
         // Configure HTTP client for OpenAI API
-        _httpClient.BaseAddress = new Uri("https://api.openai.com/v1/");
-        _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        _openAiClient.BaseAddress = new Uri("https://api.openai.com/v1/");
+        _openAiClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         
         // Load API key with robust precedence: env var OPENAI_API_KEY, then config OpenAI:ApiKey
         var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY")
@@ -45,8 +48,24 @@ public class OpenAIImageGenerationService : IImageProcessingService
             throw new InvalidOperationException("OpenAI API key is required but not configured. Please set OpenAI:ApiKey in configuration.");
         }
         
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        _openAiClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
         _logger.LogInformation("OpenAI API configured successfully");
+    }
+
+    // Backwards-compatible constructor for tests and simple manual instantiation
+    public OpenAIImageGenerationService(
+        HttpClient httpClient,
+        IConfiguration configuration,
+        ILogger<OpenAIImageGenerationService> logger,
+        IStorageService storageService)
+        : this(httpClient, new SimpleHttpClientFactory(), configuration, logger, storageService)
+    {
+    }
+
+    // Minimal IHttpClientFactory implementation that returns a fresh HttpClient (no default headers)
+    private sealed class SimpleHttpClientFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name = null!) => new HttpClient();
     }
 
     /// <summary>
@@ -97,7 +116,7 @@ public class OpenAIImageGenerationService : IImageProcessingService
             _logger.LogInformation(
                 "Posting to OpenAI images/edits: model=gpt-image-1, promptLen={PromptLen}, imageBytes={ImageBytes}",
                 prompt?.Length ?? 0, imageBytes?.Length ?? 0);
-            var response = await _httpClient.PostAsync("images/edits", formData);
+            var response = await _openAiClient.PostAsync("images/edits", formData);
             
             if (!response.IsSuccessStatusCode)
             {
@@ -197,7 +216,8 @@ public class OpenAIImageGenerationService : IImageProcessingService
             _logger.LogInformation("Downloading image from URL: {ImageUrl}", imageUrl);
             
             // Download the original image
-            var imageResponse = await _httpClient.GetAsync(imageUrl);
+            // Important: use plain download client so OpenAI Bearer token is NOT sent to blob URLs
+            var imageResponse = await _downloadClient.GetAsync(imageUrl);
             imageResponse.EnsureSuccessStatusCode();
             
             var originalImageBytes = await imageResponse.Content.ReadAsByteArrayAsync();
