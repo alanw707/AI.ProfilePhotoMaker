@@ -19,6 +19,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.DataProtection;
+using Azure.Extensions.AspNetCore.DataProtection.Blobs;
 using System.Security.Claims;
 using Serilog;
 // NOTE: Microsoft.AspNetCore.TestHost removed to prevent production container crashes
@@ -115,10 +116,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     }
 });
 
-// Configure data protection for OAuth state handling
-builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "keys")))
-    .SetApplicationName("AI.ProfilePhotoMaker.API");
+// Data protection configuration is handled in the storage services section below
 
 // Add session services for OAuth state management (required for both Development and Production)
 builder.Services.AddMemoryCache();
@@ -338,10 +336,34 @@ if (!string.IsNullOrEmpty(azureStorageConnectionString))
 {
     builder.Services.AddSingleton<BlobServiceClient>(_ => new BlobServiceClient(azureStorageConnectionString));
     builder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
+
+    // Persist Data Protection keys to Azure Blob so cookies survive pod/revision restarts
+    var dpContainer = new BlobContainerClient(azureStorageConnectionString, "dataprotection");
+    try
+    {
+        // Ensure the container exists so DataProtection can persist keys on first run
+        dpContainer.CreateIfNotExists();
+        Console.WriteLine("[DataProtection] Ensured blob container 'dataprotection' exists");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[DataProtection] Warning: failed to ensure container exists: {ex.Message}");
+        // Continue; if container truly doesn't exist and cannot be created due to perms,
+        // app will still start but cookie protection may fail until container is provisioned.
+    }
+    var dpBlob = dpContainer.GetBlobClient("keys.xml");
+    builder.Services.AddDataProtection()
+        .SetApplicationName("AIProfilePhotoMaker")
+        .PersistKeysToAzureBlobStorage(dpBlob);
 }
 else
 {
     builder.Services.AddScoped<IStorageService, LocalStorageService>();
+    
+    // Use file-based data protection for development (keys survive restarts)
+    builder.Services.AddDataProtection()
+        .SetApplicationName("AIProfilePhotoMaker")
+        .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "keys")));
 }
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Storage.StoragePathResolver>();
 
@@ -378,6 +400,17 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 
 // Add SignalR for real-time prediction updates
 builder.Services.AddSignalR();
+
+// Configure Session cookie for cross-site usage (frontend and API are on different subdomains)
+builder.Services.AddSession(options =>
+{
+    options.Cookie.Name = "AIPM.Session";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.SameSite = SameSiteMode.None;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.IdleTimeout = TimeSpan.FromHours(12);
+});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
