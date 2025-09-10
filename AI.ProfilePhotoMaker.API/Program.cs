@@ -339,6 +339,18 @@ if (!string.IsNullOrEmpty(azureStorageConnectionString))
 
     // Persist Data Protection keys to Azure Blob so cookies survive pod/revision restarts
     var dpContainer = new BlobContainerClient(azureStorageConnectionString, "dataprotection");
+    try
+    {
+        // Ensure the container exists so DataProtection can persist keys on first run
+        dpContainer.CreateIfNotExists();
+        Console.WriteLine("[DataProtection] Ensured blob container 'dataprotection' exists");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[DataProtection] Warning: failed to ensure container exists: {ex.Message}");
+        // Continue; if container truly doesn't exist and cannot be created due to perms,
+        // app will still start but cookie protection may fail until container is provisioned.
+    }
     var dpBlob = dpContainer.GetBlobClient("keys.xml");
     builder.Services.AddDataProtection()
         .SetApplicationName("AIProfilePhotoMaker")
