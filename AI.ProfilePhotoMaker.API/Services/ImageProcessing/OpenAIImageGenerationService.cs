@@ -16,25 +16,28 @@ namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 /// </summary>
 public class OpenAIImageGenerationService : IImageProcessingService
 {
-    private readonly HttpClient _httpClient;
+    private readonly HttpClient _openAiClient;
+    private readonly HttpClient _downloadClient;
     private readonly IConfiguration _configuration;
     private readonly ILogger<OpenAIImageGenerationService> _logger;
     private readonly IStorageService _storageService;
 
     public OpenAIImageGenerationService(
         HttpClient httpClient,
+        IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
         ILogger<OpenAIImageGenerationService> logger,
         IStorageService storageService)
     {
-        _httpClient = httpClient;
+        _openAiClient = httpClient;
+        _downloadClient = httpClientFactory.CreateClient(); // plain client: no OpenAI Authorization
         _configuration = configuration;
         _logger = logger;
         _storageService = storageService;
 
         // Configure HTTP client for OpenAI API
-        _httpClient.BaseAddress = new Uri("https://api.openai.com/v1/");
-        _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        _openAiClient.BaseAddress = new Uri("https://api.openai.com/v1/");
+        _openAiClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         
         // Load API key with robust precedence: env var OPENAI_API_KEY, then config OpenAI:ApiKey
         var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY")
@@ -45,8 +48,28 @@ public class OpenAIImageGenerationService : IImageProcessingService
             throw new InvalidOperationException("OpenAI API key is required but not configured. Please set OpenAI:ApiKey in configuration.");
         }
         
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        _openAiClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
         _logger.LogInformation("OpenAI API configured successfully");
+    }
+
+    // Backwards-compatible constructor for tests and simple manual instantiation
+    // Reuses the supplied HttpClient for BOTH OpenAI and download paths
+    // so tests that mock HttpMessageHandler still work without hitting network.
+    public OpenAIImageGenerationService(
+        HttpClient httpClient,
+        IConfiguration configuration,
+        ILogger<OpenAIImageGenerationService> logger,
+        IStorageService storageService)
+        : this(httpClient, new PassthroughHttpClientFactory(httpClient), configuration, logger, storageService)
+    {
+    }
+
+    // IHttpClientFactory that returns the provided client (used for tests)
+    private sealed class PassthroughHttpClientFactory : IHttpClientFactory
+    {
+        private readonly HttpClient _client;
+        public PassthroughHttpClientFactory(HttpClient client) => _client = client;
+        public HttpClient CreateClient(string name) => _client;
     }
 
     /// <summary>
@@ -97,7 +120,7 @@ public class OpenAIImageGenerationService : IImageProcessingService
             _logger.LogInformation(
                 "Posting to OpenAI images/edits: model=gpt-image-1, promptLen={PromptLen}, imageBytes={ImageBytes}",
                 prompt?.Length ?? 0, imageBytes?.Length ?? 0);
-            var response = await _httpClient.PostAsync("images/edits", formData);
+            var response = await _openAiClient.PostAsync("images/edits", formData);
             
             if (!response.IsSuccessStatusCode)
             {
@@ -195,10 +218,24 @@ public class OpenAIImageGenerationService : IImageProcessingService
         try
         {
             _logger.LogInformation("Downloading image from URL: {ImageUrl}", imageUrl);
-            
-            // Download the original image
-            var imageResponse = await _httpClient.GetAsync(imageUrl);
-            imageResponse.EnsureSuccessStatusCode();
+            // Add debug context for troubleshooting (host/scheme/SAS)
+            try
+            {
+                var u = new Uri(imageUrl);
+                var hasSas = !string.IsNullOrEmpty(u.Query) && u.Query.Contains("sig=", StringComparison.OrdinalIgnoreCase);
+                _logger.LogDebug("Download client context: host={Host}, scheme={Scheme}, hasSas={HasSas}", u.Host, u.Scheme, hasSas);
+            }
+            catch { /* ignore parse issues */ }
+
+            // Download the original image via plain client (no Authorization header)
+            var imageResponse = await _downloadClient.GetAsync(imageUrl);
+            if (!imageResponse.IsSuccessStatusCode)
+            {
+                var status = (int)imageResponse.StatusCode;
+                var reason = imageResponse.ReasonPhrase;
+                _logger.LogError("Source image fetch failed: {Status} {Reason}", status, reason);
+                throw new HttpRequestException($"Source image fetch failed: {status} {reason}");
+            }
             
             var originalImageBytes = await imageResponse.Content.ReadAsByteArrayAsync();
             _logger.LogInformation("Downloaded image - Size: {Size} bytes", originalImageBytes.Length);
@@ -250,6 +287,12 @@ public class OpenAIImageGenerationService : IImageProcessingService
             
             return (processedImageBytes, maskBytes);
         }
+        catch (HttpRequestException ex)
+        {
+            // Surface download errors to controller (maps to 502 instead of 503)
+            _logger.LogError(ex, "Failed to prepare image and mask from URL: {ImageUrl}", imageUrl);
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to prepare image and mask from URL: {ImageUrl}", imageUrl);
@@ -263,9 +306,9 @@ public class OpenAIImageGenerationService : IImageProcessingService
         
         return enhancementType.ToLower() switch
         {
-            "chibi" => basePrompt + "chibi anime style with oversized head, huge sparkling eyes, tiny body, extremely cute, soft pastel colors, maintaining facial features",
-            "studio_ghibli" => basePrompt + "Studio Ghibli animation style with soft watercolor painting effect, dreamy atmosphere, whimsical feeling, preserving the person's likeness",
-            "kawaii" => basePrompt + "kawaii anime style with ultra cute aesthetic, pastel colors, sparkly large eyes, blushing cheeks, keeping facial structure",
+            "chibi" => basePrompt + "japan chibi anime style with oversized head, huge sparkling eyes, tiny body, extremely cute, soft pastel colors, maintaining facial features",
+            "studio_ghibli" => basePrompt + "japan Studio Ghibli animation style with soft watercolor painting effect, dreamy atmosphere, whimsical feeling, preserving the person's likeness",
+            "kawaii" => basePrompt + "japan kawaii anime style with ultra cute aesthetic, pastel colors, sparkly large eyes, blushing cheeks, keeping facial structure",
             "shoujo_manga" => basePrompt + "shoujo manga art style with dramatic expressive eyes, flowing hair, romantic aesthetic, maintaining person's features",
             "retro_90s_anime" => basePrompt + "90s retro anime style with bold line art, vibrant colors, cel-shaded animation look, preserving facial characteristics",
             "pixar_3d" => basePrompt + "Pixar-quality 3D animation style with professional computer graphics, soft lighting, keeping the person recognizable",

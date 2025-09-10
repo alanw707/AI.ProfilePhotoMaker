@@ -21,6 +21,7 @@
 - Integration: use `./dev-test.sh` and root tests. Keep tests deterministic and idempotent.
 
 ## Commit & Pull Request Guidelines
+- Never create Pull Request without confirming
 - Conventional Commits (examples): `feat(ui): add cropping tool`, `fix(api): null check in upload`.
 - PRs: include summary, linked issues, and test evidence (logs/screenshots for UI). Ensure `npm run lint` (UI), `dotnet build` and `dotnet test` (API), and relevant Playwright tests pass.
 
