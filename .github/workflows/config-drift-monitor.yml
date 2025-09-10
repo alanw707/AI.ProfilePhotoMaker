@@ -37,7 +37,8 @@ jobs:
     name: 🔍 Detect Configuration Drift
     runs-on: ubuntu-latest
     # Skip if this workflow was triggered by a push (e.g., when the workflow file itself changes)
-    if: ${{ github.event_name != 'push' && matrix.environment != '' }}
+    # Note: matrix context is not available at job-level condition evaluation, so don't reference it here
+    if: ${{ github.event_name != 'push' }}
     
     strategy:
       matrix:
