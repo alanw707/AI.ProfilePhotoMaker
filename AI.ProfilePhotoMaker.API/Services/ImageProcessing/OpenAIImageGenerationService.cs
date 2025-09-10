@@ -36,16 +36,17 @@ public class OpenAIImageGenerationService : IImageProcessingService
         _httpClient.BaseAddress = new Uri("https://api.openai.com/v1/");
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         
-        var apiKey = _configuration["OpenAI:ApiKey"];
-        if (!string.IsNullOrEmpty(apiKey))
+        // Load API key with robust precedence: env var OPENAI_API_KEY, then config OpenAI:ApiKey
+        var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY")
+                     ?? _configuration["OpenAI:ApiKey"];
+        if (string.IsNullOrEmpty(apiKey))
         {
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-            _logger.LogInformation("OpenAI API configured");
+            _logger.LogError("OpenAI API key not configured - OpenAI service cannot be initialized");
+            throw new InvalidOperationException("OpenAI API key is required but not configured. Please set OpenAI:ApiKey in configuration.");
         }
-        else
-        {
-            _logger.LogWarning("OpenAI API key not configured - enhancement features unavailable");
-        }
+        
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        _logger.LogInformation("OpenAI API configured successfully");
     }
 
     /// <summary>
@@ -99,6 +100,12 @@ public class OpenAIImageGenerationService : IImageProcessingService
             {
                 var errorBody = await response.Content.ReadAsStringAsync();
                 _logger.LogError("OpenAI API error {StatusCode}: {Error}", response.StatusCode, errorBody);
+                // Surface auth problems distinctly so controller can map to 401
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized ||
+                    response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                {
+                    throw new UnauthorizedAccessException($"OpenAI authentication failed: {(int)response.StatusCode}");
+                }
                 throw new InvalidOperationException($"OpenAI image transformation failed: {response.StatusCode} - {errorBody}");
             }
 

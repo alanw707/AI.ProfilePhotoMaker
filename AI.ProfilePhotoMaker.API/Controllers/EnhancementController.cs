@@ -22,6 +22,7 @@ public class EnhancementController : ControllerBase
     private readonly ApplicationDbContext _dbContext;
     private readonly ILogger<EnhancementController> _logger;
     private readonly IWebHostEnvironment _environment;
+    private readonly HttpClient _httpClient;
 
     public EnhancementController(
         OpenAIImageGenerationService openAIService,
@@ -29,19 +30,81 @@ public class EnhancementController : ControllerBase
         ApplicationDbContext dbContext,
         ILogger<EnhancementController> logger,
         IConfiguration configuration,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        HttpClient httpClient)
     {
         _openAIService = openAIService;
         _basicTierService = basicTierService;
         _dbContext = dbContext;
         _logger = logger;
         _environment = environment;
+        _httpClient = httpClient;
         
-        // Validate OpenAI configuration at startup
-        var apiKey = configuration["OpenAI:ApiKey"];
-        if (string.IsNullOrEmpty(apiKey))
+        // Configure HttpClient for OpenAI API health checks
+        var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? configuration["OpenAI:ApiKey"];
+        if (!string.IsNullOrEmpty(apiKey))
         {
-            _logger.LogWarning("OpenAI API key not configured - enhancement features will be unavailable");
+            _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+            var tail = apiKey.Length >= 4 ? apiKey[^4..] : "****";
+            _logger.LogDebug("OpenAI health HttpClient configured (len={Len}, tail=****{Tail})", apiKey.Length, tail);
+        }
+        
+        // Note: OpenAI service will throw InvalidOperationException if API key is missing
+        // This allows the controller to be constructed but will fail at service call time with proper error handling
+    }
+
+    /// <summary>
+    /// Health check endpoint for OpenAI service connectivity
+    /// Tests if OpenAI API is configured and accessible without consuming credits
+    /// </summary>
+    [HttpGet("health")]
+    [AllowAnonymous]
+    public async Task<IActionResult> HealthCheck()
+    {
+        try
+        {
+            _logger.LogInformation("OpenAI health check requested");
+            
+            // Simple connectivity test - check OpenAI models endpoint (lightweight)
+            var response = await _httpClient.GetAsync("https://api.openai.com/v1/models");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("OpenAI health check passed");
+                return Ok(new
+                {
+                    success = true,
+                    service = "OpenAI",
+                    status = "healthy",
+                    message = "OpenAI service is accessible and configured correctly",
+                    timestamp = DateTime.UtcNow
+                });
+            }
+            else
+            {
+                _logger.LogWarning("OpenAI health check failed with status {StatusCode}", response.StatusCode);
+                return StatusCode(503, new
+                {
+                    success = false,
+                    service = "OpenAI",
+                    status = "unhealthy",
+                    message = $"OpenAI service returned status: {response.StatusCode}",
+                    timestamp = DateTime.UtcNow
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "OpenAI health check failed with exception");
+            return StatusCode(503, new
+            {
+                success = false,
+                service = "OpenAI",
+                status = "unhealthy",
+                message = "OpenAI service health check failed",
+                error = ex.Message,
+                timestamp = DateTime.UtcNow
+            });
         }
     }
 
@@ -168,25 +231,67 @@ public class EnhancementController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogError(ex, "OpenAI service unavailable for user {UserId}", userId);
+            // Refund credits since the operation failed
+            var refundSuccess = await _basicTierService.AddPurchasedCreditsAsync(userId, 2, "openai_enhancement_refund");
+            await _basicTierService.LogUsageAsync(userId, "openai_enhancement_refund", 
+                $"Refund for failed enhancement: {ex.Message}", creditsCost: -2);
             
-            // Credits already consumed - refund not implemented yet
-            
-            return StatusCode(503, new
+            if (refundSuccess)
             {
-                success = false,
-                error = new
+                _logger.LogInformation("Successfully refunded 2 credits to user {UserId} for failed OpenAI enhancement", userId);
+            }
+            else
+            {
+                _logger.LogError("Failed to refund 2 credits to user {UserId} for failed OpenAI enhancement", userId);
+            }
+            
+            // Check if this is a configuration issue (missing API key) vs service failure
+            if (ex.Message.Contains("OpenAI API key is required but not configured"))
+            {
+                _logger.LogError(ex, "OpenAI API key not configured - service cannot function");
+                
+                return StatusCode(500, new
                 {
-                    code = "ServiceUnavailable",
-                    message = "OpenAI enhancement service is temporarily unavailable. Please try again later."
-                }
-            });
+                    success = false,
+                    error = new
+                    {
+                        code = "ConfigurationError",
+                        message = "OpenAI enhancement service is not properly configured. Please contact support."
+                    }
+                });
+            }
+            else
+            {
+                _logger.LogError(ex, "OpenAI service unavailable for user {UserId}", userId);
+                
+                return StatusCode(503, new
+                {
+                    success = false,
+                    error = new
+                    {
+                        code = "ServiceUnavailable",
+                        message = "OpenAI enhancement service is temporarily unavailable. Please try again later."
+                    }
+                });
+            }
         }
         catch (UnauthorizedAccessException ex)
         {
-            _logger.LogError(ex, "OpenAI authentication failed for user {UserId}", userId);
+            // Refund credits since the operation failed
+            var refundSuccess = await _basicTierService.AddPurchasedCreditsAsync(userId, 2, "openai_enhancement_refund");
+            await _basicTierService.LogUsageAsync(userId, "openai_enhancement_refund", 
+                $"Refund for authentication failure: {ex.Message}", creditsCost: -2);
             
-            // Credits already consumed - refund not implemented yet
+            if (refundSuccess)
+            {
+                _logger.LogInformation("Successfully refunded 2 credits to user {UserId} for OpenAI authentication failure", userId);
+            }
+            else
+            {
+                _logger.LogError("Failed to refund 2 credits to user {UserId} for OpenAI authentication failure", userId);
+            }
+            
+            _logger.LogError(ex, "OpenAI authentication failed for user {UserId}", userId);
             
             return StatusCode(401, new
             {
@@ -200,9 +305,21 @@ public class EnhancementController : ControllerBase
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "Network error during OpenAI enhancement for user {UserId}", userId);
+            // Refund credits since the operation failed
+            var refundSuccess = await _basicTierService.AddPurchasedCreditsAsync(userId, 2, "openai_enhancement_refund");
+            await _basicTierService.LogUsageAsync(userId, "openai_enhancement_refund", 
+                $"Refund for network error: {ex.Message}", creditsCost: -2);
             
-            // Credits already consumed - refund not implemented yet
+            if (refundSuccess)
+            {
+                _logger.LogInformation("Successfully refunded 2 credits to user {UserId} for OpenAI network error", userId);
+            }
+            else
+            {
+                _logger.LogError("Failed to refund 2 credits to user {UserId} for OpenAI network error", userId);
+            }
+            
+            _logger.LogError(ex, "Network error during OpenAI enhancement for user {UserId}", userId);
             
             return StatusCode(502, new
             {
@@ -216,9 +333,21 @@ public class EnhancementController : ControllerBase
         }
         catch (TaskCanceledException ex)
         {
-            _logger.LogError(ex, "Request timeout during OpenAI enhancement for user {UserId}", userId);
+            // Refund credits since the operation failed
+            var refundSuccess = await _basicTierService.AddPurchasedCreditsAsync(userId, 2, "openai_enhancement_refund");
+            await _basicTierService.LogUsageAsync(userId, "openai_enhancement_refund", 
+                $"Refund for timeout: {ex.Message}", creditsCost: -2);
             
-            // Credits already consumed - refund not implemented yet
+            if (refundSuccess)
+            {
+                _logger.LogInformation("Successfully refunded 2 credits to user {UserId} for OpenAI timeout", userId);
+            }
+            else
+            {
+                _logger.LogError("Failed to refund 2 credits to user {UserId} for OpenAI timeout", userId);
+            }
+            
+            _logger.LogError(ex, "Request timeout during OpenAI enhancement for user {UserId}", userId);
             
             return StatusCode(408, new
             {
@@ -232,9 +361,21 @@ public class EnhancementController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error during OpenAI enhancement for user {UserId}: {ErrorMessage}", userId, ex.Message);
+            // Refund credits since the operation failed
+            var refundSuccess = await _basicTierService.AddPurchasedCreditsAsync(userId, 2, "openai_enhancement_refund");
+            await _basicTierService.LogUsageAsync(userId, "openai_enhancement_refund", 
+                $"Refund for unexpected error: {ex.Message}", creditsCost: -2);
             
-            // Credits already consumed - refund not implemented yet
+            if (refundSuccess)
+            {
+                _logger.LogInformation("Successfully refunded 2 credits to user {UserId} for unexpected OpenAI error", userId);
+            }
+            else
+            {
+                _logger.LogError("Failed to refund 2 credits to user {UserId} for unexpected OpenAI error", userId);
+            }
+            
+            _logger.LogError(ex, "Unexpected error during OpenAI enhancement for user {UserId}: {ErrorMessage}", userId, ex.Message);
             
             return StatusCode(500, new
             {
