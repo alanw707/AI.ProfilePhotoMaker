@@ -123,6 +123,7 @@ The AI Profile Photo Maker is a full-stack web application that uses AI to gener
 - **Credit-Based System**: Flexible pricing with free tier and premium packages
 - **Self-Healing Gallery**: Automatic repair of database-filesystem inconsistencies
 - **Photo Enhancement**: One-click photo improvement using AI
+  - See: [OpenAI Enhancement (gpt-image-1)](./OPENAI-ENHANCEMENT.md)
 - **OAuth Integration**: Google, Facebook, and Apple sign-in support
 
 ### Architecture Highlights

@@ -307,10 +307,9 @@ else
         client.Timeout = TimeSpan.FromMinutes(2);
     });
     
-    // Register OpenAI Image Generation Service with HttpClient timeout configuration
+    // Register OpenAI Image Generation Service with HttpClient
     builder.Services.AddHttpClient<OpenAIImageGenerationService>(client =>
     {
-        // Set 5-minute timeout for OpenAI API calls (image processing takes longer than regular API calls)
         client.Timeout = TimeSpan.FromMinutes(5);
     });
     

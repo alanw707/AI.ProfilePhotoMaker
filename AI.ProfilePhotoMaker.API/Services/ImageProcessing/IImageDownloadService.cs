@@ -35,12 +35,8 @@ public interface IImageDownloadService
     /// <returns>Local file path if successful, null if failed</returns>
     Task<string?> DownloadImageAsync(string imageUrl, string userId, string style, string? fileName = null);
 
-    /// <summary>
-    /// Ensures the generated images directory exists for a user
-    /// </summary>
-    /// <param name="userId">User ID</param>
-    /// <returns>Full path to the user's generated images directory</returns>
-    string EnsureGeneratedImagesDirectory(string userId);
+    // Deprecated synchronous directory creation method removed. Use
+    // async workflows and storage abstractions instead.
 
     /// <summary>
     /// Validates if an image URL is accessible and downloadable

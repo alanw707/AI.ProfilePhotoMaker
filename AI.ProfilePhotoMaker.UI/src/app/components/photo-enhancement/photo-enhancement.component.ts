@@ -211,19 +211,39 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         throw new Error(errorMsg);
       }
 
-      if (!enhanceResponse?.data?.prediction?.id) {
-        console.error('No prediction ID in response:', enhanceResponse);
-        throw new Error('Enhancement failed - no prediction ID returned');
+      let finalResult;
+
+      // Check if this is an OpenAI response (immediate result) or Replicate response (async)
+      if (
+        enhanceResponse.data?.provider === 'OpenAI' ||
+        (enhanceResponse.data?.Status === 'succeeded' && !enhanceResponse.data?.prediction)
+      ) {
+        // OpenAI returns immediate results - no polling needed
+        console.log('OpenAI immediate result detected');
+        this.processingProgress = 75;
+        this.processingStatus = 'Processing OpenAI result...';
+        this._cdr.detectChanges();
+
+        finalResult = {
+          status: 'succeeded',
+          output: enhanceResponse.data.Output,
+          dataUrl: enhanceResponse.data.dataUrl,
+        };
+      } else {
+        // Replicate async flow - requires polling
+        if (!enhanceResponse?.data?.prediction?.id) {
+          console.error('No prediction ID in response:', enhanceResponse);
+          throw new Error('Enhancement failed - no prediction ID returned');
+        }
+
+        // Step 3: Poll for completion
+        this.processingProgress = 50;
+        this.processingStatus = 'AI is enhancing your photo...';
+        this._cdr.detectChanges();
+
+        const predictionId = enhanceResponse.data.prediction.id;
+        finalResult = await this.pollForCompletion(predictionId);
       }
-
-      // Step 3: Poll for completion
-      this.processingProgress = 50;
-      this.processingStatus = 'AI is enhancing your photo...';
-      this._cdr.detectChanges();
-
-      const predictionId = enhanceResponse.data.prediction.id;
-
-      const finalResult = await this.pollForCompletion(predictionId);
 
       let enhancedUrl = null;
 

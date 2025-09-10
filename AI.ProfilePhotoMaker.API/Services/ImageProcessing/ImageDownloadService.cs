@@ -196,11 +196,7 @@ public class ImageDownloadService : IImageDownloadService
         return generatedDir;
     }
 
-    [Obsolete("Use EnsureGeneratedImagesDirectoryAsync instead")]
-    public string EnsureGeneratedImagesDirectory(string userId)
-    {
-        return EnsureGeneratedImagesDirectoryAsync(userId).GetAwaiter().GetResult();
-    }
+    // Synchronous directory helper removed; prefer asynchronous EnsureGeneratedImagesDirectoryAsync.
 
     public async Task<bool> ValidateImageUrlAsync(string imageUrl)
     {

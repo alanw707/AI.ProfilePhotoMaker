@@ -1,40 +1,35 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using AI.ProfilePhotoMaker.API.Data;
-using AI.ProfilePhotoMaker.API.Models;
+using System.Text.Json.Serialization;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services.Storage;
-using Microsoft.EntityFrameworkCore;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Formats.Png;
 
 namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 
 /// <summary>
-/// OpenAI DALL-E 3 implementation for creative image enhancement and anime styles
+/// OpenAI DALL-E implementation for creative image enhancement using HTTP client
 /// </summary>
-public class OpenAIImageGenerationService : IImageGenerationService
+public class OpenAIImageGenerationService : IImageProcessingService
 {
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
     private readonly ILogger<OpenAIImageGenerationService> _logger;
-    private readonly ApplicationDbContext _context;
     private readonly IStorageService _storageService;
-
-    public string Provider => "OpenAI";
-    public bool SupportsWebhooks => false; // OpenAI uses synchronous responses
-    public bool SupportsCustomModels => false; // OpenAI doesn't support custom model training
 
     public OpenAIImageGenerationService(
         HttpClient httpClient,
         IConfiguration configuration,
         ILogger<OpenAIImageGenerationService> logger,
-        ApplicationDbContext context,
         IStorageService storageService)
     {
         _httpClient = httpClient;
         _configuration = configuration;
         _logger = logger;
-        _context = context;
         _storageService = storageService;
 
         // Configure HTTP client for OpenAI API
@@ -45,264 +40,248 @@ public class OpenAIImageGenerationService : IImageGenerationService
         if (!string.IsNullOrEmpty(apiKey))
         {
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            _logger.LogInformation("OpenAI API configured");
+        }
+        else
+        {
+            _logger.LogWarning("OpenAI API key not configured - enhancement features unavailable");
         }
     }
 
-    public async Task<ImageGenerationResult> EnhancePhotoAsync(EnhancePhotoRequest request)
+    /// <summary>
+    /// Enhances photo quality using OpenAI DALL-E image transformation and returns base64 data URL format
+    /// </summary>
+    /// <param name="request">Enhancement request with image URL and style preferences</param>
+    /// <returns>Base64 data URL in format: data:image/png;base64,{base64data}</returns>
+    public async Task<string> EnhancePhotoQualityAsync(EnhancePhotoRequestDto request)
     {
         var startTime = DateTime.UtcNow;
         
         try
         {
-            _logger.LogInformation("Starting OpenAI enhancement for user {UserId} with type {EnhancementType}",
-                request.UserId, request.EnhancementType);
+            _logger.LogInformation("Starting OpenAI photo transformation type={Type}, imageUrl={ImageUrl}", 
+                request.EnhancementType, request.ImageUrl);
 
-            // Generate style-specific prompt
-            var prompt = GenerateEnhancementPrompt(request.EnhancementType, request.ImageUrl);
+            // Step 1: Download and process the image
+            var (imageBytes, maskBytes) = await PrepareImageAndMask(request.ImageUrl);
+            _logger.LogInformation("Image processed - Original size: {Size} bytes", imageBytes.Length);
             
-            // Download the original image to modify
-            using var originalImageStream = await DownloadImageStreamAsync(request.ImageUrl);
+            // Step 2: Generate transformation prompt
+            var prompt = GenerateTransformationPrompt(request.EnhancementType ?? "professional");
+            _logger.LogInformation("Using transformation prompt: {Prompt}", prompt);
             
-            // Prepare form data for images/edits endpoint
+            // Step 3: Create multipart form data for image editing
             using var formData = new MultipartFormDataContent();
-            formData.Add(new StreamContent(originalImageStream), "image", "original.png");
+            
+            // Add the image file
+            formData.Add(new ByteArrayContent(imageBytes), "image", "image.png");
+            
+            // Add the mask file (optional). Some models/endpoints behave better without an explicit mask.
+            // Skipping mask to allow full-image edits reliably.
+            // formData.Add(new ByteArrayContent(maskBytes), "mask", "mask.png");
+            
+            // Specify model explicitly (required by OpenAI)
+            formData.Add(new StringContent("gpt-image-1"), "model");
+
+            // Add the prompt
             formData.Add(new StringContent(prompt), "prompt");
+            
+            // Add other parameters (keep minimal to avoid unknown-parameter errors)
             formData.Add(new StringContent("1024x1024"), "size");
-            formData.Add(new StringContent("1"), "n");
-            formData.Add(new StringContent("url"), "response_format");
-
+            
+            // Step 4: Call OpenAI image edit endpoint
+            _logger.LogInformation(
+                "Posting to OpenAI images/edits: model=gpt-image-1, promptLen={PromptLen}, imageBytes={ImageBytes}",
+                prompt?.Length ?? 0, imageBytes?.Length ?? 0);
             var response = await _httpClient.PostAsync("images/edits", formData);
-            response.EnsureSuccessStatusCode();
-
-            var responseJson = await response.Content.ReadAsStringAsync();
-            var options = new JsonSerializerOptions
+            
+            if (!response.IsSuccessStatusCode)
             {
-                PropertyNameCaseInsensitive = true
-            };
-            var openAIResponse = JsonSerializer.Deserialize<OpenAIImageResponse>(responseJson, options);
-
-            if (openAIResponse?.Data?.FirstOrDefault()?.Url == null)
-            {
-                throw new InvalidOperationException("No image URL returned from OpenAI");
+                var errorBody = await response.Content.ReadAsStringAsync();
+                _logger.LogError("OpenAI API error {StatusCode}: {Error}", response.StatusCode, errorBody);
+                throw new InvalidOperationException($"OpenAI image transformation failed: {response.StatusCode} - {errorBody}");
             }
 
-            var imageUrl = openAIResponse.Data.First().Url;
+            var responseJson = await response.Content.ReadAsStringAsync();
+            var preview = responseJson.Length > 500 ? responseJson.Substring(0, 500) + "..." : responseJson;
+            _logger.LogWarning("OpenAI raw response preview: {Response}", preview);
             
-            // Download and store the image
-            var storedImageUrl = await DownloadAndStoreImageAsync(imageUrl, request.UserId, request.EnhancementType);
-            
-            // Save to database
-            await SaveEnhancedImageToDatabase(request.UserId, request.ImageUrl, storedImageUrl, request.EnhancementType);
-
-            var processingTime = DateTime.UtcNow - startTime;
-
-            _logger.LogInformation("OpenAI enhancement completed for user {UserId} in {ProcessingTime}ms",
-                request.UserId, processingTime.TotalMilliseconds);
-
-            return new ImageGenerationResult
+            var openAIResponse = JsonSerializer.Deserialize<OpenAIImageResponse>(responseJson, new JsonSerializerOptions
             {
-                Success = true,
-                ImageUrls = new[] { storedImageUrl },
-                Provider = Provider,
-                EnhancementType = request.EnhancementType,
-                ProcessingTime = processingTime,
-                Metadata = new Dictionary<string, object>
-                {
-                    { "openai_revised_prompt", openAIResponse.Data.First().RevisedPrompt ?? prompt }
-                }
-            };
+                PropertyNameCaseInsensitive = true
+            });
+
+            _logger.LogInformation("Deserialized response - Data count: {Count}", openAIResponse?.Data?.Length ?? 0);
+            
+            var imageData = openAIResponse?.Data?.FirstOrDefault();
+            if (imageData == null)
+            {
+                _logger.LogWarning("OpenAI returned no data. Raw preview: {Preview}", preview);
+                throw new InvalidOperationException("OpenAI returned no data");
+            }
+
+            string dataUrl;
+            if (!string.IsNullOrEmpty(imageData.B64Json))
+            {
+                // Base64 response
+                dataUrl = $"data:image/png;base64,{imageData.B64Json}";
+            }
+            else if (!string.IsNullOrEmpty(imageData.Url))
+            {
+                // URL response fallback when response_format is not supported
+                dataUrl = imageData.Url;
+            }
+            else
+            {
+                _logger.LogWarning("OpenAI returned neither url nor b64_json");
+                throw new InvalidOperationException("OpenAI returned neither url nor b64_json");
+            }
+            
+            var processingTime = DateTime.UtcNow - startTime;
+            _logger.LogInformation("OpenAI photo transformation completed in {Time}ms, returning base64 data URL", 
+                processingTime.TotalMilliseconds);
+
+            return dataUrl;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to enhance image with OpenAI for user {UserId}", request.UserId);
-            return new ImageGenerationResult
-            {
-                Success = false,
-                ErrorMessage = ex.Message,
-                Provider = Provider,
-                EnhancementType = request.EnhancementType,
-                ProcessingTime = DateTime.UtcNow - startTime
-            };
+            _logger.LogError(ex, "OpenAI photo transformation failed: {Message}", ex.Message);
+            throw;
         }
     }
 
-    public async Task<ImageGenerationResult> GenerateStyledImageAsync(StyledGenerationRequest request)
+    public Task<string> ProcessImageAsync(IFormFile image, string userId, string styleOption)
     {
-        // OpenAI doesn't support custom model training, so this method is not implemented
-        throw new NotSupportedException("OpenAI service does not support custom model training. Use Replicate for styled generation with trained models.");
+        throw new NotSupportedException("OpenAI service is for photo enhancement only");
     }
 
-    public async Task<IEnumerable<EnhancementType>> GetAvailableEnhancementTypesAsync()
+    public Task<IEnumerable<string>> GetAvailableStylesAsync()
     {
-        return new[]
+        var styles = new[]
         {
-            // Japanese Animation Styles
-            new EnhancementType
-            {
-                Id = "chibi",
-                Name = "Chibi Style",
-                Description = "Super cute anime style with oversized head and tiny body",
-                Category = "Japanese Animation",
-                CreditCost = 2
-            },
-            new EnhancementType
-            {
-                Id = "studio_ghibli",
-                Name = "Studio Ghibli",
-                Description = "Miyazaki-inspired dreamy watercolor aesthetic",
-                Category = "Japanese Animation", 
-                CreditCost = 2
-            },
-            new EnhancementType
-            {
-                Id = "kawaii",
-                Name = "Kawaii",
-                Description = "Ultra-cute style with pastels and sparkles",
-                Category = "Japanese Animation",
-                CreditCost = 2
-            },
-            new EnhancementType
-            {
-                Id = "shoujo_manga",
-                Name = "Shoujo Manga",
-                Description = "Classic manga style with expressive eyes",
-                Category = "Japanese Animation",
-                CreditCost = 2
-            },
-            new EnhancementType
-            {
-                Id = "retro_90s_anime",
-                Name = "90s Retro Anime",
-                Description = "Nostalgic Sailor Moon era aesthetic",
-                Category = "Japanese Animation",
-                CreditCost = 2
-            },
-            
-            // 3D Styles
-            new EnhancementType
-            {
-                Id = "pixar_3d",
-                Name = "Pixar 3D",
-                Description = "Professional 3D animation style",
-                Category = "3D Styles",
-                CreditCost = 2
-            },
-            new EnhancementType
-            {
-                Id = "low_poly",
-                Name = "Low Poly",
-                Description = "Geometric low-polygon 3D style",
-                Category = "3D Styles",
-                CreditCost = 2
-            },
-            new EnhancementType
-            {
-                Id = "clay_animation",
-                Name = "Clay Animation",
-                Description = "Stop-motion clay figure look",
-                Category = "3D Styles",
-                CreditCost = 2
-            },
-            new EnhancementType
-            {
-                Id = "voxel_art",
-                Name = "Voxel Art",
-                Description = "Minecraft-style block art",
-                Category = "3D Styles",
-                CreditCost = 2
-            }
+            "chibi",
+            "pixar_3d", 
+            "studio_ghibli",
+            "kawaii",
+            "shoujo_manga",
+            "retro_90s_anime",
+            "low_poly",
+            "clay_animation",
+            "voxel_art"
         };
+        return Task.FromResult<IEnumerable<string>>(styles);
     }
 
-    private string GenerateEnhancementPrompt(string enhancementType, string originalImageUrl)
+    public Task<string> GenerateImageAsync(GenerateImagesRequestDto request)
     {
-        // For images/edits endpoint - describe the desired transformation
-        var basePrompt = "Transform into ";
+        throw new NotSupportedException("OpenAI service focuses on photo enhancement");
+    }
+
+    /// <summary>
+    /// Downloads the image from URL, converts to PNG (square up to 1024), and creates transparent mask
+    /// </summary>
+    private async Task<(byte[] imageBytes, byte[] maskBytes)> PrepareImageAndMask(string imageUrl)
+    {
+        try
+        {
+            _logger.LogInformation("Downloading image from URL: {ImageUrl}", imageUrl);
+            
+            // Download the original image
+            var imageResponse = await _httpClient.GetAsync(imageUrl);
+            imageResponse.EnsureSuccessStatusCode();
+            
+            var originalImageBytes = await imageResponse.Content.ReadAsByteArrayAsync();
+            _logger.LogInformation("Downloaded image - Size: {Size} bytes", originalImageBytes.Length);
+            
+            // Process image and create mask using ImageSharp (cross-platform)
+            using var original = SixLabors.ImageSharp.Image.Load<Rgba32>(originalImageBytes);
+
+            // Determine target square size (up to 1024)
+            var targetSize = Math.Min(1024, Math.Max(original.Width, original.Height));
+
+            // Create square canvas with white background
+            using var squareImage = new SixLabors.ImageSharp.Image<Rgba32>(targetSize, targetSize, new Rgba32(255, 255, 255, 255));
+
+            // Resize down if needed (do not upscale)
+            int drawWidth = original.Width;
+            int drawHeight = original.Height;
+            if (original.Width > targetSize || original.Height > targetSize)
+            {
+                var scale = Math.Min((double)targetSize / original.Width, (double)targetSize / original.Height);
+                drawWidth = (int)Math.Round(original.Width * scale);
+                drawHeight = (int)Math.Round(original.Height * scale);
+            }
+
+            using var resized = original.Clone(ctx => ctx.Resize(new ResizeOptions
+            {
+                Size = new Size(drawWidth, drawHeight),
+                Mode = ResizeMode.Stretch
+            }));
+
+            // Center the (possibly resized) original image onto the white square canvas
+            var offsetX = (targetSize - drawWidth) / 2;
+            var offsetY = (targetSize - drawHeight) / 2;
+            squareImage.Mutate(ctx => ctx.DrawImage(resized, new Point(offsetX, offsetY), 1f));
+
+            // Encode to PNG bytes
+            var pngEncoder = new PngEncoder { ColorType = PngColorType.RgbWithAlpha };
+            using var imageStream = new MemoryStream();
+            await squareImage.SaveAsync(imageStream, pngEncoder);
+            var processedImageBytes = imageStream.ToArray();
+
+            // Create fully transparent mask (edit entire image)
+            using var maskImage = new SixLabors.ImageSharp.Image<Rgba32>(targetSize, targetSize, new Rgba32(255, 255, 255, 0));
+            using var maskStream = new MemoryStream();
+            await maskImage.SaveAsync(maskStream, pngEncoder);
+            var maskBytes = maskStream.ToArray();
+
+            _logger.LogInformation("Image processed to {Size}x{Size} PNG - Image: {ImageSize} bytes, Mask: {MaskSize} bytes", 
+                targetSize, targetSize, processedImageBytes.Length, maskBytes.Length);
+            
+            return (processedImageBytes, maskBytes);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to prepare image and mask from URL: {ImageUrl}", imageUrl);
+            throw new InvalidOperationException($"Failed to process image: {ex.Message}", ex);
+        }
+    }
+
+    private static string GenerateTransformationPrompt(string enhancementType)
+    {
+        var basePrompt = "Transform this portrait into ";
         
         return enhancementType.ToLower() switch
         {
-            "chibi" => basePrompt + "chibi anime style with oversized head, huge sparkling eyes, tiny body, extremely cute, soft pastel colors, kawaii aesthetic",
-            
-            "studio_ghibli" => basePrompt + "Studio Ghibli animation style, Hayao Miyazaki art aesthetic, soft watercolor painting effect, dreamy atmosphere with gentle features, whimsical and nostalgic feeling, hand-drawn animation quality with natural lighting",
-            
-            "kawaii" => basePrompt + "kawaii anime style illustration, ultra cute aesthetic with pastel pink and soft colors, sparkly large eyes with highlights, blushing cheeks, decorative hearts and stars, magical girl anime influence, adorable expression",
-            
-            "shoujo_manga" => basePrompt + "shoujo manga art style, dramatic expressive eyes with detailed iris patterns, flowing hair with highlights, soft facial features, romantic aesthetic, screen tone shading effects, classic manga illustration style",
-            
-            "retro_90s_anime" => basePrompt + "90s retro anime style, Sailor Moon and Dragon Ball Z era aesthetic, bold line art, vibrant saturated colors, cel-shaded animation look, nostalgic anime character design with classic proportions",
-            
-            "pixar_3d" => basePrompt + "Pixar-quality 3D animation style, professional computer graphics with soft lighting, detailed textures, expressive cartoon features, high-quality rendering with depth and dimension",
-            
-            "low_poly" => basePrompt + "low poly 3D art style, geometric faceted design with angular features, minimalist polygon aesthetic, clean geometric shapes, modern digital art style with flat colors",
-            
-            "clay_animation" => basePrompt + "clay animation style, stop-motion figure made of modeling clay, tactile handcrafted appearance, slightly imperfect organic shapes, Wallace and Gromit aesthetic",
-            
-            "voxel_art" => basePrompt + "voxel art style, Minecraft-inspired blocky 3D design, pixelated cube-based construction, retro video game aesthetic with distinct block patterns",
-            
-            _ => basePrompt + "professional enhanced portrait with improved lighting, clarity, and artistic quality"
+            "chibi" => basePrompt + "chibi anime style with oversized head, huge sparkling eyes, tiny body, extremely cute, soft pastel colors, maintaining facial features",
+            "studio_ghibli" => basePrompt + "Studio Ghibli animation style with soft watercolor painting effect, dreamy atmosphere, whimsical feeling, preserving the person's likeness",
+            "kawaii" => basePrompt + "kawaii anime style with ultra cute aesthetic, pastel colors, sparkly large eyes, blushing cheeks, keeping facial structure",
+            "shoujo_manga" => basePrompt + "shoujo manga art style with dramatic expressive eyes, flowing hair, romantic aesthetic, maintaining person's features",
+            "retro_90s_anime" => basePrompt + "90s retro anime style with bold line art, vibrant colors, cel-shaded animation look, preserving facial characteristics",
+            "pixar_3d" => basePrompt + "Pixar-quality 3D animation style with professional computer graphics, soft lighting, keeping the person recognizable",
+            "low_poly" => basePrompt + "low poly 3D art style with geometric faceted design, angular features, maintaining facial structure",
+            "clay_animation" => basePrompt + "clay animation style like stop-motion figure made of modeling clay, preserving the person's likeness",
+            "voxel_art" => basePrompt + "voxel art style with Minecraft-inspired blocky 3D design, keeping facial features recognizable",
+            _ => basePrompt + "professional anime style with improved lighting, clarity, and artistic quality while maintaining the person's appearance"
         };
-    }
-
-    private async Task<Stream> DownloadImageStreamAsync(string imageUrl)
-    {
-        var imageResponse = await _httpClient.GetAsync(imageUrl);
-        imageResponse.EnsureSuccessStatusCode();
-        return await imageResponse.Content.ReadAsStreamAsync();
-    }
-
-    private async Task<string> DownloadAndStoreImageAsync(string imageUrl, string userId, string enhancementType)
-    {
-        // Download image from OpenAI
-        var imageResponse = await _httpClient.GetAsync(imageUrl);
-        imageResponse.EnsureSuccessStatusCode();
-
-        using var imageStream = await imageResponse.Content.ReadAsStreamAsync();
-        
-        // Generate storage path
-        var fileName = $"openai_{enhancementType}_{Guid.NewGuid()}.png";
-        var storagePath = $"users/{userId}/enhanced/{fileName}";
-        
-        // Store in blob storage
-        await _storageService.SaveImageToPathAsync(imageStream, storagePath);
-        
-        // Return public URL
-        return _storageService.GetImageUrl(storagePath);
-    }
-
-    private async Task SaveEnhancedImageToDatabase(string userId, string originalUrl, string enhancedUrl, string enhancementType)
-    {
-        var userProfile = await _context.UserProfiles.FirstOrDefaultAsync(u => u.UserId == userId);
-        if (userProfile == null) return;
-
-        var processedImage = new ProcessedImage
-        {
-            OriginalImageUrl = originalUrl,
-            ProcessedImageUrl = enhancedUrl,
-            Style = enhancementType,
-            UserProfileId = userProfile.Id,
-            CreatedAt = DateTime.UtcNow,
-            IsOriginalUpload = false,
-            IsGenerated = true,
-            IsEnhanced = true,
-            Provider = Provider,
-            EnhancementType = enhancementType
-        };
-
-        processedImage.SetScheduledDeletionDate();
-
-        _context.ProcessedImages.Add(processedImage);
-        await _context.SaveChangesAsync();
     }
 
     // OpenAI API response models
     private class OpenAIImageResponse
     {
+        [JsonPropertyName("data")]
         public OpenAIImageData[]? Data { get; set; }
     }
 
     private class OpenAIImageData
     {
+        [JsonPropertyName("url")]
         public string? Url { get; set; }
+        
+        [JsonPropertyName("revised_prompt")]
         public string? RevisedPrompt { get; set; }
+        
+        [JsonPropertyName("b64_json")]
+        public string? B64Json { get; set; }
     }
 }

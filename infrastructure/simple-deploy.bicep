@@ -42,6 +42,10 @@ param stripePublishableKey string
 @description('Stripe webhook secret for payment event validation')
 param stripeWebhookSecret string
 
+@secure()
+@description('OpenAI API key for DALL-E 3 image generation')
+param openAiApiKey string
+
 // Generate unique names
 var uniqueSuffix = uniqueString(resourceGroup().id)
 
@@ -357,6 +361,10 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
           name: 'stripe-webhook-secret'
           value: stripeWebhookSecret
         }
+        {
+          name: 'openai-api-key'
+          value: openAiApiKey
+        }
       ]
     }
     template: {
@@ -492,6 +500,16 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'STRIPE_WEBHOOK_SECRET'
               secretRef: 'stripe-webhook-secret'
+            }
+            
+            // OpenAI Configuration
+            {
+              name: 'OPENAI_API_KEY'
+              secretRef: 'openai-api-key'
+            }
+            {
+              name: 'OpenAI__ApiKey'
+              secretRef: 'openai-api-key'
             }
             // Alternative naming for Stripe (for compatibility)
             {

@@ -222,9 +222,18 @@ export class ReplicateService {
   enhancePhoto(request: EnhancePhotoRequest): Observable<{
     success: boolean;
     data: {
-      prediction: ReplicatePredictionResult;
+      // Replicate format (with prediction wrapper)
+      prediction?: ReplicatePredictionResult;
       creditsRemaining: number;
       enhancementType: string;
+
+      // OpenAI format (direct fields)
+      Id?: string;
+      Status?: string;
+      Output?: string[];
+      CompletedAt?: string;
+      dataUrl?: string;
+      provider?: string;
     };
     error: any;
   }> {
@@ -237,9 +246,18 @@ export class ReplicateService {
     return this.http.post<{
       success: boolean;
       data: {
-        prediction: ReplicatePredictionResult;
+        // Replicate format (with prediction wrapper)
+        prediction?: ReplicatePredictionResult;
         creditsRemaining: number;
         enhancementType: string;
+
+        // OpenAI format (direct fields)
+        Id?: string;
+        Status?: string;
+        Output?: string[];
+        CompletedAt?: string;
+        dataUrl?: string;
+        provider?: string;
       };
       error: any;
     }>(this.config.getFullUrl(endpoint), request);
