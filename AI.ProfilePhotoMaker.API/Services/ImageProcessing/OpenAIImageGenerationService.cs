@@ -302,9 +302,9 @@ public class OpenAIImageGenerationService : IImageProcessingService
         
         return enhancementType.ToLower() switch
         {
-            "chibi" => basePrompt + "chibi anime style with oversized head, huge sparkling eyes, tiny body, extremely cute, soft pastel colors, maintaining facial features",
-            "studio_ghibli" => basePrompt + "Studio Ghibli animation style with soft watercolor painting effect, dreamy atmosphere, whimsical feeling, preserving the person's likeness",
-            "kawaii" => basePrompt + "kawaii anime style with ultra cute aesthetic, pastel colors, sparkly large eyes, blushing cheeks, keeping facial structure",
+            "chibi" => basePrompt + "japan chibi anime style with oversized head, huge sparkling eyes, tiny body, extremely cute, soft pastel colors, maintaining facial features",
+            "studio_ghibli" => basePrompt + "japan Studio Ghibli animation style with soft watercolor painting effect, dreamy atmosphere, whimsical feeling, preserving the person's likeness",
+            "kawaii" => basePrompt + "japan kawaii anime style with ultra cute aesthetic, pastel colors, sparkly large eyes, blushing cheeks, keeping facial structure",
             "shoujo_manga" => basePrompt + "shoujo manga art style with dramatic expressive eyes, flowing hair, romantic aesthetic, maintaining person's features",
             "retro_90s_anime" => basePrompt + "90s retro anime style with bold line art, vibrant colors, cel-shaded animation look, preserving facial characteristics",
             "pixar_3d" => basePrompt + "Pixar-quality 3D animation style with professional computer graphics, soft lighting, keeping the person recognizable",
