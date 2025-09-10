@@ -52,25 +52,9 @@ public class OpenAIImageGenerationService : IImageProcessingService
         _logger.LogInformation("OpenAI API configured successfully");
     }
 
-    // Backwards-compatible constructor for tests and simple manual instantiation
-    // Reuses the supplied HttpClient for BOTH OpenAI and download paths
-    // so tests that mock HttpMessageHandler still work without hitting network.
-    public OpenAIImageGenerationService(
-        HttpClient httpClient,
-        IConfiguration configuration,
-        ILogger<OpenAIImageGenerationService> logger,
-        IStorageService storageService)
-        : this(httpClient, new PassthroughHttpClientFactory(httpClient), configuration, logger, storageService)
-    {
-    }
-
-    // IHttpClientFactory that returns the provided client (used for tests)
-    private sealed class PassthroughHttpClientFactory : IHttpClientFactory
-    {
-        private readonly HttpClient _client;
-        public PassthroughHttpClientFactory(HttpClient client) => _client = client;
-        public HttpClient CreateClient(string name) => _client;
-    }
+    // Note: tests should supply an IHttpClientFactory that returns the same mocked HttpClient
+    // to capture both the OpenAI POST and the source image GET. Keeping a single DI constructor
+    // avoids ambiguity and simplifies runtime behavior.
 
     /// <summary>
     /// Enhances photo quality using OpenAI DALL-E image transformation and returns base64 data URL format

@@ -36,7 +36,11 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services
             var logger = NullLogger<OpenAIImageGenerationService>.Instance;
             var storage = new Mock<IStorageService>(MockBehavior.Strict); // not used by this method
 
-            var service = new OpenAIImageGenerationService(httpClient, configuration, logger, storage.Object);
+            // Provide a factory that returns the same mocked HttpClient for both OpenAI and download paths
+            var factory = new Mock<IHttpClientFactory>(MockBehavior.Strict);
+            factory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
+
+            var service = new OpenAIImageGenerationService(httpClient, factory.Object, configuration, logger, storage.Object);
 
             // Create a valid 2x2 PNG as source image
             byte[] inputPngBytes;
