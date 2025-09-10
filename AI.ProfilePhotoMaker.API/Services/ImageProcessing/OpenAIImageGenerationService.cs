@@ -90,8 +90,8 @@ public class OpenAIImageGenerationService : IImageProcessingService
             formData.Add(new StringContent(prompt), "prompt");
             
             // Add other parameters (keep minimal to avoid unknown-parameter errors)
+            // Note: Some OpenAI deployments reject response_format on edits; omit it and accept url or b64_json in response
             formData.Add(new StringContent("1024x1024"), "size");
-            formData.Add(new StringContent("b64_json"), "response_format");
             
             // Step 4: Call OpenAI image edit endpoint
             _logger.LogInformation(
