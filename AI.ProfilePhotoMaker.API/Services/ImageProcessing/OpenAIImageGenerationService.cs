@@ -53,19 +53,23 @@ public class OpenAIImageGenerationService : IImageProcessingService
     }
 
     // Backwards-compatible constructor for tests and simple manual instantiation
+    // Reuses the supplied HttpClient for BOTH OpenAI and download paths
+    // so tests that mock HttpMessageHandler still work without hitting network.
     public OpenAIImageGenerationService(
         HttpClient httpClient,
         IConfiguration configuration,
         ILogger<OpenAIImageGenerationService> logger,
         IStorageService storageService)
-        : this(httpClient, new SimpleHttpClientFactory(), configuration, logger, storageService)
+        : this(httpClient, new PassthroughHttpClientFactory(httpClient), configuration, logger, storageService)
     {
     }
 
-    // Minimal IHttpClientFactory implementation that returns a fresh HttpClient (no default headers)
-    private sealed class SimpleHttpClientFactory : IHttpClientFactory
+    // IHttpClientFactory that returns the provided client (used for tests)
+    private sealed class PassthroughHttpClientFactory : IHttpClientFactory
     {
-        public HttpClient CreateClient(string name = null!) => new HttpClient();
+        private readonly HttpClient _client;
+        public PassthroughHttpClientFactory(HttpClient client) => _client = client;
+        public HttpClient CreateClient(string name) => _client;
     }
 
     /// <summary>
