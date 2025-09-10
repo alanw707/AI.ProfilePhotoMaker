@@ -214,11 +214,24 @@ public class OpenAIImageGenerationService : IImageProcessingService
         try
         {
             _logger.LogInformation("Downloading image from URL: {ImageUrl}", imageUrl);
-            
-            // Download the original image
-            // Important: use plain download client so OpenAI Bearer token is NOT sent to blob URLs
+            // Add debug context for troubleshooting (host/scheme/SAS)
+            try
+            {
+                var u = new Uri(imageUrl);
+                var hasSas = !string.IsNullOrEmpty(u.Query) && u.Query.Contains("sig=", StringComparison.OrdinalIgnoreCase);
+                _logger.LogDebug("Download client context: host={Host}, scheme={Scheme}, hasSas={HasSas}", u.Host, u.Scheme, hasSas);
+            }
+            catch { /* ignore parse issues */ }
+
+            // Download the original image via plain client (no Authorization header)
             var imageResponse = await _downloadClient.GetAsync(imageUrl);
-            imageResponse.EnsureSuccessStatusCode();
+            if (!imageResponse.IsSuccessStatusCode)
+            {
+                var status = (int)imageResponse.StatusCode;
+                var reason = imageResponse.ReasonPhrase;
+                _logger.LogError("Source image fetch failed: {Status} {Reason}", status, reason);
+                throw new HttpRequestException($"Source image fetch failed: {status} {reason}");
+            }
             
             var originalImageBytes = await imageResponse.Content.ReadAsByteArrayAsync();
             _logger.LogInformation("Downloaded image - Size: {Size} bytes", originalImageBytes.Length);
@@ -269,6 +282,12 @@ public class OpenAIImageGenerationService : IImageProcessingService
                 targetSize, targetSize, processedImageBytes.Length, maskBytes.Length);
             
             return (processedImageBytes, maskBytes);
+        }
+        catch (HttpRequestException ex)
+        {
+            // Surface download errors to controller (maps to 502 instead of 503)
+            _logger.LogError(ex, "Failed to prepare image and mask from URL: {ImageUrl}", imageUrl);
+            throw;
         }
         catch (Exception ex)
         {
