@@ -52,7 +52,8 @@ public class ImageDownloadService : IImageDownloadService
             var imageUrl = imageUrls[i];
             // Generate unique filename to prevent overwrites
             var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff");
-            var fileName = $"{style.ToLowerInvariant()}-{timestamp}-{i + 1}.jpg";
+            var baseName = $"{style.ToLowerInvariant().Replace(' ', '-')}-{timestamp}-{i + 1}";
+            var fileName = baseName + ".jpg"; // default, updated after content-type detection
 
             try
             {
@@ -60,6 +61,14 @@ public class ImageDownloadService : IImageDownloadService
                 using var response = await _httpClient.GetAsync(imageUrl);
                 if (response.IsSuccessStatusCode)
                 {
+                    // Pick an extension from response content-type when available
+                    var contentType = response.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
+                    var ext = GetExtensionFromContentType(contentType);
+                    if (!string.IsNullOrEmpty(ext))
+                    {
+                        fileName = baseName + ext; // ensure correct container content-type
+                    }
+
                     using var imageStream = await response.Content.ReadAsStreamAsync();
 
                     // Save directly to blob storage

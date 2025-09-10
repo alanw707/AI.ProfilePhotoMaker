@@ -53,6 +53,173 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         /// <summary>
+        /// Reconcile database image records with backing storage.
+        /// Removes records that reference non-existent files. When dryRun=true, only reports counts.
+        /// </summary>
+        [HttpPost("reconcile-database")]
+        public async Task<IActionResult> ReconcileDatabase([FromQuery] bool dryRun = true)
+        {
+            // Allow anonymous access in development for database maintenance
+            string? userId = null;
+            if (_environment.IsProduction())
+            {
+                var authCheck = ValidateAuthentication();
+                if (authCheck != null) return authCheck;
+                userId = GetCurrentUserId()!;
+            }
+            else
+            {
+                // In development, we'll process all images for cleanup
+                LogInfo("Running reconcile-database in development mode (anonymous access)");
+            }
+
+            try
+            {
+                // Safety guard: never allow destructive reconcile in Production environment
+                if (_environment.IsProduction() && !dryRun)
+                {
+                    return ErrorResponse("Forbidden", "Destructive reconciliation is disabled in production", 403);
+                }
+
+                List<ProcessedImage> allImages;
+                UserProfile? profile = null;
+
+                if (userId != null)
+                {
+                    // Production mode: process images for specific user
+                    profile = await _userProfileRepository.GetByUserIdAsync(userId);
+                    if (profile == null)
+                        return ErrorResponse("ProfileNotFound", "Profile not found", 404);
+                    allImages = profile.ProcessedImages.ToList();
+                }
+                else
+                {
+                    // Development mode: process all images for cleanup
+                    if (Context == null)
+                    {
+                        return ErrorResponse("ServerError", "Database context unavailable", 500);
+                    }
+                    allImages = await Context.ProcessedImages.ToListAsync();
+                }
+
+                var orphaned = new List<ProcessedImage>();
+                var skippedAmbiguous = 0;
+
+                async Task<bool> PathExistsAsync(string? path)
+                {
+                    if (string.IsNullOrEmpty(path)) return false;
+                    if (path.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return true; // cannot verify external URLs; do not mark missing
+                    return await _storageService.ExistsAsync(path);
+                }
+
+                foreach (var img in allImages)
+                {
+                    // If both URLs are missing entirely, this is clearly orphaned
+                    if (string.IsNullOrEmpty(img.OriginalImageUrl) && string.IsNullOrEmpty(img.ProcessedImageUrl))
+                    {
+                        orphaned.Add(img);
+                        continue;
+                    }
+
+                    var isClearlyOriginal = img.IsOriginalUpload && !img.IsGenerated;
+                    var isClearlyGenerated = img.IsGenerated && !img.IsOriginalUpload;
+
+                    // Resolve ambiguous flags using style when possible
+                    if (!isClearlyOriginal && !isClearlyGenerated)
+                    {
+                        if (string.Equals(img.Style, ImageConstants.OriginalStyle, StringComparison.OrdinalIgnoreCase))
+                        {
+                            isClearlyOriginal = true;
+                        }
+                        else if (!string.IsNullOrEmpty(img.Style) && !string.Equals(img.Style, ImageConstants.OriginalStyle, StringComparison.OrdinalIgnoreCase))
+                        {
+                            isClearlyGenerated = true;
+                        }
+                    }
+
+                    // Original uploads must have the original file present; processed file is not required
+                    if (isClearlyOriginal)
+                    {
+                        var originalExists = await PathExistsAsync(img.OriginalImageUrl);
+                        if (!originalExists)
+                        {
+                            orphaned.Add(img);
+                        }
+                        continue;
+                    }
+
+                    // Generated images must have the processed file present; original file is not required
+                    if (isClearlyGenerated)
+                    {
+                        var processedExists = await PathExistsAsync(img.ProcessedImageUrl);
+                        if (!processedExists)
+                        {
+                            orphaned.Add(img);
+                        }
+                        continue;
+                    }
+
+                    // Ambiguous records (cannot confidently classify) — do not delete to avoid data loss
+                    skippedAmbiguous++;
+                }
+
+                if (dryRun)
+                {
+                    // Include fields used by tests/clients even in dry-run
+                    var totalUsersWithImages = allImages.Any() ? 1 : 0; // this endpoint reconciles only current user
+                    return SuccessResponse(new
+                    {
+                        TotalImages = allImages.Count,
+                        OrphanedRecords = orphaned.Count,
+                        OrphanedRecordsRemoved = 0,
+                        TotalUsers = totalUsersWithImages,
+                        SkippedAmbiguousRecords = skippedAmbiguous,
+                        Message = orphaned.Count > 0
+                            ? $"Found {orphaned.Count} orphaned image record(s)"
+                            : "No orphaned image records found",
+                        Timestamp = DateTime.UtcNow
+                    });
+                }
+
+                foreach (var img in orphaned)
+                {
+                    // Only remove from profile if we have a profile (production mode)
+                    if (profile != null)
+                        profile.ProcessedImages.Remove(img);
+                    // Always remove from context in both modes
+                    Context?.ProcessedImages.Remove(img);
+                }
+
+                if (orphaned.Count > 0)
+                {
+                    await Context!.SaveChangesAsync();
+                    // Update repo/caches as well for real application behavior (production mode only)
+                    if (profile != null && _userProfileRepository != null)
+                        await _userProfileRepository.UpdateAsync(profile);
+                    if (userId != null && _userContextService != null)
+                        await _userContextService.InvalidateUserCacheAsync(userId);
+                    LogInfo($"Removed {orphaned.Count} orphaned image records" + (userId != null ? $" for user {userId}" : " (development cleanup)"));
+                }
+
+                return SuccessResponse(new
+                {
+                    TotalImagesChecked = allImages.Count,
+                    OrphanedRecordsRemoved = orphaned.Count,
+                    SkippedAmbiguousRecords = skippedAmbiguous,
+                    Message = orphaned.Count > 0
+                        ? $"Successfully removed {orphaned.Count} orphaned image record(s)"
+                        : "No orphaned image records to remove",
+                    Timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, "Error reconciling image database", userId);
+                return ErrorResponse("ReconciliationFailed", "Failed to reconcile image database", 500);
+            }
+        }
+
+        /// <summary>
         /// Gets available image styles
         /// </summary>
         [HttpGet("styles")]
@@ -140,30 +307,38 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     await using var imageStream = image.OpenReadStream();
                     await _storageService.SaveImageToPathAsync(imageStream, storagePath);
 
-                    // Store storage path in DB; URLs are generated per-request
-                    // Persist both original uploads and enhanced images so they appear in the gallery
-                    var processedImage = new ProcessedImage
+                    // For ENHANCEMENT uploads: do NOT create gallery records.
+                    // These are temporary inputs for enhancement workflows.
+                    if (!dto.IsEnhanced)
                     {
-                        OriginalImageUrl = dto.IsEnhanced ? string.Empty : storagePath,
-                        ProcessedImageUrl = storagePath,
-                        Style = dto.IsEnhanced ? "Enhanced" : ImageConstants.OriginalStyle,
-                        UserProfileId = profile.Id,
-                        CreatedAt = DateTime.UtcNow,
-                        IsOriginalUpload = !dto.IsEnhanced,
-                        IsGenerated = dto.IsEnhanced,
-                    };
+                        // Store storage path in DB for original uploads so they appear in the gallery
+                        var processedImage = new ProcessedImage
+                        {
+                            OriginalImageUrl = storagePath,
+                            ProcessedImageUrl = storagePath,
+                            Style = ImageConstants.OriginalStyle,
+                            UserProfileId = profile.Id,
+                            CreatedAt = DateTime.UtcNow,
+                            IsOriginalUpload = true,
+                            IsGenerated = false,
+                        };
 
-                    // Set scheduled deletion date based on retention policy
-                    processedImage.SetScheduledDeletionDate();
+                        // Set scheduled deletion date based on retention policy
+                        processedImage.SetScheduledDeletionDate();
 
-                    profile.ProcessedImages.Add(processedImage);
-                    uploadedImages.Add(processedImage);
+                        profile.ProcessedImages.Add(processedImage);
+                        uploadedImages.Add(processedImage);
 
-                    Logger.LogInformation(
-                        dto.IsEnhanced
-                            ? "Created database record for enhanced image {FileName} for user {UserId}"
-                            : "Created database record for uploaded image {FileName} for user {UserId}",
-                        fileName, userId);
+                        Logger.LogInformation(
+                            "Created database record for uploaded image {FileName} for user {UserId}",
+                            fileName, userId);
+                    }
+                    else
+                    {
+                        Logger.LogInformation(
+                            "Stored temporary enhanced upload (no DB record) {FileName} for user {UserId}",
+                            fileName, userId);
+                    }
 
                     // Return a public URL for the client while keeping storagePath in DB
                     var publicUrl = _storageService.GetImageUrl(storagePath);
@@ -977,171 +1152,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Reconcile database image records with backing storage.
-        /// Removes records that reference non-existent files. When dryRun=true, only reports counts.
-        /// </summary>
-        [HttpPost("reconcile-database")]
-        public async Task<IActionResult> ReconcileDatabase([FromQuery] bool dryRun = true)
-        {
-            // Allow anonymous access in development for database maintenance
-            string? userId = null;
-            if (_environment.IsProduction())
-            {
-                var authCheck = ValidateAuthentication();
-                if (authCheck != null) return authCheck;
-                userId = GetCurrentUserId()!;
-            }
-            else 
-            {
-                // In development, we'll process all images for cleanup
-                LogInfo("Running reconcile-database in development mode (anonymous access)");
-            }
-
-            try
-            {
-                // Safety guard: never allow destructive reconcile in Production environment
-                if (_environment.IsProduction() && !dryRun)
-                {
-                    return ErrorResponse("Forbidden", "Destructive reconciliation is disabled in production", 403);
-                }
-
-                List<ProcessedImage> allImages;
-                UserProfile? profile = null;
-                
-                if (userId != null)
-                {
-                    // Production mode: process images for specific user
-                    profile = await _userProfileRepository.GetByUserIdAsync(userId);
-                    if (profile == null)
-                        return ErrorResponse("ProfileNotFound", "Profile not found", 404);
-                    allImages = profile.ProcessedImages.ToList();
-                }
-                else
-                {
-                    // Development mode: process all images for cleanup
-                    if (Context == null)
-                    {
-                        return ErrorResponse("ServerError", "Database context unavailable", 500);
-                    }
-                    allImages = await Context.ProcessedImages.ToListAsync();
-                }
-                var orphaned = new List<ProcessedImage>();
-                var skippedAmbiguous = 0;
-
-                async Task<bool> PathExistsAsync(string? path)
-                {
-                    if (string.IsNullOrEmpty(path)) return false;
-                    if (path.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return true; // cannot verify external URLs; do not mark missing
-                    return await _storageService.ExistsAsync(path);
-                }
-
-                foreach (var img in allImages)
-                {
-                    // If both URLs are missing entirely, this is clearly orphaned
-                    if (string.IsNullOrEmpty(img.OriginalImageUrl) && string.IsNullOrEmpty(img.ProcessedImageUrl))
-                    {
-                        orphaned.Add(img);
-                        continue;
-                    }
-
-                    var isClearlyOriginal = img.IsOriginalUpload && !img.IsGenerated;
-                    var isClearlyGenerated = img.IsGenerated && !img.IsOriginalUpload;
-
-                    // Resolve ambiguous flags using style when possible
-                    if (!isClearlyOriginal && !isClearlyGenerated)
-                    {
-                        if (string.Equals(img.Style, ImageConstants.OriginalStyle, StringComparison.OrdinalIgnoreCase))
-                        {
-                            isClearlyOriginal = true;
-                        }
-                        else if (!string.IsNullOrEmpty(img.Style) && !string.Equals(img.Style, ImageConstants.OriginalStyle, StringComparison.OrdinalIgnoreCase))
-                        {
-                            isClearlyGenerated = true;
-                        }
-                    }
-
-                    // Original uploads must have the original file present; processed file is not required
-                    if (isClearlyOriginal)
-                    {
-                        var originalExists = await PathExistsAsync(img.OriginalImageUrl);
-                        if (!originalExists)
-                        {
-                            orphaned.Add(img);
-                        }
-                        continue;
-                    }
-
-                    // Generated images must have the processed file present; original file is not required
-                    if (isClearlyGenerated)
-                    {
-                        var processedExists = await PathExistsAsync(img.ProcessedImageUrl);
-                        if (!processedExists)
-                        {
-                            orphaned.Add(img);
-                        }
-                        continue;
-                    }
-
-                    // Ambiguous records (cannot confidently classify) — do not delete to avoid data loss
-                    skippedAmbiguous++;
-                }
-
-                if (dryRun)
-                {
-                    // Include fields used by tests/clients even in dry-run
-                    var totalUsersWithImages = allImages.Any() ? 1 : 0; // this endpoint reconciles only current user
-                    return SuccessResponse(new
-                    {
-                        TotalImages = allImages.Count,
-                        OrphanedRecords = orphaned.Count,
-                        OrphanedRecordsRemoved = 0,
-                        TotalUsers = totalUsersWithImages,
-                        SkippedAmbiguousRecords = skippedAmbiguous,
-                        Message = orphaned.Count > 0
-                            ? $"Found {orphaned.Count} orphaned image record(s)"
-                            : "No orphaned image records found",
-                        Timestamp = DateTime.UtcNow
-                    });
-                }
-
-                foreach (var img in orphaned)
-                {
-                    // Only remove from profile if we have a profile (production mode)
-                    if (profile != null)
-                        profile.ProcessedImages.Remove(img);
-                    // Always remove from context in both modes
-                    Context?.ProcessedImages.Remove(img);
-                }
-
-                if (orphaned.Count > 0)
-                {
-                    await Context!.SaveChangesAsync();
-                    // Update repo/caches as well for real application behavior (production mode only)
-                    if (profile != null && _userProfileRepository != null)
-                        await _userProfileRepository.UpdateAsync(profile);
-                    if (userId != null && _userContextService != null)
-                        await _userContextService.InvalidateUserCacheAsync(userId);
-                    LogInfo($"Removed {orphaned.Count} orphaned image records" + (userId != null ? $" for user {userId}" : " (development cleanup)"));
-                }
-
-                return SuccessResponse(new
-                {
-                    TotalImagesChecked = allImages.Count,
-                    OrphanedRecordsRemoved = orphaned.Count,
-                    SkippedAmbiguousRecords = skippedAmbiguous,
-                    Message = orphaned.Count > 0
-                        ? $"Successfully removed {orphaned.Count} orphaned image record(s)"
-                        : "No orphaned image records to remove",
-                    Timestamp = DateTime.UtcNow
-                });
-            }
-            catch (Exception ex)
-            {
-                LogError(ex, "Error reconciling image database", userId);
-                return ErrorResponse("ReconciliationFailed", "Failed to reconcile image database", 500);
-            }
-        }
+        
 
         /// <summary>
         /// Saves enhanced image from base64 data to storage and creates database record
