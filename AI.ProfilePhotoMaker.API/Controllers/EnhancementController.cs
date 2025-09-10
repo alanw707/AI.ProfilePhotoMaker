@@ -2,6 +2,7 @@ using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,7 @@ public class EnhancementController : ControllerBase
     private readonly ILogger<EnhancementController> _logger;
     private readonly IWebHostEnvironment _environment;
     private readonly HttpClient _httpClient;
+    private readonly IStorageService _storageService;
 
     public EnhancementController(
         OpenAIImageGenerationService openAIService,
@@ -31,7 +33,8 @@ public class EnhancementController : ControllerBase
         ILogger<EnhancementController> logger,
         IConfiguration configuration,
         IWebHostEnvironment environment,
-        HttpClient httpClient)
+        HttpClient httpClient,
+        IStorageService storageService)
     {
         _openAIService = openAIService;
         _basicTierService = basicTierService;
@@ -39,6 +42,7 @@ public class EnhancementController : ControllerBase
         _logger = logger;
         _environment = environment;
         _httpClient = httpClient;
+        _storageService = storageService;
         
         // Configure HttpClient for OpenAI API health checks
         var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? configuration["OpenAI:ApiKey"];
@@ -413,6 +417,35 @@ public class EnhancementController : ControllerBase
                 var proxied = $"{scheme}://{host}{uri.AbsolutePath}{uri.Query}";
                 _logger.LogDebug("Rewriting Azurite URL {Original} -> {Proxied}", originalUrl, proxied);
                 return proxied;
+            }
+
+            // Production Azure Blob: if container is private (no SAS) generate a short-lived SAS URL
+            // Pattern: https://{account}.blob.core.windows.net/{container}/{blobPath}
+            var isAzureBlob = uri.Host.Contains(".blob.core.windows.net", StringComparison.OrdinalIgnoreCase);
+            var hasSas = !string.IsNullOrEmpty(uri.Query) && uri.Query.Contains("sig=", StringComparison.OrdinalIgnoreCase);
+            if (isAzureBlob && !hasSas)
+            {
+                var path = uri.AbsolutePath.Trim('/');
+                var segments = path.Split('/', 2, StringSplitOptions.RemoveEmptyEntries);
+                if (segments.Length >= 2)
+                {
+                    var blobPath = segments[1]; // drop container segment; storage service uses configured default container
+                    try
+                    {
+                        var sasUrlTask = _storageService.GenerateSasUrlAsync(blobPath, TimeSpan.FromMinutes(5));
+                        sasUrlTask.Wait();
+                        var sasUrl = sasUrlTask.Result;
+                        if (!string.IsNullOrEmpty(sasUrl))
+                        {
+                            _logger.LogDebug("Generated SAS URL for Azure blob (path={Path})", blobPath);
+                            return sasUrl;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to generate SAS URL for blob path {Path}", blobPath);
+                    }
+                }
             }
 
             return originalUrl;
