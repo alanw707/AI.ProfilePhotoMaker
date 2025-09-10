@@ -35,6 +35,22 @@ export interface UserImagesResponse {
   images: ProcessedImage[];
 }
 
+export interface SaveEnhancedImageResponse {
+  success: boolean;
+  data?: {
+    id: number;
+    fileName: string;
+    url: string;
+    enhancementType: string;
+    createdAt: string;
+    message: string;
+  };
+  error?: {
+    code: string;
+    message: string;
+  };
+}
+
 export interface TrainingStatusResponse {
   profileId: number;
   hasTrainedModel: boolean;
@@ -536,47 +552,74 @@ export class FileUploadService {
       );
   }
 
-  // UI-initiated image database repair removed to avoid unintended deletions.
-
   /**
-   * Delete temporary enhanced image file after successful enhancement
-   * @param fileName - The file name to delete
+   * Saves enhanced image from base64 data to storage and gallery
    */
-  deleteTemporaryEnhancedImage(
-    fileName: string
-  ): Observable<{ success: boolean; message: string }> {
-    console.log('🗑️ Attempting to delete enhanced image file:', fileName);
+  async saveEnhancedImage(
+    base64ImageData: string,
+    enhancementType: string
+  ): Promise<SaveEnhancedImageResponse> {
+    try {
+      const url = this.config.getFullUrl('/image/save-enhanced');
+      const headers = this.getAuthHeaders();
 
-    // Add authentication headers using production-ready AuthService
-    const headers: any = {};
-    const token = this.authService.getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    } else {
-      console.warn('No authentication token found - delete may fail');
-    }
-
-    return this.http
-      .delete<{
-        success: boolean;
-        message: string;
-      }>(this.config.getFullUrl(`/api/image/enhanced/${encodeURIComponent(fileName)}`), { headers })
-      .pipe(
-        tap(response => {
-          if (response.success) {
-            console.log('✅ Enhanced image file deleted successfully:', fileName);
-          } else {
-            console.warn('⚠️ Enhanced image deletion failed:', response.message);
+      const response = await this.http
+        .post<SaveEnhancedImageResponse>(
+          url,
+          {
+            base64ImageData,
+            enhancementType,
+          },
+          {
+            headers,
+            withCredentials: true, // Include cookies for authentication
           }
-        }),
-        catchError(error => {
-          console.error('❌ Error deleting enhanced image:', error);
-          // Return a graceful fallback - cleanup failure shouldn't break the user experience
-          return of({
-            success: false,
-            message: `Failed to delete enhanced image: ${error.message || 'Unknown error'}`,
-          });
-        })
+        )
+        .pipe(
+          timeout(30000), // 30 second timeout
+          catchError(error => {
+            console.error('Error saving enhanced image:', error);
+            return of({
+              success: false,
+              error: {
+                code: 'SAVE_FAILED',
+                message: error?.error?.message || error?.message || 'Failed to save enhanced image',
+              },
+            });
+          })
+        )
+        .toPromise();
+
+      return (
+        response || {
+          success: false,
+          error: {
+            code: 'NO_RESPONSE',
+            message: 'No response received from server',
+          },
+        }
       );
+    } catch (error: any) {
+      console.error('Error in saveEnhancedImage:', error);
+      return {
+        success: false,
+        error: {
+          code: 'NETWORK_ERROR',
+          message: error?.message || 'Network error occurred',
+        },
+      };
+    }
   }
+
+  private getAuthHeaders() {
+    const headers: any = {
+      'Content-Type': 'application/json',
+    };
+
+    // Note: AuthService uses cookies for authentication, not Authorization headers
+    // The HTTP client will automatically include cookies with withCredentials: true
+    return headers;
+  }
+
+  // UI-initiated image database repair removed to avoid unintended deletions.
 }

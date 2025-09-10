@@ -63,3 +63,12 @@ public class UploadImagesDto
     // Add this flag to indicate if upload is from enhancement page (filesystem only)
     public bool IsEnhanced { get; set; } = false;
 }
+
+public class SaveEnhancedImageDto
+{
+    [Required]
+    public string Base64ImageData { get; set; } = string.Empty;
+    
+    [StringLength(20)]
+    public string? EnhancementType { get; set; } = "professional";
+}

@@ -266,8 +266,36 @@ public class RetentionPolicyService : IRetentionPolicyService
             _logger.LogInformation("Found {PrefixedCount} enhanced files in prefixed path and {LegacyCount} in legacy path for cleanup", 
                 enhancedFiles.Count, legacyEnhancedFiles.Count);
 
-            // Use combined list for processing
-            var filesToProcess = allEnhancedFiles;
+            // Build a set of enhanced file paths that are referenced in the database
+            var referencedEnhancedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                var envPrefix = _pathResolver.GetDirectoryPrefix(StorageType.Enhanced);
+                var legacyPrefix = "enhanced/";
+
+                var dbReferenced = await _context.ProcessedImages
+                    .Where(pi => (!string.IsNullOrEmpty(pi.ProcessedImageUrl) &&
+                                  (pi.ProcessedImageUrl.StartsWith(envPrefix) || pi.ProcessedImageUrl.StartsWith(legacyPrefix))) ||
+                                  (!string.IsNullOrEmpty(pi.OriginalImageUrl) &&
+                                  (pi.OriginalImageUrl.StartsWith(envPrefix) || pi.OriginalImageUrl.StartsWith(legacyPrefix))))
+                    .Select(pi => new { pi.ProcessedImageUrl, pi.OriginalImageUrl })
+                    .ToListAsync();
+
+                foreach (var p in dbReferenced)
+                {
+                    if (!string.IsNullOrEmpty(p.ProcessedImageUrl)) referencedEnhancedPaths.Add(p.ProcessedImageUrl);
+                    if (!string.IsNullOrEmpty(p.OriginalImageUrl)) referencedEnhancedPaths.Add(p.OriginalImageUrl);
+                }
+
+                _logger.LogInformation("Found {Count} enhanced paths referenced in database; these will be preserved", referencedEnhancedPaths.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load referenced enhanced paths from database; proceeding with cautious cleanup");
+            }
+
+            // Use combined list for processing and skip anything referenced in DB
+            var filesToProcess = allEnhancedFiles.Where(p => !referencedEnhancedPaths.Contains(p)).ToList();
 
             foreach (var filePath in filesToProcess)
             {

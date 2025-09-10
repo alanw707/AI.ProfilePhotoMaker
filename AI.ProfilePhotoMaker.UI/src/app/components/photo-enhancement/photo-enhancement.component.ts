@@ -46,6 +46,11 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   isLoadingCredits = true;
   allowedTypes: string[] = ['image/jpeg', 'image/png', 'image/webp'];
 
+  // Save to gallery state
+  isSaving = false;
+  saveSuccessMessage = '';
+  isSaved = false;
+
   private _stateSubscription!: Subscription;
 
   constructor(
@@ -283,9 +288,6 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         } else {
           this._cdr.detectChanges();
         }
-
-        // Clean up the temporary uploaded image since we now have the enhanced version
-        this.cleanupTemporaryImage(uploadResult.fileName);
       } else {
         console.error('No enhanced image received from API response');
         throw new Error('No enhanced image received');
@@ -414,6 +416,39 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       link.click();
     }
   }
+
+  async saveToGallery() {
+    if (!this.enhancedImage || this.isSaving || this.isSaved) {
+      return;
+    }
+
+    this.isSaving = true;
+    this.saveSuccessMessage = '';
+    this.errorMessage = '';
+    this._cdr.markForCheck();
+
+    try {
+      const response = await this._fileUploadService.saveEnhancedImage(
+        this.enhancedImage.url,
+        this.enhancementType
+      );
+
+      if (response.success) {
+        this.isSaved = true;
+        this.saveSuccessMessage = 'Enhanced image saved to gallery successfully!';
+        // Refresh the gallery data in the dashboard coordinator service
+        this._stateService.forceRefresh();
+      } else {
+        this.errorMessage = response.error?.message || 'Failed to save enhanced image';
+      }
+    } catch (error: any) {
+      console.error('Error saving enhanced image:', error);
+      this.errorMessage = error?.message || 'Failed to save enhanced image to gallery';
+    } finally {
+      this.isSaving = false;
+      this._cdr.markForCheck();
+    }
+  }
   shareEnhanced() {
     if (navigator.share && this.enhancedImage) {
       // If data URL, use Web Share API with files if supported
@@ -449,30 +484,11 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     this.errorMessage = '';
     this.isProcessing = false;
     this.processingProgress = 0;
-  }
 
-  /**
-   * Clean up temporary uploaded image after successful enhancement
-   * This removes the temporary image file since we now have the enhanced version from Replicate
-   */
-  private cleanupTemporaryImage(fileName: string): void {
-    if (!fileName) {
-      return;
-    }
-
-    // Call backend API to delete the temporary file
-    this._fileUploadService.deleteTemporaryEnhancedImage(fileName).subscribe({
-      next: response => {
-        if (response.success) {
-        } else {
-          console.warn('⚠️ Failed to cleanup temporary image:', response.message);
-        }
-      },
-      error: error => {
-        console.warn('⚠️ Error during temporary image cleanup:', error);
-        // Don't throw error - cleanup failure shouldn't affect user experience
-      },
-    });
+    // Reset save state
+    this.isSaving = false;
+    this.isSaved = false;
+    this.saveSuccessMessage = '';
   }
 
   resetComponent() {
