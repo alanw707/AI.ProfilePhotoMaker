@@ -301,7 +301,17 @@ if (enableReplicateMock)
 }
 else
 {
-    builder.Services.AddHttpClient<IReplicateApiClient, ReplicateApiClient>();
+    builder.Services.AddHttpClient<IReplicateApiClient, ReplicateApiClient>(client =>
+    {
+        // Set 2-minute timeout for Replicate API calls to prevent UI hanging
+        client.Timeout = TimeSpan.FromMinutes(2);
+    });
+    
+    // Register OpenAI Image Generation Service with HttpClient
+    builder.Services.AddHttpClient<OpenAIImageGenerationService>(client =>
+    {
+        client.Timeout = TimeSpan.FromMinutes(5);
+    });
     
     // Configure robustness service with options
     builder.Services.Configure<ModelDiscoveryRobustnessOptions>(options =>

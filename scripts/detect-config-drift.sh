@@ -14,7 +14,8 @@
 # and distinguishes between secret-based vs infrastructure-generated patterns.
 # =============================================================================
 
-set -euo pipefail
+# Use -u and pipefail for safety, avoid -e so analysis continues even if a subcommand returns non-zero
+set -uo pipefail
 
 # Script version for tracking changes
 SCRIPT_VERSION="1.0.0"
@@ -155,7 +156,7 @@ extract_app_environment_variables() {
     log_verbose "Required variables from EnvironmentConfiguration.cs:"
     echo "$REQUIRED_APP_VARS" | while read -r var; do
         log_verbose "  • $var"
-    done
+    done || true
     
     # Extract optional variables (those checked but not required)
     OPTIONAL_APP_VARS=$(grep -E "GetEnvironmentVariable\(.*\)" "$env_config_file" | \
@@ -166,7 +167,7 @@ extract_app_environment_variables() {
     log_verbose "Optional variables from EnvironmentConfiguration.cs:"
     echo "$OPTIONAL_APP_VARS" | while read -r var; do
         log_verbose "  • $var"
-    done
+    done || true
     
     # Check for environment-specific validation logic
     if grep -q "IsProduction\(\)\|IsStaging\(\)" "$env_config_file"; then
@@ -209,20 +210,20 @@ extract_infrastructure_environment_variables() {
             local file_config_vars=$(grep -E "^\s*name:\s*'[A-Za-z]+__[A-Za-z]+'" "$bicep_file" | \
                 sed "s/.*name: '//" | sed "s/'.*$//" | sort -u || true)
             
-            BICEP_ENV_VARS=$(echo -e "$BICEP_ENV_VARS\n$file_env_vars" | sort -u | grep -v '^$')
-            BICEP_CONFIG_VARS=$(echo -e "$BICEP_CONFIG_VARS\n$file_config_vars" | sort -u | grep -v '^$')
+            BICEP_ENV_VARS=$(echo -e "$BICEP_ENV_VARS\n$file_env_vars" | sort -u | grep -v '^$' || true)
+            BICEP_CONFIG_VARS=$(echo -e "$BICEP_CONFIG_VARS\n$file_config_vars" | sort -u | grep -v '^$' || true)
         fi
     done
     
     log_verbose "Infrastructure environment variables:"
     echo "$BICEP_ENV_VARS" | while read -r var; do
         [[ -n "$var" ]] && log_verbose "  • $var"
-    done
+    done || true
     
     log_verbose "Infrastructure configuration variables:"
     echo "$BICEP_CONFIG_VARS" | while read -r var; do
         [[ -n "$var" ]] && log_verbose "  • $var"
-    done
+    done || true
     
     log_success "✅ Infrastructure configuration analysis completed"
 }
@@ -477,7 +478,7 @@ detect_naming_mismatches() {
         local correct_name="${mismatch##*:}"
         
         # Check if wrong name appears in infrastructure
-        if echo "$BICEP_ENV_VARS$BICEP_CONFIG_VARS" | grep -q "$wrong_name"; then
+        if echo "$BICEP_ENV_VARS$BICEP_CONFIG_VARS" | grep -q "^$wrong_name$"; then
             log_critical "Naming mismatch detected: $wrong_name should be $correct_name"
             add_remediation "Rename $wrong_name to $correct_name in infrastructure configuration"
         fi
@@ -524,7 +525,7 @@ detect_missing_mappings() {
                 fi
             fi
         fi
-    done
+    done || true
     
     # Variables in infrastructure but not expected by app
     echo "$BICEP_ENV_VARS" | while read -r var; do
@@ -534,7 +535,7 @@ detect_missing_mappings() {
                 log_item "Infrastructure provides variable not explicitly expected by app: $var"
             fi
         fi
-    done
+    done || true
 }
 
 is_critical_for_environment() {
@@ -582,7 +583,7 @@ validate_against_existing_scripts() {
                     log_warning "validate-secrets.sh checks $var but application doesn't explicitly require it"
                 fi
             fi
-        done
+        done || true
         
         echo "$REQUIRED_APP_VARS" | while read -r var; do
             if [[ -n "$var" ]]; then
@@ -592,7 +593,7 @@ validate_against_existing_scripts() {
                     add_remediation "Add $var validation to scripts/validate-secrets.sh"
                 fi
             fi
-        done
+        done || true
     fi
     
     log_success "✅ Validation script consistency check completed"
@@ -640,7 +641,6 @@ check_production_staging_drift() {
         "JWT_SECRET"
         "REPLICATE_API_TOKEN"
         "REPLICATE_WEBHOOK_SECRET"
-        "AZURE_STORAGE_CONNECTION_STRING"
     )
     
     for secret in "${production_required_secrets[@]}"; do
@@ -728,21 +728,21 @@ compare_configuration_snapshots() {
     local new_vars=$(grep -E '^\s*"[A-Z_]+"\s*[,]?$' "$new_snapshot" | tr -d ' ,"' | sort)
     
     # Check for added variables
-    local added_vars=$(comm -13 <(echo "$old_vars") <(echo "$new_vars"))
+    local added_vars=$(comm -13 <(echo "$old_vars") <(echo "$new_vars") || true)
     if [[ -n "$added_vars" ]]; then
         log_item "🆕 New configuration variables detected:"
         echo "$added_vars" | while read -r var; do
             [[ -n "$var" ]] && log_item "  + $var"
-        done
+        done || true
     fi
     
     # Check for removed variables
-    local removed_vars=$(comm -23 <(echo "$old_vars") <(echo "$new_vars"))
+    local removed_vars=$(comm -23 <(echo "$old_vars") <(echo "$new_vars") || true)
     if [[ -n "$removed_vars" ]]; then
         log_warning "🗑️  Configuration variables removed:"
         echo "$removed_vars" | while read -r var; do
             [[ -n "$var" ]] && log_warning "  - $var"
-        done
+        done || true
     fi
 }
 

@@ -1019,7 +1019,7 @@ public class ReplicateController : ControllerBase
                 error = new
                 {
                     code = "RequestTimeout",
-                    message = "Enhancement request timed out. Please try again with a smaller image."
+                    message = "The enhancement is taking longer than expected (over 2 minutes). Please try again in a few moments - sometimes the service needs a break! 😊"
                 }
             });
         }

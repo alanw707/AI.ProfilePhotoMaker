@@ -143,6 +143,16 @@ staging-environment-report.json
 playwright-report/
 **/junit.xml
 
+# PID files and runtime markers
+*.pid
+**/*.pid
+
+# User-specific project files
+*.csproj.user
+
+# Local cookies/session artifacts
+AI.ProfilePhotoMaker.API/cookies.txt
+
 # Compiled binaries
 *.dll
 *.pdb
