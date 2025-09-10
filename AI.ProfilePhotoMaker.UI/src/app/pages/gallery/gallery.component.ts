@@ -91,12 +91,21 @@ export class GalleryComponent implements OnInit {
 
         this.galleryImages = uniqueImages
           .map((img: ProcessedImage) => {
-            // For generated images, prioritize processedImageUrl; for uploads, use originalImageUrl
-            const preferredUrl = img.isGenerated
-              ? img.processedImageUrl || img.originalImageUrl
-              : img.originalImageUrl || img.processedImageUrl;
+            // Detect enhanced images by style markers
+            const styleLower = (img.style || '').toLowerCase();
+            const isEnhanced =
+              styleLower.startsWith('enhanced') ||
+              img.style === 'Background Remover' ||
+              img.style === 'Social Media' ||
+              img.style === 'Cartoon' ||
+              styleLower.startsWith('enhancement:');
 
-            // Skip images without valid URLs
+            // For generated/enhanced, prioritize processedImageUrl; for uploads, prefer original
+            const preferredUrl =
+              img.isGenerated || isEnhanced
+                ? img.processedImageUrl || img.originalImageUrl
+                : img.originalImageUrl || img.processedImageUrl;
+
             if (!preferredUrl) {
               this._logger.warn('Skipping image with no valid URL', {
                 id: img.id,
@@ -106,20 +115,34 @@ export class GalleryComponent implements OnInit {
               return null;
             }
 
+            const type = isEnhanced
+              ? ('enhanced' as const)
+              : img.isGenerated
+                ? ('generated' as const)
+                : ('original' as const);
+
+            const title = isEnhanced
+              ? 'Enhanced Photo'
+              : img.isGenerated
+                ? `${this.formatStyleName(img.style)} Photo`
+                : 'Uploaded Photo';
+
+            const description = isEnhanced
+              ? 'AI-enhanced photo'
+              : img.isGenerated
+                ? `Generated ${this.formatStyleName(img.style)} style profile photo`
+                : 'Original uploaded image';
+
             return {
               id: img.id,
               url: preferredUrl,
-              thumbnailUrl: preferredUrl, // Use same URL for thumbnails to ensure consistency
-              title: img.isGenerated
-                ? `${this.formatStyleName(img.style)} Photo`
-                : 'Uploaded Photo',
-              description: img.isGenerated
-                ? `Generated ${this.formatStyleName(img.style)} style profile photo`
-                : 'Original uploaded image',
+              thumbnailUrl: preferredUrl,
+              title,
+              description,
               style: img.style || 'original',
               createdAt: new Date(img.createdAt),
               status: 'completed' as const,
-              type: img.isGenerated ? ('generated' as const) : ('original' as const),
+              type,
               downloadUrl: preferredUrl,
             };
           })
@@ -193,11 +216,7 @@ export class GalleryComponent implements OnInit {
 
   async onImageDownload(image: GalleryImage) {
     // Skip enhanced images for now - focus on generated images
-    const isEnhancedImage =
-      image.style === 'Background Remover' ||
-      image.style === 'Social Media' ||
-      image.style === 'Cartoon';
-    if (isEnhancedImage) {
+    if (image.type === 'enhanced') {
       alert(
         `Enhanced image downloads are not yet implemented. Focusing on regular generated images first.\n\nImage: ${image.title} (${image.style})`
       );
@@ -416,13 +435,7 @@ export class GalleryComponent implements OnInit {
     }
 
     // Filter out enhanced images for now
-    const generatedImages = images.filter(img => {
-      const isEnhanced =
-        img.style === 'Background Remover' ||
-        img.style === 'Social Media' ||
-        img.style === 'Cartoon';
-      return !isEnhanced;
-    });
+    const generatedImages = images.filter(img => img.type === 'generated');
 
     const enhancedCount = images.length - generatedImages.length;
 

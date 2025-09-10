@@ -25,5 +25,8 @@ if $START_UI; then
   bash "$SCRIPT_DIR/scripts/ui-start.sh"
 fi
 
+echo "➡️  Starting ngrok tunnel"
+ngrok http 5032 --domain clear-anteater-usually.ngrok-free.app &
+
 echo "✅ Dev services started (API/UI)."
 

@@ -23,5 +23,8 @@ if $STOP_API; then
   bash "$SCRIPT_DIR/scripts/api-stop.sh"
 fi
 
+echo "➡️  Stopping ngrok tunnel"
+pkill -f ngrok || true
+
 echo "✅ Dev services stopped (API/UI)."
 

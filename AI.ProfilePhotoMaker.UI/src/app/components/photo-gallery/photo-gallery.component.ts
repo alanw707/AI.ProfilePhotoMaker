@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, OnInit, Output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  EventEmitter,
+  Input,
+  OnChanges,
+  OnInit,
+  Output,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GalleryFilterControlsComponent } from './gallery-filter-controls/gallery-filter-controls.component';
 import { GalleryPaginationComponent } from './gallery-pagination/gallery-pagination.component';
@@ -195,7 +203,7 @@ export interface GalleryImage {
     </div>
   `,
   styleUrls: ['./photo-gallery.component.sass'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PhotoGalleryComponent implements OnInit, OnChanges {
   @Input() images: GalleryImage[] = [];
@@ -307,9 +315,14 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
   toggleSelection(image: GalleryImage): void {
     const index = this.selectedImages.findIndex(selected => selected.id === image.id);
     if (index > -1) {
-      this.selectedImages.splice(index, 1);
+      // Create a new array without the deselected image to trigger OnPush change detection
+      this.selectedImages = [
+        ...this.selectedImages.slice(0, index),
+        ...this.selectedImages.slice(index + 1),
+      ];
     } else {
-      this.selectedImages.push(image);
+      // Reassign with a new array including the newly selected image
+      this.selectedImages = [...this.selectedImages, image];
     }
   }
 
