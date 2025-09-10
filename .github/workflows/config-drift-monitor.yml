@@ -36,7 +36,8 @@ jobs:
   config-drift-detection:
     name: 🔍 Detect Configuration Drift
     runs-on: ubuntu-latest
-    if: ${{ matrix.environment != '' }}
+    # Skip if this workflow was triggered by a push (e.g., when the workflow file itself changes)
+    if: ${{ github.event_name != 'push' && matrix.environment != '' }}
     
     strategy:
       matrix:
@@ -339,7 +340,8 @@ jobs:
     name: 📢 Notify Completion
     runs-on: ubuntu-latest
     needs: config-drift-detection
-    if: always()
+    # Also skip notifications on push-triggered runs
+    if: ${{ github.event_name != 'push' && always() }}
     
     steps:
       - name: 📊 Aggregate Results
