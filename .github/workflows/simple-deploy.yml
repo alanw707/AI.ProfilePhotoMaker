@@ -863,12 +863,14 @@ jobs:
       - name: 🔄 Refresh Container App secrets and roll revision
         run: |
           echo "🔄 [SYNC] Refreshing Container App secrets from GitHub Secrets and forcing new revision"
+          # Keep these in sync with infrastructure/simple-deploy.bicep `secrets` names
           az containerapp secret set \
             --name aipm-api-v1 \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --secrets \
               replicate-token='${{ secrets.REPLICATE_API_TOKEN }}' \
-              replicate-webhook-secret='${{ secrets.REPLICATE_WEBHOOK_SECRET }}'
+              replicate-webhook-secret='${{ secrets.REPLICATE_WEBHOOK_SECRET }}' \
+              openai-api-key='${{ secrets.OPENAI_API_KEY }}'
 
           # Force a new revision so app reads updated secrets at startup
           REV_TS=$(date +%s)
