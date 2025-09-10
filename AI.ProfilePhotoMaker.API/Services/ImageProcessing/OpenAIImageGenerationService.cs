@@ -74,8 +74,10 @@ public class OpenAIImageGenerationService : IImageProcessingService
             // Step 3: Create multipart form data for image editing
             using var formData = new MultipartFormDataContent();
             
-            // Add the image file
-            formData.Add(new ByteArrayContent(imageBytes), "image", "image.png");
+            // Add the image file (OpenAI edits expect field name image[])
+            var imageContent = new ByteArrayContent(imageBytes);
+            imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+            formData.Add(imageContent, "image[]", "image.png");
             
             // Add the mask file (optional). Some models/endpoints behave better without an explicit mask.
             // Skipping mask to allow full-image edits reliably.
@@ -89,6 +91,7 @@ public class OpenAIImageGenerationService : IImageProcessingService
             
             // Add other parameters (keep minimal to avoid unknown-parameter errors)
             formData.Add(new StringContent("1024x1024"), "size");
+            formData.Add(new StringContent("b64_json"), "response_format");
             
             // Step 4: Call OpenAI image edit endpoint
             _logger.LogInformation(
