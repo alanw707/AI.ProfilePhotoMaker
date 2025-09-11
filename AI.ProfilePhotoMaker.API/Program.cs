@@ -577,7 +577,6 @@ if (app.Environment.IsDevelopment())
 }
 app.UseCors(corsPolicy);
 // app.UsePerformanceMonitoring(); // Removed monitoring middleware
-app.Use(async (context, next) => { await next(); });
 app.UseAuthentication();
 app.UseAuthorization();
 
