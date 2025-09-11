@@ -22,6 +22,7 @@ public class ReplicateApiClient : IReplicateApiClient
     private readonly IConfiguration _configuration;
     private readonly ILogger<ReplicateApiClient> _logger;
     private readonly ApplicationDbContext _context;
+    private readonly Services.Storage.IStorageService _storageService;
     private readonly IWebhookUrlResolver _webhookUrlResolver;
     private readonly bool _mockEnabled;
 
@@ -30,13 +31,15 @@ public class ReplicateApiClient : IReplicateApiClient
         IConfiguration configuration,
         ILogger<ReplicateApiClient> logger,
         ApplicationDbContext context,
-        IWebhookUrlResolver webhookUrlResolver)
+        IWebhookUrlResolver webhookUrlResolver,
+        Services.Storage.IStorageService? storageService = null)
     {
         _httpClient = httpClient;
         _configuration = configuration;
         _logger = logger;
         _context = context;
         _webhookUrlResolver = webhookUrlResolver;
+        _storageService = storageService ?? new NoopStorageService();
         _mockEnabled = (Environment.GetEnvironmentVariable("ENABLE_REPLICATE_MOCK") ?? string.Empty)
             .Equals("true", StringComparison.OrdinalIgnoreCase);
 
@@ -54,6 +57,38 @@ public class ReplicateApiClient : IReplicateApiClient
                 ?? throw new InvalidOperationException("Replicate API token not configured");
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Token", apiToken);
         }
+    }
+
+    /// <summary>
+    /// Minimal no-op storage service used only in tests that construct ReplicateApiClient directly.
+    /// It avoids forcing tests to wire full storage dependencies. Only SAS generation is used by this class,
+    /// and here it simply returns the input path unchanged.
+    /// </summary>
+    private sealed class NoopStorageService : Services.Storage.IStorageService
+    {
+        public Task<string> SaveImageAsync(Stream imageStream, string fileName, string userId, string folderType = "generated")
+            => throw new NotSupportedException();
+        public Task<string> SaveImageToPathAsync(Stream imageStream, string storagePath)
+            => throw new NotSupportedException();
+        public Task<Stream?> GetImageAsync(string storagePath)
+            => throw new NotSupportedException();
+        public Task<bool> DeleteImageAsync(string storagePath)
+            => throw new NotSupportedException();
+        public Task<bool> ExistsAsync(string storagePath)
+            => throw new NotSupportedException();
+        public string GetImageUrl(string storagePath) => storagePath;
+        public Task<List<string>> ListUserImagesAsync(string userId)
+            => throw new NotSupportedException();
+        public Task<Services.Storage.StorageFileInfo?> GetFileInfoAsync(string storagePath)
+            => throw new NotSupportedException();
+        public Task<string> GenerateSasUrlAsync(string storagePath, TimeSpan expiry, Azure.Storage.Sas.BlobSasPermissions permissions = Azure.Storage.Sas.BlobSasPermissions.Read)
+            => Task.FromResult(storagePath);
+        public Task<string> SaveZipAsync(Stream zipStream, string storagePath)
+            => throw new NotSupportedException();
+        public Task<bool> DeleteDirectoryAsync(string directoryPath)
+            => throw new NotSupportedException();
+        public Task<List<string>> ListFilesAsync(string prefix)
+            => throw new NotSupportedException();
     }
 
     /// <summary>
@@ -863,6 +898,9 @@ public class ReplicateApiClient : IReplicateApiClient
     {
         try
         {
+            // Ensure the image URL is externally accessible (SAS or proxy) for Replicate to fetch
+            imageUrl = await NormalizeImageUrlForExternalAccessAsync(imageUrl);
+
             // Use Flux Kontext Pro for text-based photo enhancement (model-specific predictions endpoint)
             string kontextProModel = _configuration["Replicate:FluxKontextProModelId"] ?? "black-forest-labs/flux-kontext-pro";
 
@@ -994,6 +1032,70 @@ public class ReplicateApiClient : IReplicateApiClient
         {
             _logger.LogError(ex, "Error enhancing photo with Kontext Pro for user {UserId}", userId);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Ensures the provided image URL is externally accessible to Replicate's servers.
+    /// - For Azurite localhost URLs, rewrites to use ExternalApiBaseUrl/AppBaseUrl with the same path.
+    /// - For Azure Blob URLs without SAS, generates a short-lived SAS URL using the storage service.
+    /// Leaves other URLs unchanged.
+    /// </summary>
+    private async Task<string> NormalizeImageUrlForExternalAccessAsync(string originalUrl)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(originalUrl)) return originalUrl;
+            if (!Uri.TryCreate(originalUrl, UriKind.Absolute, out var uri)) return originalUrl;
+
+            // Handle Azurite local URLs by routing through our externally accessible base URL
+            var isAzuriteLocal = (uri.Host.Equals("127.0.0.1") || uri.Host.Equals("localhost"))
+                                 && uri.Port == 10000
+                                 && uri.AbsolutePath.StartsWith("/devstoreaccount1/", StringComparison.OrdinalIgnoreCase);
+            if (isAzuriteLocal)
+            {
+                var externalBase = _configuration["ExternalApiBaseUrl"]
+                                   ?? _configuration["AppBaseUrl"]
+                                   ?? "https://localhost:5001";
+                var rewritten = $"{externalBase.TrimEnd('/')}{uri.AbsolutePath}{uri.Query}";
+                _logger.LogDebug("Rewriting Azurite URL for external access {Original} -> {Rewritten}", originalUrl, rewritten);
+                return rewritten;
+            }
+
+            // For Azure Blob without SAS, generate SAS so Replicate can fetch the image
+            var isAzureBlob = uri.Host.Contains(".blob.core.windows.net", StringComparison.OrdinalIgnoreCase);
+            var hasSas = !string.IsNullOrEmpty(uri.Query) && uri.Query.Contains("sig=", StringComparison.OrdinalIgnoreCase);
+            if (isAzureBlob && !hasSas)
+            {
+                var path = uri.AbsolutePath.Trim('/');
+                var segments = path.Split('/', 2, StringSplitOptions.RemoveEmptyEntries);
+                if (segments.Length >= 2)
+                {
+                    var container = segments[0];
+                    var blobPath = segments[1];
+                    var containerAndPath = $"{container}/{blobPath}";
+                    try
+                    {
+                        var sasUrl = await _storageService.GenerateSasUrlAsync(containerAndPath, TimeSpan.FromMinutes(10));
+                        if (!string.IsNullOrEmpty(sasUrl))
+                        {
+                            _logger.LogDebug("Generated SAS URL for external access (container={Container}, path={Path})", container, blobPath);
+                            return sasUrl;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to generate SAS URL for external access (container={Container}, path={Path})", container, blobPath);
+                    }
+                }
+            }
+
+            return originalUrl;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to normalize image URL for external access: {Url}", originalUrl);
+            return originalUrl;
         }
     }
 

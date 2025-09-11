@@ -71,7 +71,9 @@ public class OpenAIImageGenerationService : IImageProcessingService
                 request.EnhancementType, request.ImageUrl);
 
             // Step 1: Download and process the image
-            var (imageBytes, maskBytes) = await PrepareImageAndMask(request.ImageUrl);
+            // Ensure the image URL is accessible from the server context (SAS/proxy)
+            var normalizedUrl = await NormalizeImageUrlForServerAccessAsync(request.ImageUrl);
+            var (imageBytes, maskBytes) = await PrepareImageAndMask(normalizedUrl);
             _logger.LogInformation("Image processed - Original size: {Size} bytes", imageBytes.Length);
             
             // Step 2: Generate transformation prompt
@@ -281,6 +283,80 @@ public class OpenAIImageGenerationService : IImageProcessingService
         {
             _logger.LogError(ex, "Failed to prepare image and mask from URL: {ImageUrl}", imageUrl);
             throw new InvalidOperationException($"Failed to process image: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Ensures the provided image URL is accessible from the API server.
+    /// - For Azure Blob without SAS: generate a short-lived SAS.
+    /// - For proxied paths like /profile-images/*: convert to SAS URL using default container.
+    /// - Leaves other URLs unchanged.
+    /// </summary>
+    private async Task<string> NormalizeImageUrlForServerAccessAsync(string originalUrl)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(originalUrl)) return originalUrl;
+
+            if (!Uri.TryCreate(originalUrl, UriKind.Absolute, out var uri))
+            {
+                return originalUrl;
+            }
+
+            // Azure Blob without SAS -> generate SAS
+            var isAzureBlob = uri.Host.Contains(".blob.core.windows.net", StringComparison.OrdinalIgnoreCase);
+            var hasSas = !string.IsNullOrEmpty(uri.Query) && uri.Query.Contains("sig=", StringComparison.OrdinalIgnoreCase);
+            if (isAzureBlob && !hasSas)
+            {
+                var path = uri.AbsolutePath.Trim('/');
+                var segments = path.Split('/', 2, StringSplitOptions.RemoveEmptyEntries);
+                if (segments.Length >= 2)
+                {
+                    var container = segments[0];
+                    var blobPath = segments[1];
+                    var containerAndPath = $"{container}/{blobPath}";
+                    try
+                    {
+                        var sasUrl = await _storageService.GenerateSasUrlAsync(containerAndPath, TimeSpan.FromMinutes(10));
+                        if (!string.IsNullOrEmpty(sasUrl))
+                        {
+                            _logger.LogDebug("Generated SAS URL for Azure image (container={Container}, path={Path})", container, blobPath);
+                            return sasUrl;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to generate SAS for Azure image (container={Container}, path={Path})", container, blobPath);
+                    }
+                }
+            }
+
+            // API proxy path /profile-images/* -> translate to SAS using default container
+            if (uri.AbsolutePath.StartsWith("/profile-images/", StringComparison.OrdinalIgnoreCase))
+            {
+                var suffix = uri.AbsolutePath.Substring("/profile-images/".Length).TrimStart('/');
+                var containerAndPath = $"profile-images/{suffix}"; // default container for this route
+                try
+                {
+                    var sasUrl = await _storageService.GenerateSasUrlAsync(containerAndPath, TimeSpan.FromMinutes(10));
+                    if (!string.IsNullOrEmpty(sasUrl))
+                    {
+                        _logger.LogDebug("Translated proxy path to SAS URL (path={Path})", suffix);
+                        return sasUrl;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to translate proxy image path to SAS (path={Path})", suffix);
+                }
+            }
+
+            return originalUrl;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to normalize image URL: {Url}", originalUrl);
+            return originalUrl;
         }
     }
 

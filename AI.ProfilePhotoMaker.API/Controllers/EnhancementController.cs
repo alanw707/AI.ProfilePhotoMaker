@@ -143,7 +143,7 @@ public class EnhancementController : ControllerBase
             _logger.LogInformation("Starting OpenAI photo enhancement for user {UserId} with style {EnhancementType}", userId, dto.EnhancementType);
             
             // Normalize image URL so the API can fetch it in all dev setups
-            dto.ImageUrl = NormalizeImageUrlForServerAccess(dto.ImageUrl);
+            dto.ImageUrl = await NormalizeImageUrlForServerAccessAsync(dto.ImageUrl);
             _logger.LogInformation("Enhancement source image URL normalized to: {ImageUrl}", dto.ImageUrl);
 
             // Check credit availability (OpenAI costs 2 credits)
@@ -398,7 +398,7 @@ public class EnhancementController : ControllerBase
     /// When the API runs in a different network context (container/WSL), that host may be unreachable.
     /// Rewrite such URLs to go through our own proxy endpoint so the server can always fetch them.
     /// </summary>
-    private string NormalizeImageUrlForServerAccess(string originalUrl)
+    private async Task<string> NormalizeImageUrlForServerAccessAsync(string originalUrl)
     {
         try
         {
@@ -429,21 +429,21 @@ public class EnhancementController : ControllerBase
                 var segments = path.Split('/', 2, StringSplitOptions.RemoveEmptyEntries);
                 if (segments.Length >= 2)
                 {
-                    var blobPath = segments[1]; // drop container segment; storage service uses configured default container
+                    var container = segments[0];
+                    var blobPath = segments[1];
+                    var containerAndPath = $"{container}/{blobPath}";
                     try
                     {
-                        var sasUrlTask = _storageService.GenerateSasUrlAsync(blobPath, TimeSpan.FromMinutes(5));
-                        sasUrlTask.Wait();
-                        var sasUrl = sasUrlTask.Result;
+                        var sasUrl = await _storageService.GenerateSasUrlAsync(containerAndPath, TimeSpan.FromMinutes(5));
                         if (!string.IsNullOrEmpty(sasUrl))
                         {
-                            _logger.LogDebug("Generated SAS URL for Azure blob (path={Path})", blobPath);
+                            _logger.LogDebug("Generated SAS URL for Azure blob (container={Container}, path={Path})", container, blobPath);
                             return sasUrl;
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Failed to generate SAS URL for blob path {Path}", blobPath);
+                        _logger.LogWarning(ex, "Failed to generate SAS URL for blob (container={Container}, path={Path})", container, blobPath);
                     }
                 }
             }
