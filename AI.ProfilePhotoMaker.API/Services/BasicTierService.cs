@@ -147,8 +147,8 @@ public class BasicTierService : IBasicTierService
             return false;
         }
 
-        // Weekly reset guard: mirror logic from the other overload so flows using
-        // the custom-amount path also refresh weekly credits when due.
+        // Weekly reset guard: mirror logic from the other overload so flows
+        // using the custom-amount path also refresh weekly credits when due.
         if (ShouldResetCredits(profile.LastCreditReset))
         {
             await ResetWeeklyCreditsAsync(userId);
