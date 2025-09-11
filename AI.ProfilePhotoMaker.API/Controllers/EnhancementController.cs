@@ -172,7 +172,8 @@ public class EnhancementController : ControllerBase
             }
             else
             {
-                creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, 2, "openai_enhancement");
+                // Use photo_enhancement action so weekly credits are eligible
+                creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, 2, "photo_enhancement");
             }
             
             if (!creditConsumed)
