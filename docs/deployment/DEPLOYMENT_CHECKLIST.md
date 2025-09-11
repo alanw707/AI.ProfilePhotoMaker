@@ -119,7 +119,7 @@ az containerapp update \
 
 ### Documentation
 - ✅ `/ClaudeDocs/Design/Architecture/oauth-deployment-architecture-2025-08-12-145500.md` - Architecture analysis
-- ✅ `/DEPLOYMENT_CHECKLIST.md` - This checklist
+- ✅ `/docs/deployment/DEPLOYMENT_CHECKLIST.md` - This checklist
 
 ### Configuration
 - ✅ `.gitignore` - Added deployment-params.json patterns
@@ -138,3 +138,4 @@ The deployment is successful when:
 - ✅ All future deployments include OAuth configuration automatically
 - ✅ No manual Azure Portal/CLI configuration required
 - ✅ Infrastructure is fully reproducible from code
+

@@ -259,7 +259,7 @@ gh repo view
 
 - [Environment Variables Reference](ENVIRONMENT_VARIABLES.md)
 - [Infrastructure Validation](../scripts/validate-infrastructure-config.sh)
-- [Deployment Checklist](../DEPLOYMENT_CHECKLIST.md)
+- [Deployment Checklist](../deployment/DEPLOYMENT_CHECKLIST.md)
 - [GitHub Actions Workflow](../.github/workflows/simple-deploy.yml)
 
 ---

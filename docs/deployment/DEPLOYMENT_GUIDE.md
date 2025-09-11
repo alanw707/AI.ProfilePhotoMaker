@@ -316,4 +316,5 @@ az sql db import --name your-db --server your-server
 - [Environment Setup Guide](../setup/ENVIRONMENT_SETUP.md) - Configure local development environment
 - [Azure CLI Setup](AZURE_CLI_SETUP.md) - Install and configure Azure CLI
 - [Architecture Overview](../architecture/OVERVIEW.md) - System architecture and design decisions
+- [Deployment Checklist](DEPLOYMENT_CHECKLIST.md) - OAuth checklist and quick commands
 - [Workflow Validation](WORKFLOW_VALIDATION.md) - Validate deployment workflows

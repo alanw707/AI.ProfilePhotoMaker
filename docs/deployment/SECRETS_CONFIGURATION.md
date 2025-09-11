@@ -1,12 +1,14 @@
+---
+
 # Secrets Configuration Guide - Azure Deployment
 
-**🔒 SECURITY WARNING**: This guide contains instructions for handling sensitive secrets. Never commit actual secrets to version control.
+Note: This content is consolidated across the following canonical documents:
+- Reference mapping and validation commands: `docs/ENVIRONMENT_VARIABLES.md`
+- End-to-end workflows and synchronization: `docs/unified-secrets-management.md`
 
-## 🎯 Overview
+This page remains as a brief guide for parameter-file specific actions and links to the canonical sources above.
 
-Before deploying to Azure, you need to update the parameter files with actual secret values. The current files contain placeholder values that must be replaced.
-
-## 📋 Required Secrets
+## 📋 Required Secrets (Summary)
 
 ### **1. SQL Admin Password**
 - **Purpose**: Administrator password for Azure SQL Database
@@ -135,7 +137,7 @@ cp parameters.staging.json parameters.staging.json.backup
 }
 ```
 
-## 🛡️ Security Best Practices
+## 🛡️ Security Best Practices (See also canonical docs)
 
 ### **DO:**
 ✅ Use different secrets for staging vs production  
@@ -187,7 +189,7 @@ cp parameters.staging.json parameters.staging.json.backup
 1. **Commit Parameter Updates** (without exposing secrets):
    ```bash
    # Add deployment documentation
-   git add AZURE_DEPLOYMENT_BACKLOG.md DEPLOYMENT_CHECKLIST.md SECRETS_CONFIGURATION_GUIDE.md
+   git add AZURE_DEPLOYMENT_BACKLOG.md docs/deployment/DEPLOYMENT_CHECKLIST.md SECRETS_CONFIGURATION_GUIDE.md
    
    # DO NOT add parameter files with real secrets
    git commit -m "docs: add Azure deployment backlog and configuration guides"
@@ -247,7 +249,7 @@ cp parameters.staging.json parameters.staging.json.backup
 - **Azure Issues**: Check Azure portal deployment logs
 - **Replicate Issues**: Visit https://replicate.com/docs
 - **JWT Issues**: Verify secret length and encoding
-- **General Deployment**: Review DEPLOYMENT_CHECKLIST.md
+- **General Deployment**: Review docs/deployment/DEPLOYMENT_CHECKLIST.md
 
 ### **Emergency Contacts**
 - Azure Support: Through Azure portal
@@ -260,7 +262,7 @@ cp parameters.staging.json parameters.staging.json.backup
 
 **Next Steps**: 
 1. Update parameter files with your actual secrets
-2. Follow DEPLOYMENT_CHECKLIST.md for deployment
+2. Follow docs/deployment/DEPLOYMENT_CHECKLIST.md for deployment
 3. Monitor deployment success in Azure portal
 
 **Status**: Ready for Implementation  

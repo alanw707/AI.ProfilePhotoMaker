@@ -251,3 +251,47 @@ If new configuration patterns are introduced, update:
 3. **Terraform Support**: Extend validation to Terraform templates
 4. **Environment-Specific Validation**: Different rules for dev/staging/prod
 5. **Auto-Fix Suggestions**: Generate corrected Bicep templates
+
+---
+
+## Appendix: Infrastructure Validation Implementation Summary (relocated)
+
+The following implementation summary was previously in the repository root as `INFRASTRUCTURE_VALIDATION_SUMMARY.md` and is preserved here for completeness.
+
+### Completed Implementation
+
+1) Enhanced GitHub Actions Workflow (`.github/workflows/simple-deploy.yml`):
+- Adds a pre-deployment step to validate infra configuration
+- Extracts variables from Bicep templates and compares with `EnvironmentConfiguration.cs`
+- Fails deployment with actionable messages on mismatch
+
+2) Local Validation Script (`scripts/validate-infrastructure-config.sh`):
+- Validates environment variables and ASP.NET Core config patterns
+- Verbose mode and color-coded output
+
+3) Test Suite (`scripts/test-infrastructure-validation.sh`):
+- Positive and negative tests with auto-restore
+
+4) Documentation (`docs/infrastructure-validation.md`):
+- Problem description, implementation details, and roadmap
+
+### Protection Against Configuration Mismatches
+
+Key validations include:
+- `AZURE_STORAGE_CONNECTION_STRING` matches between app and infra
+- `JWT_SECRET` ↔ `Jwt__Secret` mapping
+- `REPLICATE_API_TOKEN` ↔ `Replicate__ApiToken` mapping
+- Database config via `ConnectionStrings__DefaultConnection`
+
+### Deployment Safety
+
+- Pre-deployment validation blocks mismatched deployments
+- Intelligent pattern matching: direct env vars, config patterns, connection strings
+
+### Usage Examples
+
+```bash
+./scripts/validate-infrastructure-config.sh        # standard
+./scripts/validate-infrastructure-config.sh --verbose
+./scripts/test-infrastructure-validation.sh        # test suite
+```

@@ -497,7 +497,7 @@ GOOGLE_CLIENT_ID=123456789-abc123.apps.googleusercontent.com
 
 - [Environment Setup Guide](ENVIRONMENT_SETUP.md)
 - [Unified Secrets Management](unified-secrets-management.md)
-- [Deployment Checklist](../DEPLOYMENT_CHECKLIST.md)
+- [Deployment Checklist](../deployment/DEPLOYMENT_CHECKLIST.md)
 - [Infrastructure Validation](infrastructure-validation.md)
 
 ---

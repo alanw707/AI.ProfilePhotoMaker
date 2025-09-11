@@ -14,6 +14,7 @@ System design, components, and architectural decisions.
 Infrastructure deployment, CI/CD pipelines, and deployment strategies.
 
 - **[DEPLOYMENT_MILESTONE_DOCUMENTATION.md](./deployment/DEPLOYMENT_MILESTONE_DOCUMENTATION.md)** - ⭐ Complete deployment milestone documentation with issue resolution
+- **[DEPLOYMENT_CHECKLIST.md](./deployment/DEPLOYMENT_CHECKLIST.md)** - OAuth deployment checklist and quick commands
 - **[DEPLOYMENT_OPTIONS.md](./deployment/DEPLOYMENT_OPTIONS.md)** - Available deployment options and recommendations
 - **[DEPLOYMENT_STRATEGY.md](./deployment/DEPLOYMENT_STRATEGY.md)** - Overall deployment strategy and approach
 - **[OPTION_A_IMPLEMENTATION.md](./deployment/OPTION_A_IMPLEMENTATION.md)** - Two-phase deployment implementation details
@@ -41,6 +42,7 @@ Operational procedures, API documentation, and system management.
 
 - **[MILESTONE_ACHIEVEMENT_SUMMARY.md](./operations/MILESTONE_ACHIEVEMENT_SUMMARY.md)** - ⭐ Major milestone achievements and success metrics
 - **[API_REFERENCE.md](./operations/API_REFERENCE.md)** - Complete API documentation and endpoints
+- **[Webhook Integration Guide](../webhooks/INTEGRATION.md)** - Architecture, endpoints, and security
 - **[OPERATIONAL_RUNBOOK.md](./operations/OPERATIONAL_RUNBOOK.md)** - Production operations, monitoring, and incident response
 - **[CREDIT_SYSTEM.md](./operations/CREDIT_SYSTEM.md)** - Credit system implementation and management
 - **[GALLERY_MANAGEMENT.md](./operations/GALLERY_MANAGEMENT.md)** - Gallery features and management procedures
@@ -99,6 +101,15 @@ Operational procedures, API documentation, and system management.
 - Start with [API Reference](./operations/API_REFERENCE.md)
 - Review operational procedures in [Operations](./operations/) folder
 - Check [Milestone Achievement Summary](./operations/MILESTONE_ACHIEVEMENT_SUMMARY.md)
+
+---
+
+## 📑 Additional Indexes
+
+- Webhooks (development): [Ngrok Setup](../webhooks/NGROK_SETUP.md)
+- Test reports: 
+  - API Playwright Agent Collaboration Report: `AI.ProfilePhotoMaker.API/tests/playwright/AGENT-COLLABORATION-REPORT.md`
+  - API Playwright Final Validation Summary: `AI.ProfilePhotoMaker.API/tests/playwright/FINAL-VALIDATION-SUMMARY.md`
 
 ---
 
