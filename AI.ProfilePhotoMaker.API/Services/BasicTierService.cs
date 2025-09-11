@@ -147,6 +147,19 @@ public class BasicTierService : IBasicTierService
             return false;
         }
 
+        // Weekly reset guard: mirror logic from the other overload so flows using
+        // the custom-amount path also refresh weekly credits when due.
+        if (ShouldResetCredits(profile.LastCreditReset))
+        {
+            await ResetWeeklyCreditsAsync(userId);
+            profile = await GetUserProfileWithCreditsAsync(userId); // Refresh after reset
+            if (profile == null)
+            {
+                _logger.LogWarning("User profile not found after reset for user {UserId}", userId);
+                return false;
+            }
+        }
+
         // Use custom amount instead of config lookup
         var creditCost = customAmount;
 

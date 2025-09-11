@@ -7,9 +7,10 @@
     <div class="gallery-content">
       <!-- Page Header -->
       <section class="page-header">
-        <h2>Photo Enhancement</h2>
+        <h2>Photo Transform</h2>
         <p>
-          Upload your photo and enhance it with AI - background removal, lighting correction, and professional styling.
+          Transform your photo with AI — background cleanup, lighting fixes, and creative styles for social or
+          professional use.
         </p>
       </section>
 
@@ -19,7 +20,7 @@
           <div class="credits-icon">⚡</div>
           <div class="credits-content">
             <h3>{{ getTotalAvailableCredits() }} Credits</h3>
-            <p>Available for enhancement</p>
+            <p>Available for transforms</p>
           </div>
         </div>
         <div class="credits-card loading-card" *ngIf="isLoadingCredits">
@@ -48,7 +49,7 @@
           (drop)="onDrop($event)"
           [class.drag-over]="isDragOver">
           <div class="upload-icon">📷</div>
-          <h4>Upload a photo to enhance</h4>
+          <h4>Upload a photo to transform</h4>
           <p>Drag & drop or click to select • JPG, PNG, WebP • Max 7MB</p>
           <input
             type="file"
@@ -72,7 +73,7 @@
 
         <!-- Enhancement Options -->
         <div class="enhancement-options">
-          <h3>Enhancement Options</h3>
+          <h3>Transform Options</h3>
           <div class="options-grid">
             <!-- Replicate Enhancement Options (1 credit) -->
             <label class="option-card" [class.selected]="enhancementType === 'background'">
@@ -134,7 +135,7 @@
 
           <button class="btn btn-primary enhance-btn" (click)="startEnhancement()" [disabled]="!hasEnoughCredits()">
             <span *ngIf="hasEnoughCredits()">
-              Enhance Photo ({{ getRequiredCredits() }} credit{{ getRequiredCredits() > 1 ? 's' : '' }})
+              Transform Photo ({{ getRequiredCredits() }} credit{{ getRequiredCredits() > 1 ? 's' : '' }})
             </span>
             <span *ngIf="!hasEnoughCredits()">Not Enough Credits ({{ getRequiredCredits() }} required)</span>
           </button>
@@ -145,7 +146,7 @@
       <section class="processing-section" *ngIf="isProcessing">
         <div class="processing-card">
           <div class="processing-spinner"></div>
-          <h3>Enhancing Your Photo</h3>
+          <h3>Transforming Your Photo</h3>
           <p>AI is working its magic... This usually takes 30-60 seconds.</p>
           <div class="processing-progress">
             <div class="progress-bar" [style.width.%]="processingProgress"></div>
@@ -156,7 +157,7 @@
 
       <!-- Results Section -->
       <section class="results-section" *ngIf="enhancedImage">
-        <h3>Enhancement Complete!</h3>
+        <h3>Transform Complete!</h3>
         <div class="retention-info">
           <small class="text-muted">
             📅 Your enhanced photo will be available for 30 days. You can delete your data anytime in account settings.
@@ -184,7 +185,7 @@
               <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" />
               <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" />
             </svg>
-            Download Enhanced Photo
+            Download Transformed Photo
           </button>
           <button class="btn btn-secondary" (click)="shareEnhanced()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
