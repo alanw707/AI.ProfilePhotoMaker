@@ -76,8 +76,9 @@ public class ModelDeletionRegressionTests : IDisposable
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req => 
                     req.Method == HttpMethod.Get && 
-                    req.RequestUri!.ToString().EndsWith($"models/{modelId}") &&
-                    !req.RequestUri.ToString().Contains("versions")),
+                    req.RequestUri != null &&
+                    req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
+                    !req.RequestUri.AbsolutePath.Contains("/versions")),
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
 
@@ -91,7 +92,8 @@ public class ModelDeletionRegressionTests : IDisposable
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req => 
                     req.Method == HttpMethod.Get && 
-                    req.RequestUri!.ToString().EndsWith($"models/{modelId}/versions")),
+                    req.RequestUri != null &&
+                    req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}/versions")),
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(versionsResponse);
 
@@ -102,8 +104,9 @@ public class ModelDeletionRegressionTests : IDisposable
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req => 
                     req.Method == HttpMethod.Delete && 
-                    req.RequestUri!.ToString().EndsWith($"models/{modelId}") &&
-                    !req.RequestUri.ToString().Contains("versions")),
+                    req.RequestUri != null &&
+                    req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
+                    !req.RequestUri.AbsolutePath.Contains("/versions")),
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NoContent));
 
@@ -164,8 +167,9 @@ public class ModelDeletionRegressionTests : IDisposable
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req => 
                     req.Method == HttpMethod.Get && 
-                    req.RequestUri!.ToString().EndsWith($"models/{modelId}") &&
-                    !req.RequestUri.ToString().Contains("versions")),
+                    req.RequestUri != null &&
+                    req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
+                    !req.RequestUri.AbsolutePath.Contains("/versions")),
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
 
@@ -179,7 +183,8 @@ public class ModelDeletionRegressionTests : IDisposable
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req => 
                     req.Method == HttpMethod.Get && 
-                    req.RequestUri!.ToString().EndsWith($"models/{modelId}/versions")),
+                    req.RequestUri != null &&
+                    req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}/versions")),
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(versionsResponse);
 
@@ -190,8 +195,9 @@ public class ModelDeletionRegressionTests : IDisposable
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req => 
                     req.Method == HttpMethod.Delete && 
-                    req.RequestUri!.ToString().EndsWith($"models/{modelId}") &&
-                    !req.RequestUri.ToString().Contains("versions")),
+                    req.RequestUri != null &&
+                    req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
+                    !req.RequestUri.AbsolutePath.Contains("/versions")),
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NoContent));
 
@@ -233,8 +239,9 @@ public class ModelDeletionRegressionTests : IDisposable
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req => 
                     req.Method == HttpMethod.Get && 
-                    req.RequestUri!.ToString().EndsWith($"models/{modelId}") &&
-                    !req.RequestUri.ToString().Contains("versions")),
+                    req.RequestUri != null &&
+                    req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
+                    !req.RequestUri.AbsolutePath.Contains("/versions")),
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
 
@@ -251,7 +258,8 @@ public class ModelDeletionRegressionTests : IDisposable
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req => 
                     req.Method == HttpMethod.Get && 
-                    req.RequestUri!.ToString().EndsWith($"models/{modelId}/versions")),
+                    req.RequestUri != null &&
+                    req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}/versions")),
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(versionsResponse);
 
@@ -262,8 +270,9 @@ public class ModelDeletionRegressionTests : IDisposable
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req => 
                     req.Method == HttpMethod.Delete && 
-                    req.RequestUri!.ToString().EndsWith($"models/{modelId}") &&
-                    !req.RequestUri.ToString().Contains("versions")),
+                    req.RequestUri != null &&
+                    req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
+                    !req.RequestUri.AbsolutePath.Contains("/versions")),
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NoContent));
 
@@ -301,8 +310,9 @@ public class ModelDeletionRegressionTests : IDisposable
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req => 
                     req.Method == HttpMethod.Get && 
-                    req.RequestUri!.ToString().EndsWith($"models/{modelId}") &&
-                    !req.RequestUri.ToString().Contains("versions")),
+                    req.RequestUri != null &&
+                    req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
+                    !req.RequestUri.AbsolutePath.Contains("/versions")),
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NotFound));
 
@@ -343,8 +353,9 @@ public class ModelDeletionRegressionTests : IDisposable
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req => 
                     req.Method == HttpMethod.Get && 
-                    req.RequestUri!.ToString().EndsWith($"models/{modelId}") &&
-                    !req.RequestUri.ToString().Contains("versions")),
+                    req.RequestUri != null &&
+                    req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
+                    !req.RequestUri.AbsolutePath.Contains("/versions")),
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
 
@@ -361,7 +372,8 @@ public class ModelDeletionRegressionTests : IDisposable
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req => 
                     req.Method == HttpMethod.Get && 
-                    req.RequestUri!.ToString().EndsWith($"models/{modelId}/versions")),
+                    req.RequestUri != null &&
+                    req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}/versions")),
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(versionsResponse);
 
@@ -372,7 +384,8 @@ public class ModelDeletionRegressionTests : IDisposable
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req => 
                     req.Method == HttpMethod.Delete && 
-                    req.RequestUri!.ToString().Contains($"models/{modelId}/versions/")),
+                    req.RequestUri != null &&
+                    req.RequestUri.AbsolutePath.Contains($"/models/{modelId}/versions/")),
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NoContent));
 
@@ -383,8 +396,9 @@ public class ModelDeletionRegressionTests : IDisposable
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req => 
                     req.Method == HttpMethod.Delete && 
-                    req.RequestUri!.ToString().EndsWith($"models/{modelId}") &&
-                    !req.RequestUri.ToString().Contains("versions")),
+                    req.RequestUri != null &&
+                    req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
+                    !req.RequestUri.AbsolutePath.Contains("/versions")),
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NoContent));
 
@@ -433,8 +447,9 @@ public class ModelDeletionRegressionTests : IDisposable
             Times.Once(),
             ItExpr.Is<HttpRequestMessage>(req => 
                 req.Method == HttpMethod.Delete && 
-                req.RequestUri!.ToString().EndsWith($"models/{modelId}") &&
-                !req.RequestUri.ToString().Contains("versions")),
+                req.RequestUri != null &&
+                req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
+                !req.RequestUri.AbsolutePath.Contains("/versions")),
             ItExpr.IsAny<CancellationToken>());
     }
 
@@ -489,7 +504,8 @@ public class ModelDeletionRegressionTests : IDisposable
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req => 
                     req.Method == HttpMethod.Delete && 
-                    req.RequestUri!.ToString().Contains($"models/{modelId}/versions/failing-version")),
+                    req.RequestUri != null &&
+                    req.RequestUri.AbsolutePath.Contains($"/models/{modelId}/versions/failing-version")),
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(versionDeleteError);
 
@@ -575,8 +591,9 @@ public class ModelDeletionRegressionTests : IDisposable
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req => 
                     req.Method == HttpMethod.Delete && 
-                    req.RequestUri!.ToString().EndsWith($"models/{modelId}") &&
-                    !req.RequestUri.ToString().Contains("versions")),
+                    req.RequestUri != null &&
+                    req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
+                    !req.RequestUri.AbsolutePath.Contains("/versions")),
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(modelDeleteError);
 

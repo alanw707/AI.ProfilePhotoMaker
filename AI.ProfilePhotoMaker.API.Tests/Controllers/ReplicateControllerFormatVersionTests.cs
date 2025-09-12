@@ -2,6 +2,13 @@ using Xunit;
 using FluentAssertions;
 using System.Reflection;
 using AI.ProfilePhotoMaker.API.Controllers;
+using Moq;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using AI.ProfilePhotoMaker.API.Services;
+using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
+using AI.ProfilePhotoMaker.API.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace AI.ProfilePhotoMaker.API.Tests.Controllers;
 
@@ -11,17 +18,46 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers;
 public class ReplicateControllerFormatVersionTests
 {
     /// <summary>
-    /// Helper method to call private static FormatModelVersion method using reflection
+    /// Build a ReplicateController instance with minimal dependencies for reflection tests
+    /// </summary>
+    private static ReplicateController CreateController(string owner = "alanw707")
+    {
+        var client = new Mock<IReplicateApiClient>(MockBehavior.Strict).Object;
+        var basic = new Mock<IBasicTierService>(MockBehavior.Strict).Object;
+
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase($"TestDb_{Guid.NewGuid()}")
+            .Options;
+        var db = new ApplicationDbContext(options);
+
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string,string?>
+            {
+                ["Replicate:Owner"] = owner
+            })
+            .Build();
+
+        var logger = new Mock<ILogger<ReplicateController>>().Object;
+        return new ReplicateController(client, basic, db, config, logger);
+    }
+
+    /// <summary>
+    /// Helper to call the private instance FormatModelVersion via reflection
     /// </summary>
     private static string FormatModelVersion(string replicateModelId, string trainedModelVersion)
     {
-        var method = typeof(ReplicateController).GetMethod("FormatModelVersion", 
-            BindingFlags.NonPublic | BindingFlags.Static);
-        
+        var controller = CreateController();
+        var method = typeof(ReplicateController).GetMethod(
+            name: "FormatModelVersion",
+            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance,
+            binder: null,
+            types: new[] { typeof(string), typeof(string) },
+            modifiers: null);
+
         if (method == null)
             throw new InvalidOperationException("FormatModelVersion method not found");
-            
-        var result = method.Invoke(null, new object[] { replicateModelId, trainedModelVersion });
+
+        var result = method.Invoke(controller, new object[] { replicateModelId, trainedModelVersion });
         return (string)result!;
     }
 
