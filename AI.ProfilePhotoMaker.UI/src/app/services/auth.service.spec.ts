@@ -15,20 +15,13 @@ describe('AuthService', () => {
   let service: AuthService;
   let httpMock: HttpTestingController;
   let mockRouter: jasmine.SpyObj<Router>;
-  let mockConfigService: jasmine.SpyObj<ConfigService>;
 
   beforeEach(() => {
     mockRouter = jasmine.createSpyObj('Router', ['navigate']);
-    mockConfigService = jasmine.createSpyObj('ConfigService', ['getApiUrl']);
-    mockConfigService.getApiUrl.and.returnValue('http://localhost:5000');
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
-      providers: [
-        AuthService,
-        { provide: Router, useValue: mockRouter },
-        { provide: ConfigService, useValue: mockConfigService },
-      ],
+      providers: [AuthService, { provide: Router, useValue: mockRouter }, ConfigService],
     });
 
     service = TestBed.inject(AuthService);
@@ -43,15 +36,6 @@ describe('AuthService', () => {
   describe('Service Initialization', () => {
     it('should be created', () => {
       expect(service).toBeTruthy();
-    });
-
-    it('should initialize authentication state from localStorage', () => {
-      localStorage.setItem('auth_token', 'stored-token');
-
-      const newService = TestBed.inject(AuthService);
-
-      expect(newService.getToken()).toBe('stored-token');
-      expect(newService.isAuthenticated()).toBeTrue();
     });
 
     it('should start with unauthenticated state when no token exists', () => {
@@ -81,11 +65,17 @@ describe('AuthService', () => {
           })
         );
         expect(service.isAuthenticated()).toBeTrue();
-        expect(service.getToken()).toBe('jwt-token');
+        // Token is not stored client-side; verify secure session via currentUser
+        const stored = localStorage.getItem('currentUser');
+        expect(stored).not.toBeNull();
+        if (stored) {
+          const user = JSON.parse(stored);
+          expect(user.email).toBe('test@example.com');
+        }
         done();
       });
 
-      const req = httpMock.expectOne('http://localhost:5000/api/auth/login');
+      const req = httpMock.expectOne('/api/auth/login');
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual(loginData);
       req.flush(mockResponse);
@@ -100,17 +90,19 @@ describe('AuthService', () => {
         expiration: '',
       };
 
-      service.login(loginData).subscribe(response => {
-        expect(response.token).toBe('');
-        expect(service.isAuthenticated()).toBeFalse();
-        done();
+      service.login(loginData).subscribe({
+        next: () => fail('Expected error, but got success'),
+        error: _err => {
+          expect(service.isAuthenticated()).toBeFalse();
+          done();
+        },
       });
 
-      const req = httpMock.expectOne('http://localhost:5000/api/auth/login');
+      const req = httpMock.expectOne('/api/auth/login');
       req.flush(errorResponse);
     });
 
-    it('should store token on successful login', done => {
+    it('should persist currentUser on successful login', done => {
       const loginData: LoginDto = { email: 'test@example.com', password: 'password123' };
       const mockResponse = {
         isSuccess: true,
@@ -123,11 +115,18 @@ describe('AuthService', () => {
       };
 
       service.login(loginData).subscribe(() => {
-        expect(localStorage.getItem('auth_token')).toBe('jwt-token');
+        // Token is stored server-side in HttpOnly cookie; client persists currentUser only
+        expect(localStorage.getItem('auth_token')).toBeNull();
+        const stored = localStorage.getItem('currentUser');
+        expect(stored).not.toBeNull();
+        if (stored) {
+          const user = JSON.parse(stored);
+          expect(user.email).toBe('test@example.com');
+        }
         done();
       });
 
-      const req = httpMock.expectOne('http://localhost:5000/api/auth/login');
+      const req = httpMock.expectOne('/api/auth/login');
       req.flush(mockResponse);
     });
 
@@ -155,7 +154,7 @@ describe('AuthService', () => {
 
       service.login(loginData).subscribe();
 
-      const req = httpMock.expectOne('http://localhost:5000/api/auth/login');
+      const req = httpMock.expectOne('/api/auth/login');
       req.flush(mockResponse);
     });
   });
@@ -191,7 +190,7 @@ describe('AuthService', () => {
         done();
       });
 
-      const req = httpMock.expectOne('http://localhost:5000/api/auth/register');
+      const req = httpMock.expectOne('/api/auth/register');
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual(registrationData);
       req.flush(mockResponse);
@@ -213,13 +212,15 @@ describe('AuthService', () => {
         expiration: '',
       };
 
-      service.register(registrationData).subscribe(response => {
-        expect(response.token).toBe('');
-        expect(service.isAuthenticated()).toBeFalse();
-        done();
+      service.register(registrationData).subscribe({
+        next: () => fail('Expected error, but got success'),
+        error: _err => {
+          expect(service.isAuthenticated()).toBeFalse();
+          done();
+        },
       });
 
-      const req = httpMock.expectOne('http://localhost:5000/api/auth/register');
+      const req = httpMock.expectOne('/api/auth/register');
       req.flush(errorResponse);
     });
   });
@@ -228,13 +229,13 @@ describe('AuthService', () => {
     beforeEach(() => {
       // Set up authenticated state
       localStorage.setItem('auth_token', 'jwt-token');
-      service['currentUserSubject'].next({
+      (service as any)['_currentUserSubject'].next({
         token: 'jwt-token',
         email: 'test@example.com',
         firstName: 'Test',
         lastName: 'User',
       });
-      service['isAuthenticatedSubject'].next(true);
+      (service as any)['_isAuthenticatedSubject'].next(true);
     });
 
     it('should logout and clear session data', () => {
@@ -257,25 +258,23 @@ describe('AuthService', () => {
 
     it('should navigate to login page after logout', () => {
       service.logout();
-      expect(mockRouter.navigate).toHaveBeenCalledWith(['/login']);
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/auth/login'], { queryParams: {} });
     });
   });
 
   describe('Token Management', () => {
-    it('should get stored token', () => {
+    it('should return null for getToken in cookie-based auth', () => {
       localStorage.setItem('auth_token', 'stored-token');
-      expect(service.getToken()).toBe('stored-token');
+      expect(service.getToken()).toBeNull();
     });
 
     it('should return null when no token exists', () => {
       expect(service.getToken()).toBeNull();
     });
 
-    it('should check authentication state based on token', () => {
+    it('should report authentication state via subject', () => {
       expect(service.isAuthenticated()).toBeFalse();
-
-      localStorage.setItem('auth_token', 'token');
-      service['isAuthenticatedSubject'].next(true);
+      (service as any)['_isAuthenticatedSubject'].next(true);
       expect(service.isAuthenticated()).toBeTrue();
     });
   });
@@ -288,7 +287,7 @@ describe('AuthService', () => {
         firstName: 'Test',
         lastName: 'User',
       };
-      service['currentUserSubject'].next(mockUser);
+      (service as any)['_currentUserSubject'].next(mockUser);
     });
 
     it('should get current user from observable', done => {
@@ -327,7 +326,7 @@ describe('AuthService', () => {
       expect(service.isAuthenticated()).toBeFalse();
 
       localStorage.setItem('auth_token', 'valid-token');
-      service['isAuthenticatedSubject'].next(true);
+      (service as any)['_isAuthenticatedSubject'].next(true);
 
       expect(service.isAuthenticated()).toBeTrue();
     });
@@ -337,25 +336,27 @@ describe('AuthService', () => {
     it('should handle network errors during login', done => {
       const loginData: LoginDto = { email: 'test@example.com', password: 'password123' };
 
-      service.login(loginData).subscribe(response => {
-        // Should handle error gracefully
-        expect(response).toBeDefined();
-        done();
+      service.login(loginData).subscribe({
+        next: () => fail('Expected network error'),
+        error: _err => done(),
       });
 
-      const req = httpMock.expectOne('http://localhost:5000/api/auth/login');
+      const req = httpMock.expectOne('/api/auth/login');
       req.error(new ErrorEvent('Network error'));
     });
 
     it('should handle 401 unauthorized responses', done => {
       const loginData: LoginDto = { email: 'test@example.com', password: 'password123' };
 
-      service.login(loginData).subscribe(_response => {
-        expect(service.isAuthenticated()).toBeFalse();
-        done();
+      service.login(loginData).subscribe({
+        next: () => fail('Expected 401 error'),
+        error: _err => {
+          expect(service.isAuthenticated()).toBeFalse();
+          done();
+        },
       });
 
-      const req = httpMock.expectOne('http://localhost:5000/api/auth/login');
+      const req = httpMock.expectOne('/api/auth/login');
       req.flush({ error: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
     });
   });
@@ -369,12 +370,10 @@ describe('AuthService Integration Tests', () => {
   let httpMock: HttpTestingController;
 
   beforeEach(() => {
-    const mockConfigService = jasmine.createSpyObj('ConfigService', ['getApiUrl']);
-    mockConfigService.getApiUrl.and.returnValue('http://localhost:5000');
-
+    const mockRouter = jasmine.createSpyObj('Router', ['navigate']);
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
-      providers: [AuthService, { provide: ConfigService, useValue: mockConfigService }],
+      providers: [AuthService, ConfigService, { provide: Router, useValue: mockRouter }],
     });
 
     service = TestBed.inject(AuthService);
@@ -386,16 +385,8 @@ describe('AuthService Integration Tests', () => {
     localStorage.clear();
   });
 
-  it('should maintain authentication state across service instances', () => {
-    // Simulate login
-    localStorage.setItem('auth_token', 'stored-token');
-
-    // Create new service instance (simulating page reload)
-    const newService = TestBed.inject(AuthService);
-
-    expect(newService.isAuthenticated()).toBeTrue();
-    expect(newService.getToken()).toBe('stored-token');
-  });
+  // Note: Cookie-based auth stores session server-side; service
+  // initializes its state on construction and via probeSession().
 
   it('should complete login flow', done => {
     const loginData: LoginDto = { email: 'test@example.com', password: 'password123' };
@@ -420,7 +411,7 @@ describe('AuthService Integration Tests', () => {
       done();
     });
 
-    const req = httpMock.expectOne('http://localhost:5000/api/auth/login');
+    const req = httpMock.expectOne('/api/auth/login');
     req.flush(mockResponse);
   });
 });

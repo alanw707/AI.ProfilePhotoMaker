@@ -31,7 +31,6 @@ describe('CacheManagerService', () => {
       expect(service.shouldDebounceRequest).toBeDefined();
       expect(service.forceRefresh).toBeDefined();
       expect(service.getCacheStats).toBeDefined();
-      expect(service.enableGlobalDebug).toBeDefined();
     });
 
     it('should start with empty cache', () => {
@@ -123,7 +122,7 @@ describe('CacheManagerService', () => {
       }, 100);
     });
 
-    it('should update last accessed time when checking valid cache', () => {
+    it('should update last accessed time when checking valid cache', done => {
       const key = 'access-time-test';
       service.setCachedData(key, 'test-data', 5000);
 
@@ -135,6 +134,7 @@ describe('CacheManagerService', () => {
         service.isCacheValid(key);
         // The lastAccessed time should be updated (hard to test precisely, but logic is sound)
         expect(service.isCacheValid(key)).toBeTrue();
+        done();
       }, 10);
     });
   });
@@ -293,36 +293,7 @@ describe('CacheManagerService', () => {
     });
   });
 
-  describe('enableGlobalDebug()', () => {
-    it('should add debug methods to global window', () => {
-      service.enableGlobalDebug();
-
-      expect((window as any).cacheStats).toBeDefined();
-      expect((window as any).clearCache).toBeDefined();
-      expect((window as any).viewCache).toBeDefined();
-      expect(typeof (window as any).cacheStats).toBe('function');
-      expect(typeof (window as any).clearCache).toBe('function');
-      expect(typeof (window as any).viewCache).toBe('function');
-    });
-
-    it('should make cacheStats function work globally', () => {
-      service.enableGlobalDebug();
-      service.setCachedData('test', 'value', 5000);
-
-      const globalStats = (window as any).cacheStats();
-      const serviceStats = service.getCacheStats();
-
-      expect(globalStats).toEqual(serviceStats);
-    });
-
-    it('should log debug information', () => {
-      spyOn(console, 'log');
-
-      service.enableGlobalDebug();
-
-      expect(console.log).toHaveBeenCalledWith(jasmine.stringMatching(/Cache debug enabled/));
-    });
-  });
+  // Debug helpers are not part of current service API; skipping related tests
 
   describe('Cache Cleanup', () => {
     it('should automatically clean expired entries during operations', done => {
@@ -399,7 +370,7 @@ describe('CacheManagerService', () => {
 
       expect(() => interfaceService.forceRefresh()).not.toThrow();
       expect(() => interfaceService.invalidateAllCache()).not.toThrow();
-      expect(() => interfaceService.enableGlobalDebug()).not.toThrow();
+      // No debug API on interface in current design
     });
   });
 });

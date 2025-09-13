@@ -79,7 +79,6 @@ describe('FallbackOperationsService', () => {
       expect(service.getFallbackTracker).toBeDefined();
       expect(service.markFilesystemCheckCompleted).toBeDefined();
       expect(service.markModelDiscoveryCompleted).toBeDefined();
-      expect(service.enableGlobalDebug).toBeDefined();
     });
 
     it('should initialize with default fallback tracker', () => {
@@ -328,7 +327,7 @@ describe('FallbackOperationsService', () => {
       expect(result.apiGeneratedField).toBe(5);
       expect(result.filteredCount).toBe(2); // Two isGenerated: true items
       expect(result.totalImages).toBe(3);
-      expect(result.allImages).toHaveLength(3);
+      expect(result.allImages.length).toBe(3);
     });
 
     it('should handle getUserImages errors', async () => {
@@ -406,48 +405,7 @@ describe('FallbackOperationsService', () => {
     });
   });
 
-  describe('enableGlobalDebug()', () => {
-    it('should add debug methods to global window', () => {
-      service.enableGlobalDebug();
-
-      expect((window as any).checkFallback).toBeDefined();
-      expect((window as any).fixGeneratedImages).toBeDefined();
-      expect((window as any).debugData).toBeDefined();
-      expect((window as any).resetFallback).toBeDefined();
-    });
-
-    it('should make global debug functions work', () => {
-      service.enableGlobalDebug();
-
-      spyOn(service, 'checkIfFallbackNeeded');
-      spyOn(service, 'checkGeneratedImagesFromFilesystem');
-
-      const mockState = { generatedPhotosCount: 0 } as DashboardStateForFallback;
-      (window as any).checkFallback(mockState);
-      (window as any).fixGeneratedImages();
-
-      expect(service.checkIfFallbackNeeded).toHaveBeenCalledWith(mockState);
-      expect(service.checkGeneratedImagesFromFilesystem).toHaveBeenCalled();
-    });
-
-    it('should manually reset fallback tracking', () => {
-      service.enableGlobalDebug();
-      service.markFilesystemCheckCompleted();
-
-      (window as any).resetFallback();
-
-      const tracker = service.getFallbackTracker();
-      expect(tracker.filesystemCheck).toBeFalse();
-    });
-
-    it('should log debug instructions', () => {
-      spyOn(console, 'log');
-
-      service.enableGlobalDebug();
-
-      expect(console.log).toHaveBeenCalledWith(jasmine.stringMatching(/Fallback debug enabled/));
-    });
-  });
+  // Debug helpers are not part of current service API; skipping related tests
 
   describe('Error Handling', () => {
     it('should handle missing auth token gracefully', () => {
@@ -510,7 +468,7 @@ describe('FallbackOperationsService', () => {
       expect(interfaceService.getFallbackTracker).toBeDefined();
       expect(interfaceService.markFilesystemCheckCompleted).toBeDefined();
       expect(interfaceService.markModelDiscoveryCompleted).toBeDefined();
-      expect(interfaceService.enableGlobalDebug).toBeDefined();
+      // Debug API isn't part of the interface in current design
     });
 
     it('should return correct types from interface methods', async () => {
@@ -547,7 +505,7 @@ describe('FallbackOperationsService', () => {
         });
 
       // All calls should complete quickly
-      expect(calls).toHaveLength(10);
+      expect(calls.length).toBe(10);
       expect(calls.every(result => typeof result === 'object')).toBeTrue();
     });
 

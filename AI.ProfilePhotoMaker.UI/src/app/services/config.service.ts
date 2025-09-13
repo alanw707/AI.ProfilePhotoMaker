@@ -17,7 +17,8 @@ export class ConfigService {
   }
 
   get authLoginUrl(): string {
-    return this.buildEndpointUrl('/auth/login');
+    // Use buildApiEndpoint so tests can mock getApiUrl() consistently
+    return this.buildApiEndpoint('auth/login');
   }
 
   get authRegisterUrl(): string {

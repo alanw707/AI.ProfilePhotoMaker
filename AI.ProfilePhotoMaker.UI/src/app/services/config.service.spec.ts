@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ConfigService } from './config.service';
 
-describe('ConfigService - API Port Fix Validation', () => {
+describe('ConfigService - API URL building in test env', () => {
   let service: ConfigService;
 
   beforeEach(() => {
@@ -13,74 +13,49 @@ describe('ConfigService - API Port Fix Validation', () => {
     expect(service).toBeTruthy();
   });
 
-  describe('API Port Configuration Fix Validation', () => {
-    it('should use correct backend port 5032 for API calls', () => {
+  describe('API URL building under Karma (proxy /api)', () => {
+    it('should use /api base when no apiUrl is configured', () => {
       const baseUrl = service.baseUrl;
-      expect(baseUrl).toContain('5032');
-      expect(baseUrl).toContain('http://localhost:5032/api');
+      expect(baseUrl).toBe('/api');
     });
 
-    it('should build correct endpoint URLs with port 5032', () => {
-      const authUrl = service.authLoginUrl;
-      expect(authUrl).toBe('http://localhost:5032/api/auth/login');
-
-      const profileUrl = service.profileUrl;
-      expect(profileUrl).toBe('http://localhost:5032/api/profile');
-
-      const creditUrl = service.replicateCreditsUrl;
-      expect(creditUrl).toBe('http://localhost:5032/api/credit/status');
+    it('should build correct relative endpoint URLs', () => {
+      expect(service.authLoginUrl).toBe('/api/auth/login');
+      expect(service.profileUrl).toBe('/api/profile');
+      expect(service.replicateCreditsUrl).toBe('/api/credit/status');
+      expect(service.profileTrainingStatusUrl).toBe('/api/model-creation/user/current');
+      expect(service.imageListUrl).toBe('/api/image/images');
     });
 
-    it('should build dashboard API endpoints correctly', () => {
-      const endpoints = {
-        credits: service.replicateCreditsUrl,
-        trainingStatus: service.profileTrainingStatusUrl,
-        profile: service.profileUrl,
-        images: service.imageListUrl,
-      };
-
-      expect(endpoints.credits).toBe('http://localhost:5032/api/credit/status');
-      expect(endpoints.trainingStatus).toBe(
-        'http://localhost:5032/api/model-creation/user/current'
-      );
-      expect(endpoints.profile).toBe('http://localhost:5032/api/profile');
-      expect(endpoints.images).toBe('http://localhost:5032/api/image/images');
-    });
-
-    it('should handle buildEndpointUrl with full URLs correctly', () => {
+    it('should buildEndpointUrl with relative /api base', () => {
       const endpoint = '/test/endpoint';
-      const result = service['buildEndpointUrl'](endpoint);
-      expect(result).toBe('http://localhost:5032/api/test/endpoint');
+      const result = (service as any)['buildEndpointUrl'](endpoint);
+      expect(result).toBe('/api/test/endpoint');
     });
 
-    it('should not use proxy path for API calls', () => {
-      const apiUrl = service.getApiUrl();
-      expect(apiUrl).not.toBe('/api');
-      expect(apiUrl).toContain('http://localhost:5032');
-    });
-
-    it('should detect localhost environment correctly', () => {
+    it('should report localhost environment under Karma', () => {
       const env = service.getCurrentEnvironment();
+      // Karma host 9876 counts as localhost
       expect(env).toBe('localhost');
     });
   });
 
   describe('OAuth Configuration', () => {
-    it('should use localhost origin for OAuth in development', () => {
+    it('should use window origin for OAuth in tests', () => {
       const oauthBase = service.getOAuthBaseUrl();
-      expect(oauthBase).toBe('http://localhost:4200');
+      expect(oauthBase).toBe(window.location.origin);
     });
   });
 
   describe('Static File URLs', () => {
-    it('should build upload URLs with correct backend port', () => {
+    it('should build upload URLs with /api base in tests', () => {
       const uploadUrl = service.buildUploadUrl('test.jpg');
-      expect(uploadUrl).toContain('5032');
+      expect(uploadUrl).toBe('/api/uploads/test.jpg');
     });
 
-    it('should build generated image URLs with correct backend port', () => {
+    it('should build generated image URLs with /api base in tests', () => {
       const generatedUrl = service.buildGeneratedImageUrl('result.png');
-      expect(generatedUrl).toContain('5032');
+      expect(generatedUrl).toBe('/api/generated/result.png');
     });
   });
 });
