@@ -8,6 +8,10 @@ on:
   # Weekly check every Monday at 6:00 AM UTC
   schedule:
     - cron: '0 6 * * 1'
+  # Limited push trigger only when this workflow file changes, used for validation/no-op success
+  push:
+    paths:
+      - .github/workflows/config-drift-monitor.yml
   
   # Manual trigger for immediate checks
   workflow_dispatch:
