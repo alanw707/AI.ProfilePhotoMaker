@@ -385,7 +385,7 @@ jobs:
     if: ${{ always() && github.event_name != 'push' }}
     
     steps:
-      - name: 🔒 Guard: proceed only for latest run on this branch
+      - name: "🔒 Guard: proceed only for latest run on this branch"
         id: guard
         uses: actions/github-script@v7
         with:
