@@ -31,6 +31,7 @@ on:
 permissions:
   contents: read
   issues: write  # For creating drift detection issues
+  actions: read  # Required for github.rest.actions.* APIs in notify guard
 
 # Prevent overlapping runs (manual vs. scheduled) from cancelling each other mid-flight
 concurrency:
