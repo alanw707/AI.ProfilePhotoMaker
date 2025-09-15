@@ -94,12 +94,21 @@
 
       &:hover
         background: var(--surface-secondary)
-        color: var(--text-primary)
+        color: var(--text-primary) !important
 
       &.active
         background: var(--primary)
-        color: white
+        color: white !important
         border-color: var(--primary)
+        
+        // Ensure icons match readable color in the active pill
+        svg
+          color: white !important
+
+      &.active:hover
+        background: var(--primary-hover)
+        color: white !important
+        border-color: var(--primary-hover)
 
       svg
         width: 16px
@@ -322,16 +331,20 @@
     // Hover state
     &:hover
       background: var(--surface-secondary)
-      color: var(--text-primary)
+      color: var(--text-primary) !important
       transform: translateX(8px)
       border-color: var(--primary-bg-light)
       
     // Active state
     &.active
       background: var(--primary)
-      color: white
+      color: white !important
       transform: translateX(12px)
       box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3)
+    
+    &.active:hover
+      background: var(--primary-hover)
+      color: white !important
     
     // SVG icons
     svg
@@ -386,4 +399,3 @@
   100%
     opacity: 1
     transform: translateX(0)
-

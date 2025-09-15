@@ -32,6 +32,11 @@ permissions:
   contents: read
   issues: write  # For creating drift detection issues
 
+# Prevent overlapping runs (manual vs. scheduled) from cancelling each other mid-flight
+concurrency:
+  group: config-drift-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   config-drift-detection:
     name: 🔍 Detect Configuration Drift
@@ -50,7 +55,7 @@ jobs:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
         
-      - name: 🔍 Run Configuration Drift Detection
+      - name: 🔍 Run Configuration Drift Detection (with transient-error retry)
         id: drift-check
         run: |
           echo "🔍 Running configuration drift detection for ${{ matrix.environment }}"
@@ -65,18 +70,41 @@ jobs:
           # Run the drift detection script
           chmod +x scripts/detect-config-drift.sh
           
-          if ./scripts/detect-config-drift.sh "${{ matrix.environment }}"; then
+          # Retry only on script execution errors (exit codes other than 0/1/2)
+          attempts=0
+          max_attempts=3
+          final_status=3
+          while true; do
+            if ./scripts/detect-config-drift.sh "${{ matrix.environment }}"; then
+              final_status=0
+              break
+            else
+              exit_code=$?
+              if [[ $exit_code -eq 0 || $exit_code -eq 1 || $exit_code -eq 2 ]]; then
+                final_status=$exit_code
+                break
+              fi
+              attempts=$((attempts+1))
+              if [[ $attempts -ge $max_attempts ]]; then
+                final_status=$exit_code
+                break
+              fi
+              echo "Transient error (exit $exit_code). Retrying in $((attempts*5))s..."
+              sleep $((attempts*5))
+            fi
+          done
+
+          if [[ $final_status -eq 0 ]]; then
             # Script already wrote drift-critical and drift-warnings to $GITHUB_OUTPUT
             echo "drift-status=success" >> $GITHUB_OUTPUT
           else
-            exit_code=$?
-            if [[ $exit_code -eq 1 ]]; then
+            if [[ $final_status -eq 1 ]]; then
               echo "drift-status=critical" >> $GITHUB_OUTPUT
               # Fallback counts if script couldn't emit outputs
               grep -q '^drift-critical=' "$GITHUB_OUTPUT" || echo "drift-critical=1" >> "$GITHUB_OUTPUT"
               grep -q '^drift-warnings=' "$GITHUB_OUTPUT" || echo "drift-warnings=0" >> "$GITHUB_OUTPUT"
               echo "Critical configuration drift detected!"
-            elif [[ $exit_code -eq 2 ]]; then
+            elif [[ $final_status -eq 2 ]]; then
               echo "drift-status=warning" >> $GITHUB_OUTPUT
               grep -q '^drift-warnings=' "$GITHUB_OUTPUT" || echo "drift-warnings=1" >> "$GITHUB_OUTPUT"
               grep -q '^drift-critical=' "$GITHUB_OUTPUT" || echo "drift-critical=0" >> "$GITHUB_OUTPUT"
@@ -345,7 +373,38 @@ jobs:
     if: ${{ github.event_name != 'push' && always() }}
     
     steps:
+      - name: 🔒 Guard: proceed only for latest run on this branch
+        id: guard
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const workflowFile = 'config-drift-monitor.yml';
+            const branch = context.ref.replace('refs/heads/', '');
+            const currentRunId = context.runId;
+
+            const { data } = await github.rest.actions.listWorkflowRuns({
+              owner,
+              repo,
+              workflow_id: workflowFile,
+              branch,
+              per_page: 1
+            });
+
+            const latest = data.workflow_runs?.[0];
+            const isLatest = latest && latest.id === currentRunId;
+            core.info(`Latest run id for ${workflowFile} on ${branch}: ${latest?.id}; current: ${currentRunId}; isLatest=${isLatest}`);
+            core.setOutput('isLatest', String(Boolean(isLatest)));
+
+      - name: 🛑 Skip notification (not latest attempt)
+        if: steps.guard.outputs.isLatest != 'true'
+        run: |
+          echo "Skipping notify-completion because this is not the latest run for this workflow on this branch." >> $GITHUB_STEP_SUMMARY
+          echo "Current run: $GITHUB_RUN_ID; latest differs. No notification sent." >> $GITHUB_STEP_SUMMARY
+
       - name: 📊 Aggregate Results
+        if: steps.guard.outputs.isLatest == 'true'
         run: |
           echo "## Weekly Configuration Drift Monitor Completed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -353,13 +412,23 @@ jobs:
           echo "**Environments Checked:** See individual matrix jobs above" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Check job results
-          if [[ "${{ needs.config-drift-detection.result }}" == "success" ]]; then
-            echo "✅ **Overall Status:** All configuration checks passed" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ **Overall Status:** Some configuration issues detected" >> $GITHUB_STEP_SUMMARY
-            echo "Check individual job results and any created issues for details." >> $GITHUB_STEP_SUMMARY
-          fi
+          # Check job results (differentiate failure/cancelled to reduce confusing summaries)
+          case "${{ needs.config-drift-detection.result }}" in
+            success)
+              echo "✅ **Overall Status:** All configuration checks passed" >> $GITHUB_STEP_SUMMARY
+              ;;
+            cancelled)
+              echo "⏸️ **Overall Status:** Run was cancelled due to a newer run (concurrency)" >> $GITHUB_STEP_SUMMARY
+              echo "This avoids noisy emails; no action is required." >> $GITHUB_STEP_SUMMARY
+              ;;
+            failure)
+              echo "❌ **Overall Status:** One or more jobs failed after retries" >> $GITHUB_STEP_SUMMARY
+              echo "Check individual job logs and any created issues for details." >> $GITHUB_STEP_SUMMARY
+              ;;
+            *)
+              echo "⚠️ **Overall Status:** Some checks were skipped or had indeterminate results" >> $GITHUB_STEP_SUMMARY
+              ;;
+          esac
           
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Next Check:** Next Monday at 6:00 AM UTC" >> $GITHUB_STEP_SUMMARY
