@@ -39,6 +39,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  noop-validate-on-push:
+    name: 🧪 Validate Workflow on Push
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
+    steps:
+      - name: No-op validation
+        run: echo "Workflow file updated on push; skipping operational jobs."
+
   config-drift-detection:
     name: 🔍 Detect Configuration Drift
     runs-on: ubuntu-latest
