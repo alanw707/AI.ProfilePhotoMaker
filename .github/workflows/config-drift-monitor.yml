@@ -381,8 +381,8 @@ jobs:
     name: 📢 Notify Completion
     runs-on: ubuntu-latest
     needs: config-drift-detection
-    # Skip notifications on push-triggered runs. We avoid always() at job level for compatibility.
-    if: ${{ github.event_name != 'push' }}
+    # Run regardless of upstream result, but skip push-triggered validation runs
+    if: ${{ always() && github.event_name != 'push' }}
     
     steps:
       - name: 🔒 Guard: proceed only for latest run on this branch
