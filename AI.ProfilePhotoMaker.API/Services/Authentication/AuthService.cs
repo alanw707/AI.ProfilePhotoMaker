@@ -1,6 +1,7 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using AI.ProfilePhotoMaker.API.Configuration;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
@@ -8,6 +9,8 @@ using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace AI.ProfilePhotoMaker.API.Services.Authentication;
@@ -18,17 +21,23 @@ public class AuthService : IAuthService
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IConfiguration _configuration;
     private readonly ApplicationDbContext _context;
+    private readonly ILogger<AuthService> _logger;
+    private readonly LegacyCompatibilityOptions _legacyOptions;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         IConfiguration configuration,
-        ApplicationDbContext context)
+        ApplicationDbContext context,
+        ILogger<AuthService> logger,
+        IOptions<LegacyCompatibilityOptions> legacyOptions)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _configuration = configuration;
         _context = context;
+        _logger = logger;
+        _legacyOptions = legacyOptions.Value;
     }
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterDto model)
@@ -112,10 +121,20 @@ public class AuthService : IAuthService
             };
 
             // Read JWT configuration using the same key casing used by validation ("Jwt")
-            // Fall back to legacy "JWT" keys if present for robustness
-            string? secret = _configuration["Jwt:Secret"] ?? _configuration["JWT:Secret"];
+            var secret = _configuration["Jwt:Secret"];
+            if (string.IsNullOrWhiteSpace(secret) && _legacyOptions.EnableAuthLegacyJwtKeyFallback)
+            {
+                secret = _configuration["JWT:Secret"];
+                if (!string.IsNullOrWhiteSpace(secret))
+                {
+                    _logger.LogWarning(
+                        "Using legacy JWT secret configuration key \"JWT:Secret\". Migrate to \"Jwt:Secret\" and disable LegacyCompatibility.EnableAuthLegacyJwtKeyFallback when ready.");
+                }
+            }
+
             if (string.IsNullOrWhiteSpace(secret))
             {
+                _logger.LogError("Missing JWT Secret in configuration (Jwt:Secret) and legacy fallback disabled or unavailable.");
                 throw new InvalidOperationException("Missing JWT Secret in configuration (Jwt:Secret)");
             }
 
@@ -124,8 +143,28 @@ public class AuthService : IAuthService
             var expires = DateTime.UtcNow.AddHours(1);
 
             // Ensure issuer/audience match the casing used by JwtBearer validation (Program.cs uses "Jwt")
-            var issuer = _configuration["Jwt:ValidIssuer"] ?? _configuration["JWT:ValidIssuer"];
-            var audience = _configuration["Jwt:ValidAudience"] ?? _configuration["JWT:ValidAudience"];
+            var issuer = _configuration["Jwt:ValidIssuer"];
+            var audience = _configuration["Jwt:ValidAudience"];
+
+            if (string.IsNullOrWhiteSpace(issuer) && _legacyOptions.EnableAuthLegacyJwtKeyFallback)
+            {
+                issuer = _configuration["JWT:ValidIssuer"];
+                if (!string.IsNullOrWhiteSpace(issuer))
+                {
+                    _logger.LogWarning(
+                        "Using legacy JWT issuer configuration key \"JWT:ValidIssuer\". Update to \"Jwt:ValidIssuer\" once environments are migrated.");
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(audience) && _legacyOptions.EnableAuthLegacyJwtKeyFallback)
+            {
+                audience = _configuration["JWT:ValidAudience"];
+                if (!string.IsNullOrWhiteSpace(audience))
+                {
+                    _logger.LogWarning(
+                        "Using legacy JWT audience configuration key \"JWT:ValidAudience\". Update to \"Jwt:ValidAudience\" once environments are migrated.");
+                }
+            }
 
             var token = new JwtSecurityToken(
                 issuer: issuer,

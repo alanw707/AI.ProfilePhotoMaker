@@ -1,4 +1,6 @@
 using System.Net;
+using AI.ProfilePhotoMaker.API.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace AI.ProfilePhotoMaker.API.Services;
 
@@ -11,6 +13,7 @@ public class WebhookUrlResolver : IWebhookUrlResolver
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<WebhookUrlResolver> _logger;
     private readonly HttpClient _httpClient;
+    private readonly LegacyCompatibilityOptions _legacyOptions;
 
     // Cache resolved URL to avoid repeated lookups
     private string? _cachedWebhookBaseUrl;
@@ -21,12 +24,14 @@ public class WebhookUrlResolver : IWebhookUrlResolver
         IConfiguration configuration,
         IWebHostEnvironment environment,
         ILogger<WebhookUrlResolver> logger,
-        HttpClient httpClient)
+        HttpClient httpClient,
+        IOptions<LegacyCompatibilityOptions> legacyOptions)
     {
         _configuration = configuration;
         _environment = environment;
         _logger = logger;
         _httpClient = httpClient;
+        _legacyOptions = legacyOptions.Value;
     }
 
     public async Task<string?> GetWebhookBaseUrlAsync()
@@ -167,6 +172,13 @@ public class WebhookUrlResolver : IWebhookUrlResolver
             return apiBaseUrl.TrimEnd('/');
         }
 
+        if (!_legacyOptions.EnableWebhookAppBaseFallback)
+        {
+            _logger.LogError(
+                "ExternalApiBaseUrl missing and legacy AppBaseUrl fallback disabled via configuration. Webhooks will remain disabled until ExternalApiBaseUrl is set.");
+            return null;
+        }
+
         // Fallback to AppBaseUrl only if API base URL is not configured (legacy)
         var appBaseUrl = _configuration["AppBaseUrl"];
         if (string.IsNullOrWhiteSpace(appBaseUrl))
@@ -175,7 +187,9 @@ public class WebhookUrlResolver : IWebhookUrlResolver
             return null;
         }
 
-        _logger.LogWarning("Falling back to AppBaseUrl for webhook base in production. Consider setting ExternalApiBaseUrl to the API domain.");
+        _logger.LogWarning(
+            "Using legacy AppBaseUrl fallback for webhooks in production: {AppBaseUrl}. Configure ExternalApiBaseUrl or disable LegacyCompatibility.EnableWebhookAppBaseFallback to prevent this path.",
+            appBaseUrl);
         return appBaseUrl.TrimEnd('/');
     }
 

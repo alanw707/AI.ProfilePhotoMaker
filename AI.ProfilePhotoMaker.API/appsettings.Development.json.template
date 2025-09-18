@@ -21,5 +21,10 @@
       "Default": "Information",
       "Microsoft.AspNetCore": "Warning"
     }
+  },
+  "LegacyCompatibility": {
+    "EnableWebhookAppBaseFallback": true,
+    "EnableAuthLegacyJwtKeyFallback": true,
+    "EnableLegacyEnhancedPathLookup": true
   }
 }
