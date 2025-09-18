@@ -1,7 +1,9 @@
+using AI.ProfilePhotoMaker.API.Configuration;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace AI.ProfilePhotoMaker.API.Services;
 
@@ -11,17 +13,20 @@ public class RetentionPolicyService : IRetentionPolicyService
     private readonly IStorageService _storageService;
     private readonly StoragePathResolver _pathResolver;
     private readonly ILogger<RetentionPolicyService> _logger;
+    private readonly LegacyCompatibilityOptions _legacyOptions;
 
     public RetentionPolicyService(
         ApplicationDbContext context,
         IStorageService storageService,
         StoragePathResolver pathResolver,
-        ILogger<RetentionPolicyService> logger)
+        ILogger<RetentionPolicyService> logger,
+        IOptions<LegacyCompatibilityOptions> legacyOptions)
     {
         _context = context;
         _storageService = storageService;
         _pathResolver = pathResolver;
         _logger = logger;
+        _legacyOptions = legacyOptions.Value;
     }
 
     public async Task<int> DeleteExpiredImagesAsync()
@@ -252,7 +257,18 @@ public class RetentionPolicyService : IRetentionPolicyService
             var enhancedFiles = await _storageService.ListFilesAsync(enhancedPrefix);
             
             // Also check for legacy enhanced files without environment prefix (for backward compatibility)
-            var legacyEnhancedFiles = await _storageService.ListFilesAsync("enhanced/");
+            List<string> legacyEnhancedFiles;
+            if (_legacyOptions.EnableLegacyEnhancedPathLookup)
+            {
+                legacyEnhancedFiles = await _storageService.ListFilesAsync("enhanced/");
+            }
+            else
+            {
+                legacyEnhancedFiles = new List<string>();
+                _logger.LogDebug(
+                    "Skipping legacy enhanced path lookup because LegacyCompatibility.EnableLegacyEnhancedPathLookup is disabled."
+                );
+            }
             
             // Combine both lists and remove duplicates
             var allEnhancedFiles = enhancedFiles.Concat(legacyEnhancedFiles).Distinct().ToList();
@@ -263,8 +279,16 @@ public class RetentionPolicyService : IRetentionPolicyService
                 return 0;
             }
             
-            _logger.LogInformation("Found {PrefixedCount} enhanced files in prefixed path and {LegacyCount} in legacy path for cleanup", 
-                enhancedFiles.Count, legacyEnhancedFiles.Count);
+            if (_legacyOptions.EnableLegacyEnhancedPathLookup)
+            {
+                _logger.LogInformation("Found {PrefixedCount} enhanced files in prefixed path and {LegacyCount} in legacy path for cleanup", 
+                    enhancedFiles.Count, legacyEnhancedFiles.Count);
+            }
+            else
+            {
+                _logger.LogInformation("Found {PrefixedCount} enhanced files in prefixed path; legacy path lookup disabled via configuration", 
+                    enhancedFiles.Count);
+            }
 
             // Build a set of enhanced file paths that are referenced in the database
             var referencedEnhancedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -272,12 +296,15 @@ public class RetentionPolicyService : IRetentionPolicyService
             {
                 var envPrefix = _pathResolver.GetDirectoryPrefix(StorageType.Enhanced);
                 var legacyPrefix = "enhanced/";
+                var allowLegacyInDbScan = _legacyOptions.EnableLegacyEnhancedPathLookup;
 
                 var dbReferenced = await _context.ProcessedImages
                     .Where(pi => (!string.IsNullOrEmpty(pi.ProcessedImageUrl) &&
-                                  (pi.ProcessedImageUrl.StartsWith(envPrefix) || pi.ProcessedImageUrl.StartsWith(legacyPrefix))) ||
+                                  (pi.ProcessedImageUrl.StartsWith(envPrefix) ||
+                                   (allowLegacyInDbScan && pi.ProcessedImageUrl.StartsWith(legacyPrefix)))) ||
                                   (!string.IsNullOrEmpty(pi.OriginalImageUrl) &&
-                                  (pi.OriginalImageUrl.StartsWith(envPrefix) || pi.OriginalImageUrl.StartsWith(legacyPrefix))))
+                                   (pi.OriginalImageUrl.StartsWith(envPrefix) ||
+                                    (allowLegacyInDbScan && pi.OriginalImageUrl.StartsWith(legacyPrefix)))))
                     .Select(pi => new { pi.ProcessedImageUrl, pi.OriginalImageUrl })
                     .ToListAsync();
 

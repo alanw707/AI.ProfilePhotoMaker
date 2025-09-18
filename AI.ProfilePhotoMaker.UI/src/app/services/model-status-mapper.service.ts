@@ -12,6 +12,7 @@ import {
 } from '../models/model-status.types';
 import { UnifiedModelStatusCode, UnifiedModelStatusResponse } from './file-upload.service';
 import { ModelCreationStatus } from '../models/database.types';
+import { LoggingService } from './logging.service';
 
 /**
  * Service responsible for mapping between different status representations
@@ -24,6 +25,21 @@ import { ModelCreationStatus } from '../models/database.types';
   providedIn: 'root',
 })
 export class ModelStatusMapperService {
+  private legacyUsageLogged = false;
+
+  constructor(private readonly loggingService: LoggingService) {}
+
+  private logLegacyUsage(origin: string, metadata?: Record<string, unknown>): void {
+    const payload = metadata ? { origin, ...metadata } : { origin };
+
+    if (!this.legacyUsageLogged) {
+      this.loggingService.warn('Legacy model status bridge invoked', payload);
+      this.legacyUsageLogged = true;
+    } else {
+      this.loggingService.debug(`Legacy model status bridge invoked via ${origin}`, payload);
+    }
+  }
+
   /**
    * Create ModelStatus from API response (primary method)
    */
@@ -86,6 +102,12 @@ export class ModelStatusMapperService {
     progress?: number,
     error?: string
   ): ModelStatus {
+    this.logLegacyUsage('fromLegacyStatus', {
+      legacyStatus,
+      uploadedImages,
+      hasTrainedModel,
+    });
+
     const state = this.mapLegacyStringToState(legacyStatus);
 
     return {
@@ -109,6 +131,13 @@ export class ModelStatusMapperService {
    * Create adapter for gradual migration (supports both old and new)
    */
   createAdapter(status: ModelStatus): ModelStatusAdapter {
+    if (status.metadata?.legacyStatus) {
+      this.logLegacyUsage('createAdapter', {
+        legacyStatus: status.metadata.legacyStatus,
+        source: status.metadata.source,
+      });
+    }
+
     return {
       status,
       legacyStatus: status.metadata.legacyStatus || this.mapStateToLegacyString(status.state),

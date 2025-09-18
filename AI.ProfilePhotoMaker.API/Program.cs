@@ -134,6 +134,7 @@ builder.Services.AddSession(options =>
 
 // Add environment configuration with validation
 builder.Services.AddEnvironmentConfiguration();
+builder.Services.Configure<LegacyCompatibilityOptions>(builder.Configuration.GetSection(LegacyCompatibilityOptions.SectionName));
 
 // Configure database services
 if (builder.Environment.IsEnvironment("Testing"))
