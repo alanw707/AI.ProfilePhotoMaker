@@ -247,18 +247,6 @@ export class ConfigService {
   }
 
   /**
-   * Build URL for style preview images
-   * @param styleName - The style name
-   * @returns Complete style preview URL (deprecated - use StylePreviewService instead)
-   * @deprecated Use StylePreviewService.getStylePreviewUrl() for proper Azure Storage URLs
-   */
-  buildStylePreviewUrl(_styleName: string): string {
-    // Deprecated method - kept for backward compatibility
-    // Use StylePreviewService for proper Azure Storage URLs
-    return `/api/placeholder/style-preview`;
-  }
-
-  /**
    * Generate a unique filename for styles not in the map
    * @param styleName - The original style name
    * @returns A unique filename based on the style name

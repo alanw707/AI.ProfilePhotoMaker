@@ -13,14 +13,12 @@ import { FallbackOperationsService } from './fallback-operations.service';
 import { ImageValidationService } from './image-validation.service';
 import { ConfigService } from './config.service';
 import { SubscriptionStateService } from './subscription-state.service';
-import { LoggingService, LogLevel } from './logging.service';
-import { environment } from '../../environments/environment';
+import { LoggingService } from './logging.service';
 import {
   DashboardState,
   IDashboardStateService,
   UploadedImageThumbnail,
 } from '../interfaces/service.interfaces';
-import { ModelStatus } from '../models/dashboard.types';
 
 @Injectable({
   providedIn: 'root',

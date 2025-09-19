@@ -8,8 +8,8 @@
  * Matches AI.ProfilePhotoMaker.API.Models.ModelCreationStatus
  */
 export enum ModelCreationStatus {
-  Pending = 'Pending',
-  Creating = 'Creating',
-  Ready = 'Ready',
-  Failed = 'Failed',
+  PENDING = 'Pending',
+  CREATING = 'Creating',
+  READY = 'Ready',
+  FAILED = 'Failed',
 }

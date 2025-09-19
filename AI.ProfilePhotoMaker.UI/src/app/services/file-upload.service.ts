@@ -1,9 +1,10 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpEventType } from '@angular/common/http';
 import { catchError, map, Observable, of, tap, timeout } from 'rxjs';
 import { ConfigService } from './config.service';
 import { ImageUrlService } from './image-url.service';
 import { AuthService } from './auth.service';
+import { LoggingService } from './logging.service';
 
 export interface UploadResponse {
   profileId: number;
@@ -94,6 +95,7 @@ export class FileUploadService {
   private userImagesCache: UserImagesResponse | null = null;
   private userImagesCacheExpiry = 0;
   private readonly USER_IMAGES_CACHE_DURATION = 60000; // 60 seconds
+  private readonly logger = inject(LoggingService);
 
   constructor(
     private http: HttpClient,
@@ -185,7 +187,7 @@ export class FileUploadService {
                 return { progress: 100, response: transformedResponse };
               } else {
                 // Fallback for unexpected response structure
-                console.error('Unexpected upload response structure:', apiResponse);
+                this.logger.error('Unexpected upload response structure', apiResponse);
                 return { progress: 100, response: event.body as UploadResponse };
               }
             }
@@ -225,9 +227,10 @@ export class FileUploadService {
           if (response.success && response.data) {
             this.userImagesCache = response.data;
             this.userImagesCacheExpiry = now + this.USER_IMAGES_CACHE_DURATION;
-            console.log(
-              `📊 Cached user images: ${response.data.totalImages} total, ${response.data.generatedImages} generated`
-            );
+            this.logger.fileDebug('cached user images snapshot', 'user-images', {
+              totalImages: response.data.totalImages,
+              generatedImages: response.data.generatedImages,
+            });
           }
         })
       );
@@ -442,15 +445,15 @@ export class FileUploadService {
     // Add authentication headers using production-ready AuthService
     const headers: any = {};
     const token = this.authService.getToken();
-    console.log('Authentication check:', {
+    this.logger.authDebug('Resolved upload token for image upload', {
       tokenExists: !!token,
-      tokenPrefix: token?.substring(0, 20) + '...',
-      tokenLength: token?.length,
+      tokenPreview: token ? `${token.slice(0, 8)}…` : null,
+      tokenLength: token?.length ?? 0,
     });
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     } else {
-      console.warn('No authentication token found - upload may fail');
+      this.logger.warn('No authentication token found before upload request; upload may fail');
     }
 
     return this.http
@@ -469,12 +472,13 @@ export class FileUploadService {
             case HttpEventType.Response: {
               // Extract the first uploaded file URL from the response
               const response = event.body;
-              console.log('Upload API response:', response);
-              console.log('Response structure validation:', {
-                hasSuccess: !!response?.success,
+              this.logger.fileDebug('upload-single-image response received', file.name, {
+                success: response?.success,
                 hasData: !!response?.data,
-                hasUploadedFiles: !!response?.data?.UploadedFiles,
-                uploadedFilesLength: response?.data?.UploadedFiles?.length || 0,
+                uploadedFilesCount:
+                  response?.data?.UploadedFiles?.length ??
+                  response?.data?.uploadedFiles?.length ??
+                  0,
                 responseKeys: Object.keys(response || {}),
                 dataKeys: Object.keys(response?.data || {}),
               });
@@ -484,12 +488,15 @@ export class FileUploadService {
               const uploadedFiles = response?.data?.UploadedFiles || response?.data?.uploadedFiles;
               if (response?.success && uploadedFiles && uploadedFiles.length > 0) {
                 const uploadedFile = uploadedFiles[0];
-                console.log('Uploaded file details:', uploadedFile);
-                console.log('File URL extraction:', {
-                  originalUrl: uploadedFile.Url,
-                  fallbackUrl: uploadedFile.url,
-                  finalUrl: uploadedFile.Url || uploadedFile.url,
-                });
+                this.logger.fileDebug(
+                  'upload-single-image parsed file',
+                  uploadedFile.FileName || uploadedFile.fileName || file.name,
+                  {
+                    originalUrl: uploadedFile.Url,
+                    fallbackUrl: uploadedFile.url,
+                    finalUrl: uploadedFile.Url || uploadedFile.url,
+                  }
+                );
                 return {
                   progress: 100,
                   response: {
@@ -506,7 +513,11 @@ export class FileUploadService {
               const legacyUploadedFiles = response?.uploadedFiles || response?.UploadedFiles;
               if (legacyUploadedFiles && legacyUploadedFiles.length > 0) {
                 const uploadedFile = legacyUploadedFiles[0];
-                console.log('Uploaded file details (legacy):', uploadedFile);
+                this.logger.fileDebug(
+                  'upload-single-image legacy response path',
+                  uploadedFile.FileName || uploadedFile.fileName || file.name,
+                  uploadedFile
+                );
                 return {
                   progress: 100,
                   response: {
@@ -519,7 +530,7 @@ export class FileUploadService {
                 };
               }
 
-              console.error('Upload response parsing failed. Response structure:', {
+              this.logger.error('Upload response parsing failed for upload response', {
                 fullResponse: JSON.stringify(response, null, 2),
                 responseType: typeof response,
                 hasSuccess: 'success' in (response || {}),
@@ -534,8 +545,8 @@ export class FileUploadService {
 
               // Enhanced fallback - check if response has success=false with error details
               if (response?.success === false) {
-                console.error(
-                  'API returned success=false:',
+                this.logger.error(
+                  'API returned success=false for upload',
                   response?.error || response?.message || 'No error details'
                 );
               }
@@ -578,7 +589,7 @@ export class FileUploadService {
         .pipe(
           timeout(30000), // 30 second timeout
           catchError(error => {
-            console.error('Error saving enhanced image:', error);
+            this.logger.error('Error saving enhanced image', error);
             return of({
               success: false,
               error: {
@@ -600,7 +611,7 @@ export class FileUploadService {
         }
       );
     } catch (error: any) {
-      console.error('Error in saveEnhancedImage:', error);
+      this.logger.error('Error in saveEnhancedImage', error);
       return {
         success: false,
         error: {

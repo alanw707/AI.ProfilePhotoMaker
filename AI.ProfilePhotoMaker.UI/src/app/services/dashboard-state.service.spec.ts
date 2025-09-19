@@ -34,7 +34,7 @@ class MockCreditService {
   getTotalAvailableCredits = jasmine
     .createSpy('getTotalAvailableCredits')
     .and.callFake(
-      (userCreditStatus: any, creditsInfo: any) =>
+      (userCreditStatus: any, _creditsInfo: any) =>
         (userCreditStatus?.weeklyCredits || 0) + (userCreditStatus?.purchasedCredits || 0)
     );
 }
@@ -72,6 +72,10 @@ class MockStyleService {}
 
 class MockNotificationService {
   error = jasmine.createSpy('error');
+  info = jasmine.createSpy('info');
+  success = jasmine.createSpy('success');
+  warning = jasmine.createSpy('warning');
+  modelAlreadyTrained = jasmine.createSpy('modelAlreadyTrained');
 }
 
 class MockCacheManagerService {

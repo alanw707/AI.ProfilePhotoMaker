@@ -14,15 +14,8 @@ describe('StyleSelectorComponent', () => {
     const routerSpy = jasmine.createSpyObj('Router', ['navigate']);
 
     await TestBed.configureTestingModule({
-      imports: [
-        StyleSelectorComponent,
-        CommonModule,
-        FormsModule,
-        RouterTestingModule
-      ],
-      providers: [
-        { provide: Router, useValue: routerSpy }
-      ]
+      imports: [StyleSelectorComponent, CommonModule, FormsModule, RouterTestingModule],
+      providers: [{ provide: Router, useValue: routerSpy }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(StyleSelectorComponent);
@@ -65,7 +58,7 @@ describe('StyleSelectorComponent', () => {
         name: 'Business',
         description: 'Professional business style',
         previewUrl: 'preview.jpg',
-        selected: false
+        selected: false,
       };
       spyOn(component.styleToggled, 'emit');
 
@@ -140,7 +133,9 @@ describe('StyleSelectorComponent', () => {
     });
 
     it('should handle style names with multiple dashes', () => {
-      expect(component.formatStyleName('business-professional-headshot')).toBe('Business Professional Headshot');
+      expect(component.formatStyleName('business-professional-headshot')).toBe(
+        'Business Professional Headshot'
+      );
       expect(component.formatStyleName('casual-outdoor-portrait')).toBe('Casual Outdoor Portrait');
     });
 
@@ -155,8 +150,8 @@ describe('StyleSelectorComponent', () => {
       const mockEvent = {
         target: {
           src: 'original-url.jpg',
-          onerror: jasmine.createSpy('onerror')
-        }
+          onerror: jasmine.createSpy('onerror'),
+        },
       };
 
       component.onImageError(mockEvent);
@@ -168,7 +163,7 @@ describe('StyleSelectorComponent', () => {
     it('should set fallback image source on error', () => {
       const mockTarget = {
         src: 'broken-image.jpg',
-        onerror: () => {}
+        onerror: () => {},
       };
       const mockEvent = { target: mockTarget };
 
@@ -181,12 +176,12 @@ describe('StyleSelectorComponent', () => {
   describe('Navigation', () => {
     it('should navigate to gallery with refresh parameter', () => {
       const expectedParams = {
-        queryParams: { refresh: jasmine.any(Number) }
+        queryParams: { refresh: jasmine.any(Number) },
       };
 
       component.navigateToGallery();
 
-      expect(mockRouter.navigate).toHaveBeenCalledWith(['/gallery'], expectedParams);
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/gallery'], expectedParams);
     });
 
     it('should navigate to gallery with current timestamp', () => {
@@ -194,8 +189,8 @@ describe('StyleSelectorComponent', () => {
 
       component.navigateToGallery();
 
-      expect(mockRouter.navigate).toHaveBeenCalledWith(['/gallery'], {
-        queryParams: { refresh: 12345 }
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/gallery'], {
+        queryParams: { refresh: 12345 },
       });
     });
   });
@@ -208,15 +203,15 @@ describe('StyleSelectorComponent', () => {
           name: 'Business',
           description: 'Professional business style',
           previewUrl: 'business.jpg',
-          selected: false
+          selected: false,
         },
         {
           id: 'casual',
           name: 'Casual',
           description: 'Casual headshot style',
           previewUrl: 'casual.jpg',
-          selected: true
-        }
+          selected: true,
+        },
       ];
 
       component.availableStyles = mockStyles;
@@ -333,7 +328,7 @@ describe('StyleSelectorComponent', () => {
         name: 'Business',
         description: 'Professional business style',
         previewUrl: 'business.jpg',
-        selected: false
+        selected: false,
       };
 
       spyOn(component.styleToggled, 'emit');

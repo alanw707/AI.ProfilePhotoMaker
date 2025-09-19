@@ -1,4 +1,5 @@
 import { Injectable, inject, Injector, NgZone } from '@angular/core';
+import { LoggingService } from './logging.service';
 import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
 import { NotificationService } from './notification.service';
@@ -208,6 +209,7 @@ export class WorkflowOrchestrationService {
   // Use inject pattern to reduce constructor parameters
   private readonly _ngZone = inject(NgZone);
   private readonly _injector = inject(Injector);
+  private readonly _logger = inject(LoggingService);
 
   constructor(
     authService: AuthService,
@@ -381,13 +383,13 @@ export class WorkflowOrchestrationService {
         !currentState.modelStatus;
 
       if (isLoadingState) {
-        console.log('⏳ WAITING FOR DATA: Model status not loaded yet, refreshing...');
+        this._logger.workflowDebug('Waiting for model status refresh before routing decision');
         await this._deps.stateService.loadInitialDashboardData();
         await new Promise(resolve => setTimeout(resolve, 1000)); // Allow time for state updates
 
         // Get refreshed state
         const refreshedState = this._deps.stateService.getState();
-        console.log('🔄 REFRESHED STATE:', {
+        this._logger.workflowDebug('Refreshed dashboard state after loading', {
           modelStatus: refreshedState.modelStatus,
           hasLatestModel: !!refreshedState.latestTrainedModel,
         });
@@ -413,7 +415,7 @@ export class WorkflowOrchestrationService {
           }
         }
       } catch (freshErr) {
-        console.warn(
+        this._logger.warn(
           'Unified model status refresh failed; proceeding with existing state',
           freshErr
         );
@@ -422,7 +424,7 @@ export class WorkflowOrchestrationService {
       // CRITICAL FIX: Determine if user has ANY trained model using proper data validation
       const hasTrainedModel = this._checkForExistingTrainedModel(latestTrainedModel, modelStatus);
 
-      console.log('🚨 WORKFLOW ROUTING DECISION:', {
+      this._logger.workflowDebug('Workflow routing decision', {
         modelStatus,
         hasTrainedModel,
         latestTrainedModel: !!latestTrainedModel,
@@ -433,7 +435,7 @@ export class WorkflowOrchestrationService {
 
       if (hasTrainedModel) {
         // User has a trained model - always use generation, never training
-        console.log('🎯 ROUTING TO GENERATION: User has trained model');
+        this._logger.workflowDebug('Routing to generation: user has trained model');
         await this._handleExistingModelGeneration(
           selectedStyles,
           imagesPerStyle,
@@ -441,11 +443,11 @@ export class WorkflowOrchestrationService {
         );
       } else {
         // User needs a new model - start training process
-        console.log('🔄 ROUTING TO TRAINING: User needs new model');
+        this._logger.workflowDebug('Routing to training: user needs new model');
         await this._startModelTraining(selectedStyles, imagesPerStyle);
       }
     } catch (error) {
-      console.error('🚨 Training workflow error:', {
+      this._logger.error('Training workflow error', {
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
         errorType: error instanceof Error ? error.constructor.name : typeof error,
         stackTrace: error instanceof Error ? error.stack?.substring(0, 500) : undefined,
@@ -464,8 +466,8 @@ export class WorkflowOrchestrationService {
         apiError?.code === 'ModelAlreadyTrained' ||
         errorMessage.includes('ModelAlreadyTrained')
       ) {
-        console.log(
-          '🔄 FALLBACK RECOVERY: ModelAlreadyTrained detected, attempting generation route'
+        this._logger.workflowDebug(
+          'Fallback recovery: ModelAlreadyTrained detected, attempting generation route'
         );
 
         try {
@@ -490,7 +492,7 @@ export class WorkflowOrchestrationService {
 
           return; // Exit successfully
         } catch (fallbackError) {
-          console.error('🚨 Fallback generation also failed:', fallbackError);
+          this._logger.error('Fallback generation also failed', fallbackError);
           // Continue to normal error handling below
         }
       }
@@ -519,7 +521,7 @@ export class WorkflowOrchestrationService {
   private _checkForExistingTrainedModel(_latestTrainedModel: any, modelStatus: string): boolean {
     // Single source of truth: Use semantic status validation
     if (this._modelStatus.canGenerate(modelStatus)) {
-      console.log('✅ Model ready for generation - routing to generation workflow', {
+      this._logger.workflowDebug('Model ready for generation - routing to generation workflow', {
         modelStatus,
       });
       return true;
@@ -527,12 +529,12 @@ export class WorkflowOrchestrationService {
 
     // Only check for training states that require different handling
     if (this._modelStatus.isTraining(modelStatus)) {
-      console.log('🔄 Training in progress - will poll for completion');
+      this._logger.workflowDebug('Training in progress; will poll for completion');
       return false;
     }
 
     // Default: No model available
-    console.log('❌ No trained model available - initiating training workflow');
+    this._logger.workflowDebug('No trained model available; initiating training workflow');
     return false;
   }
 
@@ -587,7 +589,9 @@ export class WorkflowOrchestrationService {
         const fileUploadService = await this._loadFileUploadService();
         const unified = await firstValueFrom(fileUploadService.getUnifiedModelStatus());
         if (unified?.statusCode === 'ModelReady' && unified.hasTrainedModel) {
-          console.log('✅ Model already ready at training start; routing to generation');
+          this._logger.workflowDebug(
+            'Model already ready at training start; routing to generation'
+          );
           // Try to get latest model details
           let latestTrainedModel: any = null;
           try {
@@ -602,7 +606,10 @@ export class WorkflowOrchestrationService {
           return;
         }
       } catch (guardErr) {
-        console.warn('Pre-training readiness guard failed; proceeding with training', guardErr);
+        this._logger.warn(
+          'Pre-training readiness guard failed; proceeding with training',
+          guardErr
+        );
       }
 
       this._initializeTrainingProgress();
@@ -612,7 +619,7 @@ export class WorkflowOrchestrationService {
       this._finalizeTrainingSetup(trainingId);
       this._startTrainingStatusPolling(selectedStyles, imagesPerStyle);
     } catch (error: unknown) {
-      console.error('Training startup error:', error);
+      this._logger.error('Training startup error', error);
       this._setProgress({ isTraining: false });
 
       // Provide more specific error messages based on the failure point
@@ -672,7 +679,7 @@ export class WorkflowOrchestrationService {
 
       await this._cleanupExistingTrainingFiles(fileUploadService);
     } catch (cleanupError) {
-      console.warn('Non-critical cleanup warning:', cleanupError);
+      this._logger.warn('Non-critical training cleanup warning', cleanupError);
       // Continue with training even if cleanup fails - the backend should handle it
     }
 
@@ -703,9 +710,9 @@ export class WorkflowOrchestrationService {
       };
 
       if (existingFiles?.success && existingFiles.data && existingFiles.data.length > 0) {
-        console.log(
-          `🧹 Found ${existingFiles.data.length} existing training files, cleaning up...`
-        );
+        this._logger.workflowDebug('Cleaning up existing training files before creating new ZIP', {
+          existingFiles: existingFiles.data.length,
+        });
 
         // Delete all existing training files to prevent conflicts
         const deleteResult = (await firstValueFrom(fileUploadService.deleteAllTrainingFiles())) as {
@@ -714,15 +721,18 @@ export class WorkflowOrchestrationService {
         };
 
         if (deleteResult?.success) {
-          console.log('✅ Successfully cleaned up existing training files');
+          this._logger.workflowDebug('Successfully cleaned up existing training files');
         } else {
-          console.warn('⚠️ Cleanup completed with warnings:', deleteResult?.message);
+          this._logger.warn(
+            'Cleanup completed with warnings before training ZIP creation',
+            deleteResult?.message
+          );
         }
       } else {
-        console.log('ℹ️ No existing training files found, proceeding with creation');
+        this._logger.workflowDebug('No existing training files found; proceeding with creation');
       }
     } catch (error) {
-      console.warn('⚠️ Error during training file cleanup:', error);
+      this._logger.warn('Error during training file cleanup', error);
       // Don't throw - let the main creation attempt handle any remaining conflicts
     }
   }
@@ -735,31 +745,39 @@ export class WorkflowOrchestrationService {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`🚀 Training ZIP creation attempt ${attempt}/${maxRetries}`);
+        this._logger.workflowDebug('Training ZIP creation attempt', { attempt, maxRetries });
 
         const zipResult = await firstValueFrom(fileUploadService.createTrainingZip());
 
         if (zipResult?.success && zipResult.zipCreated) {
-          console.log('✅ Training ZIP created successfully');
+          this._logger.workflowDebug('Training ZIP created successfully');
           return zipResult;
         } else {
           lastError = zipResult;
-          console.warn(`⚠️ Attempt ${attempt} failed:`, zipResult?.message || zipResult?.error);
+          this._logger.warn(
+            `Training ZIP attempt ${attempt} failed`,
+            zipResult?.message || zipResult?.error
+          );
         }
       } catch (error) {
         lastError = error;
-        console.warn(`⚠️ Attempt ${attempt} threw error:`, error);
+        this._logger.warn(`Training ZIP attempt ${attempt} threw error`, error);
 
         // If this is a file conflict error and not the last attempt, try cleanup again
         if (attempt < maxRetries && this._isFileConflictError(error)) {
-          console.log('🔄 Detected file conflict, attempting additional cleanup...');
+          this._logger.workflowDebug(
+            'Detected file conflict during ZIP creation; attempting additional cleanup'
+          );
 
           try {
             await firstValueFrom(fileUploadService.deleteAllTrainingFiles());
             // Brief delay to allow file system to settle
             await new Promise(resolve => setTimeout(resolve, 1000));
           } catch (cleanupError) {
-            console.warn('Additional cleanup failed:', cleanupError);
+            this._logger.warn(
+              'Additional cleanup failed while resolving file conflict',
+              cleanupError
+            );
           }
         }
       }
@@ -812,7 +830,7 @@ export class WorkflowOrchestrationService {
     // validated against the authenticated user when present. Send an empty
     // string here and rely on server-side user context.
     const userId = '';
-    console.log('🚀 Starting training (server-enforced user context)');
+    this._logger.workflowDebug('Starting training (server-enforced user context)');
 
     this._setProgress({
       progressPercentage: 35,
@@ -822,16 +840,16 @@ export class WorkflowOrchestrationService {
     const trainRequest: TrainModelRequest = { userId, imageZipUrl: zipUrl };
     const replicateService = await this._loadReplicateService();
 
-    console.log('📤 Training request details:', {
+    this._logger.workflowDebug('Training request details', {
       userId,
-      zipUrl: zipUrl.substring(0, 50) + '...',
+      zipUrlPreview: zipUrl.substring(0, 50) + '...',
     });
 
     try {
       const trainResult = await firstValueFrom(replicateService.trainModel(trainRequest));
 
       if (!trainResult?.success) {
-        console.error('❌ Training API response failed:', {
+        this._logger.error('Training API response failed', {
           success: trainResult?.success,
           errorCode: trainResult?.error?.code,
           errorMessage: trainResult?.error?.message,
@@ -842,14 +860,14 @@ export class WorkflowOrchestrationService {
         throw new Error(errorDetails.userMessage);
       }
 
-      console.log('✅ Training request successful:', {
+      this._logger.workflowDebug('Training request successful', {
         predictionId: trainResult.data?.prediction?.id,
         success: true,
       });
       return trainResult.data!.prediction.id;
     } catch (error: any) {
       // Enhanced error logging for debugging
-      console.error('🚨 Training request error details:', {
+      this._logger.error('Training request error details', {
         errorType: error.constructor.name,
         errorMessage: error.message,
         errorStack: error.stack?.substring(0, 500),
@@ -907,7 +925,7 @@ export class WorkflowOrchestrationService {
             );
 
             if (!statusResult?.success) {
-              console.error('Failed to get training status:', statusResult?.error);
+              this._logger.error('Failed to get training status', statusResult?.error);
               return;
             }
 
@@ -1001,7 +1019,7 @@ export class WorkflowOrchestrationService {
               );
             }
           } catch (error) {
-            console.error('Error polling training status:', error);
+            this._logger.error('Error polling training status', error);
           }
         });
       }, 30000)
@@ -1130,7 +1148,7 @@ export class WorkflowOrchestrationService {
       // Refresh dashboard state to update model status
       await this._deps.stateService.loadInitialDashboardData();
     } catch (error: unknown) {
-      console.error('Error in batch image generation:', error);
+      this._logger.error('Error in batch image generation', error);
       this._setProgress({
         isGenerating: false,
         progressPercentage: 0,
@@ -1199,7 +1217,7 @@ export class WorkflowOrchestrationService {
         nextDelay = Math.max(nextDelay, retryAfter);
       } catch (err) {
         // Non-fatal; proceed with backoff
-        console.warn('Finalize training attempt failed', { attempt, err });
+        this._logger.warn('Finalize training attempt failed', { attempt, err });
       }
 
       await new Promise(resolve =>
@@ -1314,7 +1332,7 @@ export class WorkflowOrchestrationService {
               }
             }
           } catch (error) {
-            console.error('Error polling for prediction completion:', error);
+            this._logger.error('Error polling for prediction completion', error);
           }
         });
       }, 5000)
@@ -1704,7 +1722,7 @@ export class WorkflowOrchestrationService {
     switch (category) {
       case 'authentication':
       case 'service_authentication':
-        console.error('🔑 Authentication Diagnostics:', {
+        this._logger.error('Authentication diagnostics', {
           ...diagnostics,
           tokenExists: !!this._deps.authService.getToken(),
           tokenValid: this._deps.authService.isAuthenticated(),
@@ -1714,7 +1732,7 @@ export class WorkflowOrchestrationService {
         break;
 
       case 'configuration':
-        console.error('⚙️ Configuration Diagnostics:', {
+        this._logger.error('Configuration diagnostics', {
           ...diagnostics,
           configService: this._deps.config.constructor.name,
           suggestedAction: 'Verify Replicate API configuration and environment variables',
@@ -1723,21 +1741,21 @@ export class WorkflowOrchestrationService {
 
       case 'service_unavailable':
       case 'server_error':
-        console.error('🌐 Service Diagnostics:', {
+        this._logger.error('Service diagnostics', {
           ...diagnostics,
           suggestedAction: 'Check Replicate API status and network connectivity',
         });
         break;
 
       case 'training_preparation':
-        console.error('📦 Training Preparation Diagnostics:', {
+        this._logger.error('Training preparation diagnostics', {
           ...diagnostics,
           suggestedAction: 'Check file upload service and user uploaded images count',
         });
         break;
 
       case 'billing':
-        console.error('💳 Billing Diagnostics:', {
+        this._logger.error('Billing diagnostics', {
           ...diagnostics,
           userCredits: this._getTotalAvailableCredits(),
           suggestedAction: 'Check user credit balance and subscription status',
@@ -1745,7 +1763,7 @@ export class WorkflowOrchestrationService {
         break;
 
       default:
-        console.error('🔍 General Error Diagnostics:', {
+        this._logger.error('General error diagnostics', {
           ...diagnostics,
           errorDetails: error,
           suggestedAction: 'Review full error context and network logs',

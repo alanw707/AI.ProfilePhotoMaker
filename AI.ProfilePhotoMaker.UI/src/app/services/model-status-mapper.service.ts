@@ -4,7 +4,6 @@ import {
   ModelState,
   ModelCapabilities,
   ModelDisplayInfo,
-  ModelStatusMetadata,
   StatusIcon,
   StatusVariant,
   ModelStatusAdapter,
@@ -196,12 +195,12 @@ export class ModelStatusMapperService {
     uploadedImages: number
   ): ModelState {
     switch (dbStatus) {
-      case ModelCreationStatus.Pending:
-      case ModelCreationStatus.Creating:
+      case ModelCreationStatus.PENDING:
+      case ModelCreationStatus.CREATING:
         return ModelState.TRAINING;
-      case ModelCreationStatus.Ready:
+      case ModelCreationStatus.READY:
         return hasTrainedModel ? ModelState.READY : ModelState.READY_TO_TRAIN;
-      case ModelCreationStatus.Failed:
+      case ModelCreationStatus.FAILED:
         return ModelState.FAILED;
       default:
         // Determine initial state based on uploaded images

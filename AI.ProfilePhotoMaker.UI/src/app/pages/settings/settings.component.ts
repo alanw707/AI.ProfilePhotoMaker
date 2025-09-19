@@ -10,7 +10,7 @@ import { NotificationService } from '../../services/notification.service';
 import { DashboardCoordinatorService } from '../../services/dashboard-coordinator.service';
 import { AccountInfoComponent } from '../../components/settings/account-info/account-info.component';
 import { CreditManagementComponent } from '../../components/settings/credit-management/credit-management.component';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timeout, Subscription, TimeoutError } from 'rxjs';
 
 interface DataStats {
   inputPhotos: number;
@@ -70,7 +70,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   userCreditStatus: any = null;
 
   // Subscription Management
-  private subscriptions: any[] = [];
+  private subscriptions: Subscription[] = [];
 
   constructor(
     private authService: AuthService,
@@ -499,25 +499,21 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   // Async versions for proper loading state management
   async loadUserInfoAsync(): Promise<void> {
-    return new Promise(resolve => {
-      // Get user email from auth service - take first emission and unsubscribe
-      const timeout = setTimeout(() => {
-        console.warn('loadUserInfoAsync timed out');
-        resolve();
-      }, 5000);
+    try {
+      const user = await firstValueFrom(
+        this.authService.currentUser$.pipe(timeout({ first: 5000 }))
+      );
 
-      let subscription: any;
-      subscription = this.authService.currentUser$.subscribe(user => {
-        clearTimeout(timeout);
-        if (user) {
-          this.userEmail = user.email;
-        }
-        if (subscription) {
-          subscription.unsubscribe();
-        }
-        resolve();
-      });
-    });
+      if (user) {
+        this.userEmail = user.email;
+      }
+    } catch (error) {
+      if (error instanceof TimeoutError) {
+        console.warn('loadUserInfoAsync timed out');
+      } else {
+        console.error('Failed to load user info:', error);
+      }
+    }
   }
 
   async loadUserProfileAsync(): Promise<void> {
@@ -553,36 +549,30 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   async loadCreditInfoAsync(): Promise<void> {
-    return new Promise(resolve => {
-      // Add timeout for credit loading
-      const timeout = setTimeout(() => {
+    // Trigger a refresh before awaiting the next state emission
+    this.dashboardStateService.loadBasicDataForSettings();
+
+    try {
+      const state = await firstValueFrom(
+        this.dashboardStateService.state$.pipe(timeout({ first: 8000 }))
+      );
+
+      this.creditsInfo = state.creditsInfo;
+      this.userCreditStatus = state.userCreditStatus;
+
+      if (state.uploadedImages !== undefined) {
+        this.dataStats.inputPhotos = state.uploadedImages;
+      }
+      if (state.generatedPhotosCount !== undefined) {
+        this.dataStats.generatedPhotos = state.generatedPhotosCount;
+      }
+    } catch (error) {
+      if (error instanceof TimeoutError) {
         console.warn('loadCreditInfoAsync timed out');
-        resolve();
-      }, 8000);
-
-      // Load basic data for settings (no validation, just counts)
-      this.dashboardStateService.loadBasicDataForSettings();
-
-      // Subscribe to dashboard state for credit information - take first emission
-
-      let subscription: any;
-      subscription = this.dashboardStateService.state$.subscribe(state => {
-        clearTimeout(timeout);
-        this.creditsInfo = state.creditsInfo;
-        this.userCreditStatus = state.userCreditStatus;
-        // Also update data stats with the lighter counts
-        if (state.uploadedImages !== undefined) {
-          this.dataStats.inputPhotos = state.uploadedImages;
-        }
-        if (state.generatedPhotosCount !== undefined) {
-          this.dataStats.generatedPhotos = state.generatedPhotosCount;
-        }
-        if (subscription) {
-          subscription.unsubscribe();
-        }
-        resolve();
-      });
-    });
+      } else {
+        console.error('Failed to load credit info:', error);
+      }
+    }
   }
 
   // Helper method to format data size in human-readable format
