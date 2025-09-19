@@ -18,6 +18,7 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     mockRouter = jasmine.createSpyObj('Router', ['navigate']);
+    mockRouter.navigate.and.returnValue(Promise.resolve(true));
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],

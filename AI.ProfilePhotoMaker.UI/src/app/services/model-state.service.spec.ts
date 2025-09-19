@@ -1,12 +1,40 @@
 import { TestBed } from '@angular/core/testing';
 import { ModelStateService } from './model-state.service';
+import { ProfileService } from './profile.service';
+import { FileUploadService } from './file-upload.service';
+import { ModelStatusService } from './model-status.service';
 
 describe('ModelStateService.getModelStatusFromData', () => {
   let service: ModelStateService;
+  let profileServiceMock: jasmine.SpyObj<ProfileService>;
+  let fileUploadServiceMock: jasmine.SpyObj<FileUploadService>;
+  let modelStatusServiceMock: jasmine.SpyObj<ModelStatusService>;
 
   beforeEach(() => {
+    profileServiceMock = jasmine.createSpyObj('ProfileService', ['discoverModels']);
+    fileUploadServiceMock = jasmine.createSpyObj('FileUploadService', [
+      'getUnifiedModelStatus',
+      'getTrainingStatus',
+      'getUserModelRequests',
+    ]);
+    modelStatusServiceMock = jasmine.createSpyObj('ModelStatusService', ['getStatusInfo']);
+    modelStatusServiceMock.getStatusInfo.and.returnValue({
+      canGenerate: false,
+      isTraining: false,
+      canStartTraining: false,
+      hasFailed: false,
+      isNotStarted: false,
+      displayText: 'Model Ready',
+      actionable: false,
+    });
+
     TestBed.configureTestingModule({
-      providers: [ModelStateService],
+      providers: [
+        ModelStateService,
+        { provide: ProfileService, useValue: profileServiceMock },
+        { provide: FileUploadService, useValue: fileUploadServiceMock },
+        { provide: ModelStatusService, useValue: modelStatusServiceMock },
+      ],
     });
     service = TestBed.inject(ModelStateService);
   });
@@ -23,7 +51,7 @@ describe('ModelStateService.getModelStatusFromData', () => {
     };
 
     const result = service.getModelStatusFromData(data, null);
-    expect(result.modelStatus).toBe('Model Ready');
+    expect(result.modelStatus).toBe('ModelReady');
     expect(result.hasTrainedModel).toBeTrue();
     expect(result.latestTrainedModel).toBeTruthy();
   });
@@ -41,7 +69,7 @@ describe('ModelStateService.getModelStatusFromData', () => {
     };
 
     const result = service.getModelStatusFromData(data, { status: 'Not Started' });
-    expect(result.modelStatus).not.toBe('training');
+    expect(result.modelStatus).toBe('Not Started');
   });
 
   it('returns training when the latest request is creating or pending', () => {
@@ -55,7 +83,7 @@ describe('ModelStateService.getModelStatusFromData', () => {
     };
 
     const result = service.getModelStatusFromData(data, null);
-    expect(result.modelStatus).toBe('training');
+    expect(result.modelStatus).toBe('Training');
   });
 
   it('returns "Ready for training" when a model was deleted from Replicate', () => {

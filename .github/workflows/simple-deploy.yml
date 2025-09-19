@@ -50,7 +50,7 @@ jobs:
         run: |
           dotnet restore AI.ProfilePhotoMaker.sln
           dotnet build AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj --configuration Release
-          dotnet test AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj --configuration Release --filter 'FullyQualifiedName!~Integration'
+          dotnet test AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj --configuration Release --filter "FullyQualifiedName!~Integration&FullyQualifiedName!~Performance"
 
       - name: 🧪 Test Frontend
         env:

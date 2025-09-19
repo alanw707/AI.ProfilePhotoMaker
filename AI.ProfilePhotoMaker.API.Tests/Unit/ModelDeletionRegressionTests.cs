@@ -644,13 +644,15 @@ public class ProfileControllerDeletionRegressionTests
     {
         // Arrange
         var expectedTuplePattern = "var (success, errorMessage) = await _replicateApiClient.DeleteModelAsync(trainedModel.ReplicateModelId)";
-        
+
         // Act - Read the actual ProfileController source code
-        var controllerPath = "/home/alanw/projects/AI.ProfilePhotoMaker/AI.ProfilePhotoMaker.API/Controllers/ProfileController.cs";
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
+        var controllerPath = Path.Combine(projectRoot, "AI.ProfilePhotoMaker.API", "Controllers", "ProfileController.cs");
+        Assert.True(File.Exists(controllerPath), $"Could not find ProfileController at expected path: {controllerPath}");
         var controllerCode = File.ReadAllText(controllerPath);
-        
+
         // Assert - Verify the controller uses proper tuple destructuring
-        Assert.True(controllerCode.Contains(expectedTuplePattern), 
+        Assert.True(controllerCode.Contains(expectedTuplePattern),
             "ProfileController should use proper tuple destructuring for DeleteModelAsync call");
     }
 }
