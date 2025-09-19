@@ -394,13 +394,15 @@ describe('PhotoGalleryComponent', () => {
       component.goToPage(0);
 
       expect(component.currentPage).toBe(1);
+      expect(component.paginatedImages[0].id).toBe(1);
     });
 
     it('should handle page number beyond total pages', () => {
       component.currentPage = 1;
       component.goToPage(10);
 
-      expect(component.currentPage).toBe(1);
+      expect(component.currentPage).toBe(component.totalPages);
+      expect(component.paginatedImages[0].id).toBe(25);
     });
   });
 
@@ -516,6 +518,19 @@ describe('PhotoGalleryComponent', () => {
   });
 
   describe('Component Event Handlers', () => {
+    beforeEach(() => {
+      component.images = Array.from({ length: 60 }, (_, i) => ({
+        id: i + 1,
+        url: `image${i + 1}.jpg`,
+        title: `Image ${i + 1}`,
+        type: 'generated',
+        status: 'completed',
+        createdAt: new Date(),
+      })) as GalleryImage[];
+      component.pageSize = 12;
+      component.updateFilteredImages();
+    });
+
     it('should handle view mode change', () => {
       component.setViewMode('list');
 
@@ -523,22 +538,24 @@ describe('PhotoGalleryComponent', () => {
     });
 
     it('should handle page size change', () => {
-      spyOn(component, 'updateFilteredImages');
+      const updatePaginationSpy = spyOn(component as any, 'updatePagination').and.callThrough();
 
       component.changePageSize(24);
 
       expect(component.pageSize).toBe(24);
       expect(component.currentPage).toBe(1);
-      expect(component.updateFilteredImages).toHaveBeenCalled();
+      expect(updatePaginationSpy).toHaveBeenCalled();
+      expect(component.paginatedImages.length).toBe(24);
     });
 
     it('should handle page change', () => {
-      spyOn(component, 'updateFilteredImages');
+      const updatePaginationSpy = spyOn(component as any, 'updatePagination').and.callThrough();
 
       component.goToPage(3);
 
       expect(component.currentPage).toBe(3);
-      expect(component.updateFilteredImages).toHaveBeenCalled();
+      expect(component.paginatedImages[0].id).toBe(25);
+      expect(updatePaginationSpy).toHaveBeenCalled();
     });
   });
 

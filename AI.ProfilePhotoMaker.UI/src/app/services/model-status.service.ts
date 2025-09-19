@@ -26,12 +26,20 @@ export class ModelStatusService {
 
     // Legacy display strings (transitional support)
     const normalizedStatus = status.trim();
+    const lowercaseStatus = normalizedStatus.toLowerCase();
     // Tight legacy handling: allow only explicit known-good readiness phrases
     if (normalizedStatus === 'Model Ready' || normalizedStatus === 'ModelReady') {
       return true;
     }
+    if (
+      lowercaseStatus === 'ready' ||
+      lowercaseStatus === 'done' ||
+      lowercaseStatus === 'completed'
+    ) {
+      return true;
+    }
     const inferredReady =
-      normalizedStatus.toLowerCase().includes('ready for generation') ||
+      lowercaseStatus.includes('ready for generation') ||
       normalizedStatus.startsWith('Model trained');
     if (inferredReady) {
       // Lightweight diagnostic to observe legacy path usage in prod

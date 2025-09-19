@@ -253,18 +253,40 @@ export class PhotoGalleryComponent implements OnInit, OnChanges {
   }
 
   updateFilteredImages(): void {
-    if (this.filterType === 'all') {
+    const normalizedFilter =
+      this.filterType === null || this.filterType === undefined ? 'generated' : this.filterType;
+
+    this.filterType = normalizedFilter;
+
+    if (normalizedFilter === 'all') {
       this.filteredImages = [...this.images];
     } else {
-      this.filteredImages = this.images.filter(img => img.type === this.filterType);
+      this.filteredImages = this.images.filter(img => img.type === normalizedFilter);
     }
+
     this.updatePagination();
   }
 
   updatePagination(): void {
+    if (this.pageSize <= 0) {
+      this.totalPages = 0;
+      this.currentPage = 1;
+      this.paginatedImages = [];
+      return;
+    }
+
     this.totalPages = Math.ceil(this.filteredImages.length / this.pageSize);
-    if (this.currentPage > this.totalPages) {
-      this.currentPage = Math.max(1, this.totalPages);
+
+    if (this.totalPages === 0) {
+      this.currentPage = 1;
+      this.paginatedImages = [];
+      return;
+    }
+
+    if (this.currentPage < 1) {
+      this.currentPage = 1;
+    } else if (this.currentPage > this.totalPages) {
+      this.currentPage = this.totalPages;
     }
 
     const startIndex = (this.currentPage - 1) * this.pageSize;

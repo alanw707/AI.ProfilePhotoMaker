@@ -3,35 +3,46 @@ import * as faceapi from 'face-api.js';
 import { IImageQualityService, QualityScore } from '../interfaces/service.interfaces';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ImageQualityService implements IImageQualityService {
-
   constructor(private ngZone: NgZone) {}
 
   /**
    * Calculate comprehensive quality score
    */
-  async calculateQualityScore(img: HTMLImageElement, detections: faceapi.WithFaceLandmarks<any>[], file: File): Promise<QualityScore> {
+  async calculateQualityScore(
+    img: HTMLImageElement,
+    detections: faceapi.WithFaceLandmarks<any>[],
+    file: File
+  ): Promise<QualityScore> {
     const scores = {
       faceQuality: 0,
       technical: 0,
       composition: 0,
       fluxCompatibility: 0,
-      lighting: 0
+      lighting: 0,
     };
 
     const suggestions: string[] = [];
 
     // 1. Face Quality (30 points)
     if (detections.length === 1) {
-      const detection = detections[0];
-      const confidence = detection.detection.score;
-      
-      scores.faceQuality = Math.min(30, confidence * 30);
-      
-      if (confidence < 0.7) {
+      const detectionData = detections[0]?.detection;
+      const confidence = typeof detectionData?.score === 'number' ? detectionData.score : 0;
+
+      if (confidence > 0) {
+        scores.faceQuality = Math.min(30, Math.max(0, confidence * 30));
+      }
+
+      if (confidence === 0) {
+        suggestions.push('Unable to evaluate face clarity. Try retaking the photo.');
+      } else if (confidence < 0.7) {
         suggestions.push('Face is not clearly visible. Try better lighting or camera angle.');
+      }
+
+      if (!detectionData?.box) {
+        suggestions.push('Face detection data was incomplete. Ensure your face is fully visible.');
       }
     } else {
       suggestions.push('Upload photo with exactly one clearly visible face.');
@@ -58,31 +69,34 @@ export class ImageQualityService implements IImageQualityService {
     suggestions.push(...lightScore.suggestions);
 
     const overall = Math.round(
-      scores.faceQuality + 
-      scores.technical + 
-      scores.composition + 
-      scores.fluxCompatibility + 
-      scores.lighting
+      scores.faceQuality +
+        scores.technical +
+        scores.composition +
+        scores.fluxCompatibility +
+        scores.lighting
     );
 
     return {
       overall: Math.max(1, Math.min(100, overall)),
       breakdown: scores,
-      suggestions: suggestions.filter(s => s.length > 0)
+      suggestions: suggestions.filter(s => s.length > 0),
     };
   }
 
   /**
    * Assess technical image quality
    */
-  private async assessTechnicalQuality(img: HTMLImageElement, file: File): Promise<{score: number, suggestions: string[]}> {
+  private async assessTechnicalQuality(
+    img: HTMLImageElement,
+    file: File
+  ): Promise<{ score: number; suggestions: string[] }> {
     const suggestions: string[] = [];
     let score = 0;
 
     // Resolution check (10 points)
     const minRes = 512;
     const idealRes = 1024;
-    
+
     if (img.width >= idealRes && img.height >= idealRes) {
       score += 10;
     } else if (img.width >= minRes && img.height >= minRes) {
@@ -105,7 +119,7 @@ export class ImageQualityService implements IImageQualityService {
     // Blur detection (10 points)
     const blurScore = await this.detectBlur(img);
     score += blurScore;
-    
+
     if (blurScore < 5) {
       suggestions.push('Image appears blurry. Use better focus or lighting.');
     }
@@ -116,25 +130,33 @@ export class ImageQualityService implements IImageQualityService {
   /**
    * Assess image composition
    */
-  private assessComposition(img: HTMLImageElement, detections: faceapi.WithFaceLandmarks<any>[]): {score: number, suggestions: string[]} {
+  private assessComposition(
+    img: HTMLImageElement,
+    detections: faceapi.WithFaceLandmarks<any>[]
+  ): { score: number; suggestions: string[] } {
     const suggestions: string[] = [];
     let score = 0;
 
     if (detections.length === 1) {
-      const detection = detections[0];
-      const box = detection.detection.box;
-      
+      const detection = detections[0]?.detection;
+      const box = detection?.box;
+
+      if (!box) {
+        suggestions.push('Composition cannot be assessed without detailed face detection data.');
+        return { score, suggestions };
+      }
+
       // Face positioning (10 points)
       const faceCenterX = (box.x + box.width / 2) / img.width;
       const faceCenterY = (box.y + box.height / 2) / img.height;
-      
+
       // Check if face is roughly centered
       if (faceCenterX >= 0.3 && faceCenterX <= 0.7) {
         score += 5;
       } else {
         suggestions.push('Center your face in the photo for better composition.');
       }
-      
+
       if (faceCenterY >= 0.2 && faceCenterY <= 0.6) {
         score += 5;
       } else {
@@ -162,50 +184,63 @@ export class ImageQualityService implements IImageQualityService {
   /**
    * Assess FLUX AI compatibility
    */
-  private async assessFluxCompatibility(img: HTMLImageElement): Promise<{score: number, suggestions: string[]}> {
+  private async assessFluxCompatibility(
+    img: HTMLImageElement
+  ): Promise<{ score: number; suggestions: string[] }> {
     const suggestions: string[] = [];
     let score = 10; // Start optimistic
 
     // Check for common FLUX negative prompt issues
     // This is a simplified assessment - could be enhanced with ML models
-    
+
     // Basic image quality indicators
     const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      suggestions.push('Unable to assess FLUX compatibility due to canvas support limitations.');
+      return { score: Math.max(0, score), suggestions };
+    }
+
     canvas.width = img.width;
     canvas.height = img.height;
-    ctx.drawImage(img, 0, 0);
-    
+
     try {
+      ctx.drawImage(img, 0, 0);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
-      
+
       // Check for overexposure/underexposure
       let brightPixels = 0;
       let darkPixels = 0;
-      
+
       for (let i = 0; i < data.length; i += 4) {
         const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-        if (avg > 240) {brightPixels++;}
-        if (avg < 15) {darkPixels++;}
+        if (avg > 240) {
+          brightPixels++;
+        }
+        if (avg < 15) {
+          darkPixels++;
+        }
       }
-      
+
       const totalPixels = data.length / 4;
       const brightRatio = brightPixels / totalPixels;
       const darkRatio = darkPixels / totalPixels;
-      
+
       if (brightRatio > 0.3) {
         score -= 3;
-        suggestions.push('Image appears overexposed. Reduce lighting or use better camera settings.');
+        suggestions.push(
+          'Image appears overexposed. Reduce lighting or use better camera settings.'
+        );
       }
-      
+
       if (darkRatio > 0.3) {
         score -= 3;
         suggestions.push('Image appears underexposed. Increase lighting for better visibility.');
       }
-      
     } catch (error) {
-      // Canvas analysis failed, use default score
+      suggestions.push('Unable to assess FLUX compatibility due to canvas analysis error.');
     }
 
     return { score: Math.max(0, score), suggestions };
@@ -214,28 +249,34 @@ export class ImageQualityService implements IImageQualityService {
   /**
    * Assess lighting quality
    */
-  private assessLighting(img: HTMLImageElement): {score: number, suggestions: string[]} {
+  private assessLighting(img: HTMLImageElement): { score: number; suggestions: string[] } {
     const suggestions: string[] = [];
     let score = 8; // Start with good score
 
     // Basic lighting assessment using canvas analysis
     const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      suggestions.push('Unable to assess lighting quality.');
+      return { score: Math.max(0, Math.min(10, score)), suggestions };
+    }
+
     canvas.width = Math.min(img.width, 200); // Sample for performance
     canvas.height = Math.min(img.height, 200);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    
+
     try {
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
-      
+
       let totalBrightness = 0;
       for (let i = 0; i < data.length; i += 4) {
         totalBrightness += (data[i] + data[i + 1] + data[i + 2]) / 3;
       }
-      
+
       const avgBrightness = totalBrightness / (data.length / 4);
-      
+
       if (avgBrightness < 50) {
         score -= 4;
         suggestions.push('Image is too dark. Use better lighting for clearer results.');
@@ -245,7 +286,6 @@ export class ImageQualityService implements IImageQualityService {
       } else if (avgBrightness >= 80 && avgBrightness <= 180) {
         score += 2; // Bonus for good lighting
       }
-      
     } catch (error) {
       // Lighting analysis failed
       suggestions.push('Unable to assess lighting quality.');
@@ -259,49 +299,64 @@ export class ImageQualityService implements IImageQualityService {
    */
   private async detectBlur(img: HTMLImageElement): Promise<number> {
     const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d')!;
-    
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      return 5; // Default medium score if analysis fails
+    }
+
     // Sample size for performance
     const sampleSize = 100;
     canvas.width = sampleSize;
     canvas.height = sampleSize;
-    
-    ctx.drawImage(img, 0, 0, sampleSize, sampleSize);
-    
+
     try {
+      ctx.drawImage(img, 0, 0, sampleSize, sampleSize);
       const imageData = ctx.getImageData(0, 0, sampleSize, sampleSize);
       const data = imageData.data;
-      
+
       // Convert to grayscale and apply Laplacian operator
       let variance = 0;
       const laplacian = [];
-      
+
       // Simplified blur detection
       for (let y = 1; y < sampleSize - 1; y++) {
         for (let x = 1; x < sampleSize - 1; x++) {
           const idx = (y * sampleSize + x) * 4;
           const gray = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
-          
+
           // Simple edge detection
           const neighbors = [
-            (data[(y-1) * sampleSize * 4 + x * 4] + data[(y-1) * sampleSize * 4 + x * 4 + 1] + data[(y-1) * sampleSize * 4 + x * 4 + 2]) / 3,
-            (data[(y+1) * sampleSize * 4 + x * 4] + data[(y+1) * sampleSize * 4 + x * 4 + 1] + data[(y+1) * sampleSize * 4 + x * 4 + 2]) / 3,
-            (data[y * sampleSize * 4 + (x-1) * 4] + data[y * sampleSize * 4 + (x-1) * 4 + 1] + data[y * sampleSize * 4 + (x-1) * 4 + 2]) / 3,
-            (data[y * sampleSize * 4 + (x+1) * 4] + data[y * sampleSize * 4 + (x+1) * 4 + 1] + data[y * sampleSize * 4 + (x+1) * 4 + 2]) / 3
+            (data[(y - 1) * sampleSize * 4 + x * 4] +
+              data[(y - 1) * sampleSize * 4 + x * 4 + 1] +
+              data[(y - 1) * sampleSize * 4 + x * 4 + 2]) /
+              3,
+            (data[(y + 1) * sampleSize * 4 + x * 4] +
+              data[(y + 1) * sampleSize * 4 + x * 4 + 1] +
+              data[(y + 1) * sampleSize * 4 + x * 4 + 2]) /
+              3,
+            (data[y * sampleSize * 4 + (x - 1) * 4] +
+              data[y * sampleSize * 4 + (x - 1) * 4 + 1] +
+              data[y * sampleSize * 4 + (x - 1) * 4 + 2]) /
+              3,
+            (data[y * sampleSize * 4 + (x + 1) * 4] +
+              data[y * sampleSize * 4 + (x + 1) * 4 + 1] +
+              data[y * sampleSize * 4 + (x + 1) * 4 + 2]) /
+              3,
           ];
-          
+
           const laplacianValue = Math.abs(4 * gray - neighbors.reduce((a, b) => a + b, 0));
           laplacian.push(laplacianValue);
         }
       }
-      
+
       // Calculate variance
       const mean = laplacian.reduce((a, b) => a + b, 0) / laplacian.length;
-      variance = laplacian.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / laplacian.length;
-      
+      variance =
+        laplacian.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / laplacian.length;
+
       // Convert to 0-10 score (higher variance = less blur = higher score)
       return Math.min(10, Math.max(0, (variance / 100) * 10));
-      
     } catch (error) {
       return 5; // Default medium score if analysis fails
     }
@@ -340,9 +395,9 @@ export class ImageQualityService implements IImageQualityService {
         technical: 0,
         composition: 0,
         fluxCompatibility: 0,
-        lighting: 0
+        lighting: 0,
       },
-      suggestions: ['Unable to analyze image quality. Please try a different photo.']
+      suggestions: ['Unable to analyze image quality. Please try a different photo.'],
     };
   }
 }

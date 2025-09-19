@@ -499,11 +499,13 @@ export class DashboardStateService implements IDashboardStateService {
     forkJoin({
       trainingStatus: this._fileUploadService.getTrainingStatus().pipe(
         catchError(_error => {
+          this._logger.error('Failed to load training status data', _error);
           return of(null); // Return null for failed training status
         })
       ),
       modelRequests: this._fileUploadService.getUserModelRequests().pipe(
         catchError(_error => {
+          this._logger.error('Failed to load model request data', _error);
           return of({ success: false, data: null, error: _error });
         })
       ),
@@ -554,6 +556,7 @@ export class DashboardStateService implements IDashboardStateService {
         }
       },
       error: _error => {
+        this._logger.error('Failed to load additional dashboard data', _error);
         // Set fallback model status on async load failure
         const currentState = this.getState();
         if (currentState.modelStatus === 'Loading...') {
@@ -571,8 +574,9 @@ export class DashboardStateService implements IDashboardStateService {
     this._fileUploadService
       .getUserImages()
       .pipe(
-        catchError(_error => {
-          return of({ success: false, data: null, error: _error });
+        catchError(error => {
+          this._logger.error('Failed to refresh generated photos count', error);
+          return of({ success: false, data: null, error });
         })
       )
       .subscribe({
@@ -585,8 +589,8 @@ export class DashboardStateService implements IDashboardStateService {
 
           this.setState({ generatedPhotosCount });
         },
-        error: _error => {
-          // Silent failure for photo count refresh
+        error: error => {
+          this._logger.error('Failed to refresh generated photos count', error);
         },
       });
   }
