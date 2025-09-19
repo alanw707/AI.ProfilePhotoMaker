@@ -14,7 +14,7 @@ export interface FilterControls {
   imports: [CommonModule],
   templateUrl: './gallery-filter-controls.component.html',
   styleUrls: ['./gallery-filter-controls.component.sass'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GalleryFilterControlsComponent {
   @Input() title = 'Photo Gallery';
@@ -33,8 +33,11 @@ export class GalleryFilterControlsComponent {
   @Output() downloadSelected = new EventEmitter<void>();
 
   onFilterChange(event: Event): void {
-    const target = event.target as HTMLSelectElement;
-    this.filterChange.emit(target.value);
+    const target = event.target as HTMLSelectElement | null;
+    if (!target) {
+      return;
+    }
+    this.filterChange.emit(target.value ?? '');
   }
 
   setViewMode(mode: 'grid' | 'list'): void {
@@ -57,7 +60,9 @@ export class GalleryFilterControlsComponent {
   }
 
   get selectAllText(): string {
-    return this.selectedImages.length === this.filteredImages.length ? 'Deselect All' : 'Select All';
+    return this.selectedImages.length === this.filteredImages.length
+      ? 'Deselect All'
+      : 'Select All';
   }
 
   get shouldShowBulkActions(): boolean {

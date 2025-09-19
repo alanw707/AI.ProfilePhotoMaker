@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, firstValueFrom } from 'rxjs';
+import { LoggingService } from './logging.service';
 import { AuthService } from './auth.service';
 import { ConfigService } from './config.service';
 import { FileUploadService } from './file-upload.service';
@@ -30,13 +31,16 @@ export class FallbackOperationsService implements IFallbackOperationsService {
     private _authService: AuthService,
     private _config: ConfigService,
     private _fileUploadService: FileUploadService,
-    private _modelStatus: ModelStatusService
+    private _modelStatus: ModelStatusService,
+    private _logger: LoggingService
   ) {}
 
   /**
    * Check filesystem for missing generated images and sync to database
    */
   checkGeneratedImagesFromFilesystem(): Observable<any> {
+    this._logger.info('📁 Checking filesystem for missing generated images...');
+
     const token = this._authService.getToken();
     if (!token) {
       throw new Error('No authentication token available for fix endpoint');
@@ -47,46 +51,52 @@ export class FallbackOperationsService implements IFallbackOperationsService {
       'Content-Type': 'application/json',
     });
 
+    let fixEndpoint: string;
+    try {
+      fixEndpoint = this._config.getFullUrl('/test/fix-generated-images');
+    } catch (error) {
+      this._logger.error('Configuration error while resolving fix endpoint', error);
+      throw error instanceof Error ? error : new Error(String(error));
+    }
+
     return new Observable(observer => {
-      this._http
-        .post(this._config.getFullUrl('/test/fix-generated-images'), {}, { headers })
-        .subscribe({
-          next: (response: any) => {
-            if (response.success && response.data?.addedCount > 0) {
-              // Invalidate user images cache for fresh data
-              this._fileUploadService.invalidateUserImagesCache();
+      this._http.post(fixEndpoint, {}, { headers }).subscribe({
+        next: (response: any) => {
+          if (response.success && response.data?.addedCount > 0) {
+            // Invalidate user images cache for fresh data
+            this._fileUploadService.invalidateUserImagesCache();
 
-              // Get fresh data to ensure we have the correct total count
-              this._fileUploadService.getUserImages(true).subscribe({
-                next: (freshData: any) => {
-                  const userData = freshData.success ? freshData.data : null;
-                  const actualGeneratedCount =
-                    userData?.generatedImages ||
-                    userData?.images?.filter((img: any) => img.isGenerated)?.length ||
-                    0;
+            // Get fresh data to ensure we have the correct total count
+            this._fileUploadService.getUserImages(true).subscribe({
+              next: (freshData: any) => {
+                const userData = freshData.success ? freshData.data : null;
+                const actualGeneratedCount =
+                  userData?.generatedImages ||
+                  userData?.images?.filter((img: any) => img.isGenerated)?.length ||
+                  0;
 
-                  observer.next({
-                    success: true,
-                    addedCount: response.data.addedCount,
-                    actualGeneratedCount,
-                  });
-                  observer.complete();
-                },
-                error: (error: any) => {
-                  console.error('Failed to refresh generated photos count after fix:', error);
-                  observer.error(error);
-                },
-              });
-            } else {
-              observer.next({ success: true, addedCount: 0 });
-              observer.complete();
-            }
-          },
-          error: error => {
-            console.error('❌ Failed to check/fix generated images from filesystem:', error);
-            observer.error(error);
-          },
-        });
+                observer.next({
+                  success: true,
+                  addedCount: response.data.addedCount,
+                  actualGeneratedCount,
+                });
+                observer.complete();
+              },
+              error: (error: any) => {
+                this._logger.error('Failed to refresh generated photos count after fix', error);
+                observer.error(error);
+              },
+            });
+          } else {
+            observer.next({ success: true, addedCount: 0 });
+            observer.complete();
+          }
+        },
+        error: error => {
+          this._logger.error('❌ Failed to check/fix generated images from filesystem', error);
+          observer.error(error);
+        },
+      });
     });
   }
 
@@ -98,11 +108,11 @@ export class FallbackOperationsService implements IFallbackOperationsService {
     hasTrainedModel: boolean,
     userProfile: any
   ): boolean {
-    return (
+    return Boolean(
       generatedPhotosCount === 0 &&
-      (hasTrainedModel || userProfile?.latestTrainedModel) &&
-      userProfile && // User has been active
-      !this.fallbackOperationsRun.filesystemCheck
+        (hasTrainedModel || userProfile?.latestTrainedModel) &&
+        userProfile && // User has been active
+        !this.fallbackOperationsRun.filesystemCheck
     );
   }
 
@@ -114,11 +124,11 @@ export class FallbackOperationsService implements IFallbackOperationsService {
     uploadedImages: number,
     hasTrainedModel: boolean
   ): boolean {
-    return (
+    return Boolean(
       modelStatus === 'Not Started' &&
-      uploadedImages > 0 &&
-      !hasTrainedModel &&
-      !this.fallbackOperationsRun.modelDiscovery
+        uploadedImages > 0 &&
+        !hasTrainedModel &&
+        !this.fallbackOperationsRun.modelDiscovery
     );
   }
 
@@ -126,6 +136,8 @@ export class FallbackOperationsService implements IFallbackOperationsService {
    * Intelligent fallback operations - only run when actually needed
    */
   checkIfFallbackNeeded(state: DashboardStateForFallback): FallbackCheckResult {
+    this._logger.debug('🔍 Checking if fallback needed with state:', state);
+
     // Check filesystem if we have 0 photos but evidence of a trained model
     const shouldCheckFilesystem =
       state.generatedPhotosCount === 0 &&
@@ -149,7 +161,13 @@ export class FallbackOperationsService implements IFallbackOperationsService {
     }
 
     if (!shouldCheckFilesystem && !shouldDiscoverModels) {
+      // No fallback operations required this cycle
     }
+
+    this._logger.debug('Fallback operations decision', {
+      shouldCheckFilesystem,
+      shouldDiscoverModels,
+    });
 
     return { shouldCheckFilesystem, shouldDiscoverModels };
   }
@@ -158,6 +176,8 @@ export class FallbackOperationsService implements IFallbackOperationsService {
    * Debug method to check actual data vs displayed data
    */
   async debugDataDiscrepancy(): Promise<DataDiscrepancyResult> {
+    this._logger.debug('🔍 Debugging data discrepancy...');
+
     try {
       const freshData = await firstValueFrom(this._fileUploadService.getUserImages(true));
       const userData = freshData?.success ? freshData.data : null;
@@ -170,9 +190,11 @@ export class FallbackOperationsService implements IFallbackOperationsService {
         allImages: userData?.images || [],
       };
 
+      this._logger.debug('📊 Data Discrepancy Analysis:', result);
+
       return result;
     } catch (error) {
-      console.error('Failed to debug data discrepancy:', error);
+      this._logger.error('Failed to debug data discrepancy', error);
       throw error;
     }
   }
@@ -190,6 +212,8 @@ export class FallbackOperationsService implements IFallbackOperationsService {
         modelDiscovery: false,
         lastReset: now,
       };
+
+      this._logger.info('🔄 Reset fallback operation tracking');
     }
   }
 

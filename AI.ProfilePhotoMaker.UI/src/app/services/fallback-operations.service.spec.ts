@@ -1,10 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { FallbackOperationsService } from './fallback-operations.service';
 import { AuthService } from './auth.service';
 import { ConfigService } from './config.service';
 import { FileUploadService } from './file-upload.service';
+import { LoggingService } from './logging.service';
+import { ModelStatusService } from './model-status.service';
 import {
   DashboardStateForFallback,
   IFallbackOperationsService,
@@ -26,11 +28,25 @@ class MockFileUploadService {
 
   getUserImages = jasmine.createSpy('getUserImages').and.returnValue(
     of({
-      generatedImages: 5,
-      images: [{ isGenerated: true }, { isGenerated: true }, { isGenerated: false }],
-      totalImages: 3,
-    }).toPromise()
+      success: true,
+      data: {
+        generatedImages: 5,
+        images: [{ isGenerated: true }, { isGenerated: true }, { isGenerated: false }],
+        totalImages: 3,
+      },
+    })
   );
+}
+
+class MockLoggingService {
+  info = jasmine.createSpy('info');
+  debug = jasmine.createSpy('debug');
+  warn = jasmine.createSpy('warn');
+  error = jasmine.createSpy('error');
+}
+
+class MockModelStatusService {
+  canGenerate = jasmine.createSpy('canGenerate').and.returnValue(false);
 }
 
 describe('FallbackOperationsService', () => {
@@ -39,6 +55,8 @@ describe('FallbackOperationsService', () => {
   let mockAuthService: MockAuthService;
   let mockConfigService: MockConfigService;
   let mockFileUploadService: MockFileUploadService;
+  let mockLoggingService: MockLoggingService;
+  let mockModelStatusService: MockModelStatusService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -48,6 +66,8 @@ describe('FallbackOperationsService', () => {
         { provide: AuthService, useClass: MockAuthService },
         { provide: ConfigService, useClass: MockConfigService },
         { provide: FileUploadService, useClass: MockFileUploadService },
+        { provide: LoggingService, useClass: MockLoggingService },
+        { provide: ModelStatusService, useClass: MockModelStatusService },
       ],
     });
 
@@ -56,6 +76,8 @@ describe('FallbackOperationsService', () => {
     mockAuthService = TestBed.inject(AuthService) as any;
     mockConfigService = TestBed.inject(ConfigService) as any;
     mockFileUploadService = TestBed.inject(FileUploadService) as any;
+    mockLoggingService = TestBed.inject(LoggingService) as any;
+    mockModelStatusService = TestBed.inject(ModelStatusService) as any;
   });
 
   afterEach(() => {
@@ -164,12 +186,11 @@ describe('FallbackOperationsService', () => {
     });
 
     it('should log appropriate messages', () => {
-      spyOn(console, 'log');
       const mockResponse = { success: true, data: { addedCount: 2 } };
 
       service.checkGeneratedImagesFromFilesystem().subscribe();
 
-      expect(console.log).toHaveBeenCalledWith(
+      expect(mockLoggingService.info).toHaveBeenCalledWith(
         '📁 Checking filesystem for missing generated images...'
       );
 
@@ -272,8 +293,10 @@ describe('FallbackOperationsService', () => {
     it('should identify when both operations are needed', () => {
       mockState.generatedPhotosCount = 0;
       mockState.modelStatus = 'Not Started';
-      mockState.latestTrainedModel = { id: 'model-123' };
+      mockState.latestTrainedModel = null;
+      mockState.hasLatestTrainedModel = false;
       mockState.uploadedImages = 3;
+      mockModelStatusService.canGenerate.and.returnValue(true);
 
       const result = service.checkIfFallbackNeeded(mockState);
 
@@ -303,13 +326,11 @@ describe('FallbackOperationsService', () => {
     });
 
     it('should log appropriate messages', () => {
-      spyOn(console, 'log');
-
       service.checkIfFallbackNeeded(mockState);
 
-      expect(console.log).toHaveBeenCalledWith(
+      expect(mockLoggingService.debug).toHaveBeenCalledWith(
         '🔍 Checking if fallback needed with state:',
-        jasmine.any(Object)
+        mockState
       );
     });
   });
@@ -331,18 +352,19 @@ describe('FallbackOperationsService', () => {
     });
 
     it('should handle getUserImages errors', async () => {
-      mockFileUploadService.getUserImages.and.returnValue(Promise.reject(new Error('API error')));
+      mockFileUploadService.getUserImages.and.returnValue(throwError(() => new Error('API error')));
 
       await expectAsync(service.debugDataDiscrepancy()).toBeRejectedWithError('API error');
     });
 
     it('should log debug information', async () => {
-      spyOn(console, 'log');
-
       await service.debugDataDiscrepancy();
 
-      expect(console.log).toHaveBeenCalledWith('🔍 Debugging data discrepancy...');
-      expect(console.log).toHaveBeenCalledWith('📊 Data Discrepancy Analysis:');
+      expect(mockLoggingService.debug).toHaveBeenCalledWith('🔍 Debugging data discrepancy...');
+      expect(mockLoggingService.debug).toHaveBeenCalledWith(
+        '📊 Data Discrepancy Analysis:',
+        jasmine.any(Object)
+      );
     });
   });
 
@@ -363,6 +385,7 @@ describe('FallbackOperationsService', () => {
     it('should not reset tracker when interval has not passed', () => {
       service.markFilesystemCheckCompleted();
       const trackerBefore = service.getFallbackTracker();
+      (service as any).fallbackOperationsRun.lastReset = Date.now();
 
       service.resetFallbackTracking();
 
@@ -371,13 +394,12 @@ describe('FallbackOperationsService', () => {
     });
 
     it('should log when reset occurs', () => {
-      spyOn(console, 'log');
       const tracker = service.getFallbackTracker();
       (tracker as any).lastReset = Date.now() - 400000;
 
       service.resetFallbackTracking();
 
-      expect(console.log).toHaveBeenCalledWith('🔄 Reset fallback operation tracking');
+      expect(mockLoggingService.info).toHaveBeenCalledWith('🔄 Reset fallback operation tracking');
     });
   });
 
@@ -439,7 +461,7 @@ describe('FallbackOperationsService', () => {
 
     it('should handle getUserImages failures during refresh', done => {
       mockFileUploadService.getUserImages.and.returnValue(
-        Promise.reject(new Error('Refresh failed'))
+        throwError(() => new Error('Refresh failed'))
       );
 
       service.checkGeneratedImagesFromFilesystem().subscribe({

@@ -48,15 +48,18 @@ jobs:
           
       - name: 🧪 Test Backend
         run: |
-          cd AI.ProfilePhotoMaker.API
-          dotnet restore
-          dotnet build --configuration Release
-          
+          dotnet restore AI.ProfilePhotoMaker.sln
+          dotnet build AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj --configuration Release
+          dotnet test AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj --configuration Release --filter 'FullyQualifiedName!~Integration'
+
       - name: 🧪 Test Frontend
+        env:
+          CI: true
         run: |
           cd AI.ProfilePhotoMaker.UI
           npm ci
           npm run lint:errors-only
+          npm run test -- --watch=false --browsers=ChromeHeadless
           npm run build:mvp-v1
 
   validate-secrets:

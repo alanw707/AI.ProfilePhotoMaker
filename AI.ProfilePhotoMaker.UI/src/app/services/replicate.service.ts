@@ -228,10 +228,12 @@ export class ReplicateService {
       enhancementType: string;
 
       // OpenAI format (direct fields)
+      /* eslint-disable @typescript-eslint/naming-convention */
       Id?: string;
       Status?: string;
       Output?: string[];
       CompletedAt?: string;
+      /* eslint-enable @typescript-eslint/naming-convention */
       dataUrl?: string;
       provider?: string;
     };
@@ -252,10 +254,12 @@ export class ReplicateService {
         enhancementType: string;
 
         // OpenAI format (direct fields)
+        /* eslint-disable @typescript-eslint/naming-convention */
         Id?: string;
         Status?: string;
         Output?: string[];
         CompletedAt?: string;
+        /* eslint-enable @typescript-eslint/naming-convention */
         dataUrl?: string;
         provider?: string;
       };

@@ -7,6 +7,7 @@ import { HeaderNavigationComponent } from '../../shared/header-navigation/header
 import { CreditPackagesComponent } from '../../components/credit-packages/credit-packages.component';
 import { CreditService, UserCreditStatus } from '../../services/credit.service';
 import { NotificationService } from '../../services/notification.service';
+import { LoggingService } from '../../services/logging.service';
 
 @Component({
   selector: 'app-premium',
@@ -155,11 +156,12 @@ export class PremiumComponent implements OnInit {
     private authService: AuthService,
     private router: Router,
     private creditService: CreditService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private logging: LoggingService
   ) {}
 
   ngOnInit() {
-    console.log('Premium page ngOnInit');
+    this.logging.debug('Premium page initialized');
 
     // Only load credit status if authenticated
     if (this.authService.isAuthenticated()) {
@@ -175,14 +177,14 @@ export class PremiumComponent implements OnInit {
         }
       },
       error: error => {
-        console.error('Failed to load credit status:', error);
+        this.logging.error('Failed to load credit status', error);
         // User might not have credits yet, that's fine for this page
       },
     });
   }
 
   onCreditPackagePurchased(creditStatus: UserCreditStatus) {
-    console.log('Credit package purchased:', creditStatus);
+    this.logging.debug('Credit package purchased', creditStatus);
     this.userCreditStatus = creditStatus;
 
     this.notificationService.success(
