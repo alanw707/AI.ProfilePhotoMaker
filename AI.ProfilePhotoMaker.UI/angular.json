@@ -93,6 +93,18 @@
                   "with": "src/environments/environment.mvp-v1.ts"
                 }
               ]
+            },
+            "docker-local": {
+              "optimization": true,
+              "extractLicenses": true,
+              "sourceMap": false,
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.docker.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"

@@ -1,5 +1,5 @@
 # Multi-stage build for Angular frontend
-FROM node:18-alpine AS build
+FROM node:20-alpine AS build
 
 # Set working directory
 WORKDIR /app
@@ -13,8 +13,11 @@ RUN npm ci
 # Copy source code
 COPY AI.ProfilePhotoMaker.UI/ ./
 
-# Build the Angular application (MVP v1)
-RUN npm run build:mvp-v1
+# Allow overriding the Angular build target (defaults to production mvp-v1)
+ARG ANGULAR_BUILD_SCRIPT=build:mvp-v1
+
+# Build the Angular application using the selected script
+RUN npm run ${ANGULAR_BUILD_SCRIPT}
 
 # Production stage with nginx
 FROM nginx:alpine

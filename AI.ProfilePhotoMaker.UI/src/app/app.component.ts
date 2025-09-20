@@ -36,7 +36,10 @@ export class AppComponent implements OnInit {
   private _handleOAuthCallback(): void {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
-    if (token && !environment.production) {
+    const shouldHandleToken =
+      !!token && (!environment.production || environment.name === 'docker-local');
+
+    if (shouldHandleToken) {
       // In development OAuth flow, set cookie via same-origin endpoint then clean URL
       fetch('/api/auth/set-cookie', {
         method: 'POST',
