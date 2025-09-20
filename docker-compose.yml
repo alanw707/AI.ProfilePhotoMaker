@@ -3,6 +3,7 @@ version: '3.8'
 services:
   sql-server:
     image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
     container_name: aipm-sqlserver
     environment:
       ACCEPT_EULA: Y
@@ -26,6 +27,8 @@ services:
     image: mcr.microsoft.com/azure-storage/azurite:latest
     container_name: aipm-azurite
     command: "azurite --blobHost 0.0.0.0 --blobPort 10000 --queueHost 0.0.0.0 --queuePort 10001 --tableHost 0.0.0.0 --tablePort 10002 --location /workspace --debug /workspace/debug.log"
+    environment:
+      AZURITE_ACCOUNTS: ${AZURITE_ACCOUNTS:-devstoreaccount1:7EcjH8qw7X6gFutn5Omgg3e/EB/sTN07c5WLe1Rrl9g=}
     ports:
       - "10000:10000"  # Blob service
       - "10001:10001"  # Queue service  
@@ -33,18 +36,63 @@ services:
     volumes:
       - azurite_data:/workspace
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:10000/ || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
     networks:
       - aipm-network
 
-  # API and Frontend services removed for local development
-  # Run API with: dotnet run --project AI.ProfilePhotoMaker.API
-  # Run Frontend with: npm run dev (in AI.ProfilePhotoMaker.UI directory)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: aipm-api
+    depends_on:
+      sql-server:
+        condition: service_healthy
+      azurite:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      REPLICATE_API_TOKEN: ${REPLICATE_API_TOKEN}
+      REPLICATE_WEBHOOK_SECRET: ${REPLICATE_WEBHOOK_SECRET}
+      REPLICATE_OWNER: ${REPLICATE_OWNER}
+      REPLICATE_HARDWARE: ${REPLICATE_HARDWARE}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING:-DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=7EcjH8qw7X6gFutn5Omgg3e/EB/sTN07c5WLe1Rrl9g=;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;}
+      AZURE_STORAGE_CONTAINER_NAME: ${AZURE_STORAGE_CONTAINER_NAME}
+      AzureStorage__ConnectionString: ${AZURE_STORAGE_CONNECTION_STRING:-DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=7EcjH8qw7X6gFutn5Omgg3e/EB/sTN07c5WLe1Rrl9g=;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;}
+      AzureStorage__ContainerName: ${AZURE_STORAGE_CONTAINER_NAME}
+      ConnectionStrings__AzureStorage: ${AZURE_STORAGE_CONNECTION_STRING:-DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=7EcjH8qw7X6gFutn5Omgg3e/EB/sTN07c5WLe1Rrl9g=;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;}
+      ConnectionStrings__DefaultConnection: Server=sql-server,1433;Database=AIProfileMaker;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;MultipleActiveResultSets=true;
+      APP_BASE_URL: ${APP_BASE_URL}
+      EXTERNAL_API_BASE_URL: ${EXTERNAL_API_BASE_URL}
+      OAUTH_BASE_URL: ${OAUTH_BASE_URL}
+    ports:
+      - "${API_HTTP_PORT:-5032}:8080"
+    restart: unless-stopped
+    networks:
+      - aipm-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        ANGULAR_BUILD_SCRIPT: build:docker
+    container_name: aipm-frontend
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "${UI_HTTP_PORT:-4200}:80"
+    restart: unless-stopped
+    networks:
+      - aipm-network
 
 volumes:
   sqlserver_data:

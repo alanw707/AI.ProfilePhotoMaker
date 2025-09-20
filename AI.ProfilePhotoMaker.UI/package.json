@@ -13,6 +13,7 @@
     "build": "npm run lint && ng build",
     "build:dev": "npm run lint && ng build --configuration development",
     "build:mvp-v1": "npm run lint && ng build --configuration mvp-v1",
+    "build:docker": "npm run lint && ng build --configuration docker-local",
     "_comment_testing": "=== TESTING SCRIPTS ===",
     "test": "ng test",
     "test:integration": "ng test --karma-config=karma.integration.conf.js",

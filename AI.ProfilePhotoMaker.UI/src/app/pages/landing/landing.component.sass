@@ -1380,12 +1380,14 @@ header
 // Primary buttons using shared mixin
 .btn-primary, .bg-primary-600
   @include shared.btn-primary
-  border-radius: 8px
+  &
+    border-radius: 8px
 
 // Secondary buttons
 .btn-secondary, .bg-white.text-gray-700
   @include shared.btn-secondary
-  border-radius: 8px
+  &
+    border-radius: 8px
   
   // Professional light theme secondary buttons
   :root:not([data-theme="dark"]) &

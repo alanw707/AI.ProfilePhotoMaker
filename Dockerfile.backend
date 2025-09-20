@@ -33,6 +33,9 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
+# Install curl for container health checks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 # Create required directories for static file serving
 RUN mkdir -p uploads training-zips style-previews enhanced generated
 
