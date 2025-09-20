@@ -8,6 +8,7 @@ using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
 using AI.ProfilePhotoMaker.API.Services.Database;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
+using AI.ProfilePhotoMaker.API.Services.Health;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 // using AI.ProfilePhotoMaker.API.Services.Monitoring; // Removed monitoring dependency
 using AI.ProfilePhotoMaker.API.Middleware;
@@ -22,6 +23,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Azure.Extensions.AspNetCore.DataProtection.Blobs;
 using System.Security.Claims;
 using Serilog;
+using Microsoft.AspNetCore.Authorization;
 // NOTE: Microsoft.AspNetCore.TestHost removed to prevent production container crashes
 
 // Handle command-line arguments for migration and upload operations
@@ -660,6 +662,13 @@ if (app.Environment.IsDevelopment())
 }
 
 // Map controllers BEFORE MapFallback to ensure API routes take precedence
+// Dedicated storage health endpoint so deployment validators can confirm
+// we are wired to Azure Blob Storage rather than the local emulator.
+app.MapGet("/api/health/storage", async (IHealthCheckService healthChecks) =>
+    Results.Json(await healthChecks.GetStorageHealthAsync()))
+    .AllowAnonymous()
+    .WithName("StorageHealthCheck");
+
 app.MapControllers();
 
 // Map SignalR hub for real-time prediction updates
