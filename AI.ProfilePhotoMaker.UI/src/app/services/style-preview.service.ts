@@ -178,7 +178,7 @@ export class StylePreviewService {
       return directUrl;
     }
     // Return placeholder image API endpoint as last resort
-    return `/api/placeholder/style-preview`;
+    return this._config.getFullUrl('/placeholder/style-preview');
   }
 
   /**

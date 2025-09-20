@@ -3,6 +3,7 @@ import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { AuthService } from './services/auth.service';
 import { ThemeService } from './services/theme.service';
+import { ConfigService } from './services/config.service';
 import { NotificationComponent } from './components/shared/notification/notification.component';
 import { environment } from '../environments/environment';
 
@@ -19,6 +20,7 @@ export class AppComponent implements OnInit {
   private readonly _router = inject(Router);
   private readonly _authService = inject(AuthService);
   private readonly _themeService = inject(ThemeService);
+  private readonly _config = inject(ConfigService);
 
   ngOnInit(): void {
     // Initialize theme service to ensure proper theme application
@@ -41,7 +43,9 @@ export class AppComponent implements OnInit {
 
     if (shouldHandleToken) {
       // In development OAuth flow, set cookie via same-origin endpoint then clean URL
-      fetch('/api/auth/set-cookie', {
+      const setCookieUrl = this._config.getFullUrl('/auth/set-cookie');
+
+      fetch(setCookieUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
