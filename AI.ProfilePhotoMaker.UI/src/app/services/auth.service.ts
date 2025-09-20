@@ -400,7 +400,8 @@ export class AuthService {
           // In development only, ensure cookie is set via same-origin endpoint (proxy)
           if (!environment.production && response.token) {
             try {
-              await fetch('/api/auth/set-cookie', {
+              const setCookieUrl = this._config.getFullUrl('/auth/set-cookie');
+              await fetch(setCookieUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token: response.token }),
@@ -432,7 +433,8 @@ export class AuthService {
         switchMap(async response => {
           if (!environment.production && response.token) {
             try {
-              await fetch('/api/auth/set-cookie', {
+              const setCookieUrl = this._config.getFullUrl('/auth/set-cookie');
+              await fetch(setCookieUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token: response.token }),
