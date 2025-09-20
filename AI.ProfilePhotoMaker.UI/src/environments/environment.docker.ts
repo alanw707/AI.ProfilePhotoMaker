@@ -1,11 +1,11 @@
 export const environment = {
   production: true,
-  apiUrl: '/api',
-  baseUrl: '',
+  apiUrl: 'http://localhost:5032/api',
+  baseUrl: 'http://localhost:5032',
   name: 'docker-local',
   features: {
     debugMode: false,
-    useProxy: true,
+    useProxy: false,
     cors: true,
     enableImageValidation: true,
     enableReplicateCredits: false,
