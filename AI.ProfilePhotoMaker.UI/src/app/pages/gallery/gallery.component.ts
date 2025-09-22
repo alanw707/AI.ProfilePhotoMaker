@@ -215,14 +215,6 @@ export class GalleryComponent implements OnInit {
   }
 
   async onImageDownload(image: GalleryImage) {
-    // Skip enhanced images for now - focus on generated images
-    if (image.type === 'enhanced') {
-      alert(
-        `Enhanced image downloads are not yet implemented. Focusing on regular generated images first.\n\nImage: ${image.title} (${image.style})`
-      );
-      return;
-    }
-
     // First test if the image is accessible
     const isAccessible = await this.testImageAccess(image);
     if (!isAccessible) {
@@ -434,34 +426,32 @@ export class GalleryComponent implements OnInit {
       return;
     }
 
-    // Filter out enhanced images for now
-    const generatedImages = images.filter(img => img.type === 'generated');
+    const downloadableImages = images.filter(
+      img => img.status === 'completed' && !!(img.downloadUrl || img.url)
+    );
 
-    const enhancedCount = images.length - generatedImages.length;
+    const skippedCount = images.length - downloadableImages.length;
 
-    if (enhancedCount > 0) {
+    if (skippedCount > 0) {
       alert(
-        `Skipping ${enhancedCount} enhanced images for now. Enhanced image downloads will be implemented later.\n\nDownloading ${generatedImages.length} generated images.`
+        `Skipping ${skippedCount} image${skippedCount === 1 ? '' : 's'} that aren't ready for download yet.
+
+Downloading ${downloadableImages.length} completed image${downloadableImages.length === 1 ? '' : 's'}.`
       );
     }
 
-    if (generatedImages.length === 0) {
-      alert(
-        'No regular generated images selected. Enhanced image downloads are not yet implemented.'
-      );
+    if (downloadableImages.length === 0) {
+      alert('No completed images ready for download yet. Please wait for processing to finish.');
       return;
     }
 
-    if (generatedImages.length === 1) {
-      // Single image: use direct download
-      await this.onImageDownload(generatedImages[0]);
-      // Clear selections after single image download
+    if (downloadableImages.length === 1) {
+      await this.onImageDownload(downloadableImages[0]);
       if (this.photoGallery) {
         this.photoGallery.clearSelections();
       }
     } else {
-      // Multiple images: create zip (clearSelections is handled in createZipDownload finally block)
-      await this.createZipDownload(generatedImages);
+      await this.createZipDownload(downloadableImages);
     }
   }
 
