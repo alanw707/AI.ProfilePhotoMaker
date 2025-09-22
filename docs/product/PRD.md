@@ -64,7 +64,7 @@ Photo Enhancement (Kontext Pro)
 - Endpoint: `POST /api/replicate/enhance`.
 
 Credits & Payments
-- Weekly free credits for Basic tier: 3, reset every 7 days.
+- Weekly free credits for Basic tier: 5, reset every 7 days.
 - Purchased credits added via credit packages; status, packages (public), purchase, history provided; PaymentIntent mocked in dev.
 - Endpoints: `GET /api/credit/status`, `GET /api/credit/packages` (public), `POST /api/credit/purchase`, `GET /api/credit/history`, `POST /api/credit/create-payment-intent` (mock), `GET /api/credit/costs`, `GET /api/credit/payment-config`.
 
@@ -79,7 +79,7 @@ Webhooks & File Downloading
 - Upload limits: max 20 images per request; file size ≤ 10MB; allowed types: .jpg/.jpeg/.png/.webp with signature validation.
 - Training ZIP: requires ≥ 10 original uploads.
 - Credits:
-  - Weekly (Basic): 3; resets every 7 days.
+  - Weekly (Basic): 5; resets every 7 days.
   - Costs: enhancement = 1 (allows weekly), model_training = 15 (purchased only), styled_generation = 5 per image (purchased only).
   - Consumption occurs after successful Replicate API call.
 - Generation: 1–4 outputs per style per request; batch generation allowed; model availability checked.

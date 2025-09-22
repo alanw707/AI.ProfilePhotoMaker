@@ -218,7 +218,7 @@ This project plan outlines the major milestones, features, and tasks required to
 
 5. **Basic Tier System**
    - Weekly credit-based free generation
-   - 3 free photo enhancements per week
+   - 5 free photo enhancements per week
    - Uses Flux Kontext Pro model for enhancement
    - 95% cost reduction for free users
    - Automatic weekly credit reset

@@ -698,7 +698,7 @@ public class ProfileController : ControllerBase
             }
 
             // Reset profile credits and subscription data (but keep basic profile info)
-            profile.Credits = 3; // Reset to default
+            profile.Credits = 5; // Reset to default
             profile.PurchasedCredits = 0;
             profile.LastCreditReset = DateTime.UtcNow;
             profile.UpdatedAt = DateTime.UtcNow;

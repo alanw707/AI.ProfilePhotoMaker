@@ -8,7 +8,7 @@ import { RouterModule } from '@angular/router';
   imports: [CommonModule, RouterModule],
   templateUrl: './credit-management.component.html',
   styleUrl: './credit-management.component.sass',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CreditManagementComponent {
   @Input() creditsInfo: unknown = null;
@@ -25,11 +25,15 @@ export class CreditManagementComponent {
   }
 
   getWeeklyCredits(): number {
-    return (this.userCreditStatus as any)?.weeklyCredits || (this.creditsInfo as any)?.availableCredits || 0;
+    return (
+      (this.userCreditStatus as any)?.weeklyCredits ||
+      (this.creditsInfo as any)?.availableCredits ||
+      0
+    );
   }
 
   getMaxWeeklyCredits(): number {
-    return 3; // Fixed weekly credit limit
+    return 5; // Fixed weekly credit limit
   }
 
   getCreditUsagePercentage(): number {
