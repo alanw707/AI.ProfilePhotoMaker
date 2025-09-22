@@ -9,7 +9,7 @@ The AI Profile Photo Maker implements a flexible credit-based system that suppor
 ### Credit Types
 
 1. **Free Credits**
-   - 3 credits per week for basic users
+   - 5 credits per week for basic users
    - Auto-refreshes every Monday at midnight UTC
    - Non-accumulative (use it or lose it)
    - Tracked via `WeeklyFreeCreditsUsed` field
@@ -40,7 +40,7 @@ CREATE TABLE AspNetUsers (
     PurchasedCredits INTEGER DEFAULT 0,
     WeeklyFreeCreditsUsed INTEGER DEFAULT 0,
     LastFreeCreditsReset DATETIME,
-    -- Computed: TotalCredits = PurchasedCredits + (3 - WeeklyFreeCreditsUsed)
+    -- Computed: TotalCredits = PurchasedCredits + (5 - WeeklyFreeCreditsUsed)
 );
 ```
 
@@ -65,7 +65,7 @@ public class CreditService
 {
     public int GetAvailableCredits(UserProfile user)
     {
-        var freeCreditsRemaining = Math.Max(0, 3 - user.WeeklyFreeCreditsUsed);
+        var freeCreditsRemaining = Math.Max(0, 5 - user.WeeklyFreeCreditsUsed);
         return user.PurchasedCredits + freeCreditsRemaining;
     }
     
@@ -77,7 +77,7 @@ public class CreditService
         if (totalCredits < amount) return false;
         
         // Deduct from free credits first
-        var freeCreditsToUse = Math.Min(amount, 3 - user.WeeklyFreeCreditsUsed);
+        var freeCreditsToUse = Math.Min(amount, 5 - user.WeeklyFreeCreditsUsed);
         user.WeeklyFreeCreditsUsed += freeCreditsToUse;
         
         // Then deduct from purchased credits
@@ -173,7 +173,7 @@ sequenceDiagram
         <span class="credit-label">Credits</span>
       </div>
       <div class="credit-breakdown">
-        <p>Free: {{freeCredits}}/3 this week</p>
+        <p>Free: {{freeCredits}}/5 this week</p>
         <p>Purchased: {{purchasedCredits}}</p>
       </div>
       <button mat-button (click)="openPurchaseDialog()">

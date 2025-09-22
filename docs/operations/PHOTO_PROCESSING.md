@@ -107,7 +107,7 @@ The system supports 23+ professional photo styles:
    - Real-time preview
 
 2. **Credit System**
-   - 3 free enhancements per week (Basic tier)
+   - 5 free enhancements per week (Basic tier)
    - 1 credit per enhancement
    - Unlimited for Premium users
 

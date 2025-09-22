@@ -11,6 +11,7 @@ import { DashboardCoordinatorService } from '../../services/dashboard-coordinato
 import { AccountInfoComponent } from '../../components/settings/account-info/account-info.component';
 import { CreditManagementComponent } from '../../components/settings/credit-management/credit-management.component';
 import { firstValueFrom, timeout, Subscription, TimeoutError } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 interface DataStats {
   inputPhotos: number;
@@ -549,13 +550,17 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   async loadCreditInfoAsync(): Promise<void> {
-    // Trigger a refresh before awaiting the next state emission
-    this.dashboardStateService.loadBasicDataForSettings();
-
     try {
-      const state = await firstValueFrom(
-        this.dashboardStateService.state$.pipe(timeout({ first: 8000 }))
+      const statePromise = firstValueFrom(
+        this.dashboardStateService.state$.pipe(
+          filter(state => !!state.userCreditStatus || !!state.creditsInfo),
+          timeout({ first: 8000 })
+        )
       );
+
+      await this.dashboardStateService.loadBasicDataForSettings();
+
+      const state = await statePromise;
 
       this.creditsInfo = state.creditsInfo;
       this.userCreditStatus = state.userCreditStatus;

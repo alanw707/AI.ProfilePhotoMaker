@@ -8,7 +8,8 @@ public class BasicTierService : IBasicTierService
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<BasicTierService> _logger;
-    private const int WeeklyCredits = 3;
+    private const int WeeklyCredits = 5;
+    private const int LegacyWeeklyCredits = 3;
     private const int DaysInWeek = 7;
 
     public BasicTierService(ApplicationDbContext context, ILogger<BasicTierService> logger)
@@ -300,9 +301,61 @@ public class BasicTierService : IBasicTierService
 
     public async Task<UserProfile?> GetUserProfileWithCreditsAsync(string userId)
     {
-        return await _context.UserProfiles
+        var profile = await _context.UserProfiles
             .FirstOrDefaultAsync(p => p.UserId == userId);
+
+        if (profile == null)
+        {
+            return null;
+        }
+
+        var updated = UpgradeWeeklyCreditsIfNeeded(profile);
+        if (updated)
+        {
+            await _context.SaveChangesAsync();
+        }
+
+        return profile;
     }
+
+    private bool UpgradeWeeklyCreditsIfNeeded(UserProfile profile)
+    {
+        if (profile.SubscriptionTier != SubscriptionTier.Basic)
+        {
+            return false;
+        }
+
+        var difference = WeeklyCredits - LegacyWeeklyCredits;
+
+        // If the allowance stayed the same or decreased, only clamp accidental overages
+        if (difference <= 0)
+        {
+            if (profile.Credits > WeeklyCredits)
+            {
+                profile.Credits = WeeklyCredits;
+                profile.UpdatedAt = DateTime.UtcNow;
+                return true;
+            }
+            return false;
+        }
+
+        // Clamp any accidental overages to the current max
+        if (profile.Credits >= WeeklyCredits)
+        {
+            if (profile.Credits > WeeklyCredits)
+            {
+                profile.Credits = WeeklyCredits;
+                profile.UpdatedAt = DateTime.UtcNow;
+                return true;
+            }
+            return false;
+        }
+
+        profile.Credits = Math.Min(WeeklyCredits, profile.Credits + difference);
+        profile.UpdatedAt = DateTime.UtcNow;
+        return true;
+    }
+
 
     public async Task LogUsageAsync(string userId, string action, string? details = null, int? creditsCost = null, int? creditsRemaining = null)
     {

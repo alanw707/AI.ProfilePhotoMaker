@@ -544,7 +544,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                         Gender = null,  // Will be set during profile completion if needed
                         Ethnicity = null,  // Will be set during profile completion if needed
                         SubscriptionTier = SubscriptionTier.Basic,
-                        Credits = 3,
+                        Credits = 5,
                         LastCreditReset = DateTime.UtcNow,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
@@ -577,7 +577,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                             Gender = null,
                             Ethnicity = null,
                             SubscriptionTier = SubscriptionTier.Basic,
-                            Credits = 3,
+                            Credits = 5,
                             LastCreditReset = DateTime.UtcNow,
                             CreatedAt = DateTime.UtcNow,
                             UpdatedAt = DateTime.UtcNow
