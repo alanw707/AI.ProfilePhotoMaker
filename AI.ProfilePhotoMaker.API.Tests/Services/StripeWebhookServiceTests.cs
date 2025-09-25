@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
@@ -116,6 +117,162 @@ public class StripeWebhookServiceTests
         Assert.False(await context.CreditPurchases.AnyAsync());
     }
 
+    [Fact]
+    public async Task HandleEventAsync_PaymentIntentSucceeded_MissingUserMetadata_DoesNotProcess()
+    {
+        using var context = CreateContext();
+        var (userId, package, transaction) = await SeedSuccessfulScenarioAsync(context);
+
+        var service = CreateService(context);
+
+        var metadata = new Dictionary<string, string>
+        {
+            ["package_id"] = package.Id.ToString(),
+            ["payment_transaction_id"] = transaction.Id.ToString()
+        };
+
+        var stripeEvent = CreateStripeEvent(
+            PaymentIntentSucceededEvent,
+            transaction.ExternalTransactionId,
+            metadata);
+
+        await service.HandleEventAsync(stripeEvent);
+
+        var refreshedTransaction = await context.PaymentTransactions
+            .AsNoTracking()
+            .FirstAsync(t => t.Id == transaction.Id);
+
+        Assert.Equal(PaymentStatus.Pending, refreshedTransaction.Status);
+        Assert.Null(refreshedTransaction.ProcessedAt);
+        Assert.False(await context.CreditPurchases.AnyAsync());
+    }
+
+    [Fact]
+    public async Task HandleEventAsync_PaymentIntentSucceeded_MissingPackageMetadata_DoesNotProcess()
+    {
+        using var context = CreateContext();
+        var (userId, package, transaction) = await SeedSuccessfulScenarioAsync(context);
+
+        var service = CreateService(context);
+
+        var metadata = new Dictionary<string, string>
+        {
+            ["user_id"] = userId,
+            ["payment_transaction_id"] = transaction.Id.ToString()
+        };
+
+        var stripeEvent = CreateStripeEvent(
+            PaymentIntentSucceededEvent,
+            transaction.ExternalTransactionId,
+            metadata);
+
+        await service.HandleEventAsync(stripeEvent);
+
+        var refreshedTransaction = await context.PaymentTransactions
+            .AsNoTracking()
+            .FirstAsync(t => t.Id == transaction.Id);
+
+        Assert.Equal(PaymentStatus.Pending, refreshedTransaction.Status);
+        Assert.Null(refreshedTransaction.ProcessedAt);
+        Assert.False(await context.CreditPurchases.AnyAsync());
+    }
+
+    [Fact]
+    public async Task HandleEventAsync_PaymentIntentSucceeded_ReprocessingDoesNotDuplicateCredits()
+    {
+        using var context = CreateContext();
+        var (userId, package, transaction) = await SeedSuccessfulScenarioAsync(context);
+
+        var service = CreateService(context);
+
+        var stripeEvent = CreateStripeEvent(
+            PaymentIntentSucceededEvent,
+            transaction.ExternalTransactionId,
+            userId,
+            package.Id,
+            transaction.Id);
+
+        await service.HandleEventAsync(stripeEvent);
+
+        var profileAfterFirst = await context.UserProfiles
+            .AsNoTracking()
+            .FirstAsync(p => p.UserId == userId);
+
+        Assert.Equal(package.TotalCredits, profileAfterFirst.PurchasedCredits);
+
+        await service.HandleEventAsync(stripeEvent);
+
+        var profileAfterSecond = await context.UserProfiles
+            .AsNoTracking()
+            .FirstAsync(p => p.UserId == userId);
+
+        Assert.Equal(package.TotalCredits, profileAfterSecond.PurchasedCredits);
+
+        var purchases = await context.CreditPurchases
+            .AsNoTracking()
+            .Where(p => p.UserId == userId)
+            .ToListAsync();
+
+        Assert.Single(purchases);
+    }
+
+    [Fact]
+    public async Task HandleEventAsync_PaymentIntentSucceeded_MismatchedUserMetadata_UsesTransactionUser()
+    {
+        using var context = CreateContext();
+        var (userId, package, transaction) = await SeedSuccessfulScenarioAsync(context);
+
+        var service = CreateService(context);
+        var mismatchedUserId = Guid.NewGuid().ToString();
+
+        var metadata = new Dictionary<string, string>
+        {
+            ["user_id"] = mismatchedUserId,
+            ["package_id"] = package.Id.ToString(),
+            ["payment_transaction_id"] = transaction.Id.ToString()
+        };
+
+        var stripeEvent = CreateStripeEvent(
+            PaymentIntentSucceededEvent,
+            transaction.ExternalTransactionId,
+            metadata);
+
+        await service.HandleEventAsync(stripeEvent);
+
+        var profile = await context.UserProfiles
+            .AsNoTracking()
+            .FirstAsync(p => p.UserId == userId);
+
+        Assert.Equal(package.TotalCredits, profile.PurchasedCredits);
+        Assert.False(await context.UserProfiles.AnyAsync(p => p.UserId == mismatchedUserId));
+    }
+
+    [Fact]
+    public async Task HandleEventAsync_UnknownEventType_Ignored()
+    {
+        using var context = CreateContext();
+        var (userId, package, transaction) = await SeedSuccessfulScenarioAsync(context);
+
+        var service = CreateService(context);
+
+        var stripeEvent = CreateStripeEvent(
+            "charge.refunded",
+            transaction.ExternalTransactionId,
+            userId,
+            package.Id,
+            transaction.Id);
+
+        await service.HandleEventAsync(stripeEvent);
+
+        var refreshedTransaction = await context.PaymentTransactions
+            .AsNoTracking()
+            .FirstAsync(t => t.Id == transaction.Id);
+
+        Assert.Equal(PaymentStatus.Pending, refreshedTransaction.Status);
+        Assert.Null(refreshedTransaction.ProcessedAt);
+        Assert.False(await context.CreditPurchases.AnyAsync());
+    }
+
     private static StripeWebhookService CreateService(ApplicationDbContext context)
     {
         var basicTierService = new BasicTierService(context, NullLogger<BasicTierService>.Instance);
@@ -226,10 +383,20 @@ public class StripeWebhookServiceTests
             ["payment_transaction_id"] = transactionId.ToString()
         };
 
+        return CreateStripeEvent(eventType, paymentIntentId, metadata);
+    }
+
+    private static Event CreateStripeEvent(
+        string eventType,
+        string paymentIntentId,
+        Dictionary<string, string>? metadata)
+    {
         var paymentIntent = new PaymentIntent
         {
             Id = paymentIntentId,
-            Metadata = new Dictionary<string, string>(metadata),
+            Metadata = metadata != null
+                ? new Dictionary<string, string>(metadata)
+                : new Dictionary<string, string>(),
             Currency = "usd"
         };
 
