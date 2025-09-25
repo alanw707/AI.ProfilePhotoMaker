@@ -1,7 +1,9 @@
+using AI.ProfilePhotoMaker.API.Configuration;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace AI.ProfilePhotoMaker.API.Services;
 
@@ -10,15 +12,21 @@ public class CreditPackageService : ICreditPackageService
     private readonly ApplicationDbContext _context;
     private readonly IBasicTierService _basicTierService;
     private readonly ILogger<CreditPackageService> _logger;
+    private readonly StripeOptions _stripeOptions;
+    private readonly PaymentSimulationOptions _simulationOptions;
 
     public CreditPackageService(
         ApplicationDbContext context,
         IBasicTierService basicTierService,
-        ILogger<CreditPackageService> logger)
+        ILogger<CreditPackageService> logger,
+        IOptions<StripeOptions> stripeOptions,
+        IOptions<PaymentSimulationOptions> paymentSimulationOptions)
     {
         _context = context;
         _basicTierService = basicTierService;
         _logger = logger;
+        _stripeOptions = stripeOptions.Value;
+        _simulationOptions = paymentSimulationOptions.Value;
     }
 
     public async Task<IEnumerable<CreditPackageDto>> GetActiveCreditPackagesAsync()
@@ -42,7 +50,7 @@ public class CreditPackageService : ICreditPackageService
         return packages;
     }
 
-    public async Task<CreditPurchase?> PurchaseCreditPackageAsync(string userId, int packageId, string? paymentTransactionId = null)
+    public async Task<CreditPurchaseResult> PurchaseCreditPackageAsync(string userId, int packageId, string? paymentTransactionId = null)
     {
         var package = await _context.CreditPackages
             .FirstOrDefaultAsync(p => p.Id == packageId && p.IsActive);
@@ -50,36 +58,138 @@ public class CreditPackageService : ICreditPackageService
         if (package == null)
         {
             _logger.LogWarning("Credit package {PackageId} not found or inactive", packageId);
-            return null;
+            return new CreditPurchaseResult(false, PaymentStatus.Failed, null, "PackageNotFound", "Credit package not found or inactive.");
         }
 
+        CreditPurchase? existingPurchase = null;
+        if (!string.IsNullOrWhiteSpace(paymentTransactionId))
+        {
+            existingPurchase = await _context.CreditPurchases
+                .Include(p => p.Package)
+                .FirstOrDefaultAsync(p =>
+                    p.PaymentTransactionId == paymentTransactionId ||
+                    (!string.IsNullOrWhiteSpace(p.ExternalTransactionId) && p.ExternalTransactionId == paymentTransactionId));
+        }
+
+        if (existingPurchase != null)
+        {
+            var success = existingPurchase.Status is PaymentStatus.Completed or PaymentStatus.Succeeded;
+            return new CreditPurchaseResult(success, existingPurchase.Status, existingPurchase);
+        }
+
+        var stripeHasApiKeys = _stripeOptions.HasApiKeys();
+        var simulationForced = _simulationOptions.Enabled && _simulationOptions.SkipStripeIntegration;
+        var simulationRequired = !stripeHasApiKeys;
+        var allowSimulationBypass = simulationRequired || simulationForced;
+        var requiresStripeTransaction = stripeHasApiKeys && !allowSimulationBypass;
+
+        PaymentTransaction? transaction = null;
+        if (!string.IsNullOrWhiteSpace(paymentTransactionId))
+        {
+            transaction = await FindTransactionAsync(paymentTransactionId);
+
+            if (transaction == null && requiresStripeTransaction)
+            {
+                _logger.LogWarning("Payment transaction {TransactionId} not found for user {UserId}", paymentTransactionId, userId);
+                return new CreditPurchaseResult(false, PaymentStatus.Failed, null, "TransactionNotFound", "Payment transaction not found. Please retry the payment.");
+            }
+        }
+        else if (requiresStripeTransaction)
+        {
+            _logger.LogWarning("Stripe configured but payment transaction id missing for user {UserId} and package {PackageId}", userId, packageId);
+            return new CreditPurchaseResult(false, PaymentStatus.Failed, null, "PaymentRequired", "Payment must be completed before credits are awarded.");
+        }
+
+        if (transaction != null)
+        {
+            if (!string.Equals(transaction.UserId, userId, StringComparison.Ordinal))
+            {
+                _logger.LogWarning("Payment transaction {TransactionId} does not belong to user {UserId}", paymentTransactionId ?? transaction.Id.ToString(), userId);
+                return new CreditPurchaseResult(false, PaymentStatus.Failed, null, "TransactionMismatch", "Payment transaction does not belong to the current user.");
+            }
+
+            if (transaction.Status == PaymentStatus.Pending)
+            {
+                return new CreditPurchaseResult(false, PaymentStatus.Pending, null, "PaymentPending", "Payment is still processing.");
+            }
+
+            if (transaction.Status is PaymentStatus.Failed or PaymentStatus.Cancelled or PaymentStatus.Refunded)
+            {
+                return new CreditPurchaseResult(false, transaction.Status, null, "PaymentFailed", transaction.FailureReason ?? "Payment failed.");
+            }
+
+            var purchase = await CreatePurchaseAndApplyCreditsAsync(
+                userId,
+                package,
+                transaction.Id.ToString(),
+                transaction.Amount,
+                "stripe_credit_purchase",
+                transaction.ExternalTransactionId);
+
+            var success = purchase.Status is PaymentStatus.Completed or PaymentStatus.Succeeded;
+            return new CreditPurchaseResult(success, purchase.Status, purchase);
+        }
+
+        if (!allowSimulationBypass)
+        {
+            _logger.LogWarning("Simulation fallback disabled - payment transaction required for user {UserId} and package {PackageId}", userId, packageId);
+            return new CreditPurchaseResult(false, PaymentStatus.Failed, null, "PaymentRequired", "Unable to process purchase without a valid payment transaction.");
+        }
+
+        var simulatedPurchase = await CreatePurchaseAndApplyCreditsAsync(
+            userId,
+            package,
+            paymentTransactionId,
+            package.Price,
+            "credit_package_purchase");
+
+        var simulatedSuccess = simulatedPurchase.Status is PaymentStatus.Completed or PaymentStatus.Succeeded;
+        return new CreditPurchaseResult(simulatedSuccess, simulatedPurchase.Status, simulatedPurchase);
+    }
+
+    private async Task<PaymentTransaction?> FindTransactionAsync(string paymentTransactionId)
+    {
+        if (int.TryParse(paymentTransactionId, out var transactionId))
+        {
+            return await _context.PaymentTransactions
+                .FirstOrDefaultAsync(t => t.Id == transactionId);
+        }
+
+        return await _context.PaymentTransactions
+            .FirstOrDefaultAsync(t => t.ExternalTransactionId == paymentTransactionId);
+    }
+
+    private async Task<CreditPurchase> CreatePurchaseAndApplyCreditsAsync(string userId, CreditPackage package, string? paymentTransactionId, decimal amountPaid, string creditSource, string? externalTransactionId = null)
+    {
         var purchase = new CreditPurchase
         {
             UserId = userId,
-            PackageId = packageId,
+            PackageId = package.Id,
             PurchaseDate = DateTime.UtcNow,
             CreditsAwarded = package.TotalCredits,
-            AmountPaid = package.Price,
+            AmountPaid = amountPaid,
             PaymentTransactionId = paymentTransactionId,
-            Status = PaymentStatus.Completed,
-            CompletedAt = DateTime.UtcNow
+            PaymentProvider = externalTransactionId == null ? "simulation" : "stripe",
+            Status = PaymentStatus.Pending,
+            ExternalTransactionId = externalTransactionId
         };
 
         _context.CreditPurchases.Add(purchase);
         await _context.SaveChangesAsync();
 
-        // Add the purchased credits to the user's account
-        var creditsAdded = await _basicTierService.AddPurchasedCreditsAsync(userId, package.TotalCredits, "credit_package_purchase");
+        var creditsAdded = await _basicTierService.AddPurchasedCreditsAsync(userId, package.TotalCredits, creditSource);
+
+        purchase.Status = creditsAdded ? PaymentStatus.Completed : PaymentStatus.Failed;
+        purchase.CompletedAt = creditsAdded ? DateTime.UtcNow : null;
 
         if (!creditsAdded)
         {
-            _logger.LogError("Failed to add purchased credits to user {UserId} after successful purchase {PurchaseId}", userId, purchase.Id);
-            // Consider rolling back the purchase or marking it as failed
+            _logger.LogError("Failed to add purchased credits to user {UserId} for purchase {PurchaseId}", userId, purchase.Id);
         }
 
-        _logger.LogInformation("User {UserId} purchased credit package {PackageName} for {Amount}. Credits awarded: {Credits}",
-            userId, package.Name, package.Price, package.TotalCredits);
+        await _context.SaveChangesAsync();
 
+        purchase.Package = package;
         return purchase;
     }
 

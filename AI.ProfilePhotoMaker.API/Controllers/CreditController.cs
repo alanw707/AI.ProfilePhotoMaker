@@ -1,8 +1,12 @@
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services;
+using AI.ProfilePhotoMaker.API.Services.Payments;
+using AI.ProfilePhotoMaker.API.Configuration;
+using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Stripe;
 
 namespace AI.ProfilePhotoMaker.API.Controllers;
 
@@ -11,14 +15,24 @@ public class CreditController : BaseController
 {
     private readonly ICreditPackageService _creditPackageService;
     private readonly IBasicTierService _basicTierService;
-    private readonly IConfiguration _configuration;
+    private readonly IStripePaymentService _stripePaymentService;
+    private readonly StripeOptions _stripeOptions;
+    private readonly PaymentSimulationOptions _paymentSimulationOptions;
 
-    public CreditController(ICreditPackageService creditPackageService, IBasicTierService basicTierService, IConfiguration configuration, ILogger<CreditController> logger)
+    public CreditController(
+        ICreditPackageService creditPackageService,
+        IBasicTierService basicTierService,
+        IStripePaymentService stripePaymentService,
+        IOptions<StripeOptions> stripeOptions,
+        IOptions<PaymentSimulationOptions> paymentSimulationOptions,
+        ILogger<CreditController> logger)
         : base(logger)
     {
         _creditPackageService = creditPackageService;
         _basicTierService = basicTierService;
-        _configuration = configuration;
+        _stripePaymentService = stripePaymentService;
+        _stripeOptions = stripeOptions.Value;
+        _paymentSimulationOptions = paymentSimulationOptions.Value;
     }
 
     /// <summary>
@@ -82,12 +96,28 @@ public class CreditController : BaseController
         if (authCheck != null) return authCheck;
         var userId = GetCurrentUserId()!;
 
-        var purchase = await _creditPackageService.PurchaseCreditPackageAsync(userId, dto.PackageId, dto.PaymentTransactionId);
+        var purchaseResult = await _creditPackageService.PurchaseCreditPackageAsync(userId, dto.PackageId, dto.PaymentTransactionId);
 
-        if (purchase == null)
+        if (!purchaseResult.Success)
         {
-            return ErrorResponse("PurchaseFailed", "Credit package not found or purchase failed.");
+            if (purchaseResult.Status == PaymentStatus.Pending)
+            {
+                return StatusCode(202, new
+                {
+                    success = false,
+                    error = new
+                    {
+                        code = purchaseResult.ErrorCode ?? "PaymentPending",
+                        message = purchaseResult.ErrorMessage ?? "Payment is still processing. Please try again shortly."
+                    }
+                });
+            }
+
+            var statusCode = purchaseResult.Status == PaymentStatus.Failed ? 402 : 400;
+            return ErrorResponse(purchaseResult.ErrorCode ?? "PurchaseFailed", purchaseResult.ErrorMessage ?? "Credit package not found or purchase failed.", statusCode);
         }
+
+        var purchase = purchaseResult.Purchase!;
 
         // Get updated credit status
         var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
@@ -139,7 +169,7 @@ public class CreditController : BaseController
     /// Creates a payment intent for Stripe (placeholder for development)
     /// </summary>
     [HttpPost("create-payment-intent")]
-    public async Task<IActionResult> CreatePaymentIntent([FromBody] CreatePaymentIntentRequestDto dto)
+    public async Task<IActionResult> CreatePaymentIntent([FromBody] CreatePaymentIntentRequestDto dto, CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
             return ErrorResponse("InvalidModel", "Invalid input.");
@@ -148,26 +178,35 @@ public class CreditController : BaseController
         if (authCheck != null) return authCheck;
         var userId = GetCurrentUserId()!;
 
-        // Get the package to validate it exists
-        var package = await _creditPackageService.GetActiveCreditPackagesAsync();
-        var selectedPackage = package.FirstOrDefault(p => p.Id == dto.PackageId);
-
-        if (selectedPackage == null)
+        try
         {
-            return ErrorResponse("PackageNotFound", "Credit package not found or inactive.");
+            var intent = await _stripePaymentService.CreatePaymentIntentAsync(userId, dto.PackageId, cancellationToken);
+
+            return SuccessResponse(new
+            {
+                paymentIntentId = intent.PaymentIntentId,
+                clientSecret = intent.ClientSecret,
+                publishableKey = intent.PublishableKey,
+                paymentTransactionId = intent.PaymentTransactionId,
+                packageId = dto.PackageId,
+                isSimulation = false
+            });
         }
-
-        // Return mock payment intent for development
-        var mockClientSecret = $"pi_mock_{Guid.NewGuid():N}_secret_{Guid.NewGuid():N}";
-
-        return SuccessResponse(new
+        catch (StripeException stripeEx)
         {
-            clientSecret = mockClientSecret,
-            packageId = dto.PackageId,
-            amount = selectedPackage.Price,
-            packageName = selectedPackage.Name,
-            isSimulation = true
-        });
+            LogError(stripeEx, "Stripe error while creating payment intent");
+            return ErrorResponse("StripeError", stripeEx.Message, 502);
+        }
+        catch (InvalidOperationException invalidOperationException)
+        {
+            Logger.LogWarning("Payment intent validation failed: {Message} (PackageId: {PackageId})", invalidOperationException.Message, dto.PackageId);
+            return ErrorResponse("PaymentSetupError", invalidOperationException.Message, 400);
+        }
+        catch (Exception ex)
+        {
+            LogError(ex, "Unexpected error while creating payment intent");
+            return ErrorResponse("InternalError", "Failed to create payment intent");
+        }
     }
 
     /// <summary>
@@ -209,12 +248,28 @@ public class CreditController : BaseController
     [AllowAnonymous]
     public IActionResult GetPaymentConfig()
     {
+        var stripeHasApiKeys = _stripeOptions.HasApiKeys();
+        var webhookConfigured = _stripeOptions.HasWebhookSecret();
+        var simulationForced = _paymentSimulationOptions.Enabled && _paymentSimulationOptions.SkipStripeIntegration;
+        var simulationRequired = !stripeHasApiKeys;
+        var simulationActive = simulationRequired || simulationForced;
+        var simulationReason = simulationRequired
+            ? "StripeNotConfigured"
+            : (simulationForced ? "ExplicitBypass" : null);
+
         var config = new
         {
             PaymentSimulation = new
             {
-                Enabled = true, // Always enabled in MVP - no real payment processing
-                SkipStripeIntegration = true // Always skip Stripe in MVP
+                Enabled = simulationActive,
+                SkipStripeIntegration = simulationActive,
+                Reason = simulationReason
+            },
+            Stripe = new
+            {
+                Enabled = stripeHasApiKeys,
+                PublishableKey = stripeHasApiKeys ? _stripeOptions.PublishableKey : null,
+                WebhookConfigured = webhookConfigured
             }
         };
 
