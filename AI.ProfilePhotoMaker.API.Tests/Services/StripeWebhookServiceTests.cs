@@ -123,6 +123,39 @@ public class StripeWebhookServiceTests
         Assert.NotNull(updatedTransaction.ProcessedAt);
     }
 
+
+    [Fact]
+    public async Task HandleEventAsync_PaymentIntentFailed_MissingTransactionMetadata_ResolvesByExternalId()
+    {
+        using var context = CreateContext();
+        var (userId, package, transaction) = await SeedSuccessfulScenarioAsync(context);
+
+        var service = CreateService(context);
+
+        var metadata = new Dictionary<string, string>
+        {
+            ["user_id"] = userId,
+            ["package_id"] = package.Id.ToString()
+        };
+
+        var stripeEvent = CreateStripeEvent(
+            PaymentIntentFailedEvent,
+            transaction.ExternalTransactionId,
+            metadata);
+
+        await service.HandleEventAsync(stripeEvent);
+
+        var updatedTransaction = await context.PaymentTransactions
+            .AsNoTracking()
+            .FirstAsync(t => t.Id == transaction.Id);
+
+        Assert.Equal(PaymentStatus.Failed, updatedTransaction.Status);
+        Assert.Equal("Payment failed", updatedTransaction.FailureReason);
+        Assert.NotNull(updatedTransaction.ProcessedAt);
+
+        Assert.False(await context.CreditPurchases.AnyAsync());
+    }
+
     [Fact]
     public async Task HandleEventAsync_PaymentIntentCanceled_MarksTransactionCancelled()
     {
@@ -137,6 +170,39 @@ public class StripeWebhookServiceTests
             userId,
             package.Id,
             transaction.Id);
+
+        await service.HandleEventAsync(stripeEvent);
+
+        var updatedTransaction = await context.PaymentTransactions
+            .AsNoTracking()
+            .FirstAsync(t => t.Id == transaction.Id);
+
+        Assert.Equal(PaymentStatus.Cancelled, updatedTransaction.Status);
+        Assert.Equal("Payment cancelled", updatedTransaction.FailureReason);
+        Assert.NotNull(updatedTransaction.ProcessedAt);
+
+        Assert.False(await context.CreditPurchases.AnyAsync());
+    }
+
+
+    [Fact]
+    public async Task HandleEventAsync_PaymentIntentCanceled_MissingTransactionMetadata_ResolvesByExternalId()
+    {
+        using var context = CreateContext();
+        var (userId, package, transaction) = await SeedSuccessfulScenarioAsync(context);
+
+        var service = CreateService(context);
+
+        var metadata = new Dictionary<string, string>
+        {
+            ["user_id"] = userId,
+            ["package_id"] = package.Id.ToString()
+        };
+
+        var stripeEvent = CreateStripeEvent(
+            PaymentIntentCancelledEvent,
+            transaction.ExternalTransactionId,
+            metadata);
 
         await service.HandleEventAsync(stripeEvent);
 
@@ -209,6 +275,88 @@ public class StripeWebhookServiceTests
         Assert.Equal(PaymentStatus.Pending, refreshedTransaction.Status);
         Assert.Null(refreshedTransaction.ProcessedAt);
         Assert.False(await context.CreditPurchases.AnyAsync());
+    }
+
+    [Fact]
+    public async Task HandleEventAsync_PaymentIntentSucceeded_MissingTransactionMetadata_ResolvesByExternalId()
+    {
+        using var context = CreateContext();
+        var (userId, package, transaction) = await SeedSuccessfulScenarioAsync(context);
+
+        var service = CreateService(context);
+
+        var metadata = new Dictionary<string, string>
+        {
+            ["user_id"] = userId,
+            ["package_id"] = package.Id.ToString()
+        };
+
+        var stripeEvent = CreateStripeEvent(
+            PaymentIntentSucceededEvent,
+            transaction.ExternalTransactionId,
+            metadata);
+
+        await service.HandleEventAsync(stripeEvent);
+
+        var updatedTransaction = await context.PaymentTransactions
+            .AsNoTracking()
+            .FirstAsync(t => t.Id == transaction.Id);
+
+        Assert.Equal(PaymentStatus.Completed, updatedTransaction.Status);
+        Assert.NotNull(updatedTransaction.ProcessedAt);
+        Assert.Null(updatedTransaction.FailureReason);
+
+        var purchase = await context.CreditPurchases
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.PaymentTransactionId == transaction.Id.ToString());
+
+        Assert.NotNull(purchase);
+        Assert.Equal(package.TotalCredits, purchase!.CreditsAwarded);
+        Assert.Equal(PaymentStatus.Completed, purchase.Status);
+
+        var profile = await context.UserProfiles
+            .AsNoTracking()
+            .FirstAsync(p => p.UserId == userId);
+
+        Assert.Equal(package.TotalCredits, profile.PurchasedCredits);
+    }
+
+
+    [Fact]
+    public async Task HandleEventAsync_PaymentIntentSucceeded_InactivePackageDoesNotAwardCredits()
+    {
+        using var context = CreateContext();
+        var (userId, package, transaction) = await SeedSuccessfulScenarioAsync(context);
+
+        package.IsActive = false;
+        context.CreditPackages.Update(package);
+        await context.SaveChangesAsync();
+
+        var service = CreateService(context);
+
+        var stripeEvent = CreateStripeEvent(
+            PaymentIntentSucceededEvent,
+            transaction.ExternalTransactionId,
+            userId,
+            package.Id,
+            transaction.Id);
+
+        await service.HandleEventAsync(stripeEvent);
+
+        var updatedTransaction = await context.PaymentTransactions
+            .AsNoTracking()
+            .FirstAsync(t => t.Id == transaction.Id);
+
+        Assert.Equal(PaymentStatus.Completed, updatedTransaction.Status);
+        Assert.NotNull(updatedTransaction.ProcessedAt);
+
+        Assert.False(await context.CreditPurchases.AnyAsync());
+
+        var profile = await context.UserProfiles
+            .AsNoTracking()
+            .FirstAsync(p => p.UserId == userId);
+
+        Assert.Equal(0, profile.PurchasedCredits);
     }
 
     [Fact]

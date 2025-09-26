@@ -56,7 +56,7 @@ public class CreditControllerPaymentConfigTests
     {
         yield return new object?[]
         {
-            new StripeOptions { PublishableKey = null, SecretKey = null, WebhookSecret = null },
+            new StripeOptions { PublishableKey = null!, SecretKey = null!, WebhookSecret = null! },
             new PaymentSimulationOptions { Enabled = false, SkipStripeIntegration = false },
             true,
             "StripeNotConfigured"
@@ -72,7 +72,7 @@ public class CreditControllerPaymentConfigTests
 
         yield return new object?[]
         {
-            new StripeOptions { PublishableKey = "pk_test", SecretKey = "sk_test", WebhookSecret = null },
+            new StripeOptions { PublishableKey = "pk_test", SecretKey = "sk_test", WebhookSecret = null! },
             new PaymentSimulationOptions { Enabled = true, SkipStripeIntegration = true },
             true,
             "ExplicitBypass"
