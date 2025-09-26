@@ -2,13 +2,13 @@
 
 Create professional headshots with AI. This monorepo contains the .NET 8 Web API, Angular 19 frontend, deployment scripts, and reference documentation that power **AI Profile Photo Maker**.
 
-> 📚 Looking for docs? Jump straight to the [Documentation Hub](docs/README.md).
+> 📚 Looking for docs? Jump straight to the [Documentation Hub](docs/INDEX.md).
 
 ## 🔗 Quick Links
 
 | Area | Description |
 |------|-------------|
-| 🗂️ [Documentation Hub](docs/README.md) | Architecture, deployment, operations, and security guides |
+| 🗂️ [Documentation Hub](docs/INDEX.md) | Architecture, deployment, operations, and security guides |
 | 🚀 [Local Build Workflow](docs/LOCAL-BUILD-WORKFLOW.md) | Step-by-step guide for the local container build + deploy flow |
 | 🛡️ [Security Notes](docs/security/SECURITY_NOTES.md) | Logging hygiene, secrets, and controller protections |
 | 🧪 [Test Strategy](docs/development/TEST_ANALYSIS_REPORT.md) | Coverage overview and regression plan |
