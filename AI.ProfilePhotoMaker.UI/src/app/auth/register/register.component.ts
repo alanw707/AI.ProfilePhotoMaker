@@ -132,12 +132,12 @@ export class RegisterComponent {
   }
 
   registerWithFacebook(): void {
-    // TODO: Implement Facebook OAuth when needed
+    // Placeholder for optional Facebook OAuth integration if product roadmap requires it
     this.error = 'Facebook registration not yet implemented.';
   }
 
   registerWithApple(): void {
-    // TODO: Implement Apple OAuth when needed
+    // Placeholder for optional Apple OAuth integration if product roadmap requires it
     this.error = 'Apple registration not yet implemented.';
   }
 }

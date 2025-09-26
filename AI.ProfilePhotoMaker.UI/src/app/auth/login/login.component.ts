@@ -208,12 +208,12 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   loginWithFacebook(): void {
-    // TODO: Implement Facebook OAuth when needed
+    // Placeholder for optional Facebook OAuth integration if product roadmap requires it
     this.error = 'Facebook login not yet implemented.';
   }
 
   loginWithApple(): void {
-    // TODO: Implement Apple OAuth when needed
+    // Placeholder for optional Apple OAuth integration if product roadmap requires it
     this.error = 'Apple login not yet implemented.';
   }
 }
