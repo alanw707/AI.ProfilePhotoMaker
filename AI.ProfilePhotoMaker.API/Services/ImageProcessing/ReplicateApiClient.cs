@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Models.Replicate;
@@ -25,6 +26,9 @@ public class ReplicateApiClient : IReplicateApiClient
     private readonly Services.Storage.IStorageService _storageService;
     private readonly IWebhookUrlResolver _webhookUrlResolver;
     private readonly bool _mockEnabled;
+
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
+    private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
     public ReplicateApiClient(
         HttpClient httpClient,
@@ -134,7 +138,7 @@ public class ReplicateApiClient : IReplicateApiClient
             };
 
             var content = new StringContent(JsonSerializer.Serialize(modelRequest), Encoding.UTF8, "application/json");
-            _logger.LogInformation("Creating model for user {UserId}: {ModelName}", userId, modelName);
+            _logger.LogInformation("Creating model for user {UserId}: {ModelName}", Sid(userId), S(modelName));
             var response = await _httpClient.PostAsync("models", content);
 
             if (!response.IsSuccessStatusCode)
@@ -211,22 +215,22 @@ public class ReplicateApiClient : IReplicateApiClient
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
         {
-            _logger.LogError(ex, "Replicate API authentication failed for user {UserId}", userId);
+            _logger.LogError(ex, "Replicate API authentication failed for user {UserId}", Sid(userId));
             throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("429") || ex.Message.Contains("rate limit"))
         {
-            _logger.LogWarning(ex, "Replicate API rate limit reached for user {UserId}", userId);
+            _logger.LogWarning(ex, "Replicate API rate limit reached for user {UserId}", Sid(userId));
             throw new InvalidOperationException("Replicate API rate limit reached. Please try again later.", ex);
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("402") || ex.Message.Contains("payment"))
         {
-            _logger.LogError(ex, "Replicate API payment required for user {UserId}", userId);
+            _logger.LogError(ex, "Replicate API payment required for user {UserId}", Sid(userId));
             throw new InvalidOperationException("Replicate API payment required. Please check your billing.", ex);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating model for user {UserId}", userId);
+            _logger.LogError(ex, "Error creating model for user {UserId}", Sid(userId));
             throw;
         }
     }
@@ -243,11 +247,11 @@ public class ReplicateApiClient : IReplicateApiClient
         {
             // First, create the model to use as destination
             var modelName = $"user-{userId}-{DateTime.UtcNow:yyyyMMddHHmmss}";
-            _logger.LogInformation("Creating model {ModelName} for user {UserId}", modelName, userId);
+            _logger.LogInformation("Creating model {ModelName} for user {UserId}", S(modelName), Sid(userId));
             var destination = await CreateModelAsync(userId, modelName, $"Custom trained model for user {userId}");
 
-            _logger.LogInformation("Model created successfully: {Destination}", destination);
-            _logger.LogInformation("Using destination for training: {Destination}", destination);
+            _logger.LogInformation("Model created successfully: {Destination}", S(destination));
+            _logger.LogInformation("Using destination for training: {Destination}", S(destination));
 
             // Create a model creation request record to track the training
             var modelCreationRequest = new ModelCreationRequest
@@ -266,7 +270,7 @@ public class ReplicateApiClient : IReplicateApiClient
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Created model creation request {RequestId} for user {UserId}",
-                modelCreationRequest.Id, userId);
+                modelCreationRequest.Id, Sid(userId));
 
             var trainingRequest = new
             {
@@ -290,7 +294,7 @@ public class ReplicateApiClient : IReplicateApiClient
             var endpoint = $"models/replicate/fast-flux-trainer/versions/{versionId}/trainings";
 
             _logger.LogInformation("Creating training for user {UserId} at endpoint: {Endpoint} with ZIP URL: {ZipUrl}",
-                userId, endpoint, imageZipUrl);
+                Sid(userId), S(endpoint), S(imageZipUrl));
             var response = await _httpClient.PostAsync(endpoint, content);
 
             if (!response.IsSuccessStatusCode)
@@ -343,28 +347,28 @@ public class ReplicateApiClient : IReplicateApiClient
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Updated model creation request {RequestId} with training ID {TrainingId}",
-                modelCreationRequest.Id, result.Id);
+                modelCreationRequest.Id, Sid(result.Id));
 
             return result;
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
         {
-            _logger.LogError(ex, "Replicate API authentication failed for user {UserId}", userId);
+            _logger.LogError(ex, "Replicate API authentication failed for user {UserId}", Sid(userId));
             throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("429") || ex.Message.Contains("rate limit"))
         {
-            _logger.LogWarning(ex, "Replicate API rate limit reached for user {UserId}", userId);
+            _logger.LogWarning(ex, "Replicate API rate limit reached for user {UserId}", Sid(userId));
             throw new InvalidOperationException("Replicate API rate limit reached. Please try again later.", ex);
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("402") || ex.Message.Contains("payment"))
         {
-            _logger.LogError(ex, "Replicate API payment required for user {UserId}", userId);
+            _logger.LogError(ex, "Replicate API payment required for user {UserId}", Sid(userId));
             throw new InvalidOperationException("Replicate API payment required. Please check your billing.", ex);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating model training for user {UserId}", userId);
+            _logger.LogError(ex, "Error creating model training for user {UserId}", Sid(userId));
             throw;
         }
     }
@@ -401,17 +405,17 @@ public class ReplicateApiClient : IReplicateApiClient
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
         {
-            _logger.LogError(ex, "Replicate API authentication failed for training {TrainingId}", trainingId);
+            _logger.LogError(ex, "Replicate API authentication failed for training {TrainingId}", Sid(trainingId));
             throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("404") || ex.Message.Contains("not found"))
         {
-            _logger.LogWarning(ex, "Training {TrainingId} not found", trainingId);
+            _logger.LogWarning(ex, "Training {TrainingId} not found", Sid(trainingId));
             throw new InvalidOperationException($"Training {trainingId} not found.", ex);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting training status for training {TrainingId}", trainingId);
+            _logger.LogError(ex, "Error getting training status for training {TrainingId}", Sid(trainingId));
             throw;
         }
     }
@@ -438,8 +442,8 @@ public class ReplicateApiClient : IReplicateApiClient
             string stylePrompt = CreateFluxStylePrompt(stylePrompts.PromptTemplate, userInfo, userId);
 
             _logger.LogInformation("Generating images with model version: {ModelVersion} for user: {UserId}, style: {Style}",
-                trainedModelVersion, userId, style);
-            _logger.LogInformation("Generated prompt: {Prompt}", stylePrompt);
+                S(trainedModelVersion), Sid(userId), S(style));
+            _logger.LogInformation("Generated prompt: {Prompt}", S(stylePrompt));
 
             // Get webhook URL for async processing
             var webhookUrl = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete");
@@ -544,29 +548,33 @@ public class ReplicateApiClient : IReplicateApiClient
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to persist prediction ownership for {PredictionId} (user {UserId})", result.Id, userId);
+                _logger.LogWarning(
+                    ex,
+                    "Failed to persist prediction ownership for {PredictionId} (user {UserId})",
+                    Sid(result.Id),
+                    Sid(userId));
             }
 
             return result;
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
         {
-            _logger.LogError(ex, "Replicate API authentication failed for user {UserId} with style {Style}", userId, style);
+            _logger.LogError(ex, "Replicate API authentication failed for user {UserId} with style {Style}", Sid(userId), S(style));
             throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("429") || ex.Message.Contains("rate limit"))
         {
-            _logger.LogWarning(ex, "Replicate API rate limit reached for user {UserId} with style {Style}", userId, style);
+            _logger.LogWarning(ex, "Replicate API rate limit reached for user {UserId} with style {Style}", Sid(userId), S(style));
             throw new InvalidOperationException("Replicate API rate limit reached. Please try again later.", ex);
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("402") || ex.Message.Contains("payment"))
         {
-            _logger.LogError(ex, "Replicate API payment required for user {UserId} with style {Style}", userId, style);
+            _logger.LogError(ex, "Replicate API payment required for user {UserId} with style {Style}", Sid(userId), S(style));
             throw new InvalidOperationException("Replicate API payment required. Please check your billing.", ex);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error generating images for user {UserId} with style {Style}", userId, style);
+            _logger.LogError(ex, "Error generating images for user {UserId} with style {Style}", Sid(userId), S(style));
             throw;
         }
     }
@@ -619,17 +627,17 @@ public class ReplicateApiClient : IReplicateApiClient
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
         {
-            _logger.LogError(ex, "Replicate API authentication failed for prediction {PredictionId}", predictionId);
+            _logger.LogError(ex, "Replicate API authentication failed for prediction {PredictionId}", Sid(predictionId));
             throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("404") || ex.Message.Contains("not found"))
         {
-            _logger.LogWarning(ex, "Prediction {PredictionId} not found", predictionId);
+            _logger.LogWarning(ex, "Prediction {PredictionId} not found", Sid(predictionId));
             throw new InvalidOperationException($"Prediction {predictionId} not found.", ex);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting prediction status for prediction {PredictionId}", predictionId);
+            _logger.LogError(ex, "Error getting prediction status for prediction {PredictionId}", Sid(predictionId));
             throw;
         }
     }
@@ -691,7 +699,7 @@ public class ReplicateApiClient : IReplicateApiClient
         // Clean up extra spaces 
         result = result.Replace("  ", " ").Trim();
 
-        _logger.LogInformation("Generated prompt with trigger word: {Prompt}", result);
+        _logger.LogInformation("Generated prompt with trigger word: {Prompt}", S(result));
 
         return result;
     }
@@ -720,7 +728,7 @@ public class ReplicateApiClient : IReplicateApiClient
         // Clean up extra spaces 
         result = result.Replace("  ", " ").Trim();
 
-        _logger.LogInformation("Generated basic prompt: {Prompt}", result);
+        _logger.LogInformation("Generated basic prompt: {Prompt}", S(result));
 
         return result;
     }
@@ -769,7 +777,10 @@ public class ReplicateApiClient : IReplicateApiClient
     {
         try
         {
-            _logger.LogInformation("Creating training for user {UserId} with destination {Destination}", userId, destination);
+            _logger.LogInformation(
+                "Creating training for user {UserId} with destination {Destination}",
+                Sid(userId),
+                S(destination));
 
             var trainingRequest = new
             {
@@ -810,12 +821,15 @@ public class ReplicateApiClient : IReplicateApiClient
                 throw new Exception("Failed to deserialize training response");
             }
 
-            _logger.LogInformation("Training created successfully for user {UserId} with ID {TrainingId}", userId, result.Id);
+            _logger.LogInformation(
+                "Training created successfully for user {UserId} with ID {TrainingId}",
+                Sid(userId),
+                Sid(result.Id));
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating training with destination for user {UserId}", userId);
+            _logger.LogError(ex, "Error creating training with destination for user {UserId}", Sid(userId));
             throw;
         }
     }
@@ -844,8 +858,10 @@ public class ReplicateApiClient : IReplicateApiClient
             _context.ModelCreationRequests.Add(modelCreationRequest);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Created model creation request {RequestId} for user {UserId}",
-                modelCreationRequest.Id, userId);
+            _logger.LogInformation(
+                "Created model creation request {RequestId} for user {UserId}",
+                modelCreationRequest.Id,
+                Sid(userId));
 
             // Initiate model creation
             var destination = await CreateModelAsync(userId, modelCreationRequest.ModelName,
@@ -856,14 +872,16 @@ public class ReplicateApiClient : IReplicateApiClient
             modelCreationRequest.Status = ModelCreationStatus.Creating;
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Model creation initiated for request {RequestId} with destination {Destination}",
-                modelCreationRequest.Id, destination);
+            _logger.LogInformation(
+                "Model creation initiated for request {RequestId} with destination {Destination}",
+                modelCreationRequest.Id,
+                S(destination));
 
             return modelCreationRequest.Id;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error initiating model creation and training for user {UserId}", userId);
+            _logger.LogError(ex, "Error initiating model creation and training for user {UserId}", Sid(userId));
             throw;
         }
     }
@@ -987,8 +1005,11 @@ public class ReplicateApiClient : IReplicateApiClient
                 throw new Exception("Failed to deserialize Kontext Pro enhancement response");
             }
 
-            _logger.LogInformation("Kontext Pro enhancement started for user {UserId} with prediction ID {PredictionId}, type: {EnhancementType}",
-                userId, result.Id, enhancementType);
+            _logger.LogInformation(
+                "Kontext Pro enhancement started for user {UserId} with prediction ID {PredictionId}, type: {EnhancementType}",
+                Sid(userId),
+                Sid(result.Id),
+                S(enhancementType));
 
             // Persist ownership for status checks (same pattern as GenerateImagesAsync)
             try
@@ -1003,34 +1024,41 @@ public class ReplicateApiClient : IReplicateApiClient
                         CreatedAt = DateTime.UtcNow
                     });
                     await _context.SaveChangesAsync();
-                    _logger.LogDebug("Persisted enhancement prediction {PredictionId} for user {UserId}", result.Id, userId);
+                    _logger.LogDebug(
+                        "Persisted enhancement prediction {PredictionId} for user {UserId}",
+                        Sid(result.Id),
+                        Sid(userId));
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to persist enhancement prediction ownership for {PredictionId} (user {UserId})", result.Id, userId);
+                _logger.LogWarning(
+                    ex,
+                    "Failed to persist enhancement prediction ownership for {PredictionId} (user {UserId})",
+                    Sid(result.Id),
+                    Sid(userId));
             }
 
             return result;
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
         {
-            _logger.LogError(ex, "Replicate API authentication failed for Kontext Pro enhancement for user {UserId}", userId);
+            _logger.LogError(ex, "Replicate API authentication failed for Kontext Pro enhancement for user {UserId}", Sid(userId));
             throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("429") || ex.Message.Contains("rate limit"))
         {
-            _logger.LogWarning(ex, "Replicate API rate limit reached for Kontext Pro enhancement for user {UserId}", userId);
+            _logger.LogWarning(ex, "Replicate API rate limit reached for Kontext Pro enhancement for user {UserId}", Sid(userId));
             throw new InvalidOperationException("Replicate API rate limit reached. Please try again later.", ex);
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("402") || ex.Message.Contains("payment"))
         {
-            _logger.LogError(ex, "Replicate API payment required for Kontext Pro enhancement for user {UserId}", userId);
+            _logger.LogError(ex, "Replicate API payment required for Kontext Pro enhancement for user {UserId}", Sid(userId));
             throw new InvalidOperationException("Replicate API payment required. Please check your billing.", ex);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error enhancing photo with Kontext Pro for user {UserId}", userId);
+            _logger.LogError(ex, "Error enhancing photo with Kontext Pro for user {UserId}", Sid(userId));
             throw;
         }
     }
@@ -1058,7 +1086,10 @@ public class ReplicateApiClient : IReplicateApiClient
                                    ?? _configuration["AppBaseUrl"]
                                    ?? "https://localhost:5001";
                 var rewritten = $"{externalBase.TrimEnd('/')}{uri.AbsolutePath}{uri.Query}";
-                _logger.LogDebug("Rewriting Azurite URL for external access {Original} -> {Rewritten}", originalUrl, rewritten);
+                _logger.LogDebug(
+                    "Rewriting Azurite URL for external access {Original} -> {Rewritten}",
+                    S(originalUrl),
+                    S(rewritten));
                 return rewritten;
             }
 
@@ -1079,13 +1110,20 @@ public class ReplicateApiClient : IReplicateApiClient
                         var sasUrl = await _storageService.GenerateSasUrlAsync(containerAndPath, TimeSpan.FromMinutes(10));
                         if (!string.IsNullOrEmpty(sasUrl))
                         {
-                            _logger.LogDebug("Generated SAS URL for external access (container={Container}, path={Path})", container, blobPath);
+                            _logger.LogDebug(
+                                "Generated SAS URL for external access (container={Container}, path={Path})",
+                                S(container),
+                                S(blobPath));
                             return sasUrl;
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Failed to generate SAS URL for external access (container={Container}, path={Path})", container, blobPath);
+                        _logger.LogWarning(
+                            ex,
+                            "Failed to generate SAS URL for external access (container={Container}, path={Path})",
+                            S(container),
+                            S(blobPath));
                     }
                 }
             }
@@ -1094,7 +1132,7 @@ public class ReplicateApiClient : IReplicateApiClient
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to normalize image URL for external access: {Url}", originalUrl);
+            _logger.LogWarning(ex, "Failed to normalize image URL for external access: {Url}", S(originalUrl));
             return originalUrl;
         }
     }
@@ -1159,23 +1197,23 @@ public class ReplicateApiClient : IReplicateApiClient
 
             if (response.IsSuccessStatusCode)
             {
-                _logger.LogInformation("Model {ModelId} exists and is accessible", modelId);
+                _logger.LogInformation("Model {ModelId} exists and is accessible", S(modelId));
                 return true;
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                _logger.LogInformation("Model {ModelId} not found on Replicate", modelId);
+                _logger.LogInformation("Model {ModelId} not found on Replicate", S(modelId));
                 return false;
             }
             else
             {
-                _logger.LogWarning("Unable to check model {ModelId} status: {StatusCode}", modelId, response.StatusCode);
+                _logger.LogWarning("Unable to check model {ModelId} status: {StatusCode}", S(modelId), response.StatusCode);
                 return false;
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking if model {ModelId} exists", modelId);
+            _logger.LogError(ex, "Error checking if model {ModelId} exists", S(modelId));
             return false;
         }
     }
@@ -1189,44 +1227,44 @@ public class ReplicateApiClient : IReplicateApiClient
     {
         try
         {
-            _logger.LogInformation("Deleting model {ModelId} with proactive version cleanup", modelId);
-            
+            _logger.LogInformation("Deleting model {ModelId} with proactive version cleanup", S(modelId));
+
             // Check if model exists first
             var modelResponse = await _httpClient.GetAsync($"models/{modelId}");
             if (modelResponse.StatusCode == HttpStatusCode.NotFound)
             {
-                _logger.LogInformation("Model {ModelId} not found, deletion complete", modelId);
+                _logger.LogInformation("Model {ModelId} not found, deletion complete", S(modelId));
                 return (true, null);
             }
             if (!modelResponse.IsSuccessStatusCode)
             {
                 var checkError = await modelResponse.Content.ReadAsStringAsync();
-                _logger.LogError("Failed to access model {ModelId}: {StatusCode}", modelId, modelResponse.StatusCode);
+                _logger.LogError("Failed to access model {ModelId}: {StatusCode}", S(modelId), modelResponse.StatusCode);
                 return (false, $"Unable to access model: {checkError}");
             }
 
             // Proactive approach: Always clean versions first
             var versions = await GetModelVersionsAsync(modelId);
-            
+
             if (versions.Count > 0)
             {
-                _logger.LogInformation("Found {VersionCount} versions for model {ModelId}, cleaning up proactively", 
-                    versions.Count, modelId);
-                
+                _logger.LogInformation("Found {VersionCount} versions for model {ModelId}, cleaning up proactively",
+                    versions.Count, S(modelId));
+
                 var failedVersions = new List<string>();
                 foreach (var versionId in versions)
                 {
                     var (success, error) = await DeleteModelVersionAsync(modelId, versionId);
                     if (!success)
                     {
-                        _logger.LogWarning("Version cleanup failed: {VersionId} → {Error}", versionId, error);
+                        _logger.LogWarning("Version cleanup failed: {VersionId} → {Error}", Sid(versionId), S(error));
                         failedVersions.Add(versionId);
                     }
                 }
 
                 if (failedVersions.Count > 0)
                 {
-                    _logger.LogError("Version cleanup incomplete: {FailedCount}/{TotalCount} failed", 
+                    _logger.LogError("Version cleanup incomplete: {FailedCount}/{TotalCount} failed",
                         failedVersions.Count, versions.Count);
                     return (false, $"Failed to delete {failedVersions.Count} versions: {string.Join(", ", failedVersions)}");
                 }
@@ -1235,30 +1273,30 @@ public class ReplicateApiClient : IReplicateApiClient
             }
             else
             {
-                _logger.LogDebug("No versions found for model {ModelId}, proceeding to model deletion", modelId);
+                _logger.LogDebug("No versions found for model {ModelId}, proceeding to model deletion", S(modelId));
             }
 
             // Delete model (should succeed after version cleanup)
             var deleteResponse = await _httpClient.DeleteAsync($"models/{modelId}");
-            
+
             if (deleteResponse.IsSuccessStatusCode || deleteResponse.StatusCode == HttpStatusCode.NotFound)
             {
-                _logger.LogInformation("Model deletion successful: {ModelId}", modelId);
+                _logger.LogInformation("Model deletion successful: {ModelId}", S(modelId));
                 return (true, null);
             }
 
             // Handle unexpected deletion failure
             var deleteError = await deleteResponse.Content.ReadAsStringAsync();
             string? errorDetail = ExtractErrorDetail(deleteError);
-            
-            _logger.LogError("Unexpected deletion failure for {ModelId}: {StatusCode} - {Error}", 
-                modelId, deleteResponse.StatusCode, errorDetail);
-            
+
+            _logger.LogError("Unexpected deletion failure for {ModelId}: {StatusCode} - {Error}",
+                S(modelId), deleteResponse.StatusCode, S(errorDetail));
+
             return (false, errorDetail ?? $"Delete failed: {deleteError}");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Model deletion error: {ModelId}", modelId);
+            _logger.LogError(ex, "Model deletion error: {ModelId}", S(modelId));
             return (false, $"Network or API error: {ex.Message}");
         }
     }
@@ -1269,7 +1307,7 @@ public class ReplicateApiClient : IReplicateApiClient
     private static string? ExtractErrorDetail(string errorResponse)
     {
         if (string.IsNullOrWhiteSpace(errorResponse)) return null;
-        
+
         try
         {
             var errorObj = JsonDocument.Parse(errorResponse);
@@ -1325,7 +1363,7 @@ public class ReplicateApiClient : IReplicateApiClient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating prediction with model {ModelId}", modelId);
+            _logger.LogError(ex, "Error creating prediction with model {ModelId}", S(modelId));
             throw;
         }
     }
@@ -1375,12 +1413,12 @@ public class ReplicateApiClient : IReplicateApiClient
                 }
             }
 
-            _logger.LogInformation("Found {Count} models for user {UserId}", models.Count, userId);
+            _logger.LogInformation("Found {Count} models for user {UserId}", models.Count, Sid(userId));
             return models;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error finding models for user {UserId}", userId);
+            _logger.LogError(ex, "Error finding models for user {UserId}", Sid(userId));
             return new List<ReplicateModelInfo>();
         }
     }
@@ -1398,7 +1436,7 @@ public class ReplicateApiClient : IReplicateApiClient
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("Failed to get model {ModelId}: {StatusCode}", modelId, response.StatusCode);
+                _logger.LogError("Failed to get model {ModelId}: {StatusCode}", S(modelId), response.StatusCode);
                 return null;
             }
 
@@ -1412,12 +1450,12 @@ public class ReplicateApiClient : IReplicateApiClient
                 return idElement.GetString();
             }
 
-            _logger.LogWarning("No latest version found for model {ModelId}", modelId);
+            _logger.LogWarning("No latest version found for model {ModelId}", S(modelId));
             return null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting model version for {ModelId}", modelId);
+            _logger.LogError(ex, "Error getting model version for {ModelId}", S(modelId));
             return null;
         }
     }
@@ -1436,7 +1474,7 @@ public class ReplicateApiClient : IReplicateApiClient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking model availability for {ModelId}", modelId);
+            _logger.LogError(ex, "Error checking model availability for {ModelId}", S(modelId));
             return false;
         }
     }
@@ -1450,24 +1488,24 @@ public class ReplicateApiClient : IReplicateApiClient
     {
         try
         {
-            _logger.LogInformation("Fetching versions for model {ModelId}", modelId);
+            _logger.LogInformation("Fetching versions for model {ModelId}", S(modelId));
             var response = await _httpClient.GetAsync($"models/{modelId}/versions");
-            
+
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Failed to fetch versions for model {ModelId}: {StatusCode}", modelId, response.StatusCode);
+                _logger.LogWarning("Failed to fetch versions for model {ModelId}: {StatusCode}", S(modelId), response.StatusCode);
                 return new List<string>();
             }
 
             var responseContent = await response.Content.ReadAsStringAsync();
-            
+
             // CRITICAL FIX: Validate response content before JSON parsing
             if (string.IsNullOrWhiteSpace(responseContent))
             {
-                _logger.LogWarning("Empty response when fetching versions for model {ModelId}", modelId);
+                _logger.LogWarning("Empty response when fetching versions for model {ModelId}", S(modelId));
                 return new List<string>();
             }
-            
+
             // CRITICAL FIX: Robust JSON parsing with specific error handling
             JsonDocument versionData;
             try
@@ -1476,11 +1514,14 @@ public class ReplicateApiClient : IReplicateApiClient
             }
             catch (JsonException jsonEx)
             {
-                _logger.LogError(jsonEx, "Invalid JSON response when fetching versions for model {ModelId}. Response: {Response}", 
-                    modelId, responseContent);
+                _logger.LogError(
+                    jsonEx,
+                    "Invalid JSON response when fetching versions for model {ModelId}. Response: {Response}",
+                    S(modelId),
+                    S(responseContent));
                 return new List<string>();
             }
-            
+
             var versions = new List<string>();
             if (versionData.RootElement.TryGetProperty("results", out var resultsElement) && resultsElement.ValueKind == JsonValueKind.Array)
             {
@@ -1496,13 +1537,13 @@ public class ReplicateApiClient : IReplicateApiClient
                     }
                 }
             }
-            
-            _logger.LogInformation("Found {Count} versions for model {ModelId}", versions.Count, modelId);
+
+            _logger.LogInformation("Found {Count} versions for model {ModelId}", versions.Count, S(modelId));
             return versions;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching versions for model {ModelId}", modelId);
+            _logger.LogError(ex, "Error fetching versions for model {ModelId}", S(modelId));
             // CRITICAL FIX: Always return empty list instead of throwing to prevent cascade deletion from failing
             return new List<string>();
         }
@@ -1522,13 +1563,13 @@ public class ReplicateApiClient : IReplicateApiClient
                 var versions = await GetModelVersionsAsync(modelId);
                 if (versions.Any(v => string.Equals(v, versionId, StringComparison.OrdinalIgnoreCase)))
                 {
-                    _logger.LogInformation("Model version {VersionId} is now available for {ModelId}", versionId, modelId);
+                    _logger.LogInformation("Model version {VersionId} is now available for {ModelId}", Sid(versionId), S(modelId));
                     return true;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Error while polling versions for {ModelId}; continuing to retry", modelId);
+                _logger.LogWarning(ex, "Error while polling versions for {ModelId}; continuing to retry", S(modelId));
             }
 
             // Exponential backoff with cap
@@ -1543,8 +1584,11 @@ public class ReplicateApiClient : IReplicateApiClient
             await Task.Delay(delay < remaining ? delay : remaining);
         }
 
-        _logger.LogWarning("Timed out waiting for version {VersionId} of model {ModelId} to become available (timeout {Timeout}s)",
-            versionId, modelId, (int)effectiveTimeout.TotalSeconds);
+        _logger.LogWarning(
+            "Timed out waiting for version {VersionId} of model {ModelId} to become available (timeout {Timeout}s)",
+            Sid(versionId),
+            S(modelId),
+            (int)effectiveTimeout.TotalSeconds);
         return false;
     }
 
@@ -1552,19 +1596,24 @@ public class ReplicateApiClient : IReplicateApiClient
     {
         try
         {
-            _logger.LogInformation("Deleting version {VersionId} of model {ModelId}", versionId, modelId);
+            _logger.LogInformation("Deleting version {VersionId} of model {ModelId}", Sid(versionId), S(modelId));
             var response = await _httpClient.DeleteAsync($"models/{modelId}/versions/{versionId}");
-            
+
             if (response.IsSuccessStatusCode)
             {
-                _logger.LogInformation("Successfully deleted version {VersionId} of model {ModelId}", versionId, modelId);
+                _logger.LogInformation("Successfully deleted version {VersionId} of model {ModelId}", Sid(versionId), S(modelId));
                 return (true, null);
             }
             else
             {
                 var error = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Failed to delete version {VersionId} of model {ModelId}: {StatusCode} - {Error}", versionId, modelId, response.StatusCode, error);
-                
+                _logger.LogError(
+                    "Failed to delete version {VersionId} of model {ModelId}: {StatusCode} - {Error}",
+                    Sid(versionId),
+                    S(modelId),
+                    response.StatusCode,
+                    S(error));
+
                 // Parse and return user-friendly error message
                 try
                 {
@@ -1580,7 +1629,7 @@ public class ReplicateApiClient : IReplicateApiClient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting version {VersionId} of model {ModelId}", versionId, modelId);
+            _logger.LogError(ex, "Error deleting version {VersionId} of model {ModelId}", Sid(versionId), S(modelId));
             return (false, $"Network or API error: {ex.Message}");
         }
     }

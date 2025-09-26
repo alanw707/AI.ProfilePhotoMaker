@@ -1,5 +1,6 @@
 using AI.ProfilePhotoMaker.API.Configuration;
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services.Payments.Models;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +15,8 @@ public class StripePaymentService : IStripePaymentService
     private readonly ILogger<StripePaymentService> _logger;
     private readonly StripeOptions _options;
     private readonly StripeClient _stripeClient;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
+    private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
     public StripePaymentService(
         ApplicationDbContext dbContext,
@@ -46,7 +49,7 @@ public class StripePaymentService : IStripePaymentService
 
         if (user is null)
         {
-            _logger.LogWarning("Cannot create payment intent for non-existent user {UserId}", userId);
+            _logger.LogWarning("Cannot create payment intent for non-existent user {UserId}", Sid(userId));
             throw new InvalidOperationException("User not found");
         }
 
@@ -96,13 +99,13 @@ public class StripePaymentService : IStripePaymentService
         }
         catch (StripeException stripeException)
         {
-            _logger.LogError(stripeException, "Stripe API error while creating payment intent for user {UserId}", userId);
+            _logger.LogError(stripeException, "Stripe API error while creating payment intent for user {UserId}", Sid(userId));
             throw;
         }
 
         if (string.IsNullOrWhiteSpace(paymentIntent.ClientSecret))
         {
-            _logger.LogError("Stripe did not return a client secret for payment intent {PaymentIntentId}", paymentIntent.Id);
+            _logger.LogError("Stripe did not return a client secret for payment intent {PaymentIntentId}", Sid(paymentIntent.Id));
             throw new InvalidOperationException("Stripe did not return a client secret for the payment intent");
         }
 
@@ -143,7 +146,7 @@ public class StripePaymentService : IStripePaymentService
         catch (StripeException updateException)
         {
             // Log but do not fail the flow – transaction is recorded locally
-            _logger.LogWarning(updateException, "Failed to update Stripe metadata for payment intent {PaymentIntentId}", paymentIntent.Id);
+            _logger.LogWarning(updateException, "Failed to update Stripe metadata for payment intent {PaymentIntentId}", Sid(paymentIntent.Id));
         }
 
         return new PaymentIntentResponse(paymentIntent.Id, paymentIntent.ClientSecret, _options.PublishableKey, transaction.Id.ToString());

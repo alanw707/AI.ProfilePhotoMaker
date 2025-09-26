@@ -1,3 +1,4 @@
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace AI.ProfilePhotoMaker.API.Services.Database;
@@ -9,6 +10,7 @@ public class MigrationHealthCheck : IHealthCheck
 {
     private readonly IMigrationService _migrationService;
     private readonly ILogger<MigrationHealthCheck> _logger;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
 
     public MigrationHealthCheck(IMigrationService migrationService, ILogger<MigrationHealthCheck> logger)
     {
@@ -45,8 +47,8 @@ public class MigrationHealthCheck : IHealthCheck
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Migration health check failed");
-            return HealthCheckResult.Unhealthy($"Migration health check failed: {ex.Message}");
+            _logger.LogError(ex, "Migration health check failed: {Message}", S(ex.Message));
+            return HealthCheckResult.Unhealthy($"Migration health check failed: {S(ex.Message)}");
         }
     }
 }

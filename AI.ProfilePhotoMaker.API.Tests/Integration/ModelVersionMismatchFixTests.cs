@@ -30,7 +30,7 @@ public class ModelVersionMismatchFixTests : IClassFixture<CustomWebApplicationFa
         // Arrange
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        
+
         // Create a model creation request as would happen during training
         var modelRequest = new ModelCreationRequest
         {
@@ -69,14 +69,14 @@ public class ModelVersionMismatchFixTests : IClassFixture<CustomWebApplicationFa
 
         // Assert
         result.Should().Be("alanw707/test-model-version-fix:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
-        
+
         // Verify the format matches the expected pattern for Replicate API
         result.Should().MatchRegex(@"^alanw707\/[\w-]+:[a-fA-F0-9]{64}$");
-        
+
         // Verify model ID is stored without owner prefix
         modelRequest.ReplicateModelId.Should().Be("test-model-version-fix");
         modelRequest.ReplicateModelId.Should().NotStartWith("alanw707/");
-        
+
         // Verify version is a valid 64-character hex string
         modelRequest.TrainedModelVersion.Should().MatchRegex(@"^[a-fA-F0-9]{64}$");
     }
@@ -95,17 +95,17 @@ public class ModelVersionMismatchFixTests : IClassFixture<CustomWebApplicationFa
             spLegacy.GetRequiredService<ILogger<ReplicateController>>()
         );
         var formatMethod = typeof(ReplicateController).GetMethod(
-            name: "FormatModelVersion", 
+            name: "FormatModelVersion",
             bindingAttr: System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
             binder: null,
             types: new[] { typeof(string), typeof(string) },
             modifiers: null);
-        
+
         // Test with legacy data that has owner prefix (should still work)
-        var result = (string)formatMethod!.Invoke(controller, new object[] 
-        { 
+        var result = (string)formatMethod!.Invoke(controller, new object[]
+        {
             "alanw707/legacy-model-with-prefix",  // Legacy format with owner prefix
-            "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd" 
+            "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd"
         })!;
 
         result.Should().Be("alanw707/legacy-model-with-prefix:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd");
@@ -125,16 +125,16 @@ public class ModelVersionMismatchFixTests : IClassFixture<CustomWebApplicationFa
             spClean.GetRequiredService<ILogger<ReplicateController>>()
         );
         var formatMethodClean = typeof(ReplicateController).GetMethod(
-            name: "FormatModelVersion", 
+            name: "FormatModelVersion",
             bindingAttr: System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
             binder: null,
             types: new[] { typeof(string), typeof(string) },
             modifiers: null);
-        
-        var result = (string)formatMethodClean!.Invoke(controllerClean, new object[] 
-        { 
+
+        var result = (string)formatMethodClean!.Invoke(controllerClean, new object[]
+        {
             "clean-model-no-prefix",  // New format without owner prefix
-            "fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321" 
+            "fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321"
         })!;
 
         result.Should().Be("alanw707/clean-model-no-prefix:fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321");

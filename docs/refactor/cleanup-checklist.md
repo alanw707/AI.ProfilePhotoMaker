@@ -62,14 +62,14 @@
   - Rationale: Abandoned artifact increases repository noise.  
   - Action: Confirm with doc owners, delete or repurpose directory, update indices.  
   - Validation: Ensure `docs/claudedocs-index.md` does not reference the path.
-- [ ] **Confirm social login TODOs should stay visible** *(UI auth)*  
+- [ ] **Confirm social login follow-ups should stay visible** *(UI auth)*  
   - Locations: `AI.ProfilePhotoMaker.UI/src/app/auth/login/login.component.ts:211-216`, `.../register/register.component.ts:135-140`.  
-  - Rationale: Persistent TODOs indicate roadmap uncertainty.  
+  - Rationale: Persistent reminders indicate roadmap uncertainty.  
   - Action: Sync with product roadmap; either convert to tracked issues or keep TODOs intentionally.  
   - Validation: None—communication/documentation task.
 - [ ] **Finish rollback logic for unified secrets deployment** *(Scripts)*  
   - Location: `scripts/deploy-with-unified-secrets.sh:179`.  
-  - Rationale: TODO placeholder leaves rollout without safe fallback.  
+  - Rationale: Leaving placeholders without owners blocks rollout readiness.  
   - Action: Design rollback flow or document manual steps; test via dry-run.  
   - Validation: Execute script in staging; verify failure paths restore prior state.
 - [ ] **Review shell duplicates for API/UI control** *(Scripts)*  

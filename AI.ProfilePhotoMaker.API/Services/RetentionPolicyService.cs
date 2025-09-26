@@ -1,5 +1,6 @@
 using AI.ProfilePhotoMaker.API.Configuration;
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +15,9 @@ public class RetentionPolicyService : IRetentionPolicyService
     private readonly StoragePathResolver _pathResolver;
     private readonly ILogger<RetentionPolicyService> _logger;
     private readonly LegacyCompatibilityOptions _legacyOptions;
+
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
+    private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
     public RetentionPolicyService(
         ApplicationDbContext context,
@@ -54,7 +58,7 @@ public class RetentionPolicyService : IRetentionPolicyService
             {
                 _logger.LogError(ex,
                     "Failed to delete expired image {ImageId}: {Error}",
-                    image.Id, ex.Message);
+                    image.Id, S(ex.Message));
             }
         }
 
@@ -132,11 +136,11 @@ public class RetentionPolicyService : IRetentionPolicyService
             try
             {
                 await _storageService.DeleteImageAsync(fileUrl);
-                _logger.LogDebug("Deleted file: {FileUrl}", fileUrl);
+                _logger.LogDebug("Deleted file: {FileUrl}", S(fileUrl));
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to delete file {FileUrl}: {Error}", fileUrl, ex.Message);
+                _logger.LogWarning(ex, "Failed to delete file {FileUrl}: {Error}", S(fileUrl), S(ex.Message));
                 // Continue with other files even if one fails
             }
         }
@@ -175,7 +179,7 @@ public class RetentionPolicyService : IRetentionPolicyService
         image.ScheduledDeletionDate = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
-        _logger.LogInformation("Image {ImageId} marked for immediate deletion by user {UserId}", imageId, userId);
+        _logger.LogInformation("Image {ImageId} marked for immediate deletion by user {UserId}", imageId, Sid(userId));
 
         return true;
     }
@@ -198,7 +202,7 @@ public class RetentionPolicyService : IRetentionPolicyService
         }
 
         await _context.SaveChangesAsync();
-        _logger.LogInformation("All {Count} images marked for immediate deletion by user {UserId}", count, userId);
+        _logger.LogInformation("All {Count} images marked for immediate deletion by user {UserId}", count, Sid(userId));
 
         return count;
     }
@@ -229,7 +233,7 @@ public class RetentionPolicyService : IRetentionPolicyService
 
         await _context.SaveChangesAsync();
         _logger.LogInformation("Image {ImageId} restored by user {UserId}, new deletion date: {DeletionDate}",
-            imageId, userId, image.ScheduledDeletionDate);
+            imageId, Sid(userId), image.ScheduledDeletionDate);
 
         return true;
     }
@@ -251,11 +255,11 @@ public class RetentionPolicyService : IRetentionPolicyService
             // Get the enhanced directory prefix for all users
             var enhancedPrefix = _pathResolver.GetDirectoryPrefix(StorageType.Enhanced);
             _logger.LogDebug("Starting enhanced image cleanup for prefix: {Prefix}, cutoff time: {CutoffTime}",
-                enhancedPrefix, cutoffTime);
+                S(enhancedPrefix), cutoffTime);
 
             // List all files in the enhanced directory
             var enhancedFiles = await _storageService.ListFilesAsync(enhancedPrefix);
-            
+
             // Also check for legacy enhanced files without environment prefix (for backward compatibility)
             List<string> legacyEnhancedFiles;
             if (_legacyOptions.EnableLegacyEnhancedPathLookup)
@@ -269,24 +273,24 @@ public class RetentionPolicyService : IRetentionPolicyService
                     "Skipping legacy enhanced path lookup because LegacyCompatibility.EnableLegacyEnhancedPathLookup is disabled."
                 );
             }
-            
+
             // Combine both lists and remove duplicates
             var allEnhancedFiles = enhancedFiles.Concat(legacyEnhancedFiles).Distinct().ToList();
 
             if (!allEnhancedFiles.Any())
             {
-                _logger.LogDebug("No enhanced files found for cleanup in either prefixed ({Prefix}) or legacy (enhanced/) paths", enhancedPrefix);
+                _logger.LogDebug("No enhanced files found for cleanup in either prefixed ({Prefix}) or legacy (enhanced/) paths", S(enhancedPrefix));
                 return 0;
             }
-            
+
             if (_legacyOptions.EnableLegacyEnhancedPathLookup)
             {
-                _logger.LogInformation("Found {PrefixedCount} enhanced files in prefixed path and {LegacyCount} in legacy path for cleanup", 
+                _logger.LogInformation("Found {PrefixedCount} enhanced files in prefixed path and {LegacyCount} in legacy path for cleanup",
                     enhancedFiles.Count, legacyEnhancedFiles.Count);
             }
             else
             {
-                _logger.LogInformation("Found {PrefixedCount} enhanced files in prefixed path; legacy path lookup disabled via configuration", 
+                _logger.LogInformation("Found {PrefixedCount} enhanced files in prefixed path; legacy path lookup disabled via configuration",
                     enhancedFiles.Count);
             }
 
@@ -333,7 +337,7 @@ public class RetentionPolicyService : IRetentionPolicyService
 
                     if (fileInfo == null)
                     {
-                        _logger.LogWarning("Could not get file info for enhanced image: {FilePath}", filePath);
+                        _logger.LogWarning("Could not get file info for enhanced image: {FilePath}", S(filePath));
                         continue;
                     }
 
@@ -347,24 +351,24 @@ public class RetentionPolicyService : IRetentionPolicyService
                             deletedCount++;
                             _logger.LogInformation(
                                 "Deleted orphaned enhanced image: {FilePath} (created: {CreatedAt}, age: {Age})",
-                                filePath,
+                                S(filePath),
                                 fileInfo.CreatedAt,
                                 DateTime.UtcNow.Subtract(fileInfo.CreatedAt));
                         }
                         else
                         {
-                            _logger.LogWarning("Failed to delete enhanced image: {FilePath}", filePath);
+                            _logger.LogWarning("Failed to delete enhanced image: {FilePath}", S(filePath));
                         }
                     }
                     else
                     {
                         _logger.LogDebug("Enhanced image {FilePath} is too recent (created: {CreatedAt})",
-                            filePath, fileInfo.CreatedAt);
+                            S(filePath), fileInfo.CreatedAt);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error processing enhanced image {FilePath}: {Error}", filePath, ex.Message);
+                    _logger.LogError(ex, "Error processing enhanced image {FilePath}: {Error}", S(filePath), S(ex.Message));
                     // Continue with next file
                 }
             }
@@ -380,7 +384,7 @@ public class RetentionPolicyService : IRetentionPolicyService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to perform enhanced image cleanup: {Error}", ex.Message);
+            _logger.LogError(ex, "Failed to perform enhanced image cleanup: {Error}", S(ex.Message));
             throw;
         }
 

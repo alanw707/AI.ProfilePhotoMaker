@@ -1,5 +1,6 @@
 using System.Net;
 using AI.ProfilePhotoMaker.API.Configuration;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using Microsoft.Extensions.Options;
 
 namespace AI.ProfilePhotoMaker.API.Services;
@@ -14,6 +15,8 @@ public class WebhookUrlResolver : IWebhookUrlResolver
     private readonly ILogger<WebhookUrlResolver> _logger;
     private readonly HttpClient _httpClient;
     private readonly LegacyCompatibilityOptions _legacyOptions;
+
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
 
     // Cache resolved URL to avoid repeated lookups
     private string? _cachedWebhookBaseUrl;
@@ -60,7 +63,7 @@ public class WebhookUrlResolver : IWebhookUrlResolver
             // Validate that the URL is HTTPS
             if (resolvedUrl != null && !resolvedUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
-                _logger.LogWarning("Webhook URL is not HTTPS: {WebhookUrl}. Webhooks will be disabled.", resolvedUrl);
+                _logger.LogWarning("Webhook URL is not HTTPS: {WebhookUrl}. Webhooks will be disabled.", S(resolvedUrl));
                 return null;
             }
 
@@ -69,7 +72,7 @@ public class WebhookUrlResolver : IWebhookUrlResolver
             _lastResolutionTime = DateTime.UtcNow;
 
             _logger.LogInformation("Resolved webhook base URL: {WebhookUrl} (Environment: {Environment})",
-                resolvedUrl ?? "DISABLED", _environment.EnvironmentName);
+                S(resolvedUrl ?? "DISABLED"), _environment.EnvironmentName);
 
             return resolvedUrl;
         }
@@ -111,13 +114,13 @@ public class WebhookUrlResolver : IWebhookUrlResolver
             var isValid = response.StatusCode != HttpStatusCode.NotFound; // Accept any response except 404
 
             _logger.LogInformation("Webhook URL validation: {WebhookUrl} -> {StatusCode} ({IsValid})",
-                webhookUrl, response.StatusCode, isValid ? "VALID" : "INVALID");
+                S(webhookUrl), response.StatusCode, isValid ? "VALID" : "INVALID");
 
             return isValid;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Webhook URL validation failed for: {WebhookUrl}", webhookUrl);
+            _logger.LogWarning(ex, "Webhook URL validation failed for: {WebhookUrl}", S(webhookUrl));
             return false;
         }
     }
@@ -128,7 +131,7 @@ public class WebhookUrlResolver : IWebhookUrlResolver
         var explicitNgrokUrl = _configuration["Webhooks:NgrokTunnelUrl"];
         if (!string.IsNullOrWhiteSpace(explicitNgrokUrl))
         {
-            _logger.LogDebug("Using explicit ngrok tunnel URL from configuration: {NgrokUrl}", explicitNgrokUrl);
+            _logger.LogDebug("Using explicit ngrok tunnel URL from configuration: {NgrokUrl}", S(explicitNgrokUrl));
             return explicitNgrokUrl.TrimEnd('/');
         }
 
@@ -136,7 +139,7 @@ public class WebhookUrlResolver : IWebhookUrlResolver
         var webhookBaseUrl = _configuration["Webhooks:BaseUrl"];
         if (!string.IsNullOrWhiteSpace(webhookBaseUrl))
         {
-            _logger.LogDebug("Using webhook base URL override: {WebhookBaseUrl}", webhookBaseUrl);
+            _logger.LogDebug("Using webhook base URL override: {WebhookBaseUrl}", S(webhookBaseUrl));
             return webhookBaseUrl.TrimEnd('/');
         }
 
@@ -144,7 +147,7 @@ public class WebhookUrlResolver : IWebhookUrlResolver
         var ngrokUrl = await DetectNgrokTunnelAsync();
         if (ngrokUrl != null)
         {
-            _logger.LogDebug("Detected ngrok tunnel via API: {NgrokUrl}", ngrokUrl);
+            _logger.LogDebug("Detected ngrok tunnel via API: {NgrokUrl}", S(ngrokUrl));
             return ngrokUrl;
         }
 
@@ -152,7 +155,7 @@ public class WebhookUrlResolver : IWebhookUrlResolver
         var appBaseUrl = _configuration["AppBaseUrl"];
         if (!string.IsNullOrWhiteSpace(appBaseUrl) && appBaseUrl.StartsWith("https://"))
         {
-            _logger.LogDebug("Using HTTPS app base URL for webhooks: {AppBaseUrl}", appBaseUrl);
+            _logger.LogDebug("Using HTTPS app base URL for webhooks: {AppBaseUrl}", S(appBaseUrl));
             return appBaseUrl.TrimEnd('/');
         }
 
@@ -168,7 +171,7 @@ public class WebhookUrlResolver : IWebhookUrlResolver
         var apiBaseUrl = _configuration["ExternalApiBaseUrl"];
         if (!string.IsNullOrWhiteSpace(apiBaseUrl))
         {
-            _logger.LogDebug("Using ExternalApiBaseUrl for webhooks in production: {ApiBaseUrl}", apiBaseUrl);
+            _logger.LogDebug("Using ExternalApiBaseUrl for webhooks in production: {ApiBaseUrl}", S(apiBaseUrl));
             return apiBaseUrl.TrimEnd('/');
         }
 
@@ -189,7 +192,7 @@ public class WebhookUrlResolver : IWebhookUrlResolver
 
         _logger.LogWarning(
             "Using legacy AppBaseUrl fallback for webhooks in production: {AppBaseUrl}. Configure ExternalApiBaseUrl or disable LegacyCompatibility.EnableWebhookAppBaseFallback to prevent this path.",
-            appBaseUrl);
+            S(appBaseUrl));
         return appBaseUrl.TrimEnd('/');
     }
 
@@ -200,7 +203,7 @@ public class WebhookUrlResolver : IWebhookUrlResolver
             // ngrok API endpoint (default local)
             var ngrokApiUrl = _configuration["Webhooks:NgrokApiUrl"] ?? "http://localhost:4040/api/tunnels";
 
-            _logger.LogDebug("Attempting to detect ngrok tunnel via API: {NgrokApiUrl}", ngrokApiUrl);
+            _logger.LogDebug("Attempting to detect ngrok tunnel via API: {NgrokApiUrl}", S(ngrokApiUrl));
 
             using var response = await _httpClient.GetAsync(ngrokApiUrl);
             if (!response.IsSuccessStatusCode)
@@ -221,7 +224,7 @@ public class WebhookUrlResolver : IWebhookUrlResolver
 
             if (httpsTunnel?.PublicUrl != null)
             {
-                _logger.LogDebug("Found ngrok HTTPS tunnel: {TunnelUrl}", httpsTunnel.PublicUrl);
+                _logger.LogDebug("Found ngrok HTTPS tunnel: {TunnelUrl}", S(httpsTunnel.PublicUrl));
                 return httpsTunnel.PublicUrl.TrimEnd('/');
             }
 

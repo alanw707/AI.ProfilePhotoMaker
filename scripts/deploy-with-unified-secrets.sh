@@ -176,7 +176,7 @@ perform_rollback() {
     
     log_info "🔄 Rolling back to deployment: $previous_deployment"
     
-    # TODO: Implement rollback logic
+    # Future improvement: add rollback logic once deployment flow is finalized
     # This would involve:
     # 1. Reverting container app images to previous versions
     # 2. Restoring previous configuration

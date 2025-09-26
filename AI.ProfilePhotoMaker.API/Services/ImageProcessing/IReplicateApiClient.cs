@@ -78,7 +78,7 @@ public interface IReplicateApiClient
     /// </summary>
     /// <param name="request">The generate images request</param>
     /// <returns>The prediction result URL</returns>
-    Task<string> GenerateImagesAsync(GenerateImagesRequestDto request);    
+    Task<string> GenerateImagesAsync(GenerateImagesRequestDto request);
 
     /// <summary>
     /// Enhances a user's uploaded photo using Flux Kontext Pro for text-based image editing

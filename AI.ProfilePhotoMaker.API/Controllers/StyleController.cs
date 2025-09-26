@@ -1,4 +1,5 @@
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +14,8 @@ public class StyleController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<StyleController> _logger;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
+    private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
     public StyleController(ApplicationDbContext context, ILogger<StyleController> logger)
     {
@@ -143,7 +146,7 @@ public class StyleController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving style template by name {StyleName}", name);
+            _logger.LogError(ex, "Error retrieving style template by name {StyleName}", S(name));
             return StatusCode(500, new { success = false, error = new { code = "DatabaseError", message = "Failed to retrieve style template." } });
         }
     }
@@ -207,7 +210,7 @@ public class StyleController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error saving style selection for user {UserId}", userId);
+            _logger.LogError(ex, "Error saving style selection for user {UserId}", Sid(userId));
             return StatusCode(500, new { success = false, error = new { code = "DatabaseError", message = "Failed to save style selection." } });
         }
     }
@@ -258,7 +261,7 @@ public class StyleController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving user selected styles for user {UserId}", userId);
+            _logger.LogError(ex, "Error retrieving user selected styles for user {UserId}", Sid(userId));
             return StatusCode(500, new { success = false, error = new { code = "DatabaseError", message = "Failed to retrieve user selected styles." } });
         }
     }

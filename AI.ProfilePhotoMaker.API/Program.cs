@@ -362,13 +362,13 @@ else
         // Set 2-minute timeout for Replicate API calls to prevent UI hanging
         client.Timeout = TimeSpan.FromMinutes(2);
     });
-    
+
     // Register OpenAI Image Generation Service with HttpClient
     builder.Services.AddHttpClient<OpenAIImageGenerationService>(client =>
     {
         client.Timeout = TimeSpan.FromMinutes(5);
     });
-    
+
     // Configure robustness service with options
     builder.Services.Configure<ModelDiscoveryRobustnessOptions>(options =>
     {
@@ -378,7 +378,7 @@ else
         options.CircuitBreakerFailureThreshold = 5;
         options.CircuitBreakerTimeoutMs = 60000;
     });
-    
+
     builder.Services.AddSingleton<ModelDiscoveryRobustnessService>();
     builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IModelDiscoveryService, AI.ProfilePhotoMaker.API.Services.ModelDiscoveryService>();
 }
@@ -417,7 +417,7 @@ if (!string.IsNullOrEmpty(azureStorageConnectionString))
 else
 {
     builder.Services.AddScoped<IStorageService, LocalStorageService>();
-    
+
     // Use file-based data protection for development (keys survive restarts)
     builder.Services.AddDataProtection()
         .SetApplicationName("AIProfilePhotoMaker")
@@ -802,34 +802,34 @@ static async Task ValidateReplicateConfigurationAsync(WebApplication app)
 static void LoadEnvironmentVariables(IWebHostEnvironment environment)
 {
     var envFile = Path.Combine(environment.ContentRootPath, $".env.{environment.EnvironmentName.ToLower()}");
-    
+
     if (File.Exists(envFile))
     {
         Console.WriteLine($"Loading environment variables from: {envFile}");
-        
+
         var lines = File.ReadAllLines(envFile);
         foreach (var line in lines)
         {
             if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#") || line.StartsWith("//"))
                 continue;
-                
+
             var parts = line.Split('=', 2);
             if (parts.Length == 2)
             {
                 var key = parts[0].Trim();
                 var value = parts[1].Trim();
-                
+
                 // Remove quotes if present
-                if ((value.StartsWith("\"") && value.EndsWith("\"")) || 
+                if ((value.StartsWith("\"") && value.EndsWith("\"")) ||
                     (value.StartsWith("'") && value.EndsWith("'")))
                 {
                     value = value.Substring(1, value.Length - 2);
                 }
-                
+
                 Environment.SetEnvironmentVariable(key, value);
             }
         }
-        
+
         Console.WriteLine($"✅ Loaded environment variables from .env.{environment.EnvironmentName.ToLower()}");
     }
     else

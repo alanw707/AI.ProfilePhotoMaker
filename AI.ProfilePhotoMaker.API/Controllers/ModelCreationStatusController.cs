@@ -1,4 +1,5 @@
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using Microsoft.AspNetCore.Authorization;
@@ -20,6 +21,8 @@ public class ModelCreationStatusController : ControllerBase
     private readonly ILogger<ModelCreationStatusController> _logger;
     private readonly IReplicateApiClient _replicateApiClient;
     private readonly IWebHostEnvironment _environment;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
+    private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
     public ModelCreationStatusController(
         ApplicationDbContext context,
@@ -165,7 +168,7 @@ public class ModelCreationStatusController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving model creation status for request {RequestId}", requestId);
+            _logger.LogError(ex, "Error retrieving model creation status for request {RequestId}", S(requestId));
             return StatusCode(500, new
             {
                 success = false,
@@ -223,7 +226,7 @@ public class ModelCreationStatusController : ControllerBase
                         trainedModelVersion = readyModel.TrainedModelVersion,
                         completedAt = readyModel.CompletedAt
                     } : null,
-                    readyModelDebug = readyModel != null ? new 
+                    readyModelDebug = readyModel != null ? new
                     {
                         id = readyModel.Id,
                         status = readyModel.Status,

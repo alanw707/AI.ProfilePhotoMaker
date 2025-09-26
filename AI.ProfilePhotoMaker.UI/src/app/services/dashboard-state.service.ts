@@ -364,7 +364,7 @@ export class DashboardStateService implements IDashboardStateService {
 
         // Check if we need immediate filesystem repair
         if (generatedPhotosCount === 0 && uploadedImageThumbnails.length > 0) {
-          // TODO: Add filesystem repair logic if needed
+          // Optional: add filesystem repair logic if we adopt a disk-based cache in the future
         }
 
         // 🔧 FIX: Use total credits from subscription service

@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 
 namespace AI.ProfilePhotoMaker.API.Controllers
 {
@@ -14,6 +15,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
     {
         protected readonly ILogger Logger;
         protected readonly ApplicationDbContext? Context;
+        protected static string S(string? value) => LoggingSanitizer.Sanitize(value);
+        protected static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
         protected BaseController(ILogger logger, ApplicationDbContext? context = null)
         {
@@ -84,7 +87,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         protected void LogError(Exception exception, string message, string? userId = null)
         {
             userId ??= GetCurrentUserId();
-            Logger.LogError(exception, "{Message} for user {UserId}", message, userId);
+            Logger.LogError(exception, "{Message} for user {UserId}", S(message), Sid(userId));
         }
 
         /// <summary>
@@ -95,7 +98,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         protected void LogInfo(string message, string? userId = null)
         {
             userId ??= GetCurrentUserId();
-            Logger.LogInformation("{Message} for user {UserId}", message, userId);
+            Logger.LogInformation("{Message} for user {UserId}", S(message), Sid(userId));
         }
 
         /// <summary>

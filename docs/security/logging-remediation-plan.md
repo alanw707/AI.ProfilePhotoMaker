@@ -11,15 +11,19 @@ CodeQL flagged numerous `Log entries created from user input` findings across th
 ## Tasks
 
 ### 1. Shared Logging Sanitizer Utility
-- [ ] Create `LoggingSanitizer` static helper (e.g., under `AI.ProfilePhotoMaker.API/Infrastructure/Logging/`)
-  - Methods: `Sanitize(string? value)`, optional `SanitizeForId(string?)`, `SanitizeForPrompt(string?, int maxLength)`
+- [x] Create `LoggingSanitizer` static helper (e.g., under `AI.ProfilePhotoMaker.API/Infrastructure/Logging/`)
+  - Methods: `Sanitize(string? value)`, optional `SanitizeId(string?)`
   - Replace newline, carriage return, tab, and other control characters with safe placeholders
   - Collapse null/whitespace to `[redacted]`
-- [ ] Unit tests covering common input patterns and boundary conditions
+- [x] Unit tests covering common input patterns and boundary conditions
 
 ### 2. Replace Inline Sanitization
-- [ ] Refactor `CreditPackageService` to consume the shared helper (remove local `SanitizeForLog`)
+- [x] Refactor `CreditPackageService` to consume the shared helper (remove local `SanitizeForLog`)
 - [ ] Audit existing logging code across the API projects (controllers, services, clients) and replace manual scrubbing/formatting with helper usage
+  - [x] Stripe webhook flow (`StripeWebhookService`)
+  - [x] Replicate surfaces (`ReplicateController`, `ReplicateApiClient`)
+  - [x] OpenAI + other image flows (`OpenAIImageGenerationService`, `ImageDownloadService`, webhook normalizers)
+  - [ ] Remaining controllers/services flagged by CodeQL report
 
 ### 3. Clear CodeQL Alerts
 - [ ] Review CodeQL report filtered by `Log entries created from user input`
@@ -36,4 +40,3 @@ CodeQL flagged numerous `Log entries created from user input` findings across th
 ## Tracking
 
 Create issues or PR checklist items referencing this plan to ensure each step ships with review evidence.
-

@@ -1,3 +1,5 @@
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
+
 namespace AI.ProfilePhotoMaker.API.Services.Storage;
 
 /// <summary>
@@ -19,6 +21,8 @@ public class StoragePathResolver
     private readonly IWebHostEnvironment _environment;
     private readonly IConfiguration _configuration;
     private readonly ILogger<StoragePathResolver> _logger;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
+    private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
     public StoragePathResolver(
         IWebHostEnvironment environment,
@@ -51,7 +55,7 @@ public class StoragePathResolver
         };
 
         _logger.LogDebug("Generated storage path: {Path} for type: {Type}, user: {UserId}",
-            path, type, userId);
+            S(path), type, Sid(userId));
 
         return path;
     }

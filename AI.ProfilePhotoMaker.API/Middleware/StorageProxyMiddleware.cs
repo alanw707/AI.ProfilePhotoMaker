@@ -1,3 +1,5 @@
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
+
 namespace AI.ProfilePhotoMaker.API.Middleware;
 
 /// <summary>
@@ -8,6 +10,8 @@ public class StorageProxyMiddleware
     private readonly RequestDelegate _next;
     private readonly ILogger<StorageProxyMiddleware> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
+
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
 
     public StorageProxyMiddleware(RequestDelegate next, ILogger<StorageProxyMiddleware> logger, IHttpClientFactory httpClientFactory)
     {
@@ -21,12 +25,12 @@ public class StorageProxyMiddleware
         var originalPath = context.Request.Path.Value;
         var pathForCheck = originalPath?.ToLower();
 
-        _logger.LogDebug("Storage proxy middleware processing path: {Path}", originalPath);
+        _logger.LogDebug("Storage proxy middleware processing path: {Path}", S(originalPath));
 
         // Check if this is a storage proxy request (case-insensitive check)
         if (pathForCheck?.StartsWith("/devstoreaccount1/") == true && originalPath != null)
         {
-            _logger.LogInformation("Storage proxy middleware intercepting request: {Path}", originalPath);
+            _logger.LogInformation("Storage proxy middleware intercepting request: {Path}", S(originalPath));
             await ProxyStorageRequest(context, originalPath);
             return;
         }
@@ -42,7 +46,7 @@ public class StorageProxyMiddleware
             // Remove the leading slash and construct Azurite URL
             var azuriteUrl = $"http://127.0.0.1:10000{path}";
 
-            _logger.LogDebug("Proxying storage request: {Path} -> {AzuriteUrl}", path, azuriteUrl);
+            _logger.LogDebug("Proxying storage request: {Path} -> {AzuriteUrl}", S(path), S(azuriteUrl));
 
             using var httpClient = _httpClientFactory.CreateClient();
 
@@ -86,7 +90,7 @@ public class StorageProxyMiddleware
             // For HEAD, do not write a response body
             if (HttpMethods.IsHead(context.Request.Method))
             {
-                _logger.LogDebug("Storage proxy HEAD request successful: {Path}, Status: {StatusCode}", path, context.Response.StatusCode);
+                _logger.LogDebug("Storage proxy HEAD request successful: {Path}, Status: {StatusCode}", S(path), context.Response.StatusCode);
                 return;
             }
 
@@ -95,11 +99,11 @@ public class StorageProxyMiddleware
             await context.Response.Body.WriteAsync(content);
 
             _logger.LogDebug("Storage proxy request successful: {Path}, Status: {StatusCode}, Size: {Size}",
-                path, context.Response.StatusCode, content.Length);
+                S(path), context.Response.StatusCode, content.Length);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error proxying storage request for path: {Path}", path);
+            _logger.LogError(ex, "Error proxying storage request for path: {Path}", S(path));
             context.Response.StatusCode = 500;
             await context.Response.WriteAsync("Storage proxy error");
         }

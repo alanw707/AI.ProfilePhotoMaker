@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services.Database;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,7 @@ public class DatabaseHealthService : IDatabaseHealthService
     private readonly IMigrationService _migrationService;
     private readonly IDatabaseProviderService _databaseProvider;
     private readonly ILogger<DatabaseHealthService> _logger;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
 
     public DatabaseHealthService(
         ApplicationDbContext context,
@@ -51,7 +53,7 @@ public class DatabaseHealthService : IDatabaseHealthService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Database connectivity check failed: {Message}", ex.Message);
+            _logger.LogWarning(ex, "Database connectivity check failed: {Message}", S(ex.Message));
             return false;
         }
     }
@@ -72,7 +74,7 @@ public class DatabaseHealthService : IDatabaseHealthService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get migration status");
+            _logger.LogError(ex, "Failed to get migration status: {Message}", S(ex.Message));
             return new MigrationStatusDto
             {
                 AppliedCount = 0,
@@ -99,11 +101,11 @@ public class DatabaseHealthService : IDatabaseHealthService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to validate database data");
+            _logger.LogError(ex, "Failed to validate database data: {Message}", S(ex.Message));
             return new DataValidationDto
             {
                 IsValid = false,
-                Issues = new List<string> { $"Data validation failed: {ex.Message}" }
+                Issues = new List<string> { $"Data validation failed: {S(ex.Message)}" }
             };
         }
     }
@@ -143,7 +145,7 @@ public class DatabaseHealthService : IDatabaseHealthService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to get some table counts");
+                _logger.LogWarning(ex, "Failed to get some table counts: {Message}", S(ex.Message));
                 metrics["tableCounts"] = tableCounts; // Include partial results
             }
 
@@ -167,7 +169,7 @@ public class DatabaseHealthService : IDatabaseHealthService
             }
             catch (Exception ex)
             {
-                _logger.LogDebug(ex, "Could not determine database size");
+                _logger.LogDebug(ex, "Could not determine database size: {Message}", S(ex.Message));
             }
 
             stopwatch.Stop();
@@ -177,11 +179,11 @@ public class DatabaseHealthService : IDatabaseHealthService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to collect database metrics");
+            _logger.LogError(ex, "Failed to collect database metrics: {Message}", S(ex.Message));
             return new Dictionary<string, object>
             {
                 ["error"] = "Failed to collect database metrics",
-                ["errorMessage"] = ex.Message
+                ["errorMessage"] = S(ex.Message)
             };
         }
     }

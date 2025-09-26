@@ -1,4 +1,5 @@
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using System.Data.Common;
@@ -14,6 +15,8 @@ public class EnhancedDatabaseProviderService : IDatabaseProviderService
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<EnhancedDatabaseProviderService> _logger;
     private readonly DatabaseProviderConfig _providerConfig;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
+    private static string Sl(string? value) => LoggingSanitizer.Sanitize(value, 400);
 
     public EnhancedDatabaseProviderService(
         IConfiguration configuration,
@@ -145,7 +148,7 @@ public class EnhancedDatabaseProviderService : IDatabaseProviderService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get database connection string");
+            _logger.LogError(ex, "Failed to get database connection string: {Message}", S(ex.Message));
             throw;
         }
     }
@@ -227,7 +230,7 @@ public class EnhancedDatabaseProviderService : IDatabaseProviderService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Could not enhance connection string, using as-is");
+            _logger.LogWarning(ex, "Could not enhance connection string, using as-is: {Message}", S(ex.Message));
             return connectionString;
         }
     }
@@ -241,10 +244,10 @@ public class EnhancedDatabaseProviderService : IDatabaseProviderService
             _logger.LogInformation(
                 "Connection string details from {Source}: Server={Server}, Database={Database}, User={User}, " +
                 "Pooling={Pooling}, MinPool={MinPool}, MaxPool={MaxPool}, Timeout={Timeout}",
-                source,
+                S(source),
                 MaskServerName(builder.DataSource),
-                builder.InitialCatalog,
-                builder.UserID,
+                S(builder.InitialCatalog),
+                S(builder.UserID),
                 builder.Pooling,
                 builder.MinPoolSize,
                 builder.MaxPoolSize,
@@ -252,7 +255,7 @@ public class EnhancedDatabaseProviderService : IDatabaseProviderService
         }
         catch
         {
-            _logger.LogInformation("Connection string from {Source} (unable to parse details)", source);
+            _logger.LogInformation("Connection string from {Source} (unable to parse details)", S(source));
         }
     }
 
@@ -270,7 +273,7 @@ public class EnhancedDatabaseProviderService : IDatabaseProviderService
             }
         }
 
-        return server.Length > 4 ? $"{server.Substring(0, 4)}***" : server;
+        return server.Length > 4 ? $"{server.Substring(0, 4)}***" : S(server);
     }
 
     public DatabaseProvider GetDatabaseProvider()
@@ -319,7 +322,7 @@ public class EnhancedDatabaseProviderService : IDatabaseProviderService
 
                 if (attempt == maxAttempts)
                 {
-                    _logger.LogError(sqlEx, "All database connectivity attempts failed");
+                    _logger.LogError(sqlEx, "All database connectivity attempts failed: {Message}", S(sqlEx.Message));
                     return false;
                 }
 
@@ -328,7 +331,7 @@ public class EnhancedDatabaseProviderService : IDatabaseProviderService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error during database connectivity test");
+                _logger.LogError(ex, "Unexpected error during database connectivity test: {Message}", S(ex.Message));
                 return false;
             }
         }

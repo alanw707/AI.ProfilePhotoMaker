@@ -1,5 +1,6 @@
 using AI.ProfilePhotoMaker.API.Configuration;
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using Microsoft.Data.SqlClient;
@@ -91,13 +92,19 @@ public class CreditPackageService : ICreditPackageService
 
             if (transaction == null && requiresStripeTransaction)
             {
-                _logger.LogWarning("Payment transaction {TransactionId} not found for user {UserId}", SanitizeForLog(paymentTransactionId), SanitizeForLog(userId));
+                _logger.LogWarning(
+                    "Payment transaction {TransactionId} not found for user {UserId}",
+                    LoggingSanitizer.SanitizeId(paymentTransactionId),
+                    LoggingSanitizer.SanitizeId(userId));
                 return new CreditPurchaseResult(false, PaymentStatus.Failed, null, "TransactionNotFound", "Payment transaction not found. Please retry the payment.");
             }
         }
         else if (requiresStripeTransaction)
         {
-            _logger.LogWarning("Stripe configured but payment transaction id missing for user {UserId} and package {PackageId}", SanitizeForLog(userId), packageId);
+            _logger.LogWarning(
+                "Stripe configured but payment transaction id missing for user {UserId} and package {PackageId}",
+                LoggingSanitizer.SanitizeId(userId),
+                packageId);
             return new CreditPurchaseResult(false, PaymentStatus.Failed, null, "PaymentRequired", "Payment must be completed before credits are awarded.");
         }
 
@@ -105,7 +112,10 @@ public class CreditPackageService : ICreditPackageService
         {
             if (!string.Equals(transaction.UserId, userId, StringComparison.Ordinal))
             {
-                _logger.LogWarning("Payment transaction {TransactionId} does not belong to user {UserId}", SanitizeForLog(paymentTransactionId ?? transaction.Id.ToString()), SanitizeForLog(userId));
+                _logger.LogWarning(
+                    "Payment transaction {TransactionId} does not belong to user {UserId}",
+                    LoggingSanitizer.SanitizeId(paymentTransactionId ?? transaction.Id.ToString()),
+                    LoggingSanitizer.SanitizeId(userId));
                 return new CreditPurchaseResult(false, PaymentStatus.Failed, null, "TransactionMismatch", "Payment transaction does not belong to the current user.");
             }
 
@@ -133,7 +143,10 @@ public class CreditPackageService : ICreditPackageService
 
         if (!allowSimulationBypass)
         {
-            _logger.LogWarning("Simulation fallback disabled - payment transaction required for user {UserId} and package {PackageId}", SanitizeForLog(userId), packageId);
+            _logger.LogWarning(
+                "Simulation fallback disabled - payment transaction required for user {UserId} and package {PackageId}",
+                LoggingSanitizer.SanitizeId(userId),
+                packageId);
             return new CreditPurchaseResult(false, PaymentStatus.Failed, null, "PaymentRequired", "Unable to process purchase without a valid payment transaction.");
         }
 
@@ -159,10 +172,6 @@ public class CreditPackageService : ICreditPackageService
         return await _context.PaymentTransactions
             .FirstOrDefaultAsync(t => t.ExternalTransactionId == paymentTransactionId);
     }
-
-    private static string SanitizeForLog(string? value) => string.IsNullOrWhiteSpace(value)
-        ? "[redacted]"
-        : value.Replace("\r", string.Empty).Replace("\n", string.Empty);
 
     private static bool IsUniqueConstraintViolation(DbUpdateException exception)
     {
@@ -214,7 +223,10 @@ public class CreditPackageService : ICreditPackageService
 
         if (!creditsAdded)
         {
-            _logger.LogError("Failed to add purchased credits to user {UserId} for purchase {PurchaseId}", SanitizeForLog(userId), purchase.Id);
+            _logger.LogError(
+                "Failed to add purchased credits to user {UserId} for purchase {PurchaseId}",
+                LoggingSanitizer.SanitizeId(userId),
+                purchase.Id);
         }
 
         await _context.SaveChangesAsync();

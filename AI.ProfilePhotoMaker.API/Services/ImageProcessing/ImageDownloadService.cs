@@ -1,3 +1,4 @@
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 
 namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
@@ -13,6 +14,9 @@ public class ImageDownloadService : IImageDownloadService
     private readonly IAsyncFileService _asyncFileService;
     private readonly IStorageService _storageService;
     private readonly StoragePathResolver _pathResolver;
+
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
+    private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
     public ImageDownloadService(
         HttpClient httpClient,
@@ -40,12 +44,12 @@ public class ImageDownloadService : IImageDownloadService
 
         if (imageUrls == null || imageUrls.Count == 0)
         {
-            _logger.LogWarning("No image URLs provided for download for user {UserId}", userId);
+            _logger.LogWarning("No image URLs provided for download for user {UserId}", Sid(userId));
             return downloadResults;
         }
 
         _logger.LogInformation("Starting download of {Count} images for user {UserId}, style {Style}",
-            imageUrls.Count, userId, style);
+            imageUrls.Count, Sid(userId), S(style));
 
         for (int i = 0; i < imageUrls.Count; i++)
         {
@@ -83,12 +87,12 @@ public class ImageDownloadService : IImageDownloadService
                         Success = true
                     });
                     _logger.LogInformation("Successfully downloaded and saved image {Index} for user {UserId}: {StoragePath}",
-                        i + 1, userId, savedStoragePath);
+                        i + 1, Sid(userId), S(savedStoragePath));
                 }
                 else
                 {
                     _logger.LogWarning("Failed to download image {Index} from {Url}: {StatusCode}",
-                        i + 1, imageUrl, response.StatusCode);
+                        i + 1, S(imageUrl), response.StatusCode);
                     downloadResults.Add(new ImageDownloadResult
                     {
                         StoragePath = string.Empty,
@@ -101,7 +105,7 @@ public class ImageDownloadService : IImageDownloadService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to download image {Index} from {Url} for user {UserId}",
-                    i + 1, imageUrl, userId);
+                    i + 1, S(imageUrl), Sid(userId));
                 downloadResults.Add(new ImageDownloadResult
                 {
                     StoragePath = string.Empty,
@@ -114,7 +118,7 @@ public class ImageDownloadService : IImageDownloadService
 
         var successCount = downloadResults.Count(r => r.Success);
         _logger.LogInformation("Downloaded {SuccessCount}/{TotalCount} images for user {UserId}, style {Style}",
-            successCount, imageUrls.Count, userId, style);
+            successCount, imageUrls.Count, Sid(userId), S(style));
 
         return downloadResults;
     }
@@ -125,14 +129,14 @@ public class ImageDownloadService : IImageDownloadService
         {
             if (string.IsNullOrEmpty(imageUrl))
             {
-                _logger.LogWarning("Empty image URL provided for user {UserId}", userId);
+                _logger.LogWarning("Empty image URL provided for user {UserId}", Sid(userId));
                 return null;
             }
 
             // Validate URL accessibility first
             if (!await ValidateImageUrlAsync(imageUrl))
             {
-                _logger.LogWarning("Image URL not accessible: {Url} for user {UserId}", imageUrl, userId);
+                _logger.LogWarning("Image URL not accessible: {Url} for user {UserId}", S(imageUrl), Sid(userId));
                 return null;
             }
 
@@ -172,25 +176,25 @@ public class ImageDownloadService : IImageDownloadService
             await _asyncFileService.CopyStreamToFileAsync(contentStream, localPath, 81920);
 
             _logger.LogInformation("Successfully downloaded image from {Url} to {LocalPath} for user {UserId}",
-                imageUrl, localPath, userId);
+                S(imageUrl), S(localPath), Sid(userId));
 
             return localPath;
         }
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "HTTP error downloading image from {Url} for user {UserId}: {Message}",
-                imageUrl, userId, ex.Message);
+                S(imageUrl), Sid(userId), S(ex.Message));
             return null;
         }
         catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
         {
-            _logger.LogError(ex, "Timeout downloading image from {Url} for user {UserId}", imageUrl, userId);
+            _logger.LogError(ex, "Timeout downloading image from {Url} for user {UserId}", S(imageUrl), Sid(userId));
             return null;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error downloading image from {Url} for user {UserId}: {Message}",
-                imageUrl, userId, ex.Message);
+                S(imageUrl), Sid(userId), S(ex.Message));
             return null;
         }
     }
@@ -200,7 +204,7 @@ public class ImageDownloadService : IImageDownloadService
         var generatedDir = Path.Combine(_environment.ContentRootPath, "generated", userId);
 
         await _asyncFileService.CreateDirectoryAsync(generatedDir);
-        _logger.LogDebug("Ensured generated images directory exists: {Directory}", generatedDir);
+        _logger.LogDebug("Ensured generated images directory exists: {Directory}", S(generatedDir));
 
         return generatedDir;
     }
@@ -225,7 +229,7 @@ public class ImageDownloadService : IImageDownloadService
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Failed to validate image URL: {Url}", imageUrl);
+            _logger.LogDebug(ex, "Failed to validate image URL: {Url}", S(imageUrl));
             return false;
         }
     }

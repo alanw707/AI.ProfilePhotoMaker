@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 
 namespace AI.ProfilePhotoMaker.API.Services.Health;
@@ -12,6 +13,7 @@ public class StorageHealthService : IStorageHealthService
     private readonly IStorageService _storageService;
     private readonly ILogger<StorageHealthService> _logger;
     private readonly IConfiguration _configuration;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
 
     public StorageHealthService(
         IStorageService storageService,
@@ -54,7 +56,7 @@ public class StorageHealthService : IStorageHealthService
                     }
                     catch (Exception deleteEx)
                     {
-                        _logger.LogWarning(deleteEx, "Could not delete health check test file {FileName}", testFileName);
+                        _logger.LogWarning(deleteEx, "Could not delete health check test file {FileName}: {Message}", S(testFileName), S(deleteEx.Message));
                     }
 
                     return true;
@@ -64,13 +66,13 @@ public class StorageHealthService : IStorageHealthService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Storage connectivity test failed");
+                _logger.LogWarning(ex, "Storage connectivity test failed: {Message}", S(ex.Message));
                 return false;
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Storage connectivity check failed");
+            _logger.LogError(ex, "Storage connectivity check failed: {Message}", S(ex.Message));
             return false;
         }
     }
@@ -104,7 +106,7 @@ public class StorageHealthService : IStorageHealthService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Storage upload test failed");
+                _logger.LogWarning(ex, "Storage upload test failed: {Message}", S(ex.Message));
                 results["upload"] = false;
             }
 
@@ -118,7 +120,7 @@ public class StorageHealthService : IStorageHealthService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Storage exists test failed");
+                    _logger.LogWarning(ex, "Storage exists test failed: {Message}", S(ex.Message));
                     results["exists"] = false;
                 }
             }
@@ -134,7 +136,7 @@ public class StorageHealthService : IStorageHealthService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Storage download test failed");
+                    _logger.LogWarning(ex, "Storage download test failed: {Message}", S(ex.Message));
                     results["download"] = false;
                 }
             }
@@ -150,7 +152,7 @@ public class StorageHealthService : IStorageHealthService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Storage delete test failed");
+                    _logger.LogWarning(ex, "Storage delete test failed: {Message}", S(ex.Message));
                     results["delete"] = false;
                 }
             }
@@ -159,7 +161,7 @@ public class StorageHealthService : IStorageHealthService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Storage operations test failed");
+            _logger.LogError(ex, "Storage operations test failed: {Message}", S(ex.Message));
             return results; // Return current results even if there was an overall failure
         }
     }
@@ -192,7 +194,7 @@ public class StorageHealthService : IStorageHealthService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Could not parse Azure Storage connection string details");
+                    _logger.LogWarning(ex, "Could not parse Azure Storage connection string details: {Message}", S(ex.Message));
                 }
             }
             else

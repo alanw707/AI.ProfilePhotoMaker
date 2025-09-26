@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 
 namespace AI.ProfilePhotoMaker.API.Controllers
@@ -17,9 +18,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private readonly ApplicationDbContext _context;
         private readonly ILogger<DiagnosticController> _logger;
         private readonly IWebHostEnvironment _environment;
+        private static string S(string? value) => LoggingSanitizer.Sanitize(value);
+        private static string Sl(string? value) => LoggingSanitizer.Sanitize(value, 400);
 
         public DiagnosticController(
-            ApplicationDbContext context, 
+            ApplicationDbContext context,
             ILogger<DiagnosticController> logger,
             IWebHostEnvironment environment)
         {
@@ -34,7 +37,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 throw new InvalidOperationException("DiagnosticController is not available in Production environment");
             }
 
-            _logger.LogWarning("⚠️ DiagnosticController initialized in {Environment} environment", _environment.EnvironmentName);
+            _logger.LogWarning("⚠️ DiagnosticController initialized in {Environment} environment", S(_environment.EnvironmentName));
         }
 
         /// <summary>
@@ -97,10 +100,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogCritical("❌ MANUAL MIGRATION FAILED: {Message}", ex.Message);
-                _logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
+                _logger.LogCritical("❌ MANUAL MIGRATION FAILED: {Message}", S(ex.Message));
+                _logger.LogCritical("Stack trace: {StackTrace}", Sl(ex.StackTrace));
 
-                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+                return StatusCode(500, new { error = S(ex.Message), stackTrace = Sl(ex.StackTrace) });
             }
         }
 
@@ -155,10 +158,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogCritical("❌ DATABASE RESET FAILED: {Message}", ex.Message);
-                _logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
+                _logger.LogCritical("❌ DATABASE RESET FAILED: {Message}", S(ex.Message));
+                _logger.LogCritical("Stack trace: {StackTrace}", Sl(ex.StackTrace));
 
-                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+                return StatusCode(500, new { error = S(ex.Message), stackTrace = Sl(ex.StackTrace) });
             }
         }
 
@@ -303,7 +306,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 foreach (var sql in sqlCommands)
                 {
-                    _logger.LogCritical("Executing SQL: {Command}", sql.Substring(0, Math.Min(100, sql.Length)) + "...");
+                    _logger.LogCritical("Executing SQL: {Command}", Sl(sql.Substring(0, Math.Min(100, sql.Length)) + "..."));
                     await _context.Database.ExecuteSqlRawAsync(sql);
                 }
 
@@ -331,10 +334,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogCritical("❌ RAW SQL FAILED: {Message}", ex.Message);
-                _logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
+                _logger.LogCritical("❌ RAW SQL FAILED: {Message}", S(ex.Message));
+                _logger.LogCritical("Stack trace: {StackTrace}", Sl(ex.StackTrace));
 
-                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+                return StatusCode(500, new { error = S(ex.Message), stackTrace = Sl(ex.StackTrace) });
             }
         }
 
@@ -378,7 +381,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 foreach (var sql in sqlCommands)
                 {
-                    _logger.LogCritical("Executing schema fix: {Command}", sql.Substring(0, Math.Min(80, sql.Length)) + "...");
+                    _logger.LogCritical("Executing schema fix: {Command}", Sl(sql.Substring(0, Math.Min(80, sql.Length)) + "..."));
                     await _context.Database.ExecuteSqlRawAsync(sql);
                 }
 
@@ -405,10 +408,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogCritical("❌ SCHEMA FIX FAILED: {Message}", ex.Message);
-                _logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
+                _logger.LogCritical("❌ SCHEMA FIX FAILED: {Message}", S(ex.Message));
+                _logger.LogCritical("Stack trace: {StackTrace}", Sl(ex.StackTrace));
 
-                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+                return StatusCode(500, new { error = S(ex.Message), stackTrace = Sl(ex.StackTrace) });
             }
         }
 
@@ -449,8 +452,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     }
                     catch (Exception ex)
                     {
-                        results.Add($"ERROR: {ex.Message}");
-                        _logger.LogCritical("Failed to execute: {Command}, Error: {Error}", command, ex.Message);
+                        results.Add($"ERROR: {S(ex.Message)}");
+                        _logger.LogCritical("Failed to execute: {Command}, Error: {Error}", Sl(command), S(ex.Message));
                     }
                 }
 
@@ -482,10 +485,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogCritical("❌ COLUMN FIX FAILED: {Message}", ex.Message);
-                _logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
+                _logger.LogCritical("❌ COLUMN FIX FAILED: {Message}", S(ex.Message));
+                _logger.LogCritical("Stack trace: {StackTrace}", Sl(ex.StackTrace));
 
-                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+                return StatusCode(500, new { error = S(ex.Message), stackTrace = Sl(ex.StackTrace) });
             }
         }
 
@@ -540,12 +543,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     {
                         var rowsAffected = await _context.Database.ExecuteSqlRawAsync(sql);
                         results.Add($"CreditPackages update executed successfully");
-                        _logger.LogCritical("CreditPackages update executed: {Sql}", sql.Substring(0, Math.Min(50, sql.Length)) + "...");
+                        _logger.LogCritical("CreditPackages update executed: {Sql}", Sl(sql.Substring(0, Math.Min(50, sql.Length)) + "..."));
                     }
                     catch (Exception ex)
                     {
-                        results.Add($"CreditPackages update failed: {ex.Message}");
-                        _logger.LogCritical("❌ CreditPackages update failed: {Error}", ex.Message);
+                        results.Add($"CreditPackages update failed: {S(ex.Message)}");
+                        _logger.LogCritical("❌ CreditPackages update failed: {Error}", S(ex.Message));
                     }
                 }
 
@@ -573,8 +576,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     }
                     catch (Exception ex)
                     {
-                        results.Add($"Styles column update failed: {ex.Message}");
-                        _logger.LogCritical("❌ Styles column update failed: {Error}", ex.Message);
+                        results.Add($"Styles column update failed: {S(ex.Message)}");
+                        _logger.LogCritical("❌ Styles column update failed: {Error}", S(ex.Message));
                     }
                 }
 
@@ -628,8 +631,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     }
                     catch (Exception ex)
                     {
-                        results.Add($"Styles description update failed: {ex.Message}");
-                        _logger.LogCritical("❌ Styles description update failed: {Error}", ex.Message);
+                        results.Add($"Styles description update failed: {S(ex.Message)}");
+                        _logger.LogCritical("❌ Styles description update failed: {Error}", S(ex.Message));
                     }
                 }
 
@@ -662,10 +665,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogCritical("❌ DATA MIGRATION FAILED: {Message}", ex.Message);
-                _logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
+                _logger.LogCritical("❌ DATA MIGRATION FAILED: {Message}", S(ex.Message));
+                _logger.LogCritical("Stack trace: {StackTrace}", Sl(ex.StackTrace));
 
-                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+                return StatusCode(500, new { error = S(ex.Message), stackTrace = Sl(ex.StackTrace) });
             }
         }
 
@@ -698,7 +701,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 }
                 catch (Exception ex)
                 {
-                    result["creditPackageColumns"] = $"Error: {ex.Message}";
+                    result["creditPackageColumns"] = $"Error: {S(ex.Message)}";
                 }
 
                 // Check Styles table structure  
@@ -715,7 +718,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 }
                 catch (Exception ex)
                 {
-                    result["styleColumns"] = $"Error: {ex.Message}";
+                    result["styleColumns"] = $"Error: {S(ex.Message)}";
                 }
 
                 // Get sample data
@@ -736,7 +739,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 }
                 catch (Exception ex)
                 {
-                    result["sampleCreditPackages"] = $"Error: {ex.Message}";
+                    result["sampleCreditPackages"] = $"Error: {S(ex.Message)}";
                 }
 
                 try
@@ -753,15 +756,15 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 }
                 catch (Exception ex)
                 {
-                    result["sampleStyles"] = $"Error: {ex.Message}";
+                    result["sampleStyles"] = $"Error: {S(ex.Message)}";
                 }
 
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                _logger.LogCritical("❌ INSPECT FAILED: {Message}", ex.Message);
-                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+                _logger.LogCritical("❌ INSPECT FAILED: {Message}", S(ex.Message));
+                return StatusCode(500, new { error = S(ex.Message), stackTrace = Sl(ex.StackTrace) });
             }
         }
 
@@ -798,7 +801,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     }
                     catch (Exception ex)
                     {
-                        results.Add($"Column command failed: {ex.Message}");
+                        results.Add($"Column command failed: {S(ex.Message)}");
                     }
                 }
 
@@ -819,7 +822,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     }
                     catch (Exception ex)
                     {
-                        results.Add($"Update failed: {ex.Message}");
+                        results.Add($"Update failed: {S(ex.Message)}");
                     }
                 }
 
@@ -827,8 +830,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogCritical("❌ SIMPLE FIX FAILED: {Message}", ex.Message);
-                return StatusCode(500, new { error = ex.Message });
+                _logger.LogCritical("❌ SIMPLE FIX FAILED: {Message}", S(ex.Message));
+                return StatusCode(500, new { error = S(ex.Message) });
             }
         }
 
@@ -861,12 +864,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     {
                         var rowsAffected = await _context.Database.ExecuteSqlRawAsync(sql);
                         results.Add($"✅ {sql} → {rowsAffected} rows updated");
-                        _logger.LogCritical("SQL executed: {Command} → {RowsAffected} rows", sql, rowsAffected);
+                        _logger.LogCritical("SQL executed: {Command} → {RowsAffected} rows", Sl(sql), rowsAffected);
                     }
                     catch (Exception ex)
                     {
-                        results.Add($"❌ {sql} → Error: {ex.Message}");
-                        _logger.LogCritical("❌ SQL failed: {Command} → {Error}", sql, ex.Message);
+                        results.Add($"❌ {sql} → Error: {S(ex.Message)}");
+                        _logger.LogCritical("❌ SQL failed: {Command} → {Error}", Sl(sql), S(ex.Message));
                     }
                 }
 
@@ -892,14 +895,14 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                         success = false,
                         message = "Updates executed but verification failed",
                         updateResults = results,
-                        verificationError = ex.Message
+                        verificationError = S(ex.Message)
                     });
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogCritical("❌ CREDIT DESCRIPTION UPDATE FAILED: {Message}", ex.Message);
-                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+                _logger.LogCritical("❌ CREDIT DESCRIPTION UPDATE FAILED: {Message}", S(ex.Message));
+                return StatusCode(500, new { error = S(ex.Message), stackTrace = Sl(ex.StackTrace) });
             }
         }
 
@@ -980,12 +983,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                         addedCount++;
                         results.Add($"✅ ADDED: Style '{styleData.Name}' (ID: {newStyle.Id})");
-                        _logger.LogCritical("Added style: {StyleName} with ID: {StyleId}", styleData.Name, newStyle.Id);
+                        _logger.LogCritical("Added style: {StyleName} with ID: {StyleId}", S(styleData.Name), newStyle.Id);
                     }
                     catch (Exception ex)
                     {
-                        results.Add($"❌ ERROR adding '{styleData.Name}': {ex.Message}");
-                        _logger.LogCritical("Failed to add style {StyleName}: {Error}", styleData.Name, ex.Message);
+                        results.Add($"❌ ERROR adding '{styleData.Name}': {S(ex.Message)}");
+                        _logger.LogCritical("Failed to add style {StyleName}: {Error}", S(styleData.Name), S(ex.Message));
                     }
                 }
 
@@ -1011,10 +1014,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogCritical("❌ STYLE POPULATION FAILED: {Message}", ex.Message);
-                _logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
+                _logger.LogCritical("❌ STYLE POPULATION FAILED: {Message}", S(ex.Message));
+                _logger.LogCritical("Stack trace: {StackTrace}", Sl(ex.StackTrace));
 
-                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+                return StatusCode(500, new { error = S(ex.Message), stackTrace = Sl(ex.StackTrace) });
             }
         }
 
@@ -1080,10 +1083,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogCritical("❌ STYLES POPULATION FAILED: {Message}", ex.Message);
-                _logger.LogCritical("Stack trace: {StackTrace}", ex.StackTrace);
+                _logger.LogCritical("❌ STYLES POPULATION FAILED: {Message}", S(ex.Message));
+                _logger.LogCritical("Stack trace: {StackTrace}", Sl(ex.StackTrace));
 
-                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+                return StatusCode(500, new { error = S(ex.Message), stackTrace = Sl(ex.StackTrace) });
             }
         }
 
@@ -1107,7 +1110,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 }
                 catch (Exception ex)
                 {
-                    tables["creditPackages"] = $"Error: {ex.Message}";
+                    tables["creditPackages"] = $"Error: {S(ex.Message)}";
                 }
 
                 try
@@ -1116,7 +1119,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 }
                 catch (Exception ex)
                 {
-                    tables["userProfiles"] = $"Error: {ex.Message}";
+                    tables["userProfiles"] = $"Error: {S(ex.Message)}";
                 }
 
                 try
@@ -1125,14 +1128,14 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 }
                 catch (Exception ex)
                 {
-                    tables["styles"] = $"Error: {ex.Message}";
+                    tables["styles"] = $"Error: {S(ex.Message)}";
                 }
 
                 return Ok(new { canConnect = true, tables });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = ex.Message });
+                return StatusCode(500, new { error = S(ex.Message) });
             }
         }
 
@@ -1160,16 +1163,17 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     await _context.SaveChangesAsync();
                 }
 
-                return Ok(new { 
-                    success = true, 
-                    updatedCount, 
+                return Ok(new
+                {
+                    success = true,
+                    updatedCount,
                     totalStyles = styles.Count,
                     message = $"Updated {updatedCount} prompt templates to include 'A photo of {{subject}}' format"
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = ex.Message });
+                return StatusCode(500, new { error = S(ex.Message) });
             }
         }
 
@@ -1197,16 +1201,17 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     await _context.SaveChangesAsync();
                 }
 
-                return Ok(new { 
-                    success = true, 
-                    fixedCount, 
+                return Ok(new
+                {
+                    success = true,
+                    fixedCount,
                     totalStyles = styles.Count,
                     message = $"Fixed {fixedCount} templates with duplicate {{subject}} placeholders"
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = ex.Message });
+                return StatusCode(500, new { error = S(ex.Message) });
             }
         }
 
@@ -1256,8 +1261,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogCritical("❌ MODEL REQUESTS FAILED: {Message}", ex.Message);
-                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+                _logger.LogCritical("❌ MODEL REQUESTS FAILED: {Message}", S(ex.Message));
+                return StatusCode(500, new { error = S(ex.Message), stackTrace = Sl(ex.StackTrace) });
             }
         }
 
@@ -1300,7 +1305,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 foreach (var readyModel in readyModels)
                 {
-                    _logger.LogCritical("Updating ready model {Id} version from '{OldVersion}' to '{NewVersion}'", 
+                    _logger.LogCritical("Updating ready model {Id} version from '{OldVersion}' to '{NewVersion}'",
                         readyModel.Id, readyModel.TrainedModelVersion, correctVersion);
                     readyModel.TrainedModelVersion = correctVersion;
                 }
@@ -1329,8 +1334,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogCritical("❌ MODEL CLEANUP FAILED: {Message}", ex.Message);
-                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+                _logger.LogCritical("❌ MODEL CLEANUP FAILED: {Message}", S(ex.Message));
+                return StatusCode(500, new { error = S(ex.Message), stackTrace = Sl(ex.StackTrace) });
             }
         }
 

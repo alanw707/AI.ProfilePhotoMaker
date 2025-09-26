@@ -1,3 +1,4 @@
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AI.ProfilePhotoMaker.API.Controllers;
@@ -7,6 +8,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers;
 public class PlaceholderImageController : ControllerBase
 {
     private readonly ILogger<PlaceholderImageController> _logger;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
 
     public PlaceholderImageController(ILogger<PlaceholderImageController> logger)
     {
@@ -55,7 +57,7 @@ public class PlaceholderImageController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error generating placeholder image");
+            _logger.LogError(ex, "Error generating placeholder image: {Message}", S(ex.Message));
             // Return a 1x1 transparent PNG as fallback
             var transparentPng = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==");
             return File(transparentPng, "image/png");

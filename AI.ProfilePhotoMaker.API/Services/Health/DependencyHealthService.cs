@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 
 namespace AI.ProfilePhotoMaker.API.Services.Health;
@@ -12,6 +13,7 @@ public class DependencyHealthService : IDependencyHealthService
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
     private readonly ILogger<DependencyHealthService> _logger;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
 
     // Define the external dependencies we want to monitor
     private readonly Dictionary<string, DependencyConfig> _dependencies;
@@ -91,14 +93,14 @@ public class DependencyHealthService : IDependencyHealthService
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogWarning(ex, "Failed to check dependency {DependencyName}", dependencyName);
+            _logger.LogWarning(ex, "Failed to check dependency {DependencyName}: {Message}", S(dependencyName), S(ex.Message));
 
             return new DependencyStatusDto
             {
                 Name = dependencyName,
                 Status = "Unhealthy",
                 ResponseTime = stopwatch.ElapsedMilliseconds,
-                Error = ex.Message
+                Error = S(ex.Message)
             };
         }
     }
@@ -164,7 +166,7 @@ public class DependencyHealthService : IDependencyHealthService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Could not parse Azure Storage connection string for health check");
+                _logger.LogWarning(ex, "Could not parse Azure Storage connection string for health check: {Message}", S(ex.Message));
             }
         }
 
@@ -233,7 +235,7 @@ public class DependencyHealthService : IDependencyHealthService
                 Name = config.Name,
                 Status = "Unhealthy",
                 ResponseTime = stopwatch.ElapsedMilliseconds,
-                Error = $"HTTP request failed: {ex.Message}"
+                Error = $"HTTP request failed: {S(ex.Message)}"
             };
         }
     }

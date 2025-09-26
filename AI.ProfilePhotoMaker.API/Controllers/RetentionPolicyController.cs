@@ -1,3 +1,4 @@
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,6 +13,7 @@ public class RetentionPolicyController : ControllerBase
 {
     private readonly IRetentionPolicyService _retentionPolicyService;
     private readonly ILogger<RetentionPolicyController> _logger;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
 
     public RetentionPolicyController(
         IRetentionPolicyService retentionPolicyService,
@@ -40,7 +42,7 @@ public class RetentionPolicyController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting expired images");
+            _logger.LogError(ex, "Error getting expired images: {Message}", S(ex.Message));
             return StatusCode(500, new { success = false, message = "Internal server error" });
         }
     }
@@ -64,7 +66,7 @@ public class RetentionPolicyController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting expired images");
+            _logger.LogError(ex, "Error deleting expired images: {Message}", S(ex.Message));
             return StatusCode(500, new { success = false, message = "Internal server error" });
         }
     }
@@ -87,7 +89,7 @@ public class RetentionPolicyController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error initializing retention dates");
+            _logger.LogError(ex, "Error initializing retention dates: {Message}", S(ex.Message));
             return StatusCode(500, new { success = false, message = "Internal server error" });
         }
     }

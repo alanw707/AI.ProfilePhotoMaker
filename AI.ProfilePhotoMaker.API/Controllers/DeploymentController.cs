@@ -1,3 +1,4 @@
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services.Deployment;
 using Microsoft.AspNetCore.Authorization;
@@ -18,6 +19,7 @@ public class DeploymentController : ControllerBase
     private readonly IDeploymentValidationService _deploymentValidation;
     private readonly IDeploymentMonitoringService _deploymentMonitoring;
     private readonly ILogger<DeploymentController> _logger;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
 
     public DeploymentController(
         IDeploymentValidationService deploymentValidation,
@@ -48,7 +50,7 @@ public class DeploymentController : ControllerBase
             var result = await _deploymentValidation.ValidatePreDeploymentAsync();
 
             _logger.LogInformation("Pre-deployment validation completed: {Status} with {ComponentCount} components in {Duration}ms",
-                result.Status, result.Components.Count, result.Duration);
+                S(result.Status?.ToString()), result.Components.Count, result.Duration);
 
             // Always return 200 OK - the validation status is in the response body
             // This allows CI/CD pipelines to process the validation results
@@ -86,7 +88,7 @@ public class DeploymentController : ControllerBase
             var result = await _deploymentValidation.ValidatePostDeploymentAsync();
 
             _logger.LogInformation("Post-deployment validation completed: {Status} with {ComponentCount} components in {Duration}ms",
-                result.Status, result.Components.Count, result.Duration);
+                S(result.Status?.ToString()), result.Components.Count, result.Duration);
 
             return Ok(result);
         }
@@ -122,7 +124,7 @@ public class DeploymentController : ControllerBase
             var result = await _deploymentValidation.GetDeploymentReadinessScoreAsync();
 
             _logger.LogInformation("Readiness score calculated: {Score}% ({Level}) - Ready: {IsReady}",
-                result.OverallScore, result.ReadinessLevel, result.IsReadyForDeployment);
+                result.OverallScore, S(result.ReadinessLevel), result.IsReadyForDeployment);
 
             return Ok(result);
         }
@@ -158,7 +160,7 @@ public class DeploymentController : ControllerBase
             var result = await _deploymentValidation.ValidateConfigurationAsync();
 
             _logger.LogInformation("Configuration validation completed: {Status} with {MissingCount} missing required variables",
-                result.Status, result.MissingRequired.Count);
+                S(result.Status?.ToString()), result.MissingRequired.Count);
 
             return Ok(result);
         }
@@ -194,7 +196,7 @@ public class DeploymentController : ControllerBase
             var result = await _deploymentValidation.ValidatePerformanceBaselinesAsync();
 
             _logger.LogInformation("Performance validation completed: {Status} - Meets requirements: {MeetsRequirements}, Issues: {IssueCount}",
-                result.Status, result.MeetsRequirements, result.Issues.Count);
+                S(result.Status?.ToString()), result.MeetsRequirements, result.Issues.Count);
 
             return Ok(result);
         }
@@ -230,7 +232,7 @@ public class DeploymentController : ControllerBase
             var result = await _deploymentValidation.ValidateSecurityConfigurationAsync();
 
             _logger.LogInformation("Security validation completed: {Status} - Score: {Score}, Issues: {HasIssues}",
-                result.Status, result.SecurityScore, result.HasSecurityIssues);
+                S(result.Status?.ToString()), result.SecurityScore, result.HasSecurityIssues);
 
             return Ok(result);
         }
@@ -266,7 +268,7 @@ public class DeploymentController : ControllerBase
             var result = await _deploymentValidation.ValidateAzureServicesAsync();
 
             _logger.LogInformation("Azure services validation completed: {Status} - All healthy: {AllHealthy}, Failed services: {FailedCount}",
-                result.Status, result.AllServicesHealthy, result.FailedServices.Count);
+                S(result.Status?.ToString()), result.AllServicesHealthy, result.FailedServices.Count);
 
             return Ok(result);
         }
@@ -302,7 +304,7 @@ public class DeploymentController : ControllerBase
             var result = await _deploymentValidation.ValidateDatabaseReadinessAsync();
 
             _logger.LogInformation("Database validation completed: {Status} - Production ready: {IsReady}, Pending migrations: {PendingMigrations}",
-                result.Status, result.IsProductionReady, result.Schema.PendingMigrations);
+                S(result.Status?.ToString()), result.IsProductionReady, result.Schema.PendingMigrations);
 
             return Ok(result);
         }
@@ -338,7 +340,7 @@ public class DeploymentController : ControllerBase
             var result = await _deploymentValidation.ValidateRegressionTestsAsync();
 
             _logger.LogInformation("Regression tests completed: {Status} - {Passed}/{Total} tests passed",
-                result.Status, result.PassedTests, result.TestResults.Count);
+                S(result.Status?.ToString()), result.PassedTests, result.TestResults.Count);
 
             return Ok(result);
         }
@@ -374,7 +376,7 @@ public class DeploymentController : ControllerBase
             var result = await _deploymentMonitoring.GetDeploymentHealthAsync();
 
             _logger.LogInformation("Deployment health check completed: {Status} - Healthy: {IsHealthy}, Issues: {IssueCount}",
-                result.HealthStatus, result.IsHealthy, result.Issues.Count);
+                S(result.HealthStatus), result.IsHealthy, result.Issues.Count);
 
             return Ok(result);
         }
@@ -410,7 +412,7 @@ public class DeploymentController : ControllerBase
             var result = await _deploymentMonitoring.DetectConfigurationDriftAsync();
 
             _logger.LogInformation("Configuration drift detection completed: Has drift: {HasDrift}, Severity: {Severity}, Items: {ItemCount}",
-                result.HasDrift, result.DriftSeverity, result.DriftItems.Count);
+                result.HasDrift, S(result.DriftSeverity?.ToString()), result.DriftItems.Count);
 
             return Ok(result);
         }
@@ -482,7 +484,7 @@ public class DeploymentController : ControllerBase
             var result = await _deploymentMonitoring.CheckPerformanceRegressionAsync();
 
             _logger.LogInformation("Performance regression check completed: Has regression: {HasRegression}, Severity: {Severity}, Issues: {IssueCount}",
-                result.HasRegression, result.RegressionSeverity, result.Issues.Count);
+                result.HasRegression, S(result.RegressionSeverity?.ToString()), result.Issues.Count);
 
             return Ok(result);
         }
@@ -512,7 +514,7 @@ public class DeploymentController : ControllerBase
     [ProducesResponseType(typeof(object), (int)HttpStatusCode.InternalServerError)]
     public async Task<ActionResult<object>> ResetConfigurationBaselineAsync()
     {
-        _logger.LogInformation("Configuration baseline reset requested by user: {User}", User.Identity?.Name ?? "Unknown");
+        _logger.LogInformation("Configuration baseline reset requested by user: {User}", S(User.Identity?.Name));
 
         try
         {
@@ -624,7 +626,7 @@ public class DeploymentController : ControllerBase
             };
 
             _logger.LogInformation("Deployment summary generated: Readiness: {ReadinessScore}%, Health: {HealthStatus}, Issues: {IssueCount}",
-                readiness.OverallScore, health.HealthStatus, health.Issues.Count);
+                readiness.OverallScore, S(health.HealthStatus), health.Issues.Count);
 
             return Ok(summary);
         }

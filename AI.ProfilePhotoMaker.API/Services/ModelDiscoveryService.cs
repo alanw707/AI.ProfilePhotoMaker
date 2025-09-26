@@ -1,4 +1,5 @@
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +18,9 @@ public class ModelDiscoveryService : IModelDiscoveryService
     private readonly ApplicationDbContext _context;
     private readonly ILogger<ModelDiscoveryService> _logger;
     private readonly ModelDiscoveryRobustnessService _robustnessService;
+
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
+    private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
     public ModelDiscoveryService(
         ReplicateApi replicateApi,
@@ -39,7 +43,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
     {
         try
         {
-            _logger.LogInformation("Quick database check for user {UserId}", userId);
+            _logger.LogInformation("Quick database check for user {UserId}", Sid(userId));
 
             // Get user profile from database
             var userProfile = await _context.UserProfiles
@@ -81,7 +85,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during quick database check for user {UserId}", userId);
+            _logger.LogError(ex, "Error during quick database check for user {UserId}", Sid(userId));
             throw;
         }
     }
@@ -95,13 +99,13 @@ public class ModelDiscoveryService : IModelDiscoveryService
 
         try
         {
-            _logger.LogInformation("Starting model discovery for user {UserId}", userId);
+            _logger.LogInformation("Starting model discovery for user {UserId}", Sid(userId));
 
             // First, do a quick database check
             var quickCheck = await QuickDatabaseCheckAsync(userId);
             if (quickCheck.HasModel && !quickCheck.ShouldRunDiscovery)
             {
-                _logger.LogInformation("User {UserId} already has model in database and sync is recent. Skipping API calls.", userId);
+                _logger.LogInformation("User {UserId} already has model in database and sync is recent. Skipping API calls.", Sid(userId));
                 result.Success = true;
                 result.Message = "Model already in database and recently synced";
                 return result;
@@ -109,7 +113,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
 
             // Get user's models from Replicate using pattern user-{userId} (without timestamp)
             var userPattern = $"user-{userId}";
-            _logger.LogInformation("Searching for models with pattern: {Pattern}", userPattern);
+            _logger.LogInformation("Searching for models with pattern: {Pattern}", S(userPattern));
 
             // Simplified approach: Use pattern prefix matching instead of timestamp guessing
             try
@@ -117,12 +121,12 @@ public class ModelDiscoveryService : IModelDiscoveryService
                 var discoveredModels = new List<UserModelInfo>();
                 var owner = "alanw707"; // Your Replicate username
 
-                _logger.LogInformation("Using simplified pattern prefix matching for user {UserId}", userId);
+                _logger.LogInformation("Using simplified pattern prefix matching for user {UserId}", Sid(userId));
 
                 // Method 1: Use efficient ReplicateApiClient pattern discovery FIRST with retry logic
                 try
                 {
-                    _logger.LogInformation("Using ReplicateApiClient to find models for user {UserId} with robustness layer", userId);
+                    _logger.LogInformation("Using ReplicateApiClient to find models for user {UserId} with robustness layer", Sid(userId));
 
                     var apiClientModels = await _robustnessService.ExecuteWithRetryAsync(
                         () => _replicateApiClient.FindUserModelsByPatternAsync(userId),
@@ -132,7 +136,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
                     {
                         var modelId = $"{apiModel.Owner}/{apiModel.Name}";
                         _logger.LogInformation("✅ Found model via ReplicateApiClient: {ModelId} with version: {VersionId}",
-                            modelId, apiModel.LatestVersion);
+                            S(modelId), S(apiModel.LatestVersion));
 
                         discoveredModels.Add(new UserModelInfo
                         {
@@ -147,7 +151,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "ReplicateApiClient pattern discovery failed for user {UserId} after retries", userId);
+                    _logger.LogWarning(ex, "ReplicateApiClient pattern discovery failed for user {UserId} after retries", Sid(userId));
                 }
 
                 // Method 2: Check for the specific known model (only if not found above)
@@ -160,12 +164,12 @@ public class ModelDiscoveryService : IModelDiscoveryService
                     {
                         discoveredModels.Add(knownModel);
                         _logger.LogInformation("✅ Found known model (fallback): {ModelId} with version: {VersionId}",
-                            knownModel.ModelId, knownModel.VersionId);
+                            S(knownModel.ModelId), S(knownModel.VersionId));
                     }
                     else
                     {
                         _logger.LogInformation("ℹ️ Known model already found via ReplicateApiClient with version: {VersionId}",
-                            existingModel.VersionId);
+                            S(existingModel.VersionId));
                     }
                 }
 
@@ -184,20 +188,20 @@ public class ModelDiscoveryService : IModelDiscoveryService
                     result.Message = $"Found {result.ModelsFound} models using direct checking. Added: {result.ModelsAdded}, Removed: {result.ModelsRemoved}";
 
                     _logger.LogInformation("Model discovery completed successfully for user {UserId}. Found: {Found}, Added: {Added}",
-                        userId, result.ModelsFound, result.ModelsAdded);
+                        Sid(userId), result.ModelsFound, result.ModelsAdded);
                 }
                 else
                 {
                     result.Success = true;
                     result.Message = $"No models found using direct checking for pattern user-{userId}";
-                    _logger.LogInformation("No models found for user {UserId} using direct checking", userId);
+                    _logger.LogInformation("No models found for user {UserId} using direct checking", Sid(userId));
                 }
 
                 return result;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during direct model discovery for user {UserId}", userId);
+                _logger.LogError(ex, "Error during direct model discovery for user {UserId}", Sid(userId));
                 result.Message = $"Error during direct model discovery: {ex.Message}";
                 return result;
             }
@@ -205,7 +209,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during model discovery for user {UserId}", userId);
+            _logger.LogError(ex, "Error during model discovery for user {UserId}", Sid(userId));
             result.Message = $"Error during model discovery: {ex.Message}";
             return result;
         }
@@ -258,7 +262,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting model sync status for user {UserId}", userId);
+            _logger.LogError(ex, "Error getting model sync status for user {UserId}", Sid(userId));
             return new ModelSyncStatus
             {
                 UserId = userId,
@@ -277,7 +281,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
 
         try
         {
-            _logger.LogInformation("Starting model version repair for user {UserId}", userId);
+            _logger.LogInformation("Starting model version repair for user {UserId}", Sid(userId));
 
             // Find models where TrainedModelVersion might be incorrect (looks like model ID instead of version hash)
             var modelsToRepair = await _context.ModelCreationRequests
@@ -295,7 +299,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
             {
                 try
                 {
-                    _logger.LogInformation("Repairing version for model {ModelId}", model.ReplicateModelId);
+                    _logger.LogInformation("Repairing version for model {ModelId}", S(model.ReplicateModelId));
 
                     // Get the actual version ID from Replicate API
                     if (string.IsNullOrEmpty(model.ReplicateModelId))
@@ -308,7 +312,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
                     if (!string.IsNullOrEmpty(actualVersionId) && actualVersionId != model.TrainedModelVersion)
                     {
                         _logger.LogInformation("Updating model {ModelId} version from {OldVersion} to {NewVersion}",
-                            model.ReplicateModelId, model.TrainedModelVersion, actualVersionId);
+                            S(model.ReplicateModelId), S(model.TrainedModelVersion), S(actualVersionId));
 
                         model.TrainedModelVersion = actualVersionId;
                         result.ModelsRepaired++;
@@ -321,17 +325,17 @@ public class ModelDiscoveryService : IModelDiscoveryService
                     }
                     else if (string.IsNullOrEmpty(actualVersionId))
                     {
-                        _logger.LogWarning("Could not retrieve version for model {ModelId}", model.ReplicateModelId);
+                        _logger.LogWarning("Could not retrieve version for model {ModelId}", S(model.ReplicateModelId));
                         result.ModelsWithErrors++;
                     }
                     else
                     {
-                        _logger.LogInformation("Model {ModelId} already has correct version", model.ReplicateModelId);
+                        _logger.LogInformation("Model {ModelId} already has correct version", S(model.ReplicateModelId));
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error repairing version for model {ModelId}", model.ReplicateModelId);
+                    _logger.LogError(ex, "Error repairing version for model {ModelId}", S(model.ReplicateModelId));
                     result.ModelsWithErrors++;
                 }
             }
@@ -347,7 +351,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during model version repair for user {UserId}", userId);
+            _logger.LogError(ex, "Error during model version repair for user {UserId}", Sid(userId));
             result.Success = false;
             result.ErrorMessage = ex.Message;
             return result;
@@ -361,24 +365,24 @@ public class ModelDiscoveryService : IModelDiscoveryService
     {
         try
         {
-            _logger.LogInformation("Manually syncing model {ModelId} version {VersionId} for user {UserId}", modelId, versionId, userId);
+            _logger.LogInformation("Manually syncing model {ModelId} version {VersionId} for user {UserId}", S(modelId), S(versionId), Sid(userId));
 
             // Verify model exists on Replicate
             var parts = modelId.Split('/');
             if (parts.Length != 2)
             {
-                _logger.LogError("Invalid model ID format: {ModelId}", modelId);
+                _logger.LogError("Invalid model ID format: {ModelId}", S(modelId));
                 return false;
             }
 
             try
             {
                 await _replicateApi.ModelsGetAsync(parts[0], parts[1]);
-                _logger.LogInformation("Successfully verified model {ModelId} exists on Replicate", modelId);
+                _logger.LogInformation("Successfully verified model {ModelId} exists on Replicate", S(modelId));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Model {ModelId} not found on Replicate", modelId);
+                _logger.LogError(ex, "Model {ModelId} not found on Replicate", S(modelId));
                 return false;
             }
 
@@ -425,12 +429,12 @@ public class ModelDiscoveryService : IModelDiscoveryService
 
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Successfully synced model {ModelId} for user {UserId}", modelId, userId);
+            _logger.LogInformation("Successfully synced model {ModelId} for user {UserId}", S(modelId), Sid(userId));
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error syncing specific model {ModelId} for user {UserId}", modelId, userId);
+            _logger.LogError(ex, "Error syncing specific model {ModelId} for user {UserId}", S(modelId), Sid(userId));
             return false;
         }
     }
@@ -446,22 +450,22 @@ public class ModelDiscoveryService : IModelDiscoveryService
             _logger.LogWarning(
                 "Manual override requested for model {ModelId} by {OverriddenBy}. " +
                 "User: {UserId}, Reason: {Reason}",
-                modelId, overriddenBy, userId, reason);
+                S(modelId), S(overriddenBy), Sid(userId), S(reason));
 
             // Record the override using robustness service
             await _robustnessService.OverrideModelExistenceAsync(userId, modelId, reason, overriddenBy);
 
             // Find the failed model in database
             var failedModel = await _context.ModelCreationRequests
-                .Where(m => m.UserId == userId && 
-                           m.ReplicateModelId == modelId && 
+                .Where(m => m.UserId == userId &&
+                           m.ReplicateModelId == modelId &&
                            m.Status == ModelCreationStatus.Failed)
                 .OrderByDescending(m => m.CreatedAt)
                 .FirstOrDefaultAsync();
 
             if (failedModel == null)
             {
-                _logger.LogWarning("No failed model found for override: {ModelId}, User: {UserId}", modelId, userId);
+                _logger.LogWarning("No failed model found for override: {ModelId}, User: {UserId}", S(modelId), Sid(userId));
                 return false;
             }
 
@@ -476,7 +480,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
                 _logger.LogError(
                     "Override rejected: Model {ModelId} verification failed. " +
                     "Confidence: {Confidence}, User: {UserId}",
-                    modelId, verificationResult.ConfidenceLevel, userId);
+                    S(modelId), verificationResult.ConfidenceLevel, Sid(userId));
                 return false;
             }
 
@@ -490,15 +494,15 @@ public class ModelDiscoveryService : IModelDiscoveryService
 
             _logger.LogInformation(
                 "Successfully restored model {ModelId} for user {UserId} via manual override by {OverriddenBy}",
-                modelId, userId, overriddenBy);
+                S(modelId), Sid(userId), S(overriddenBy));
 
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, 
+            _logger.LogError(ex,
                 "Error during manual override for model {ModelId}, User: {UserId}, Override by: {OverriddenBy}",
-                modelId, userId, overriddenBy);
+                S(modelId), Sid(userId), S(overriddenBy));
             return false;
         }
     }
@@ -516,7 +520,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
 
             try
             {
-                _logger.LogInformation("Checking for known model: {ModelId}", knownModelId);
+                _logger.LogInformation("Checking for known model: {ModelId}", S(knownModelId));
 
                 var modelExists = await CheckModelExistsDirectly(owner, knownModelName);
                 if (modelExists)
@@ -527,11 +531,11 @@ public class ModelDiscoveryService : IModelDiscoveryService
                     {
                         // Note: ModelsGetAsync returns void, so we can't get version info this way
                         // We'll rely on the version being set properly during model sync
-                        _logger.LogInformation("Found known model {ModelId}, version lookup not available via SDK", knownModelId);
+                        _logger.LogInformation("Found known model {ModelId}, version lookup not available via SDK", S(knownModelId));
                     }
                     catch (Exception versionEx)
                     {
-                        _logger.LogWarning(versionEx, "Could not get version for known model {ModelId}", knownModelId);
+                        _logger.LogWarning(versionEx, "Could not get version for known model {ModelId}", S(knownModelId));
                     }
 
                     return new UserModelInfo
@@ -547,7 +551,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error checking known model {ModelId}", knownModelId);
+                _logger.LogError(ex, "Error checking known model {ModelId}", S(knownModelId));
             }
         }
 
@@ -596,7 +600,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
                 };
                 _context.UserProfiles.Add(userProfile);
                 await _context.SaveChangesAsync();
-                _logger.LogInformation("Created new user profile for user {UserId}", userId);
+                _logger.LogInformation("Created new user profile for user {UserId}", Sid(userId));
             }
 
             if (userProfile == null)
@@ -635,7 +639,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
                     {
                         versionId = await _replicateApiClient.GetModelVersionAsync(mostRecentModel.ModelId);
                         _logger.LogInformation("Retrieved actual version ID {VersionId} for model {ModelId}",
-                            versionId, mostRecentModel.ModelId);
+                            S(versionId), S(mostRecentModel.ModelId));
                     }
 
                     existingModel.TrainedModelVersion = versionId;
@@ -650,7 +654,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
                     {
                         versionId = await _replicateApiClient.GetModelVersionAsync(mostRecentModel.ModelId);
                         _logger.LogInformation("Retrieved actual version ID {VersionId} for new model {ModelId}",
-                            versionId, mostRecentModel.ModelId);
+                            S(versionId), S(mostRecentModel.ModelId));
                     }
 
                     var newModel = new ModelCreationRequest
@@ -669,7 +673,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
                 result.AddedModelIds.Add(mostRecentModel.ModelId);
 
                 _logger.LogInformation("Updated user profile with model {ModelId} version {VersionId}",
-                    mostRecentModel.ModelId, mostRecentModel.VersionId);
+                    S(mostRecentModel.ModelId), S(mostRecentModel.VersionId));
             }
 
             // If database has a model but it's not found on Replicate, verify before marking as failed
@@ -679,7 +683,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
                 var modelExistsOnReplicate = replicateModels.Any(m => m.ModelId == currentModelId);
                 if (!modelExistsOnReplicate)
                 {
-                    _logger.LogWarning("Model {ModelId} not found in discovery results. Starting verification process to prevent false negative", currentModelId);
+                    _logger.LogWarning("Model {ModelId} not found in discovery results. Starting verification process to prevent false negative", S(currentModelId));
 
                     // ENHANCED: Multi-method verification before marking as deleted
                     var verificationResult = await _robustnessService.VerifyModelExistenceAsync(
@@ -689,15 +693,15 @@ public class ModelDiscoveryService : IModelDiscoveryService
 
                     _logger.LogInformation(
                         "Model verification completed for {ModelId}. Exists: {Exists}, Confidence: {Confidence}, Duration: {Duration}ms",
-                        currentModelId, verificationResult.ModelExists, verificationResult.ConfidenceLevel, 
+                        S(currentModelId), verificationResult.ModelExists, verificationResult.ConfidenceLevel,
                         verificationResult.VerificationDuration.TotalMilliseconds);
 
                     // Only mark as failed if verification confirms model doesn't exist with high confidence
                     if (!verificationResult.ModelExists && (verificationResult.ConfidenceLevel == ModelExistenceConfidence.High || verificationResult.ConfidenceLevel == ModelExistenceConfidence.Medium))
                     {
                         _logger.LogWarning(
-                            "Model {ModelId} verified as deleted externally with {Confidence} confidence. Marking as failed", 
-                            currentModelId, verificationResult.ConfidenceLevel);
+                            "Model {ModelId} verified as deleted externally with {Confidence} confidence. Marking as failed",
+                            S(currentModelId), verificationResult.ConfidenceLevel);
 
                         // Mark the model as failed instead of deleting it (preserve history)
                         if (latestModelInDb != null)
@@ -714,12 +718,12 @@ public class ModelDiscoveryService : IModelDiscoveryService
                         _logger.LogInformation(
                             "Model {ModelId} verification suggests it still exists or verification failed. NOT marking as failed. " +
                             "Exists: {Exists}, Confidence: {Confidence}",
-                            currentModelId, verificationResult.ModelExists, verificationResult.ConfidenceLevel);
+                            S(currentModelId), verificationResult.ModelExists, verificationResult.ConfidenceLevel);
 
                         // Log this as a potential discovery issue for monitoring
                         _logger.LogWarning(
                             "Potential discovery reliability issue: Model {ModelId} exists but was not found in discovery. " +
-                            "This may indicate API reliability problems.", currentModelId);
+                            "This may indicate API reliability problems.", S(currentModelId));
                     }
                 }
             }
@@ -732,7 +736,7 @@ public class ModelDiscoveryService : IModelDiscoveryService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error syncing models to database for user {UserId}", userId);
+            _logger.LogError(ex, "Error syncing models to database for user {UserId}", Sid(userId));
             throw;
         }
     }

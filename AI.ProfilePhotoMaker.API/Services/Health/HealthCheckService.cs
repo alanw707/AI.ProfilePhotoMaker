@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 
 namespace AI.ProfilePhotoMaker.API.Services.Health;
@@ -14,6 +15,7 @@ public class HealthCheckService : IHealthCheckService
     private readonly IDependencyHealthService _dependencyHealthService;
     private readonly ILogger<HealthCheckService> _logger;
     private readonly IWebHostEnvironment _environment;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
 
     public HealthCheckService(
         IDatabaseHealthService databaseHealthService,
@@ -54,7 +56,7 @@ public class HealthCheckService : IHealthCheckService
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Error during basic health check");
+            _logger.LogError(ex, "Error during basic health check: {Message}", S(ex.Message));
 
             return new HealthCheckResponseDto
             {
@@ -62,7 +64,7 @@ public class HealthCheckService : IHealthCheckService
                 Duration = stopwatch.ElapsedMilliseconds,
                 Version = GetVersion(),
                 Environment = _environment.EnvironmentName,
-                Message = $"Health check failed: {ex.Message}"
+                Message = $"Health check failed: {S(ex.Message)}"
             };
         }
     }
@@ -117,14 +119,14 @@ public class HealthCheckService : IHealthCheckService
             response.Duration = stopwatch.ElapsedMilliseconds;
 
             _logger.LogInformation("Comprehensive health check completed: {Status} in {Duration}ms",
-                response.Status, response.Duration);
+                S(response.Status), response.Duration);
 
             return response;
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Error during comprehensive health check");
+            _logger.LogError(ex, "Error during comprehensive health check: {Message}", S(ex.Message));
 
             return new ComprehensiveHealthResponseDto
             {
@@ -132,7 +134,7 @@ public class HealthCheckService : IHealthCheckService
                 Duration = stopwatch.ElapsedMilliseconds,
                 Version = GetVersion(),
                 Environment = _environment.EnvironmentName,
-                Errors = { $"Health check failed: {ex.Message}" }
+                Errors = { $"Health check failed: {S(ex.Message)}" }
             };
         }
     }
@@ -171,7 +173,7 @@ public class HealthCheckService : IHealthCheckService
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Error during database health check");
+            _logger.LogError(ex, "Error during database health check: {Message}", S(ex.Message));
 
             return new DatabaseHealthResponseDto
             {
@@ -181,7 +183,7 @@ public class HealthCheckService : IHealthCheckService
                 Environment = _environment.EnvironmentName,
                 CanConnect = false,
                 Exists = false,
-                Message = $"Database health check failed: {ex.Message}"
+                Message = $"Database health check failed: {S(ex.Message)}"
             };
         }
     }
@@ -227,7 +229,7 @@ public class HealthCheckService : IHealthCheckService
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Error during storage health check");
+            _logger.LogError(ex, "Error during storage health check: {Message}", S(ex.Message));
 
             return new StorageHealthResponseDto
             {
@@ -236,7 +238,7 @@ public class HealthCheckService : IHealthCheckService
                 Version = GetVersion(),
                 Environment = _environment.EnvironmentName,
                 CanConnect = false,
-                Message = $"Storage health check failed: {ex.Message}"
+                Message = $"Storage health check failed: {S(ex.Message)}"
             };
         }
     }
@@ -271,7 +273,7 @@ public class HealthCheckService : IHealthCheckService
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Error during dependencies health check");
+            _logger.LogError(ex, "Error during dependencies health check: {Message}", S(ex.Message));
 
             return new DependenciesHealthResponseDto
             {
@@ -279,7 +281,7 @@ public class HealthCheckService : IHealthCheckService
                 Duration = stopwatch.ElapsedMilliseconds,
                 Version = GetVersion(),
                 Environment = _environment.EnvironmentName,
-                Message = $"Dependencies health check failed: {ex.Message}"
+                Message = $"Dependencies health check failed: {S(ex.Message)}"
             };
         }
     }
@@ -307,7 +309,7 @@ public class HealthCheckService : IHealthCheckService
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Error during readiness check");
+            _logger.LogError(ex, "Error during readiness check: {Message}", S(ex.Message));
 
             return Task.FromResult(new HealthCheckResponseDto
             {
@@ -315,7 +317,7 @@ public class HealthCheckService : IHealthCheckService
                 Duration = stopwatch.ElapsedMilliseconds,
                 Version = GetVersion(),
                 Environment = _environment.EnvironmentName,
-                Message = $"Readiness check failed: {ex.Message}"
+                Message = $"Readiness check failed: {S(ex.Message)}"
             });
         }
     }
@@ -344,7 +346,7 @@ public class HealthCheckService : IHealthCheckService
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Error during liveness check");
+            _logger.LogError(ex, "Error during liveness check: {Message}", S(ex.Message));
 
             return new HealthCheckResponseDto
             {
@@ -352,7 +354,7 @@ public class HealthCheckService : IHealthCheckService
                 Duration = stopwatch.ElapsedMilliseconds,
                 Version = GetVersion(),
                 Environment = _environment.EnvironmentName,
-                Message = $"Liveness check failed: {ex.Message}"
+                Message = $"Liveness check failed: {S(ex.Message)}"
             };
         }
     }
@@ -393,7 +395,7 @@ public class HealthCheckService : IHealthCheckService
                 Status = "Unhealthy",
                 Description = "Database connectivity and migration status",
                 Duration = stopwatch.ElapsedMilliseconds,
-                Error = ex.Message
+                Error = S(ex.Message)
             };
         }
     }
@@ -431,7 +433,7 @@ public class HealthCheckService : IHealthCheckService
                 Status = "Unhealthy",
                 Description = "Storage connectivity and operations",
                 Duration = stopwatch.ElapsedMilliseconds,
-                Error = ex.Message
+                Error = S(ex.Message)
             };
         }
     }
@@ -471,7 +473,7 @@ public class HealthCheckService : IHealthCheckService
                 Status = "Unhealthy",
                 Description = "External dependencies status",
                 Duration = stopwatch.ElapsedMilliseconds,
-                Error = ex.Message
+                Error = S(ex.Message)
             };
         }
     }

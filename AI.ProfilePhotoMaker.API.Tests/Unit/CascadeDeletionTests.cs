@@ -24,7 +24,7 @@ public class CascadeDeletionTests
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
-        
+
         return new ApplicationDbContext(options);
     }
 
@@ -38,7 +38,7 @@ public class CascadeDeletionTests
 
         // Create a model (this automatically creates 3 versions)
         var modelId = await mockClient.CreateModelAsync("test-user", "test-model");
-        
+
         // Verify model has versions initially
         var initialVersions = await mockClient.GetModelVersionsAsync(modelId);
         Assert.True(initialVersions.Count > 0, "Model should have versions after creation");
@@ -80,7 +80,7 @@ public class CascadeDeletionTests
 
         // Create a model (automatically creates versions)
         var modelId = await mockClient.CreateModelAsync("test-user", "test-model");
-        
+
         // Act
         var versions = await mockClient.GetModelVersionsAsync(modelId);
 

@@ -6,7 +6,7 @@ namespace AI.ProfilePhotoMaker.API.Services;
 public static class ModelExistenceConfidence
 {
     public const string High = "High";
-    public const string Medium = "Medium";  
+    public const string Medium = "Medium";
     public const string Low = "Low";
 }
 
@@ -46,7 +46,7 @@ public class ModelDiscoveryRobustnessService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Operation {Operation} failed on attempt {Attempt}/{MaxAttempts}: {Error}", 
+                _logger.LogWarning("Operation {Operation} failed on attempt {Attempt}/{MaxAttempts}: {Error}",
                     operationName, attempt, _options.MaxRetryAttempts, ex.Message);
 
                 if (attempt == _options.MaxRetryAttempts)
@@ -75,9 +75,9 @@ public class ModelDiscoveryRobustnessService
         // Simple implementation - return success result
         _logger.LogInformation("Verifying existence of model {Model} version {Version} for user {User}", modelName, modelVersion ?? "latest", userId);
         await Task.CompletedTask;
-        return new ModelVerificationResult 
-        { 
-            ModelExists = true, 
+        return new ModelVerificationResult
+        {
+            ModelExists = true,
             ConfidenceLevel = ModelExistenceConfidence.High,
             VerificationDuration = TimeSpan.FromMilliseconds(100)
         };

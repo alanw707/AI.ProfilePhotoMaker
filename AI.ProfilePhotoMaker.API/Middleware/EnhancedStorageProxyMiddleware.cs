@@ -1,6 +1,7 @@
-namespace AI.ProfilePhotoMaker.API.Middleware;
-
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Services.Storage;
+
+namespace AI.ProfilePhotoMaker.API.Middleware;
 
 /// <summary>
 /// Enhanced middleware to proxy storage requests for both Azurite (development) and Azure Blob Storage (production)
@@ -12,6 +13,8 @@ public class EnhancedStorageProxyMiddleware
     private readonly ILogger<EnhancedStorageProxyMiddleware> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IWebHostEnvironment _environment;
+
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
 
     public EnhancedStorageProxyMiddleware(
         RequestDelegate next,
@@ -29,7 +32,7 @@ public class EnhancedStorageProxyMiddleware
     {
         var path = context.Request.Path.Value?.ToLower();
 
-        _logger.LogDebug("Enhanced storage proxy processing path: {Path}", path);
+        _logger.LogDebug("Enhanced storage proxy processing path: {Path}", S(path));
 
         // Get storage service from request scope
         var storageService = context.RequestServices.GetRequiredService<IStorageService>();
@@ -37,7 +40,7 @@ public class EnhancedStorageProxyMiddleware
         // Handle Azurite requests (development)
         if (path?.StartsWith("/devstoreaccount1/") == true)
         {
-            _logger.LogInformation("Proxying Azurite request: {Path}", path);
+            _logger.LogInformation("Proxying Azurite request: {Path}", S(path));
             await ProxyAzuriteRequest(context, path);
             return;
         }
@@ -45,7 +48,7 @@ public class EnhancedStorageProxyMiddleware
         // Handle Azure Blob Storage requests (all environments)
         if (path?.StartsWith("/profile-images/") == true)
         {
-            _logger.LogInformation("Proxying Azure Blob Storage request: {Path}", path);
+            _logger.LogInformation("Proxying Azure Blob Storage request: {Path}", S(path));
             await ProxyAzureBlobRequest(context, path, storageService);
             return;
         }
@@ -64,7 +67,7 @@ public class EnhancedStorageProxyMiddleware
             // Remove the leading slash and construct Azurite URL
             var azuriteUrl = $"http://127.0.0.1:10000{path}";
 
-            _logger.LogDebug("Proxying to Azurite: {Path} -> {AzuriteUrl}", path, azuriteUrl);
+            _logger.LogDebug("Proxying to Azurite: {Path} -> {AzuriteUrl}", S(path), S(azuriteUrl));
 
             using var httpClient = _httpClientFactory.CreateClient();
 
@@ -88,7 +91,7 @@ public class EnhancedStorageProxyMiddleware
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Azurite request failed: {StatusCode} for {Path}", response.StatusCode, path);
+                _logger.LogWarning("Azurite request failed: {StatusCode} for {Path}", response.StatusCode, S(path));
                 context.Response.StatusCode = (int)response.StatusCode;
                 return;
             }
@@ -104,7 +107,7 @@ public class EnhancedStorageProxyMiddleware
             if (HttpMethods.IsHead(context.Request.Method))
             {
                 context.Response.StatusCode = (int)response.StatusCode;
-                _logger.LogDebug("Azurite proxy HEAD successful: {Path}, Status: {Status}", path, context.Response.StatusCode);
+                _logger.LogDebug("Azurite proxy HEAD successful: {Path}, Status: {Status}", S(path), context.Response.StatusCode);
                 return;
             }
 
@@ -118,11 +121,11 @@ public class EnhancedStorageProxyMiddleware
             await context.Response.Body.WriteAsync(content);
 
             _logger.LogDebug("Azurite proxy successful: {Path}, ContentType: {ContentType}, Size: {Size}",
-                path, context.Response.ContentType, content.Length);
+                S(path), S(context.Response.ContentType), content.Length);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error proxying Azurite request for path: {Path}", path);
+            _logger.LogError(ex, "Error proxying Azurite request for path: {Path}", S(path));
             context.Response.StatusCode = 500;
             await context.Response.WriteAsync("Azurite proxy error");
         }
@@ -140,7 +143,7 @@ public class EnhancedStorageProxyMiddleware
             // Storage Path: prod/uploads/userId/fileName.png
             var storagePath = path.Substring("/profile-images/".Length);
 
-            _logger.LogDebug("Serving image from storage: {Path} -> {StoragePath}", path, storagePath);
+            _logger.LogDebug("Serving image from storage: {Path} -> {StoragePath}", S(path), S(storagePath));
 
             // For HEAD requests, just verify existence and return headers without a body
             if (HttpMethods.IsHead(context.Request.Method))
@@ -153,7 +156,7 @@ public class EnhancedStorageProxyMiddleware
                     context.Response.Headers["Cache-Control"] = "public, max-age=31536000, immutable";
                     context.Response.Headers["ETag"] = $"\"{storagePath.GetHashCode():X}\"";
                 }
-                _logger.LogDebug("HEAD check for {StoragePath}: {Status}", storagePath, context.Response.StatusCode);
+                _logger.LogDebug("HEAD check for {StoragePath}: {Status}", S(storagePath), context.Response.StatusCode);
                 return;
             }
 
@@ -162,7 +165,7 @@ public class EnhancedStorageProxyMiddleware
 
             if (imageStream == null)
             {
-                _logger.LogWarning("Image not found in storage: {StoragePath}", storagePath);
+                _logger.LogWarning("Image not found in storage: {StoragePath}", S(storagePath));
                 context.Response.StatusCode = 404;
                 await context.Response.WriteAsync("Image not found");
                 return;
@@ -180,11 +183,11 @@ public class EnhancedStorageProxyMiddleware
             await imageStream.CopyToAsync(context.Response.Body);
             await imageStream.DisposeAsync();
 
-            _logger.LogDebug("Successfully served image: {Path}, ContentType: {ContentType}", path, contentType);
+            _logger.LogDebug("Successfully served image: {Path}, ContentType: {ContentType}", S(path), S(contentType));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error serving image from storage: {Path}", path);
+            _logger.LogError(ex, "Error serving image from storage: {Path}", S(path));
             context.Response.StatusCode = 500;
             await context.Response.WriteAsync("Storage proxy error");
         }

@@ -1,3 +1,4 @@
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,6 +16,8 @@ public class ModelDiscoveryController : ControllerBase
 {
     private readonly IModelDiscoveryService _modelDiscoveryService;
     private readonly ILogger<ModelDiscoveryController> _logger;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
+    private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
     public ModelDiscoveryController(
         IModelDiscoveryService modelDiscoveryService,
@@ -43,14 +46,14 @@ public class ModelDiscoveryController : ControllerBase
                 return Unauthorized(new { success = false, error = "User not authenticated" });
             }
 
-            _logger.LogInformation("Starting model discovery and sync for user {UserId}", userId);
+            _logger.LogInformation("Starting model discovery and sync for user {UserId}", Sid(userId));
 
             var result = await _modelDiscoveryService.DiscoverAndSyncUserModelsAsync(userId);
 
             if (result.Success)
             {
                 _logger.LogInformation("Model discovery completed successfully for user {UserId}. Found: {Found}, Added: {Added}, Removed: {Removed}",
-                    userId, result.ModelsFound, result.ModelsAdded, result.ModelsRemoved);
+                    Sid(userId), result.ModelsFound, result.ModelsAdded, result.ModelsRemoved);
 
                 return Ok(new
                 {
@@ -61,7 +64,7 @@ public class ModelDiscoveryController : ControllerBase
             }
             else
             {
-                _logger.LogWarning("Model discovery failed for user {UserId}: {Message}", userId, result.Message);
+                _logger.LogWarning("Model discovery failed for user {UserId}: {Message}", Sid(userId), S(result.Message));
                 return BadRequest(new
                 {
                     success = false,
@@ -171,7 +174,7 @@ public class ModelDiscoveryController : ControllerBase
             }
 
             _logger.LogInformation("Manually syncing model {ModelId} version {VersionId} for user {UserId}",
-                request.ModelId, request.VersionId, userId);
+                S(request.ModelId), S(request.VersionId), Sid(userId));
 
             var success = await _modelDiscoveryService.SyncSpecificModelAsync(userId, request.ModelId, request.VersionId);
 
@@ -194,7 +197,7 @@ public class ModelDiscoveryController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error syncing specific model {ModelId}", request.ModelId);
+            _logger.LogError(ex, "Error syncing specific model {ModelId}", S(request.ModelId));
             return StatusCode(500, new
             {
                 success = false,
@@ -229,7 +232,7 @@ public class ModelDiscoveryController : ControllerBase
             }
 
             var overriddenBy = User.Identity?.Name ?? userId;
-            
+
             _logger.LogWarning(
                 "Manual override deletion request for model {ModelId} by {OverriddenBy}. " +
                 "Target User: {UserId}, Reason: {Reason}",
@@ -267,7 +270,7 @@ public class ModelDiscoveryController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during model deletion override for {ModelId}", request.ModelId);
+            _logger.LogError(ex, "Error during model deletion override for {ModelId}", S(request.ModelId));
             return StatusCode(500, new
             {
                 success = false,

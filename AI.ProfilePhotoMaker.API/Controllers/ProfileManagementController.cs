@@ -1,6 +1,7 @@
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using Microsoft.AspNetCore.Authorization;
@@ -23,6 +24,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private readonly IConfiguration _configuration;
         private readonly IReplicateApiClient _replicateApiClient;
         private readonly IUserContextService _userContextService;
+        private static new string S(string? value) => LoggingSanitizer.Sanitize(value);
+        private static new string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
         public ProfileManagementController(
             IUserProfileRepository userProfileRepository,
@@ -93,7 +96,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                LogError(ex, "Error retrieving profile", userId);
+                LogError(ex, "Error retrieving profile", Sid(userId));
                 return ErrorResponse("ProfileError", "Failed to retrieve profile", 500);
             }
         }
@@ -153,7 +156,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                LogError(ex, "Error creating profile", userId);
+                LogError(ex, "Error creating profile", Sid(userId));
                 return ErrorResponse("ProfileCreationFailed", "Failed to create profile", 500);
             }
         }
@@ -211,7 +214,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                LogError(ex, "Error updating profile", userId);
+                LogError(ex, "Error updating profile", Sid(userId));
                 return ErrorResponse("ProfileUpdateFailed", "Failed to update profile", 500);
             }
         }
@@ -248,7 +251,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                LogError(ex, "Error deleting profile", userId);
+                LogError(ex, "Error deleting profile", Sid(userId));
                 return ErrorResponse("ProfileDeletionFailed", "Failed to delete profile", 500);
             }
         }
