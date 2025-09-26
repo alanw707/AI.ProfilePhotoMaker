@@ -6,6 +6,7 @@ using AI.ProfilePhotoMaker.API.Models.DTOs;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Stripe;
 
 namespace AI.ProfilePhotoMaker.API.Services;
 
@@ -16,19 +17,22 @@ public class CreditPackageService : ICreditPackageService
     private readonly ILogger<CreditPackageService> _logger;
     private readonly StripeOptions _stripeOptions;
     private readonly PaymentSimulationOptions _simulationOptions;
+    private readonly StripeClient? _stripeClient;
 
     public CreditPackageService(
         ApplicationDbContext context,
         IBasicTierService basicTierService,
         ILogger<CreditPackageService> logger,
         IOptions<StripeOptions> stripeOptions,
-        IOptions<PaymentSimulationOptions> paymentSimulationOptions)
+        IOptions<PaymentSimulationOptions> paymentSimulationOptions,
+        StripeClient? stripeClient = null)
     {
         _context = context;
         _basicTierService = basicTierService;
         _logger = logger;
         _stripeOptions = stripeOptions.Value;
         _simulationOptions = paymentSimulationOptions.Value;
+        _stripeClient = stripeClient;
     }
 
     public async Task<IEnumerable<CreditPackageDto>> GetActiveCreditPackagesAsync()
@@ -110,6 +114,8 @@ public class CreditPackageService : ICreditPackageService
 
         if (transaction != null)
         {
+            await RefreshStripeTransactionStatusAsync(transaction);
+
             if (!string.Equals(transaction.UserId, userId, StringComparison.Ordinal))
             {
                 _logger.LogWarning(
@@ -233,6 +239,61 @@ public class CreditPackageService : ICreditPackageService
 
         purchase.Package = package;
         return purchase;
+    }
+
+    private async Task RefreshStripeTransactionStatusAsync(PaymentTransaction transaction)
+    {
+        if (_stripeClient == null || string.IsNullOrWhiteSpace(transaction.ExternalTransactionId))
+        {
+            return;
+        }
+
+        if (transaction.Status is PaymentStatus.Completed or PaymentStatus.Succeeded)
+        {
+            return;
+        }
+
+        var paymentIntentService = new PaymentIntentService(_stripeClient);
+
+        try
+        {
+            var intent = await paymentIntentService.GetAsync(transaction.ExternalTransactionId);
+
+            switch (intent.Status)
+            {
+                case "succeeded":
+                    transaction.Status = PaymentStatus.Completed;
+                    transaction.FailureReason = null;
+                    transaction.ProcessedAt ??= DateTime.UtcNow;
+                    transaction.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                    break;
+                case "processing":
+                case "requires_capture":
+                    transaction.Status = PaymentStatus.Pending;
+                    transaction.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                    break;
+                case "requires_payment_method":
+                case "requires_confirmation":
+                    // Payment is waiting for a new confirmation; leave status as-is so UI can retry.
+                    break;
+                default:
+                    break;
+            }
+        }
+        catch (StripeException stripeException)
+        {
+            _logger.LogWarning(stripeException,
+                "Unable to refresh Stripe payment intent {PaymentIntentId}",
+                LoggingSanitizer.SanitizeId(transaction.ExternalTransactionId));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "Unexpected error while refreshing Stripe payment intent {PaymentIntentId}",
+                LoggingSanitizer.SanitizeId(transaction.ExternalTransactionId));
+        }
     }
 
     public async Task<IEnumerable<CreditPurchase>> GetUserPurchaseHistoryAsync(string userId)

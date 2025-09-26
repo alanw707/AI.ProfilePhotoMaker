@@ -114,6 +114,32 @@
     flex-direction: column
     gap: 0.35rem
 
+  .stripe-error-banner
+    display: flex
+    align-items: flex-start
+    gap: 0.75rem
+    padding: 0.85rem 1rem
+    border-radius: 12px
+    background: rgba(255, 112, 138, 0.12)
+    border: 1px solid rgba(255, 112, 138, 0.45)
+    color: var(--error-color)
+    font-weight: 600
+    line-height: 1.35
+
+    .stripe-error-icon
+      display: inline-flex
+      align-items: center
+      justify-content: center
+      width: 1.6rem
+      height: 1.6rem
+      border-radius: 50%
+      background: rgba(255, 112, 138, 0.25)
+      color: var(--error-color)
+      font-weight: 700
+
+    .stripe-error-copy
+      flex: 1
+
   .section-label
     font-size: 0.95rem
     font-weight: 700
@@ -210,11 +236,6 @@
     font-size: 0.85rem
     color: var(--error-color)
     font-weight: 600
-  
-  .stripe-error
-    margin-top: 0.75rem
-    color: var(--error-color)
-    font-size: 0.9rem
   
   .payment-actions
     display: flex

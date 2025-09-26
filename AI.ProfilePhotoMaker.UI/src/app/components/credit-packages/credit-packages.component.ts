@@ -621,6 +621,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
   }
 
   private _handlePaymentError(message: string): void {
+    this.stripeErrorMessage = message;
     this._notificationService.error('Payment Error', message);
     this.isConfirmingPayment = false;
     this.isLoadingIntent = false;
