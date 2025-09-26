@@ -962,7 +962,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     return ErrorResponse("FileNotFound", "Training ZIP file not found.", 404);
                 }
 
-                Logger.LogInformation("Deleted training ZIP file {FileName} for user {UserId}", fileName, Sid(userId));
+                Logger.LogInformation("Deleted training ZIP file {FileName} for user {UserId}", S(fileName), Sid(userId));
 
                 return SuccessResponse(new
                 {
@@ -972,7 +972,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                LogError(ex, "Error deleting training ZIP file {FileName}", fileName);
+                Logger.LogError(ex, "Error deleting training ZIP file {FileName} for user {UserId}", S(fileName), Sid(GetCurrentUserId()));
                 return ErrorResponse("FileSystemError", "Failed to delete training ZIP file.", 500);
             }
         }
