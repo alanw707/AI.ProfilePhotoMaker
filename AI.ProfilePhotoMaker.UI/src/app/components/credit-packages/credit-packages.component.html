@@ -36,6 +36,10 @@
             <span class="section-label">Card Details</span>
             <small class="section-subtitle">Payments are securely processed by Stripe.</small>
           </header>
+          <div class="stripe-error-banner" *ngIf="stripeErrorMessage" role="alert">
+            <span class="stripe-error-icon" aria-hidden="true">!</span>
+            <span class="stripe-error-copy">{{ stripeErrorMessage }}</span>
+          </div>
           <div class="stripe-card-container" [class.focused]="isCardElementFocused">
             <div id="card-element"></div>
           </div>
@@ -157,10 +161,6 @@
             Please complete all required fields to continue.
           </div>
         </section>
-      </div>
-
-      <div class="stripe-error" *ngIf="stripeErrorMessage">
-        {{ stripeErrorMessage }}
       </div>
     </ng-container>
 
