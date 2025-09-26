@@ -31,7 +31,7 @@ public class ReplicateControllerFormatVersionTests
         var db = new ApplicationDbContext(options);
 
         var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string,string?>
+            .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Replicate:Owner"] = owner
             })
@@ -65,13 +65,13 @@ public class ReplicateControllerFormatVersionTests
     [InlineData("alanw707/user-12345", "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890", "alanw707/user-12345:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890")]
     [InlineData("mock/user-test", "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", "alanw707/user-test:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")]
     public void FormatModelVersion_WithVersionHashOnly_ShouldFormatCorrectly(
-        string replicateModelId, 
-        string trainedModelVersion, 
+        string replicateModelId,
+        string trainedModelVersion,
         string expected)
     {
         // Act
         var result = FormatModelVersion(replicateModelId, trainedModelVersion);
-        
+
         // Assert
         result.Should().Be(expected);
         result.Should().MatchRegex(@"^alanw707\/[\w-]+:[a-fA-F0-9]{64}$");
@@ -84,7 +84,7 @@ public class ReplicateControllerFormatVersionTests
     {
         // Act
         var result = FormatModelVersion("alanw707/some-model", alreadyFormatted);
-        
+
         // Assert
         result.Should().Be(alreadyFormatted);
         result.Should().MatchRegex(@"^alanw707\/[\w-]+:[a-fA-F0-9]{64}$");
@@ -96,10 +96,10 @@ public class ReplicateControllerFormatVersionTests
         // Arrange
         var replicateModelId = "alanw707/user-complex-name-123";
         var versionHash = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
-        
+
         // Act
         var result = FormatModelVersion(replicateModelId, versionHash);
-        
+
         // Assert
         result.Should().Be("alanw707/user-complex-name-123:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
     }

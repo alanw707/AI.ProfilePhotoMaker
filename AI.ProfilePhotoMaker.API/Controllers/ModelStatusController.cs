@@ -1,5 +1,6 @@
 using AI.ProfilePhotoMaker.API.Constants;
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using Microsoft.AspNetCore.Authorization;
@@ -16,6 +17,8 @@ public class ModelStatusController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<ModelStatusController> _logger;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
+    private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
     public ModelStatusController(ApplicationDbContext context, ILogger<ModelStatusController> logger)
     {
@@ -190,4 +193,3 @@ public class ModelStatusController : ControllerBase
         return Ok(response);
     }
 }
-

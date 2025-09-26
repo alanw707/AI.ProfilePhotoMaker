@@ -3,6 +3,7 @@ using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +29,9 @@ public class ReplicateController : ControllerBase
     private readonly ApplicationDbContext _dbContext;
     private readonly IConfiguration _configuration;
     private readonly ILogger<ReplicateController> _logger;
+
+    private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
 
     public ReplicateController(
         IReplicateApiClient replicateApiClient,
@@ -64,7 +68,10 @@ public class ReplicateController : ControllerBase
 
         if (existingModel != null)
         {
-            _logger.LogWarning("User {UserId} attempted to train a new model but already has trained model {ModelId}", userId, existingModel.ReplicateModelId);
+            _logger.LogWarning(
+                "User {UserId} attempted to train a new model but already has trained model {ModelId}",
+                LoggingSanitizer.SanitizeId(userId),
+                LoggingSanitizer.SanitizeId(existingModel.ReplicateModelId));
             return BadRequest(new
             {
                 success = false,
@@ -101,7 +108,8 @@ public class ReplicateController : ControllerBase
             // Convert image ZIP URL to external API format before passing to Replicate
             var externalImageZipUrl = ConvertToExternalApiUrl(dto.ImageZipUrl);
             _logger.LogInformation("Converted ZIP URL from {OriginalUrl} to {ExternalUrl} for Replicate API",
-                dto.ImageZipUrl, externalImageZipUrl);
+                LoggingSanitizer.Sanitize(dto.ImageZipUrl),
+                LoggingSanitizer.Sanitize(externalImageZipUrl));
 
             // Enforce user context: trust authenticated user over DTO
             if (!string.IsNullOrEmpty(dto.UserId) && !string.Equals(dto.UserId, userId, StringComparison.Ordinal))
@@ -119,7 +127,8 @@ public class ReplicateController : ControllerBase
             var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "model_training");
             if (!creditConsumed)
             {
-                _logger.LogError("Successfully created Replicate training but failed to consume credits for user {UserId}", userId);
+                _logger.LogError("Successfully created Replicate training but failed to consume credits for user {UserId}",
+                    LoggingSanitizer.SanitizeId(userId));
                 // Note: In this case, the Replicate training is already running but we couldn't charge credits
                 // This is better than charging credits for failed training requests
             }
@@ -140,7 +149,10 @@ public class ReplicateController : ControllerBase
         }
         catch (ReplicateApiException ex)
         {
-            _logger.LogError(ex, "Replicate API error during training for user {UserId}: {Status} {Code}", userId, (int)ex.StatusCode, ex.ErrorCode);
+            _logger.LogError(ex, "Replicate API error during training for user {UserId}: {Status} {Code}",
+                LoggingSanitizer.SanitizeId(userId),
+                (int)ex.StatusCode,
+                LoggingSanitizer.Sanitize(ex.ErrorCode));
             var status = ex.StatusCode switch
             {
                 System.Net.HttpStatusCode.UnprocessableEntity => 400,
@@ -167,7 +179,8 @@ public class ReplicateController : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
-            _logger.LogError(ex, "Replicate auth failed during training for user {UserId}", userId);
+            _logger.LogError(ex, "Replicate auth failed during training for user {UserId}",
+                LoggingSanitizer.SanitizeId(userId));
             return StatusCode(500, new
             {
                 success = false,
@@ -180,7 +193,8 @@ public class ReplicateController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogError(ex, "Replicate configuration error during training for user {UserId}", userId);
+            _logger.LogError(ex, "Replicate configuration error during training for user {UserId}",
+                LoggingSanitizer.SanitizeId(userId));
             return StatusCode(500, new
             {
                 success = false,
@@ -193,7 +207,8 @@ public class ReplicateController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Training failed for user {UserId}", userId);
+            _logger.LogError(ex, "Training failed for user {UserId}",
+                LoggingSanitizer.SanitizeId(userId));
             // If training fails, we might want to refund the credit later.
             return StatusCode(500, new
             {
@@ -308,7 +323,9 @@ public class ReplicateController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error finalizing training {TrainingId} for user {UserId}", trainingId, userId);
+            _logger.LogError(ex, "Error finalizing training {TrainingId} for user {UserId}",
+                LoggingSanitizer.SanitizeId(trainingId),
+                LoggingSanitizer.SanitizeId(userId));
             return StatusCode(500, new
             {
                 success = false,
@@ -396,10 +413,10 @@ public class ReplicateController : ControllerBase
                     }
                 });
             }
-            
+
             // Use trained model from database as single source of truth
             var modelVersionToUse = FormatModelVersion(model.ReplicateModelId!, model.TrainedModelVersion!);
-            _logger.LogInformation("Using trained model version from database: ModelId={ModelId}, Version={Version}", 
+            _logger.LogInformation("Using trained model version from database: ModelId={ModelId}, Version={Version}",
                 model.ReplicateModelId, modelVersionToUse);
 
             // If model was very recently completed, proactively wait a short time for version finalization
@@ -437,7 +454,8 @@ public class ReplicateController : ControllerBase
             } : null;
 
             _logger.LogInformation("Retrieved user info from database: Gender={Gender}, Ethnicity={Ethnicity}",
-                userInfo?.Gender ?? "NULL", userInfo?.Ethnicity ?? "NULL");
+                S(userInfo?.Gender ?? "NULL"),
+                S(userInfo?.Ethnicity ?? "NULL"));
 
             // Enforce user context: trust authenticated user over DTO
             if (!string.IsNullOrEmpty(dto.UserId) && !string.Equals(dto.UserId, userId, StringComparison.Ordinal))
@@ -455,7 +473,7 @@ public class ReplicateController : ControllerBase
             var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, requiredCredits, "styled_generation");
             if (!creditConsumed)
             {
-                _logger.LogError("Successfully created Replicate prediction but failed to consume credits for user {UserId}", userId);
+                _logger.LogError("Successfully created Replicate prediction but failed to consume credits for user {UserId}", Sid(userId));
                 // Note: In this case, the Replicate prediction is already running but we couldn't charge credits
                 // This is better than charging credits for failed predictions
             }
@@ -478,8 +496,11 @@ public class ReplicateController : ControllerBase
         {
             double? ageSec = null;
             try { ageSec = model?.CompletedAt.HasValue == true ? (double?)(DateTime.UtcNow - model!.CompletedAt!.Value).TotalSeconds : null; } catch { }
-            _logger.LogWarning(ex, "Replicate reports version not available yet for user {UserId}{Age}", userId,
-                ageSec.HasValue ? $", model age ~{ageSec.Value:F1}s" : string.Empty);
+            _logger.LogWarning(
+                ex,
+                "Replicate reports version not available yet for user {UserId}{Age}",
+                Sid(userId),
+                S(ageSec.HasValue ? $", model age ~{ageSec.Value:F1}s" : string.Empty));
             return StatusCode(409, new
             {
                 success = false,
@@ -493,7 +514,7 @@ public class ReplicateController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error generating images for user {UserId}", userId);
+            _logger.LogError(ex, "Error generating images for user {UserId}", Sid(userId));
             // If generation fails, we might want to refund the credit
             // For now, we'll just return failure
             return StatusCode(500, new
@@ -595,7 +616,7 @@ public class ReplicateController : ControllerBase
 
             // Use trained model from database as single source of truth
             var modelVersionToUse = FormatModelVersion(model.ReplicateModelId!, model.TrainedModelVersion!);
-            _logger.LogInformation("Using trained model version from database: ModelId={ModelId}, Version={Version}", 
+            _logger.LogInformation("Using trained model version from database: ModelId={ModelId}, Version={Version}",
                 model.ReplicateModelId, modelVersionToUse);
 
             var userInfo = userProfile != null ? new UserInfo
@@ -605,7 +626,8 @@ public class ReplicateController : ControllerBase
             } : null;
 
             _logger.LogInformation("Retrieved user info from database: Gender={Gender}, Ethnicity={Ethnicity}",
-                userInfo?.Gender ?? "NULL", userInfo?.Ethnicity ?? "NULL");
+                S(userInfo?.Gender ?? "NULL"),
+                S(userInfo?.Ethnicity ?? "NULL"));
 
             // Generate images for all styles in parallel
             // Enforce user context: trust authenticated user over DTO
@@ -621,30 +643,30 @@ public class ReplicateController : ControllerBase
             // Process styles sequentially to avoid race conditions with Replicate API
             // when using the same model version for multiple concurrent requests
             var results = new List<StyleGenerationResult>();
-            
+
             foreach (var style in dto.Styles)
             {
                 try
                 {
-                    _logger.LogInformation("Starting generation for style {Style} for user {UserId}", style, userId);
+                    _logger.LogInformation("Starting generation for style {Style} for user {UserId}", S(style), Sid(userId));
                     var result = await _replicateApiClient.GenerateImagesAsync(modelVersionToUse, userId, style, userInfo, dto.NumOutputsPerStyle);
-                    results.Add(new StyleGenerationResult 
-                    { 
-                        Style = style, 
-                        Success = true, 
-                        Result = result, 
-                        Error = null 
+                    results.Add(new StyleGenerationResult
+                    {
+                        Style = style,
+                        Success = true,
+                        Result = result,
+                        Error = null
                     });
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error generating images for style {Style} for user {UserId}", style, userId);
-                    results.Add(new StyleGenerationResult 
-                    { 
-                        Style = style, 
-                        Success = false, 
-                        Result = null, 
-                        Error = ex.Message 
+                    _logger.LogError(ex, "Error generating images for style {Style} for user {UserId}", S(style), Sid(userId));
+                    results.Add(new StyleGenerationResult
+                    {
+                        Style = style,
+                        Success = false,
+                        Result = null,
+                        Error = ex.Message
                     });
                 }
             }
@@ -673,7 +695,7 @@ public class ReplicateController : ControllerBase
             var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, actualCreditsRequired, "styled_generation");
             if (!creditConsumed)
             {
-                _logger.LogError("Successfully created Replicate predictions but failed to consume credits for user {UserId}", userId);
+                _logger.LogError("Successfully created Replicate predictions but failed to consume credits for user {UserId}", Sid(userId));
                 // Note: In this case, the Replicate predictions are already running but we couldn't charge credits
                 // This is better than charging credits for failed predictions
             }
@@ -697,7 +719,7 @@ public class ReplicateController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error in batch image generation for user {UserId}", userId);
+            _logger.LogError(ex, "Error in batch image generation for user {UserId}", Sid(userId));
             // If generation fails, we might want to refund the credit
             // For now, we'll just return failure
             return StatusCode(500, new
@@ -746,7 +768,7 @@ public class ReplicateController : ControllerBase
 
             if (recentGeneratedImage != null)
             {
-                _logger.LogDebug("Found recent generated image for user {UserId}, checking Replicate for final status", userId);
+                _logger.LogDebug("Found recent generated image for user {UserId}, checking Replicate for final status", Sid(userId));
             }
         }
 
@@ -804,7 +826,7 @@ public class ReplicateController : ControllerBase
         }
         return Ok(new { success = true, data = result, error = (object?)null });
     }
-    
+
     /// <summary>
     /// Checks if a model is available on Replicate
     /// </summary>
@@ -915,7 +937,7 @@ public class ReplicateController : ControllerBase
             var fluxKontextProModelId = _configuration["Replicate:FluxKontextProModelId"];
             if (string.IsNullOrEmpty(fluxKontextProModelId))
             {
-                _logger.LogError("FluxKontextProModelId configuration is missing for user {UserId}", userId);
+                _logger.LogError("FluxKontextProModelId configuration is missing for user {UserId}", Sid(userId));
                 return StatusCode(500, new
                 {
                     success = false,
@@ -930,7 +952,8 @@ public class ReplicateController : ControllerBase
             // Convert image URL to external API format before passing to Replicate
             var externalImageUrl = ConvertToExternalApiUrl(dto.ImageUrl);
             _logger.LogInformation("Converted image URL from {OriginalUrl} to {ExternalUrl} for Replicate API",
-                dto.ImageUrl, externalImageUrl);
+                LoggingSanitizer.Sanitize(dto.ImageUrl),
+                LoggingSanitizer.Sanitize(externalImageUrl));
 
             // Enhance the uploaded photo
             var result = await _replicateApiClient.EnhancePhotoAsync(userId, externalImageUrl, dto.EnhancementType ?? "professional");
@@ -939,7 +962,7 @@ public class ReplicateController : ControllerBase
             var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "photo_enhancement");
             if (!creditConsumed)
             {
-                _logger.LogError("Successfully created Replicate enhancement but failed to consume credits for user {UserId}", userId);
+                _logger.LogError("Successfully created Replicate enhancement but failed to consume credits for user {UserId}", Sid(userId));
                 // Note: In this case, the Replicate enhancement is already running but we couldn't charge credits
                 // This is better than charging credits for failed enhancement requests
             }
@@ -960,7 +983,7 @@ public class ReplicateController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            _logger.LogError(ex, "Invalid configuration or parameters for photo enhancement for user {UserId}", userId);
+            _logger.LogError(ex, "Invalid configuration or parameters for photo enhancement for user {UserId}", Sid(userId));
             return BadRequest(new
             {
                 success = false,
@@ -973,7 +996,7 @@ public class ReplicateController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogError(ex, "Service unavailable for photo enhancement for user {UserId}", userId);
+            _logger.LogError(ex, "Service unavailable for photo enhancement for user {UserId}", Sid(userId));
             return StatusCode(503, new
             {
                 success = false,
@@ -986,7 +1009,7 @@ public class ReplicateController : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
-            _logger.LogError(ex, "Replicate authentication failed during photo enhancement for user {UserId}", userId);
+            _logger.LogError(ex, "Replicate authentication failed during photo enhancement for user {UserId}", Sid(userId));
             return StatusCode(401, new
             {
                 success = false,
@@ -999,7 +1022,7 @@ public class ReplicateController : ControllerBase
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "Network error during photo enhancement for user {UserId}", userId);
+            _logger.LogError(ex, "Network error during photo enhancement for user {UserId}", Sid(userId));
             return StatusCode(502, new
             {
                 success = false,
@@ -1012,7 +1035,7 @@ public class ReplicateController : ControllerBase
         }
         catch (TaskCanceledException ex)
         {
-            _logger.LogError(ex, "Request timeout during photo enhancement for user {UserId}", userId);
+            _logger.LogError(ex, "Request timeout during photo enhancement for user {UserId}", Sid(userId));
             return StatusCode(408, new
             {
                 success = false,
@@ -1025,7 +1048,7 @@ public class ReplicateController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error during photo enhancement for user {UserId}: {ErrorMessage}", userId, ex.Message);
+            _logger.LogError(ex, "Unexpected error during photo enhancement for user {UserId}: {ErrorMessage}", Sid(userId), S(ex.Message));
             return StatusCode(500, new
             {
                 success = false,
@@ -1066,7 +1089,7 @@ public class ReplicateController : ControllerBase
                     return $"{appBaseUrl.TrimEnd('/')}{relativePath}";
                 }
 
-                _logger.LogWarning("No ExternalApiBaseUrl configured and AppBaseUrl is not HTTPS - external APIs may not be able to access: {Url}", originalUrl);
+                _logger.LogWarning("No ExternalApiBaseUrl configured and AppBaseUrl is not HTTPS - external APIs may not be able to access: {Url}", S(originalUrl));
             }
             return originalUrl;
         }
@@ -1087,7 +1110,7 @@ public class ReplicateController : ControllerBase
                 return $"{appBaseUrl.TrimEnd('/')}{originalUrl}";
             }
 
-            _logger.LogWarning("No ExternalApiBaseUrl configured and AppBaseUrl is not HTTPS - external APIs may not be able to access: {Url}", originalUrl);
+            _logger.LogWarning("No ExternalApiBaseUrl configured and AppBaseUrl is not HTTPS - external APIs may not be able to access: {Url}", S(originalUrl));
         }
 
         return originalUrl;
@@ -1221,7 +1244,7 @@ public class ReplicateController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during Replicate health check for user {UserId}", userId);
+            _logger.LogError(ex, "Error during Replicate health check for user {UserId}", Sid(userId));
             return StatusCode(500, new
             {
                 success = false,
@@ -1237,7 +1260,7 @@ public class ReplicateController : ControllerBase
     /// <summary>
     /// Validates and retrieves trained model from database as single source of truth
     /// </summary>
-    private async Task<(bool Success, ModelCreationRequest? Model, string? ErrorCode, string? ErrorMessage)> 
+    private async Task<(bool Success, ModelCreationRequest? Model, string? ErrorCode, string? ErrorMessage)>
         ValidateTrainedModelAsync(string userId)
     {
         // Get user's trained model from database
@@ -1253,13 +1276,13 @@ public class ReplicateController : ControllerBase
 
         if (string.IsNullOrEmpty(trainedModel.ReplicateModelId))
         {
-            _logger.LogError("User {UserId} has trained model without ReplicateModelId", userId);
+            _logger.LogError("User {UserId} has trained model without ReplicateModelId", Sid(userId));
             return (false, null, "IncompleteModel", "Your trained model data is incomplete. Please contact support or retrain your model.");
         }
 
         if (string.IsNullOrEmpty(trainedModel.TrainedModelVersion))
         {
-            _logger.LogError("User {UserId} has trained model without TrainedModelVersion", userId);
+            _logger.LogError("User {UserId} has trained model without TrainedModelVersion", Sid(userId));
             return (false, null, "IncompleteModel", "Your trained model data is incomplete. Please contact support or retrain your model.");
         }
 

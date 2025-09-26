@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using AI.ProfilePhotoMaker.API.Configuration;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services.Health;
 // using AI.ProfilePhotoMaker.API.Services.Monitoring; // Removed monitoring dependency
@@ -25,6 +26,8 @@ public partial class DeploymentValidationService : IDeploymentValidationService
     private readonly ApplicationDbContext _dbContext;
     private readonly ILogger<DeploymentValidationService> _logger;
     private readonly IWebHostEnvironment _environment;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
+    private static string Sl(string? value) => LoggingSanitizer.Sanitize(value, 400);
 
     public DeploymentValidationService(
         IHealthCheckService healthCheckService,
@@ -104,19 +107,19 @@ public partial class DeploymentValidationService : IDeploymentValidationService
             response.Duration = stopwatch.ElapsedMilliseconds;
 
             _logger.LogInformation("Pre-deployment validation completed: {Status} in {Duration}ms",
-                response.Status, response.Duration);
+                S(response.Status), response.Duration);
 
             return response;
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Pre-deployment validation failed");
+            _logger.LogError(ex, "Pre-deployment validation failed: {Message}", S(ex.Message));
 
             response.IsValid = false;
             response.Status = "ValidationError";
             response.Duration = stopwatch.ElapsedMilliseconds;
-            response.Errors.Add($"Validation failed: {ex.Message}");
+            response.Errors.Add($"Validation failed: {S(ex.Message)}");
 
             return response;
         }
@@ -173,19 +176,19 @@ public partial class DeploymentValidationService : IDeploymentValidationService
             response.Duration = stopwatch.ElapsedMilliseconds;
 
             _logger.LogInformation("Post-deployment validation completed: {Status} in {Duration}ms",
-                response.Status, response.Duration);
+                S(response.Status), response.Duration);
 
             return response;
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Post-deployment validation failed");
+            _logger.LogError(ex, "Post-deployment validation failed: {Message}", S(ex.Message));
 
             response.IsValid = false;
             response.Status = "ValidationError";
             response.Duration = stopwatch.ElapsedMilliseconds;
-            response.Errors.Add($"Validation failed: {ex.Message}");
+            response.Errors.Add($"Validation failed: {S(ex.Message)}");
 
             return response;
         }
@@ -233,19 +236,19 @@ public partial class DeploymentValidationService : IDeploymentValidationService
             response.Duration = stopwatch.ElapsedMilliseconds;
 
             _logger.LogInformation("Configuration validation completed: {Status} in {Duration}ms",
-                response.Status, response.Duration);
+                S(response.Status), response.Duration);
 
             return response;
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Configuration validation failed");
+            _logger.LogError(ex, "Configuration validation failed: {Message}", S(ex.Message));
 
             response.IsValid = false;
             response.Status = "ValidationError";
             response.Duration = stopwatch.ElapsedMilliseconds;
-            response.Errors.Add($"Configuration validation failed: {ex.Message}");
+            response.Errors.Add($"Configuration validation failed: {S(ex.Message)}");
 
             return response;
         }
@@ -277,9 +280,11 @@ public partial class DeploymentValidationService : IDeploymentValidationService
             // Get current performance metrics - simplified without monitoring service
             // var currentMetrics = await _performanceMonitoring.GetCurrentMetricsAsync();
             // Use mock data since monitoring service is not available
-            var currentMetrics = new { 
+            var currentMetrics = new
+            {
                 ApiMetrics = new { AverageResponseTime = 200.0, ErrorRate = 1.0, RequestsPerSecond = 50.0 },
-                SystemMetrics = new { 
+                SystemMetrics = new
+                {
                     Memory = new { UsagePercentage = 45.0 },
                     Cpu = new { UsagePercentage = 35.0 }
                 },
@@ -314,19 +319,19 @@ public partial class DeploymentValidationService : IDeploymentValidationService
             response.Duration = stopwatch.ElapsedMilliseconds;
 
             _logger.LogInformation("Performance validation completed: {Status} in {Duration}ms",
-                response.Status, response.Duration);
+                S(response.Status), response.Duration);
 
             return Task.FromResult(response);
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Performance validation failed");
+            _logger.LogError(ex, "Performance validation failed: {Message}", S(ex.Message));
 
             response.IsValid = false;
             response.Status = "ValidationError";
             response.Duration = stopwatch.ElapsedMilliseconds;
-            response.Errors.Add($"Performance validation failed: {ex.Message}");
+            response.Errors.Add($"Performance validation failed: {S(ex.Message)}");
 
             return Task.FromResult(response);
         }
@@ -388,19 +393,19 @@ public partial class DeploymentValidationService : IDeploymentValidationService
             response.Duration = stopwatch.ElapsedMilliseconds;
 
             _logger.LogInformation("Security validation completed: {Status} with {Score} in {Duration}ms",
-                response.Status, response.SecurityScore, response.Duration);
+                S(response.Status), S(response.SecurityScore), response.Duration);
 
             return response;
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Security validation failed");
+            _logger.LogError(ex, "Security validation failed: {Message}", S(ex.Message));
 
             response.IsValid = false;
             response.Status = "ValidationError";
             response.Duration = stopwatch.ElapsedMilliseconds;
-            response.Errors.Add($"Security validation failed: {ex.Message}");
+            response.Errors.Add($"Security validation failed: {S(ex.Message)}");
 
             return response;
         }
@@ -458,19 +463,19 @@ public partial class DeploymentValidationService : IDeploymentValidationService
             response.Duration = stopwatch.ElapsedMilliseconds;
 
             _logger.LogInformation("Azure services validation completed: {Status} in {Duration}ms",
-                response.Status, response.Duration);
+                S(response.Status), response.Duration);
 
             return response;
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Azure services validation failed");
+            _logger.LogError(ex, "Azure services validation failed: {Message}", S(ex.Message));
 
             response.IsValid = false;
             response.Status = "ValidationError";
             response.Duration = stopwatch.ElapsedMilliseconds;
-            response.Errors.Add($"Azure services validation failed: {ex.Message}");
+            response.Errors.Add($"Azure services validation failed: {S(ex.Message)}");
 
             return response;
         }
@@ -530,19 +535,19 @@ public partial class DeploymentValidationService : IDeploymentValidationService
             response.Duration = stopwatch.ElapsedMilliseconds;
 
             _logger.LogInformation("Database validation completed: {Status} in {Duration}ms",
-                response.Status, response.Duration);
+                S(response.Status), response.Duration);
 
             return response;
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Database validation failed");
+            _logger.LogError(ex, "Database validation failed: {Message}", S(ex.Message));
 
             response.IsValid = false;
             response.Status = "ValidationError";
             response.Duration = stopwatch.ElapsedMilliseconds;
-            response.Errors.Add($"Database validation failed: {ex.Message}");
+            response.Errors.Add($"Database validation failed: {S(ex.Message)}");
 
             return response;
         }
@@ -604,19 +609,19 @@ public partial class DeploymentValidationService : IDeploymentValidationService
             response.Duration = stopwatch.ElapsedMilliseconds;
 
             _logger.LogInformation("Regression tests completed: {Status} - {Passed}/{Total} passed in {Duration}ms",
-                response.Status, response.PassedTests, regressionTests.Count, response.Duration);
+                S(response.Status), response.PassedTests, regressionTests.Count, response.Duration);
 
             return response;
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Regression validation failed");
+            _logger.LogError(ex, "Regression validation failed: {Message}", S(ex.Message));
 
             response.IsValid = false;
             response.Status = "ValidationError";
             response.Duration = stopwatch.ElapsedMilliseconds;
-            response.Errors.Add($"Regression validation failed: {ex.Message}");
+            response.Errors.Add($"Regression validation failed: {S(ex.Message)}");
 
             return response;
         }
@@ -689,21 +694,21 @@ public partial class DeploymentValidationService : IDeploymentValidationService
             stopwatch.Stop();
 
             _logger.LogInformation("Deployment readiness calculated: {Score}% ({Level}) in {Duration}ms",
-                response.OverallScore, response.ReadinessLevel, stopwatch.ElapsedMilliseconds);
+                response.OverallScore, S(response.ReadinessLevel), stopwatch.ElapsedMilliseconds);
 
             return response;
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Failed to calculate deployment readiness score");
+            _logger.LogError(ex, "Failed to calculate deployment readiness score: {Message}", S(ex.Message));
 
             return new DeploymentReadinessScoreDto
             {
                 OverallScore = 0,
                 ReadinessLevel = "Error",
                 IsReadyForDeployment = false,
-                BlockingIssues = { $"Readiness calculation failed: {ex.Message}" },
+                BlockingIssues = { $"Readiness calculation failed: {S(ex.Message)}" },
                 CriticalRecommendations = { "Fix readiness calculation errors before deployment" },
                 CalculatedAt = DateTime.UtcNow
             };
@@ -744,7 +749,7 @@ public partial class DeploymentValidationService : IDeploymentValidationService
                 IsValid = false,
                 Description = "Environment and application configuration validation",
                 Duration = stopwatch.ElapsedMilliseconds,
-                Error = ex.Message
+                Error = S(ex.Message)
             };
         }
     }
@@ -783,7 +788,7 @@ public partial class DeploymentValidationService : IDeploymentValidationService
                 IsValid = false,
                 Description = "Security configuration and compliance validation",
                 Duration = stopwatch.ElapsedMilliseconds,
-                Error = ex.Message
+                Error = S(ex.Message)
             };
         }
     }
@@ -822,7 +827,7 @@ public partial class DeploymentValidationService : IDeploymentValidationService
                 IsValid = false,
                 Description = "Database schema, data, and performance validation",
                 Duration = stopwatch.ElapsedMilliseconds,
-                Error = ex.Message
+                Error = S(ex.Message)
             };
         }
     }
@@ -868,7 +873,7 @@ public partial class DeploymentValidationService : IDeploymentValidationService
                 IsValid = false,
                 Description = "Storage service connectivity and configuration validation",
                 Duration = stopwatch.ElapsedMilliseconds,
-                Error = ex.Message
+                Error = S(ex.Message)
             };
         }
     }
@@ -913,7 +918,7 @@ public partial class DeploymentValidationService : IDeploymentValidationService
                 IsValid = false,
                 Description = "External service dependencies validation",
                 Duration = stopwatch.ElapsedMilliseconds,
-                Error = ex.Message
+                Error = S(ex.Message)
             };
         }
     }
@@ -953,7 +958,7 @@ public partial class DeploymentValidationService : IDeploymentValidationService
                 IsValid = false,
                 Description = "Performance baseline and capacity validation",
                 Duration = stopwatch.ElapsedMilliseconds,
-                Error = ex.Message
+                Error = S(ex.Message)
             };
         }
     }
@@ -991,7 +996,7 @@ public partial class DeploymentValidationService : IDeploymentValidationService
                 IsValid = false,
                 Description = "Azure services connectivity and configuration validation",
                 Duration = stopwatch.ElapsedMilliseconds,
-                Error = ex.Message
+                Error = S(ex.Message)
             };
         }
     }

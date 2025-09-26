@@ -1,3 +1,4 @@
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
@@ -12,6 +13,8 @@ namespace AI.ProfilePhotoMaker.API.Hubs;
 public class PredictionHub : Hub
 {
     private readonly ILogger<PredictionHub> _logger;
+    private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
 
     public PredictionHub(ILogger<PredictionHub> logger)
     {
@@ -25,7 +28,7 @@ public class PredictionHub : Hub
         {
             // Join user-specific group for targeted notifications
             await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{userId}");
-            _logger.LogDebug("User {UserId} connected to prediction hub", userId);
+            _logger.LogDebug("User {UserId} connected to prediction hub", Sid(userId));
         }
         await base.OnConnectedAsync();
     }
@@ -36,7 +39,7 @@ public class PredictionHub : Hub
         if (!string.IsNullOrEmpty(userId))
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"user_{userId}");
-            _logger.LogDebug("User {UserId} disconnected from prediction hub", userId);
+            _logger.LogDebug("User {UserId} disconnected from prediction hub", Sid(userId));
         }
         await base.OnDisconnectedAsync(exception);
     }
@@ -47,6 +50,6 @@ public class PredictionHub : Hub
     public async Task SubscribeToPrediction(string predictionId)
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, $"prediction_{predictionId}");
-        _logger.LogDebug("Client subscribed to prediction {PredictionId}", predictionId);
+        _logger.LogDebug("Client subscribed to prediction {PredictionId}", Sid(predictionId));
     }
 }

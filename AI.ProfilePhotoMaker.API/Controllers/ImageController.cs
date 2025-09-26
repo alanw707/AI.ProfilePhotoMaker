@@ -2,6 +2,7 @@ using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using AI.ProfilePhotoMaker.API.Constants;
 using Microsoft.AspNetCore.Authorization;
@@ -26,6 +27,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private readonly IAsyncZipService _asyncZipService;
         private readonly IStorageService _storageService;
         private readonly StoragePathResolver _pathResolver;
+        private static new string S(string? value) => LoggingSanitizer.Sanitize(value);
+        private static new string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
         public ImageController(
             IUserProfileRepository userProfileRepository,
@@ -198,7 +201,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                         await _userProfileRepository.UpdateAsync(profile);
                     if (userId != null && _userContextService != null)
                         await _userContextService.InvalidateUserCacheAsync(userId);
-                    LogInfo($"Removed {orphaned.Count} orphaned image records" + (userId != null ? $" for user {userId}" : " (development cleanup)"));
+                    LogInfo($"Removed {orphaned.Count} orphaned image records" + (userId != null ? $" for user {Sid(userId)}" : " (development cleanup)"));
                 }
 
                 return SuccessResponse(new
@@ -214,7 +217,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
             catch (Exception ex)
             {
-                LogError(ex, "Error reconciling image database", userId);
+                LogError(ex, "Error reconciling image database", Sid(userId));
                 return ErrorResponse("ReconciliationFailed", "Failed to reconcile image database", 500);
             }
         }
@@ -500,11 +503,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                         physicalFileDeleted = await _storageService.DeleteImageAsync(image.ProcessedImageUrl);
                         if (physicalFileDeleted)
                         {
-                            Logger.LogInformation("Deleted generated image from storage: {StoragePath}", image.ProcessedImageUrl);
+                            Logger.LogInformation("Deleted generated image from storage: {StoragePath}", S(image.ProcessedImageUrl));
                         }
                         else
                         {
-                            Logger.LogWarning("Generated image not found in storage: {StoragePath}", image.ProcessedImageUrl);
+                            Logger.LogWarning("Generated image not found in storage: {StoragePath}", S(image.ProcessedImageUrl));
                         }
                     }
                     catch (Exception fileEx)
@@ -523,11 +526,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                         physicalFileDeleted = await _storageService.DeleteImageAsync(image.OriginalImageUrl);
                         if (physicalFileDeleted)
                         {
-                            Logger.LogInformation("Deleted uploaded image from storage: {StoragePath}", image.OriginalImageUrl);
+                            Logger.LogInformation("Deleted uploaded image from storage: {StoragePath}", S(image.OriginalImageUrl));
                         }
                         else
                         {
-                            Logger.LogWarning("Uploaded image not found in storage: {StoragePath}", image.OriginalImageUrl);
+                            Logger.LogWarning("Uploaded image not found in storage: {StoragePath}", S(image.OriginalImageUrl));
                         }
                     }
                     catch (Exception fileEx)
@@ -553,7 +556,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     imageCountBefore, imageCountAfterRemove);
 
                 // Save changes to database with explicit transaction handling
-                Logger.LogInformation("Saving profile changes to database for user {UserId}", userId);
+                Logger.LogInformation("Saving profile changes to database for user {UserId}", Sid(userId));
                 await _userProfileRepository.UpdateAsync(profile);
 
                 // Verify deletion worked by querying directly from database context (bypasses EF tracking)
@@ -959,7 +962,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     return ErrorResponse("FileNotFound", "Training ZIP file not found.", 404);
                 }
 
-                Logger.LogInformation("Deleted training ZIP file {FileName} for user {UserId}", fileName, userId);
+                Logger.LogInformation("Deleted training ZIP file {FileName} for user {UserId}", fileName, Sid(userId));
 
                 return SuccessResponse(new
                 {
@@ -994,11 +997,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 if (deleted)
                 {
-                    Logger.LogInformation("Deleted training ZIP file at {StoragePath} for user {UserId}", trainingZipPath, userId);
+                    Logger.LogInformation("Deleted training ZIP file at {StoragePath} for user {UserId}", S(trainingZipPath), Sid(userId));
                 }
                 else
                 {
-                    Logger.LogInformation("No training ZIP file found at {StoragePath} for user {UserId}", trainingZipPath, userId);
+                    Logger.LogInformation("No training ZIP file found at {StoragePath} for user {UserId}", S(trainingZipPath), Sid(userId));
                 }
 
                 return SuccessResponse(new
@@ -1116,7 +1119,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 var allImages = profile.ProcessedImages.OrderByDescending(i => i.CreatedAt).ToList();
                 var generatedImages = allImages.Where(i => i.IsGenerated).ToList();
-                
+
                 var diagnosticInfo = new
                 {
                     totalImages = allImages.Count,
@@ -1152,7 +1155,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
         }
 
-        
+
 
         /// <summary>
         /// Saves enhanced image from base64 data to storage and creates database record
@@ -1235,12 +1238,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 profile.ProcessedImages.Add(processedImage);
                 await _userProfileRepository.UpdateAsync(profile);
 
-                Logger.LogInformation("Saved enhanced image {FileName} for user {UserId} with type {EnhancementType}", 
+                Logger.LogInformation("Saved enhanced image {FileName} for user {UserId} with type {EnhancementType}",
                     fileName, userId, dto.EnhancementType);
 
                 // Return the saved image URL
                 var publicUrl = _storageService.GetImageUrl(storagePath);
-                
+
                 return SuccessResponse(new
                 {
                     Id = processedImage.Id,

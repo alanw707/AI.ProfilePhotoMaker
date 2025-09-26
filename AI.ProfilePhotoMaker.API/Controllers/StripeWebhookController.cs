@@ -1,5 +1,6 @@
 using System.IO;
 using AI.ProfilePhotoMaker.API.Configuration;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Services.Payments;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,6 +17,7 @@ public class StripeWebhookController : ControllerBase
     private readonly StripeOptions _stripeOptions;
     private readonly IStripeWebhookService _webhookService;
     private readonly ILogger<StripeWebhookController> _logger;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
 
     public StripeWebhookController(IOptions<StripeOptions> stripeOptions, IStripeWebhookService webhookService, ILogger<StripeWebhookController> logger)
     {

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using Microsoft.EntityFrameworkCore;
 using Stripe;
@@ -56,13 +57,15 @@ public class StripeWebhookService : IStripeWebhookService
 
         if (!metadata.TryGetValue("user_id", out var userId) || string.IsNullOrWhiteSpace(userId))
         {
-            _logger.LogWarning("Stripe payment intent {PaymentIntentId} missing user_id metadata", paymentIntent.Id);
+            _logger.LogWarning("Stripe payment intent {PaymentIntentId} missing user_id metadata",
+                LoggingSanitizer.SanitizeId(paymentIntent.Id));
             return;
         }
 
         if (!metadata.TryGetValue("package_id", out var packageIdRaw) || !int.TryParse(packageIdRaw, out var packageId))
         {
-            _logger.LogWarning("Stripe payment intent {PaymentIntentId} missing package_id metadata", paymentIntent.Id);
+            _logger.LogWarning("Stripe payment intent {PaymentIntentId} missing package_id metadata",
+                LoggingSanitizer.SanitizeId(paymentIntent.Id));
             return;
         }
 
@@ -80,19 +83,25 @@ public class StripeWebhookService : IStripeWebhookService
 
         if (transaction == null)
         {
-            _logger.LogWarning("No payment transaction found for payment intent {PaymentIntentId}", paymentIntent.Id);
+            _logger.LogWarning("No payment transaction found for payment intent {PaymentIntentId}",
+                LoggingSanitizer.SanitizeId(paymentIntent.Id));
             return;
         }
 
         if (!string.Equals(transaction.UserId, userId, StringComparison.Ordinal))
         {
-            _logger.LogWarning("Payment transaction {TransactionId} user mismatch. Transaction user {TransactionUserId}, metadata user {MetadataUserId}", transaction.Id, transaction.UserId, userId);
+            _logger.LogWarning("Payment transaction {TransactionId} user mismatch. Transaction user {TransactionUserId}, metadata user {MetadataUserId}",
+                transaction.Id,
+                LoggingSanitizer.SanitizeId(transaction.UserId),
+                LoggingSanitizer.SanitizeId(userId));
             userId = transaction.UserId;
         }
 
         if (transaction.Status is PaymentStatus.Completed or PaymentStatus.Succeeded)
         {
-            _logger.LogInformation("Stripe payment intent {PaymentIntentId} already processed for transaction {TransactionId}", paymentIntent.Id, transaction.Id);
+            _logger.LogInformation("Stripe payment intent {PaymentIntentId} already processed for transaction {TransactionId}",
+                LoggingSanitizer.SanitizeId(paymentIntent.Id),
+                transaction.Id);
         }
         else
         {
@@ -108,11 +117,16 @@ public class StripeWebhookService : IStripeWebhookService
         if (!purchaseResult.Success)
         {
             _logger.LogWarning("Credit purchase not finalized after Stripe webhook for transaction {TransactionId}: Status={Status} Code={Code} Message={Message}",
-                transaction.Id, purchaseResult.Status, purchaseResult.ErrorCode, purchaseResult.ErrorMessage);
+                transaction.Id,
+                purchaseResult.Status,
+                LoggingSanitizer.Sanitize(purchaseResult.ErrorCode),
+                LoggingSanitizer.Sanitize(purchaseResult.ErrorMessage));
         }
         else
         {
-            _logger.LogInformation("Stripe payment intent {PaymentIntentId} processed successfully for transaction {TransactionId}", paymentIntent.Id, transaction.Id);
+            _logger.LogInformation("Stripe payment intent {PaymentIntentId} processed successfully for transaction {TransactionId}",
+                LoggingSanitizer.SanitizeId(paymentIntent.Id),
+                transaction.Id);
         }
     }
 
@@ -131,7 +145,9 @@ public class StripeWebhookService : IStripeWebhookService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        _logger.LogWarning("Stripe payment intent {PaymentIntentId} failed. Transaction {TransactionId} marked as failed", paymentIntent.Id, transaction.Id);
+        _logger.LogWarning("Stripe payment intent {PaymentIntentId} failed. Transaction {TransactionId} marked as failed",
+            LoggingSanitizer.SanitizeId(paymentIntent.Id),
+            transaction.Id);
     }
 
     private async Task HandlePaymentIntentCanceledAsync(string eventId, PaymentIntent paymentIntent, CancellationToken cancellationToken)
@@ -149,7 +165,9 @@ public class StripeWebhookService : IStripeWebhookService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Stripe payment intent {PaymentIntentId} cancelled. Transaction {TransactionId} marked as cancelled", paymentIntent.Id, transaction.Id);
+        _logger.LogInformation("Stripe payment intent {PaymentIntentId} cancelled. Transaction {TransactionId} marked as cancelled",
+            LoggingSanitizer.SanitizeId(paymentIntent.Id),
+            transaction.Id);
     }
 
     private async Task<PaymentTransaction?> FindTransactionAsync(PaymentIntent paymentIntent, CancellationToken cancellationToken)

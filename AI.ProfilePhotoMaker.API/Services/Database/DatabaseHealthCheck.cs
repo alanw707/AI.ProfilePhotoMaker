@@ -1,3 +1,4 @@
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace AI.ProfilePhotoMaker.API.Services.Database;
@@ -9,6 +10,7 @@ public class DatabaseHealthCheck : IHealthCheck
 {
     private readonly IDatabaseProviderService _databaseProvider;
     private readonly ILogger<DatabaseHealthCheck> _logger;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
 
     public DatabaseHealthCheck(IDatabaseProviderService databaseProvider, ILogger<DatabaseHealthCheck> logger)
     {
@@ -41,8 +43,8 @@ public class DatabaseHealthCheck : IHealthCheck
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Database health check failed");
-            return HealthCheckResult.Unhealthy($"Database health check failed: {ex.Message}");
+            _logger.LogError(ex, "Database health check failed: {Message}", S(ex.Message));
+            return HealthCheckResult.Unhealthy($"Database health check failed: {S(ex.Message)}");
         }
     }
 

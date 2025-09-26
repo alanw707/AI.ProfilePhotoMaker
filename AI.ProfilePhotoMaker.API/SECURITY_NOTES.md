@@ -86,3 +86,27 @@ Watch for these log entries indicating security issues:
 - `DiagnosticController is not available in Production environment`
 
 These should **never appear** in Production logs if properly configured.
+
+## Logging Hygiene
+
+- All controllers, middleware, hubs, and services route log arguments through `Infrastructure/Logging/LoggingSanitizer.cs`. Controllers inherit `S(...)` / `Sid(...)` helpers from `BaseController`; services add local helpers when logging values that may originate from users or external systems.
+- Sanitization trims control characters, normalizes empty values to `[redacted]`, and caps length (256 by default, 128 for IDs). Use `S` for general strings and `Sid` for identifiers (user IDs, Stripe IDs, transaction IDs, SQL sources).
+- Never interpolate raw exception messages, URLs, SQL fragments, request payloads, or IDs directly into log templates. Wrap them in `S`/`Sid` before logging—even for debug-level output or dev-only diagnostics.
+- When adding new logging outside controllers:
+  - `using AI.ProfilePhotoMaker.API.Infrastructure.Logging;`
+  - define local helpers: `private static string S(string? value) => LoggingSanitizer.Sanitize(value);`
+  - sanitize *all* dynamic arguments prior to logging.
+- Existing coverage:
+  - Stripe flows (`CreditController`, `StripeWebhookService`, `StripePaymentService`) sanitize IDs and API errors.
+  - Replicate and image processing services sanitize model IDs, URLs, styles.
+  - Deployment/health/storage diagnostics sanitize connection details, dependency names, and exception text.
+- Tests:
+  - Sanitizer behavior: `AI.ProfilePhotoMaker.API.Tests/Infrastructure/Logging/LoggingSanitizerTests.cs`
+  - Stripe regressions: `StripeWebhookServiceTests`, `CreditControllerPaymentConfigTests`
+  - Recommended quick check:
+    ```bash
+    dotnet test AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj \
+      --configuration Release \
+      --filter "LoggingSanitizerTests|StripeWebhookServiceTests|CreditControllerPaymentConfigTests"
+    ```
+- Full regression: `dotnet test AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj --configuration Release`

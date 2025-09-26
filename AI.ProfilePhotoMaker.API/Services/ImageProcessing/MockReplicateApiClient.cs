@@ -1,5 +1,6 @@
 using System.Text.Json;
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Models.Replicate;
@@ -15,6 +16,8 @@ public class MockReplicateApiClient : IReplicateApiClient
     private static readonly Dictionary<string, HashSet<string>> ModelVersions = new();
     private readonly ApplicationDbContext _context;
     private readonly ILogger<MockReplicateApiClient> _logger;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
+    private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
     /// <summary>
     /// For testing purposes - clears all static state
@@ -38,7 +41,7 @@ public class MockReplicateApiClient : IReplicateApiClient
     {
         var full = $"mock/{modelName}";
         CreatedModels.Add(full);
-        
+
         // Initialize with some mock versions for testing cascade deletion
         if (!ModelVersions.ContainsKey(full))
         {
@@ -49,9 +52,9 @@ public class MockReplicateApiClient : IReplicateApiClient
                 $"{full}:version3-{DateTime.UtcNow:yyyyMMdd}"
             };
         }
-        
-        _logger.LogInformation("[Mock] CreateModel => {Model} (tracking {CreatedCount} models, {VersionCount} versions)", 
-            full, CreatedModels.Count, ModelVersions[full].Count);
+
+        _logger.LogInformation("[Mock] CreateModel => {Model} (tracking {CreatedCount} models, {VersionCount} versions)",
+            S(full), CreatedModels.Count, ModelVersions[full].Count);
         return Task.FromResult(full);
     }
 
@@ -99,7 +102,7 @@ public class MockReplicateApiClient : IReplicateApiClient
             Trainings[training.Id!] = tr;
 
             _logger.LogInformation("[Mock] Training {TrainingId} completed with version {Version}",
-                training.Id, tr.Version);
+                Sid(training.Id), S(tr.Version));
         });
 
         return training;
@@ -121,12 +124,12 @@ public class MockReplicateApiClient : IReplicateApiClient
     {
         if (Trainings.TryGetValue(trainingId, out var tr))
         {
-            _logger.LogInformation("[Mock] GetTrainingStatus {TrainingId} => {Status}", trainingId, tr.Status);
+            _logger.LogInformation("[Mock] GetTrainingStatus {TrainingId} => {Status}", Sid(trainingId), S(tr.Status));
             return Task.FromResult(tr);
         }
 
         // Unknown id: return succeeded for backwards compatibility
-        _logger.LogWarning("[Mock] GetTrainingStatus unknown id {TrainingId}, returning succeeded", trainingId);
+        _logger.LogWarning("[Mock] GetTrainingStatus unknown id {TrainingId}, returning succeeded", Sid(trainingId));
         return Task.FromResult(new ReplicateTrainingResult
         {
             Id = trainingId,
@@ -223,7 +226,7 @@ public class MockReplicateApiClient : IReplicateApiClient
     public Task<bool> CheckModelExistsAsync(string modelId)
     {
         bool exists = CreatedModels.Contains(modelId) && !DeletedModels.Contains(modelId);
-        _logger.LogInformation("[Mock] CheckModelExists => {ModelId} exists: {Exists}", modelId, exists);
+        _logger.LogInformation("[Mock] CheckModelExists => {ModelId} exists: {Exists}", S(modelId), exists);
         return Task.FromResult(exists);
     }
 
@@ -232,26 +235,26 @@ public class MockReplicateApiClient : IReplicateApiClient
         // Check if model exists and hasn't been deleted
         if (!CreatedModels.Contains(modelId))
         {
-            _logger.LogWarning("[Mock] DeleteModel => {ModelId} not found in created models", modelId);
+            _logger.LogWarning("[Mock] DeleteModel => {ModelId} not found in created models", S(modelId));
             return Task.FromResult((false, (string?)"Model not found"));
         }
-        
+
         if (DeletedModels.Contains(modelId))
         {
-            _logger.LogWarning("[Mock] DeleteModel => {ModelId} already deleted", modelId);
+            _logger.LogWarning("[Mock] DeleteModel => {ModelId} already deleted", S(modelId));
             return Task.FromResult((false, (string?)"Model already deleted"));
         }
-        
+
         // Check if model has existing versions - simulate Replicate's business rule
         if (ModelVersions.TryGetValue(modelId, out var versions) && versions.Count > 0)
         {
-            _logger.LogWarning("[Mock] DeleteModel => {ModelId} has {VersionCount} existing versions and cannot be deleted", modelId, versions.Count);
+            _logger.LogWarning("[Mock] DeleteModel => {ModelId} has {VersionCount} existing versions and cannot be deleted", S(modelId), versions.Count);
             return Task.FromResult((false, (string?)"This model has existing versions and cannot be deleted"));
         }
-        
+
         // Mark as deleted
         DeletedModels.Add(modelId);
-        _logger.LogInformation("[Mock] DeleteModel => {ModelId} successfully deleted ({DeletedCount} total deleted)", modelId, DeletedModels.Count);
+        _logger.LogInformation("[Mock] DeleteModel => {ModelId} successfully deleted ({DeletedCount} total deleted)", S(modelId), DeletedModels.Count);
         return Task.FromResult((true, (string?)null));
     }
 
@@ -291,11 +294,11 @@ public class MockReplicateApiClient : IReplicateApiClient
         if (ModelVersions.TryGetValue(modelId, out var versions))
         {
             var versionList = versions.ToList();
-            _logger.LogInformation("[Mock] GetModelVersions => {ModelId} has {VersionCount} versions", modelId, versionList.Count);
+            _logger.LogInformation("[Mock] GetModelVersions => {ModelId} has {VersionCount} versions", S(modelId), versionList.Count);
             return Task.FromResult(versionList);
         }
 
-        _logger.LogInformation("[Mock] GetModelVersions => {ModelId} has no versions", modelId);
+        _logger.LogInformation("[Mock] GetModelVersions => {ModelId} has no versions", S(modelId));
         return Task.FromResult(new List<string>());
     }
 
@@ -303,19 +306,19 @@ public class MockReplicateApiClient : IReplicateApiClient
     {
         if (!ModelVersions.TryGetValue(modelId, out var versions))
         {
-            _logger.LogWarning("[Mock] DeleteModelVersion => {ModelId} not found", modelId);
+            _logger.LogWarning("[Mock] DeleteModelVersion => {ModelId} not found", S(modelId));
             return Task.FromResult((false, (string?)"Model not found"));
         }
 
         if (!versions.Contains(versionId))
         {
-            _logger.LogWarning("[Mock] DeleteModelVersion => {VersionId} not found in {ModelId}", versionId, modelId);
+            _logger.LogWarning("[Mock] DeleteModelVersion => {VersionId} not found in {ModelId}", S(versionId), S(modelId));
             return Task.FromResult((false, (string?)"Version not found"));
         }
 
         versions.Remove(versionId);
-        _logger.LogInformation("[Mock] DeleteModelVersion => {VersionId} deleted from {ModelId} ({RemainingVersions} versions remaining)", 
-            versionId, modelId, versions.Count);
+        _logger.LogInformation("[Mock] DeleteModelVersion => {VersionId} deleted from {ModelId} ({RemainingVersions} versions remaining)",
+            S(versionId), S(modelId), versions.Count);
         return Task.FromResult((true, (string?)null));
     }
 

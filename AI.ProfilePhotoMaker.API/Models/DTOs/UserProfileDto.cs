@@ -68,7 +68,7 @@ public class SaveEnhancedImageDto
 {
     [Required]
     public string Base64ImageData { get; set; } = string.Empty;
-    
+
     [StringLength(20)]
     public string? EnhancementType { get; set; } = "professional";
 }

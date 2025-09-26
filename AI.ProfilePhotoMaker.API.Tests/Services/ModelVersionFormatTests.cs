@@ -21,18 +21,18 @@ public class ModelVersionFormatTests
     public void ValidateModelVersionFormat_ValidFormats_ShouldPass(string modelVersion)
     {
         // Act & Assert
-        modelVersion.Should().MatchRegex(ValidModelVersionPattern, 
+        modelVersion.Should().MatchRegex(ValidModelVersionPattern,
             "model version should follow format: alanw707/modelId:versionHash");
-        
+
         var parts = modelVersion.Split(':');
         parts.Should().HaveCount(2, "version should have exactly one colon separator");
-        
+
         var modelPart = parts[0];
         var versionHash = parts[1];
-        
-        modelPart.Should().StartWith($"{ExpectedOwner}/", 
+
+        modelPart.Should().StartWith($"{ExpectedOwner}/",
             "model should be owned by {0}", ExpectedOwner);
-        
+
         versionHash.Should().MatchRegex(ValidVersionHashPattern,
             "version hash should be a 64-character hexadecimal string");
         versionHash.Should().HaveLength(64, "version hash should be exactly 64 characters");
@@ -50,7 +50,7 @@ public class ModelVersionFormatTests
     public void ValidateModelVersionFormat_InvalidFormats_ShouldFail(string modelVersion)
     {
         // Act & Assert
-        modelVersion.Should().NotMatchRegex(ValidModelVersionPattern, 
+        modelVersion.Should().NotMatchRegex(ValidModelVersionPattern,
             "invalid format should not match the required pattern");
     }
 
@@ -59,14 +59,14 @@ public class ModelVersionFormatTests
     {
         // Arrange
         const string testModelVersion = "alanw707/user-12345-20240815123456:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
-        
+
         // Act
         var parts = testModelVersion.Split(':');
         var modelIdParts = parts[0].Split('/');
         var owner = modelIdParts[0];
         var modelName = modelIdParts[1];
         var versionHash = parts[1];
-        
+
         // Assert
         owner.Should().Be("alanw707");
         modelName.Should().Be("user-12345-20240815123456");
@@ -84,7 +84,7 @@ public class ModelVersionFormatTests
             UserId = "test-user",
             Style = "professional"
         };
-        
+
         // Act & Assert
         dto.TrainedModelVersion.Should().MatchRegex(ValidModelVersionPattern);
     }
@@ -99,7 +99,7 @@ public class ModelVersionFormatTests
             UserId = "test-user",
             Styles = new List<string> { "professional", "casual" }
         };
-        
+
         // Act & Assert
         dto.TrainedModelVersion.Should().MatchRegex(ValidModelVersionPattern);
     }
@@ -136,14 +136,14 @@ public class ModelVersionFormatTests
 
     [Theory]
     [InlineData("alanw707/user-test:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", "alanw707", "user-test", "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")]
-    [InlineData("alanw707/user-12345-20240815:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 
+    [InlineData("alanw707/user-12345-20240815:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
                 "alanw707", "user-12345-20240815", "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")]
     public void ParseModelVersion_ValidInputs_ShouldReturnCorrectComponents(
         string input, string expectedOwner, string expectedModel, string expectedHash)
     {
         // Act
         var (owner, modelName, versionHash) = ParseModelVersion(input);
-        
+
         // Assert
         owner.Should().Be(expectedOwner);
         modelName.Should().Be(expectedModel);
@@ -160,7 +160,7 @@ public class ModelVersionFormatTests
     {
         // Act
         var (owner, modelName, versionHash) = ParseModelVersion(input);
-        
+
         // Assert
         owner.Should().BeNull();
         modelName.Should().BeNull();
@@ -175,14 +175,14 @@ public class ModelVersionFormatTests
     {
         // This test verifies the version parameter passed to GenerateImagesAsync
         // follows the expected format before being sent to Replicate API
-        
+
         // Arrange
         const string validVersion = "alanw707/user-test-model:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
-        
+
         // Act & Assert
-        validVersion.Should().MatchRegex(ValidModelVersionPattern, 
+        validVersion.Should().MatchRegex(ValidModelVersionPattern,
             "version passed to ReplicateApiClient should be in correct format");
-            
+
         // The version should be used directly in the API request:
         // version = trainedModelVersion // Expected format: "alanw707/modelId:versionHash" 
     }
@@ -194,10 +194,10 @@ public class ModelVersionFormatTests
         const string correctFormat = "alanw707/user-12345-model:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
         const string incorrectFormat1 = "user-12345-model:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"; // Missing owner
         const string incorrectFormat2 = "alanw707/user-12345-model"; // Missing version hash
-        
+
         // Correct format should pass
         correctFormat.Should().MatchRegex(ValidModelVersionPattern);
-        
+
         // Incorrect formats should fail  
         incorrectFormat1.Should().NotMatchRegex(ValidModelVersionPattern);
         incorrectFormat2.Should().NotMatchRegex(ValidModelVersionPattern);
@@ -211,7 +211,7 @@ public class ModelVersionFormatTests
 public static class ModelVersionValidationExtensions
 {
     private const string ValidModelVersionPattern = @"^alanw707\/[\w-]+:[a-fA-F0-9]{64}$";
-    
+
     public static bool IsValidReplicateModelVersion(this string? modelVersion)
     {
         if (string.IsNullOrWhiteSpace(modelVersion))
@@ -219,13 +219,13 @@ public static class ModelVersionValidationExtensions
 
         return Regex.IsMatch(modelVersion, ValidModelVersionPattern);
     }
-    
+
     public static void ValidateReplicateModelVersion(this string? modelVersion, string parameterName = "modelVersion")
     {
         if (!modelVersion.IsValidReplicateModelVersion())
         {
             throw new ArgumentException(
-                $"Model version must follow format 'alanw707/modelId:versionHash' but was '{modelVersion}'", 
+                $"Model version must follow format 'alanw707/modelId:versionHash' but was '{modelVersion}'",
                 parameterName);
         }
     }

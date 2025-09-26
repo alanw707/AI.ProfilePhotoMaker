@@ -199,7 +199,10 @@ public class CreditController : BaseController
         }
         catch (InvalidOperationException invalidOperationException)
         {
-            Logger.LogWarning("Payment intent validation failed: {Message} (PackageId: {PackageId})", invalidOperationException.Message, dto.PackageId);
+            Logger.LogWarning(
+                "Payment intent validation failed: {Message} (PackageId: {PackageId})",
+                S(invalidOperationException.Message),
+                Sid(dto.PackageId.ToString()));
             return ErrorResponse("PaymentSetupError", invalidOperationException.Message, 400);
         }
         catch (Exception ex)

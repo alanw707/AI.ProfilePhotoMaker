@@ -41,7 +41,7 @@ public partial class DeploymentValidationService
                 IsValid = false,
                 Description = "Basic application health status",
                 Duration = stopwatch.ElapsedMilliseconds,
-                Error = ex.Message
+                Error = S(ex.Message)
             };
         }
     }
@@ -71,7 +71,7 @@ public partial class DeploymentValidationService
                 },
                 Warnings = dependencies
                     .Where(d => d.Value.Status != "Healthy")
-                    .Select(d => $"{d.Key}: {d.Value.Error}")
+                    .Select(d => $"{d.Key}: {S(d.Value.Error)}")
                     .ToList()
             };
         }
@@ -84,7 +84,7 @@ public partial class DeploymentValidationService
                 IsValid = false,
                 Description = "External service connectivity validation",
                 Duration = stopwatch.ElapsedMilliseconds,
-                Error = ex.Message
+                Error = S(ex.Message)
             };
         }
     }
@@ -115,7 +115,7 @@ public partial class DeploymentValidationService
                 },
                 Warnings = testResults
                     .Where(t => !t.Passed)
-                    .Select(t => $"{t.TestName}: {t.ErrorMessage}")
+                    .Select(t => $"{t.TestName}: {S(t.ErrorMessage)}")
                     .ToList()
             };
         }
@@ -128,7 +128,7 @@ public partial class DeploymentValidationService
                 IsValid = false,
                 Description = "Core functionality validation",
                 Duration = stopwatch.ElapsedMilliseconds,
-                Error = ex.Message
+                Error = S(ex.Message)
             };
         }
     }
@@ -167,7 +167,7 @@ public partial class DeploymentValidationService
                 IsValid = false,
                 Description = "Monitoring and metrics collection validation",
                 Duration = stopwatch.ElapsedMilliseconds,
-                Error = ex.Message
+                Error = S(ex.Message)
             });
         }
     }
@@ -217,7 +217,7 @@ public partial class DeploymentValidationService
                 IsValid = false,
                 Description = "Runtime security configuration validation",
                 Duration = stopwatch.ElapsedMilliseconds,
-                Error = ex.Message
+                Error = S(ex.Message)
             });
         }
     }

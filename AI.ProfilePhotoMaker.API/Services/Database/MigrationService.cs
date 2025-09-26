@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using Microsoft.EntityFrameworkCore;
 
 namespace AI.ProfilePhotoMaker.API.Services.Database;
@@ -13,6 +14,8 @@ public class MigrationService : IMigrationService
     private readonly IDatabaseProviderService _databaseProvider;
     private readonly ILogger<MigrationService> _logger;
     private readonly IWebHostEnvironment _environment;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
+    private static string Sl(string? value) => LoggingSanitizer.Sanitize(value, 400);
 
     public MigrationService(
         ApplicationDbContext context,
@@ -55,7 +58,7 @@ public class MigrationService : IMigrationService
             }
 
             _logger.LogInformation("Applying {Count} pending migrations: {Migrations}",
-                pendingMigrations.Count(), string.Join(", ", pendingMigrations));
+                pendingMigrations.Count(), Sl(string.Join(", ", pendingMigrations)));
 
             // Apply migrations with conflict resolution
             await ApplyMigrationsWithConflictResolutionAsync(pendingMigrations);
@@ -66,13 +69,13 @@ public class MigrationService : IMigrationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Migration failed: {Message}", ex.Message);
-            result.Errors.Add($"Migration failed: {ex.Message}");
+            _logger.LogError(ex, "Migration failed: {Message}", S(ex.Message));
+            result.Errors.Add($"Migration failed: {S(ex.Message)}");
 
             // Add inner exception details
             if (ex.InnerException != null)
             {
-                result.Errors.Add($"Inner exception: {ex.InnerException.Message}");
+                result.Errors.Add($"Inner exception: {S(ex.InnerException.Message)}");
             }
         }
         finally
@@ -113,7 +116,7 @@ public class MigrationService : IMigrationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get migration status: {Message}", ex.Message);
+            _logger.LogError(ex, "Failed to get migration status: {Message}", S(ex.Message));
         }
 
         return status;
@@ -160,8 +163,8 @@ public class MigrationService : IMigrationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Database validation failed: {Message}", ex.Message);
-            result.Issues.Add($"Validation error: {ex.Message}");
+            _logger.LogError(ex, "Database validation failed: {Message}", S(ex.Message));
+            result.Issues.Add($"Validation error: {S(ex.Message)}");
         }
 
         return result;
@@ -175,7 +178,7 @@ public class MigrationService : IMigrationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get applied migrations");
+            _logger.LogError(ex, "Failed to get applied migrations: {Message}", S(ex.Message));
             return Enumerable.Empty<string>();
         }
     }
@@ -188,7 +191,7 @@ public class MigrationService : IMigrationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get pending migrations");
+            _logger.LogError(ex, "Failed to get pending migrations: {Message}", S(ex.Message));
             return Enumerable.Empty<string>();
         }
     }
@@ -202,7 +205,7 @@ public class MigrationService : IMigrationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to ensure database creation");
+            _logger.LogError(ex, "Failed to ensure database creation: {Message}", S(ex.Message));
             return false;
         }
     }
@@ -257,8 +260,8 @@ public class MigrationService : IMigrationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to assess database health");
-            health.Errors.Add($"Health check failed: {ex.Message}");
+            _logger.LogError(ex, "Failed to assess database health: {Message}", S(ex.Message));
+            health.Errors.Add($"Health check failed: {S(ex.Message)}");
         }
 
         return health;
@@ -266,6 +269,7 @@ public class MigrationService : IMigrationService
 
     private async Task ValidateTable(string tableName, ValidationResult result, int minExpectedCount = 0)
     {
+        var cleanTableName = S(tableName);
         try
         {
             var count = tableName switch
@@ -285,18 +289,18 @@ public class MigrationService : IMigrationService
 
                 if (count < minExpectedCount)
                 {
-                    result.Issues.Add($"Table {tableName} has {count} records, expected at least {minExpectedCount}");
+                    result.Issues.Add($"Table {cleanTableName} has {count} records, expected at least {minExpectedCount}");
                 }
             }
             else
             {
-                result.Issues.Add($"Could not validate table {tableName}");
+                result.Issues.Add($"Could not validate table {cleanTableName}");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to validate table {TableName}", tableName);
-            result.Issues.Add($"Failed to access table {tableName}: {ex.Message}");
+            _logger.LogWarning(ex, "Failed to validate table {TableName}", cleanTableName);
+            result.Issues.Add($"Failed to access table {cleanTableName}: {S(ex.Message)}");
         }
     }
 

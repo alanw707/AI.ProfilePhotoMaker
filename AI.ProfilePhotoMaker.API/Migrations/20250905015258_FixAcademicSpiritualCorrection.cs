@@ -19,8 +19,8 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 keyColumn: "Id",
                 keyValue: 20,
                 columns: new[] { "Name", "Description", "PromptTemplate", "NegativePromptTemplate", "UpdatedAt" },
-                values: new object[] { 
-                    "academic", 
+                values: new object[] {
+                    "academic",
                     "Academic professional style",
                     "academic professional portrait, scholarly appearance, intellectual style, educational setting",
                     "unprofessional, casual, distracting elements",
@@ -46,8 +46,8 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 keyColumn: "Id",
                 keyValue: 20,
                 columns: new[] { "Name", "Description", "PromptTemplate", "NegativePromptTemplate", "UpdatedAt" },
-                values: new object[] { 
-                    "digital-native", 
+                values: new object[] {
+                    "digital-native",
                     "Modern tech creator portrait",
                     "{subject}, professional portrait of {gender} {ethnicity}, modern digital creator aesthetic, subtle RGB accent lighting, clean tech-inspired background, confident creative expression, contemporary casual style, soft purple and cyan color accents, approachable online personality",
                     "outdated technology, old fashioned, formal business, analog aesthetic, traditional office",

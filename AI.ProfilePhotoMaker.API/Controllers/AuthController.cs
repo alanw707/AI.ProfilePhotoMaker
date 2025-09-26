@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services.Authentication;
@@ -15,8 +16,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-        public class AuthController : ControllerBase
-        {
+    public class AuthController : ControllerBase
+    {
         private readonly IAuthService _authService;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
@@ -25,6 +26,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private readonly HttpClient _httpClient;
         private readonly IWebHostEnvironment _environment;
         private readonly ILogger<AuthController> _logger;
+        private static string S(string? value) => LoggingSanitizer.Sanitize(value);
+        private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
         public AuthController(
             IAuthService authService,
@@ -135,7 +138,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             catch (Exception ex)
             {
                 // Environment-aware session error handling
-                _logger.LogWarning(ex, "Session initialization failed in OAuth URL generation: {ErrorMessage}", ex.Message);
+                _logger.LogWarning(ex, "Session initialization failed in OAuth URL generation: {ErrorMessage}", S(ex.Message));
 
                 if (_environment.IsDevelopment())
                 {
@@ -193,7 +196,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             catch (Exception ex)
             {
                 // Environment-aware session error handling
-                _logger.LogWarning(ex, "Session initialization failed in external login: {ErrorMessage}", ex.Message);
+                _logger.LogWarning(ex, "Session initialization failed in external login: {ErrorMessage}", S(ex.Message));
 
                 if (_environment.IsDevelopment())
                 {
@@ -299,7 +302,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 if (state != sessionState)
                 {
                     _logger.LogError("OAuth state mismatch - potential CSRF attack. Expected: {ExpectedState}, Received: {ReceivedState}",
-                        sessionState, state);
+                        S(sessionState), S(state));
                     return Redirect($"{frontendBaseUrl}/auth/login?error=invalid_state");
                 }
 
@@ -674,7 +677,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             // Default to localhost for development
             return "http://localhost:4200";
         }
-        
+
         [HttpPost("set-cookie")]
         [ApiExplorerSettings(IgnoreApi = true)]
         public IActionResult SetCookie([FromBody] SetCookieRequest payload)

@@ -44,13 +44,13 @@ public class ModelDeletionRegressionTests : IDisposable
         // Create a proper configuration mock with required settings
         var configurationMock = new Mock<IConfiguration>();
         configurationMock.Setup(x => x["Replicate:ApiToken"]).Returns("test-token");
-        
+
         // Create mock webhook resolver
         var webhookResolver = new Mock<IWebhookUrlResolver>();
-        
+
         // Create HttpClient with our mocked handler
         var httpClient = new HttpClient(_httpHandlerMock.Object);
-        
+
         return new ReplicateApiClient(
             httpClient,
             configurationMock.Object,
@@ -68,14 +68,14 @@ public class ModelDeletionRegressionTests : IDisposable
     {
         // Arrange
         var modelId = "test/model-with-empty-versions";
-        
+
         // Mock the model exists check (returns 200)
         _httpHandlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => 
-                    req.Method == HttpMethod.Get && 
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Get &&
                     req.RequestUri != null &&
                     req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
                     !req.RequestUri.AbsolutePath.Contains("/versions")),
@@ -85,13 +85,13 @@ public class ModelDeletionRegressionTests : IDisposable
         // NEW: Mock the proactive versions fetch (returns empty response)
         var versionsResponse = new HttpResponseMessage(HttpStatusCode.OK);
         versionsResponse.Content = new StringContent("", Encoding.UTF8, "application/json");
-        
+
         _httpHandlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => 
-                    req.Method == HttpMethod.Get && 
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Get &&
                     req.RequestUri != null &&
                     req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}/versions")),
                 ItExpr.IsAny<CancellationToken>())
@@ -102,8 +102,8 @@ public class ModelDeletionRegressionTests : IDisposable
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => 
-                    req.Method == HttpMethod.Delete && 
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Delete &&
                     req.RequestUri != null &&
                     req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
                     !req.RequestUri.AbsolutePath.Contains("/versions")),
@@ -144,8 +144,8 @@ public class ModelDeletionRegressionTests : IDisposable
         _httpHandlerMock.Protected().Verify(
             "SendAsync",
             Times.Once(),
-            ItExpr.Is<HttpRequestMessage>(req => 
-                req.Method == HttpMethod.Get && 
+            ItExpr.Is<HttpRequestMessage>(req =>
+                req.Method == HttpMethod.Get &&
                 req.RequestUri!.ToString().EndsWith($"models/{modelId}/versions")),
             ItExpr.IsAny<CancellationToken>());
     }
@@ -159,14 +159,14 @@ public class ModelDeletionRegressionTests : IDisposable
     {
         // Arrange
         var modelId = "test/model-malformed-versions";
-        
+
         // Mock the model exists check (returns 200)
         _httpHandlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => 
-                    req.Method == HttpMethod.Get && 
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Get &&
                     req.RequestUri != null &&
                     req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
                     !req.RequestUri.AbsolutePath.Contains("/versions")),
@@ -176,13 +176,13 @@ public class ModelDeletionRegressionTests : IDisposable
         // NEW: Mock versions endpoint returning malformed JSON
         var versionsResponse = new HttpResponseMessage(HttpStatusCode.OK);
         versionsResponse.Content = new StringContent("{ invalid json content", Encoding.UTF8, "application/json");
-        
+
         _httpHandlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => 
-                    req.Method == HttpMethod.Get && 
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Get &&
                     req.RequestUri != null &&
                     req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}/versions")),
                 ItExpr.IsAny<CancellationToken>())
@@ -193,8 +193,8 @@ public class ModelDeletionRegressionTests : IDisposable
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => 
-                    req.Method == HttpMethod.Delete && 
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Delete &&
                     req.RequestUri != null &&
                     req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
                     !req.RequestUri.AbsolutePath.Contains("/versions")),
@@ -231,14 +231,14 @@ public class ModelDeletionRegressionTests : IDisposable
     {
         // Arrange
         var modelId = "test/model-no-versions";
-        
+
         // Mock the model exists check (returns 200)
         _httpHandlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => 
-                    req.Method == HttpMethod.Get && 
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Get &&
                     req.RequestUri != null &&
                     req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
                     !req.RequestUri.AbsolutePath.Contains("/versions")),
@@ -249,15 +249,15 @@ public class ModelDeletionRegressionTests : IDisposable
         var versionsResponse = new HttpResponseMessage(HttpStatusCode.OK);
         var versionsData = new { results = new object[0] };
         versionsResponse.Content = new StringContent(
-            JsonSerializer.Serialize(versionsData), 
+            JsonSerializer.Serialize(versionsData),
             Encoding.UTF8, "application/json");
-        
+
         _httpHandlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => 
-                    req.Method == HttpMethod.Get && 
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Get &&
                     req.RequestUri != null &&
                     req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}/versions")),
                 ItExpr.IsAny<CancellationToken>())
@@ -268,8 +268,8 @@ public class ModelDeletionRegressionTests : IDisposable
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => 
-                    req.Method == HttpMethod.Delete && 
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Delete &&
                     req.RequestUri != null &&
                     req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
                     !req.RequestUri.AbsolutePath.Contains("/versions")),
@@ -302,14 +302,14 @@ public class ModelDeletionRegressionTests : IDisposable
     {
         // Arrange
         var modelId = "test/model-not-found";
-        
+
         // Mock the model exists check (returns 404)
         _httpHandlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => 
-                    req.Method == HttpMethod.Get && 
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Get &&
                     req.RequestUri != null &&
                     req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
                     !req.RequestUri.AbsolutePath.Contains("/versions")),
@@ -330,8 +330,8 @@ public class ModelDeletionRegressionTests : IDisposable
         _httpHandlerMock.Protected().Verify(
             "SendAsync",
             Times.Never(),
-            ItExpr.Is<HttpRequestMessage>(req => 
-                req.Method == HttpMethod.Get && 
+            ItExpr.Is<HttpRequestMessage>(req =>
+                req.Method == HttpMethod.Get &&
                 req.RequestUri!.ToString().EndsWith($"models/{modelId}/versions")),
             ItExpr.IsAny<CancellationToken>());
     }
@@ -345,14 +345,14 @@ public class ModelDeletionRegressionTests : IDisposable
     {
         // Arrange
         var modelId = "test/model-with-valid-versions";
-        
+
         // Mock the model exists check (returns 200)
         _httpHandlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => 
-                    req.Method == HttpMethod.Get && 
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Get &&
                     req.RequestUri != null &&
                     req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
                     !req.RequestUri.AbsolutePath.Contains("/versions")),
@@ -363,15 +363,15 @@ public class ModelDeletionRegressionTests : IDisposable
         var versionsResponse = new HttpResponseMessage(HttpStatusCode.OK);
         var versionsData = new { results = new[] { new { id = "version1" }, new { id = "version2" } } };
         versionsResponse.Content = new StringContent(
-            JsonSerializer.Serialize(versionsData), 
+            JsonSerializer.Serialize(versionsData),
             Encoding.UTF8, "application/json");
-        
+
         _httpHandlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => 
-                    req.Method == HttpMethod.Get && 
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Get &&
                     req.RequestUri != null &&
                     req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}/versions")),
                 ItExpr.IsAny<CancellationToken>())
@@ -382,8 +382,8 @@ public class ModelDeletionRegressionTests : IDisposable
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => 
-                    req.Method == HttpMethod.Delete && 
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Delete &&
                     req.RequestUri != null &&
                     req.RequestUri.AbsolutePath.Contains($"/models/{modelId}/versions/")),
                 ItExpr.IsAny<CancellationToken>())
@@ -394,8 +394,8 @@ public class ModelDeletionRegressionTests : IDisposable
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => 
-                    req.Method == HttpMethod.Delete && 
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Delete &&
                     req.RequestUri != null &&
                     req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
                     !req.RequestUri.AbsolutePath.Contains("/versions")),
@@ -436,8 +436,8 @@ public class ModelDeletionRegressionTests : IDisposable
         _httpHandlerMock.Protected().Verify(
             "SendAsync",
             Times.Exactly(2),
-            ItExpr.Is<HttpRequestMessage>(req => 
-                req.Method == HttpMethod.Delete && 
+            ItExpr.Is<HttpRequestMessage>(req =>
+                req.Method == HttpMethod.Delete &&
                 req.RequestUri!.ToString().Contains($"models/{modelId}/versions/")),
             ItExpr.IsAny<CancellationToken>());
 
@@ -445,8 +445,8 @@ public class ModelDeletionRegressionTests : IDisposable
         _httpHandlerMock.Protected().Verify(
             "SendAsync",
             Times.Once(),
-            ItExpr.Is<HttpRequestMessage>(req => 
-                req.Method == HttpMethod.Delete && 
+            ItExpr.Is<HttpRequestMessage>(req =>
+                req.Method == HttpMethod.Delete &&
                 req.RequestUri != null &&
                 req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
                 !req.RequestUri.AbsolutePath.Contains("/versions")),
@@ -462,14 +462,14 @@ public class ModelDeletionRegressionTests : IDisposable
     {
         // Arrange
         var modelId = "test/model-version-delete-fails";
-        
+
         // Mock the model exists check (returns 200)
         _httpHandlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => 
-                    req.Method == HttpMethod.Get && 
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Get &&
                     req.RequestUri!.ToString().EndsWith($"models/{modelId}") &&
                     !req.RequestUri.ToString().Contains("versions")),
                 ItExpr.IsAny<CancellationToken>())
@@ -479,15 +479,15 @@ public class ModelDeletionRegressionTests : IDisposable
         var versionsResponse = new HttpResponseMessage(HttpStatusCode.OK);
         var versionsData = new { results = new[] { new { id = "failing-version" } } };
         versionsResponse.Content = new StringContent(
-            JsonSerializer.Serialize(versionsData), 
+            JsonSerializer.Serialize(versionsData),
             Encoding.UTF8, "application/json");
-        
+
         _httpHandlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => 
-                    req.Method == HttpMethod.Get && 
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Get &&
                     req.RequestUri!.ToString().EndsWith($"models/{modelId}/versions")),
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(versionsResponse);
@@ -495,15 +495,15 @@ public class ModelDeletionRegressionTests : IDisposable
         // NEW: Mock version deletion failure (returns 400)
         var versionDeleteError = new HttpResponseMessage(HttpStatusCode.BadRequest);
         versionDeleteError.Content = new StringContent(
-            JsonSerializer.Serialize(new { detail = "Version is still processing" }), 
+            JsonSerializer.Serialize(new { detail = "Version is still processing" }),
             Encoding.UTF8, "application/json");
-        
+
         _httpHandlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => 
-                    req.Method == HttpMethod.Delete && 
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Delete &&
                     req.RequestUri != null &&
                     req.RequestUri.AbsolutePath.Contains($"/models/{modelId}/versions/failing-version")),
                 ItExpr.IsAny<CancellationToken>())
@@ -535,8 +535,8 @@ public class ModelDeletionRegressionTests : IDisposable
         _httpHandlerMock.Protected().Verify(
             "SendAsync",
             Times.Never(),
-            ItExpr.Is<HttpRequestMessage>(req => 
-                req.Method == HttpMethod.Delete && 
+            ItExpr.Is<HttpRequestMessage>(req =>
+                req.Method == HttpMethod.Delete &&
                 req.RequestUri!.ToString().EndsWith($"models/{modelId}") &&
                 !req.RequestUri.ToString().Contains("versions")),
             ItExpr.IsAny<CancellationToken>());
@@ -551,14 +551,14 @@ public class ModelDeletionRegressionTests : IDisposable
     {
         // Arrange
         var modelId = "test/model-delete-fails";
-        
+
         // Mock the model exists check (returns 200)
         _httpHandlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => 
-                    req.Method == HttpMethod.Get && 
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Get &&
                     req.RequestUri!.ToString().EndsWith($"models/{modelId}") &&
                     !req.RequestUri.ToString().Contains("versions")),
                 ItExpr.IsAny<CancellationToken>())
@@ -568,15 +568,15 @@ public class ModelDeletionRegressionTests : IDisposable
         var versionsResponse = new HttpResponseMessage(HttpStatusCode.OK);
         var versionsData = new { results = new object[0] };
         versionsResponse.Content = new StringContent(
-            JsonSerializer.Serialize(versionsData), 
+            JsonSerializer.Serialize(versionsData),
             Encoding.UTF8, "application/json");
-        
+
         _httpHandlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => 
-                    req.Method == HttpMethod.Get && 
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Get &&
                     req.RequestUri!.ToString().EndsWith($"models/{modelId}/versions")),
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(versionsResponse);
@@ -584,13 +584,13 @@ public class ModelDeletionRegressionTests : IDisposable
         // NEW: Mock model deletion failure (unexpected 500 error)
         var modelDeleteError = new HttpResponseMessage(HttpStatusCode.InternalServerError);
         modelDeleteError.Content = new StringContent("Internal server error", Encoding.UTF8, "text/plain");
-        
+
         _httpHandlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(req => 
-                    req.Method == HttpMethod.Delete && 
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Delete &&
                     req.RequestUri != null &&
                     req.RequestUri.AbsolutePath.EndsWith($"/models/{modelId}") &&
                     !req.RequestUri.AbsolutePath.Contains("/versions")),

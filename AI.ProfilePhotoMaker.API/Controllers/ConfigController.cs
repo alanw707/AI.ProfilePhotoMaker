@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 
 namespace AI.ProfilePhotoMaker.API.Controllers;
 
@@ -14,6 +15,8 @@ public class ConfigController : ControllerBase
     private readonly IConfiguration _configuration;
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<ConfigController> _logger;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
+    private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
     public ConfigController(
         IConfiguration configuration,
@@ -103,7 +106,7 @@ public class ConfigController : ControllerBase
             };
 
             _logger.LogInformation("Client configuration requested. Environment: {Environment}, AppBaseUrl: {AppBaseUrl}",
-                environmentName, appBaseUrl);
+                environmentName, S(appBaseUrl));
 
             return Ok(new { success = true, data = clientConfig });
         }
@@ -249,7 +252,7 @@ public class ConfigController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during configuration validation for user {UserId}", userId);
+            _logger.LogError(ex, "Error during configuration validation for user {UserId}", Sid(userId));
             return StatusCode(500, new
             {
                 success = false,

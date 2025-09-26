@@ -19,8 +19,8 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 keyColumn: "Id",
                 keyValue: 1,
                 columns: new[] { "Name", "Description", "PromptTemplate", "NegativePromptTemplate", "UpdatedAt" },
-                values: new object[] { 
-                    "beach-vibes", 
+                values: new object[] {
+                    "beach-vibes",
                     "Sun-kissed vacation mode portrait",
                     "{subject}, professional portrait of {gender} {ethnicity}, subtle beach vacation aesthetic, sun-kissed healthy glow, soft coastal background with blurred ocean hints, warm golden hour lighting, relaxed confident expression, casual summer style, natural beachy hair texture",
                     "winter clothes, cold weather, indoor office, formal business attire, pale skin",
@@ -33,8 +33,8 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 keyColumn: "Id",
                 keyValue: 3,
                 columns: new[] { "Name", "Description", "PromptTemplate", "NegativePromptTemplate", "UpdatedAt" },
-                values: new object[] { 
-                    "fresh", 
+                values: new object[] {
+                    "fresh",
                     "Clean energetic refreshed portrait",
                     "{subject}, professional portrait of {gender} {ethnicity}, fresh clean aesthetic, dewy glowing skin, bright airy background, soft natural lighting, energetic refreshed expression, subtle wet hair effect, spa-like atmosphere, healthy vitality",
                     "tired, exhausted, dull skin, dark shadows, heavy makeup, messy appearance",
@@ -47,8 +47,8 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 keyColumn: "Id",
                 keyValue: 5,
                 columns: new[] { "Name", "Description", "PromptTemplate", "NegativePromptTemplate", "UpdatedAt" },
-                values: new object[] { 
-                    "retro-wave", 
+                values: new object[] {
+                    "retro-wave",
                     "Modern 80s synthwave aesthetic portrait",
                     "{subject}, professional portrait of {gender} {ethnicity}, modern retro aesthetic, subtle 80s inspired lighting, soft neon accent colors pink and blue, urban night background, confident trendy expression, contemporary style with vintage flair, cinematic color grading",
                     "modern minimalist, black and white, corporate, traditional, plain background",
@@ -61,8 +61,8 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 keyColumn: "Id",
                 keyValue: 7,
                 columns: new[] { "Name", "Description", "PromptTemplate", "NegativePromptTemplate", "UpdatedAt" },
-                values: new object[] { 
-                    "night-out", 
+                values: new object[] {
+                    "night-out",
                     "Sophisticated evening portrait",
                     "{subject}, professional portrait of {gender} {ethnicity}, elegant evening aesthetic, warm ambient lighting with bokeh, sophisticated night out look, soft city lights background, confident social expression, subtle glamour, golden hour meets blue hour atmosphere",
                     "casual daywear, bright daylight, morning light, workout clothes, plain appearance",
@@ -75,8 +75,8 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 keyColumn: "Id",
                 keyValue: 20,
                 columns: new[] { "Name", "Description", "PromptTemplate", "NegativePromptTemplate", "UpdatedAt" },
-                values: new object[] { 
-                    "digital-native", 
+                values: new object[] {
+                    "digital-native",
                     "Modern tech creator portrait",
                     "{subject}, professional portrait of {gender} {ethnicity}, modern digital creator aesthetic, subtle RGB accent lighting, clean tech-inspired background, confident creative expression, contemporary casual style, soft purple and cyan color accents, approachable online personality",
                     "outdated technology, old fashioned, formal business, analog aesthetic, traditional office",
@@ -95,8 +95,8 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 keyColumn: "Id",
                 keyValue: 1,
                 columns: new[] { "Name", "Description", "PromptTemplate", "NegativePromptTemplate", "UpdatedAt" },
-                values: new object[] { 
-                    "corporate", 
+                values: new object[] {
+                    "corporate",
                     "Professional corporate headshot style",
                     "professional corporate headshot, business attire, clean background, confident expression, high-quality photography",
                     "casual clothes, blurred, low quality, unprofessional",
@@ -109,8 +109,8 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 keyColumn: "Id",
                 keyValue: 3,
                 columns: new[] { "Name", "Description", "PromptTemplate", "NegativePromptTemplate", "UpdatedAt" },
-                values: new object[] { 
-                    "consultant", 
+                values: new object[] {
+                    "consultant",
                     "Professional consultant style",
                     "professional consultant portrait, business consulting style, smart casual attire, approachable yet professional",
                     "too casual, unprofessional, blurred",
@@ -123,8 +123,8 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 keyColumn: "Id",
                 keyValue: 5,
                 columns: new[] { "Name", "Description", "PromptTemplate", "NegativePromptTemplate", "UpdatedAt" },
-                values: new object[] { 
-                    "legal", 
+                values: new object[] {
+                    "legal",
                     "Legal professional portrait",
                     "legal professional portrait, formal business attire, trustworthy appearance, professional law office style",
                     "casual, informal, unprofessional",
@@ -137,8 +137,8 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 keyColumn: "Id",
                 keyValue: 7,
                 columns: new[] { "Name", "Description", "PromptTemplate", "NegativePromptTemplate", "UpdatedAt" },
-                values: new object[] { 
-                    "author", 
+                values: new object[] {
+                    "author",
                     "Author and writer portrait",
                     "author portrait, writer style, creative professional appearance, literary aesthetic, thoughtful expression",
                     "unprofessional, distracting elements, poor composition",
@@ -151,8 +151,8 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 keyColumn: "Id",
                 keyValue: 20,
                 columns: new[] { "Name", "Description", "PromptTemplate", "NegativePromptTemplate", "UpdatedAt" },
-                values: new object[] { 
-                    "spiritual", 
+                values: new object[] {
+                    "spiritual",
                     "Spiritual wellness style",
                     "spiritual portrait, wellness style, mindful peaceful appearance, holistic health aesthetic",
                     "materialistic look, stressed appearance, conventional business",

@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using SixLabors.ImageSharp;
@@ -22,6 +23,9 @@ public class OpenAIImageGenerationService : IImageProcessingService
     private readonly ILogger<OpenAIImageGenerationService> _logger;
     private readonly IStorageService _storageService;
 
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
+    private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
+
     public OpenAIImageGenerationService(
         HttpClient httpClient,
         IHttpClientFactory httpClientFactory,
@@ -38,7 +42,7 @@ public class OpenAIImageGenerationService : IImageProcessingService
         // Configure HTTP client for OpenAI API
         _openAiClient.BaseAddress = new Uri("https://api.openai.com/v1/");
         _openAiClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        
+
         // Load API key with robust precedence: env var OPENAI_API_KEY, then config OpenAI:ApiKey
         var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY")
                      ?? _configuration["OpenAI:ApiKey"];
@@ -47,7 +51,7 @@ public class OpenAIImageGenerationService : IImageProcessingService
             _logger.LogError("OpenAI API key not configured - OpenAI service cannot be initialized");
             throw new InvalidOperationException("OpenAI API key is required but not configured. Please set OpenAI:ApiKey in configuration.");
         }
-        
+
         _openAiClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
         _logger.LogInformation("OpenAI API configured successfully");
     }
@@ -64,54 +68,55 @@ public class OpenAIImageGenerationService : IImageProcessingService
     public async Task<string> EnhancePhotoQualityAsync(EnhancePhotoRequestDto request)
     {
         var startTime = DateTime.UtcNow;
-        
+
         try
         {
-            _logger.LogInformation("Starting OpenAI photo transformation type={Type}, imageUrl={ImageUrl}", 
-                request.EnhancementType, request.ImageUrl);
+            _logger.LogInformation("Starting OpenAI photo transformation type={Type}, imageUrl={ImageUrl}",
+                S(request.EnhancementType),
+                S(request.ImageUrl));
 
             // Step 1: Download and process the image
             // Ensure the image URL is accessible from the server context (SAS/proxy)
             var normalizedUrl = await NormalizeImageUrlForServerAccessAsync(request.ImageUrl);
             var (imageBytes, maskBytes) = await PrepareImageAndMask(normalizedUrl);
             _logger.LogInformation("Image processed - Original size: {Size} bytes", imageBytes.Length);
-            
+
             // Step 2: Generate transformation prompt
             var prompt = GenerateTransformationPrompt(request.EnhancementType ?? "professional");
-            _logger.LogInformation("Using transformation prompt: {Prompt}", prompt);
-            
+            _logger.LogInformation("Using transformation prompt: {Prompt}", S(prompt));
+
             // Step 3: Create multipart form data for image editing
             using var formData = new MultipartFormDataContent();
-            
+
             // Add the image file (OpenAI edits expect field name image[])
             var imageContent = new ByteArrayContent(imageBytes);
             imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
             formData.Add(imageContent, "image[]", "image.png");
-            
+
             // Add the mask file (optional). Some models/endpoints behave better without an explicit mask.
             // Skipping mask to allow full-image edits reliably.
             // formData.Add(new ByteArrayContent(maskBytes), "mask", "mask.png");
-            
+
             // Specify model explicitly (required by OpenAI)
             formData.Add(new StringContent("gpt-image-1"), "model");
 
             // Add the prompt
             formData.Add(new StringContent(prompt), "prompt");
-            
+
             // Add other parameters (keep minimal to avoid unknown-parameter errors)
             // Note: Some OpenAI deployments reject response_format on edits; omit it and accept url or b64_json in response
             formData.Add(new StringContent("1024x1024"), "size");
-            
+
             // Step 4: Call OpenAI image edit endpoint
             _logger.LogInformation(
                 "Posting to OpenAI images/edits: model=gpt-image-1, promptLen={PromptLen}, imageBytes={ImageBytes}",
                 prompt?.Length ?? 0, imageBytes?.Length ?? 0);
             var response = await _openAiClient.PostAsync("images/edits", formData);
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 var errorBody = await response.Content.ReadAsStringAsync();
-                _logger.LogError("OpenAI API error {StatusCode}: {Error}", response.StatusCode, errorBody);
+                _logger.LogError("OpenAI API error {StatusCode}: {Error}", response.StatusCode, S(errorBody));
                 // Surface auth problems distinctly so controller can map to 401
                 if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized ||
                     response.StatusCode == System.Net.HttpStatusCode.Forbidden)
@@ -123,19 +128,19 @@ public class OpenAIImageGenerationService : IImageProcessingService
 
             var responseJson = await response.Content.ReadAsStringAsync();
             var preview = responseJson.Length > 500 ? responseJson.Substring(0, 500) + "..." : responseJson;
-            _logger.LogWarning("OpenAI raw response preview: {Response}", preview);
-            
+            _logger.LogWarning("OpenAI raw response preview: {Response}", S(preview));
+
             var openAIResponse = JsonSerializer.Deserialize<OpenAIImageResponse>(responseJson, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
 
             _logger.LogInformation("Deserialized response - Data count: {Count}", openAIResponse?.Data?.Length ?? 0);
-            
+
             var imageData = openAIResponse?.Data?.FirstOrDefault();
             if (imageData == null)
             {
-                _logger.LogWarning("OpenAI returned no data. Raw preview: {Preview}", preview);
+                _logger.LogWarning("OpenAI returned no data. Raw preview: {Preview}", S(preview));
                 throw new InvalidOperationException("OpenAI returned no data");
             }
 
@@ -155,16 +160,16 @@ public class OpenAIImageGenerationService : IImageProcessingService
                 _logger.LogWarning("OpenAI returned neither url nor b64_json");
                 throw new InvalidOperationException("OpenAI returned neither url nor b64_json");
             }
-            
+
             var processingTime = DateTime.UtcNow - startTime;
-            _logger.LogInformation("OpenAI photo transformation completed in {Time}ms, returning base64 data URL", 
+            _logger.LogInformation("OpenAI photo transformation completed in {Time}ms, returning base64 data URL",
                 processingTime.TotalMilliseconds);
 
             return dataUrl;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "OpenAI photo transformation failed: {Message}", ex.Message);
+            _logger.LogError(ex, "OpenAI photo transformation failed: {Message}", S(ex.Message));
             throw;
         }
     }
@@ -179,7 +184,7 @@ public class OpenAIImageGenerationService : IImageProcessingService
         var styles = new[]
         {
             "chibi",
-            "pixar_3d", 
+            "pixar_3d",
             "studio_ghibli",
             "kawaii",
             "shoujo_manga",
@@ -203,13 +208,17 @@ public class OpenAIImageGenerationService : IImageProcessingService
     {
         try
         {
-            _logger.LogInformation("Downloading image from URL: {ImageUrl}", imageUrl);
+            _logger.LogInformation("Downloading image from URL: {ImageUrl}", S(imageUrl));
             // Add debug context for troubleshooting (host/scheme/SAS)
             try
             {
                 var u = new Uri(imageUrl);
                 var hasSas = !string.IsNullOrEmpty(u.Query) && u.Query.Contains("sig=", StringComparison.OrdinalIgnoreCase);
-                _logger.LogDebug("Download client context: host={Host}, scheme={Scheme}, hasSas={HasSas}", u.Host, u.Scheme, hasSas);
+                _logger.LogDebug(
+                    "Download client context: host={Host}, scheme={Scheme}, hasSas={HasSas}",
+                    S(u.Host),
+                    S(u.Scheme),
+                    hasSas);
             }
             catch { /* ignore parse issues */ }
 
@@ -219,13 +228,13 @@ public class OpenAIImageGenerationService : IImageProcessingService
             {
                 var status = (int)imageResponse.StatusCode;
                 var reason = imageResponse.ReasonPhrase;
-                _logger.LogError("Source image fetch failed: {Status} {Reason}", status, reason);
+                _logger.LogError("Source image fetch failed: {Status} {Reason}", status, S(reason));
                 throw new HttpRequestException($"Source image fetch failed: {status} {reason}");
             }
-            
+
             var originalImageBytes = await imageResponse.Content.ReadAsByteArrayAsync();
             _logger.LogInformation("Downloaded image - Size: {Size} bytes", originalImageBytes.Length);
-            
+
             // Process image and create mask using ImageSharp (cross-platform)
             using var original = SixLabors.ImageSharp.Image.Load<Rgba32>(originalImageBytes);
 
@@ -268,20 +277,20 @@ public class OpenAIImageGenerationService : IImageProcessingService
             await maskImage.SaveAsync(maskStream, pngEncoder);
             var maskBytes = maskStream.ToArray();
 
-            _logger.LogInformation("Image processed to {Size}x{Size} PNG - Image: {ImageSize} bytes, Mask: {MaskSize} bytes", 
+            _logger.LogInformation("Image processed to {Size}x{Size} PNG - Image: {ImageSize} bytes, Mask: {MaskSize} bytes",
                 targetSize, targetSize, processedImageBytes.Length, maskBytes.Length);
-            
+
             return (processedImageBytes, maskBytes);
         }
         catch (HttpRequestException ex)
         {
             // Surface download errors to controller (maps to 502 instead of 503)
-            _logger.LogError(ex, "Failed to prepare image and mask from URL: {ImageUrl}", imageUrl);
+            _logger.LogError(ex, "Failed to prepare image and mask from URL: {ImageUrl}", S(imageUrl));
             throw;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to prepare image and mask from URL: {ImageUrl}", imageUrl);
+            _logger.LogError(ex, "Failed to prepare image and mask from URL: {ImageUrl}", S(imageUrl));
             throw new InvalidOperationException($"Failed to process image: {ex.Message}", ex);
         }
     }
@@ -320,13 +329,20 @@ public class OpenAIImageGenerationService : IImageProcessingService
                         var sasUrl = await _storageService.GenerateSasUrlAsync(containerAndPath, TimeSpan.FromMinutes(10));
                         if (!string.IsNullOrEmpty(sasUrl))
                         {
-                            _logger.LogDebug("Generated SAS URL for Azure image (container={Container}, path={Path})", container, blobPath);
+                            _logger.LogDebug(
+                                "Generated SAS URL for Azure image (container={Container}, path={Path})",
+                                S(container),
+                                S(blobPath));
                             return sasUrl;
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Failed to generate SAS for Azure image (container={Container}, path={Path})", container, blobPath);
+                        _logger.LogWarning(
+                            ex,
+                            "Failed to generate SAS for Azure image (container={Container}, path={Path})",
+                            S(container),
+                            S(blobPath));
                     }
                 }
             }
@@ -341,13 +357,13 @@ public class OpenAIImageGenerationService : IImageProcessingService
                     var sasUrl = await _storageService.GenerateSasUrlAsync(containerAndPath, TimeSpan.FromMinutes(10));
                     if (!string.IsNullOrEmpty(sasUrl))
                     {
-                        _logger.LogDebug("Translated proxy path to SAS URL (path={Path})", suffix);
+                        _logger.LogDebug("Translated proxy path to SAS URL (path={Path})", S(suffix));
                         return sasUrl;
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to translate proxy image path to SAS (path={Path})", suffix);
+                    _logger.LogWarning(ex, "Failed to translate proxy image path to SAS (path={Path})", S(suffix));
                 }
             }
 
@@ -355,7 +371,7 @@ public class OpenAIImageGenerationService : IImageProcessingService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to normalize image URL: {Url}", originalUrl);
+            _logger.LogWarning(ex, "Failed to normalize image URL: {Url}", S(originalUrl));
             return originalUrl;
         }
     }
@@ -363,7 +379,7 @@ public class OpenAIImageGenerationService : IImageProcessingService
     private static string GenerateTransformationPrompt(string enhancementType)
     {
         var basePrompt = "Transform this portrait into ";
-        
+
         return enhancementType.ToLower() switch
         {
             "chibi" => basePrompt + "japan chibi anime style with oversized head, huge sparkling eyes, tiny body, extremely cute, soft pastel colors, maintaining facial features",
@@ -390,10 +406,10 @@ public class OpenAIImageGenerationService : IImageProcessingService
     {
         [JsonPropertyName("url")]
         public string? Url { get; set; }
-        
+
         [JsonPropertyName("revised_prompt")]
         public string? RevisedPrompt { get; set; }
-        
+
         [JsonPropertyName("b64_json")]
         public string? B64Json { get; set; }
     }

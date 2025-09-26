@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 
 namespace AI.ProfilePhotoMaker.API.Controllers;
@@ -15,6 +16,7 @@ public class StylePreviewController : ControllerBase
     private readonly IStorageService _storageService;
     private readonly IConfiguration _configuration;
     private readonly ILogger<StylePreviewController> _logger;
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
 
     public StylePreviewController(
         IStorageService storageService,
@@ -80,7 +82,7 @@ public class StylePreviewController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting style preview URL for {StyleName}", styleName);
+            _logger.LogError(ex, "Error getting style preview URL for {StyleName}", S(styleName));
             return StatusCode(500, new
             {
                 success = false,

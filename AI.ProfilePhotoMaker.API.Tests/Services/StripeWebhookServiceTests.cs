@@ -61,7 +61,7 @@ public class StripeWebhookServiceTests
         Assert.Equal(package.TotalCredits, profile.PurchasedCredits);
     }
 
-        [Fact]
+    [Fact]
     public async Task HandleEventAsync_PaymentIntentFailed_MarksTransactionFailed()
     {
         using var context = CreateContext();

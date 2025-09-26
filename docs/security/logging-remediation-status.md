@@ -1,23 +1,25 @@
 # Logging Sanitization Remediation Status
 
-_Last updated: $(date -u '+%Y-%m-%d %H:%M:%SZ')_
+_Last updated: 2025-09-26 15:33:15Z_
 
 ## Summary
-- Identified ~200 CodeQL alerts for `Log entries created from user input`
-- Initial remediation completed for Stripe credit purchase flow (`CreditPackageService`)
-- Centralized helper still pending
+- Shared `LoggingSanitizer` helper now available with unit coverage.
+- Stripe credit purchase, webhook, and middleware flows now sanitize user-supplied identifiers.
+- Replicate + OpenAI surfaces (controllers, clients, download pipelines) scrubbed; remaining hits isolated to legacy controllers/services flagged by CodeQL.
 
 ## Next Steps
-- Implement shared `LoggingSanitizer` (see plan)
-- Refactor flagged classes (`ReplicateApiClient`, `OpenAIImageGenerationService`, etc.)
-- Validate CodeQL scan runs clean after changes
+- Finish sweeping residual CodeQL findings (legacy enhancement controllers, storage utilities, health endpoints).
+- Document logging hygiene guidance in `AI.ProfilePhotoMaker.API/SECURITY_NOTES.md`.
+- Re-run CodeQL scan (local or pipeline) to confirm alerts close; evaluate automation/analyzers afterward.
 
 ## Completed Work
-- ✅ Stripe credit purchase logging sanitized inline (temporary)
-- ✅ Unique index + idempotent purchase handling to guard against double credits
+- ✅ Introduced `LoggingSanitizer` utility and unit tests.
+- ✅ Stripe credit purchase + webhook flows now route sensitive identifiers through the helper.
+- ✅ Replicate surfaces (`ReplicateController`, `ReplicateApiClient`, webhooks, SignalR hub) migrated to sanitized logging.
+- ✅ OpenAI enhancement + image download stack now sanitize URLs, prompts, and user identifiers.
+- ✅ Storage proxy middleware and Config/Retention services switched to shared sanitizer helpers.
 
 ## Open Items
-- Shared sanitizer + adoption across codebase
-- Documentation update in `SECURITY_NOTES.md`
-- Optional automation to prevent regressions
-
+- Remaining sanitization across services still flagged by CodeQL.
+- Documentation update in `SECURITY_NOTES.md`.
+- Optional automation to prevent regressions.

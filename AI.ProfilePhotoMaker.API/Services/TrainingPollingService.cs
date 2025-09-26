@@ -125,11 +125,11 @@ public class TrainingPollingService : ITrainingPollingService
                 }
 
                 var trainedModelVersion = resolvedVersionId;
-                
+
                 // Validate version format (should be 64-character hex string)
                 if (!System.Text.RegularExpressions.Regex.IsMatch(trainedModelVersion, @"^[a-fA-F0-9]{64}$"))
                 {
-                    _logger.LogError("Invalid version format received: {Version} for model {ModelId}. Expected 64-character hex string.", 
+                    _logger.LogError("Invalid version format received: {Version} for model {ModelId}. Expected 64-character hex string.",
                         trainedModelVersion, modelRequest.ReplicateModelId);
                     modelRequest.Status = ModelCreationStatus.Failed;
                     modelRequest.ErrorMessage = $"Invalid version format received: {trainedModelVersion}";
@@ -137,7 +137,7 @@ public class TrainingPollingService : ITrainingPollingService
                     await scopedDbContext.SaveChangesAsync();
                     return;
                 }
-                
+
                 // Wait for version to become visible/available on Replicate before marking Ready
                 var modelIdForApi = modelRequest.ReplicateModelId!;
                 var waitStart = DateTime.UtcNow;
