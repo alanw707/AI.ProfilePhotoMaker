@@ -1,180 +1,91 @@
 # AI Profile Photo Maker
 
-A modern web application for creating professional AI-generated profile photos using Replicate's AI models with a simplified local build workflow.
+Create professional headshots with AI. This monorepo contains the .NET 8 Web API, Angular 19 frontend, deployment scripts, and reference documentation that power **AI Profile Photo Maker**.
 
-## 🚀 Quick Start (Local Build Workflow)
+> 📚 Looking for docs? Jump straight to the [Documentation Hub](docs/README.md).
 
-This project uses a simplified local build approach for faster development and more reliable deployments.
+## 🔗 Quick Links
 
-### Prerequisites
-- Docker Desktop installed and running
-- Azure CLI installed (`az --version`) 
-- Logged in to Azure (`az login`)
-- Node.js 20.x (LTS) and .NET 8
+| Area | Description |
+|------|-------------|
+| 🗂️ [Documentation Hub](docs/README.md) | Architecture, deployment, operations, and security guides |
+| 🚀 [Local Build Workflow](docs/LOCAL-BUILD-WORKFLOW.md) | Step-by-step guide for the local container build + deploy flow |
+| 🛡️ [Security Notes](docs/security/SECURITY_NOTES.md) | Logging hygiene, secrets, and controller protections |
+| 🧪 [Test Strategy](docs/development/TEST_ANALYSIS_REPORT.md) | Coverage overview and regression plan |
+| 🗺️ [Project Plan](docs/development/PROJECT_PLAN.md) | Milestones, roadmap, and sprint planning |
 
-### Deploy in 3 Steps
+## 🏗️ Architecture Overview
+
+- **Frontend:** Angular 19 SPA hosted on Azure Container Apps. Responsive UI with modular feature areas and reusable components.
+- **Backend:** ASP.NET Core (.NET 8) Web API with EF Core, ASP.NET Identity, and JWT authentication. Integrates with Replicate FLUX for model training and Stripe for payments.
+- **Storage Modes:** Supports both public blob delivery and a secure API proxy mode for private containers (`Storage:ProxyBlobRequests`).
+- **Infrastructure:** Azure Container Apps + Azure SQL + Azure Storage + Azure Key Vault + Application Insights. Deployment helpers live under [`scripts/`](scripts/).
+
+More detail (including diagrams and decision records) lives in [docs/architecture/ARCHITECTURE_OVERVIEW.md](docs/architecture/ARCHITECTURE_OVERVIEW.md).
+
+## ⚡ Getting Started (Developers)
 
 ```bash
-# 1. Build images locally (30-60 seconds)
-./scripts/build-local.sh
+# Clone the repo
+ git clone https://github.com/alanw707/AI.ProfilePhotoMaker.git
+ cd AI.ProfilePhotoMaker
 
-# 2. Push to Azure Container Registry
-./scripts/push-to-acr.sh
+# Backend
+ cd AI.ProfilePhotoMaker.API
+ dotnet restore
+ dotnet run
 
-# 3. Deploy infrastructure (triggers automatically)
-git push origin main
+# Frontend (new terminal)
+ cd ../AI.ProfilePhotoMaker.UI
+ npm install
+ ng serve
+
+# App available at http://localhost:4200
 ```
 
-## 📖 Documentation
+Environment setup, secrets, OAuth configuration, and troubleshooting tips are documented in [docs/ENVIRONMENT_SETUP.md](docs/ENVIRONMENT_SETUP.md).
 
-- **[Local Build Workflow](docs/LOCAL-BUILD-WORKFLOW.md)** - Complete guide to the local build process
-- [Project Plan](docs/development/PROJECT_PLAN.md) - Overall plan and milestones
-- [Development Backlog](docs/development/DEVELOPMENT_BACKLOG.md) - Detailed task list and status
-- [Setup Guide](docs/ENVIRONMENT_SETUP.md) - Development environment setup
-- [Architecture Overview](docs/architecture/ARCHITECTURE_OVERVIEW.md) - System architecture and design
-- [Private Blob Storage via API Proxy](docs/PRIVATE_BLOB_STORAGE.md) - Switch to private containers using the API proxy
+## 🧰 Local Build & Deploy Workflow
 
-## Overview
+This project favors a “build locally, push once” workflow for reproducible deployments.
 
-AI.ProfilePhotoMaker is a web application that allows users to create professional profile photos using AI. Users can upload selfies, which are used to train a custom AI model through Replicate.com's FLUX API. The application then generates high-quality professional profile photos in various styles selected by the user.
+```bash
+./scripts/build-local.sh     # Build backend + frontend images locally
+./scripts/push-to-acr.sh     # Push images to Azure Container Registry
+git push origin main         # GitHub Actions deploy the freshly pushed images
+```
 
-## Key Features
+Additional helpers (drift detection, credential sync, rollbacks) are available in [`scripts/`](scripts/).
 
-- **User Authentication**: Secure registration and login
-- **Image Upload**: Upload up to 10 selfies for training
-- **Style Selection**: Choose from multiple professional photo styles
-- **AI Processing**: Custom model training and image generation with webhook-based processing
-- **Photo Enhancement**: Real-time photo enhancement with 75-85% faster response times
-- **Results Gallery**: View, download, and manage generated photos
-- **Subscription Plans**: Access features based on subscription level
+## ✅ Testing & Quality
 
-## Technology Stack
+- **API:** `dotnet test AI.ProfilePhotoMaker.API.Tests/AI.ProfilePhotoMaker.API.Tests.csproj --configuration Release`
+- **UI:** `npm run test` inside `AI.ProfilePhotoMaker.UI`
+- **E2E:** Playwright scenarios live under `tests/e2e/`
 
-### Backend
-- .NET 8 Web API
-- Entity Framework Core
-- SQL Server
-- ASP.NET Core Identity
-- JWT Authentication
+CI runs CodeQL, static analysis, and targeted regression suites on every PR.
 
-### Frontend
-- Angular 19 + TypeScript
-- Angular CLI build system
-- Modern CSS with Angular styling
-- Responsive design
-
-### Cloud Infrastructure
-- Azure Container Apps (hosting)
-- Azure Container Registry (images)
-- Azure SQL Database (data)
-- Azure Storage Account (files)
-- Azure Key Vault (secrets)
-- Application Insights (monitoring)
-
-### Blob Storage Access Modes
-- Default (public blob): Images are served directly from Azure Blob URLs. No API proxy is used; CORS for blobs must allow the frontend domains. This is the current production setup.
-- Private (API proxy): To serve images via the API (supporting private containers and unified caching), enable `Storage:ProxyBlobRequests`.
-  - Set `Storage:ProxyBlobRequests=true` in configuration (env var `Storage__ProxyBlobRequests=true`).
-  - The API will expose images at `/profile-images/{storagePath}` and return proxied URLs based on `AppBaseUrl`.
-  - Consider turning off public access on the storage account/containers and using SAS only for backend-to-backend flows.
-  - Enhanced proxy adds cache headers (`Cache-Control: immutable`) for better client performance.
-
-### External Services
-- Replicate.com FLUX AI (webhook-based integration)
-- Stripe Payments (planned)
-
-## Getting Started
-
-For detailed setup instructions, see the [Setup Guide](docs/SETUP.md).
-
-### Quick Start
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/AI.ProfilePhotoMaker.git
-   cd AI.ProfilePhotoMaker
-   ```
-
-2. **Set up the backend**
-   ```bash
-   cd AI.ProfilePhotoMaker.API
-   dotnet restore
-   dotnet run
-   ```
-
-3. **Set up the frontend**
-   ```bash
-   cd AI.ProfilePhotoMaker.UI
-   npm install
-   ng serve
-   ```
-
-4. Open your browser and navigate to `http://localhost:4200`
-
-## Project Structure
+## 📁 Repository Layout
 
 ```
 AI.ProfilePhotoMaker/
-├── .github/                    # GitHub workflows and templates
-├── AI.ProfilePhotoMaker.API/   # .NET 8 Web API
-│   ├── Controllers/            # API endpoints
-│   ├── Data/                   # Database context and repositories
-│   ├── Models/                 # Data models and DTOs
-│   ├── Services/               # Business logic and integrations
-│   └── Program.cs              # Application entry point
-├── AI.ProfilePhotoMaker.UI/    # Angular frontend
-│   ├── src/                    # Source code
-│   │   ├── app/                # Angular components and services
-│   │   ├── assets/             # Static assets
-│   │   └── environments/       # Environment configurations
-│   └── angular.json            # Angular CLI configuration
-└── docs/                       # Project documentation
+├── AI.ProfilePhotoMaker.API/         # ASP.NET Core Web API
+├── AI.ProfilePhotoMaker.API.Tests/   # API unit & integration tests
+├── AI.ProfilePhotoMaker.UI/          # Angular SPA
+├── docs/                             # Architecture, deployment, operations docs
+├── scripts/                          # Local build/deploy helpers
+├── tests/                            # Playwright & performance suites
+└── README.md                         # You are here
 ```
 
-## API Endpoints
+## 🤝 Contributing
 
-For a detailed API reference, run the application and visit `/swagger` endpoint.
+1. Fork the repo & create a feature branch.
+2. Run lint/tests locally (`dotnet test`, `npm run lint`).
+3. Open a PR against `main`.
 
-### Key Endpoints
+Please follow the logging hygiene guidelines in [SECURITY_NOTES](docs/security/SECURITY_NOTES.md#logging-hygiene) when touching API code.
 
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Authenticate user
-- `POST /api/profile/upload` - Upload selfie images
-- `GET /api/profile/styles` - Get available styles
-- `POST /api/profile/generate` - Generate images with styles
-- `GET /api/profile/images` - Get user's processed images
+## 📄 License
 
-## Development Workflow
-
-1. Choose a task from the [Tasks](docs/TASKS.md) document
-2. Create a feature branch (`feature/your-feature-name`)
-3. Implement the feature
-4. Add tests
-5. Create a pull request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE.txt file for details.
-
-## Contributing
-
-Contributions are welcome! Before opening a PR, please review the repository guidelines in [AGENTS.md](AGENTS.md) for project structure, local dev commands, coding style, testing, and PR requirements.
-
-## Acknowledgments
-
-- [Replicate.com](https://replicate.com) for their FLUX AI model
-- [Angular](https://angular.io) and [.NET](https://dotnet.microsoft.com) communities
-
----
-
----
-
-## Additional Documentation
-
-- [Enhanced Photo Webhook Migration](docs/ENHANCE_PHOTO_WEBHOOK_MIGRATION.md) - Migration summary and architecture improvements (August 22, 2025)
-- [API Webhook Integration Guide](docs/API_WEBHOOK_INTEGRATION.md) - Comprehensive webhook architecture and integration guide
-- [Refactoring Documentation](docs/REFACTOR.md) - Comprehensive refactoring process and architecture improvements
-- [OAuth Troubleshooting](docs/OAUTH_TROUBLESHOOTING.md) - OAuth implementation and troubleshooting guide
-- [Product Requirements (PRD)](docs/product/PRD.md) - Product goals, scope, and milestones
-
-*Last updated: August 22, 2025*
+Distributed under the MIT License. See [LICENSE.txt](LICENSE.txt) for details.
