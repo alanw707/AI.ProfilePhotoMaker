@@ -46,9 +46,10 @@ public class CreditControllerPaymentConfigTests
         Assert.Equal(expectedReason, simulation["reason"]);
 
         var stripe = ((object?)data["stripe"]!).ToDictionary();
-        var hasKeys = stripeOptions.HasApiKeys();
-        Assert.Equal(hasKeys, stripe["enabled"]);
-        Assert.Equal(hasKeys ? stripeOptions.PublishableKey : null, stripe["publishableKey"]);
+        var stripeReady = stripeOptions.HasApiKeys() && stripeOptions.HasWebhookSecret();
+        var simulationForced = simulationOptions.Enabled && simulationOptions.SkipStripeIntegration;
+        Assert.Equal(stripeReady && !simulationForced, stripe["enabled"]);
+        Assert.Equal(stripeReady ? stripeOptions.PublishableKey : null, stripe["publishableKey"]);
         Assert.Equal(stripeOptions.HasWebhookSecret(), stripe["webhookConfigured"]);
     }
 
@@ -73,6 +74,14 @@ public class CreditControllerPaymentConfigTests
         yield return new object?[]
         {
             new StripeOptions { PublishableKey = "pk_test", SecretKey = "sk_test", WebhookSecret = null! },
+            new PaymentSimulationOptions { Enabled = true, SkipStripeIntegration = true },
+            true,
+            "WebhookNotConfigured"
+        };
+
+        yield return new object?[]
+        {
+            new StripeOptions { PublishableKey = "pk_test", SecretKey = "sk_test", WebhookSecret = "whsec_test" },
             new PaymentSimulationOptions { Enabled = true, SkipStripeIntegration = true },
             true,
             "ExplicitBypass"
