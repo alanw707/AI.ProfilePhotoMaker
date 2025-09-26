@@ -250,12 +250,20 @@ public class CreditController : BaseController
     {
         var stripeHasApiKeys = _stripeOptions.HasApiKeys();
         var webhookConfigured = _stripeOptions.HasWebhookSecret();
+        var stripeReady = stripeHasApiKeys && webhookConfigured;
         var simulationForced = _paymentSimulationOptions.Enabled && _paymentSimulationOptions.SkipStripeIntegration;
-        var simulationRequired = !stripeHasApiKeys;
+        var simulationRequired = !stripeReady;
         var simulationActive = simulationRequired || simulationForced;
-        var simulationReason = simulationRequired
-            ? "StripeNotConfigured"
-            : (simulationForced ? "ExplicitBypass" : null);
+
+        string? simulationReason = null;
+        if (simulationRequired)
+        {
+            simulationReason = !stripeHasApiKeys ? "StripeNotConfigured" : "WebhookNotConfigured";
+        }
+        else if (simulationForced)
+        {
+            simulationReason = "ExplicitBypass";
+        }
 
         var config = new
         {
@@ -267,8 +275,8 @@ public class CreditController : BaseController
             },
             Stripe = new
             {
-                Enabled = stripeHasApiKeys,
-                PublishableKey = stripeHasApiKeys ? _stripeOptions.PublishableKey : null,
+                Enabled = stripeReady && !simulationForced,
+                PublishableKey = stripeReady ? _stripeOptions.PublishableKey : null,
                 WebhookConfigured = webhookConfigured
             }
         };
