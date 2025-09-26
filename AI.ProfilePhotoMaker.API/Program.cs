@@ -10,6 +10,8 @@ using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Health;
 using AI.ProfilePhotoMaker.API.Services.Storage;
+using AI.ProfilePhotoMaker.API.Services.Payments;
+using AspNetCoreRateLimit;
 // using AI.ProfilePhotoMaker.API.Services.Monitoring; // Removed monitoring dependency
 using AI.ProfilePhotoMaker.API.Middleware;
 using AI.ProfilePhotoMaker.API.Configuration;
@@ -24,6 +26,7 @@ using Azure.Extensions.AspNetCore.DataProtection.Blobs;
 using System.Security.Claims;
 using Serilog;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
 // NOTE: Microsoft.AspNetCore.TestHost removed to prevent production container crashes
 
 // Handle command-line arguments for migration and upload operations
@@ -136,6 +139,58 @@ builder.Services.AddSession(options =>
 
 // Add environment configuration with validation
 builder.Services.AddEnvironmentConfiguration();
+builder.Services.AddOptions();
+builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
+builder.Services.Configure<IpRateLimitPolicies>(builder.Configuration.GetSection("IpRateLimitPolicies"));
+builder.Services.AddInMemoryRateLimiting();
+builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+
+builder.Services.Configure<StripeOptions>(builder.Configuration.GetSection(StripeOptions.SectionName));
+
+builder.Services.PostConfigure<StripeOptions>(options =>
+{
+    if (string.IsNullOrWhiteSpace(options.PublishableKey))
+    {
+        options.PublishableKey = Environment.GetEnvironmentVariable(EnvironmentConfiguration.STRIPE_PUBLISHABLE_KEY) ?? string.Empty;
+    }
+
+    if (string.IsNullOrWhiteSpace(options.SecretKey))
+    {
+        options.SecretKey = Environment.GetEnvironmentVariable(EnvironmentConfiguration.STRIPE_SECRET_KEY) ?? string.Empty;
+    }
+
+    if (string.IsNullOrWhiteSpace(options.WebhookSecret))
+    {
+        options.WebhookSecret = Environment.GetEnvironmentVariable(EnvironmentConfiguration.STRIPE_WEBHOOK_SECRET) ?? string.Empty;
+    }
+
+    options.PublishableKey = options.PublishableKey?.Trim() ?? string.Empty;
+    options.SecretKey = options.SecretKey?.Trim() ?? string.Empty;
+    options.WebhookSecret = options.WebhookSecret?.Trim() ?? string.Empty;
+});
+
+builder.Services.Configure<PaymentSimulationOptions>(builder.Configuration.GetSection(PaymentSimulationOptions.SectionName));
+
+builder.Services.AddSingleton(provider =>
+{
+    var stripeOptions = provider.GetRequiredService<IOptions<StripeOptions>>().Value;
+    var appInfo = new Stripe.AppInfo
+    {
+        Name = "AI Profile Photo Maker API",
+        Version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "1.0.0",
+        Url = "https://github.com/alanwsmith/AI.ProfilePhotoMaker"
+    };
+
+    Stripe.StripeConfiguration.AppInfo = appInfo;
+    Stripe.StripeConfiguration.ApiKey = stripeOptions.SecretKey;
+
+    return new Stripe.StripeClient(stripeOptions.SecretKey ?? string.Empty);
+});
+
+builder.Services.AddScoped<IStripePaymentService, StripePaymentService>();
+builder.Services.AddScoped<IStripeWebhookService, StripeWebhookService>();
+
 builder.Services.Configure<LegacyCompatibilityOptions>(builder.Configuration.GetSection(LegacyCompatibilityOptions.SectionName));
 
 // Configure database services
@@ -579,6 +634,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 app.UseCors(corsPolicy);
+app.UseIpRateLimiting();
 // app.UsePerformanceMonitoring(); // Removed monitoring middleware
 app.UseAuthentication();
 app.UseAuthorization();

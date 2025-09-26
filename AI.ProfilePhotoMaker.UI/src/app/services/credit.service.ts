@@ -52,7 +52,16 @@ export interface PaymentConfig {
   paymentSimulation: {
     enabled: boolean;
     skipStripeIntegration: boolean;
+    reason?: string | null;
   };
+}
+
+export interface CreatePaymentIntentResponse {
+  paymentIntentId: string;
+  clientSecret: string;
+  publishableKey?: string;
+  paymentTransactionId?: string;
+  isSimulation: boolean;
 }
 
 export interface ApiResponse<T> {
@@ -109,10 +118,15 @@ export class CreditService {
    */
   createPaymentIntent(request: {
     packageId: number;
-  }): Observable<{ success: boolean; data: { clientSecret: string; isSimulation: boolean } }> {
+  }): Observable<{
+    success: boolean;
+    data: CreatePaymentIntentResponse;
+    error?: { code: string; message: string };
+  }> {
     return this._http.post<{
       success: boolean;
-      data: { clientSecret: string; isSimulation: boolean };
+      data: CreatePaymentIntentResponse;
+      error?: { code: string; message: string };
     }>(this._configService.buildApiEndpoint('credit/create-payment-intent'), request);
   }
 

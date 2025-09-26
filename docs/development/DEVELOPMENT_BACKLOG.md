@@ -84,8 +84,8 @@ Based on comprehensive analysis of the current project state, approximately **91
 - **Dependencies**: Stripe account setup, webhook configuration
 
 **Subtasks:**
-- [ ] Set up production Stripe webhook endpoints
-- [ ] Implement webhook signature validation
+- [x] Set up production Stripe webhook endpoints (API webhook implemented; production wiring pending)
+- [x] Implement webhook signature validation
 - [ ] Test payment failure scenarios
 - [ ] Add transaction logging
 - [ ] Implement refund handling
@@ -110,8 +110,8 @@ public async Task<IActionResult> HandleStripeWebhook()
 - **Complexity**: Medium
 
 **Subtasks:**
-- [ ] Add rate limiting middleware
-- [ ] Configure limits per endpoint type
+- [x] Add rate limiting middleware (IP-based policies with AspNetCoreRateLimit)
+- [x] Configure limits per endpoint type (login, payments, webhook)
 - [ ] Add Redis caching for distributed rate limiting
 - [ ] Implement client-side rate limit handling
 - [ ] Add monitoring and alerting
@@ -460,6 +460,24 @@ WebhookIntegrationTests
 ---
 
 ## Recent Development Activity
+
+### **September 24, 2025 - Stripe Payment Webhook Implementation**
+
+**Completed Tasks:**
+- ✅ Added `POST /api/webhooks/stripe` endpoint with signature validation using Stripe webhook secrets
+- ✅ Persisted payment intents as `PaymentTransaction` records and finalize credit purchases upon webhook success
+- ✅ Hardened credit purchase flow to block pending/failed transactions while allowing simulation fallback
+- ✅ Added automated tests covering pending and completed purchase scenarios
+- ✅ Added unit coverage for Stripe webhook success, failure, and cancellation flows
+
+**Impact:**
+- Real Stripe intents can now be fulfilled end-to-end with idempotent credit awards
+- Frontend receives pending status codes while credits post asynchronously after webhook confirmation
+- Provides audit trail for Stripe events and eliminates double-crediting on retries
+
+**Rate Limiting Improvements:**
+- ✅ Added IP-based rate limiting middleware and endpoint-specific rules for auth and payment-critical APIs
+- ✅ Configured forwarded header support and 429 responses to throttle abusive traffic
 
 ### **July 28, 2025 - Toast Notification UX Fix**
 

@@ -2,7 +2,7 @@
   <div class="header">
     <h2>Purchase Credits</h2>
     <p class="subtitle">Choose a credit package to unlock premium features</p>
-    <div class="simulation-notice" *ngIf="paymentConfig?.paymentSimulation?.enabled">
+    <div class="simulation-notice" *ngIf="isSimulationMode">
       <small>
         <strong>Development Mode:</strong>
         Payment simulation is enabled - no real charges will be made.
@@ -10,8 +10,201 @@
     </div>
   </div>
 
-  <!-- Payment Simulation Modal -->
-  <div class="payment-container" *ngIf="selectedPackage && isPurchasing">
+  <div class="payment-container" *ngIf="isStripePaymentActive && selectedPackage">
+    <h3>Complete Payment for {{ selectedPackage.name }}</h3>
+
+    <div class="stripe-summary">
+      <div class="summary-row">
+        <span>Credits</span>
+        <span>{{ selectedPackage.totalCredits }}</span>
+      </div>
+      <div class="summary-row">
+        <span>Amount Due</span>
+        <span>${{ selectedPackage.price }}</span>
+      </div>
+    </div>
+
+    <div class="stripe-status" *ngIf="isLoadingIntent">
+      <div class="loading-spinner">⏳</div>
+      <p>Preparing secure payment form...</p>
+    </div>
+
+    <ng-container *ngIf="!isLoadingIntent">
+      <div class="payment-form">
+        <section class="card-block">
+          <header class="section-heading">
+            <span class="section-label">Card Details</span>
+            <small class="section-subtitle">Payments are securely processed by Stripe.</small>
+          </header>
+          <div class="stripe-card-container" [class.focused]="isCardElementFocused">
+            <div id="card-element"></div>
+          </div>
+          <p class="card-supporting-text">We accept major credit and debit cards.</p>
+        </section>
+
+        <section class="billing-block">
+          <header class="section-heading">
+            <span class="section-label">Billing Details</span>
+            <small class="section-subtitle">Use the address associated with your card.</small>
+          </header>
+          <div class="billing-grid">
+            <label
+              class="billing-field full-width"
+              [class.invalid]="billingDetailsTouched && !billingDetails.name.trim()">
+              <span>Cardholder Name</span>
+              <input
+                type="text"
+                name="billingName"
+                autocomplete="cc-name"
+                placeholder="Jane Doe"
+                [(ngModel)]="billingDetails.name"
+                [ngModelOptions]="{ standalone: true }"
+                (blur)="billingDetailsTouched = true" />
+            </label>
+
+            <label class="billing-field full-width" [class.invalid]="billingDetailsTouched && !billingEmailIsValid">
+              <span>Email</span>
+              <input
+                type="email"
+                name="billingEmail"
+                autocomplete="email"
+                placeholder="jane@example.com"
+                [(ngModel)]="billingDetails.email"
+                [ngModelOptions]="{ standalone: true }"
+                (blur)="billingDetailsTouched = true" />
+            </label>
+
+            <label
+              class="billing-field full-width"
+              [class.invalid]="billingDetailsTouched && !billingDetails.addressLine1.trim()">
+              <span>Address Line 1</span>
+              <input
+                type="text"
+                name="billingAddress1"
+                autocomplete="address-line1"
+                placeholder="123 Market Street"
+                [(ngModel)]="billingDetails.addressLine1"
+                [ngModelOptions]="{ standalone: true }"
+                (blur)="billingDetailsTouched = true" />
+            </label>
+
+            <label class="billing-field full-width optional">
+              <span>
+                Address Line 2
+                <small>(Optional)</small>
+              </span>
+              <input
+                type="text"
+                name="billingAddress2"
+                autocomplete="address-line2"
+                placeholder="Apartment, suite, etc."
+                [(ngModel)]="billingDetails.addressLine2"
+                [ngModelOptions]="{ standalone: true }" />
+            </label>
+
+            <label class="billing-field" [class.invalid]="billingDetailsTouched && !billingDetails.city.trim()">
+              <span>City</span>
+              <input
+                type="text"
+                name="billingCity"
+                autocomplete="address-level2"
+                placeholder="San Francisco"
+                [(ngModel)]="billingDetails.city"
+                [ngModelOptions]="{ standalone: true }"
+                (blur)="billingDetailsTouched = true" />
+            </label>
+
+            <label class="billing-field">
+              <span>State / Province</span>
+              <input
+                type="text"
+                name="billingState"
+                autocomplete="address-level1"
+                placeholder="CA"
+                [(ngModel)]="billingDetails.state"
+                [ngModelOptions]="{ standalone: true }" />
+            </label>
+
+            <label class="billing-field" [class.invalid]="billingDetailsTouched && !billingDetails.postalCode.trim()">
+              <span>Postal Code</span>
+              <input
+                type="text"
+                name="billingPostal"
+                autocomplete="postal-code"
+                placeholder="94107"
+                [(ngModel)]="billingDetails.postalCode"
+                [ngModelOptions]="{ standalone: true }"
+                (blur)="billingDetailsTouched = true" />
+            </label>
+
+            <label class="billing-field" [class.invalid]="billingDetailsTouched && !billingCountryIsValid">
+              <span>Country</span>
+              <input
+                type="text"
+                name="billingCountry"
+                autocomplete="country"
+                placeholder="US"
+                maxlength="2"
+                [(ngModel)]="billingDetails.country"
+                (ngModelChange)="onCountryCodeChange($event)"
+                [ngModelOptions]="{ standalone: true }"
+                (blur)="billingDetailsTouched = true" />
+            </label>
+          </div>
+
+          <p class="billing-hint">Your billing country should use the two-letter code (e.g., US, CA, GB).</p>
+          <div class="billing-validation" *ngIf="billingDetailsTouched && !isBillingDetailsValid">
+            Please complete all required fields to continue.
+          </div>
+        </section>
+      </div>
+
+      <div class="stripe-error" *ngIf="stripeErrorMessage">
+        {{ stripeErrorMessage }}
+      </div>
+    </ng-container>
+
+    <div class="payment-actions">
+      <button
+        class="confirm-btn"
+        type="button"
+        [disabled]="
+          isLoadingIntent ||
+          isConfirmingPayment ||
+          isAwaitingWebhookConfirmation ||
+          !selectedPackage ||
+          !isBillingDetailsValid
+        "
+        (click)="confirmStripePayment()">
+        {{
+          isAwaitingWebhookConfirmation
+            ? 'Awaiting Confirmation...'
+            : isConfirmingPayment
+              ? 'Processing Payment...'
+              : 'Complete Payment'
+        }}
+      </button>
+      <button
+        class="cancel-btn"
+        type="button"
+        [disabled]="isConfirmingPayment || isAwaitingWebhookConfirmation"
+        (click)="cancelPurchase()">
+        Cancel
+      </button>
+    </div>
+
+    <div class="webhook-wait-banner" *ngIf="isAwaitingWebhookConfirmation" role="status">
+      <span class="webhook-spinner" aria-hidden="true"></span>
+      <div class="webhook-copy">
+        <strong>Finalizing payment...</strong>
+        <p>Stripe is confirming your payment. We will update your credits automatically once it finishes.</p>
+      </div>
+    </div>
+
+    <p class="secure-note">Payments are securely processed by Stripe. Your card details never touch our servers.</p>
+  </div>
+
+  <div class="payment-container simulation" *ngIf="isSimulationMode && isPurchasing && selectedPackage">
     <h3>Simulating Payment for {{ selectedPackage.name }}</h3>
     <div class="simulation-payment">
       <p>Payment simulation in progress...</p>
@@ -20,24 +213,20 @@
     </div>
   </div>
 
-  <!-- Loading State -->
   <div class="loading" *ngIf="isLoadingPackages">
     <p>Loading credit packages...</p>
   </div>
 
-  <!-- Empty State -->
   <div class="empty-state" *ngIf="!isLoadingPackages && packages.length === 0 && !selectedPackage">
     <p>No credit packages available at this time.</p>
     <button class="retry-btn" (click)="loadPackages()">Retry</button>
   </div>
 
-  <!-- Credit Packages -->
   <div class="packages-grid" *ngIf="!isLoadingPackages && packages.length > 0 && !selectedPackage">
     <div
       class="package-card"
       [class.recommended]="isPackageRecommended(pkg)"
       *ngFor="let pkg of packages; trackBy: trackByPackageId">
-      <!-- Recommended Badge -->
       <div class="recommended-badge" *ngIf="isPackageRecommended(pkg)">Most Popular</div>
 
       <div class="package-header">
@@ -87,14 +276,13 @@
       </div>
 
       <div class="package-actions">
-        <button class="purchase-btn" [disabled]="isPurchasing" (click)="purchasePackage(pkg)">
-          {{ isPurchasing ? 'Processing...' : 'Purchase Credits' }}
+        <button class="purchase-btn" [disabled]="isPurchasing || isStripePaymentActive" (click)="purchasePackage(pkg)">
+          {{ isPurchasing || isStripePaymentActive ? 'Processing...' : 'Purchase Credits' }}
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Data Retention Policy -->
   <div class="retention-policy-info">
     <h3>Data Retention Policy</h3>
     <div class="retention-details">
@@ -113,7 +301,6 @@
     </div>
   </div>
 
-  <!-- Credit Costs Information -->
   <div class="credit-costs-info">
     <h3>Credit Costs</h3>
     <div class="cost-grid">

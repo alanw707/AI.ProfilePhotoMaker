@@ -36,7 +36,7 @@ This project plan outlines the major milestones, features, and tasks required to
 - [x] File management and cleanup
 - [x] Basic tier system with weekly credits
 - [x] Credit management and usage tracking
-- [~] Payment integration (Stripe) - 50% complete, webhook testing needed
+- [~] Payment integration (Stripe) - 70% complete (payment intents + webhook processing implemented; live testing pending)
 
 ### Phase 4: Frontend Development ✅ COMPLETED (100%)
 - [x] Angular project structure
@@ -102,7 +102,7 @@ This project plan outlines the major milestones, features, and tasks required to
    - [x] Implement user registration and login endpoints
    - [x] Add user profile management (CRUD)
    - [x] Enforce validation and error handling
-   - [ ] Implement rate limiting for auth endpoints
+   - [x] Implement rate limiting for auth endpoints
 
 3. **Profile Photo Styles & Selection** ✅ COMPLETED
    - [x] Define available photo styles in ReplicateApiClient
@@ -130,10 +130,11 @@ This project plan outlines the major milestones, features, and tasks required to
    - [x] **NEW**: Dashboard and gallery auto-repair functionality
    - [ ] Enforce data retention (delete after 7 days)
 
-7. **Payments & Transactions** ⏳ NOT STARTED
-   - [ ] Integrate payment provider (e.g., Stripe)
+7. **Payments & Transactions** 🔄 IN PROGRESS (70%)
+   - [x] Integrate Stripe payment intents + webhook fulfillment
    - [ ] Require payment before image generation/download
-   - [ ] Track transactions per user
+   - [x] Track transactions per user
+   - [~] Expand automated coverage for edge cases
 
 8. **Audit Logging & Activity Tracking** ⏳ NOT STARTED
    - [ ] Implement activity logging for key actions
