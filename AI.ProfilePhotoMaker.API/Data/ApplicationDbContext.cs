@@ -162,6 +162,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasOne(p => p.User)
             .WithMany()
             .HasForeignKey(p => p.UserId);
+
+        builder.Entity<CreditPurchase>()
+            .HasIndex(p => p.PaymentTransactionId)
+            .HasFilter("[PaymentTransactionId] IS NOT NULL")
+            .IsUnique()
+            .HasDatabaseName("IX_CreditPurchases_PaymentTransactionId_Unique");
     }
 
     private void ConfigurePerformanceIndexes(ModelBuilder builder)

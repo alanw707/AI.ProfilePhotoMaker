@@ -2,6 +2,7 @@ using AI.ProfilePhotoMaker.API.Configuration;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -163,6 +164,16 @@ public class CreditPackageService : ICreditPackageService
         ? "[redacted]"
         : value.Replace("\r", string.Empty).Replace("\n", string.Empty);
 
+    private static bool IsUniqueConstraintViolation(DbUpdateException exception)
+    {
+        if (exception.InnerException is SqlException sqlException)
+        {
+            return sqlException.Number is 2601 or 2627;
+        }
+
+        return false;
+    }
+
     private async Task<CreditPurchase> CreatePurchaseAndApplyCreditsAsync(string userId, CreditPackage package, string? paymentTransactionId, decimal amountPaid, string creditSource, string? externalTransactionId = null)
     {
         var purchase = new CreditPurchase
@@ -179,7 +190,22 @@ public class CreditPackageService : ICreditPackageService
         };
 
         _context.CreditPurchases.Add(purchase);
-        await _context.SaveChangesAsync();
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex) && !string.IsNullOrWhiteSpace(paymentTransactionId))
+        {
+            _context.Entry(purchase).State = EntityState.Detached;
+
+            var existingPurchase = await _context.CreditPurchases
+                .Include(p => p.Package)
+                .AsNoTracking()
+                .FirstAsync(p => p.PaymentTransactionId == paymentTransactionId);
+
+            return existingPurchase;
+        }
 
         var creditsAdded = await _basicTierService.AddPurchasedCreditsAsync(userId, package.TotalCredits, creditSource);
 
