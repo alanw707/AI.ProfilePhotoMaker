@@ -11,6 +11,69 @@ API_STARTED=false
 UI_STARTED=false
 NGROK_PID=""
 
+API_PROJECT="${SCRIPT_DIR}/AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj"
+
+load_stripe_env() {
+  if [[ -n ${STRIPE_SECRET_KEY:-} && -n ${STRIPE_PUBLISHABLE_KEY:-} && -n ${STRIPE_WEBHOOK_SECRET:-} ]]; then
+    return
+  fi
+
+  if ! command -v dotnet >/dev/null 2>&1; then
+    echo "⚠️  dotnet CLI not available; skipping Stripe secret export"
+    return
+  fi
+
+  if [[ ! -f $API_PROJECT ]]; then
+    echo "⚠️  API project file not found at $API_PROJECT; skipping Stripe secret export"
+    return
+  fi
+
+  local secrets
+  if ! secrets=$(dotnet user-secrets list --project "$API_PROJECT" 2>/dev/null); then
+    echo "⚠️  Unable to read dotnet user-secrets; skipping Stripe secret export"
+    return
+  fi
+
+  if [[ -z ${STRIPE_SECRET_KEY:-} ]]; then
+    local value
+    value=$(printf '%s\n' "$secrets" | awk -F ' = ' -v search='Stripe:SecretKey' '$1==search {print substr($0, index($0, " = ")+3); exit}')
+    if [[ -n $value ]]; then
+      export STRIPE_SECRET_KEY="$value"
+      echo "ℹ️  Loaded Stripe:SecretKey from user-secrets"
+    else
+      echo "⚠️  Stripe:SecretKey missing from user-secrets"
+    fi
+  fi
+
+  if [[ -z ${STRIPE_PUBLISHABLE_KEY:-} ]]; then
+    local value
+    value=$(printf '%s\n' "$secrets" | awk -F ' = ' -v search='Stripe:PublishableKey' '$1==search {print substr($0, index($0, " = ")+3); exit}')
+    if [[ -n $value ]]; then
+      export STRIPE_PUBLISHABLE_KEY="$value"
+      echo "ℹ️  Loaded Stripe:PublishableKey from user-secrets"
+    else
+      echo "⚠️  Stripe:PublishableKey missing from user-secrets"
+    fi
+  fi
+
+  if [[ -z ${STRIPE_WEBHOOK_SECRET:-} ]]; then
+    local value
+    value=$(printf '%s\n' "$secrets" | awk -F ' = ' -v search='Stripe:WebhookSecret' '$1==search {print substr($0, index($0, " = ")+3); exit}')
+    if [[ -n $value ]]; then
+      export STRIPE_WEBHOOK_SECRET="$value"
+      echo "ℹ️  Loaded Stripe:WebhookSecret from user-secrets"
+    else
+      echo "⚠️  Stripe:WebhookSecret missing from user-secrets"
+    fi
+  fi
+}
+
+# Provide default E2E login credentials unless caller overrides
+export STRIPE_E2E_EMAIL="${STRIPE_E2E_EMAIL:-testuser@example.com}"
+export STRIPE_E2E_PASSWORD="${STRIPE_E2E_PASSWORD:-TestPassword123!}"
+
+load_stripe_env
+
 cleanup() {
   local exit_code=$?
   if [[ $exit_code -ne 0 ]]; then

@@ -68,6 +68,14 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
   billingDetails: BillingDetailsForm = this._createEmptyBillingDetails();
   billingDetailsTouched = false;
   isCardElementFocused = false;
+  isAwaitingWebhookConfirmation = false;
+  private _pendingPaymentTransactionId: string | null = null;
+  private _pendingPaymentPackageId: number | null = null;
+  private _pendingPaymentAttempts = 0;
+  private _pendingPaymentTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly _maxPendingPaymentAttempts = 6;
+  private readonly _initialPendingDelayMs = 3000;
+  private readonly _pendingRetryDelayMs = 5000;
   private _stripeClientSecret: string | null = null;
   private _stripePublishableKey: string | null = null;
   private readonly _emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -103,6 +111,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
       this._themeSubscription.unsubscribe();
     }
 
+    this._clearPendingPaymentWatch();
     this._teardownStripeElements();
   }
 
@@ -227,6 +236,8 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     this.selectedPackage = pkg;
     this.stripeErrorMessage = null;
     this.isPurchasing = false;
+    this.isAwaitingWebhookConfirmation = false;
+    this._clearPendingPaymentWatch();
 
     if (this._shouldUsePaymentSimulation()) {
       this.isPurchasing = true;
@@ -438,16 +449,22 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this._pendingPaymentTransactionId = paymentTransactionId ?? this.stripeTransactionId;
+    this._pendingPaymentPackageId = this.selectedPackage.id;
+    this._pendingPaymentAttempts = 0;
+
     this._creditService
       .purchaseCreditPackage({
         packageId: this.selectedPackage.id,
-        paymentTransactionId,
+        paymentTransactionId: this._pendingPaymentTransactionId ?? paymentTransactionId,
       })
       .subscribe({
         next: response => {
           this.isConfirmingPayment = false;
 
           if (response.success) {
+            this._clearPendingPaymentWatch();
+            this.isAwaitingWebhookConfirmation = false;
             this._notificationService.success(
               'Credits Added',
               `${this.selectedPackage?.totalCredits ?? ''} credits added to your account!`
@@ -458,21 +475,122 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
 
           const errorCode = (response as any)?.error?.code;
           if (errorCode === 'PaymentPending') {
+            this.isAwaitingWebhookConfirmation = true;
             this._notificationService.info(
               'Payment Processing',
-              'Payment is still processing. Credits will update once the payment is confirmed.'
+              "Stripe is still finalizing your payment. We'll retry automatically in the background."
             );
-            this._resetStripeState();
+            this._startPendingPaymentWatch();
+            this._cdr.detectChanges();
             return;
           }
 
+          this._clearPendingPaymentWatch();
           this._handlePaymentError(response.error?.message || 'Payment failed. Please try again.');
         },
         error: error => {
           console.error('purchaseCreditPackage error', error);
+          this._clearPendingPaymentWatch();
           this._handlePaymentError('Unable to finalize purchase. Please try again.');
         },
       });
+  }
+
+  private _startPendingPaymentWatch(): void {
+    if (!this._pendingPaymentTransactionId || !this._pendingPaymentPackageId) {
+      return;
+    }
+
+    this._cancelPendingPaymentTimer();
+    this._pendingPaymentAttempts = 0;
+    this._schedulePendingPaymentCheck();
+  }
+
+  private _schedulePendingPaymentCheck(): void {
+    if (!this._pendingPaymentTransactionId || !this._pendingPaymentPackageId) {
+      return;
+    }
+
+    const delay =
+      this._pendingPaymentAttempts === 0 ? this._initialPendingDelayMs : this._pendingRetryDelayMs;
+
+    this._pendingPaymentTimer = setTimeout(() => {
+      this._pendingPaymentAttempts += 1;
+      console.debug('Polling Stripe payment status', {
+        attempt: this._pendingPaymentAttempts,
+        transactionId: this._pendingPaymentTransactionId,
+      });
+
+      this._creditService
+        .purchaseCreditPackage({
+          packageId: this._pendingPaymentPackageId!,
+          paymentTransactionId: this._pendingPaymentTransactionId!,
+        })
+        .subscribe({
+          next: response => {
+            if (response.success) {
+              this._notificationService.success(
+                'Credits Added',
+                `${this.selectedPackage?.totalCredits ?? ''} credits added to your account!`
+              );
+              this._finalizeSuccess(response.data.updatedCredits ?? null);
+              this._clearPendingPaymentWatch();
+              return;
+            }
+
+            const errorCode = (response as any)?.error?.code;
+            if (
+              errorCode === 'PaymentPending' &&
+              this._pendingPaymentAttempts < this._maxPendingPaymentAttempts
+            ) {
+              this._schedulePendingPaymentCheck();
+              return;
+            }
+
+            if (errorCode === 'PaymentPending') {
+              this._notificationService.info(
+                'Payment Processing',
+                'Stripe is still confirming your payment. Credits will update shortly.'
+              );
+              this.isAwaitingWebhookConfirmation = false;
+              this._resetStripeState();
+              this.selectedPackage = null;
+              this._cdr.detectChanges();
+              return;
+            }
+
+            this._clearPendingPaymentWatch();
+            this._handlePaymentError(
+              response.error?.message || 'Unable to finalize purchase. Please contact support.'
+            );
+          },
+          error: error => {
+            console.error('purchaseCreditPackage polling error', error);
+
+            if (this._pendingPaymentAttempts < this._maxPendingPaymentAttempts) {
+              this._schedulePendingPaymentCheck();
+              return;
+            }
+
+            this._clearPendingPaymentWatch();
+            this._handlePaymentError('Unable to confirm payment status. Please try again.');
+          },
+        });
+    }, delay);
+  }
+
+  private _cancelPendingPaymentTimer(): void {
+    if (this._pendingPaymentTimer) {
+      clearTimeout(this._pendingPaymentTimer);
+      this._pendingPaymentTimer = null;
+    }
+  }
+
+  private _clearPendingPaymentWatch(): void {
+    this._cancelPendingPaymentTimer();
+    this._pendingPaymentAttempts = 0;
+    this._pendingPaymentTransactionId = null;
+    this._pendingPaymentPackageId = null;
   }
 
   private _finalizeSuccess(updatedCredits: UserCreditStatus | null): void {
@@ -492,10 +610,12 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     this.isLoadingIntent = false;
     this.isConfirmingPayment = false;
     this.isPurchasing = false;
+    this.isAwaitingWebhookConfirmation = false;
     this.stripeErrorMessage = null;
     this.stripeTransactionId = null;
     this._stripeClientSecret = null;
     this.isCardElementFocused = false;
+    this._clearPendingPaymentWatch();
     this._resetBillingDetails();
     this._teardownStripeCardElement();
   }
@@ -505,6 +625,8 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     this.isConfirmingPayment = false;
     this.isLoadingIntent = false;
     this.isPurchasing = false;
+    this.isAwaitingWebhookConfirmation = false;
+    this._clearPendingPaymentWatch();
     this._cdr.detectChanges();
   }
 

@@ -168,13 +168,37 @@
       <button
         class="confirm-btn"
         type="button"
-        [disabled]="isLoadingIntent || isConfirmingPayment || !selectedPackage || !isBillingDetailsValid"
+        [disabled]="
+          isLoadingIntent ||
+          isConfirmingPayment ||
+          isAwaitingWebhookConfirmation ||
+          !selectedPackage ||
+          !isBillingDetailsValid
+        "
         (click)="confirmStripePayment()">
-        {{ isConfirmingPayment ? 'Processing Payment...' : 'Complete Payment' }}
+        {{
+          isAwaitingWebhookConfirmation
+            ? 'Awaiting Confirmation...'
+            : isConfirmingPayment
+              ? 'Processing Payment...'
+              : 'Complete Payment'
+        }}
       </button>
-      <button class="cancel-btn" type="button" [disabled]="isConfirmingPayment" (click)="cancelPurchase()">
+      <button
+        class="cancel-btn"
+        type="button"
+        [disabled]="isConfirmingPayment || isAwaitingWebhookConfirmation"
+        (click)="cancelPurchase()">
         Cancel
       </button>
+    </div>
+
+    <div class="webhook-wait-banner" *ngIf="isAwaitingWebhookConfirmation" role="status">
+      <span class="webhook-spinner" aria-hidden="true"></span>
+      <div class="webhook-copy">
+        <strong>Finalizing payment...</strong>
+        <p>Stripe is confirming your payment. We will update your credits automatically once it finishes.</p>
+      </div>
     </div>
 
     <p class="secure-note">Payments are securely processed by Stripe. Your card details never touch our servers.</p>

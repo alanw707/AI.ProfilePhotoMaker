@@ -229,6 +229,39 @@
     .cancel-btn
       min-width: 120px
       @include shared.btn-secondary
+
+  .webhook-wait-banner
+    margin-top: 1.5rem
+    padding: 0.9rem 1.1rem
+    border-radius: 12px
+    display: flex
+    align-items: center
+    gap: 0.85rem
+    background: rgba(102, 126, 234, 0.12)
+    border: 1px solid rgba(102, 126, 234, 0.35)
+    color: var(--text-primary)
+
+    .webhook-spinner
+      width: 1.1rem
+      height: 1.1rem
+      border-radius: 50%
+      border: 2px solid rgba(102, 126, 234, 0.25)
+      border-top-color: rgba(82, 208, 255, 0.85)
+      animation: stripeWebhookSpin 0.9s linear infinite
+
+    .webhook-copy
+      display: flex
+      flex-direction: column
+      gap: 0.15rem
+
+      strong
+        font-size: 0.95rem
+        color: var(--text-primary)
+
+      p
+        margin: 0
+        font-size: 0.82rem
+        color: var(--text-secondary)
   
   .secure-note
     margin-top: 1.25rem
@@ -642,3 +675,9 @@
     opacity: 1
   100%
     opacity: 0.3
+
+@keyframes stripeWebhookSpin
+  from
+    transform: rotate(0deg)
+  to
+    transform: rotate(360deg)

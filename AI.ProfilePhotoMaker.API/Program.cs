@@ -146,19 +146,29 @@ builder.Services.Configure<IpRateLimitPolicies>(builder.Configuration.GetSection
 builder.Services.AddInMemoryRateLimiting();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
-builder.Services.AddOptions<StripeOptions>()
-    .Configure<IConfiguration>((options, configuration) =>
+builder.Services.Configure<StripeOptions>(builder.Configuration.GetSection(StripeOptions.SectionName));
+
+builder.Services.PostConfigure<StripeOptions>(options =>
+{
+    if (string.IsNullOrWhiteSpace(options.PublishableKey))
     {
-        options.PublishableKey = configuration["Stripe:PublishableKey"]
-            ?? Environment.GetEnvironmentVariable(EnvironmentConfiguration.STRIPE_PUBLISHABLE_KEY)
-            ?? string.Empty;
-        options.SecretKey = configuration["Stripe:SecretKey"]
-            ?? Environment.GetEnvironmentVariable(EnvironmentConfiguration.STRIPE_SECRET_KEY)
-            ?? string.Empty;
-        options.WebhookSecret = configuration["Stripe:WebhookSecret"]
-            ?? Environment.GetEnvironmentVariable(EnvironmentConfiguration.STRIPE_WEBHOOK_SECRET)
-            ?? string.Empty;
-    });
+        options.PublishableKey = Environment.GetEnvironmentVariable(EnvironmentConfiguration.STRIPE_PUBLISHABLE_KEY) ?? string.Empty;
+    }
+
+    if (string.IsNullOrWhiteSpace(options.SecretKey))
+    {
+        options.SecretKey = Environment.GetEnvironmentVariable(EnvironmentConfiguration.STRIPE_SECRET_KEY) ?? string.Empty;
+    }
+
+    if (string.IsNullOrWhiteSpace(options.WebhookSecret))
+    {
+        options.WebhookSecret = Environment.GetEnvironmentVariable(EnvironmentConfiguration.STRIPE_WEBHOOK_SECRET) ?? string.Empty;
+    }
+
+    options.PublishableKey = options.PublishableKey?.Trim() ?? string.Empty;
+    options.SecretKey = options.SecretKey?.Trim() ?? string.Empty;
+    options.WebhookSecret = options.WebhookSecret?.Trim() ?? string.Empty;
+});
 
 builder.Services.Configure<PaymentSimulationOptions>(builder.Configuration.GetSection(PaymentSimulationOptions.SectionName));
 
