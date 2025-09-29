@@ -60,7 +60,7 @@ jobs:
     strategy:
       matrix:
         # Build the environment list dynamically and avoid empty entries
-        environment: ${{ fromJSON(format('["{0}"{1}]', (github.event.inputs.environment || 'Production'), (github.event_name == 'schedule' && '","Staging"' || ''))) }}
+        environment: ${{ fromJSON(format('["{0}"{1}]', (github.event.inputs.environment || 'Production'), (github.event_name == 'schedule' && ',"Staging"' || ''))) }}
       fail-fast: false
     
     steps:
