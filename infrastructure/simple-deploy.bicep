@@ -299,11 +299,19 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01'
 }
 
 // Backend API Container App
+resource backendUserIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: '${appName}-api-identity-${environment}-${uniqueSuffix}'
+  location: location
+}
+
 resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: backendAppName
   location: location
   identity: {
-    type: 'SystemAssigned'
+    type: 'SystemAssigned,UserAssigned'
+    userAssignedIdentities: {
+      '${backendUserIdentity.id}': {}
+    }
   }
   properties: {
     managedEnvironmentId: containerAppsEnvironment.id
@@ -372,7 +380,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
         {
           name: 'openai-api-key'
           keyVaultUrl: '${keyVault.properties.vaultUri}secrets/OpenAiApiKey'
-          identity: 'SystemAssigned'
+          identity: backendUserIdentity.id
         }
       ]
     }
@@ -587,7 +595,7 @@ resource backendKeyVaultSecretsAccess 'Microsoft.Authorization/roleAssignments@2
   name: guid(keyVault.id, backendApp.name, 'kv-secrets-user')
   scope: keyVault
   properties: {
-    principalId: backendApp.identity.principalId
+    principalId: backendUserIdentity.properties.principalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
   }
