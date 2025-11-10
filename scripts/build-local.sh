@@ -83,7 +83,10 @@ echo ""
 echo -e "${GREEN}🎉 All Images Built Successfully!${NC}"
 echo ""
 echo -e "${BLUE}📊 Built Images:${NC}"
-docker images | grep "${ACR_LOGIN_SERVER}" | head -10
+# Allow docker|grep|head to exit cleanly even though pipefail is enabled
+set +o pipefail
+docker images | grep "${ACR_LOGIN_SERVER}" | head -10 || true
+set -o pipefail
 
 echo ""
 echo -e "${YELLOW}💡 Next Steps:${NC}"
