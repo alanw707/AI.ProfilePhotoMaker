@@ -372,7 +372,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
         {
           name: 'openai-api-key'
           keyVaultUrl: '${keyVault.properties.vaultUri}secrets/OpenAiApiKey'
-          identity: 'system'
+          identity: 'SystemAssigned'
         }
       ]
     }
