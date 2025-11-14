@@ -1,10 +1,6 @@
 #!/bin/bash
 # Infrastructure Configuration Validation Script
 # Validates alignment between Bicep templates and application environment variable expectations
-# 
-# NOTE: For comprehensive configuration drift detection across all systems, use:
-#       ./scripts/detect-config-drift.sh [Environment]
-#
 # Usage: ./scripts/validate-infrastructure-config.sh [--verbose]
 
 set -e
@@ -102,6 +98,7 @@ CRITICAL_VARS=(
     "JWT_SECRET"
     "REPLICATE_API_TOKEN"
     "REPLICATE_WEBHOOK_SECRET"
+    "OPENAI_API_KEY"
     "GOOGLE_CLIENT_ID"
     "GOOGLE_CLIENT_SECRET"
     "MSSQL_SA_PASSWORD"
@@ -142,6 +139,13 @@ check_infrastructure_provides() {
             local config_match=$(echo "$BICEP_CONFIG_VARS" | grep -x "Replicate__WebhookSecret" || true)
             if [[ -n "$config_match" ]]; then
                 echo "config:Replicate__WebhookSecret"
+                return 0
+            fi
+            ;;
+        "OPENAI_API_KEY")
+            local config_match=$(echo "$BICEP_CONFIG_VARS" | grep -x "OpenAI__ApiKey" || true)
+            if [[ -n "$config_match" ]]; then
+                echo "config:OpenAI__ApiKey"
                 return 0
             fi
             ;;
@@ -268,9 +272,6 @@ else
     echo "  3. Ensure exact name matching (case-sensitive)"
     echo "  4. Common mistake: AzureStorage__ConnectionString vs AZURE_STORAGE_CONNECTION_STRING"
     echo "  5. Run this script with --verbose for detailed debugging"
-    echo ""
-    echo -e "${CYAN}💡 For comprehensive drift detection and monitoring, run:${NC}"
-    echo "     ./scripts/detect-config-drift.sh Production"
     echo ""
     echo -e "${RED}🚫 DEPLOYMENT BLOCKED - Fix environment variable mismatches before deploying${NC}"
     exit 1
