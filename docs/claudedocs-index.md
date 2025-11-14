@@ -1,11 +1,11 @@
 # ClaudeDocs Index
 
-The `ClaudeDocs/` directory contains analysis and generated reports (performance audits, deployment investigations, config-drift snapshots). These are auxiliary artifacts and are not the canonical product documentation.
+The `ClaudeDocs/` directory contains analysis and generated reports (performance audits, deployment investigations, historical drift snapshots). These are auxiliary artifacts and are not the canonical product documentation.
 
 Primary locations:
 - `ClaudeDocs/Analysis/Performance/` – performance audit reports
 - `ClaudeDocs/Report/` – one-off investigation writeups
-- `ClaudeDocs/Config-Drift/` – drift monitoring snapshots and dashboards (produced by scripts)
+- `ClaudeDocs/Config-Drift/` – historical drift monitoring snapshots and dashboards (legacy tooling)
 
 Current reports in repo:
 
@@ -23,4 +23,3 @@ Current reports in repo:
 Notes:
 - Treat ClaudeDocs as historical/generative output. The canonical engineering documentation lives under `docs/` and in code comments.
 - Scripts may reference `ClaudeDocs/` for report output; that’s expected.
-
