@@ -1,5 +1,7 @@
 # AI Profile Photo Maker - Deployment Strategy Guide
 
+> Status: Archived reference. For the up-to-date “how to deploy” steps, use `docs/deployment/DEPLOYMENT_GUIDE.md` and `docs/deployment/DEPLOYMENT_CHECKLIST.md`. This document captures the original option analysis and history.
+
 ## Overview
 
 This document outlines the comprehensive deployment strategy for the AI Profile Photo Maker application, including different deployment options, current status, and next steps. This guide serves as the primary reference for all deployment-related activities.

@@ -1,7 +1,7 @@
 ## Product Requirements Document (PRD) — AI.ProfilePhotoMaker
 
-Version: 1.0
-Last updated: 2025-07-28
+Version: 1.1  
+Last updated: 2025-11-15
 
 ### 1) Product Summary
 - AI-powered profile/headshot photo maker with: user auth (email/password + Google OAuth), photo upload, custom model training on Replicate, styled image generation, photo enhancement, credits/credit packages, and automated data retention.
@@ -9,12 +9,12 @@ Last updated: 2025-07-28
 
 ### 2) Goals
 - Enable users to generate professional profile photos from their selfies using AI styles.
-- Provide a basic tier with weekly free credits, and paid credits via credit packages (Stripe integration WIP).
+- Provide a basic tier with weekly free credits, and paid credits via credit packages (Stripe PaymentIntents + webhooks in production, with simulation mode for development).
 - Ensure reliability via hybrid DB/filesystem syncing and webhook-driven flows.
-- Enforce privacy via retention: input photos deleted after 7 days, generated photos after 30 days.
+- Enforce privacy via retention: input photos deleted after 7 days, generated photos after 30 days (target behavior; automated cleanup is being phased in via background jobs).
 
 ### 3) Non‑Goals
-- No full subscription billing lifecycle in MVP (credit packages are primary; Stripe webhook flow present but not fully enforced in UI).
+- No full subscription billing lifecycle in MVP (credit packages are primary; Stripe webhook flow drives credit awards, but not all UI flows are strictly payment-gated yet).
 - No admin analytics dashboard in MVP.
 - No enterprise SSO or multi-tenant roles.
 
@@ -65,11 +65,11 @@ Photo Enhancement (Kontext Pro)
 
 Credits & Payments
 - Weekly free credits for Basic tier: 5, reset every 7 days.
-- Purchased credits added via credit packages; status, packages (public), purchase, history provided; PaymentIntent mocked in dev.
-- Endpoints: `GET /api/credit/status`, `GET /api/credit/packages` (public), `POST /api/credit/purchase`, `GET /api/credit/history`, `POST /api/credit/create-payment-intent` (mock), `GET /api/credit/costs`, `GET /api/credit/payment-config`.
+- Purchased credits added via credit packages; status, packages (public), purchase, history provided; PaymentIntents created via Stripe in all environments, with a configuration switch for simulation in development/test.
+- Endpoints: `GET /api/credit/status`, `GET /api/credit/packages` (public), `POST /api/credit/purchase`, `GET /api/credit/history`, `POST /api/credit/create-payment-intent` (Stripe PaymentIntent), `GET /api/credit/costs`, `GET /api/credit/payment-config`.
 
 Retention & Privacy
-- Retention policy: input photos (original uploads) deleted after 7 days; AI generated photos deleted after 30 days. Background service runs periodic cleanup; manual endpoints to inspect/delete expired images.
+- Retention policy: input photos (original uploads) deleted after 7 days; AI generated photos deleted after 30 days. Background services and tooling implement this over time; manual endpoints exist to inspect/delete expired images in early MVP deployments.
 - Endpoints: `GET /api/retentionpolicy/expired-images`, `POST /api/retentionpolicy/delete-expired`, `POST /api/retentionpolicy/initialize-retention-dates`, `GET /api/retentionpolicy/policy-info`.
 
 Webhooks & File Downloading
@@ -161,5 +161,4 @@ Webhooks & File Downloading
 - Credit: `/api/credit/*`
 - Retention: `/api/retentionpolicy/*`
 - Webhooks: `/api/webhooks/replicate/*`
-
 

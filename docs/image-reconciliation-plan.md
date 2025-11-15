@@ -1,5 +1,7 @@
 # Image Reconciliation and Safe Repair Plan
 
+> Status: Design reference for future reconciliation/retention improvements. The currently implemented behavior is summarized in `PROJECT_PLAN.md` and the Retention/Background service docs.
+
 ## Context
 - Some environments experienced unexpected drops in “uploaded photos” due to aggressive UI‑triggered database reconciliation.
 - We’ve already gated repair behind feature flags and prevented destructive reconcile in production.
@@ -57,4 +59,3 @@
 - Transient storage/network failures → classify as Inconclusive; never delete.
 - Path drift (env prefix/container) → legacy fallback checks.
 - Operator error → destructive operations gated, logged, and off by default in prod.
-

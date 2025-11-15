@@ -4,6 +4,8 @@ Welcome to the comprehensive documentation for the AI Profile Photo Maker applic
 
 ## 📚 Documentation Structure
 
+> For day-to-day work, start with the **Canonical Developer Docs** below; everything else is deep-dive or historical reference.
+
 ### 🏗️ [Architecture](./architecture/)
 System design, components, and architectural decisions.
 
@@ -32,10 +34,10 @@ Security implementation, authentication, and compliance documentation.
 ### 💻 [Development](./development/)
 Development processes, backlogs, and project planning.
 
-- **[DEVELOPMENT_BACKLOG.md](./development/DEVELOPMENT_BACKLOG.md)** - Development backlog and feature requests
-- **[PROJECT_PLAN.md](./development/PROJECT_PLAN.md)** - Overall project planning and milestones
-- **[SPRINT_ROADMAP.md](./development/SPRINT_ROADMAP.md)** - Sprint planning and roadmap
-- **[TEST_ANALYSIS_REPORT.md](./development/TEST_ANALYSIS_REPORT.md)** - Testing analysis and quality metrics
+- **[PROJECT_PLAN.md](./development/PROJECT_PLAN.md)** - Overall project planning and milestones (canonical)
+- **[DEVELOPMENT_BACKLOG.md](./development/DEVELOPMENT_BACKLOG.md)** - Detailed task backlog and estimates
+- **[SPRINT_ROADMAP.md](./development/SPRINT_ROADMAP.md)** - Historical sprint roadmap and timeline
+- **[TEST_ANALYSIS_REPORT.md](./development/TEST_ANALYSIS_REPORT.md)** - Testing analysis and quality metrics (with dated snapshots)
 
 ### ⚙️ [Operations](./operations/)
 Operational procedures, API documentation, and system management.
@@ -51,7 +53,17 @@ Operational procedures, API documentation, and system management.
 
 ---
 
-## 🌟 Key Documents
+## 🌟 Canonical Developer Docs
+
+- **Product & Requirements**: `docs/product/PRD.md`
+- **Architecture Overview**: `docs/architecture/ARCHITECTURE_OVERVIEW.md`
+- **Environment & Secrets**: `docs/setup/ENVIRONMENT_SETUP.md`, `docs/ENVIRONMENT_VARIABLES.md`, `docs/SECRET_MANAGEMENT_WORKFLOW.md`
+- **Plan & Backlog**: `docs/development/PROJECT_PLAN.md`, `docs/development/DEVELOPMENT_BACKLOG.md`
+- **Operations & API**: `docs/operations/API_REFERENCE.md`, `docs/operations/OPERATIONAL_RUNBOOK.md`, `docs/operations/CREDIT_SYSTEM.md`
+
+---
+
+## 🌟 Milestone Documentation
 
 ### **Recently Created (Milestone Documentation)**
 

@@ -1,5 +1,7 @@
 # Production Image URL Migration Guide
 
+> Status: One-time production migration playbook. This is historical; for current storage behavior and reconciliation design, see `PRIVATE_BLOB_STORAGE.md` and `image-reconciliation-plan.md`.
+
 ## Overview
 
 This guide provides a comprehensive plan to migrate existing database records from relative image paths to full Azure Blob URLs. This addresses the production issue where the database stored relative paths (e.g., `/prod/uploads/...`) instead of full Azure URLs, causing 404 errors and triggering incorrect auto-repair deletion.

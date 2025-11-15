@@ -1,5 +1,7 @@
 # SignalR Real-Time Enhancement Updates - Integration Guide
 
+> Status: Optional enhancement guide. Real-time notifications are not required for the current MVP; treat this as a future roadmap reference rather than required implementation.
+
 ## Overview
 Real-time prediction notifications eliminate the need for frontend polling, providing instant completion notifications.
 

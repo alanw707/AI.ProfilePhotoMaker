@@ -1,5 +1,7 @@
 # Playwright Suite Overlap Assessment
 
+> Status: Archived refactor note. Use the root `tests/e2e/README.md` and `AI.ProfilePhotoMaker.API/tests/playwright/README.md` as the primary references when working on Playwright tests.
+
 ## Repository-Level Suite (`tests/e2e`)
 - Entry point: `tests/e2e/image-upload-validation.spec.js` with shared config `tests/e2e/playwright.config.js`.
 - Focus: Production/staging smoke for image upload validation across desktop, cross-browser, and mobile devices.

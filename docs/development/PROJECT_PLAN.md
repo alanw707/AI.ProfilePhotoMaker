@@ -5,9 +5,9 @@ This project plan outlines the major milestones, features, and tasks required to
 
 ---
 
-## Project Status (Updated July 27, 2025)
+## Project Status (Updated November 15, 2025)
 
-**Overall Completion: 91%** 
+**Overall Completion: ~93%** 
 
 ### Phase 1: Foundation ✅ COMPLETED (100%)
 - [x] .NET 8 Web API setup
@@ -28,7 +28,7 @@ This project plan outlines the major milestones, features, and tasks required to
 - [x] Training ZIP file management
 - [x] Webhook signature validation
 
-### Phase 3: User & Business Features 🔄 IN PROGRESS (85%)
+### Phase 3: User & Business Features 🔄 IN PROGRESS (90%)
 - [x] Image upload system (max 20 selfies)
 - [x] User profile CRUD operations
 - [x] Style selection API and persistence
@@ -36,7 +36,7 @@ This project plan outlines the major milestones, features, and tasks required to
 - [x] File management and cleanup
 - [x] Basic tier system with weekly credits
 - [x] Credit management and usage tracking
-- [~] Payment integration (Stripe) - 70% complete (payment intents + webhook processing implemented; live testing pending)
+- [~] Payment integration (Stripe) - 90% complete (payment intents + webhook processing implemented; local end-to-end flow validated; production smoke tests pending)
 
 ### Phase 4: Frontend Development ✅ COMPLETED (100%)
 - [x] Angular project structure
@@ -130,11 +130,11 @@ This project plan outlines the major milestones, features, and tasks required to
    - [x] **NEW**: Dashboard and gallery auto-repair functionality
    - [ ] Enforce data retention (delete after 7 days)
 
-7. **Payments & Transactions** 🔄 IN PROGRESS (70%)
+7. **Payments & Transactions** 🔄 IN PROGRESS (90%)
    - [x] Integrate Stripe payment intents + webhook fulfillment
-   - [ ] Require payment before image generation/download
+   - [ ] Require payment before image generation/download for all paid flows
    - [x] Track transactions per user
-   - [~] Expand automated coverage for edge cases
+   - [~] Expand automated coverage for edge cases (service + webhook tests)
 
 8. **Audit Logging & Activity Tracking** ⏳ NOT STARTED
    - [ ] Implement activity logging for key actions
@@ -154,12 +154,12 @@ This project plan outlines the major milestones, features, and tasks required to
     - [x] Responsive design and theme switching
     - [x] Modern SASS architecture with @use syntax
     - [x] Component-based architecture with shared modules
-    - [ ] Integrate payment flow (simulation implemented)
+    - [x] Integrate payment flow (Stripe + simulation; UI purchase flow wired to payment intents)
     - [x] Handle API errors and user feedback
 
-11. **Testing & Quality Assurance** 🔄 IN PROGRESS (20%)
+11. **Testing & Quality Assurance** 🔄 IN PROGRESS (25%)
     - [~] Write unit/integration tests for backend (some controller tests exist)
-    - [~] Write Angular component/service tests (basic tests exist)
+    - [~] Write Angular component/service tests (basic tests exist; Karma headless runner configured)
     - [ ] Mock external APIs in tests
     - [ ] Achieve 80%+ code coverage
 
