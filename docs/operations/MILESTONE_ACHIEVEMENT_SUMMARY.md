@@ -1,5 +1,7 @@
 # 🎉 Milestone Achievement Summary
 
+> Status: Milestone summary. For current deployment steps and status, see `docs/deployment/DEPLOYMENT_GUIDE.md`, `docs/deployment/DEPLOYMENT_CHECKLIST.md`, and `docs/development/PROJECT_PLAN.md`.
+
 ## AI Profile Photo Maker - Successfully Deployed to Production
 
 **Date:** August 5, 2025  

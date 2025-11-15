@@ -28,3 +28,11 @@
 - [2025-11-14 18:20 PT] Verified SQL password escaping, updated docker-compose health check, and synced SA password & secrets
 - [2025-11-14 18:20 PT] API started via `./dev-start.sh --api-only`; confirmed storage/Azure settings via user-secrets override
 - [2025-11-14 18:20 PT] Ran Stripe CLI listener script, confirmed webhook secret auto-rotates, purchased Starter Pack (50 credits) via API, webhook succeeded
+
+## Canonical References
+
+- High-level docs index: `docs/INDEX.md`
+- Product requirements: `docs/product/PRD.md`
+- Architecture overview: `docs/architecture/ARCHITECTURE_OVERVIEW.md`
+- Project plan & roadmap: `docs/development/PROJECT_PLAN.md`, `docs/development/SPRINT_ROADMAP.md`
+- Test strategy: `docs/development/TEST_ANALYSIS_REPORT.md`

@@ -1,5 +1,7 @@
 # Unified Secrets Management & OAuth Deployment Continuity
 
+> Status: Archived deep-dive. For the current, concise workflow, start with `docs/SECRET_MANAGEMENT_WORKFLOW.md` and `docs/setup/ENVIRONMENT_SETUP.md`.
+
 This document provides comprehensive guidance for managing secrets across all stores and ensuring OAuth deployment continuity.
 
 ## Overview

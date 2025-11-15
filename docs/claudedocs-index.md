@@ -1,5 +1,7 @@
 # ClaudeDocs Index
 
+> Status: Historical/generative reports index. For canonical engineering documentation, always start from `docs/INDEX.md`.
+
 The `ClaudeDocs/` directory contains analysis and generated reports (performance audits, deployment investigations, config-drift snapshots). These are auxiliary artifacts and are not the canonical product documentation.
 
 Primary locations:
@@ -23,4 +25,3 @@ Current reports in repo:
 Notes:
 - Treat ClaudeDocs as historical/generative output. The canonical engineering documentation lives under `docs/` and in code comments.
 - Scripts may reference `ClaudeDocs/` for report output; that’s expected.
-

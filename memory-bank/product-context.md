@@ -23,3 +23,13 @@ AI Profile Photo Maker is a consumer-facing platform that turns user-uploaded se
 - `AI.ProfilePhotoMaker.API.Tests/`: xUnit suites (unit, integration, controller, infrastructure, performance) with fixtures/builders.
 - `AI.ProfilePhotoMaker.UI/`: Angular 19 app with feature modules, shared libs, assets, Cypress + Playwright harnesses.
 - `docs/`, `tests/`, `scripts/`, `infrastructure/`: documentation hub, combined Playwright scenarios, automation utilities, and IaC assets.
+
+## Canonical Documentation
+
+Use this memory-bank file as a short owner’s summary, but treat the following as source of truth:
+
+- Documentation hub: `docs/INDEX.md`
+- Product requirements: `docs/product/PRD.md`
+- System architecture: `docs/architecture/ARCHITECTURE_OVERVIEW.md`, `docs/architecture/cloud-architecture.md`
+- Environment & secrets: `docs/setup/ENVIRONMENT_SETUP.md`, `docs/ENVIRONMENT_VARIABLES.md`, `docs/SECRET_MANAGEMENT_WORKFLOW.md`
+- Delivery plan: `docs/development/PROJECT_PLAN.md`, `docs/development/SPRINT_ROADMAP.md`, `docs/development/DEVELOPMENT_BACKLOG.md`
