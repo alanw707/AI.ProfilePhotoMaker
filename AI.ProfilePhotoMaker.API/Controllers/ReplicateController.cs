@@ -124,8 +124,8 @@ public class ReplicateController : ControllerBase
             var result = await _replicateApiClient.CreateModelTrainingAsync(userId, externalImageZipUrl);
 
             // Only consume credits AFTER successful API call
-            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "model_training");
-            if (!creditConsumed)
+            var creditConsumption = await _basicTierService.ConsumeCreditsAsync(userId, "model_training");
+            if (!creditConsumption.Success)
             {
                 _logger.LogError("Successfully created Replicate training but failed to consume credits for user {UserId}",
                     LoggingSanitizer.SanitizeId(userId));
@@ -471,7 +471,7 @@ public class ReplicateController : ControllerBase
 
             // Only consume credits AFTER successful API call (5 credits per image generated)
             var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, requiredCredits, "styled_generation");
-            if (!creditConsumed)
+            if (!creditConsumed.Success)
             {
                 _logger.LogError("Successfully created Replicate prediction but failed to consume credits for user {UserId}", Sid(userId));
                 // Note: In this case, the Replicate prediction is already running but we couldn't charge credits
@@ -693,7 +693,7 @@ public class ReplicateController : ControllerBase
             // Only consume credits for successful generations
             var actualCreditsRequired = successfulGenerations.Count * dto.NumOutputsPerStyle * CreditCostConfig.GetCreditCost("styled_generation");
             var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, actualCreditsRequired, "styled_generation");
-            if (!creditConsumed)
+            if (!creditConsumed.Success)
             {
                 _logger.LogError("Successfully created Replicate predictions but failed to consume credits for user {UserId}", Sid(userId));
                 // Note: In this case, the Replicate predictions are already running but we couldn't charge credits
@@ -960,7 +960,7 @@ public class ReplicateController : ControllerBase
 
             // Only consume credit AFTER successful API call
             var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "photo_enhancement");
-            if (!creditConsumed)
+            if (!creditConsumed.Success)
             {
                 _logger.LogError("Successfully created Replicate enhancement but failed to consume credits for user {UserId}", Sid(userId));
                 // Note: In this case, the Replicate enhancement is already running but we couldn't charge credits

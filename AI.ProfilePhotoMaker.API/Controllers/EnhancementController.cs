@@ -123,6 +123,8 @@ public class EnhancementController : ControllerBase
     [HttpPost("enhance")]
     public async Task<IActionResult> EnhancePhoto([FromBody] EnhancePhotoRequestDto dto)
     {
+        CreditConsumptionResult? creditConsumptionResult = null;
+
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
@@ -168,9 +170,9 @@ public class EnhancementController : ControllerBase
 
             // Consume credits BEFORE API call to prevent race conditions
             // Use photo_enhancement action so weekly credits are eligible
-            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, 2, "photo_enhancement");
+            creditConsumptionResult = await _basicTierService.ConsumeCreditsAsync(userId, 2, "photo_enhancement");
 
-            if (!creditConsumed)
+            if (creditConsumptionResult == null || !creditConsumptionResult.Success)
             {
                 _logger.LogError("Failed to consume credits for user {UserId} for OpenAI enhancement", Sid(userId));
                 return StatusCode(500, new
@@ -216,7 +218,7 @@ public class EnhancementController : ControllerBase
         {
             _logger.LogError(ex, "Invalid configuration or parameters for OpenAI enhancement for user {UserId}", Sid(userId));
 
-            // Credits already consumed - refund not implemented yet
+            await HandleEnhancementRefundAsync(userId, creditConsumptionResult, "invalid request", ex.Message);
 
             return BadRequest(new
             {
@@ -230,19 +232,7 @@ public class EnhancementController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            // Refund credits since the operation failed
-            var refundSuccess = await _basicTierService.RefundCreditsAsync(userId, 2, "photo_enhancement");
-            await _basicTierService.LogUsageAsync(userId, "openai_enhancement_refund",
-                $"Refund for failed enhancement: {ex.Message}", creditsCost: -2);
-
-            if (refundSuccess)
-            {
-                _logger.LogInformation("Successfully refunded 2 credits to user {UserId} for failed OpenAI enhancement", Sid(userId));
-            }
-            else
-            {
-                _logger.LogError("Failed to refund 2 credits to user {UserId} for failed OpenAI enhancement", Sid(userId));
-            }
+            await HandleEnhancementRefundAsync(userId, creditConsumptionResult, "failed enhancement", ex.Message);
 
             // Check if this is a configuration issue (missing API key) vs service failure
             if (ex.Message.Contains("OpenAI API key is required but not configured"))
@@ -276,19 +266,7 @@ public class EnhancementController : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
-            // Refund credits since the operation failed
-            var refundSuccess = await _basicTierService.RefundCreditsAsync(userId, 2, "photo_enhancement");
-            await _basicTierService.LogUsageAsync(userId, "openai_enhancement_refund",
-                $"Refund for authentication failure: {ex.Message}", creditsCost: -2);
-
-            if (refundSuccess)
-            {
-                _logger.LogInformation("Successfully refunded 2 credits to user {UserId} for OpenAI authentication failure", Sid(userId));
-            }
-            else
-            {
-                _logger.LogError("Failed to refund 2 credits to user {UserId} for OpenAI authentication failure", Sid(userId));
-            }
+            await HandleEnhancementRefundAsync(userId, creditConsumptionResult, "authentication failure", ex.Message);
 
             _logger.LogError(ex, "OpenAI authentication failed for user {UserId}", Sid(userId));
 
@@ -304,19 +282,7 @@ public class EnhancementController : ControllerBase
         }
         catch (HttpRequestException ex)
         {
-            // Refund credits since the operation failed
-            var refundSuccess = await _basicTierService.RefundCreditsAsync(userId, 2, "photo_enhancement");
-            await _basicTierService.LogUsageAsync(userId, "openai_enhancement_refund",
-                $"Refund for network error: {ex.Message}", creditsCost: -2);
-
-            if (refundSuccess)
-            {
-                _logger.LogInformation("Successfully refunded 2 credits to user {UserId} for OpenAI network error", Sid(userId));
-            }
-            else
-            {
-                _logger.LogError("Failed to refund 2 credits to user {UserId} for OpenAI network error", Sid(userId));
-            }
+            await HandleEnhancementRefundAsync(userId, creditConsumptionResult, "network error", ex.Message);
 
             _logger.LogError(ex, "Network error during OpenAI enhancement for user {UserId}", Sid(userId));
 
@@ -332,19 +298,7 @@ public class EnhancementController : ControllerBase
         }
         catch (TaskCanceledException ex)
         {
-            // Refund credits since the operation failed
-            var refundSuccess = await _basicTierService.RefundCreditsAsync(userId, 2, "photo_enhancement");
-            await _basicTierService.LogUsageAsync(userId, "openai_enhancement_refund",
-                $"Refund for timeout: {ex.Message}", creditsCost: -2);
-
-            if (refundSuccess)
-            {
-                _logger.LogInformation("Successfully refunded 2 credits to user {UserId} for OpenAI timeout", Sid(userId));
-            }
-            else
-            {
-                _logger.LogError("Failed to refund 2 credits to user {UserId} for OpenAI timeout", Sid(userId));
-            }
+            await HandleEnhancementRefundAsync(userId, creditConsumptionResult, "timeout", ex.Message);
 
             _logger.LogError(ex, "Request timeout during OpenAI enhancement for user {UserId}", Sid(userId));
 
@@ -360,19 +314,7 @@ public class EnhancementController : ControllerBase
         }
         catch (Exception ex)
         {
-            // Refund credits since the operation failed
-            var refundSuccess = await _basicTierService.RefundCreditsAsync(userId, 2, "photo_enhancement");
-            await _basicTierService.LogUsageAsync(userId, "openai_enhancement_refund",
-                $"Refund for unexpected error: {ex.Message}", creditsCost: -2);
-
-            if (refundSuccess)
-            {
-                _logger.LogInformation("Successfully refunded 2 credits to user {UserId} for unexpected OpenAI error", Sid(userId));
-            }
-            else
-            {
-                _logger.LogError("Failed to refund 2 credits to user {UserId} for unexpected OpenAI error", Sid(userId));
-            }
+            await HandleEnhancementRefundAsync(userId, creditConsumptionResult, "unexpected error", ex.Message);
 
             _logger.LogError(ex, "Unexpected error during OpenAI enhancement for user {UserId}: {ErrorMessage}", Sid(userId), S(ex.Message));
 
@@ -449,6 +391,27 @@ public class EnhancementController : ControllerBase
         {
             // If parsing fails, just return original URL
             return originalUrl;
+        }
+    }
+
+    private async Task HandleEnhancementRefundAsync(string userId, CreditConsumptionResult? consumptionResult, string scenario, string details)
+    {
+        var creditsToRefund = consumptionResult?.TotalCreditsConsumed ?? 0;
+        var refundSuccess = await _basicTierService.RefundCreditsAsync(userId, consumptionResult);
+
+        if (creditsToRefund > 0)
+        {
+            await _basicTierService.LogUsageAsync(userId, "openai_enhancement_refund",
+                $"Refund for {scenario}: {details}", creditsCost: -creditsToRefund);
+        }
+
+        if (refundSuccess)
+        {
+            _logger.LogInformation("Successfully refunded {Credits} credits to user {UserId} for OpenAI {Scenario}", creditsToRefund, Sid(userId), scenario);
+        }
+        else
+        {
+            _logger.LogError("Failed to refund credits to user {UserId} for OpenAI {Scenario}", Sid(userId), scenario);
         }
     }
 }

@@ -7,9 +7,9 @@ public interface IBasicTierService
     Task<bool> HasAvailableCreditsAsync(string userId);
     Task<int> GetAvailableCreditsAsync(string userId);
     Task<(int weeklyCredits, int purchasedCredits)> GetCreditBreakdownAsync(string userId);
-    Task<bool> ConsumeCreditsAsync(string userId, string action = "basic_generation");
-    Task<bool> ConsumeCreditsAsync(string userId, int customAmount, string action = "styled_generation");
-    Task<bool> RefundCreditsAsync(string userId, int credits, string action = "basic_generation");
+    Task<CreditConsumptionResult> ConsumeCreditsAsync(string userId, string action = "basic_generation");
+    Task<CreditConsumptionResult> ConsumeCreditsAsync(string userId, int customAmount, string action = "styled_generation");
+    Task<bool> RefundCreditsAsync(string userId, CreditConsumptionResult? consumptionResult);
     Task<bool> AddPurchasedCreditsAsync(string userId, int credits, string source = "credit_purchase");
     Task ResetWeeklyCreditsAsync(string userId);
     Task ResetAllExpiredCreditsAsync();
