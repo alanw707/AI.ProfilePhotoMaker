@@ -490,13 +490,6 @@ validateEnvironmentConsistency() {
         errors=$((errors + 1))
     fi
     
-    # Validate configuration drift detection
-    if [[ -f ".github/workflows/config-drift-monitor.yml" ]]; then
-        log_success "✅ Configuration drift monitoring workflow found"
-    else
-        log_warning "⚠️  Configuration drift monitoring not configured"
-    fi
-    
     return $errors
 }
 
@@ -587,64 +580,8 @@ else
     log_error "❌ Infrastructure validation failed with $INFRA_ERRORS errors"
 fi
 
-echo ""
-
 # ===========================================
-# 6. VALIDATE CONFIGURATION DRIFT DETECTION
-# ===========================================
-
-log_info "🔄 Validating configuration drift detection integration..."
-
-# Check for drift monitoring infrastructure
-if [[ -f ".github/workflows/config-drift-monitor.yml" ]]; then
-    log_success "✅ Configuration drift monitoring workflow found"
-    
-    # Check if drift monitoring includes the validation commands we need
-    if grep -q "validate-secrets.sh" .github/workflows/config-drift-monitor.yml; then
-        log_success "✅ Secrets validation integrated into drift monitoring"
-    else
-        log_warning "⚠️  Secrets validation not integrated into drift monitoring"
-    fi
-    
-    # Check for Azure resource validation in drift monitoring
-    if grep -q "az deployment group validate" .github/workflows/config-drift-monitor.yml; then
-        log_success "✅ Infrastructure validation integrated into drift monitoring"
-    else
-        log_warning "⚠️  Infrastructure validation not integrated into drift monitoring"
-    fi
-else
-    log_warning "⚠️  Configuration drift monitoring not configured"
-    log_info "💡 Consider setting up drift monitoring to prevent configuration mismatches"
-fi
-
-# Validate that current configuration would pass drift detection
-log_info "🧪 Simulating configuration drift detection..."
-
-# Check if deployed infrastructure matches current templates
-if command -v az &> /dev/null; then
-    log_info "📊 Azure CLI available"
-    if [[ -n "${AZURE_CLIENT_ID:-}" || -n "${AZURE_SUBSCRIPTION_ID:-}" ]]; then
-        log_info "ℹ️  Azure credentials detected - could perform live drift detection"
-    else
-        log_info "ℹ️  Run with Azure credentials to perform live drift detection"
-    fi
-else
-    log_info "ℹ️  Azure CLI not available - skipping live drift detection"
-fi
-
-# Check for configuration validation integration
-if [[ -f "AI.ProfilePhotoMaker.API/Configuration/EnvironmentConfiguration.cs" ]]; then
-    if grep -q "UseEnvironmentValidationAsync" AI.ProfilePhotoMaker.API/Configuration/EnvironmentConfiguration.cs; then
-        log_success "✅ Application startup validation integrated"
-    else
-        log_warning "⚠️  Application startup validation not integrated"
-    fi
-fi
-
-echo ""
-
-# ===========================================
-# 7. VALIDATE APPLICATION CONFIGURATION
+# 6. VALIDATE APPLICATION CONFIGURATION
 # ===========================================
 
 log_info "🔍 Validating application configuration..."

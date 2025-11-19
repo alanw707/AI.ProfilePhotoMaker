@@ -275,6 +275,14 @@ resource stripeWebhookSecretKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = 
   }
 }
 
+resource openAiApiKeyKV 'Microsoft.KeyVault/vaults/secrets@2023-02-01' = {
+  parent: keyVault
+  name: 'OpenAiApiKey'
+  properties: {
+    value: openAiApiKey
+  }
+}
+
 // Container Apps Environment
 resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' = {
   name: containerEnvName
@@ -291,11 +299,19 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01'
 }
 
 // Backend API Container App
+resource backendUserIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: '${appName}-api-identity-${environment}-${uniqueSuffix}'
+  location: location
+}
+
 resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: backendAppName
   location: location
   identity: {
-    type: 'SystemAssigned'
+    type: 'SystemAssigned,UserAssigned'
+    userAssignedIdentities: {
+      '${backendUserIdentity.id}': {}
+    }
   }
   properties: {
     managedEnvironmentId: containerAppsEnvironment.id
@@ -363,7 +379,8 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
         }
         {
           name: 'openai-api-key'
-          value: openAiApiKey
+          keyVaultUrl: '${keyVault.properties.vaultUri}secrets/OpenAiApiKey'
+          identity: backendUserIdentity.id
         }
       ]
     }
@@ -571,6 +588,16 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
         ]
       }
     }
+  }
+}
+
+resource backendKeyVaultSecretsAccess 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+  name: guid(keyVault.id, backendApp.name, 'kv-secrets-user')
+  scope: keyVault
+  properties: {
+    principalId: backendUserIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
   }
 }
 

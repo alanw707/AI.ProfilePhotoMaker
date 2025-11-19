@@ -55,7 +55,7 @@ This project favors a “build locally, push once” workflow for reproducible d
 git push origin main         # GitHub Actions deploy the freshly pushed images
 ```
 
-Additional helpers (drift detection, credential sync, rollbacks) are available in [`scripts/`](scripts/).
+Additional helpers (credential sync, rollbacks, diagnostics) are available in [`scripts/`](scripts/).
 
 ## ✅ Testing & Quality
 
