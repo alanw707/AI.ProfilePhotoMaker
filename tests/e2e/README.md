@@ -6,6 +6,7 @@ This directory contains Playwright-based E2E coverage that targets the combined 
 
 - `image-upload-validation.spec.js` – production/staging smoke validation for storage uploads
 - `stripe-checkout.spec.js` – local Stripe checkout flow validation (runs only when Stripe keys and test credentials are configured)
+- `photo-enhancement-credits.spec.ts` – regression that proves successful photo transforms immediately deduct credits (opt-in via env vars)
 - `playwright.config.js` – multi-environment configuration targeting hosted environments
 - `playwright.local.config.js` – local configuration that points to the dev stack on `http://localhost:4200`
 - `test-images/` – shared assets for upload scenarios
@@ -29,10 +30,33 @@ This directory contains Playwright-based E2E coverage that targets the combined 
 
 3. Verify the API reports real Stripe keys via `GET /api/credit/payment-config`. When simulation mode is disabled the `stripe-checkout` spec will execute; otherwise Playwright skips it automatically.
 
-4. Run the local suite:
+4. Install Playwright dependencies inside `tests/e2e/` (once):
    ```bash
-   npx playwright test stripe-checkout.spec.js --config tests/e2e/playwright.local.config.js
+   cd tests/e2e
+   npm install
    ```
+
+5. Run the local suite from the same directory so the locally installed Playwright package is used:
+   ```bash
+   npx playwright test stripe-checkout.spec.js --config playwright.local.config.js
+   ```
+
+### Photo Enhancement Credit Regression
+
+The credit regression spec requires a dedicated test account that already has at least two credits available (weekly or purchased). Provide the credentials and opt into the suite before running:
+
+```bash
+export CREDIT_TEST_EMAIL="qa.enhancement@example.com"
+export CREDIT_TEST_PASSWORD="SuperSecret123!"
+# Optional overrides
+# export CREDIT_TEST_BASE_URL="http://localhost:4200"
+# export RUN_CREDIT_TESTS=true
+
+cd tests/e2e
+npx playwright test photo-enhancement-credits.spec.js --config playwright.local.config.js
+```
+
+The script logs in through the UI, uploads `tests/e2e/test-images/sample-selfie.jpg`, runs one enhancement, and asserts that both the dashboard widget and `/api/credit/status` endpoint show a two-credit deduction once the enhancement succeeds.
 
 ### Stripe CLI (Webhooks)
 

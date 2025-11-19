@@ -9,7 +9,6 @@ public class BasicTierService : IBasicTierService
     private readonly ApplicationDbContext _context;
     private readonly ILogger<BasicTierService> _logger;
     private const int WeeklyCredits = 5;
-    private const int LegacyWeeklyCredits = 3;
     private const int DaysInWeek = 7;
 
     public BasicTierService(ApplicationDbContext context, ILogger<BasicTierService> logger)
@@ -63,18 +62,27 @@ public class BasicTierService : IBasicTierService
         return (profile?.Credits ?? 0, profile?.PurchasedCredits ?? 0);
     }
 
-    public async Task<bool> ConsumeCreditsAsync(string userId, string action = "basic_generation")
+    public Task<CreditConsumptionResult> ConsumeCreditsAsync(string userId, string action = "basic_generation")
+    {
+        var creditCost = CreditCostConfig.GetCreditCost(action);
+        var canUseWeeklyCredits = CreditCostConfig.CanUseWeeklyCredits(action);
+        return ConsumeCreditsInternalAsync(userId, creditCost, action, canUseWeeklyCredits);
+    }
+
+    public Task<CreditConsumptionResult> ConsumeCreditsAsync(string userId, int customAmount, string action = "styled_generation")
+    {
+        var canUseWeeklyCredits = CreditCostConfig.CanUseWeeklyCredits(action);
+        return ConsumeCreditsInternalAsync(userId, customAmount, action, canUseWeeklyCredits);
+    }
+
+    private async Task<CreditConsumptionResult> ConsumeCreditsInternalAsync(string userId, int creditCost, string action, bool canUseWeeklyCredits)
     {
         var profile = await GetUserProfileWithCreditsAsync(userId);
         if (profile == null)
         {
             _logger.LogWarning("User profile not found for user {UserId}", userId);
-            return false;
+            return CreditConsumptionResult.Failed(action, "profile_not_found");
         }
-
-        // Get the credit cost for this action
-        var creditCost = CreditCostConfig.GetCreditCost(action);
-        var canUseWeeklyCredits = CreditCostConfig.CanUseWeeklyCredits(action);
 
         // Check if credits need to be reset first
         if (ShouldResetCredits(profile.LastCreditReset))
@@ -86,7 +94,7 @@ public class BasicTierService : IBasicTierService
         if (profile == null)
         {
             _logger.LogWarning("User profile not found after reset for user {UserId}", userId);
-            return false;
+            return CreditConsumptionResult.Failed(action, "profile_not_found_post_reset");
         }
 
         var totalAvailableCredits = profile.PurchasedCredits + (canUseWeeklyCredits ? profile.Credits : 0);
@@ -95,7 +103,7 @@ public class BasicTierService : IBasicTierService
         {
             _logger.LogWarning("Insufficient credits for user {UserId}. Available: {Available} (Purchased: {Purchased}, Weekly: {Weekly}), Required: {Required} for {Action}",
                 userId, totalAvailableCredits, profile.PurchasedCredits, canUseWeeklyCredits ? profile.Credits : 0, creditCost, action);
-            return false;
+            return CreditConsumptionResult.Failed(action, "insufficient_credits");
         }
 
         // Prioritize weekly credits first, then purchased credits as fallback
@@ -122,7 +130,7 @@ public class BasicTierService : IBasicTierService
         if (creditsToConsume > 0)
         {
             _logger.LogError("Credit consumption calculation error for user {UserId}", userId);
-            return false;
+            return CreditConsumptionResult.Failed(action, "calculation_error");
         }
 
         profile.UpdatedAt = DateTime.UtcNow;
@@ -136,85 +144,7 @@ public class BasicTierService : IBasicTierService
         _logger.LogInformation("User {UserId} consumed {Credits} credits for {Action}. Remaining: {Remaining} ({Purchased} purchased + {Weekly} weekly)",
             userId, creditCost, action, remainingCredits, profile.PurchasedCredits, profile.Credits);
 
-        return true;
-    }
-
-    public async Task<bool> ConsumeCreditsAsync(string userId, int customAmount, string action = "styled_generation")
-    {
-        var profile = await GetUserProfileWithCreditsAsync(userId);
-        if (profile == null)
-        {
-            _logger.LogWarning("User profile not found for user {UserId}", userId);
-            return false;
-        }
-
-        // Weekly reset guard: mirror logic from the other overload so flows
-        // using the custom-amount path also refresh weekly credits when due.
-        if (ShouldResetCredits(profile.LastCreditReset))
-        {
-            await ResetWeeklyCreditsAsync(userId);
-            profile = await GetUserProfileWithCreditsAsync(userId); // Refresh after reset
-            if (profile == null)
-            {
-                _logger.LogWarning("User profile not found after reset for user {UserId}", userId);
-                return false;
-            }
-        }
-
-        // Use custom amount instead of config lookup
-        var creditCost = customAmount;
-
-        // Check if this operation can use weekly credits (styled_generation cannot)
-        var canUseWeeklyCredits = CreditCostConfig.CanUseWeeklyCredits(action);
-
-        var totalAvailableCredits = profile.PurchasedCredits + (canUseWeeklyCredits ? profile.Credits : 0);
-
-        if (totalAvailableCredits < creditCost)
-        {
-            _logger.LogWarning("Insufficient credits for user {UserId}. Available: {Available} (Purchased: {Purchased}, Weekly: {Weekly}), Required: {Required} for {Action}",
-                userId, totalAvailableCredits, profile.PurchasedCredits, canUseWeeklyCredits ? profile.Credits : 0, creditCost, action);
-            return false;
-        }
-
-        // Prioritize weekly credits first, then purchased credits as fallback
-        var creditsToConsume = creditCost;
-        var consumedFromPurchased = 0;
-        var consumedFromWeekly = 0;
-
-        // First, use weekly credits if operation allows
-        if (canUseWeeklyCredits && profile.Credits > 0)
-        {
-            consumedFromWeekly = Math.Min(creditsToConsume, profile.Credits);
-            profile.Credits -= consumedFromWeekly;
-            creditsToConsume -= consumedFromWeekly;
-        }
-
-        // Then use purchased credits if still need credits
-        if (creditsToConsume > 0 && profile.PurchasedCredits > 0)
-        {
-            consumedFromPurchased = Math.Min(creditsToConsume, profile.PurchasedCredits);
-            profile.PurchasedCredits -= consumedFromPurchased;
-            creditsToConsume -= consumedFromPurchased;
-        }
-
-        if (creditsToConsume > 0)
-        {
-            _logger.LogError("Credit consumption calculation error for user {UserId}", userId);
-            return false;
-        }
-
-        profile.UpdatedAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
-
-        // Log the usage with detailed breakdown
-        var details = $"Consumed {creditCost} credits ({consumedFromPurchased} purchased + {consumedFromWeekly} weekly)";
-        var remainingCredits = profile.PurchasedCredits + profile.Credits;
-        await LogUsageAsync(userId, action, details, creditCost, remainingCredits);
-
-        _logger.LogInformation("User {UserId} consumed {Credits} credits for {Action}. Remaining: {Remaining} ({Purchased} purchased + {Weekly} weekly)",
-            userId, creditCost, action, remainingCredits, profile.PurchasedCredits, profile.Credits);
-
-        return true;
+        return CreditConsumptionResult.Succeeded(action, consumedFromWeekly, consumedFromPurchased);
     }
 
     public async Task<bool> AddPurchasedCreditsAsync(string userId, int credits, string source = "credit_purchase")
@@ -236,6 +166,67 @@ public class BasicTierService : IBasicTierService
 
         _logger.LogInformation("Added {Credits} purchased credits to user {UserId}. New total: {Total} ({Purchased} purchased + {Weekly} weekly)",
             credits, userId, profile.PurchasedCredits + profile.Credits, profile.PurchasedCredits, profile.Credits);
+
+        return true;
+    }
+
+    public async Task<bool> RefundCreditsAsync(string userId, CreditConsumptionResult? consumptionResult)
+    {
+        if (consumptionResult == null || !consumptionResult.Success || consumptionResult.TotalCreditsConsumed <= 0)
+        {
+            _logger.LogDebug("No credits to refund for user {UserId}", userId);
+            return true;
+        }
+
+        var profile = await GetUserProfileWithCreditsAsync(userId);
+        if (profile == null)
+        {
+            _logger.LogWarning("User profile not found for user {UserId} when refunding credits", userId);
+            return false;
+        }
+
+        var weeklyBefore = profile.Credits;
+        var purchasedBefore = profile.PurchasedCredits;
+
+        var weeklyToRefund = consumptionResult.WeeklyCreditsConsumed;
+        var purchasedToRefund = consumptionResult.PurchasedCreditsConsumed;
+
+        if (weeklyToRefund > 0)
+        {
+            var weeklyRoom = WeeklyCredits - profile.Credits;
+            if (weeklyRoom > 0)
+            {
+                var refundWeekly = Math.Min(weeklyToRefund, weeklyRoom);
+                profile.Credits += refundWeekly;
+                weeklyToRefund -= refundWeekly;
+            }
+
+            if (weeklyToRefund > 0)
+            {
+                // Weekly bucket already reset elsewhere; roll remainder into purchased credits so nothing is lost
+                purchasedToRefund += weeklyToRefund;
+                weeklyToRefund = 0;
+            }
+        }
+
+        if (purchasedToRefund > 0)
+        {
+            profile.PurchasedCredits += purchasedToRefund;
+        }
+
+        profile.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        var weeklyRefunded = profile.Credits - weeklyBefore;
+        var purchasedRefunded = profile.PurchasedCredits - purchasedBefore;
+
+        _logger.LogInformation(
+            "Refunded {Total} credits to user {UserId} for {Action} (weekly +{Weekly}, purchased +{Purchased})",
+            consumptionResult.TotalCreditsConsumed,
+            userId,
+            consumptionResult.Action,
+            weeklyRefunded,
+            purchasedRefunded);
 
         return true;
     }
@@ -318,6 +309,11 @@ public class BasicTierService : IBasicTierService
         return profile;
     }
 
+    /// <summary>
+    /// Ensures stored weekly credits stay within the valid Basic-tier bounds.
+    /// We intentionally avoid auto-topping balances back to the weekly allowance
+    /// so that completed operations permanently consume credits until the next reset.
+    /// </summary>
     private bool UpgradeWeeklyCreditsIfNeeded(UserProfile profile)
     {
         if (profile.SubscriptionTier != SubscriptionTier.Basic)
@@ -325,35 +321,25 @@ public class BasicTierService : IBasicTierService
             return false;
         }
 
-        var difference = WeeklyCredits - LegacyWeeklyCredits;
+        var updated = false;
 
-        // If the allowance stayed the same or decreased, only clamp accidental overages
-        if (difference <= 0)
+        if (profile.Credits > WeeklyCredits)
         {
-            if (profile.Credits > WeeklyCredits)
-            {
-                profile.Credits = WeeklyCredits;
-                profile.UpdatedAt = DateTime.UtcNow;
-                return true;
-            }
-            return false;
+            profile.Credits = WeeklyCredits;
+            updated = true;
+        }
+        else if (profile.Credits < 0)
+        {
+            profile.Credits = 0;
+            updated = true;
         }
 
-        // Clamp any accidental overages to the current max
-        if (profile.Credits >= WeeklyCredits)
+        if (updated)
         {
-            if (profile.Credits > WeeklyCredits)
-            {
-                profile.Credits = WeeklyCredits;
-                profile.UpdatedAt = DateTime.UtcNow;
-                return true;
-            }
-            return false;
+            profile.UpdatedAt = DateTime.UtcNow;
         }
 
-        profile.Credits = Math.Min(WeeklyCredits, profile.Credits + difference);
-        profile.UpdatedAt = DateTime.UtcNow;
-        return true;
+        return updated;
     }
 
 

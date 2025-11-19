@@ -1,5 +1,7 @@
 # Logging Sanitization Remediation Status
 
+> Status: Progress snapshot for CodeQL logging findings. Use this together with `logging-remediation-plan.md`; high-level security posture is summarized in `SECURITY_REVIEW_SUMMARY.md`.
+
 _Last updated: 2025-09-26 15:33:15Z_
 
 ## Summary

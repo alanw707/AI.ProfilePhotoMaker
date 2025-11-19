@@ -1,5 +1,7 @@
 # CI/CD Workflow Validation
 
+> Status: Archived validation report for the PowerShell-based GitHub Actions workflow. For current deployment steps, see `DEPLOYMENT_GUIDE.md` and `WORKFLOW_VALIDATION` references from CI configs.
+
 This PR validates the Docker authentication fixes implemented in the PowerShell-based GitHub Actions workflow.
 
 ## 🎯 Test Objectives
@@ -40,4 +42,3 @@ This PR validates the Docker authentication fixes implemented in the PowerShell-
 ## 🔍 Monitoring
 
 This PR will trigger the full deployment pipeline and validate all authentication fixes.
-

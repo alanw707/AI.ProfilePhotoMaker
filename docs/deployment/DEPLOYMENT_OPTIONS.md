@@ -1,5 +1,7 @@
 # Deployment Options - Detailed Analysis
 
+> Status: Archived reference. The selected approach is already reflected in `DEPLOYMENT_GUIDE.md` and `DEPLOYMENT_CHECKLIST.md`; use those for practical deployment instructions.
+
 ## Executive Summary
 
 This document provides a comprehensive analysis of deployment options for the AI Profile Photo Maker application. After extensive troubleshooting of persistent deployment failures, we've identified and implemented **Option A: Quick Fix** as the optimal solution for immediate deployment success.

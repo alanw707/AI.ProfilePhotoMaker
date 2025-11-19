@@ -191,6 +191,7 @@ scripts/node_modules/
 scripts/package-lock.json  
 scripts/package.json
 scripts/validation-report.json
+tests/e2e/node_modules/
 
 # Deployment parameters with secrets - NEVER commit actual secrets!
 deployment-params.json

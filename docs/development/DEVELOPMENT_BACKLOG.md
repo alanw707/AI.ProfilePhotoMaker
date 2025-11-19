@@ -1,6 +1,6 @@
 # Development Backlog & Task Estimation
 
-*Last Updated: July 27, 2025 (Project Status Update)*
+*Last Updated: November 15, 2025 (Synced with current branch feat/headless-tests-stripe)*
 
 ## Executive Summary
 
@@ -29,8 +29,8 @@ Based on comprehensive analysis of the current project state, approximately **91
 - Debug logging cleanup for production readiness
 
 ### 🔄 **In Progress (5%)**
-- Stripe payment integration (webhook testing)
-- Production environment configuration
+- Stripe payment integration (production smoke tests + UI polish)
+- Production environment configuration (live Stripe + staging validation)
 
 ### 📋 **Remaining Work (4%)**
 - Comprehensive testing suite
@@ -84,25 +84,14 @@ Based on comprehensive analysis of the current project state, approximately **91
 - **Dependencies**: Stripe account setup, webhook configuration
 
 **Subtasks:**
-- [x] Set up production Stripe webhook endpoints (API webhook implemented; production wiring pending)
-- [x] Implement webhook signature validation
-- [ ] Test payment failure scenarios
-- [ ] Add transaction logging
-- [ ] Implement refund handling
-- [ ] Test with real payment methods
+- [x] Set up Stripe webhook endpoint (`POST /api/webhooks/stripe`) with signature validation
+- [x] Persist payment intents as `PaymentTransaction` records and finalize credit purchases on webhook success
+- [x] Test happy-path payment flow locally using Stripe CLI (PaymentIntent confirmation + webhook + credit ledger)
+- [ ] Test payment failure / cancellation scenarios
+- [ ] Implement refund handling (if included in MVP scope)
+- [ ] Run at least one real payment in production/staging with test card
 
-**Technical Requirements:**
-```csharp
-// Implement in CreditController
-[HttpPost("stripe-webhook")]
-public async Task<IActionResult> HandleStripeWebhook()
-{
-    // Validate webhook signature
-    // Process payment events
-    // Update user credits
-    // Log transactions
-}
-```
+> Note: The webhook controller & service are implemented; this backlog item now tracks remaining edge cases and production validation rather than core implementation.
 
 #### **Task #2: Rate Limiting Implementation**
 - **Priority**: 🔴 Critical (Security)
@@ -179,7 +168,7 @@ WebhookIntegrationTests
 - **Complexity**: Medium
 
 **Subtasks:**
-- [ ] Set up Karma/Jasmine test configuration
+- [x] Set up Karma/Jasmine test configuration with headless Chrome (Puppeteer-managed)
 - [ ] Test core components (dashboard, gallery, auth)
 - [ ] Test services and guards
 - [ ] Mock HTTP requests

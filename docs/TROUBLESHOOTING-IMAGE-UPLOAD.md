@@ -1,5 +1,7 @@
 # 🔧 Troubleshooting Guide: Image Upload 404 Errors in Production
 
+> Status: Targeted troubleshooting note for a resolved production issue. Keep for historical context; storage behavior is documented more generally in `PRIVATE_BLOB_STORAGE.md` and `infrastructure-validation.md`.
+
 ## Problem Summary
 
 **Issue**: Uploaded images show 404 errors in production environment while working correctly in development.

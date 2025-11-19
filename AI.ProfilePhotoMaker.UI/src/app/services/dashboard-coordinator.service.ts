@@ -259,6 +259,18 @@ export class DashboardCoordinatorService implements IDashboardStateService {
   }
 
   /**
+   * Refresh credit balances after usage or purchase
+   */
+  async refreshCredits(options?: { internalOnly?: boolean }): Promise<void> {
+    if (options?.internalOnly) {
+      await this._subscriptionState.refreshInternalCredits();
+      return;
+    }
+
+    await this._subscriptionState.refreshCredits();
+  }
+
+  /**
    * Load profile data (coordinator responsibility)
    */
   private async loadProfileData(): Promise<void> {

@@ -1,5 +1,7 @@
 # Private Blob Storage via API Proxy
 
+> Status: Active operational guide for switching between public and private blob delivery. Use this alongside `infrastructure-validation.md` when changing storage behavior.
+
 This guide explains how to switch image delivery from public Azure Blob URLs to private containers served through the API proxy.
 
 ## Overview

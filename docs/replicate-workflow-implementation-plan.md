@@ -1,5 +1,7 @@
 # Replicate Training/Generation Workflow – Implementation Plan
 
+> Status: Design plan for Replicate training/generation robustness and mocking. Treat this as a reference; the current implementation details live in code and `PROJECT_PLAN.md`.
+
 This plan addresses issues in the Replicate training/generation workflow and adds a safe, no‑cost mock path for local development and tests.
 
 ## Scope
@@ -148,4 +150,3 @@ This plan addresses issues in the Replicate training/generation workflow and add
 ---
 
 If you want, I can implement Phases 1, 2, 4, and 5 immediately to unblock local end‑to‑end testing without hitting Replicate.
-

@@ -1,5 +1,7 @@
 # Cleanup & Refactor Readiness Checklist
 
+> Status: Archived planning checklist. Treat this as historical guidance; for current work, rely on `PROJECT_PLAN.md`, `DEVELOPMENT_BACKLOG.md`, and the scripts under `scripts/`.
+
 ## Approach & Safety Principles
 - Inventory only: this document captures investigation targets before touching code.
 - Sequence work by risk: start with isolated folders/files, end with cross-cutting runtime paths.

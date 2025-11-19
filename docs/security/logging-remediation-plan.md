@@ -1,5 +1,7 @@
 # Logging Sanitization Remediation Plan
 
+> Status: Active reference for logging hygiene work. For a high-level summary of what’s already done, see `docs/security/logging-remediation-status.md` and `AI.ProfilePhotoMaker.API/SECURITY_NOTES.md`.
+
 CodeQL flagged numerous `Log entries created from user input` findings across the API codebase. This document tracks the remediation plan to ensure we sanitize all user-supplied values before they reach structured logs.
 
 ## Goals

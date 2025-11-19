@@ -1,6 +1,8 @@
 # ClaudeDocs Index
 
-The `ClaudeDocs/` directory contains analysis and generated reports (performance audits, deployment investigations, historical drift snapshots). These are auxiliary artifacts and are not the canonical product documentation.
+> Status: Historical/generative reports index. For canonical engineering documentation, always start from `docs/INDEX.md`.
+
+The `ClaudeDocs/` directory contains analysis and generated reports (performance audits, deployment investigations, historical/config-drift snapshots). These are auxiliary artifacts and are not the canonical product documentation.
 
 Primary locations:
 - `ClaudeDocs/Analysis/Performance/` – performance audit reports

@@ -3,10 +3,70 @@ const { defineConfig, devices } = require('@playwright/test');
 
 /**
  * Playwright Configuration for AI Profile Photo Maker E2E Tests
- * 
+ *
  * Configured for comprehensive testing across multiple environments
  * with specific focus on storage service validation.
  */
+
+const baseProjects = [
+  {
+    name: 'production-validation',
+    use: {
+      ...devices['Desktop Chrome'],
+      baseURL: 'https://app.aiprofilephotomaker.com',
+    },
+    testMatch: '**/image-upload-validation.spec.js',
+    timeout: 90000, // Longer timeout for production tests
+  },
+
+  {
+    name: 'staging-validation',
+    use: {
+      ...devices['Desktop Chrome'],
+      baseURL: process.env.STAGING_URL || 'https://staging-app.aiprofilephotomaker.com',
+    },
+    testMatch: '**/image-upload-validation.spec.js',
+    timeout: 60000,
+  },
+
+  {
+    name: 'cross-browser-validation',
+    use: {
+      ...devices['Desktop Firefox'],
+      baseURL: process.env.TEST_BASE_URL || 'https://app.aiprofilephotomaker.com',
+    },
+    testMatch: '**/image-upload-validation.spec.js',
+    dependencies: ['production-validation'], // Run after main validation
+  },
+
+  {
+    name: 'mobile-validation',
+    use: {
+      ...devices['iPhone 13'],
+      baseURL: process.env.TEST_BASE_URL || 'https://app.aiprofilephotomaker.com',
+    },
+    testMatch: '**/image-upload-validation.spec.js',
+    dependencies: ['production-validation'], // Run after main validation
+  },
+];
+
+const enableCreditProject =
+  process.env.RUN_CREDIT_TESTS === 'true' ||
+  (!!process.env.CREDIT_TEST_EMAIL && !!process.env.CREDIT_TEST_PASSWORD);
+
+if (enableCreditProject) {
+  baseProjects.push({
+    name: 'local-enhancement-credits',
+    use: {
+      ...devices['Desktop Chrome'],
+      baseURL: process.env.CREDIT_TEST_BASE_URL || process.env.TEST_BASE_URL || 'http://localhost:4200',
+      headless: true,
+    },
+    testMatch: '**/photo-enhancement-credits.spec.ts',
+    timeout: 300000,
+  });
+}
+
 module.exports = defineConfig({
   // Test directory
   testDir: './tests/e2e',
@@ -55,47 +115,7 @@ module.exports = defineConfig({
   },
 
   // Test projects for different environments and scenarios
-  projects: [
-    {
-      name: 'production-validation',
-      use: { 
-        ...devices['Desktop Chrome'],
-        baseURL: 'https://app.aiprofilephotomaker.com'
-      },
-      testMatch: '**/image-upload-validation.spec.js',
-      timeout: 90000, // Longer timeout for production tests
-    },
-    
-    {
-      name: 'staging-validation',
-      use: { 
-        ...devices['Desktop Chrome'],
-        baseURL: process.env.STAGING_URL || 'https://staging-app.aiprofilephotomaker.com'
-      },
-      testMatch: '**/image-upload-validation.spec.js',
-      timeout: 60000,
-    },
-    
-    {
-      name: 'cross-browser-validation',
-      use: { 
-        ...devices['Desktop Firefox'],
-        baseURL: process.env.TEST_BASE_URL || 'https://app.aiprofilephotomaker.com'
-      },
-      testMatch: '**/image-upload-validation.spec.js',
-      dependencies: ['production-validation'], // Run after main validation
-    },
-    
-    {
-      name: 'mobile-validation',
-      use: { 
-        ...devices['iPhone 13'],
-        baseURL: process.env.TEST_BASE_URL || 'https://app.aiprofilephotomaker.com'
-      },
-      testMatch: '**/image-upload-validation.spec.js',
-      dependencies: ['production-validation'], // Run after main validation
-    }
-  ],
+  projects: baseProjects,
 
   // Global setup and teardown
   globalSetup: require.resolve('./setup/global-setup.js'),

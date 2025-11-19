@@ -19,15 +19,16 @@ API_PROJECT_PATH="AI.ProfilePhotoMaker.API"
 
 # Secret mappings: LOCAL_NAME:GITHUB_NAME:KEYVAULT_NAME
 SECRET_MAPPINGS=(
-    "MSSQL_SA_PASSWORD:SQL_ADMIN_PASSWORD:ConnectionString"
-    "JWT_SECRET:JWT_SECRET:JwtSecret"
-    "REPLICATE_API_TOKEN:REPLICATE_API_TOKEN:ReplicateApiToken"
-    "REPLICATE_WEBHOOK_SECRET:REPLICATE_WEBHOOK_SECRET:ReplicateWebhookSecret"
-    "GOOGLE_CLIENT_ID:GOOGLE_CLIENT_ID:GoogleClientId"
-    "GOOGLE_CLIENT_SECRET:GOOGLE_CLIENT_SECRET:GoogleClientSecret"
-    "STRIPE_SECRET_KEY:STRIPE_SECRET_KEY:StripeSecretKey"
-    "STRIPE_PUBLISHABLE_KEY:STRIPE_PUBLISHABLE_KEY:StripePublishableKey"
-    "STRIPE_WEBHOOK_SECRET:STRIPE_WEBHOOK_SECRET:StripeWebhookSecret"
+    "MSSQL_SA_PASSWORD|SQL_ADMIN_PASSWORD|ConnectionString"
+    "JWT_SECRET|JWT_SECRET|JwtSecret"
+    "REPLICATE_API_TOKEN|REPLICATE_API_TOKEN|ReplicateApiToken"
+    "REPLICATE_WEBHOOK_SECRET|REPLICATE_WEBHOOK_SECRET|ReplicateWebhookSecret"
+    "GOOGLE_CLIENT_ID|GOOGLE_CLIENT_ID|GoogleClientId"
+    "GOOGLE_CLIENT_SECRET|GOOGLE_CLIENT_SECRET|GoogleClientSecret"
+    "STRIPE_SECRET_KEY|STRIPE_SECRET_KEY|StripeSecretKey"
+    "STRIPE_PUBLISHABLE_KEY|STRIPE_PUBLISHABLE_KEY|StripePublishableKey"
+    "STRIPE_WEBHOOK_SECRET|STRIPE_WEBHOOK_SECRET|StripeWebhookSecret"
+    "OpenAI:ApiKey|OPENAI_API_KEY|OpenAIApiKey"
 )
 
 print_usage() {
@@ -160,7 +161,7 @@ sync_secret() {
     local source="$2"
     local dry_run="$3"
     
-    IFS=':' read -r local_name github_name keyvault_name <<< "$mapping"
+    IFS='|' read -r local_name github_name keyvault_name <<< "$mapping"
     
     log "Syncing secret: $local_name"
     
@@ -240,7 +241,7 @@ validate_consistency() {
     local inconsistencies=0
     
     for mapping in "${SECRET_MAPPINGS[@]}"; do
-        IFS=':' read -r local_name github_name keyvault_name <<< "$mapping"
+        IFS='|' read -r local_name github_name keyvault_name <<< "$mapping"
         
         # Get Azure value
         local azure_value=""
@@ -348,7 +349,7 @@ main() {
     # Sync secrets
     local secrets_synced=0
     for mapping in "${SECRET_MAPPINGS[@]}"; do
-        IFS=':' read -r local_name github_name keyvault_name <<< "$mapping"
+        IFS='|' read -r local_name github_name keyvault_name <<< "$mapping"
         
         # Skip if specific secret requested and this isn't it
         if [[ -n "$specific_secret" ]]; then

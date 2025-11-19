@@ -108,6 +108,7 @@ echo ""
 # Database Password
 echo "1. Database Password (MSSQL_SA_PASSWORD)"
 echo "   Requirements: 8+ characters, mixed case, numbers, special characters"
+echo "   (Special characters like # are supported; the generated .env entry will be quoted automatically.)"
 if [ "$ENVIRONMENT" = "development" ]; then
     suggested_password="Dev@$(generate_password)"
 elif [ "$ENVIRONMENT" = "test" ]; then
@@ -198,7 +199,9 @@ else
 fi
 
 # Replace required variables
-sed "${SED_ARGS[@]}" "s|MSSQL_SA_PASSWORD=.*|MSSQL_SA_PASSWORD=$db_password|g" "$ENV_FILE"
+db_password_for_sed=${db_password//&/\\&}
+db_password_for_sed=${db_password_for_sed//|/\\|}
+sed "${SED_ARGS[@]}" "s|MSSQL_SA_PASSWORD=.*|MSSQL_SA_PASSWORD=\"$db_password_for_sed\"|g" "$ENV_FILE"
 sed "${SED_ARGS[@]}" "s|JWT_SECRET=.*|JWT_SECRET=$jwt_secret|g" "$ENV_FILE"
 sed "${SED_ARGS[@]}" "s|REPLICATE_API_TOKEN=.*|REPLICATE_API_TOKEN=$replicate_token|g" "$ENV_FILE"
 sed "${SED_ARGS[@]}" "s|REPLICATE_WEBHOOK_SECRET=.*|REPLICATE_WEBHOOK_SECRET=$webhook_secret|g" "$ENV_FILE"
