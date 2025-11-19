@@ -30,9 +30,15 @@ This directory contains Playwright-based E2E coverage that targets the combined 
 
 3. Verify the API reports real Stripe keys via `GET /api/credit/payment-config`. When simulation mode is disabled the `stripe-checkout` spec will execute; otherwise Playwright skips it automatically.
 
-4. Run the local suite:
+4. Install Playwright dependencies inside `tests/e2e/` (once):
    ```bash
-   npx playwright test stripe-checkout.spec.js --config tests/e2e/playwright.local.config.js
+   cd tests/e2e
+   npm install
+   ```
+
+5. Run the local suite from the same directory so the locally installed Playwright package is used:
+   ```bash
+   npx playwright test stripe-checkout.spec.js --config playwright.local.config.js
    ```
 
 ### Photo Enhancement Credit Regression
@@ -46,7 +52,8 @@ export CREDIT_TEST_PASSWORD="SuperSecret123!"
 # export CREDIT_TEST_BASE_URL="http://localhost:4200"
 # export RUN_CREDIT_TESTS=true
 
-npx playwright test photo-enhancement-credits.spec.ts --config tests/e2e/playwright.local.config.js
+cd tests/e2e
+npx playwright test photo-enhancement-credits.spec.js --config playwright.local.config.js
 ```
 
 The script logs in through the UI, uploads `tests/e2e/test-images/sample-selfie.jpg`, runs one enhancement, and asserts that both the dashboard widget and `/api/credit/status` endpoint show a two-credit deduction once the enhancement succeeds.
