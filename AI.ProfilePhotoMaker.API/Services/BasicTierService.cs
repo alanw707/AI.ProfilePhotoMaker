@@ -9,7 +9,6 @@ public class BasicTierService : IBasicTierService
     private readonly ApplicationDbContext _context;
     private readonly ILogger<BasicTierService> _logger;
     private const int WeeklyCredits = 5;
-    private const int LegacyWeeklyCredits = 3;
     private const int DaysInWeek = 7;
 
     public BasicTierService(ApplicationDbContext context, ILogger<BasicTierService> logger)
@@ -240,6 +239,59 @@ public class BasicTierService : IBasicTierService
         return true;
     }
 
+    public async Task<bool> RefundCreditsAsync(string userId, int credits, string action = "basic_generation")
+    {
+        if (credits <= 0)
+        {
+            return true;
+        }
+
+        var profile = await GetUserProfileWithCreditsAsync(userId);
+        if (profile == null)
+        {
+            _logger.LogWarning("User profile not found for user {UserId} when refunding credits", userId);
+            return false;
+        }
+
+        var weeklyBefore = profile.Credits;
+        var purchasedBefore = profile.PurchasedCredits;
+
+        var remaining = credits;
+        var canUseWeekly = CreditCostConfig.CanUseWeeklyCredits(action);
+
+        if (canUseWeekly)
+        {
+            var weeklyRoom = WeeklyCredits - profile.Credits;
+            if (weeklyRoom > 0)
+            {
+                var refundWeekly = Math.Min(remaining, weeklyRoom);
+                profile.Credits += refundWeekly;
+                remaining -= refundWeekly;
+            }
+        }
+
+        if (remaining > 0)
+        {
+            profile.PurchasedCredits += remaining;
+        }
+
+        profile.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        var weeklyRefunded = profile.Credits - weeklyBefore;
+        var purchasedRefunded = profile.PurchasedCredits - purchasedBefore;
+
+        _logger.LogInformation(
+            "Refunded {Total} credits to user {UserId} for {Action} (weekly +{Weekly}, purchased +{Purchased})",
+            credits,
+            userId,
+            action,
+            weeklyRefunded,
+            purchasedRefunded);
+
+        return true;
+    }
+
     public async Task ResetWeeklyCreditsAsync(string userId)
     {
         var profile = await GetUserProfileWithCreditsAsync(userId);
@@ -318,6 +370,11 @@ public class BasicTierService : IBasicTierService
         return profile;
     }
 
+    /// <summary>
+    /// Ensures stored weekly credits stay within the valid Basic-tier bounds.
+    /// We intentionally avoid auto-topping balances back to the weekly allowance
+    /// so that completed operations permanently consume credits until the next reset.
+    /// </summary>
     private bool UpgradeWeeklyCreditsIfNeeded(UserProfile profile)
     {
         if (profile.SubscriptionTier != SubscriptionTier.Basic)
@@ -325,35 +382,25 @@ public class BasicTierService : IBasicTierService
             return false;
         }
 
-        var difference = WeeklyCredits - LegacyWeeklyCredits;
+        var updated = false;
 
-        // If the allowance stayed the same or decreased, only clamp accidental overages
-        if (difference <= 0)
+        if (profile.Credits > WeeklyCredits)
         {
-            if (profile.Credits > WeeklyCredits)
-            {
-                profile.Credits = WeeklyCredits;
-                profile.UpdatedAt = DateTime.UtcNow;
-                return true;
-            }
-            return false;
+            profile.Credits = WeeklyCredits;
+            updated = true;
+        }
+        else if (profile.Credits < 0)
+        {
+            profile.Credits = 0;
+            updated = true;
         }
 
-        // Clamp any accidental overages to the current max
-        if (profile.Credits >= WeeklyCredits)
+        if (updated)
         {
-            if (profile.Credits > WeeklyCredits)
-            {
-                profile.Credits = WeeklyCredits;
-                profile.UpdatedAt = DateTime.UtcNow;
-                return true;
-            }
-            return false;
+            profile.UpdatedAt = DateTime.UtcNow;
         }
 
-        profile.Credits = Math.Min(WeeklyCredits, profile.Credits + difference);
-        profile.UpdatedAt = DateTime.UtcNow;
-        return true;
+        return updated;
     }
 
 

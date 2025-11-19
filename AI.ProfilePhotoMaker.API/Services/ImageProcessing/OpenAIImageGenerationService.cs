@@ -43,13 +43,12 @@ public class OpenAIImageGenerationService : IImageProcessingService
         _openAiClient.BaseAddress = new Uri("https://api.openai.com/v1/");
         _openAiClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-        // Load API key with robust precedence: env var OPENAI_API_KEY, then config OpenAI:ApiKey
-        var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY")
-                     ?? _configuration["OpenAI:ApiKey"];
+        // Load API key from canonical configuration path. Environment variables should use OpenAI__ApiKey.
+        var apiKey = _configuration["OpenAI:ApiKey"];
         if (string.IsNullOrEmpty(apiKey))
         {
             _logger.LogError("OpenAI API key not configured - OpenAI service cannot be initialized");
-            throw new InvalidOperationException("OpenAI API key is required but not configured. Please set OpenAI:ApiKey in configuration.");
+            throw new InvalidOperationException("OpenAI API key is required but not configured. Please set OpenAI:ApiKey in configuration or OpenAI__ApiKey as an environment variable.");
         }
 
         _openAiClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);

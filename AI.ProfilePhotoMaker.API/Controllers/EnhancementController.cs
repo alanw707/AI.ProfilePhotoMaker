@@ -167,18 +167,8 @@ public class EnhancementController : ControllerBase
             }
 
             // Consume credits BEFORE API call to prevent race conditions
-            // TEMPORARY DEBUG: Skip credit check in development for OpenAI API testing
-            bool creditConsumed;
-            if (_environment.IsDevelopment() && dto.EnhancementType == "chibi")
-            {
-                _logger.LogWarning("DEVELOPMENT MODE: Skipping credit check for OpenAI API debugging");
-                creditConsumed = true;
-            }
-            else
-            {
-                // Use photo_enhancement action so weekly credits are eligible
-                creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, 2, "photo_enhancement");
-            }
+            // Use photo_enhancement action so weekly credits are eligible
+            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, 2, "photo_enhancement");
 
             if (!creditConsumed)
             {
@@ -241,7 +231,7 @@ public class EnhancementController : ControllerBase
         catch (InvalidOperationException ex)
         {
             // Refund credits since the operation failed
-            var refundSuccess = await _basicTierService.AddPurchasedCreditsAsync(userId, 2, "openai_enhancement_refund");
+            var refundSuccess = await _basicTierService.RefundCreditsAsync(userId, 2, "photo_enhancement");
             await _basicTierService.LogUsageAsync(userId, "openai_enhancement_refund",
                 $"Refund for failed enhancement: {ex.Message}", creditsCost: -2);
 
@@ -287,7 +277,7 @@ public class EnhancementController : ControllerBase
         catch (UnauthorizedAccessException ex)
         {
             // Refund credits since the operation failed
-            var refundSuccess = await _basicTierService.AddPurchasedCreditsAsync(userId, 2, "openai_enhancement_refund");
+            var refundSuccess = await _basicTierService.RefundCreditsAsync(userId, 2, "photo_enhancement");
             await _basicTierService.LogUsageAsync(userId, "openai_enhancement_refund",
                 $"Refund for authentication failure: {ex.Message}", creditsCost: -2);
 
@@ -315,7 +305,7 @@ public class EnhancementController : ControllerBase
         catch (HttpRequestException ex)
         {
             // Refund credits since the operation failed
-            var refundSuccess = await _basicTierService.AddPurchasedCreditsAsync(userId, 2, "openai_enhancement_refund");
+            var refundSuccess = await _basicTierService.RefundCreditsAsync(userId, 2, "photo_enhancement");
             await _basicTierService.LogUsageAsync(userId, "openai_enhancement_refund",
                 $"Refund for network error: {ex.Message}", creditsCost: -2);
 
@@ -343,7 +333,7 @@ public class EnhancementController : ControllerBase
         catch (TaskCanceledException ex)
         {
             // Refund credits since the operation failed
-            var refundSuccess = await _basicTierService.AddPurchasedCreditsAsync(userId, 2, "openai_enhancement_refund");
+            var refundSuccess = await _basicTierService.RefundCreditsAsync(userId, 2, "photo_enhancement");
             await _basicTierService.LogUsageAsync(userId, "openai_enhancement_refund",
                 $"Refund for timeout: {ex.Message}", creditsCost: -2);
 
@@ -371,7 +361,7 @@ public class EnhancementController : ControllerBase
         catch (Exception ex)
         {
             // Refund credits since the operation failed
-            var refundSuccess = await _basicTierService.AddPurchasedCreditsAsync(userId, 2, "openai_enhancement_refund");
+            var refundSuccess = await _basicTierService.RefundCreditsAsync(userId, 2, "photo_enhancement");
             await _basicTierService.LogUsageAsync(userId, "openai_enhancement_refund",
                 $"Refund for unexpected error: {ex.Message}", creditsCost: -2);
 

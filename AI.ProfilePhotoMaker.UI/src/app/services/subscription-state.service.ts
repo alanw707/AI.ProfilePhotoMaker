@@ -220,6 +220,15 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
   }
 
   /**
+   * Refresh only internal credits (weekly + purchased) without calling external providers
+   */
+  async refreshInternalCredits(): Promise<void> {
+    this.forceRefreshCache(this.creditsCacheKey);
+    this._cacheManager.forceRefresh('credits_load');
+    await this.loadCreditsOnly();
+  }
+
+  /**
    * Check if user has enough credits for an operation
    */
   hasEnoughCredits(requiredCredits: number): boolean {

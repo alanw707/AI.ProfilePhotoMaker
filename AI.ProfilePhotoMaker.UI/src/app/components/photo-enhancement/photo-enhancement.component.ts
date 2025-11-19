@@ -288,6 +288,8 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         } else {
           this._cdr.detectChanges();
         }
+
+        await this.refreshCreditState();
       } else {
         console.error('No enhanced image received from API response');
         throw new Error('No enhanced image received');
@@ -493,7 +495,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
   resetComponent() {
     this.enhanceAnother();
-    this._stateService.loadCreditsOnly();
+    void this.refreshCreditState();
   }
 
   getNextResetText(resetDate: Date): string {
@@ -508,6 +510,14 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       return 'tomorrow';
     } else {
       return `in ${diffDays} days`;
+    }
+  }
+
+  private async refreshCreditState(): Promise<void> {
+    try {
+      await this._stateService.refreshCredits({ internalOnly: true });
+    } catch (refreshError) {
+      console.warn('Failed to refresh credits after enhancement', refreshError);
     }
   }
 }
