@@ -77,6 +77,9 @@ export interface FinalizeTrainingData {
 
 export interface CreditsInfo {
   availableCredits: number;
+  purchasedCredits?: number;
+  weeklyCredits?: number;
+  totalCredits?: number;
   subscriptionTier: string;
   lastCreditReset: Date;
   nextResetDate: Date;

@@ -35,7 +35,14 @@ export class RegisterComponent {
         firstName: ['', [Validators.required, Validators.minLength(2)]],
         lastName: ['', [Validators.required, Validators.minLength(2)]],
         email: ['', [Validators.required, Validators.email]],
-        password: ['', [Validators.required, Validators.minLength(8)]],
+        password: [
+          '',
+          [
+            Validators.required,
+            Validators.minLength(8),
+            Validators.pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$/), // upper, lower, digit, symbol
+          ],
+        ],
         confirmPassword: ['', Validators.required],
         gender: ['', Validators.required],
         ethnicity: ['', Validators.required],
@@ -57,6 +64,13 @@ export class RegisterComponent {
 
   shouldShowPasswordError(): boolean {
     return this.f['password'].invalid && this.f['password'].touched;
+  }
+  shouldShowPasswordComplexityError(): boolean {
+    return (
+      this.f['password'].errors?.['pattern'] &&
+      this.f['password'].touched &&
+      !this.f['password'].errors?.['minlength']
+    );
   }
 
   shouldShowConfirmPasswordError(): boolean {
@@ -89,6 +103,27 @@ export class RegisterComponent {
     return null;
   }
 
+  private extractErrorMessage(error: any): string {
+    if (error?.error?.message) {
+      return error.error.message;
+    }
+
+    // ASP.NET model state validation: { errors: { Field: [msg] } }
+    if (error?.error?.errors) {
+      const allErrors = Object.values(error.error.errors)
+        .flat()
+        .filter(Boolean)
+        .join(' ');
+      if (allErrors) return allErrors;
+    }
+
+    if (error?.error?.title) {
+      return error.error.title;
+    }
+
+    return error?.message || 'Registration failed. Please try again.';
+  }
+
   onSubmit(): void {
     this.error = '';
 
@@ -112,7 +147,8 @@ export class RegisterComponent {
         this._router.navigate(['/app/dashboard']);
       },
       error: error => {
-        this.error = error.message || 'Registration failed. Please try again.';
+        const apiMessage = this.extractErrorMessage(error);
+        this.error = apiMessage;
         this.loading = false;
       },
     });

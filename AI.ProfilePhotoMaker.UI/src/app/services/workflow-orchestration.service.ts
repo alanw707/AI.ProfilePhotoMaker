@@ -269,9 +269,10 @@ export class WorkflowOrchestrationService {
     const generationCredits = this._calculateGenerationCredits(selectedStyles, imagesPerStyle);
     const totalCredits = trainingCredits + generationCredits;
 
-    const availableCredits = this._getTotalAvailableCredits();
-    const hasEnoughCredits = availableCredits >= totalCredits;
-    const remainingCredits = availableCredits - totalCredits;
+    // Paywall enforcement: training + styled generation must use purchased credits
+    const availablePurchasedCredits = this._getPurchasedCredits();
+    const hasEnoughCredits = availablePurchasedCredits >= totalCredits;
+    const remainingCredits = availablePurchasedCredits - totalCredits;
 
     return {
       trainingCredits,
@@ -299,37 +300,39 @@ export class WorkflowOrchestrationService {
     return totalImages * generationCostPerImage;
   }
 
-  private _getTotalAvailableCredits(): number {
-    // Primary: Check subscription service first (same source as UI)
-    const subscriptionState = this._deps.subscriptionState.getState();
-    if (subscriptionState.totalCredits !== undefined && subscriptionState.totalCredits > 0) {
-      return subscriptionState.totalCredits;
-    }
-
-    // Secondary: Dashboard state service
-    const state = this._deps.stateService.getState();
-    if (state.totalCredits !== undefined && state.totalCredits > 0) {
-      return state.totalCredits;
-    }
-
-    // Fallback: Try subscription service user credit status
-    const userStatus = subscriptionState.userCreditStatus;
-    if (userStatus?.totalCredits !== undefined && userStatus.totalCredits > 0) {
-      return userStatus.totalCredits;
-    }
-
-    // Last resort: Manual calculation from dashboard state
-    return this._calculateCreditsFromState(state);
-  }
-
   private _calculateCreditsFromState(state: any): number {
     const userCreditStatus = state.userCreditStatus;
     const creditsInfo = state.creditsInfo;
 
-    const weeklyCredits = userCreditStatus?.weeklyCredits || creditsInfo?.availableCredits || 0;
-    const purchasedCredits = userCreditStatus?.purchasedCredits || 0;
+    const purchasedCredits =
+      userCreditStatus?.purchasedCredits ||
+      creditsInfo?.purchasedCredits ||
+      0;
 
-    return weeklyCredits + purchasedCredits;
+    return purchasedCredits;
+  }
+
+  private _getPurchasedCredits(): number {
+    // Primary: subscription state (used across the UI)
+    const subscriptionState = this._deps.subscriptionState.getState();
+    if (subscriptionState.userCreditStatus?.purchasedCredits !== undefined) {
+      return subscriptionState.userCreditStatus.purchasedCredits;
+    }
+    if (subscriptionState.creditsInfo?.purchasedCredits !== undefined) {
+      return subscriptionState.creditsInfo.purchasedCredits;
+    }
+
+    // Secondary: dashboard state
+    const state = this._deps.stateService.getState();
+    if (state.userCreditStatus?.purchasedCredits !== undefined) {
+      return state.userCreditStatus.purchasedCredits;
+    }
+    if (state.creditsInfo?.purchasedCredits !== undefined) {
+      return state.creditsInfo.purchasedCredits;
+    }
+
+    // Last resort: totalCredits (prefer over zero to avoid blocking legitimate users)
+    return state.totalCredits || subscriptionState.totalCredits || 0;
   }
 
   // Main workflow orchestration method
@@ -359,7 +362,7 @@ export class WorkflowOrchestrationService {
     );
 
     if (!creditCalc.hasEnoughCredits) {
-      const availableCredits = this._getTotalAvailableCredits();
+      const availableCredits = this._getPurchasedCredits();
 
       if (availableCredits === 0) {
         this._deps.notificationService.error(
@@ -1757,7 +1760,7 @@ export class WorkflowOrchestrationService {
       case 'billing':
         this._logger.error('Billing diagnostics', {
           ...diagnostics,
-          userCredits: this._getTotalAvailableCredits(),
+          userCredits: this._getPurchasedCredits(),
           suggestedAction: 'Check user credit balance and subscription status',
         });
         break;

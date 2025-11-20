@@ -533,10 +533,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const state = this.stateService.getState();
     const { userCreditStatus, creditsInfo } = state;
 
-    const weeklyCredits = userCreditStatus?.weeklyCredits || creditsInfo?.availableCredits || 0;
-    const purchasedCredits = userCreditStatus?.purchasedCredits || 0;
+    // Paywall: generation/training require purchased credits
+    const purchasedCredits =
+      userCreditStatus?.purchasedCredits ||
+      (creditsInfo as any)?.purchasedCredits ||
+      0;
 
-    return weeklyCredits + purchasedCredits;
+    return purchasedCredits;
   }
 
   calculateTotalCredits(): number {
