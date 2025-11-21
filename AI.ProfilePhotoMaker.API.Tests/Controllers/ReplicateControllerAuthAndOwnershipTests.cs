@@ -71,6 +71,8 @@ public class ReplicateControllerAuthAndOwnershipTests
                  .ReturnsAsync((999, 999));
         mockBasic.Setup(s => s.ConsumeCreditsAsync("user-123", "model_training"))
                  .ReturnsAsync(CreditConsumptionResult.Succeeded("model_training", 0, CreditCostConfig.GetCreditCost("model_training")));
+        mockBasic.Setup(s => s.RefundCreditsAsync("user-123", It.IsAny<CreditConsumptionResult>()))
+                 .ReturnsAsync(true);
 
         var controller = CreateController("user-123", db, mockReplicate, mockBasic);
 
