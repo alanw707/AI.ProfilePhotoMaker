@@ -71,6 +71,8 @@ public class ReplicateControllerAuthAndOwnershipTests
                  .ReturnsAsync((999, 999));
         mockBasic.Setup(s => s.ConsumeCreditsAsync("user-123", "model_training"))
                  .ReturnsAsync(CreditConsumptionResult.Succeeded("model_training", 0, CreditCostConfig.GetCreditCost("model_training")));
+        mockBasic.Setup(s => s.RefundCreditsAsync("user-123", It.IsAny<CreditConsumptionResult>()))
+                 .ReturnsAsync(true);
 
         var controller = CreateController("user-123", db, mockReplicate, mockBasic);
 
@@ -97,8 +99,6 @@ public class ReplicateControllerAuthAndOwnershipTests
         // Enough credits
         mockBasic.Setup(s => s.GetCreditBreakdownAsync("user-123"))
                  .ReturnsAsync((999, 999));
-        mockBasic.Setup(s => s.ConsumeCreditsAsync("user-123", It.IsAny<int>(), "styled_generation"))
-                 .ReturnsAsync((string _, int credits, string _) => CreditConsumptionResult.Succeeded("styled_generation", 0, credits));
 
         var controller = CreateController("user-123", db, mockReplicate, mockBasic);
 
@@ -127,8 +127,6 @@ public class ReplicateControllerAuthAndOwnershipTests
         // Credits sufficient
         mockBasic.Setup(s => s.GetCreditBreakdownAsync("user-123"))
                  .ReturnsAsync((999, 999));
-        mockBasic.Setup(s => s.ConsumeCreditsAsync("user-123", It.IsAny<int>(), "styled_generation"))
-                 .ReturnsAsync((string _, int credits, string _) => CreditConsumptionResult.Succeeded("styled_generation", 0, credits));
 
         var controller = CreateController("user-123", db, mockReplicate, mockBasic);
 
