@@ -114,7 +114,9 @@ export class RegisterComponent {
         .flat()
         .filter(Boolean)
         .join(' ');
-      if (allErrors) return allErrors;
+      if (allErrors) {
+        return allErrors;
+      }
     }
 
     if (error?.error?.title) {
