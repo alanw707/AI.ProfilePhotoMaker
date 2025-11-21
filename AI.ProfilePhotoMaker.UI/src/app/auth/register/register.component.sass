@@ -13,25 +13,25 @@
   @include shared.card-base
   box-shadow: var(--shadow-md)
   background: var(--card-bg)
-  padding: 40px
-  max-width: 560px
+  padding: 28px
+  max-width: 540px
   width: 100%
 
 .register-header
   text-align: center
-  margin-bottom: 30px
+  margin-bottom: 18px
 
   h1
     color: var(--text-primary)
-    font-size: 24px
+    font-size: 22px
     font-weight: 700
-    margin-bottom: 10px
+    margin-bottom: 6px
 
   h2
     color: var(--text-primary)
-    font-size: 20px
+    font-size: 18px
     font-weight: 600
-    margin-bottom: 8px
+    margin-bottom: 6px
 
   p
     color: var(--text-secondary)
@@ -41,15 +41,15 @@
 .register-form
   .form-row
     display: flex
-    gap: 15px
-    margin-bottom: 20px
+    gap: 12px
+    margin-bottom: 14px
 
     .form-group
       flex: 1
       margin-bottom: 0
 
   .form-group
-    margin-bottom: 20px
+    margin-bottom: 14px
 
     label
       display: block
@@ -87,6 +87,11 @@
     select.form-control
       color: var(--text-primary)
       background: var(--input-bg)
+      option
+        color: var(--text-primary)
+        background: var(--card-bg)
+      option[disabled]
+        color: var(--text-secondary)
 
     .invalid-feedback
       color: var(--accent-danger)

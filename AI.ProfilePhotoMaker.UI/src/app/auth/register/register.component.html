@@ -115,6 +115,9 @@
         <div *ngIf="shouldShowPasswordError()" class="invalid-feedback">
           <div *ngIf="f['password'].errors?.['required']">Password is required</div>
           <div *ngIf="f['password'].errors?.['minlength']">Password must be at least 8 characters</div>
+          <div *ngIf="shouldShowPasswordComplexityError()">
+            Password must include an uppercase, lowercase, number, and symbol.
+          </div>
         </div>
       </div>
 

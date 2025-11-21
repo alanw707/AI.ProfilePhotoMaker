@@ -103,6 +103,18 @@ public class ReplicateController : ControllerBase
             });
         }
 
+        // Consume credits BEFORE calling Replicate; refund on failure
+        var trainingCredits = await _basicTierService.ConsumeCreditsAsync(userId, "model_training");
+        if (!trainingCredits.Success)
+        {
+            _logger.LogError("Failed to consume training credits for user {UserId} before starting Replicate training", Sid(userId));
+            return StatusCode(500, new
+            {
+                success = false,
+                error = new { code = "CreditConsumptionFailed", message = "Unable to charge credits for training. Please try again." }
+            });
+        }
+
         try
         {
             // Convert image ZIP URL to external API format before passing to Replicate
@@ -114,6 +126,7 @@ public class ReplicateController : ControllerBase
             // Enforce user context: trust authenticated user over DTO
             if (!string.IsNullOrEmpty(dto.UserId) && !string.Equals(dto.UserId, userId, StringComparison.Ordinal))
             {
+                await _basicTierService.RefundCreditsAsync(userId, trainingCredits);
                 return BadRequest(new
                 {
                     success = false,
@@ -122,16 +135,6 @@ public class ReplicateController : ControllerBase
             }
 
             var result = await _replicateApiClient.CreateModelTrainingAsync(userId, externalImageZipUrl);
-
-            // Only consume credits AFTER successful API call
-            var creditConsumption = await _basicTierService.ConsumeCreditsAsync(userId, "model_training");
-            if (!creditConsumption.Success)
-            {
-                _logger.LogError("Successfully created Replicate training but failed to consume credits for user {UserId}",
-                    LoggingSanitizer.SanitizeId(userId));
-                // Note: In this case, the Replicate training is already running but we couldn't charge credits
-                // This is better than charging credits for failed training requests
-            }
 
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
 
@@ -149,6 +152,7 @@ public class ReplicateController : ControllerBase
         }
         catch (ReplicateApiException ex)
         {
+            await _basicTierService.RefundCreditsAsync(userId, trainingCredits);
             _logger.LogError(ex, "Replicate API error during training for user {UserId}: {Status} {Code}",
                 LoggingSanitizer.SanitizeId(userId),
                 (int)ex.StatusCode,
@@ -179,6 +183,7 @@ public class ReplicateController : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
+            await _basicTierService.RefundCreditsAsync(userId, trainingCredits);
             _logger.LogError(ex, "Replicate auth failed during training for user {UserId}",
                 LoggingSanitizer.SanitizeId(userId));
             return StatusCode(500, new
@@ -193,6 +198,7 @@ public class ReplicateController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            await _basicTierService.RefundCreditsAsync(userId, trainingCredits);
             _logger.LogError(ex, "Replicate configuration error during training for user {UserId}",
                 LoggingSanitizer.SanitizeId(userId));
             return StatusCode(500, new
@@ -207,6 +213,7 @@ public class ReplicateController : ControllerBase
         }
         catch (Exception ex)
         {
+            await _basicTierService.RefundCreditsAsync(userId, trainingCredits);
             _logger.LogError(ex, "Training failed for user {UserId}",
                 LoggingSanitizer.SanitizeId(userId));
             // If training fails, we might want to refund the credit later.
@@ -368,6 +375,7 @@ public class ReplicateController : ControllerBase
         }
 
         AI.ProfilePhotoMaker.API.Models.ModelCreationRequest? model = null;
+        CreditConsumptionResult? creditConsumed = null;
         try
         {
             // Get user info from database for prompt generation
@@ -467,16 +475,19 @@ public class ReplicateController : ControllerBase
                 });
             }
 
-            var result = await _replicateApiClient.GenerateImagesAsync(modelVersionToUse, userId, dto.Style, userInfo);
-
-            // Only consume credits AFTER successful API call (5 credits per image generated)
-            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, requiredCredits, "styled_generation");
+            // Consume credits BEFORE calling Replicate; refund on failure
+            creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, requiredCredits, "styled_generation");
             if (!creditConsumed.Success)
             {
-                _logger.LogError("Successfully created Replicate prediction but failed to consume credits for user {UserId}", Sid(userId));
-                // Note: In this case, the Replicate prediction is already running but we couldn't charge credits
-                // This is better than charging credits for failed predictions
+                _logger.LogError("Failed to consume styled generation credits for user {UserId} before Replicate call", Sid(userId));
+                return StatusCode(500, new
+                {
+                    success = false,
+                    error = new { code = "CreditConsumptionFailed", message = "Unable to charge credits for generation. Please try again." }
+                });
             }
+
+            var result = await _replicateApiClient.GenerateImagesAsync(modelVersionToUse, userId, dto.Style, userInfo);
 
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
 
@@ -501,6 +512,10 @@ public class ReplicateController : ControllerBase
                 "Replicate reports version not available yet for user {UserId}{Age}",
                 Sid(userId),
                 S(ageSec.HasValue ? $", model age ~{ageSec.Value:F1}s" : string.Empty));
+            // Refund if we pre-charged
+            if (creditConsumed?.Success == true)
+                await _basicTierService.RefundCreditsAsync(userId, creditConsumed);
+
             return StatusCode(409, new
             {
                 success = false,
@@ -514,6 +529,9 @@ public class ReplicateController : ControllerBase
         }
         catch (Exception ex)
         {
+            if (creditConsumed?.Success == true)
+                await _basicTierService.RefundCreditsAsync(userId, creditConsumed);
+
             _logger.LogError(ex, "Error generating images for user {UserId}", Sid(userId));
             // If generation fails, we might want to refund the credit
             // For now, we'll just return failure
@@ -549,8 +567,9 @@ public class ReplicateController : ControllerBase
             return BadRequest(new { success = false, error = new { code = "NoStyles", message = "At least one style must be specified." } });
 
         // Calculate total credits required (5 credits per image)
+        var costPerImage = CreditCostConfig.GetCreditCost("styled_generation");
         var totalImages = dto.Styles.Count * dto.NumOutputsPerStyle;
-        var requiredCredits = totalImages * CreditCostConfig.GetCreditCost("styled_generation");
+        var requiredCredits = totalImages * costPerImage;
 
         // Check if user has sufficient purchased credits for styled generation
         var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
@@ -568,6 +587,7 @@ public class ReplicateController : ControllerBase
             });
         }
 
+        CreditConsumptionResult? creditConsumed = null;
         try
         {
             // Get user info from database for prompt generation
@@ -644,6 +664,18 @@ public class ReplicateController : ControllerBase
             // when using the same model version for multiple concurrent requests
             var results = new List<StyleGenerationResult>();
 
+            // Consume credits BEFORE calling Replicate; refund on failure
+            creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, requiredCredits, "styled_generation");
+            if (!creditConsumed.Success)
+            {
+                _logger.LogError("Failed to consume batch styled generation credits for user {UserId} before Replicate calls", Sid(userId));
+                return StatusCode(500, new
+                {
+                    success = false,
+                    error = new { code = "CreditConsumptionFailed", message = "Unable to charge credits for generation. Please try again." }
+                });
+            }
+
             foreach (var style in dto.Styles)
             {
                 try
@@ -677,7 +709,10 @@ public class ReplicateController : ControllerBase
 
             if (!successfulGenerations.Any())
             {
-                // All generations failed
+                // All generations failed – refund full charge
+                if (creditConsumed?.Success == true)
+                    await _basicTierService.RefundCreditsAsync(userId, creditConsumed);
+
                 return StatusCode(500, new
                 {
                     success = false,
@@ -690,15 +725,22 @@ public class ReplicateController : ControllerBase
                 });
             }
 
-            // Only consume credits for successful generations
-            var actualCreditsRequired = successfulGenerations.Count * dto.NumOutputsPerStyle * CreditCostConfig.GetCreditCost("styled_generation");
-            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, actualCreditsRequired, "styled_generation");
-            if (!creditConsumed.Success)
+            // Partial failures: refund unused credits for failed styles
+            var failedImages = failedGenerations.Count * dto.NumOutputsPerStyle;
+            var refundTotal = failedImages * costPerImage;
+
+            int refundWeekly = 0;
+            int refundPurchased = 0;
+            if (creditConsumed?.Success == true && refundTotal > 0)
             {
-                _logger.LogError("Successfully created Replicate predictions but failed to consume credits for user {UserId}", Sid(userId));
-                // Note: In this case, the Replicate predictions are already running but we couldn't charge credits
-                // This is better than charging credits for failed predictions
+                refundWeekly = Math.Min(creditConsumed.WeeklyCreditsConsumed, refundTotal);
+                refundPurchased = Math.Min(creditConsumed.PurchasedCreditsConsumed, refundTotal - refundWeekly);
+
+                var refundResult = CreditConsumptionResult.Succeeded("styled_generation_refund", refundWeekly, refundPurchased);
+                await _basicTierService.RefundCreditsAsync(userId, refundResult);
             }
+
+            var creditsCharged = requiredCredits - (refundWeekly + refundPurchased);
 
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
 
@@ -709,7 +751,7 @@ public class ReplicateController : ControllerBase
                 {
                     predictions = successfulGenerations.Select(g => new { Style = g.Style, Result = g.Result }).ToList(),
                     creditsRemaining = remainingCredits,
-                    creditsCost = actualCreditsRequired,
+                    creditsCost = creditsCharged,
                     successfulStyles = successfulGenerations.Count,
                     failedStyles = failedGenerations.Count,
                     failures = failedGenerations.Select(f => new { Style = f.Style, Error = f.Error }).ToList()
@@ -719,6 +761,9 @@ public class ReplicateController : ControllerBase
         }
         catch (Exception ex)
         {
+            if (creditConsumed?.Success == true)
+                await _basicTierService.RefundCreditsAsync(userId, creditConsumed);
+
             _logger.LogError(ex, "Error in batch image generation for user {UserId}", Sid(userId));
             // If generation fails, we might want to refund the credit
             // For now, we'll just return failure
