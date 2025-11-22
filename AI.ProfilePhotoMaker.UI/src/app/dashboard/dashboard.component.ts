@@ -30,6 +30,7 @@ import { ConfigService } from '../services/config.service';
 import { StylePreviewService } from '../services/style-preview.service';
 import { WorkflowStepService, ImageThumbnail } from '../services/workflow-step.service';
 import { LoggingService, LogLevel } from '../services/logging.service';
+import { NavigationService } from '../services/navigation.service';
 import { environment } from '../../environments/environment';
 import { DashboardState } from '../interfaces/service.interfaces';
 // Lazy-loaded service types
@@ -132,7 +133,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     switch (event.action) {
       case 'purchase':
       case 'viewPackages':
-        this._router.navigate(['/pricing']);
+        this._navigation.goToPricingPlans();
         break;
       case 'upgrade':
         this._router.navigate(['/premium']);
@@ -145,6 +146,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   constructor(
     private readonly _authService: AuthService,
     private readonly _router: Router,
+    private readonly _navigation: NavigationService,
     private readonly _styleService: StyleService,
     private readonly _notificationService: NotificationService,
     public readonly creditService: CreditService,

@@ -250,6 +250,10 @@
   class="training-note insufficient-credits"
   *ngIf="selectedStyles > 0 && uploadedImageCount >= 10 && !hasEnoughCredits">
   <div class="note-icon">💳</div>
-  <p>Insufficient credits. You need {{ totalCredits - remainingCredits }} more credits.</p>
-  <button class="btn btn-secondary btn-sm">Purchase Credits</button>
+  <p>
+    Insufficient credits. You need
+    <span class="credits-needed">{{ getMissingCredits() }}</span>
+    more credits.
+  </p>
+  <button class="btn btn-secondary btn-sm credit-cta" (click)="onPurchaseCredits()">Purchase Credits</button>
 </div>

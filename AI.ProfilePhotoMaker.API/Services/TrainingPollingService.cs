@@ -65,6 +65,7 @@ public class TrainingPollingService : ITrainingPollingService
         using var scope = _serviceScopeFactory.CreateScope();
         var scopedDbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var scopedReplicateClient = scope.ServiceProvider.GetRequiredService<IReplicateApiClient>();
+        var scopedBasicTierService = scope.ServiceProvider.GetRequiredService<IBasicTierService>();
 
         try
         {
@@ -85,6 +86,13 @@ public class TrainingPollingService : ITrainingPollingService
 
             _logger.LogInformation("Found model creation request {RequestId} for training {TrainingId}",
                 modelRequest.Id, trainingId);
+
+            // Avoid double processing (and double refunds) if we've already finalized this training
+            if (modelRequest.CompletedAt.HasValue)
+            {
+                _logger.LogInformation("Training {TrainingId} already finalized with status {Status}; skipping", trainingId, modelRequest.Status);
+                return;
+            }
 
             // Update the model creation request based on training status
             if (trainingStatus.IsCompleted && trainingStatus.Status?.ToLower() == "succeeded")
@@ -186,11 +194,36 @@ public class TrainingPollingService : ITrainingPollingService
             }
             else if (trainingStatus.Status?.ToLower() == "failed" || trainingStatus.Status?.ToLower() == "canceled")
             {
-                _logger.LogWarning("Training {TrainingId} failed or was canceled with status {Status}", trainingId, trainingStatus.Status);
+                var detailedError = trainingStatus.Error ?? "<none>";
+                var logSnippet = string.IsNullOrWhiteSpace(trainingStatus.Logs)
+                    ? "<no logs>"
+                    : (trainingStatus.Logs!.Length > 800 ? trainingStatus.Logs.Substring(0, 800) + "..." : trainingStatus.Logs);
+
+                _logger.LogWarning("Training {TrainingId} failed or was canceled with status {Status}. Error: {Error}. Logs: {Logs}",
+                    trainingId, trainingStatus.Status, detailedError, logSnippet);
 
                 modelRequest.Status = ModelCreationStatus.Failed;
-                modelRequest.ErrorMessage = trainingStatus.Error ?? $"Training failed with status: {trainingStatus.Status}";
+                modelRequest.ErrorMessage = trainingStatus.Error ??
+                    (!string.IsNullOrWhiteSpace(trainingStatus.Logs)
+                        ? trainingStatus.Logs!.Length > 500 ? trainingStatus.Logs.Substring(0, 500) + "..." : trainingStatus.Logs
+                        : $"Training failed with status: {trainingStatus.Status}");
                 modelRequest.CompletedAt = DateTime.UtcNow;
+
+                // Refund the training credits since Replicate never delivered a trained model
+                try
+                {
+                    var refundResult = CreditConsumptionResult.Succeeded(
+                        "model_training_refund",
+                        weeklyCredits: 0,
+                        purchasedCredits: CreditCostConfig.ModelTraining);
+
+                    await scopedBasicTierService.RefundCreditsAsync(modelRequest.UserId, refundResult);
+                    _logger.LogInformation("Refunded training credits for user {UserId} after training {TrainingId} failed", modelRequest.UserId, trainingId);
+                }
+                catch (Exception refundEx)
+                {
+                    _logger.LogError(refundEx, "Failed to refund credits for user {UserId} after training {TrainingId} failure", modelRequest.UserId, trainingId);
+                }
             }
             else
             {

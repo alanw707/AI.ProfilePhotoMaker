@@ -43,8 +43,9 @@ public class StorageProxyMiddleware
     {
         try
         {
-            // Remove the leading slash and construct Azurite URL
-            var azuriteUrl = $"http://127.0.0.1:10000{path}";
+            // Preserve query string (SAS tokens live here) when proxying to Azurite
+            var query = context.Request.QueryString.HasValue ? context.Request.QueryString.Value : string.Empty;
+            var azuriteUrl = $"http://127.0.0.1:10000{path}{query}";
 
             _logger.LogDebug("Proxying storage request: {Path} -> {AzuriteUrl}", S(path), S(azuriteUrl));
 

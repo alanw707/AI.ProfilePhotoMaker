@@ -44,6 +44,12 @@ public class ReplicateTrainingResult
     public string? Error { get; set; }
 
     /// <summary>
+    /// Raw logs from the training run (often contains the actual failure reason)
+    /// </summary>
+    [JsonPropertyName("logs")]
+    public string? Logs { get; set; }
+
+    /// <summary>
     /// Webhook URL for notifications about training status changes
     /// </summary>
     [JsonPropertyName("webhook")]

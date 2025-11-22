@@ -137,6 +137,27 @@ export class NavigationService {
     return this.navigateTo('/pricing');
   }
 
+  goToPricingPlans(): Promise<boolean> {
+    // Navigate to pricing and aggressively scroll to the packages once they render
+    const targetId = 'packages-section';
+    return this.navigateTo('/pricing').then(success => {
+      if (success) {
+        let attempts = 0;
+        const maxAttempts = 8;
+        const interval = setInterval(() => {
+          const el = document.getElementById(targetId);
+          if (el) {
+            this.scrollToSection(targetId, 150);
+            clearInterval(interval);
+          } else if (++attempts >= maxAttempts) {
+            clearInterval(interval);
+          }
+        }, 150);
+      }
+      return success;
+    });
+  }
+
   goToFeatures(): Promise<boolean> {
     return this.navigateTo('/features');
   }

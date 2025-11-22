@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { ConfigService } from '../../../services/config.service';
+import { NavigationService } from '../../../services/navigation.service';
 import { ModelStatusService } from '../../../services/model-status.service';
 
 export interface StyleOption {
@@ -25,7 +26,8 @@ export class StyleSelectorComponent {
   constructor(
     private _router: Router,
     private _config: ConfigService,
-    private _modelStatus: ModelStatusService
+    private _modelStatus: ModelStatusService,
+    private _navigation: NavigationService
   ) {}
   @Input() availableStyles: StyleOption[] = [];
   @Input() imagesPerStyle = 2;
@@ -135,5 +137,13 @@ export class StyleSelectorComponent {
     this._router.navigate(['/app/gallery'], {
       queryParams: { refresh: Date.now() },
     });
+  }
+
+  getMissingCredits(): number {
+    return this.remainingCredits < 0 ? Math.abs(this.remainingCredits) : 0;
+  }
+
+  onPurchaseCredits(): void {
+    this._navigation.goToPricingPlans();
   }
 }
