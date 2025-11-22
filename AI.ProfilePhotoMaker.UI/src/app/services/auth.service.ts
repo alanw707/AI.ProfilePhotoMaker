@@ -534,16 +534,26 @@ export class AuthService {
    */
   private navigateToLogin(reason: string): void {
     const queryParams = reason !== 'user_initiated' ? { reason } : {};
+    try {
+      const navigationResult = this._router.navigate(['/auth/login'], { queryParams });
 
-    this._router.navigate(['/auth/login'], { queryParams }).then(success => {
-      if (success) {
-        console.log('✅ Successfully navigated to login page');
-      } else {
-        console.error('❌ Failed to navigate to login page');
-        // Fallback - force page reload to login
-        window.location.href = '/auth/login';
-      }
-    });
+      Promise.resolve(navigationResult)
+        .then(success => {
+          if (success === false) {
+            console.error('❌ Failed to navigate to login page');
+            window.location.href = '/auth/login';
+          } else {
+            console.log('✅ Successfully navigated to login page');
+          }
+        })
+        .catch(err => {
+          console.error('❌ Error navigating to login page:', err);
+          window.location.href = '/auth/login';
+        });
+    } catch (err) {
+      console.error('❌ Failed to navigate to login page', err);
+      window.location.href = '/auth/login';
+    }
   }
 
   /**
