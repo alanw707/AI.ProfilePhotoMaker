@@ -67,7 +67,7 @@ import { LoggingService } from '../../services/logging.service';
           </section>
 
           <!-- Credit Packages Section -->
-          <section class="packages-section">
+          <section id="packages-section" class="packages-section">
             <app-credit-packages (packagePurchased)="onCreditPackagePurchased($event)">
             </app-credit-packages>
           </section>

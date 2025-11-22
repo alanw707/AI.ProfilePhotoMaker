@@ -1,4 +1,5 @@
 using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using Microsoft.EntityFrameworkCore;
@@ -32,7 +33,7 @@ public class TrainingPollingService : ITrainingPollingService
     /// </summary>
     public async Task StartPollingForTraining(string trainingId, string userId)
     {
-        _logger.LogInformation("Starting polling for training {TrainingId} for user {UserId}", trainingId, userId);
+        _logger.LogInformation("Starting polling for training {TrainingId} for user {UserId}", S(trainingId), Sid(userId));
 
         // Store the polling task info - we'll let the background service handle the actual polling
         // This method primarily exists for extensibility if we need immediate polling triggers
@@ -51,7 +52,7 @@ public class TrainingPollingService : ITrainingPollingService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking training status for {TrainingId}", trainingId);
+            _logger.LogError(ex, "Error checking training status for {TrainingId}", S(trainingId));
             return false;
         }
     }
@@ -65,10 +66,11 @@ public class TrainingPollingService : ITrainingPollingService
         using var scope = _serviceScopeFactory.CreateScope();
         var scopedDbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var scopedReplicateClient = scope.ServiceProvider.GetRequiredService<IReplicateApiClient>();
+        var scopedBasicTierService = scope.ServiceProvider.GetRequiredService<IBasicTierService>();
 
         try
         {
-            _logger.LogInformation("Processing training completion for training {TrainingId}", trainingId);
+            _logger.LogInformation("Processing training completion for training {TrainingId}", S(trainingId));
 
             // Get the current training status from Replicate
             var trainingStatus = await scopedReplicateClient.GetTrainingStatusAsync(trainingId);
@@ -79,17 +81,24 @@ public class TrainingPollingService : ITrainingPollingService
 
             if (modelRequest == null)
             {
-                _logger.LogWarning("No model creation request found for training ID {TrainingId}", trainingId);
+                _logger.LogWarning("No model creation request found for training ID {TrainingId}", S(trainingId));
                 return;
             }
 
             _logger.LogInformation("Found model creation request {RequestId} for training {TrainingId}",
-                modelRequest.Id, trainingId);
+                modelRequest.Id, S(trainingId));
+
+            // Avoid double processing (and double refunds) if we've already finalized this training
+            if (modelRequest.CompletedAt.HasValue)
+            {
+                _logger.LogInformation("Training {TrainingId} already finalized with status {Status}; skipping", S(trainingId), S(modelRequest.Status.ToString()));
+                return;
+            }
 
             // Update the model creation request based on training status
             if (trainingStatus.IsCompleted && trainingStatus.Status?.ToLower() == "succeeded")
             {
-                _logger.LogInformation("Training {TrainingId} completed successfully", trainingId);
+                _logger.LogInformation("Training {TrainingId} completed successfully", S(trainingId));
 
                 // Extract the trained model version for the user's custom model
                 // Note: Replicate training status "version" points to the trainer model (fast-flux-trainer)
@@ -105,18 +114,18 @@ public class TrainingPollingService : ITrainingPollingService
                             ? modelRequest.ReplicateModelId!
                             : $"alanw707/{modelRequest.ReplicateModelId}";
                         resolvedVersionId = await scopedReplicateClient.GetModelVersionAsync(fullModelId);
-                        _logger.LogInformation("Resolved model version for {ModelId}: {VersionId}", fullModelId, resolvedVersionId);
+                        _logger.LogInformation("Resolved model version for {ModelId}: {VersionId}", Sid(fullModelId), Sid(resolvedVersionId));
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to resolve version for model {ModelId}", modelRequest.ReplicateModelId);
+                    _logger.LogError(ex, "Failed to resolve version for model {ModelId}", Sid(modelRequest.ReplicateModelId));
                 }
 
                 // Critical: Do NOT fall back to trainingStatus.Version (it's the trainer model's version)
                 if (string.IsNullOrEmpty(resolvedVersionId))
                 {
-                    _logger.LogError("Could not resolve model version for {ModelId}. Training marked as failed.", modelRequest.ReplicateModelId);
+                    _logger.LogError("Could not resolve model version for {ModelId}. Training marked as failed.", Sid(modelRequest.ReplicateModelId));
                     modelRequest.Status = ModelCreationStatus.Failed;
                     modelRequest.ErrorMessage = "Could not determine trained model version";
                     modelRequest.CompletedAt = DateTime.UtcNow;
@@ -130,7 +139,7 @@ public class TrainingPollingService : ITrainingPollingService
                 if (!System.Text.RegularExpressions.Regex.IsMatch(trainedModelVersion, @"^[a-fA-F0-9]{64}$"))
                 {
                     _logger.LogError("Invalid version format received: {Version} for model {ModelId}. Expected 64-character hex string.",
-                        trainedModelVersion, modelRequest.ReplicateModelId);
+                        Sid(trainedModelVersion), Sid(modelRequest.ReplicateModelId));
                     modelRequest.Status = ModelCreationStatus.Failed;
                     modelRequest.ErrorMessage = $"Invalid version format received: {trainedModelVersion}";
                     modelRequest.CompletedAt = DateTime.UtcNow;
@@ -152,8 +161,8 @@ public class TrainingPollingService : ITrainingPollingService
                     double? sinceCompletion = completedAtUtc.HasValue ? (DateTime.UtcNow - completedAtUtc.Value).TotalSeconds : null;
                     _logger.LogWarning(
                         "Version {Version} for model {ModelId} not visible yet after {WaitedSec:F1}s{SinceCompletion}",
-                        trainedModelVersion,
-                        modelIdForApi,
+                        Sid(trainedModelVersion),
+                        Sid(modelIdForApi),
                         waited.TotalSeconds,
                         sinceCompletion.HasValue ? $", ~{sinceCompletion.Value:F1}s since training completion" : string.Empty);
                     return;
@@ -164,8 +173,8 @@ public class TrainingPollingService : ITrainingPollingService
                     double? sinceCompletion = completedAtUtc.HasValue ? (DateTime.UtcNow - completedAtUtc.Value).TotalSeconds : null;
                     _logger.LogInformation(
                         "Version {Version} for model {ModelId} became available after {WaitedSec:F1}s{SinceCompletion}",
-                        trainedModelVersion,
-                        modelIdForApi,
+                        Sid(trainedModelVersion),
+                        Sid(modelIdForApi),
                         waited.TotalSeconds,
                         sinceCompletion.HasValue ? $", ~{sinceCompletion.Value:F1}s since training completion" : string.Empty);
                 }
@@ -177,7 +186,7 @@ public class TrainingPollingService : ITrainingPollingService
                 modelRequest.ErrorMessage = null;
 
                 _logger.LogInformation("Model creation request {RequestId} marked as Ready with version {Version}",
-                    modelRequest.Id, trainedModelVersion);
+                    modelRequest.Id, Sid(trainedModelVersion));
 
                 // Save changes first
                 await scopedDbContext.SaveChangesAsync();
@@ -186,15 +195,42 @@ public class TrainingPollingService : ITrainingPollingService
             }
             else if (trainingStatus.Status?.ToLower() == "failed" || trainingStatus.Status?.ToLower() == "canceled")
             {
-                _logger.LogWarning("Training {TrainingId} failed or was canceled with status {Status}", trainingId, trainingStatus.Status);
+                var detailedError = string.IsNullOrWhiteSpace(trainingStatus.Error)
+                    ? "<none>"
+                    : Sl(trainingStatus.Error);
+                var logSnippet = string.IsNullOrWhiteSpace(trainingStatus.Logs)
+                    ? "<no logs>"
+                    : Sl(trainingStatus.Logs!.Length > 800 ? trainingStatus.Logs.Substring(0, 800) + "..." : trainingStatus.Logs, 800);
+
+                _logger.LogWarning("Training {TrainingId} failed or was canceled with status {Status}. Error: {Error}. Logs: {Logs}",
+                    S(trainingId), S(trainingStatus.Status), detailedError, logSnippet);
 
                 modelRequest.Status = ModelCreationStatus.Failed;
-                modelRequest.ErrorMessage = trainingStatus.Error ?? $"Training failed with status: {trainingStatus.Status}";
+                modelRequest.ErrorMessage = trainingStatus.Error ??
+                    (!string.IsNullOrWhiteSpace(trainingStatus.Logs)
+                        ? trainingStatus.Logs!.Length > 500 ? trainingStatus.Logs.Substring(0, 500) + "..." : trainingStatus.Logs
+                        : $"Training failed with status: {trainingStatus.Status}");
                 modelRequest.CompletedAt = DateTime.UtcNow;
+
+                // Refund the training credits since Replicate never delivered a trained model
+                try
+                {
+                    var refundResult = CreditConsumptionResult.Succeeded(
+                        "model_training_refund",
+                        weeklyCredits: 0,
+                        purchasedCredits: CreditCostConfig.ModelTraining);
+
+                    await scopedBasicTierService.RefundCreditsAsync(modelRequest.UserId, refundResult);
+                    _logger.LogInformation("Refunded training credits for user {UserId} after training {TrainingId} failed", Sid(modelRequest.UserId), S(trainingId));
+                }
+                catch (Exception refundEx)
+                {
+                    _logger.LogError(refundEx, "Failed to refund credits for user {UserId} after training {TrainingId} failure", Sid(modelRequest.UserId), S(trainingId));
+                }
             }
             else
             {
-                _logger.LogInformation("Training {TrainingId} not yet complete, status: {Status}", trainingId, trainingStatus.Status);
+                _logger.LogInformation("Training {TrainingId} not yet complete, status: {Status}", S(trainingId), S(trainingStatus.Status));
                 return; // Training still in progress, don't save changes
             }
 
@@ -202,12 +238,15 @@ public class TrainingPollingService : ITrainingPollingService
             await scopedDbContext.SaveChangesAsync();
 
             _logger.LogInformation("Successfully processed training completion for {TrainingId}, status: {Status}",
-                trainingId, modelRequest.Status);
+                S(trainingId), S(modelRequest.Status.ToString()));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing training completion for {TrainingId}", trainingId);
+            _logger.LogError(ex, "Error processing training completion for {TrainingId}", S(trainingId));
         }
     }
 
+    private static string S(string? value) => LoggingSanitizer.Sanitize(value);
+    private static string Sl(string? value, int maxLength = 256) => LoggingSanitizer.Sanitize(value, maxLength);
+    private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 }

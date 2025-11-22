@@ -505,7 +505,7 @@
         </p>
       </div>
 
-      <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+      <div id="pricing-cards" class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
         <div *ngFor="let plan of plans" class="pricing-card relative" [class.recommended]="plan.recommended">
           <!-- Recommended badge -->
           <div *ngIf="plan.recommended" class="absolute -top-5 left-1/2 transform -translate-x-1/2">
