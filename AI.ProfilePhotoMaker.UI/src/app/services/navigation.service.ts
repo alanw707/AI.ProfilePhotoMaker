@@ -14,12 +14,15 @@ export class NavigationService {
     private router: Router,
     private location: Location
   ) {
-    // Track navigation history
-    this.router.events
-      .pipe(filter(event => event instanceof NavigationEnd))
-      .subscribe((event: NavigationEnd) => {
-        this.addToHistory(event.url);
-      });
+    // Track navigation history (router.events may be undefined in tests/mocks)
+    const eventsStream: any = (this.router as any)?.events;
+    if (eventsStream && typeof eventsStream.pipe === 'function') {
+      eventsStream
+        .pipe(filter((event: any) => event instanceof NavigationEnd))
+        .subscribe((event: NavigationEnd) => {
+          this.addToHistory(event.url);
+        });
+    }
   }
 
   private addToHistory(url: string): void {
