@@ -10,7 +10,10 @@
     </div>
   </div>
 
-  <div class="payment-container" *ngIf="isStripePaymentActive && selectedPackage">
+  <div
+    id="credit-purchase-form"
+    class="payment-container"
+    *ngIf="isStripePaymentActive && selectedPackage">
     <h3>Complete Payment for {{ selectedPackage.name }}</h3>
 
     <div class="stripe-summary">
@@ -204,7 +207,10 @@
     <p class="secure-note">Payments are securely processed by Stripe. Your card details never touch our servers.</p>
   </div>
 
-  <div class="payment-container simulation" *ngIf="isSimulationMode && isPurchasing && selectedPackage">
+  <div
+    id="credit-purchase-form"
+    class="payment-container simulation"
+    *ngIf="isSimulationMode && isPurchasing && selectedPackage">
     <h3>Simulating Payment for {{ selectedPackage.name }}</h3>
     <div class="simulation-payment">
       <p>Payment simulation in progress...</p>

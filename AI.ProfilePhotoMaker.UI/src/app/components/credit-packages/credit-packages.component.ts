@@ -241,6 +241,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
 
     if (this._shouldUsePaymentSimulation()) {
       this.isPurchasing = true;
+      this._scrollToPurchaseForm();
       this.simulatePayment(pkg);
       return;
     }
@@ -248,6 +249,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     this.isStripePaymentActive = true;
     this.isLoadingIntent = true;
     this._cdr.markForCheck();
+    this._scrollToPurchaseForm();
 
     this._creditService.createPaymentIntent({ packageId: pkg.id }).subscribe({
       next: async response => {
@@ -832,5 +834,23 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     this._stripeElements = null;
     this._stripe = null;
     this._stripePublishableKey = null;
+  }
+
+  private _scrollToPurchaseForm(attempt = 0): void {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+
+    const target = document.getElementById('credit-purchase-form');
+    if (target) {
+      const yOffset = 90;
+      const targetY = target.getBoundingClientRect().top + window.scrollY - yOffset;
+      window.scrollTo({ top: targetY, behavior: 'smooth' });
+      return;
+    }
+
+    if (attempt < 8) {
+      setTimeout(() => this._scrollToPurchaseForm(attempt + 1), 80);
+    }
   }
 }
