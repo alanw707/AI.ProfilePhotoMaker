@@ -7,6 +7,7 @@ This directory contains Playwright-based E2E coverage that targets the combined 
 - `image-upload-validation.spec.js` – production/staging smoke validation for storage uploads
 - `stripe-checkout.spec.js` – local Stripe checkout flow validation (runs only when Stripe keys and test credentials are configured)
 - `photo-enhancement-credits.spec.ts` – regression that proves successful photo transforms immediately deduct credits (opt-in via env vars)
+- `pricing-scroll.spec.js` – UI-only check that pricing CTAs scroll to the billing form without submitting payment (opt-in via env var)
 - `playwright.config.js` – multi-environment configuration targeting hosted environments
 - `playwright.local.config.js` – local configuration that points to the dev stack on `http://localhost:4200`
 - `test-images/` – shared assets for upload scenarios
@@ -57,6 +58,17 @@ npx playwright test photo-enhancement-credits.spec.js --config playwright.local.
 ```
 
 The script logs in through the UI, uploads `tests/e2e/test-images/sample-selfie.jpg`, runs one enhancement, and asserts that both the dashboard widget and `/api/credit/status` endpoint show a two-credit deduction once the enhancement succeeds.
+
+### Pricing Scroll (no purchase)
+
+Runs a UI-only validation that each "Purchase Credits" button scrolls to the billing form without touching Stripe. It stubs the credit APIs and intentionally avoids creating payment intents.
+
+```bash
+export RUN_PRICING_SCROLL=true
+
+cd tests/e2e
+npx playwright test pricing-scroll.spec.js --config playwright.local.config.js
+```
 
 ### Stripe CLI (Webhooks)
 

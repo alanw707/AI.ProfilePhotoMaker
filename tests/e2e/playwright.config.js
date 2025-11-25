@@ -54,6 +54,9 @@ const enableCreditProject =
   process.env.RUN_CREDIT_TESTS === 'true' ||
   (!!process.env.CREDIT_TEST_EMAIL && !!process.env.CREDIT_TEST_PASSWORD);
 
+const enablePricingScroll =
+  process.env.RUN_PRICING_SCROLL === 'true' || process.env.RUN_PRICING_SCROLL_TEST === 'true';
+
 if (enableCreditProject) {
   baseProjects.push({
     name: 'local-enhancement-credits',
@@ -64,6 +67,19 @@ if (enableCreditProject) {
     },
     testMatch: '**/photo-enhancement-credits.spec.ts',
     timeout: 300000,
+  });
+}
+
+if (enablePricingScroll) {
+  baseProjects.push({
+    name: 'pricing-scroll-local',
+    use: {
+      ...devices['Desktop Chrome'],
+      baseURL: process.env.TEST_BASE_URL || 'http://localhost:4200',
+      headless: true,
+    },
+    testMatch: '**/pricing-scroll.spec.js',
+    timeout: 90000,
   });
 }
 
