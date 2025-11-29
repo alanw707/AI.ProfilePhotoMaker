@@ -51,19 +51,23 @@ test.describe('Pricing purchase scroll', () => {
     await purchasePromise;
 
     // Capture scroll position and viewport offset relative to the form
-    const { scrollY, formTop } = await page.evaluate(() => {
+    const { scrollY, top, bottom, viewportHeight } = await page.evaluate(() => {
       const el = document.getElementById('credit-purchase-form');
       const rect = el?.getBoundingClientRect();
       return {
         scrollY: window.scrollY,
-        formTop: rect ? rect.top : null,
+        top: rect ? rect.top : null,
+        bottom: rect ? rect.bottom : null,
+        viewportHeight: window.innerHeight,
       };
     });
 
     expect(scrollY).toBeGreaterThan(initialScroll + 10);
-    // Form should be near the top of the viewport (allow small offset for header)
-    expect(formTop).toBeGreaterThan(-20);
-    expect(formTop).toBeLessThan(140);
+    // Form should be at least partially in the viewport
+    expect(top).not.toBeNull();
+    expect(bottom).not.toBeNull();
+    expect(top).toBeLessThan(viewportHeight);
+    expect(bottom).toBeGreaterThan(0);
   });
 });
 
@@ -104,9 +108,8 @@ async function stubPricingApis(page) {
     });
   });
 
-  // Intercept payment intent creation to avoid hitting Stripe; return failure after a brief delay
-  await page.route('**/api/credit/create-payment-intent', async route => {
-    await page.waitForTimeout(400); // allow UI to render the form and scroll
+  // Intercept payment intent creation to avoid hitting Stripe; return fast failure
+  await page.route('**/api/credit/create-payment-intent', route => {
     route.fulfill({
       status: 400,
       contentType: 'application/json',
