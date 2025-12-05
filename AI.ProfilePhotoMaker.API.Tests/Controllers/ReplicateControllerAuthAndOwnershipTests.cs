@@ -45,7 +45,8 @@ public class ReplicateControllerAuthAndOwnershipTests
             mockBasic.Object,
             db,
             config.Object,
-            new NullLogger<ReplicateController>());
+            new NullLogger<ReplicateController>(),
+            new Mock<IPendingGenerationService>().Object);
 
         var httpContext = new DefaultHttpContext
         {

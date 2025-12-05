@@ -6,6 +6,7 @@ using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using AI.ProfilePhotoMaker.API.Hubs;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
+using AI.ProfilePhotoMaker.API.Services.Notifications;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
@@ -28,6 +29,7 @@ public class ReplicateWebhookController : ControllerBase
     private readonly IImageDownloadService _imageDownloadService;
     private readonly IStorageService _storageService;
     private readonly IHubContext<PredictionHub> _hubContext;
+    private readonly IEmailNotificationService _emailNotificationService;
 
     private static string S(string? value) => LoggingSanitizer.Sanitize(value);
     private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
@@ -38,7 +40,8 @@ public class ReplicateWebhookController : ControllerBase
         IReplicateApiClient replicateApiClient,
         IImageDownloadService imageDownloadService,
         IStorageService storageService,
-        IHubContext<PredictionHub> hubContext)
+        IHubContext<PredictionHub> hubContext,
+        IEmailNotificationService emailNotificationService)
     {
         _logger = logger;
         _dbContext = dbContext;
@@ -46,6 +49,7 @@ public class ReplicateWebhookController : ControllerBase
         _imageDownloadService = imageDownloadService;
         _storageService = storageService;
         _hubContext = hubContext;
+        _emailNotificationService = emailNotificationService;
     }
 
     // Training webhook endpoint removed - now using polling mechanism
@@ -244,6 +248,17 @@ public class ReplicateWebhookController : ControllerBase
                         _logger.LogWarning(ex, "Failed to send real-time notification for prediction {PredictionId}", Sid(safePayload.Id));
                     }
 
+                    // Best-effort email notification
+                    try
+                    {
+                        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                        await _emailNotificationService.SendGenerationCompletedAsync(userId, user?.Email, style, savedImageIds.Count);
+                    }
+                    catch (Exception emailEx)
+                    {
+                        _logger.LogWarning(emailEx, "Failed to send generation completion email for user {UserId}", Sid(userId));
+                    }
+
                     return Ok(new
                     {
                         success = true,
@@ -260,6 +275,19 @@ public class ReplicateWebhookController : ControllerBase
             }
             else
             {
+                if (!string.IsNullOrEmpty(userId) && safePayload.HasFailed)
+                {
+                    try
+                    {
+                        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                        await _emailNotificationService.SendGenerationFailedAsync(userId, user?.Email, style, safePayload.Error ?? safePayload.Status);
+                    }
+                    catch (Exception emailEx)
+                    {
+                        _logger.LogWarning(emailEx, "Failed to send generation failure email for user {UserId}", Sid(userId));
+                    }
+                }
+
                 _logger.LogWarning("Prediction webhook ignored - not completed, failed, no output, or missing userId: {@Payload}", payload);
             }
 

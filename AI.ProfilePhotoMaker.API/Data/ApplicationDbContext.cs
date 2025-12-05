@@ -18,6 +18,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<ModelCreationRequest> ModelCreationRequests { get; set; }
     public virtual DbSet<UsageLog> UsageLogs { get; set; }
     public virtual DbSet<Prediction> Predictions { get; set; }
+    public virtual DbSet<PendingGenerationRequest> PendingGenerationRequests { get; set; }
 
     // Subscription management
     public virtual DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
@@ -42,6 +43,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         ConfigureUserStyleSelectionRelationships(builder);
         ConfigureSubscriptionRelationships(builder);
         ConfigurePaymentTransactionRelationships(builder);
+        ConfigurePendingGenerationRelationships(builder);
         ConfigureCreditPackageRelationships(builder);
 
         // Configure indexes for performance - ENHANCED FOR OPTIMIZATION
@@ -54,6 +56,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         SeedCreditPackages(builder);
         SeedStyles(builder);
     }
+
 
     private void ConfigureUserProfileRelationships(ModelBuilder builder)
     {
@@ -143,6 +146,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasOne(t => t.Subscription)
             .WithMany()
             .HasForeignKey(t => t.SubscriptionId);
+    }
+
+    private void ConfigurePendingGenerationRelationships(ModelBuilder builder)
+    {
+        builder.Entity<PendingGenerationRequest>()
+            .HasIndex(p => new { p.UserId, p.TrainingRequestId })
+            .HasDatabaseName("IX_PendingGeneration_UserId_TrainingId")
+            .IsUnique();
     }
 
     private void ConfigureCreditPackageRelationships(ModelBuilder builder)

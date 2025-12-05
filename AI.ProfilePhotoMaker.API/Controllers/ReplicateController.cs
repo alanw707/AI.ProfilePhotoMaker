@@ -1,4 +1,3 @@
-using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services;
@@ -8,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using AI.ProfilePhotoMaker.API.Models.DTOs;
 
 namespace AI.ProfilePhotoMaker.API.Controllers;
 
@@ -29,6 +29,7 @@ public class ReplicateController : ControllerBase
     private readonly ApplicationDbContext _dbContext;
     private readonly IConfiguration _configuration;
     private readonly ILogger<ReplicateController> _logger;
+    private readonly IPendingGenerationService _pendingGenerationService;
 
     private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
     private static string S(string? value) => LoggingSanitizer.Sanitize(value);
@@ -38,13 +39,15 @@ public class ReplicateController : ControllerBase
         IBasicTierService basicTierService,
         ApplicationDbContext dbContext,
         IConfiguration configuration,
-        ILogger<ReplicateController> logger)
+        ILogger<ReplicateController> logger,
+        IPendingGenerationService pendingGenerationService)
     {
         _replicateApiClient = replicateApiClient;
         _basicTierService = basicTierService;
         _dbContext = dbContext;
         _configuration = configuration;
         _logger = logger;
+        _pendingGenerationService = pendingGenerationService;
     }
 
     /// <summary>
@@ -227,6 +230,36 @@ public class ReplicateController : ControllerBase
                 }
             });
         }
+    }
+
+    /// <summary>
+    /// Enqueue generation to run automatically after training completes
+    /// </summary>
+    [HttpPost("generate/queue")]
+    public async Task<IActionResult> QueueGeneration([FromBody] QueueGenerationRequest request)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+        }
+
+        if (request == null || string.IsNullOrWhiteSpace(request.TrainingId) || request.Styles == null || !request.Styles.Any())
+        {
+            return BadRequest(new { success = false, error = new { code = "InvalidRequest", message = "TrainingId and styles are required." } });
+        }
+
+        var modelRequest = await _dbContext.ModelCreationRequests
+            .FirstOrDefaultAsync(m => m.UserId == userId && m.PendingTrainingRequestId == request.TrainingId);
+
+        if (modelRequest == null)
+        {
+            return NotFound(new { success = false, error = new { code = "TrainingNotFound", message = "Training not found for current user." } });
+        }
+
+        await _pendingGenerationService.EnqueueAsync(userId, request.TrainingId, request.Styles, request.NumOutputsPerStyle);
+
+        return Ok(new { success = true, message = "Generation queued to run after training completes." });
     }
 
     /// <summary>

@@ -111,6 +111,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         services.AddScoped<AI.ProfilePhotoMaker.API.Services.IBasicTierService, AI.ProfilePhotoMaker.API.Services.BasicTierService>();
         services.AddScoped<AI.ProfilePhotoMaker.API.Services.IUserContextService, AI.ProfilePhotoMaker.API.Services.UserContextService>();
         services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository, AI.ProfilePhotoMaker.API.Data.UserProfileRepository>();
+        services.AddScoped<AI.ProfilePhotoMaker.API.Services.IPendingGenerationService, AI.ProfilePhotoMaker.API.Services.PendingGenerationService>();
 
         // Add mock Replicate services
         services.AddScoped<IReplicateApiClient, MockReplicateApiClient>();

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
+using AI.ProfilePhotoMaker.API.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 using Stripe;
 
@@ -12,15 +13,18 @@ public class StripeWebhookService : IStripeWebhookService
     private readonly ApplicationDbContext _dbContext;
     private readonly ICreditPackageService _creditPackageService;
     private readonly ILogger<StripeWebhookService> _logger;
+    private readonly IEmailNotificationService _emailNotificationService;
 
     public StripeWebhookService(
         ApplicationDbContext dbContext,
         ICreditPackageService creditPackageService,
-        ILogger<StripeWebhookService> logger)
+        ILogger<StripeWebhookService> logger,
+        IEmailNotificationService emailNotificationService)
     {
         _dbContext = dbContext;
         _creditPackageService = creditPackageService;
         _logger = logger;
+        _emailNotificationService = emailNotificationService;
     }
 
     public async Task HandleEventAsync(Event stripeEvent, CancellationToken cancellationToken = default)
@@ -127,6 +131,19 @@ public class StripeWebhookService : IStripeWebhookService
             _logger.LogInformation("Stripe payment intent {PaymentIntentId} processed successfully for transaction {TransactionId}",
                 LoggingSanitizer.SanitizeId(paymentIntent.Id),
                 transaction.Id);
+
+            if (purchaseResult.Purchase != null)
+            {
+                try
+                {
+                    var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+                    await _emailNotificationService.SendPurchaseReceiptAsync(userId, user?.Email, purchaseResult.Purchase);
+                }
+                catch (Exception emailEx)
+                {
+                    _logger.LogWarning(emailEx, "Failed to send purchase receipt email for user {UserId}", LoggingSanitizer.SanitizeId(userId));
+                }
+            }
         }
     }
 

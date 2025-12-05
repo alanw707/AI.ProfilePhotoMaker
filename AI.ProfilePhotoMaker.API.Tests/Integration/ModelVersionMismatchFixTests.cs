@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
+using Moq;
 
 namespace AI.ProfilePhotoMaker.API.Tests.Integration;
 
@@ -51,7 +52,8 @@ public class ModelVersionMismatchFixTests : IClassFixture<CustomWebApplicationFa
             scope.ServiceProvider.GetRequiredService<IBasicTierService>(),
             dbContext,
             scope.ServiceProvider.GetRequiredService<IConfiguration>(),
-            scope.ServiceProvider.GetRequiredService<ILogger<ReplicateController>>()
+            scope.ServiceProvider.GetRequiredService<ILogger<ReplicateController>>(),
+            new Mock<IPendingGenerationService>().Object
         );
 
         var formatMethod = typeof(ReplicateController).GetMethod(
@@ -92,7 +94,8 @@ public class ModelVersionMismatchFixTests : IClassFixture<CustomWebApplicationFa
             spLegacy.GetRequiredService<IBasicTierService>(),
             spLegacy.GetRequiredService<ApplicationDbContext>(),
             spLegacy.GetRequiredService<IConfiguration>(),
-            spLegacy.GetRequiredService<ILogger<ReplicateController>>()
+            spLegacy.GetRequiredService<ILogger<ReplicateController>>(),
+            new Mock<IPendingGenerationService>().Object
         );
         var formatMethod = typeof(ReplicateController).GetMethod(
             name: "FormatModelVersion",
@@ -122,7 +125,8 @@ public class ModelVersionMismatchFixTests : IClassFixture<CustomWebApplicationFa
             spClean.GetRequiredService<IBasicTierService>(),
             spClean.GetRequiredService<ApplicationDbContext>(),
             spClean.GetRequiredService<IConfiguration>(),
-            spClean.GetRequiredService<ILogger<ReplicateController>>()
+            spClean.GetRequiredService<ILogger<ReplicateController>>(),
+            new Mock<IPendingGenerationService>().Object
         );
         var formatMethodClean = typeof(ReplicateController).GetMethod(
             name: "FormatModelVersion",

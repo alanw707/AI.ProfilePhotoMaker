@@ -63,7 +63,7 @@ export interface GenerationStatus {
 
 // Semantic Model Status Interface
 export interface ModelStatus {
-  state: 'NOT_STARTED' | 'READY_TO_TRAIN' | 'TRAINING' | 'READY' | 'FAILED';
+  state: 'NOT_STARTED' | 'READY_TO_TRAIN' | 'TRAINING' | 'GENERATING' | 'READY' | 'FAILED';
   canGenerate: boolean;
   canTrain: boolean;
   displayText: string;
@@ -108,6 +108,18 @@ export class ModelStatusHelper {
         canGenerate: false,
         canTrain: false,
         displayText: 'Training in progress...',
+        progress,
+        legacyStatus: status,
+      };
+    }
+
+    // Generation states
+    if (status.toLowerCase().includes('generation') || status.toLowerCase().includes('generating')) {
+      return {
+        state: 'GENERATING',
+        canGenerate: false,
+        canTrain: false,
+        displayText: 'Generating images...',
         progress,
         legacyStatus: status,
       };

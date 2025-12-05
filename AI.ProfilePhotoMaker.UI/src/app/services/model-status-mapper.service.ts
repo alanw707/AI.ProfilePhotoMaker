@@ -9,7 +9,11 @@ import {
   ModelStatusAdapter,
   DEFAULT_MODEL_STATUS_CONFIG,
 } from '../models/model-status.types';
-import { UnifiedModelStatusCode, UnifiedModelStatusResponse } from './file-upload.service';
+import {
+  GenerationStatusResponse,
+  UnifiedModelStatusCode,
+  UnifiedModelStatusResponse,
+} from './file-upload.service';
 import { ModelCreationStatus } from '../models/database.types';
 import { LoggingService } from './logging.service';
 
@@ -43,12 +47,16 @@ export class ModelStatusMapperService {
    * Create ModelStatus from API response (primary method)
    */
   fromApiResponse(response: UnifiedModelStatusResponse): ModelStatus {
-    const state = this.mapApiCodeToState(response.statusCode);
+    const generationInProgress =
+      this.isGenerationInProgress(response.generationStatus) || response.statusCode === 'Generating';
+    const generationFailed = this.isGenerationFailed(response.generationStatus);
+    const stateFromApi = this.mapApiCodeToState(response.statusCode);
+    const state = generationInProgress ? ModelState.GENERATING : stateFromApi;
 
     return {
       state,
-      capabilities: this.computeCapabilitiesFromApi(response),
-      display: this.createDisplayInfoFromApi(response),
+      capabilities: this.computeCapabilitiesFromApi(response, generationFailed, generationInProgress),
+      display: this.createDisplayInfoFromApi(response, generationFailed, generationInProgress),
       metadata: {
         lastUpdated: response.lastUpdated ? new Date(response.lastUpdated) : new Date(),
         source: 'api',
@@ -179,6 +187,8 @@ export class ModelStatusMapperService {
         return ModelState.READY_TO_TRAIN;
       case 'Training':
         return ModelState.TRAINING;
+      case 'Generating':
+        return ModelState.GENERATING;
       case 'ModelReady':
         return ModelState.READY;
       case 'Failed':
@@ -241,12 +251,16 @@ export class ModelStatusMapperService {
     return ModelState.NOT_STARTED;
   }
 
-  private computeCapabilitiesFromApi(response: UnifiedModelStatusResponse): ModelCapabilities {
+  private computeCapabilitiesFromApi(
+    response: UnifiedModelStatusResponse,
+    generationFailed: boolean,
+    generationInProgress: boolean
+  ): ModelCapabilities {
     return {
-      canGenerate: response.hasTrainedModel && response.statusCode === 'ModelReady',
-      canTrain: response.canStartTraining && response.statusCode !== 'Training',
-      canCancel: response.statusCode === 'Training' && !!response.currentRequest,
-      canRetry: response.statusCode === 'Failed',
+      canGenerate: response.hasTrainedModel && response.statusCode === 'ModelReady' && !generationInProgress,
+      canTrain: response.canStartTraining && response.statusCode !== 'Training' && !generationInProgress,
+      canCancel: (response.statusCode === 'Training' && !!response.currentRequest) || generationInProgress,
+      canRetry: response.statusCode === 'Failed' || generationFailed,
       canDelete: response.hasTrainedModel,
     };
   }
@@ -263,13 +277,35 @@ export class ModelStatusMapperService {
       canTrain:
         (state === ModelState.READY_TO_TRAIN || state === ModelState.FAILED) &&
         uploadedImages >= minImages,
-      canCancel: state === ModelState.TRAINING,
+      canCancel: state === ModelState.TRAINING || state === ModelState.GENERATING,
       canRetry: state === ModelState.FAILED,
       canDelete: hasTrainedModel,
     };
   }
 
-  private createDisplayInfoFromApi(response: UnifiedModelStatusResponse): ModelDisplayInfo {
+  private createDisplayInfoFromApi(
+    response: UnifiedModelStatusResponse,
+    generationFailed: boolean,
+    generationInProgress: boolean
+  ): ModelDisplayInfo {
+    if (generationInProgress) {
+      return {
+        primaryText: 'Generating images',
+        secondaryText: 'Running in background',
+        icon: StatusIcon.GENERATING,
+        variant: StatusVariant.LOADING,
+      };
+    }
+
+    if (generationFailed) {
+      return {
+        primaryText: 'Generation failed',
+        secondaryText: response.generationStatus?.error || 'Try again or contact support',
+        icon: StatusIcon.ERROR,
+        variant: StatusVariant.ERROR,
+      };
+    }
+
     switch (response.statusCode) {
       case 'NotStarted':
         return {
@@ -352,6 +388,14 @@ export class ModelStatusMapperService {
           primaryText: 'Training in progress',
           secondaryText: 'This usually takes 10-15 minutes',
           icon: StatusIcon.TRAINING,
+          variant: StatusVariant.LOADING,
+        };
+
+      case ModelState.GENERATING:
+        return {
+          primaryText: 'Generating images',
+          secondaryText: 'Running in background',
+          icon: StatusIcon.GENERATING,
           variant: StatusVariant.LOADING,
         };
 
@@ -488,6 +532,8 @@ export class ModelStatusMapperService {
         return 'Ready for training';
       case 'Training':
         return 'training';
+      case 'Generating':
+        return 'Generating';
       case 'ModelReady':
         return 'Model Ready';
       case 'Failed':
@@ -505,6 +551,8 @@ export class ModelStatusMapperService {
         return 'Ready for training';
       case ModelState.TRAINING:
         return 'training';
+      case ModelState.GENERATING:
+        return 'Generation in progress';
       case ModelState.READY:
         return 'Model Ready';
       case ModelState.FAILED:
@@ -512,5 +560,19 @@ export class ModelStatusMapperService {
       default:
         return 'Not Started';
     }
+  }
+
+  private isGenerationInProgress(generation?: GenerationStatusResponse | null): boolean {
+    if (!generation?.status) {
+      return false;
+    }
+    return generation.status === 'queued' || generation.status === 'processing';
+  }
+
+  private isGenerationFailed(generation?: GenerationStatusResponse | null): boolean {
+    if (!generation?.status) {
+      return false;
+    }
+    return generation.status === 'failed' || generation.status === 'canceled';
   }
 }

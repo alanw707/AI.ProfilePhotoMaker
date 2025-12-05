@@ -2,6 +2,7 @@ using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
+using AI.ProfilePhotoMaker.API.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 
 namespace AI.ProfilePhotoMaker.API.Services;
@@ -15,17 +16,20 @@ public class TrainingPollingService : ITrainingPollingService
     private readonly ApplicationDbContext _dbContext;
     private readonly IReplicateApiClient _replicateApiClient;
     private readonly IServiceScopeFactory _serviceScopeFactory;
+    private readonly IPendingGenerationService _pendingGenerationService;
 
     public TrainingPollingService(
         ILogger<TrainingPollingService> logger,
         ApplicationDbContext dbContext,
         IReplicateApiClient replicateApiClient,
-        IServiceScopeFactory serviceScopeFactory)
+        IServiceScopeFactory serviceScopeFactory,
+        IPendingGenerationService pendingGenerationService)
     {
         _logger = logger;
         _dbContext = dbContext;
         _replicateApiClient = replicateApiClient;
         _serviceScopeFactory = serviceScopeFactory;
+        _pendingGenerationService = pendingGenerationService;
     }
 
     /// <summary>
@@ -67,6 +71,8 @@ public class TrainingPollingService : ITrainingPollingService
         var scopedDbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var scopedReplicateClient = scope.ServiceProvider.GetRequiredService<IReplicateApiClient>();
         var scopedBasicTierService = scope.ServiceProvider.GetRequiredService<IBasicTierService>();
+        var scopedEmailService = scope.ServiceProvider.GetRequiredService<IEmailNotificationService>();
+        var scopedPendingGenerationService = scope.ServiceProvider.GetRequiredService<IPendingGenerationService>();
 
         try
         {
@@ -192,6 +198,30 @@ public class TrainingPollingService : ITrainingPollingService
                 await scopedDbContext.SaveChangesAsync();
 
                 // Note: Removed automatic sample generation - users should only get what they explicitly request
+
+                // Notify user via email (best-effort, non-blocking)
+                try
+                {
+                    var user = await scopedDbContext.Users.FirstOrDefaultAsync(u => u.Id == modelRequest.UserId);
+                    if (user != null)
+                    {
+                        await scopedEmailService.SendTrainingCompletedAsync(modelRequest.UserId, user.Email, modelRequest.ModelName, trainedModelVersion);
+                    }
+                }
+                catch (Exception notifyEx)
+                {
+                    _logger.LogWarning(notifyEx, "Failed to send training completion email for user {UserId}", Sid(modelRequest.UserId));
+                }
+
+                // Kick off any queued background generation for this training
+                try
+                {
+                    await scopedPendingGenerationService.ProcessAsync(trainingId);
+                }
+                catch (Exception genEx)
+                {
+                    _logger.LogWarning(genEx, "Failed to process pending generation for training {TrainingId}", Sid(trainingId));
+                }
             }
             else if (trainingStatus.Status?.ToLower() == "failed" || trainingStatus.Status?.ToLower() == "canceled")
             {

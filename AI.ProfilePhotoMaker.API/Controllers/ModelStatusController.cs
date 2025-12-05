@@ -3,6 +3,7 @@ using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
+using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,13 +18,18 @@ public class ModelStatusController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<ModelStatusController> _logger;
+    private readonly IReplicateApiClient _replicateApiClient;
     private static string S(string? value) => LoggingSanitizer.Sanitize(value);
     private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
-    public ModelStatusController(ApplicationDbContext context, ILogger<ModelStatusController> logger)
+    public ModelStatusController(
+        ApplicationDbContext context,
+        ILogger<ModelStatusController> logger,
+        IReplicateApiClient replicateApiClient)
     {
         _context = context;
         _logger = logger;
+        _replicateApiClient = replicateApiClient;
     }
 
     private string? GetCurrentUserId()
@@ -65,6 +71,8 @@ public class ModelStatusController : ControllerBase
             .OrderByDescending(r => r.CreatedAt)
             .FirstOrDefaultAsync();
 
+        var generationStatus = await GetLatestGenerationStatusAsync(userId);
+
         var response = new ModelStatusResponse
         {
             HasTrainedModel = latestTrainedModel != null && !string.IsNullOrEmpty(latestTrainedModel.TrainedModelVersion),
@@ -79,10 +87,15 @@ public class ModelStatusController : ControllerBase
                 createdAt = latestRequest.CreatedAt,
                 completedAt = latestRequest.CompletedAt,
                 errorMessage = latestRequest.ErrorMessage
-            }
+            },
+            GenerationStatus = generationStatus
         };
 
         // Determine unified status code
+        var isGenerationInProgress = generationStatus != null &&
+            (string.Equals(generationStatus.Status, "queued", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(generationStatus.Status, "processing", StringComparison.OrdinalIgnoreCase));
+
         if (latestRequest != null && latestRequest.Status == ModelCreationStatus.Failed)
         {
             response.StatusCode = UnifiedModelStatusCode.Failed;
@@ -91,6 +104,10 @@ public class ModelStatusController : ControllerBase
         else if (latestRequest != null && (latestRequest.Status == ModelCreationStatus.Pending || latestRequest.Status == ModelCreationStatus.Creating))
         {
             response.StatusCode = UnifiedModelStatusCode.Training;
+        }
+        else if (isGenerationInProgress)
+        {
+            response.StatusCode = UnifiedModelStatusCode.Generating;
         }
         else if (response.HasTrainedModel)
         {
@@ -147,6 +164,8 @@ public class ModelStatusController : ControllerBase
             .OrderByDescending(r => r.CreatedAt)
             .FirstOrDefaultAsync();
 
+        var generationStatus = await GetLatestGenerationStatusAsync(userId);
+
         var response = new ModelStatusResponse
         {
             HasTrainedModel = latestTrainedModel != null && !string.IsNullOrEmpty(latestTrainedModel.TrainedModelVersion),
@@ -161,10 +180,15 @@ public class ModelStatusController : ControllerBase
                 createdAt = latestRequest.CreatedAt,
                 completedAt = latestRequest.CompletedAt,
                 errorMessage = latestRequest.ErrorMessage
-            }
+            },
+            GenerationStatus = generationStatus
         };
 
         // Determine unified status code
+        var isGenerationInProgress = generationStatus != null &&
+            (string.Equals(generationStatus.Status, "queued", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(generationStatus.Status, "processing", StringComparison.OrdinalIgnoreCase));
+
         if (latestRequest != null && latestRequest.Status == ModelCreationStatus.Failed)
         {
             response.StatusCode = UnifiedModelStatusCode.Failed;
@@ -173,6 +197,10 @@ public class ModelStatusController : ControllerBase
         else if (latestRequest != null && (latestRequest.Status == ModelCreationStatus.Pending || latestRequest.Status == ModelCreationStatus.Creating))
         {
             response.StatusCode = UnifiedModelStatusCode.Training;
+        }
+        else if (isGenerationInProgress)
+        {
+            response.StatusCode = UnifiedModelStatusCode.Generating;
         }
         else if (response.HasTrainedModel)
         {
@@ -191,5 +219,87 @@ public class ModelStatusController : ControllerBase
         }
 
         return Ok(response);
+    }
+
+    private async Task<GenerationStatusDto?> GetLatestGenerationStatusAsync(string userId)
+    {
+        var latestPrediction = await _context.Predictions
+            .Where(p => p.UserId == userId)
+            .OrderByDescending(p => p.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        var pendingGeneration = await _context.PendingGenerationRequests
+            .Where(p => p.UserId == userId)
+            .OrderByDescending(p => p.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        if (latestPrediction == null)
+        {
+            if (pendingGeneration != null)
+            {
+                return new GenerationStatusDto
+                {
+                    PredictionId = pendingGeneration.LastPredictionId,
+                    Status = pendingGeneration.Status switch
+                    {
+                        PendingGenerationStatus.Pending => "queued",
+                        PendingGenerationStatus.Started => "processing",
+                        PendingGenerationStatus.Failed => "failed",
+                        PendingGenerationStatus.Succeeded => "succeeded",
+                        _ => "unknown"
+                    },
+                    StartedAt = pendingGeneration.StartedAt ?? pendingGeneration.CreatedAt,
+                    CompletedAt = pendingGeneration.CompletedAt,
+                    Error = pendingGeneration.ErrorMessage
+                };
+            }
+
+            return null;
+        }
+
+        try
+        {
+            var predictionStatus = await _replicateApiClient.GetPredictionStatusAsync(latestPrediction.Id);
+            return new GenerationStatusDto
+            {
+                PredictionId = predictionStatus.Id ?? latestPrediction.Id,
+                Status = NormalizePredictionStatus(predictionStatus.Status),
+                Style = latestPrediction.Style,
+                StartedAt = predictionStatus.StartedAt ?? predictionStatus.CreatedAt,
+                CompletedAt = predictionStatus.CompletedAt,
+                OutputCount = predictionStatus.GeneratedImageUrls.Count(),
+                Error = predictionStatus.Error
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve prediction status for {PredictionId}", Sid(latestPrediction.Id));
+            return new GenerationStatusDto
+            {
+                PredictionId = latestPrediction.Id,
+                Status = "unknown",
+                Style = latestPrediction.Style,
+                StartedAt = latestPrediction.CreatedAt
+            };
+        }
+    }
+
+    private static string NormalizePredictionStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return "unknown";
+        }
+
+        var normalized = status.Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "starting" => "queued",
+            "processing" => "processing",
+            "succeeded" => "succeeded",
+            "failed" => "failed",
+            "canceled" => "canceled",
+            _ => "unknown"
+        };
     }
 }

@@ -38,7 +38,8 @@ public class ReplicateControllerFormatVersionTests
             .Build();
 
         var logger = new Mock<ILogger<ReplicateController>>().Object;
-        return new ReplicateController(client, basic, db, config, logger);
+        var pending = new Mock<IPendingGenerationService>().Object;
+        return new ReplicateController(client, basic, db, config, logger, pending);
     }
 
     /// <summary>
