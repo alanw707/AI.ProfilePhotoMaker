@@ -111,7 +111,7 @@ public class EmailNotificationService : IEmailNotificationService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Failed to send {Template} email for user {UserId}: {Reason}", template, Sid(userId), S(ex.Message));
+            _logger.LogWarning(ex, "Failed to send {Template} email to {Recipient} for user {UserId}", template, S(toEmail), Sid(userId));
         }
     }
 }

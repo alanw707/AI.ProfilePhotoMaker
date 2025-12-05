@@ -37,12 +37,6 @@ public class PendingGenerationService : IPendingGenerationService
 
     public async Task EnqueueAsync(string userId, string trainingRequestId, IEnumerable<string> styles, int numOutputsPerStyle)
     {
-        if (numOutputsPerStyle < 1 || numOutputsPerStyle > 4)
-        {
-            _logger.LogWarning("Rejecting enqueue with invalid outputs per style {NumOutputsPerStyle} for training {TrainingId}", numOutputsPerStyle, Sid(trainingRequestId));
-            throw new ArgumentOutOfRangeException(nameof(numOutputsPerStyle), "Outputs per style must be between 1 and 4.");
-        }
-
         var stylesList = styles?.Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().ToList() ?? new List<string>();
         if (!stylesList.Any())
         {
@@ -101,15 +95,6 @@ public class PendingGenerationService : IPendingGenerationService
     {
         try
         {
-            if (request.NumOutputsPerStyle < 1 || request.NumOutputsPerStyle > 4)
-            {
-                request.Status = PendingGenerationStatus.Failed;
-                request.ErrorMessage = "Invalid outputs per style";
-                request.CompletedAt = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
-                return;
-            }
-
             request.Status = PendingGenerationStatus.Started;
             request.StartedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
