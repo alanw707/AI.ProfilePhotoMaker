@@ -64,6 +64,7 @@ interface WorkflowOrchestrationService {
     imagesPerStyle: number,
     modelStatus: string
   ): CreditCalculation;
+  queueBackgroundGeneration(selectedStyles: StyleOption[], imagesPerStyle: number): Promise<void>;
   dismissSuccessMessage(): void;
   dispose(): void;
 }

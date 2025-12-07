@@ -109,6 +109,11 @@ interface ReplicateService {
   trainModel(request: TrainModelRequest): Observable<TrainingStartApiResponse>;
   getTrainingStatus(trainingId: string): Observable<TrainingStatusResponse>;
   finalizeTraining(trainingId: string): Observable<{ success: boolean; data: any; error: any }>;
+  queueGeneration(
+    trainingId: string,
+    styles: string[],
+    numOutputsPerStyle: number
+  ): Observable<any>;
   generateBatchImages(request: GenerateBatchImagesRequest): Observable<BatchGenerationResponse>;
   getPredictionStatus(predictionId: string): Observable<PredictionStatusResponse>;
 }
