@@ -993,6 +993,8 @@ public class ReplicateController : ControllerBase
     [HttpPost("enhance")]
     public async Task<IActionResult> EnhancePhoto([FromBody] EnhancePhotoRequestDto dto)
     {
+        CreditConsumptionResult? creditConsumed = null;
+
         if (!ModelState.IsValid)
             return BadRequest(new { success = false, error = new { code = "InvalidModel", message = "Invalid input." } });
 
@@ -1043,17 +1045,24 @@ public class ReplicateController : ControllerBase
                 LoggingSanitizer.Sanitize(dto.ImageUrl),
                 LoggingSanitizer.Sanitize(externalImageUrl));
 
+            // Consume credit BEFORE calling Replicate to avoid post-hoc refunds/race conditions
+            creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, CreditCostConfig.PhotoEnhancement, "photo_enhancement");
+            if (creditConsumed is null || !creditConsumed.Success)
+            {
+                _logger.LogError("Failed to consume credits for photo enhancement for user {UserId}", Sid(userId));
+                return StatusCode(500, new
+                {
+                    success = false,
+                    error = new
+                    {
+                        code = "CreditConsumptionFailed",
+                        message = "Failed to process credit deduction. Please try again."
+                    }
+                });
+            }
+
             // Enhance the uploaded photo
             var result = await _replicateApiClient.EnhancePhotoAsync(userId, externalImageUrl, dto.EnhancementType ?? "professional");
-
-            // Only consume credit AFTER successful API call
-            var creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, "photo_enhancement");
-            if (!creditConsumed.Success)
-            {
-                _logger.LogError("Successfully created Replicate enhancement but failed to consume credits for user {UserId}", Sid(userId));
-                // Note: In this case, the Replicate enhancement is already running but we couldn't charge credits
-                // This is better than charging credits for failed enhancement requests
-            }
 
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
 
@@ -1071,6 +1080,9 @@ public class ReplicateController : ControllerBase
         }
         catch (ArgumentException ex)
         {
+            if (creditConsumed?.Success == true)
+                await _basicTierService.RefundCreditsAsync(userId, creditConsumed);
+
             _logger.LogError(ex, "Invalid configuration or parameters for photo enhancement for user {UserId}", Sid(userId));
             return BadRequest(new
             {
@@ -1084,6 +1096,9 @@ public class ReplicateController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            if (creditConsumed?.Success == true)
+                await _basicTierService.RefundCreditsAsync(userId, creditConsumed);
+
             _logger.LogError(ex, "Service unavailable for photo enhancement for user {UserId}", Sid(userId));
             return StatusCode(503, new
             {
@@ -1097,6 +1112,9 @@ public class ReplicateController : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
+            if (creditConsumed?.Success == true)
+                await _basicTierService.RefundCreditsAsync(userId, creditConsumed);
+
             _logger.LogError(ex, "Replicate authentication failed during photo enhancement for user {UserId}", Sid(userId));
             return StatusCode(401, new
             {
@@ -1110,6 +1128,9 @@ public class ReplicateController : ControllerBase
         }
         catch (HttpRequestException ex)
         {
+            if (creditConsumed?.Success == true)
+                await _basicTierService.RefundCreditsAsync(userId, creditConsumed);
+
             _logger.LogError(ex, "Network error during photo enhancement for user {UserId}", Sid(userId));
             return StatusCode(502, new
             {
@@ -1123,6 +1144,9 @@ public class ReplicateController : ControllerBase
         }
         catch (TaskCanceledException ex)
         {
+            if (creditConsumed?.Success == true)
+                await _basicTierService.RefundCreditsAsync(userId, creditConsumed);
+
             _logger.LogError(ex, "Request timeout during photo enhancement for user {UserId}", Sid(userId));
             return StatusCode(408, new
             {
@@ -1136,6 +1160,9 @@ public class ReplicateController : ControllerBase
         }
         catch (Exception ex)
         {
+            if (creditConsumed?.Success == true)
+                await _basicTierService.RefundCreditsAsync(userId, creditConsumed);
+
             _logger.LogError(ex, "Unexpected error during photo enhancement for user {UserId}: {ErrorMessage}", Sid(userId), S(ex.Message));
             return StatusCode(500, new
             {
