@@ -35,19 +35,20 @@ public class ReplicateControllerAuthAndOwnershipTests
         ApplicationDbContext db,
         Mock<IReplicateApiClient>? mockReplicate = null,
         Mock<IBasicTierService>? mockBasic = null,
-        Mock<IPendingGenerationService>? mockPending = null)
+        Mock<IPendingGenerationService>? mockPending = null,
+        IConfiguration? configuration = null)
     {
         mockReplicate ??= new Mock<IReplicateApiClient>(MockBehavior.Strict);
         mockBasic ??= new Mock<IBasicTierService>(MockBehavior.Strict);
         mockPending ??= new Mock<IPendingGenerationService>(MockBehavior.Strict);
 
-        var config = new Mock<IConfiguration>();
+        var config = configuration ?? new Mock<IConfiguration>().Object;
 
         var controller = new ReplicateController(
             mockReplicate.Object,
             mockBasic.Object,
             db,
-            config.Object,
+            config,
             new NullLogger<ReplicateController>(),
             mockPending.Object);
 
@@ -289,5 +290,86 @@ public class ReplicateControllerAuthAndOwnershipTests
         var result = await controller.QueueGeneration(goodRequest) as OkObjectResult;
         result.Should().NotBeNull();
         pending.Verify();
+    }
+
+    [Fact]
+    public async Task EnhancePhoto_FailsWhenCreditConsumptionFails()
+    {
+        using var db = CreateInMemoryDb();
+        var userId = "user-123";
+
+        var mockReplicate = new Mock<IReplicateApiClient>(MockBehavior.Strict);
+        var mockBasic = new Mock<IBasicTierService>(MockBehavior.Strict);
+
+        mockBasic.Setup(b => b.GetAvailableCreditsAsync(userId)).ReturnsAsync(1);
+        mockBasic.Setup(b => b.ConsumeCreditsAsync(userId, It.IsAny<int>(), "photo_enhancement"))
+                 .ReturnsAsync(CreditConsumptionResult.Failed("photo_enhancement", "insufficient_credits"));
+
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Replicate:FluxKontextProModelId"] = "owner/flux:version",
+                ["ExternalApiBaseUrl"] = "https://example.com"
+            })
+            .Build();
+
+        var controller = CreateController(userId, db, mockReplicate, mockBasic, configuration: config);
+        var httpContext = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "TestAuth"))
+        };
+        controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+        var dto = new EnhancePhotoRequestDto { ImageUrl = "https://example.com/img.png", EnhancementType = "professional" };
+
+        var result = await controller.EnhancePhoto(dto) as ObjectResult;
+        result.Should().NotBeNull();
+        result!.StatusCode.Should().Be(500);
+
+        mockReplicate.VerifyNoOtherCalls();
+        mockBasic.VerifyAll();
+    }
+
+    [Fact]
+    public async Task EnhancePhoto_RefundsOnReplicateFailure()
+    {
+        using var db = CreateInMemoryDb();
+        var userId = "user-123";
+
+        var mockReplicate = new Mock<IReplicateApiClient>(MockBehavior.Strict);
+        var mockBasic = new Mock<IBasicTierService>(MockBehavior.Strict);
+
+        mockBasic.Setup(b => b.GetAvailableCreditsAsync(userId)).ReturnsAsync(2);
+        var consumption = CreditConsumptionResult.Succeeded("photo_enhancement", 1, 0);
+        mockBasic.Setup(b => b.ConsumeCreditsAsync(userId, It.IsAny<int>(), "photo_enhancement"))
+                 .ReturnsAsync(consumption);
+        mockBasic.Setup(b => b.RefundCreditsAsync(userId, consumption)).ReturnsAsync(true);
+
+        mockReplicate.Setup(r => r.EnhancePhotoAsync(userId, It.IsAny<string>(), It.IsAny<string>()))
+                     .ThrowsAsync(new HttpRequestException("network"));
+
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Replicate:FluxKontextProModelId"] = "owner/flux:version",
+                ["ExternalApiBaseUrl"] = "https://example.com"
+            })
+            .Build();
+
+        var controller = CreateController(userId, db, mockReplicate, mockBasic, configuration: config);
+        var httpContext = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "TestAuth"))
+        };
+        controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+        var dto = new EnhancePhotoRequestDto { ImageUrl = "https://example.com/img.png", EnhancementType = "professional" };
+
+        var result = await controller.EnhancePhoto(dto) as ObjectResult;
+        result.Should().NotBeNull();
+        result!.StatusCode.Should().Be(502);
+
+        mockReplicate.VerifyAll();
+        mockBasic.Verify(b => b.RefundCreditsAsync(userId, consumption), Times.Once);
     }
 }
