@@ -141,7 +141,7 @@ public class StripeWebhookService : IStripeWebhookService
                 }
                 catch (Exception emailEx)
                 {
-                    _logger.LogWarning(emailEx, "Failed to send purchase receipt email for user {UserId}", LoggingSanitizer.SanitizeId(userId));
+                    _logger.LogWarning("Failed to send purchase receipt email for user {UserId}: {Reason}", LoggingSanitizer.SanitizeId(userId), LoggingSanitizer.Sanitize(emailEx.Message));
                 }
             }
         }

@@ -210,7 +210,7 @@ public class TrainingPollingService : ITrainingPollingService
                 }
                 catch (Exception notifyEx)
                 {
-                    _logger.LogWarning(notifyEx, "Failed to send training completion email for user {UserId}", Sid(modelRequest.UserId));
+                    _logger.LogWarning("Failed to send training completion email for user {UserId}: {Reason}", Sid(modelRequest.UserId), S(notifyEx.Message));
                 }
 
                 // Kick off any queued background generation for this training

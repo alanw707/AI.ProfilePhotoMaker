@@ -256,7 +256,7 @@ public class ReplicateWebhookController : ControllerBase
                     }
                     catch (Exception emailEx)
                     {
-                        _logger.LogWarning(emailEx, "Failed to send generation completion email for user {UserId}", Sid(userId));
+                        _logger.LogWarning("Failed to send generation completion email for user {UserId}: {Reason}", Sid(userId), S(emailEx.Message));
                     }
 
                     return Ok(new
@@ -284,7 +284,7 @@ public class ReplicateWebhookController : ControllerBase
                     }
                     catch (Exception emailEx)
                     {
-                        _logger.LogWarning(emailEx, "Failed to send generation failure email for user {UserId}", Sid(userId));
+                        _logger.LogWarning("Failed to send generation failure email for user {UserId}: {Reason}", Sid(userId), S(emailEx.Message));
                     }
                 }
 
