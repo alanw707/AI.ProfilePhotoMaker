@@ -23,6 +23,9 @@ export class ModelStatusService {
     if (status === 'ModelReady') {
       return true;
     }
+    if (status === 'Generating') {
+      return false;
+    }
 
     // Legacy display strings (transitional support)
     const normalizedStatus = status.trim();
@@ -63,6 +66,9 @@ export class ModelStatusService {
     if (status === 'Training') {
       return true;
     }
+    if (status === 'Generating') {
+      return false;
+    }
 
     // Legacy display strings (transitional support)
     const normalizedStatus = status.toLowerCase().trim();
@@ -85,6 +91,9 @@ export class ModelStatusService {
     // Unified status codes (preferred)
     if (status === 'ReadyForTraining') {
       return true;
+    }
+    if (status === 'Generating') {
+      return false;
     }
 
     // Legacy display strings (transitional support)
@@ -201,6 +210,8 @@ export class ModelStatusService {
       switch (status as UnifiedModelStatusCode) {
         case 'ModelReady':
           return 'Model Ready';
+        case 'Generating':
+          return 'Generating...';
         case 'Training':
           return 'Training...';
         case 'ReadyForTraining':

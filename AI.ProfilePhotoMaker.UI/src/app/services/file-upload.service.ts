@@ -67,8 +67,19 @@ export type UnifiedModelStatusCode =
   | 'NotStarted'
   | 'ReadyForTraining'
   | 'Training'
+  | 'Generating'
   | 'ModelReady'
   | 'Failed';
+
+export interface GenerationStatusResponse {
+  predictionId?: string | null;
+  status?: 'queued' | 'processing' | 'succeeded' | 'failed' | 'canceled' | 'unknown';
+  style?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  outputCount?: number | null;
+  error?: string | null;
+}
 
 export interface UnifiedModelStatusResponse {
   statusCode: UnifiedModelStatusCode;
@@ -86,6 +97,7 @@ export interface UnifiedModelStatusResponse {
     completedAt?: string | null;
     errorMessage?: string | null;
   } | null;
+  generationStatus?: GenerationStatusResponse | null;
 }
 
 @Injectable({
@@ -299,6 +311,7 @@ export class FileUploadService {
           reason: raw?.reason ?? raw?.Reason ?? null,
           lastUpdated: raw?.lastUpdated ?? raw?.LastUpdated ?? null,
           currentRequest: raw?.currentRequest ?? raw?.CurrentRequest ?? null,
+          generationStatus: raw?.generationStatus ?? raw?.GenerationStatus ?? null,
         };
         return normalized;
       })

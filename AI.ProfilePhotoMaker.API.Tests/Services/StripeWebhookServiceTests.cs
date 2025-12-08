@@ -7,6 +7,7 @@ using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.Payments;
 using AI.ProfilePhotoMaker.API.Configuration;
+using AI.ProfilePhotoMaker.API.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -507,7 +508,16 @@ public class StripeWebhookServiceTests
             Options.Create(stripeOptions),
             Options.Create(simulationOptions));
 
-        return new StripeWebhookService(context, creditPackageService, NullLogger<StripeWebhookService>.Instance);
+        var email = new DummyEmailNotificationService();
+        return new StripeWebhookService(context, creditPackageService, NullLogger<StripeWebhookService>.Instance, email);
+    }
+
+    private sealed class DummyEmailNotificationService : IEmailNotificationService
+    {
+        public Task SendTrainingCompletedAsync(string userId, string? email, string? modelName, string? modelVersion) => Task.CompletedTask;
+        public Task SendGenerationCompletedAsync(string userId, string? email, string? style, int imageCount) => Task.CompletedTask;
+        public Task SendGenerationFailedAsync(string userId, string? email, string? style, string? error) => Task.CompletedTask;
+        public Task SendPurchaseReceiptAsync(string userId, string? email, CreditPurchase purchase) => Task.CompletedTask;
     }
 
     private static ApplicationDbContext CreateContext()

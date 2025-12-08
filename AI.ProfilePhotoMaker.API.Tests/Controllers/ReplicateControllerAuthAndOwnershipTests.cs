@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Security.Claims;
 using AI.ProfilePhotoMaker.API.Controllers;
 using AI.ProfilePhotoMaker.API.Data;
@@ -33,10 +34,12 @@ public class ReplicateControllerAuthAndOwnershipTests
         string userId,
         ApplicationDbContext db,
         Mock<IReplicateApiClient>? mockReplicate = null,
-        Mock<IBasicTierService>? mockBasic = null)
+        Mock<IBasicTierService>? mockBasic = null,
+        Mock<IPendingGenerationService>? mockPending = null)
     {
         mockReplicate ??= new Mock<IReplicateApiClient>(MockBehavior.Strict);
         mockBasic ??= new Mock<IBasicTierService>(MockBehavior.Strict);
+        mockPending ??= new Mock<IPendingGenerationService>(MockBehavior.Strict);
 
         var config = new Mock<IConfiguration>();
 
@@ -45,7 +48,8 @@ public class ReplicateControllerAuthAndOwnershipTests
             mockBasic.Object,
             db,
             config.Object,
-            new NullLogger<ReplicateController>());
+            new NullLogger<ReplicateController>(),
+            mockPending.Object);
 
         var httpContext = new DefaultHttpContext
         {
@@ -227,4 +231,63 @@ public class ReplicateControllerAuthAndOwnershipTests
         mockBasic.VerifyNoOtherCalls();
     }
 
+    [Fact]
+    public async Task QueueGeneration_RejectsInvalidOutputsPerStyle()
+    {
+        using var db = CreateInMemoryDb();
+        db.ModelCreationRequests.Add(new ModelCreationRequest
+        {
+            UserId = "user-123",
+            PendingTrainingRequestId = "train-1",
+            Status = ModelCreationStatus.Creating,
+            CreatedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var pending = new Mock<IPendingGenerationService>(MockBehavior.Strict);
+        var controller = CreateController("user-123", db, mockPending: pending);
+
+        var badRequest = new QueueGenerationRequest
+        {
+            TrainingId = "train-1",
+            Styles = new List<string> { "corporate" },
+            NumOutputsPerStyle = 0
+        };
+
+        var result = await controller.QueueGeneration(badRequest) as BadRequestObjectResult;
+        result.Should().NotBeNull();
+        pending.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task QueueGeneration_Enqueues_OnValidRequest()
+    {
+        using var db = CreateInMemoryDb();
+        db.ModelCreationRequests.Add(new ModelCreationRequest
+        {
+            UserId = "user-123",
+            PendingTrainingRequestId = "train-1",
+            Status = ModelCreationStatus.Creating,
+            CreatedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var pending = new Mock<IPendingGenerationService>(MockBehavior.Strict);
+        pending.Setup(p => p.EnqueueAsync("user-123", "train-1", It.IsAny<IEnumerable<string>>(), 2))
+               .Returns(Task.CompletedTask)
+               .Verifiable();
+
+        var controller = CreateController("user-123", db, mockPending: pending);
+
+        var goodRequest = new QueueGenerationRequest
+        {
+            TrainingId = "train-1",
+            Styles = new List<string> { "corporate", "studio" },
+            NumOutputsPerStyle = 2
+        };
+
+        var result = await controller.QueueGeneration(goodRequest) as OkObjectResult;
+        result.Should().NotBeNull();
+        pending.Verify();
+    }
 }

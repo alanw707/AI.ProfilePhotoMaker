@@ -374,6 +374,56 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                     b.ToTable("PaymentTransactions");
                 });
 
+            modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.PendingGenerationRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LastPredictionId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("NumOutputsPerStyle")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StylesJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TrainingRequestId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "TrainingRequestId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_PendingGeneration_UserId_TrainingId");
+
+                    b.ToTable("PendingGenerationRequests");
+                });
+
             modelBuilder.Entity("AI.ProfilePhotoMaker.API.Models.Prediction", b =>
                 {
                     b.Property<string>("Id")

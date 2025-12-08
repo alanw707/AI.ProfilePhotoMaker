@@ -141,6 +141,18 @@ export class ReplicateService {
     );
   }
 
+  queueGeneration(
+    trainingId: string,
+    styles: string[],
+    numOutputsPerStyle: number
+  ): Observable<any> {
+    return this.http.post<any>(this.config.getFullUrl('/replicate/generate/queue'), {
+      trainingId,
+      styles,
+      numOutputsPerStyle,
+    });
+  }
+
   // Image Generation (Premium)
   generateImages(
     request: GenerateImagesRequest

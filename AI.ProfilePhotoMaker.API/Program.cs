@@ -11,6 +11,7 @@ using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Health;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using AI.ProfilePhotoMaker.API.Services.Payments;
+using AI.ProfilePhotoMaker.API.Services.Notifications;
 using AspNetCoreRateLimit;
 // using AI.ProfilePhotoMaker.API.Services.Monitoring; // Removed monitoring dependency
 using AI.ProfilePhotoMaker.API.Middleware;
@@ -146,6 +147,7 @@ builder.Services.Configure<IpRateLimitPolicies>(builder.Configuration.GetSection
 builder.Services.AddInMemoryRateLimiting();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
 builder.Services.Configure<StripeOptions>(builder.Configuration.GetSection(StripeOptions.SectionName));
 
 builder.Services.PostConfigure<StripeOptions>(options =>
@@ -190,6 +192,8 @@ builder.Services.AddSingleton(provider =>
 
 builder.Services.AddScoped<IStripePaymentService, StripePaymentService>();
 builder.Services.AddScoped<IStripeWebhookService, StripeWebhookService>();
+builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>();
+builder.Services.AddScoped<IPendingGenerationService, PendingGenerationService>();
 
 builder.Services.Configure<LegacyCompatibilityOptions>(builder.Configuration.GetSection(LegacyCompatibilityOptions.SectionName));
 

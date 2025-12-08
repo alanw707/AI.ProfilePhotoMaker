@@ -64,6 +64,7 @@ interface WorkflowOrchestrationService {
     imagesPerStyle: number,
     modelStatus: string
   ): CreditCalculation;
+  queueBackgroundGeneration(selectedStyles: StyleOption[], imagesPerStyle: number): Promise<void>;
   dismissSuccessMessage(): void;
   dispose(): void;
 }
@@ -569,6 +570,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   continueInBackground(): void {
+    const selectedStyles = this.availableStyles.filter(s => s.selected);
+
+    const queueWork = async () => {
+      try {
+        if (!this._workflowService) {
+          await this._loadWorkflowService();
+        }
+        if (this._workflowService) {
+          await this._workflowService.queueBackgroundGeneration(selectedStyles, this.imagesPerStyle);
+        }
+      } catch (error) {
+        console.error('Failed to queue background generation', error);
+      }
+    };
+
+    queueWork();
+
     this._notificationService.info(
       'Continuing in Background',
       "Training and generation will continue. We'll email you when your photos are ready."

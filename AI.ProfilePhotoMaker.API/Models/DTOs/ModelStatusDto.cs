@@ -8,6 +8,7 @@ public enum UnifiedModelStatusCode
     NotStarted,
     ReadyForTraining,
     Training,
+    Generating,
     ModelReady,
     Failed
 }
@@ -24,4 +25,16 @@ public class ModelStatusResponse
     public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
 
     public object? CurrentRequest { get; set; }
+    public GenerationStatusDto? GenerationStatus { get; set; }
+}
+
+public class GenerationStatusDto
+{
+    public string? PredictionId { get; set; }
+    public string Status { get; set; } = "unknown"; // queued | processing | succeeded | failed | canceled | unknown
+    public string? Style { get; set; }
+    public DateTime? StartedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    public int? OutputCount { get; set; }
+    public string? Error { get; set; }
 }

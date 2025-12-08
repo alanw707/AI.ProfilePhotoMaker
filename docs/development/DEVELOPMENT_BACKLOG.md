@@ -1,14 +1,14 @@
 # Development Backlog & Task Estimation
 
-*Last Updated: November 15, 2025 (Synced with current branch feat/headless-tests-stripe)*
+*Last Updated: December 3, 2025 (reflects live purchase validation + new training/email tasks)*
 
 ## Executive Summary
 
-Based on comprehensive analysis of the current project state, approximately **91% of core functionality is complete**. Recent architecture improvements have eliminated mobile header overlap issues through CSS Grid layout redesign, improving maintainability and responsive behavior. The remaining work focuses on payment integration, testing, production deployment, and performance optimizations. Estimated remaining effort: **5-6 weeks** for full production readiness.
+Based on comprehensive analysis of the current project state, approximately **93% of core functionality is complete**. Recent architecture improvements have eliminated mobile header overlap issues through CSS Grid layout redesign, improving maintainability and responsive behavior. The remaining work focuses on Stripe edge-case hardening (post-live purchase), separating training vs. generation expectations, adding transactional email, testing, production deployment, and performance optimizations. Estimated remaining effort: **5-6 weeks** for full production readiness.
 
 ## Project Completion Status
 
-### ✅ **Completed Features (91%)**
+### ✅ **Completed Features (93%)**
 - Core authentication system with OAuth
 - AI model training and image generation
 - Gallery management with self-healing capabilities
@@ -25,18 +25,18 @@ Based on comprehensive analysis of the current project state, approximately **91
 - Micro-interactions and accessibility improvements
 - Development tooling enhancements (frontend restart capability)
 - Basic payment simulation
+- Live payment purchase validated (2025-12-03)
 - Comprehensive documentation
 - Debug logging cleanup for production readiness
 
-### 🔄 **In Progress (5%)**
-- Stripe payment integration (production smoke tests + UI polish)
+### 🔄 **In Progress (4%)**
+- Stripe payment integration hardening (failure/refund scenarios, webhook retry resilience)
 - Production environment configuration (live Stripe + staging validation)
 
-### 📋 **Remaining Work (4%)**
-- Comprehensive testing suite
-- Production deployment preparation
-- Performance optimizations
-- Advanced features and polish
+### 📋 **Remaining Work (3%)**
+- Training vs. generation separation for background runs and status clarity
+- Transactional email notifications (training/generation completion, receipts, failures)
+- Comprehensive testing suite; production deployment preparation; performance optimizations; advanced features and polish
 
 ---
 
@@ -87,9 +87,10 @@ Based on comprehensive analysis of the current project state, approximately **91
 - [x] Set up Stripe webhook endpoint (`POST /api/webhooks/stripe`) with signature validation
 - [x] Persist payment intents as `PaymentTransaction` records and finalize credit purchases on webhook success
 - [x] Test happy-path payment flow locally using Stripe CLI (PaymentIntent confirmation + webhook + credit ledger)
+- [x] Run at least one real payment in production/staging (live purchase validated 2025-12-03; capture receipt/logs)
 - [ ] Test payment failure / cancellation scenarios
 - [ ] Implement refund handling (if included in MVP scope)
-- [ ] Run at least one real payment in production/staging with test card
+- [ ] Add automated edge-case coverage for webhook retry/delay scenarios
 
 > Note: The webhook controller & service are implemented; this backlog item now tracks remaining edge cases and production validation rather than core implementation.
 
@@ -127,13 +128,37 @@ services.AddRateLimiter(options =>
 - [ ] Implement soft delete with recovery period
 - [ ] Add cleanup logging and monitoring
 
+#### **Task #4: Training vs. Image Generation Separation (Background UX)**
+- **Priority**: 🔴 Critical (Expectation management)
+- **Estimate**: 2-3 days
+- **Complexity**: Medium
+
+**Subtasks:**
+- [x] Separate training vs. generation statuses/timestamps in API responses and persistence
+- [ ] Gate image generation trigger until training completes; queue or block premature requests
+- [x] Update UI background-run messaging to reflect two-phase flow and show live status (surfaced GENERATING state)
+- [ ] Emit events/notifications when training completes to start/queue generation; surface stuck states
+- [ ] Add telemetry/alerts for training or generation stalls and mismatches
+
+#### **Task #5: Transactional Email Delivery**
+- **Priority**: 🔴 Critical (User notifications)
+- **Estimate**: 3-4 days
+- **Complexity**: Medium
+
+**Subtasks:**
+- [ ] Select provider (SendGrid/SES/SMTP) and configure secrets/infrastructure
+- [x] Implement email service + templates: training complete, generation complete, credit purchase receipt, failure/retry notice (SMTP scaffold, sandboxable)
+- [ ] Add user email preferences/opt-out and verified from-address/domain
+- [ ] Add logging/monitoring and retries for send failures
+- [ ] Add tests with provider mocks/stubs and template coverage
+
 ---
 
 ## Medium Priority Tasks (Sprint 3-4)
 
 ### 🧪 **Testing & Quality Assurance**
 
-#### **Task #4: Backend Unit Test Suite**
+#### **Task #6: Backend Unit Test Suite**
 - **Priority**: 🟡 High
 - **Estimate**: 5-7 days
 - **Complexity**: Medium
@@ -162,7 +187,7 @@ ApiIntegrationTests
 WebhookIntegrationTests
 ```
 
-#### **Task #5: Frontend Component Testing**
+#### **Task #7: Frontend Component Testing**
 - **Priority**: 🟡 High
 - **Estimate**: 4-5 days
 - **Complexity**: Medium
@@ -175,7 +200,7 @@ WebhookIntegrationTests
 - [ ] Add E2E tests with Cypress/Protractor
 - [ ] Implement visual regression testing
 
-#### **Task #6: API Load Testing**
+#### **Task #8: API Load Testing**
 - **Priority**: 🟡 High  
 - **Estimate**: 2-3 days
 - **Complexity**: Medium
@@ -194,7 +219,7 @@ WebhookIntegrationTests
 
 ### 🚀 **Deployment & Infrastructure**
 
-#### **Task #7: Production Environment Setup**
+#### **Task #9: Production Environment Setup**
 - **Priority**: 🟡 High
 - **Estimate**: 3-4 days
 - **Complexity**: High
@@ -208,7 +233,7 @@ WebhookIntegrationTests
 - [ ] Set up monitoring and logging
 - [ ] Implement health checks
 
-#### **Task #8: CI/CD Pipeline Enhancement**
+#### **Task #10: CI/CD Pipeline Enhancement**
 - **Priority**: 🟠 Medium
 - **Estimate**: 2-3 days
 - **Complexity**: Medium
@@ -227,7 +252,7 @@ WebhookIntegrationTests
 
 ### 📊 **Analytics & Monitoring**
 
-#### **Task #9: User Activity Logging**
+#### **Task #11: User Activity Logging**
 - **Priority**: 🟠 Medium
 - **Estimate**: 2-3 days
 - **Complexity**: Low-Medium
@@ -239,7 +264,7 @@ WebhookIntegrationTests
 - [ ] Add analytics for usage patterns
 - [ ] Implement error tracking
 
-#### **Task #10: Advanced Gallery Features**
+#### **Task #12: Advanced Gallery Features**
 - **Priority**: 🟠 Medium
 - **Estimate**: 3-4 days
 - **Complexity**: Medium
@@ -253,7 +278,7 @@ WebhookIntegrationTests
 
 ### 💡 **User Experience Improvements**
 
-#### **Task #11: Progressive Web App (PWA)**
+#### **Task #13: Progressive Web App (PWA)**
 - **Priority**: 🟢 Low
 - **Estimate**: 2-3 days
 - **Complexity**: Medium
@@ -265,7 +290,7 @@ WebhookIntegrationTests
 - [ ] Enable install prompts
 - [ ] Add offline image viewing
 
-#### **Task #12: Real-time Notifications**
+#### **Task #14: Real-time Notifications**
 - **Priority**: 🟢 Low
 - **Estimate**: 3-4 days
 - **Complexity**: Medium-High
@@ -276,7 +301,7 @@ WebhookIntegrationTests
 - [ ] Add generation completion alerts
 - [ ] Implement in-app notification system
 
-#### **Task #13: Advanced Dashboard UX**
+#### **Task #15: Advanced Dashboard UX**
 - **Priority**: 🟢 Low
 - **Estimate**: 2-3 days
 - **Complexity**: Medium
@@ -295,7 +320,7 @@ WebhookIntegrationTests
 
 ### 🔧 **Technical Debt & Optimization**
 
-#### **Task #14: Performance Optimization**
+#### **Task #16: Performance Optimization**
 - **Priority**: 🟠 Medium
 - **Estimate**: 2-3 days
 - **Complexity**: Medium
@@ -307,7 +332,7 @@ WebhookIntegrationTests
 - [ ] Optimize Angular bundle size
 - [ ] Add lazy loading for components
 
-#### **Task #15: Code Quality Improvements**
+#### **Task #17: Code Quality Improvements**
 - **Priority**: 🟠 Medium
 - **Estimate**: 2-3 days
 - **Complexity**: Low
@@ -427,19 +452,22 @@ WebhookIntegrationTests
 ## Next Steps
 
 ### **Week 1 Priorities**
-1. Complete Stripe webhook implementation and testing
-2. Implement rate limiting for security
-3. Begin comprehensive test suite development
+1. Harden Stripe edge cases (failure/refund paths, webhook retry resilience) and document live purchase evidence
+2. Split training vs. image generation workflow/status for background runs; update UI messaging
+3. Implement transactional email provider + templates (training/generation completion, receipts, failures)
 
 ### **Week 2 Priorities**
-1. Finish backend unit tests
-2. Implement data retention system
-3. Start production environment preparation
+1. Implement distributed rate limiting (Redis) with client handling + monitoring
+2. Implement data retention/cleanup system (7-day deletion, logging)
+3. Begin comprehensive test suite development (backend + UI; target critical flows)
 
 ### **Immediate Actions Required**
 - [x] Choose cloud provider (Azure/AWS) - ✅ **Azure selected and configured**
 - [x] Set up CI/CD pipeline enhancements - ✅ **Complete Azure deployment pipeline created**
 - [x] Update deployment documentation with corrected sequence - ✅ **Documentation updated with parameter fixes**
+- [x] Live purchase validated in Stripe balance (2025-12-03) - no additional receipt capture required
+- [ ] Select transactional email provider (SendGrid/SES/SMTP) and configure verified domain/from address
+- [ ] Finalize training vs. generation status UX/acceptance criteria for background runs
 - [ ] Replace parameter file placeholders with actual values
 - [ ] Deploy infrastructure to staging environment
 - [ ] Set up production Stripe account

@@ -109,6 +109,11 @@ interface ReplicateService {
   trainModel(request: TrainModelRequest): Observable<TrainingStartApiResponse>;
   getTrainingStatus(trainingId: string): Observable<TrainingStatusResponse>;
   finalizeTraining(trainingId: string): Observable<{ success: boolean; data: any; error: any }>;
+  queueGeneration(
+    trainingId: string,
+    styles: string[],
+    numOutputsPerStyle: number
+  ): Observable<any>;
   generateBatchImages(request: GenerateBatchImagesRequest): Observable<BatchGenerationResponse>;
   getPredictionStatus(predictionId: string): Observable<PredictionStatusResponse>;
 }
@@ -1779,5 +1784,33 @@ export class WorkflowOrchestrationService {
   dispose(): void {
     this._clearAllIntervals();
     this.resetProgress();
+  }
+
+  async queueBackgroundGeneration(selectedStyles: StyleOption[], imagesPerStyle: number): Promise<void> {
+    const trainingId = this.getProgress().trainingId;
+    if (!trainingId || selectedStyles.length === 0) {
+      return;
+    }
+
+    try {
+      const replicateService = await this._loadReplicateService();
+      await firstValueFrom(
+        replicateService.queueGeneration(
+          trainingId,
+          selectedStyles.map(s => s.name),
+          imagesPerStyle
+        )
+      );
+      this._deps.notificationService.info(
+        'Background Generation Queued',
+        'We will start generating your selected styles as soon as training is ready.'
+      );
+    } catch (error) {
+      this._logger.error('Failed to queue background generation', error);
+      this._deps.notificationService.warning(
+        'Could not queue generation',
+        'Please stay on this page or retry to ensure generation starts after training.'
+      );
+    }
   }
 }

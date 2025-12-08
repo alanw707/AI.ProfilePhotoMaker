@@ -21,6 +21,7 @@ export enum ModelState {
   NOT_STARTED = 'NOT_STARTED',
   READY_TO_TRAIN = 'READY_TO_TRAIN',
   TRAINING = 'TRAINING',
+   GENERATING = 'GENERATING',
   READY = 'READY',
   FAILED = 'FAILED',
 }
@@ -217,6 +218,10 @@ export class ModelStatusGuards {
     return status.state === ModelState.TRAINING;
   }
 
+  static isGenerating(status: ModelStatus): boolean {
+    return status.state === ModelState.GENERATING;
+  }
+
   static isReady(status: ModelStatus): boolean {
     return status.state === ModelState.READY;
   }
@@ -230,7 +235,11 @@ export class ModelStatusGuards {
   }
 
   static canTrain(status: ModelStatus): boolean {
-    return status.capabilities.canTrain && status.state !== ModelState.TRAINING;
+    return (
+      status.capabilities.canTrain &&
+      status.state !== ModelState.TRAINING &&
+      status.state !== ModelState.GENERATING
+    );
   }
 
   static needsImages(status: ModelStatus): boolean {
