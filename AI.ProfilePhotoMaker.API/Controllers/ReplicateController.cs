@@ -238,6 +238,11 @@ public class ReplicateController : ControllerBase
     [HttpPost("generate/queue")]
     public async Task<IActionResult> QueueGeneration([FromBody] QueueGenerationRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(new { success = false, error = new { code = "InvalidRequest", message = "Invalid generation request." } });
+        }
+
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId))
         {
@@ -247,6 +252,11 @@ public class ReplicateController : ControllerBase
         if (request == null || string.IsNullOrWhiteSpace(request.TrainingId) || request.Styles == null || !request.Styles.Any())
         {
             return BadRequest(new { success = false, error = new { code = "InvalidRequest", message = "TrainingId and styles are required." } });
+        }
+
+        if (request.NumOutputsPerStyle < 1 || request.NumOutputsPerStyle > 4)
+        {
+            return BadRequest(new { success = false, error = new { code = "InvalidRequest", message = "numOutputsPerStyle must be between 1 and 4." } });
         }
 
         var modelRequest = await _dbContext.ModelCreationRequests

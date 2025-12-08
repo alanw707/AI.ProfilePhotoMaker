@@ -77,6 +77,12 @@ public class BasicTierService : IBasicTierService
 
     private async Task<CreditConsumptionResult> ConsumeCreditsInternalAsync(string userId, int creditCost, string action, bool canUseWeeklyCredits)
     {
+        if (creditCost <= 0)
+        {
+            _logger.LogWarning("Rejected credit consumption for user {UserId}: non-positive creditCost {CreditCost} for action {Action}", userId, creditCost, action);
+            return CreditConsumptionResult.Failed(action, "invalid_credit_cost");
+        }
+
         var profile = await GetUserProfileWithCreditsAsync(userId);
         if (profile == null)
         {
