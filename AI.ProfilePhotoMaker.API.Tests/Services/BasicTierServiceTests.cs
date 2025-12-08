@@ -71,6 +71,26 @@ public class BasicTierServiceTests
         Assert.Equal(consumption.WeeklyCreditsConsumed, profile.PurchasedCredits); // rollover goes to purchased bucket
     }
 
+    [Fact]
+    public async Task ConsumeCreditsAsync_RejectsNonPositiveCosts()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserProfileAsync(context, weeklyCredits: 3, purchasedCredits: 2);
+        var service = CreateService(context);
+
+        var zeroCost = await service.ConsumeCreditsAsync(userId, 0, "styled_generation");
+        Assert.False(zeroCost.Success);
+        Assert.Equal("invalid_credit_cost", zeroCost.Error);
+
+        var negativeCost = await service.ConsumeCreditsAsync(userId, -5, "styled_generation");
+        Assert.False(negativeCost.Success);
+        Assert.Equal("invalid_credit_cost", negativeCost.Error);
+
+        var profile = await context.UserProfiles.FirstAsync(p => p.UserId == userId);
+        Assert.Equal(3, profile.Credits);
+        Assert.Equal(2, profile.PurchasedCredits);
+    }
+
     private static ApplicationDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
