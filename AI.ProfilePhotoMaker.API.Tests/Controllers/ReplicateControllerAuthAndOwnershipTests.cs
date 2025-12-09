@@ -36,11 +36,13 @@ public class ReplicateControllerAuthAndOwnershipTests
         Mock<IReplicateApiClient>? mockReplicate = null,
         Mock<IBasicTierService>? mockBasic = null,
         Mock<IPendingGenerationService>? mockPending = null,
-        IConfiguration? configuration = null)
+        IConfiguration? configuration = null,
+        Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>? storage = null)
     {
         mockReplicate ??= new Mock<IReplicateApiClient>(MockBehavior.Strict);
         mockBasic ??= new Mock<IBasicTierService>(MockBehavior.Strict);
         mockPending ??= new Mock<IPendingGenerationService>(MockBehavior.Strict);
+        storage ??= new Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>(MockBehavior.Strict);
 
         var config = configuration ?? new Mock<IConfiguration>().Object;
 
@@ -50,7 +52,8 @@ public class ReplicateControllerAuthAndOwnershipTests
             db,
             config,
             new NullLogger<ReplicateController>(),
-            mockPending.Object);
+            mockPending.Object,
+            storage.Object);
 
         var httpContext = new DefaultHttpContext
         {
