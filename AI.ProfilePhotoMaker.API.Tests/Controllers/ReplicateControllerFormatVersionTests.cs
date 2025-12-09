@@ -39,7 +39,8 @@ public class ReplicateControllerFormatVersionTests
 
         var logger = new Mock<ILogger<ReplicateController>>().Object;
         var pending = new Mock<IPendingGenerationService>().Object;
-        return new ReplicateController(client, basic, db, config, logger, pending);
+        var storage = new Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>().Object;
+        return new ReplicateController(client, basic, db, config, logger, pending, storage);
     }
 
     /// <summary>

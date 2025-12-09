@@ -53,7 +53,8 @@ public class ModelVersionMismatchFixTests : IClassFixture<CustomWebApplicationFa
             dbContext,
             scope.ServiceProvider.GetRequiredService<IConfiguration>(),
             scope.ServiceProvider.GetRequiredService<ILogger<ReplicateController>>(),
-            new Mock<IPendingGenerationService>().Object
+            new Mock<IPendingGenerationService>().Object,
+            new Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>().Object
         );
 
         var formatMethod = typeof(ReplicateController).GetMethod(
@@ -95,7 +96,8 @@ public class ModelVersionMismatchFixTests : IClassFixture<CustomWebApplicationFa
             spLegacy.GetRequiredService<ApplicationDbContext>(),
             spLegacy.GetRequiredService<IConfiguration>(),
             spLegacy.GetRequiredService<ILogger<ReplicateController>>(),
-            new Mock<IPendingGenerationService>().Object
+            new Mock<IPendingGenerationService>().Object,
+            new Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>().Object
         );
         var formatMethod = typeof(ReplicateController).GetMethod(
             name: "FormatModelVersion",
@@ -126,7 +128,8 @@ public class ModelVersionMismatchFixTests : IClassFixture<CustomWebApplicationFa
             spClean.GetRequiredService<ApplicationDbContext>(),
             spClean.GetRequiredService<IConfiguration>(),
             spClean.GetRequiredService<ILogger<ReplicateController>>(),
-            new Mock<IPendingGenerationService>().Object
+            new Mock<IPendingGenerationService>().Object,
+            new Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>().Object
         );
         var formatMethodClean = typeof(ReplicateController).GetMethod(
             name: "FormatModelVersion",

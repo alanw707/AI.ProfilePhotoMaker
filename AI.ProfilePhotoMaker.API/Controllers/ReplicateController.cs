@@ -3,6 +3,7 @@ using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
+using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -30,6 +31,7 @@ public class ReplicateController : ControllerBase
     private readonly IConfiguration _configuration;
     private readonly ILogger<ReplicateController> _logger;
     private readonly IPendingGenerationService _pendingGenerationService;
+    private readonly IStorageService _storageService;
 
     private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
     private static string S(string? value) => LoggingSanitizer.Sanitize(value);
@@ -40,7 +42,8 @@ public class ReplicateController : ControllerBase
         ApplicationDbContext dbContext,
         IConfiguration configuration,
         ILogger<ReplicateController> logger,
-        IPendingGenerationService pendingGenerationService)
+        IPendingGenerationService pendingGenerationService,
+        IStorageService storageService)
     {
         _replicateApiClient = replicateApiClient;
         _basicTierService = basicTierService;
@@ -48,6 +51,7 @@ public class ReplicateController : ControllerBase
         _configuration = configuration;
         _logger = logger;
         _pendingGenerationService = pendingGenerationService;
+        _storageService = storageService;
     }
 
     /// <summary>
@@ -1062,7 +1066,8 @@ public class ReplicateController : ControllerBase
             }
 
             // Enhance the uploaded photo
-            var result = await _replicateApiClient.EnhancePhotoAsync(userId, externalImageUrl, dto.EnhancementType ?? "professional");
+            var normalizedImageUrl = await NormalizeImageUrlForReplicateAsync(externalImageUrl);
+            var result = await _replicateApiClient.EnhancePhotoAsync(userId, normalizedImageUrl, dto.EnhancementType ?? "professional");
 
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
 
@@ -1182,30 +1187,9 @@ public class ReplicateController : ControllerBase
     /// </summary>
     private string ConvertToExternalApiUrl(string originalUrl)
     {
-        // If already a fully qualified HTTP URL, return as-is
+        // If already a fully qualified HTTP URL, return as-is unless it's localhost (handled later)
         if (originalUrl.StartsWith("http://") || originalUrl.StartsWith("https://"))
         {
-            // Check if it's using localhost - convert to external API URL
-            if (originalUrl.Contains("localhost") || originalUrl.Contains("127.0.0.1"))
-            {
-                var uri = new Uri(originalUrl);
-                var relativePath = uri.PathAndQuery;
-
-                var externalBaseUrl = _configuration["ExternalApiBaseUrl"];
-                if (!string.IsNullOrEmpty(externalBaseUrl))
-                {
-                    return $"{externalBaseUrl.TrimEnd('/')}{relativePath}";
-                }
-
-                // Fallback to AppBaseUrl if ExternalApiBaseUrl not configured and AppBaseUrl is HTTPS
-                var appBaseUrl = _configuration["AppBaseUrl"];
-                if (!string.IsNullOrEmpty(appBaseUrl) && appBaseUrl.StartsWith("https://"))
-                {
-                    return $"{appBaseUrl.TrimEnd('/')}{relativePath}";
-                }
-
-                _logger.LogWarning("No ExternalApiBaseUrl configured and AppBaseUrl is not HTTPS - external APIs may not be able to access: {Url}", S(originalUrl));
-            }
             return originalUrl;
         }
 
@@ -1226,6 +1210,65 @@ public class ReplicateController : ControllerBase
             }
 
             _logger.LogWarning("No ExternalApiBaseUrl configured and AppBaseUrl is not HTTPS - external APIs may not be able to access: {Url}", S(originalUrl));
+        }
+
+        return originalUrl;
+    }
+
+    /// <summary>
+    /// Normalize image URL for Replicate access: handle azurite, localhost, and private Azure blobs by generating a SAS URL.
+    /// </summary>
+    private async Task<string> NormalizeImageUrlForReplicateAsync(string originalUrl)
+    {
+        if (string.IsNullOrWhiteSpace(originalUrl))
+        {
+            return originalUrl;
+        }
+
+        Uri uri;
+        if (!Uri.TryCreate(originalUrl, UriKind.Absolute, out uri))
+        {
+            return originalUrl;
+        }
+
+        var host = uri.Host.ToLowerInvariant();
+        var isAzurite = host.Contains("127.0.0.1") || host.Contains("localhost") || host.Contains("devstoreaccount1");
+        var isAzureBlob = host.Contains(".blob.core.windows.net");
+
+        // Azurite or localhost: route through our proxy (ExternalApiBaseUrl or AppBaseUrl) so Replicate can fetch it
+        if (isAzurite)
+        {
+            var proxyBase = _configuration["ExternalApiBaseUrl"] ?? _configuration["AppBaseUrl"];
+            if (!string.IsNullOrEmpty(proxyBase))
+            {
+                var proxied = $"{proxyBase.TrimEnd('/')}{uri.PathAndQuery}";
+                _logger.LogDebug("Using proxied Azurite URL for Replicate: {Url}", S(proxied));
+                return proxied;
+            }
+        }
+
+        // Private Azure Blob without SAS: generate a short-lived SAS URL
+        if (isAzureBlob && string.IsNullOrEmpty(uri.Query))
+        {
+            var segments = uri.AbsolutePath.Trim('/').Split('/', 2, StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length >= 2)
+            {
+                var container = segments[0];
+                var blobPath = segments[1];
+                try
+                {
+                    var sasUrl = await _storageService.GenerateSasUrlAsync($"{container}/{blobPath}", TimeSpan.FromMinutes(10));
+                    if (!string.IsNullOrEmpty(sasUrl))
+                    {
+                        _logger.LogDebug("Generated SAS URL for Replicate enhancement (container={Container}, path={Path})", S(container), S(blobPath));
+                        return sasUrl;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to generate SAS URL for Replicate enhancement (container={Container}, path={Path})", S(container), S(blobPath));
+                }
+            }
         }
 
         return originalUrl;
