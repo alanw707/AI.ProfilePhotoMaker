@@ -16,6 +16,20 @@
     "WebhookSecret": "STORED_IN_USER_SECRETS"
   },
   "AppBaseUrl": "http://localhost:4200",
+  "Email": {
+    "Enabled": true,
+    "FromEmail": "no-reply@aiprofilephotomaker.com",
+    "FromName": "AI Profile Photo Maker",
+    "SmtpHost": "smtp-relay.brevo.com",
+    "SmtpPort": 465,
+    "EnableSsl": true,
+    "Username": "STORED_IN_USER_SECRETS",
+    "Password": "STORED_IN_USER_SECRETS",
+    "UseApi": false,
+    "ApiKey": "STORED_IN_USER_SECRETS",
+    "SandboxMode": true,
+    "FrontendBaseUrl": "http://localhost:4200"
+  },
   "Logging": {
     "LogLevel": {
       "Default": "Information",

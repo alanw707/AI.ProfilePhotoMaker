@@ -83,6 +83,8 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
           REPLICATE_WEBHOOK_SECRET: ${{ secrets.REPLICATE_WEBHOOK_SECRET }}
+          EMAIL__APIKEY: ${{ secrets.EMAIL__APIKEY }}
+          EMAIL__USEAPI: ${{ secrets.EMAIL__USEAPI }}
           SQL_ADMIN_PASSWORD: ${{ secrets.SQL_ADMIN_PASSWORD }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
@@ -147,6 +149,8 @@ jobs:
           fi
           validate_secret "REPLICATE_API_TOKEN" "$REPLICATE_API_TOKEN" 20 || ((errors++))
           validate_secret "REPLICATE_WEBHOOK_SECRET" "$REPLICATE_WEBHOOK_SECRET" 32 || ((errors++))
+          validate_secret "EMAIL__APIKEY" "$EMAIL__APIKEY" 20 || ((errors++))
+          validate_secret "EMAIL__USEAPI" "$EMAIL__USEAPI" 4 || ((errors++))
           
           # Enhanced Google OAuth validation (detect the current production issue)
           if [[ -z "$GOOGLE_CLIENT_ID" ]]; then
@@ -495,6 +499,9 @@ jobs:
               },
               "openAiApiKey": {
                 "value": "${{ secrets.OPENAI_API_KEY }}"
+              },
+              "emailApiKey": {
+                "value": "${{ secrets.EMAIL__APIKEY }}"
               }
             }
           }
@@ -872,7 +879,14 @@ jobs:
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --secrets \
               replicate-token='${{ secrets.REPLICATE_API_TOKEN }}' \
-              replicate-webhook-secret='${{ secrets.REPLICATE_WEBHOOK_SECRET }}'
+              replicate-webhook-secret='${{ secrets.REPLICATE_WEBHOOK_SECRET }}' \
+              email-api-key='${{ secrets.EMAIL__APIKEY }}'
+
+          # Ensure API path is enabled
+          az containerapp update \
+            --name aipm-api-v1 \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --set-env-vars Email__UseApi=true
 
           # Force a new revision so app reads updated secrets at startup
           REV_TS=$(date +%s)

@@ -192,7 +192,7 @@ builder.Services.AddSingleton(provider =>
 
 builder.Services.AddScoped<IStripePaymentService, StripePaymentService>();
 builder.Services.AddScoped<IStripeWebhookService, StripeWebhookService>();
-builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>();
+// Email notifications (registered via HttpClient below)
 builder.Services.AddScoped<IPendingGenerationService, PendingGenerationService>();
 
 builder.Services.Configure<LegacyCompatibilityOptions>(builder.Configuration.GetSection(LegacyCompatibilityOptions.SectionName));
@@ -440,6 +440,9 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IDependencyH
 // builder.Services.AddPerformanceMonitoring(builder.Configuration); // Removed monitoring service
 builder.Services.AddScoped<IAsyncFileService, AsyncFileService>();
 builder.Services.AddScoped<IAsyncZipService, AsyncZipService>();
+
+// Email notifications (supports SMTP or Brevo API)
+builder.Services.AddHttpClient<IEmailNotificationService, EmailNotificationService>();
 
 builder.Services.AddDeploymentValidation(builder.Configuration);
 builder.Services.ConfigureDeploymentValidation(builder.Configuration, builder.Environment);
