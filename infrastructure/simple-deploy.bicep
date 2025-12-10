@@ -46,6 +46,10 @@ param stripeWebhookSecret string
 @description('OpenAI API key for DALL-E 3 image generation')
 param openAiApiKey string
 
+@secure()
+@description('Brevo API key (xkeysib-...) for sending email via API')
+param emailApiKey string
+
 // Generate unique names
 var uniqueSuffix = uniqueString(resourceGroup().id)
 
@@ -382,6 +386,10 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
           keyVaultUrl: '${keyVault.properties.vaultUri}secrets/OpenAiApiKey'
           identity: backendUserIdentity.id
         }
+        {
+          name: 'email-api-key'
+          value: emailApiKey
+        }
       ]
     }
     template: {
@@ -517,6 +525,39 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'STRIPE_WEBHOOK_SECRET'
               secretRef: 'stripe-webhook-secret'
+            }
+            // Email / notifications (Brevo SMTP)
+            {
+              name: 'Email__Username'
+              value: ''
+            }
+            {
+              name: 'Email__Password'
+              value: ''
+            }
+            {
+              name: 'Email__FromEmail'
+              value: 'no-reply@aiprofilephotomaker.com'
+            }
+            {
+              name: 'Email__FromName'
+              value: 'AI Profile Photo Maker'
+            }
+            {
+              name: 'Email__SandboxMode'
+              value: 'false'
+            }
+            {
+              name: 'Email__FrontendBaseUrl'
+              value: 'https://app.aiprofilephotomaker.com'
+            }
+            {
+              name: 'Email__UseApi'
+              value: 'true'
+            }
+            {
+              name: 'Email__ApiKey'
+              secretRef: 'email-api-key'
             }
             
             // OpenAI Configuration

@@ -63,6 +63,19 @@ services:
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
       STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      # Email / Brevo SMTP (optional for local testing)
+      Email__Enabled: ${Email__Enabled:-false}
+      Email__Username: ${Email__Username}
+      Email__Password: ${Email__Password}
+      Email__FromEmail: ${Email__FromEmail:-no-reply@aiprofilephotomaker.com}
+      Email__FromName: ${Email__FromName:-AI Profile Photo Maker}
+      Email__SmtpHost: ${Email__SmtpHost:-smtp-relay.brevo.com}
+      Email__SmtpPort: ${Email__SmtpPort:-465}
+      Email__EnableSsl: ${Email__EnableSsl:-true}
+      Email__UseApi: ${Email__UseApi:-false}
+      Email__ApiKey: ${Email__ApiKey:-}
+      Email__SandboxMode: ${Email__SandboxMode:-true}
+      Email__FrontendBaseUrl: ${Email__FrontendBaseUrl:-http://localhost:4200}
       AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING:-DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=7EcjH8qw7X6gFutn5Omgg3e/EB/sTN07c5WLe1Rrl9g=;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;}
       AZURE_STORAGE_CONTAINER_NAME: ${AZURE_STORAGE_CONTAINER_NAME}
       AzureStorage__ConnectionString: ${AZURE_STORAGE_CONNECTION_STRING:-DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=7EcjH8qw7X6gFutn5Omgg3e/EB/sTN07c5WLe1Rrl9g=;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;}
@@ -72,6 +85,7 @@ services:
       APP_BASE_URL: ${APP_BASE_URL}
       EXTERNAL_API_BASE_URL: ${EXTERNAL_API_BASE_URL}
       OAUTH_BASE_URL: ${OAUTH_BASE_URL}
+      Replicate__WebhookSecret: ${Replicate__WebhookSecret:-}
     ports:
       - "${API_HTTP_PORT:-5032}:8080"
     restart: unless-stopped
