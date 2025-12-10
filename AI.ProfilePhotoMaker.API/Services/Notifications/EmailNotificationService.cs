@@ -101,14 +101,25 @@ public class EmailNotificationService : IEmailNotificationService
             return;
         }
 
-        // Force Brevo API path (preferred and avoids SMTP auth issues)
-        if (!string.IsNullOrWhiteSpace(_options.ApiKey))
+        var useApi = _options.UseApi && !string.IsNullOrWhiteSpace(_options.ApiKey);
+        if (useApi)
         {
             await SendEmailViaApiAsync(toEmail, subject, htmlBody, template, userId);
             return;
         }
 
-        _logger.LogWarning("Email API key missing; skipping send for {Template}", template);
+        var canSmtp = !string.IsNullOrWhiteSpace(_options.SmtpHost);
+        if (canSmtp)
+        {
+            await SendEmailViaSmtpAsync(toEmail, subject, htmlBody, template, userId);
+            return;
+        }
+
+        _logger.LogWarning("No email delivery path available (UseApi={UseApi}, ApiKeySet={ApiKeySet}, SmtpHost={SmtpHost}) for {Template}",
+            _options.UseApi,
+            !string.IsNullOrWhiteSpace(_options.ApiKey),
+            S(_options.SmtpHost),
+            template);
     }
 
     private async Task SendEmailViaApiAsync(string toEmail, string subject, string htmlBody, string template, string? userId)
@@ -144,6 +155,38 @@ public class EmailNotificationService : IEmailNotificationService
         catch (Exception ex)
         {
             _logger.LogWarning("Failed API email send {Template} for user {UserId}: {Reason}", template, Sid(userId), S(ex.Message));
+        }
+    }
+
+    private async Task SendEmailViaSmtpAsync(string toEmail, string subject, string htmlBody, string template, string? userId)
+    {
+        using var mail = new MailMessage
+        {
+            From = new MailAddress(_options.FromEmail!, _options.FromName ?? "AI Profile Photo Maker"),
+            Subject = _options.SandboxMode ? $"[SANDBOX] {subject}" : subject,
+            Body = htmlBody,
+            IsBodyHtml = true
+        };
+        mail.To.Add(new MailAddress(toEmail));
+
+        using var client = new SmtpClient(_options.SmtpHost, _options.SmtpPort)
+        {
+            EnableSsl = _options.EnableSsl
+        };
+
+        if (!string.IsNullOrWhiteSpace(_options.Username))
+        {
+            client.Credentials = new NetworkCredential(_options.Username, _options.Password);
+        }
+
+        try
+        {
+            await client.SendMailAsync(mail);
+            _logger.LogInformation("Sent {Template} email via SMTP to {Recipient} for user {UserId}", template, S(toEmail), Sid(userId));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Failed SMTP email send {Template} for user {UserId}: {Reason}", template, Sid(userId), S(ex.Message));
         }
     }
 
