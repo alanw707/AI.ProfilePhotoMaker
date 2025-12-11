@@ -244,6 +244,7 @@ public class ReplicateController : ControllerBase
     {
         if (!ModelState.IsValid)
         {
+            _logger.LogWarning("QueueGeneration rejected: model state invalid for user {UserId}", LoggingSanitizer.SanitizeId(User.FindFirst(ClaimTypes.NameIdentifier)?.Value));
             return BadRequest(new { success = false, error = new { code = "InvalidRequest", message = "Invalid generation request." } });
         }
 
@@ -255,11 +256,13 @@ public class ReplicateController : ControllerBase
 
         if (request == null || string.IsNullOrWhiteSpace(request.TrainingId) || request.Styles == null || !request.Styles.Any())
         {
-            return BadRequest(new { success = false, error = new { code = "InvalidRequest", message = "TrainingId and styles are required." } });
+            _logger.LogWarning("QueueGeneration rejected: missing trainingId or styles. User {UserId}", LoggingSanitizer.SanitizeId(userId));
+            return BadRequest(new { success = false, error = new { code = "InvalidRequest", message = "TrainingId and at least one style are required." } });
         }
 
         if (request.NumOutputsPerStyle < 1 || request.NumOutputsPerStyle > 4)
         {
+            _logger.LogWarning("QueueGeneration rejected: invalid numOutputsPerStyle {Num} for user {UserId}", request.NumOutputsPerStyle, LoggingSanitizer.SanitizeId(userId));
             return BadRequest(new { success = false, error = new { code = "InvalidRequest", message = "numOutputsPerStyle must be between 1 and 4." } });
         }
 
@@ -268,6 +271,7 @@ public class ReplicateController : ControllerBase
 
         if (modelRequest == null)
         {
+            _logger.LogWarning("QueueGeneration rejected: training not found for user {UserId}, trainingId {TrainingId}", LoggingSanitizer.SanitizeId(userId), LoggingSanitizer.SanitizeId(request.TrainingId));
             return NotFound(new { success = false, error = new { code = "TrainingNotFound", message = "Training not found for current user." } });
         }
 
