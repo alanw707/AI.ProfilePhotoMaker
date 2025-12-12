@@ -224,8 +224,18 @@ public class ModelStatusController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to compute model status for user {UserId}", LoggingSanitizer.SanitizeId(GetCurrentUserId()));
-            return StatusCode(500, new { success = false, error = new { code = "ModelStatusFailed", message = ex.Message } });
+            var userId = LoggingSanitizer.SanitizeId(GetCurrentUserId());
+            _logger.LogError(ex, "Failed to compute model status for user {UserId}", userId);
+            return StatusCode(500, new
+            {
+                success = false,
+                error = new
+                {
+                    code = "ModelStatusFailed",
+                    message = ex.Message,
+                    details = ex.ToString()
+                }
+            });
         }
     }
 
