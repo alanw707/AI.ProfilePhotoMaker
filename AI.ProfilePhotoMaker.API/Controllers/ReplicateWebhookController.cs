@@ -252,7 +252,7 @@ public class ReplicateWebhookController : ControllerBase
                     try
                     {
                         var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId);
-                        await _emailNotificationService.SendGenerationCompletedAsync(userId, user?.Email, style, savedImageIds.Count);
+                        await _emailNotificationService.SendGenerationCompletedAsync(userId, user?.Email, style, savedImageIds.Count, safePayload.Id);
                     }
                     catch (Exception emailEx)
                     {
@@ -280,7 +280,7 @@ public class ReplicateWebhookController : ControllerBase
                     try
                     {
                         var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId);
-                        await _emailNotificationService.SendGenerationFailedAsync(userId, user?.Email, style, safePayload.Error ?? safePayload.Status);
+                        await _emailNotificationService.SendGenerationFailedAsync(userId, user?.Email, style, safePayload.Error ?? safePayload.Status, safePayload.Id);
                     }
                     catch (Exception emailEx)
                     {

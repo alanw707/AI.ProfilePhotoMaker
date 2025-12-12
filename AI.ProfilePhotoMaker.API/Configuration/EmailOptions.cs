@@ -19,7 +19,22 @@ public class EmailOptions
     public string? Password { get; set; }
 
     /// <summary>
+    /// When true, use Brevo HTTP API instead of SMTP for sending.
+    /// </summary>
+    public bool UseApi { get; set; } = false;
+
+    /// <summary>
+    /// Brevo API key (xkeysib-...), used when UseApi is true.
+    /// </summary>
+    public string? ApiKey { get; set; }
+
+    /// <summary>
     /// When true, tag emails as sandbox to avoid confusing users in lower environments.
     /// </summary>
     public bool SandboxMode { get; set; } = true;
+
+    /// <summary>
+    /// Frontend base URL for CTA links in emails (e.g., https://app.aiprofilephotomaker.com)
+    /// </summary>
+    public string? FrontendBaseUrl { get; set; }
 }

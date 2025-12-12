@@ -515,8 +515,8 @@ public class StripeWebhookServiceTests
     private sealed class DummyEmailNotificationService : IEmailNotificationService
     {
         public Task SendTrainingCompletedAsync(string userId, string? email, string? modelName, string? modelVersion) => Task.CompletedTask;
-        public Task SendGenerationCompletedAsync(string userId, string? email, string? style, int imageCount) => Task.CompletedTask;
-        public Task SendGenerationFailedAsync(string userId, string? email, string? style, string? error) => Task.CompletedTask;
+        public Task SendGenerationCompletedAsync(string userId, string? email, string? style, int imageCount, string? jobId = null) => Task.CompletedTask;
+        public Task SendGenerationFailedAsync(string userId, string? email, string? style, string? error, string? jobId = null) => Task.CompletedTask;
         public Task SendPurchaseReceiptAsync(string userId, string? email, CreditPurchase purchase) => Task.CompletedTask;
     }
 

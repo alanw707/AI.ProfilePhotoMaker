@@ -146,7 +146,7 @@ public class ModelStatusController : ControllerBase
 
             if (profile == null)
             {
-                return NotFound(new { success = false, error = new { code = "ProfileNotFound", message = "Profile not found" } });
+                return NotFound("Profile not found");
             }
 
             var totalUploadedImages = profile.ProcessedImages
