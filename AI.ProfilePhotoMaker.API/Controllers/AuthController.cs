@@ -699,8 +699,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 var cookieOptions = new CookieOptions
                 {
                     HttpOnly = true,
-                    Secure = false,
-                    SameSite = SameSiteMode.Lax,
+                    Secure = true,
+                    SameSite = SameSiteMode.None, // allow cross-site during dev when using secure cookie
                     Domain = null, // Development-only endpoint, keep local
                     Expires = DateTimeOffset.UtcNow.AddHours(12),
                     Path = "/"
