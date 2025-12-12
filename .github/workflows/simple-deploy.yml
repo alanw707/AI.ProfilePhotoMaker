@@ -198,6 +198,11 @@ jobs:
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
+
+      - name: 🏗️ Setup .NET (EF tools)
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
         
       - name: 🔧 Install Azure CLI
         run: |
@@ -222,6 +227,34 @@ jobs:
       - name: 📤 Push Docker images to ACR
         run: |
           IMAGE_TAG=${{ env.IMAGE_TAG }} ./scripts/push-to-acr.sh
+
+      - name: 🧭 Apply pending EF migrations (prod DB)
+        env:
+          SQL_CONNECTION_STRING: "Server=tcp:aipm-sql-v1-6j74jubocuukg.database.windows.net,1433;Initial Catalog=aipmdb;User ID=sqladmin;Password=${{ secrets.SQL_ADMIN_PASSWORD }};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+        run: |
+          echo "🔍 Checking for pending EF Core migrations against production database..."
+          dotnet tool restore
+
+          PENDING=$(dotnet ef migrations list \
+            --project AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj \
+            --context ApplicationDbContext --verbose \
+            | awk '/\[/ {print $0}' | grep -v '\[Applied\]' || true)
+
+          if [ -z "$PENDING" ]; then
+            echo "✅ No pending migrations."
+            exit 0
+          fi
+
+          echo "🛠️ Pending migrations detected:"
+          echo "$PENDING"
+          echo "🚀 Applying migrations..."
+
+          dotnet ef database update \
+            --project AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj \
+            --context ApplicationDbContext \
+            --connection "$SQL_CONNECTION_STRING"
+
+          echo "✅ Migrations applied successfully."
           
       - name: 🏗️ Ensure Resource Group
         run: |
