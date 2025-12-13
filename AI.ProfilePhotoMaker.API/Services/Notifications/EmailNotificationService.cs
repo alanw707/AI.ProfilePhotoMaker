@@ -31,22 +31,28 @@ public class EmailNotificationService : IEmailNotificationService
 
     public Task SendTrainingCompletedAsync(string userId, string? email, string? modelName, string? modelVersion)
     {
-        var subject = "Your model training is complete";
+        var subject = "Your model is ready 🎉";
+        var cta = BuildCtaLink("app/dashboard");
+        var safeModel = WebUtility.HtmlEncode(modelName ?? "Your custom model");
+        var safeVersion = WebUtility.HtmlEncode(modelVersion ?? "latest");
+
         var body = $@"<p>Your model has finished training.</p>
-                      <p>Model: <strong>{WebUtility.HtmlEncode(modelName ?? "Custom model")}</strong><br/>
-                      Version: <strong>{WebUtility.HtmlEncode(modelVersion ?? "latest")}</strong></p>
-                      <p>You can start generating images now.</p>";
+                      <p><strong>{safeModel}</strong> (version {safeVersion}) is ready to generate images.</p>
+                      <p>Open your dashboard to pick a style and start generating.</p>
+                      {(string.IsNullOrWhiteSpace(cta) ? string.Empty : $"<p><a href=\"{cta}\">Go to dashboard</a></p>")}";
+
         return SendEmailAsync(email, subject, body, "training-completed", userId);
     }
 
     public Task SendGenerationCompletedAsync(string userId, string? email, string? style, int imageCount, string? jobId = null)
     {
         var subject = "Your images are ready";
-        var cta = BuildCtaLink(jobId);
+        // Link users to the gallery (known route) instead of the old jobs URL that 404s
+        var cta = BuildCtaLink("app/gallery");
         var body = $@"<p>Your generation request has completed.</p>
                       <p>Style: <strong>{WebUtility.HtmlEncode(style ?? "Unknown")}</strong><br/>
                       Images: <strong>{imageCount}</strong></p>
-                      <p>Sign in to view and download your results.{(string.IsNullOrWhiteSpace(cta) ? string.Empty : $"<br/><a href=\"{cta}\">Open generation</a>")}</p>";
+                      <p>Sign in to view and download your results.{(string.IsNullOrWhiteSpace(cta) ? string.Empty : $"<br/><a href=\"{cta}\">Open gallery</a>")}</p>";
         return SendEmailAsync(email, subject, body, "generation-completed", userId);
     }
 
@@ -190,19 +196,19 @@ public class EmailNotificationService : IEmailNotificationService
         }
     }
 
-    private string? BuildCtaLink(string? jobId)
+    private string? BuildCtaLink(string? relativePath)
     {
-        if (string.IsNullOrWhiteSpace(jobId))
-        {
-            return null;
-        }
-
         var baseUrl = _options.FrontendBaseUrl?.TrimEnd('/');
         if (string.IsNullOrWhiteSpace(baseUrl))
         {
             return null;
         }
 
-        return $"{baseUrl}/dashboard/jobs/{WebUtility.UrlEncode(jobId)}";
+        if (string.IsNullOrWhiteSpace(relativePath))
+        {
+            return baseUrl;
+        }
+
+        return $"{baseUrl}/{relativePath.TrimStart('/')}";
     }
 }
