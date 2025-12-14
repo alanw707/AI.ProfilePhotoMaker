@@ -234,6 +234,26 @@ public class BasicTierService : IBasicTierService
             weeklyRefunded,
             purchasedRefunded);
 
+        // Log refunds so UI can display credited amounts during failure states.
+        // Use a stable action name: if caller already uses a *_refund action, keep it; otherwise suffix _refund.
+        try
+        {
+            var totalRefunded = weeklyRefunded + purchasedRefunded;
+            if (totalRefunded > 0)
+            {
+                var action = consumptionResult.Action.EndsWith("_refund", StringComparison.OrdinalIgnoreCase)
+                    ? consumptionResult.Action
+                    : $"{consumptionResult.Action}_refund";
+                var details = $"Refunded {totalRefunded} credits ({purchasedRefunded} purchased + {weeklyRefunded} weekly)";
+                var remainingCredits = profile.PurchasedCredits + profile.Credits;
+                await LogUsageAsync(userId, action, details, -totalRefunded, remainingCredits);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to log credit refund usage for user {UserId}", userId);
+        }
+
         return true;
     }
 

@@ -26,6 +26,7 @@ public class ModelStatusResponse
 
     public object? CurrentRequest { get; set; }
     public GenerationStatusDto? GenerationStatus { get; set; }
+    public CreditImpactDto? CreditImpact { get; set; }
 }
 
 public class GenerationStatusDto
@@ -37,4 +38,11 @@ public class GenerationStatusDto
     public DateTime? CompletedAt { get; set; }
     public int? OutputCount { get; set; }
     public string? Error { get; set; }
+}
+
+public class CreditImpactDto
+{
+    public int ChargedCredits { get; set; }
+    public int RefundedCredits { get; set; }
+    public int NetCredits { get; set; }
 }

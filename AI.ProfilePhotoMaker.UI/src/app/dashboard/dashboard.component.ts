@@ -9,7 +9,8 @@ import {
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, Subscription, interval, firstValueFrom, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 import { HeaderNavigationComponent } from '../shared/header-navigation/header-navigation.component';
 import { StatsCardComponent } from '../components/dashboard/stats-card/stats-card.component';
@@ -33,6 +34,7 @@ import { LoggingService, LogLevel } from '../services/logging.service';
 import { NavigationService } from '../services/navigation.service';
 import { environment } from '../../environments/environment';
 import { DashboardState } from '../interfaces/service.interfaces';
+import { FileUploadService, UnifiedModelStatusResponse } from '../services/file-upload.service';
 // Lazy-loaded service types
 interface WorkflowProgress {
   isTraining: boolean;
@@ -46,6 +48,22 @@ interface WorkflowProgress {
   lastGenerationCount: number;
   showLastGenerationMessage: boolean;
   activePredictionIds: string[];
+}
+
+interface ActiveJobViewModel {
+  kind: 'training' | 'generation' | 'error';
+  title: string;
+  message: string;
+  progressPercent: number;
+  etaText?: string;
+  errorDetails?: string;
+  creditImpact?: {
+    chargedCredits: number;
+    refundedCredits: number;
+    netCredits: number;
+  } | null;
+  trainingRequestId?: string | null;
+  predictionId?: string | null;
 }
 
 interface CreditCalculation {
@@ -89,6 +107,7 @@ interface WorkflowOrchestrationService {
 export class DashboardComponent implements OnInit, OnDestroy {
   state$: Observable<DashboardState>;
   workflowProgress$: Observable<WorkflowProgress>;
+  activeJob: ActiveJobViewModel | null = null;
 
   // Component-specific state
   currentStep = 1;
@@ -110,10 +129,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     expectedGenerationTime: 0,
     lastGenerationCount: 0,
     showLastGenerationMessage: false,
-    activePredictionIds: [],
-  });
+      activePredictionIds: [],
+    });
 
   // State-based getters for template - removed, using stateService.getState() directly
+  private _activeJobPolling?: Subscription;
 
   getTotalAvailableCredits(): number {
     const state = this.stateService.getState();
@@ -158,7 +178,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private readonly _workflowStepService: WorkflowStepService,
     private readonly _injector: Injector,
     private readonly _cdr: ChangeDetectorRef,
-    private readonly _logger: LoggingService
+    private readonly _logger: LoggingService,
+    private readonly _fileUploadService: FileUploadService
   ) {
     this.state$ = this.stateService.state$;
     this.workflowProgress$ = this._workflowProgressSubject.asObservable();
@@ -211,11 +232,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     this.stateService.loadInitialDashboardData();
     this._loadAvailableStyles();
+    this._startActiveJobPolling();
   }
   ngOnDestroy(): void {
     this.stateService.resetState();
     if (this._workflowService) {
       this._workflowService.dispose();
+    }
+    if (this._activeJobPolling) {
+      this._activeJobPolling.unsubscribe();
+      this._activeJobPolling = undefined;
     }
     this._workflowProgressSubject.complete();
   }
@@ -589,12 +615,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     this._notificationService.info(
       'Continuing in Background',
-      "Training and generation will continue. We'll email you when your photos are ready."
+      "Training and generation will continue. You can safely leave this page — we'll email you when your photos are ready."
     );
-    // Navigate to gallery with refresh parameter to force reload
-    this._router.navigate(['/app/gallery'], {
-      queryParams: { refresh: Date.now() },
-    });
+
+    // Keep the user on the dashboard so they can continue to see progress.
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   // Method to handle dismissing success message
@@ -609,5 +634,158 @@ export class DashboardComponent implements OnInit, OnDestroy {
         lastGenerationCount: 0,
       });
     }
+  }
+
+  purchaseCredits(): void {
+    this._navigation.goToPricingPlans();
+  }
+
+  private _startActiveJobPolling(): void {
+    // Avoid duplicate polling if Angular reuses the component (defensive).
+    if (this._activeJobPolling) {
+      return;
+    }
+
+    const refresh = async () => {
+      await this._refreshActiveJobFromServer();
+    };
+
+    refresh();
+    this._activeJobPolling = interval(15000).subscribe(() => {
+      refresh();
+    });
+  }
+
+  private async _refreshActiveJobFromServer(): Promise<void> {
+    const unified = await firstValueFrom(
+      this._fileUploadService.getUnifiedModelStatus().pipe(
+        catchError(() => of(null))
+      )
+    );
+
+    if (!unified) {
+      return;
+    }
+
+    const mapped = this._mapUnifiedStatusToActiveJob(unified);
+    this.activeJob = mapped;
+
+    // Also hydrate the existing workflow progress observable so the in-dashboard progress card can resume.
+    this._workflowProgressSubject.next({
+      ...this._workflowProgressSubject.value,
+      isTraining: mapped?.kind === 'training',
+      isGenerating: mapped?.kind === 'generation',
+      progressPercentage: mapped?.kind === 'training' || mapped?.kind === 'generation' ? mapped.progressPercent : 0,
+      progressMessage: mapped?.message || '',
+      estimatedCompletion: mapped?.etaText || '',
+      trainingId: mapped?.trainingRequestId || '',
+    });
+
+    this._cdr.detectChanges();
+  }
+
+  private _mapUnifiedStatusToActiveJob(unified: UnifiedModelStatusResponse): ActiveJobViewModel | null {
+    const creditImpact = unified.creditImpact ?? null;
+    const current = unified.currentRequest ?? null;
+    const generation = unified.generationStatus ?? null;
+
+    const formatMinutesRemaining = (typicalMinutes: number, startIso?: string | null): string | undefined => {
+      if (!startIso) {
+        return undefined;
+      }
+      const start = new Date(startIso).getTime();
+      if (Number.isNaN(start)) {
+        return undefined;
+      }
+      const elapsedMinutes = (Date.now() - start) / 1000 / 60;
+      const remaining = Math.max(0, Math.ceil(typicalMinutes - elapsedMinutes));
+      return remaining <= 1 ? 'Almost done' : `~${remaining} min remaining`;
+    };
+
+    if (unified.statusCode === 'Failed') {
+      const rawErrorDetails = unified.reason || current?.errorMessage || 'Something went wrong.';
+      const normalizedError = (rawErrorDetails || '').toLowerCase();
+
+      // Some failures are not "training failed" but rather "the trained model is no longer available".
+      // Adjust messaging to avoid confusing users about refunds/credits.
+      const isModelMissing =
+        normalizedError.includes('deleted from replicate') ||
+        normalizedError.includes('no longer exists on replicate') ||
+        normalizedError.includes('model was deleted');
+
+      const errorDetails = isModelMissing
+        ? 'Your trained model can’t be found anymore. It may have been deleted or expired.'
+        : rawErrorDetails.length > 240
+          ? `${rawErrorDetails.slice(0, 240)}…`
+          : rawErrorDetails;
+
+      return {
+        kind: 'error',
+        title: isModelMissing ? 'Model unavailable' : 'Training failed',
+        message: isModelMissing
+          ? 'Your trained model is no longer available. You can retrain and generate photos again.'
+          : 'Your model training did not complete.',
+        progressPercent: 0,
+        errorDetails,
+        creditImpact,
+        trainingRequestId: current?.trainingRequestId ?? null,
+      };
+    }
+
+    if (generation && (generation.status === 'failed' || generation.status === 'canceled')) {
+      const errorDetails = generation.error || 'Photo generation failed.';
+      return {
+        kind: 'error',
+        title: 'Generation failed',
+        message: 'Your photo generation did not complete.',
+        progressPercent: 0,
+        errorDetails,
+        creditImpact,
+        predictionId: generation.predictionId ?? null,
+      };
+    }
+
+    if (unified.statusCode === 'Training') {
+      const status = (current?.status || '').toLowerCase();
+      const progressPercent = status === 'pending' ? 25 : status === 'creating' ? 50 : 75;
+      const etaText = formatMinutesRemaining(12, current?.createdAt);
+      return {
+        kind: 'training',
+        title: 'Training in progress',
+        message: 'Your AI model is training in the background.',
+        progressPercent,
+        etaText,
+        trainingRequestId: current?.trainingRequestId ?? null,
+        creditImpact,
+      };
+    }
+
+    if (unified.statusCode === 'Generating' || generation?.status === 'queued' || generation?.status === 'processing') {
+      const startedAt = generation?.startedAt || null;
+      const etaText = formatMinutesRemaining(8, startedAt);
+
+      let progressPercent = 15;
+      if (generation?.status === 'queued') {
+        progressPercent = 10;
+      } else if (generation?.status === 'processing') {
+        const typicalMs = 8 * 60 * 1000;
+        const startMs = startedAt ? new Date(startedAt).getTime() : 0;
+        const elapsed = startMs ? Math.max(0, Date.now() - startMs) : 0;
+        const ratio = typicalMs > 0 ? Math.min(elapsed / typicalMs, 0.85) : 0;
+        progressPercent = Math.round(15 + ratio * 70);
+      }
+
+      return {
+        kind: 'generation',
+        title: 'Generating photos',
+        message: 'Your photos are being generated in the background.',
+        progressPercent,
+        etaText,
+        predictionId: generation?.predictionId ?? null,
+        creditImpact,
+      };
+    }
+
+    return null;
   }
 }

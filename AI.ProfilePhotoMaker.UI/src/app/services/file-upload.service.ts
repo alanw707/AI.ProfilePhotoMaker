@@ -93,11 +93,17 @@ export interface UnifiedModelStatusResponse {
   currentRequest?: {
     id: string;
     status: string;
+    trainingRequestId?: string | null;
     createdAt: string;
     completedAt?: string | null;
     errorMessage?: string | null;
   } | null;
   generationStatus?: GenerationStatusResponse | null;
+  creditImpact?: {
+    chargedCredits: number;
+    refundedCredits: number;
+    netCredits: number;
+  } | null;
 }
 
 @Injectable({
@@ -312,6 +318,7 @@ export class FileUploadService {
           lastUpdated: raw?.lastUpdated ?? raw?.LastUpdated ?? null,
           currentRequest: raw?.currentRequest ?? raw?.CurrentRequest ?? null,
           generationStatus: raw?.generationStatus ?? raw?.GenerationStatus ?? null,
+          creditImpact: raw?.creditImpact ?? raw?.CreditImpact ?? null,
         };
         return normalized;
       })
