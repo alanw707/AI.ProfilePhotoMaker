@@ -696,11 +696,14 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 }
 
                 var cookieName = _configuration["Authentication:TokenCookieName"] ?? "AuthToken";
+                var isSecureRequest = Request.IsHttps;
                 var cookieOptions = new CookieOptions
                 {
                     HttpOnly = true,
-                    Secure = true,
-                    SameSite = SameSiteMode.None, // allow cross-site during dev when using secure cookie
+                    Secure = isSecureRequest,
+                    SameSite = isSecureRequest
+                        ? SameSiteMode.None // required for cross-site redirects when running behind https (e.g., ngrok)
+                        : SameSiteMode.Lax, // allow local http dev without browsers rejecting SameSite=None without Secure
                     Domain = null, // Development-only endpoint, keep local
                     Expires = DateTimeOffset.UtcNow.AddHours(12),
                     Path = "/"
