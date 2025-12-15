@@ -58,6 +58,10 @@ services:
       REPLICATE_WEBHOOK_SECRET: ${REPLICATE_WEBHOOK_SECRET}
       REPLICATE_OWNER: ${REPLICATE_OWNER}
       REPLICATE_HARDWARE: ${REPLICATE_HARDWARE}
+      Replicate__ApiToken: ${REPLICATE_API_TOKEN}
+      Replicate__WebhookSecret: ${REPLICATE_WEBHOOK_SECRET}
+      Replicate__Owner: ${REPLICATE_OWNER}
+      Replicate__Hardware: ${REPLICATE_HARDWARE}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
@@ -76,16 +80,18 @@ services:
       Email__ApiKey: ${Email__ApiKey:-}
       Email__SandboxMode: ${Email__SandboxMode:-true}
       Email__FrontendBaseUrl: ${Email__FrontendBaseUrl:-http://localhost:4200}
-      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING:-DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=7EcjH8qw7X6gFutn5Omgg3e/EB/sTN07c5WLe1Rrl9g=;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;}
+      # Use a docker-specific connection string so host env vars (often pointing to localhost)
+      # don't break container-to-container connectivity.
+      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING_DOCKER:-DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=7EcjH8qw7X6gFutn5Omgg3e/EB/sTN07c5WLe1Rrl9g=;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;}
       AZURE_STORAGE_CONTAINER_NAME: ${AZURE_STORAGE_CONTAINER_NAME}
-      AzureStorage__ConnectionString: ${AZURE_STORAGE_CONNECTION_STRING:-DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=7EcjH8qw7X6gFutn5Omgg3e/EB/sTN07c5WLe1Rrl9g=;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;}
+      AzureStorage__ConnectionString: ${AZURE_STORAGE_CONNECTION_STRING_DOCKER:-DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=7EcjH8qw7X6gFutn5Omgg3e/EB/sTN07c5WLe1Rrl9g=;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;}
       AzureStorage__ContainerName: ${AZURE_STORAGE_CONTAINER_NAME}
-      ConnectionStrings__AzureStorage: ${AZURE_STORAGE_CONNECTION_STRING:-DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=7EcjH8qw7X6gFutn5Omgg3e/EB/sTN07c5WLe1Rrl9g=;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;}
+      ConnectionStrings__AzureStorage: ${AZURE_STORAGE_CONNECTION_STRING_DOCKER:-DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=7EcjH8qw7X6gFutn5Omgg3e/EB/sTN07c5WLe1Rrl9g=;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;}
       ConnectionStrings__DefaultConnection: Server=sql-server,1433;Database=AIProfileMaker;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;MultipleActiveResultSets=true;
       APP_BASE_URL: ${APP_BASE_URL}
       EXTERNAL_API_BASE_URL: ${EXTERNAL_API_BASE_URL}
+      ExternalApiBaseUrl: ${EXTERNAL_API_BASE_URL}
       OAUTH_BASE_URL: ${OAUTH_BASE_URL}
-      Replicate__WebhookSecret: ${Replicate__WebhookSecret:-}
     ports:
       - "${API_HTTP_PORT:-5032}:8080"
     restart: unless-stopped

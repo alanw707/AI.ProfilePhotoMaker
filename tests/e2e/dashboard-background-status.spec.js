@@ -27,11 +27,6 @@ const config = {
     'TestPassword123!',
 };
 
-test.skip(
-  process.env.RUN_DASHBOARD_STATUS_TESTS !== 'true',
-  'Set RUN_DASHBOARD_STATUS_TESTS=true to enable dashboard background status checks.'
-);
-
 async function login(page) {
   await page.goto(`${config.baseUrl}/auth/login`);
   await page.fill('input#email', config.email);
@@ -54,6 +49,11 @@ function interceptModelStatus(page, handler) {
 }
 
 test.describe('Dashboard background status banner', () => {
+  test.skip(
+    process.env.RUN_DASHBOARD_STATUS_TESTS !== 'true',
+    'Set RUN_DASHBOARD_STATUS_TESTS=true to enable dashboard background status checks.'
+  );
+
   test('shows training progress after navigating away and back', async ({ page }) => {
     const createdAt = new Date(Date.now() - 2 * 60 * 1000).toISOString();
     await interceptModelStatus(page, () => ({
@@ -85,6 +85,13 @@ test.describe('Dashboard background status banner', () => {
     const banner = page.locator('.active-job-section .active-job-card');
     await expect(banner).toBeVisible({ timeout: 15000 });
     await expect(banner).toContainText('Training in progress');
+
+    const continueBtn = page.locator('button.continue-background-btn');
+    if (await continueBtn.isVisible()) {
+      await continueBtn.click();
+      await expect(banner).toBeVisible({ timeout: 15000 });
+      await expect(banner).toContainText('Training in progress');
+    }
 
     // Navigate away and back - should still show (server-driven)
     await page.goto(`${config.baseUrl}/app/gallery`);
@@ -131,6 +138,13 @@ test.describe('Dashboard background status banner', () => {
     const banner = page.locator('.active-job-section .active-job-card');
     await expect(banner).toBeVisible({ timeout: 15000 });
     await expect(banner).toContainText(/Generating photos|Generating/i);
+
+    const continueBtn = page.locator('button.continue-background-btn');
+    if (await continueBtn.isVisible()) {
+      await continueBtn.click();
+      await expect(banner).toBeVisible({ timeout: 15000 });
+      await expect(banner).toContainText(/Generating photos|Generating/i);
+    }
 
     await page.goto(`${config.baseUrl}/app/settings`);
     await page.waitForURL('**/app/settings', { timeout: 15000 });

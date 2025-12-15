@@ -84,7 +84,7 @@ interface WorkflowOrchestrationService {
   ): CreditCalculation;
   queueBackgroundGeneration(selectedStyles: StyleOption[], imagesPerStyle: number): Promise<void>;
   dismissSuccessMessage(): void;
-  dispose(): void;
+  pause(): void;
 }
 
 @Component({
@@ -118,6 +118,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Lazy-loaded service
   private _workflowService: WorkflowOrchestrationService | null = null;
+  private readonly _subscriptions = new Subscription();
   private _workflowProgressSubject = new BehaviorSubject<WorkflowProgress>({
     isTraining: false,
     isGenerating: false,
@@ -202,7 +203,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     // Subscribe to state changes to update UI
-    this.state$.subscribe(state => {
+    this._subscriptions.add(this.state$.subscribe(state => {
       // Debug logging for troubleshooting (development only)
       this._logger.conditionalLog(
         environment.features.logging?.enableDashboardDebug ?? false,
@@ -228,21 +229,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
       // Force change detection for async updates
       this._cdr.detectChanges();
-    });
+    }));
 
     this.stateService.loadInitialDashboardData();
     this._loadAvailableStyles();
-    this._startActiveJobPolling();
+
+    // Hydrate active job immediately and start polling only when needed.
+    void this._refreshActiveJobFromServer();
   }
   ngOnDestroy(): void {
-    this.stateService.resetState();
     if (this._workflowService) {
-      this._workflowService.dispose();
+      this._workflowService.pause();
     }
     if (this._activeJobPolling) {
       this._activeJobPolling.unsubscribe();
       this._activeJobPolling = undefined;
     }
+    this._subscriptions.unsubscribe();
     this._workflowProgressSubject.complete();
   }
   private _updateCurrentStep(): void {
@@ -397,9 +400,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this._workflowService = this._injector.get(workflowOrchestrationServiceClass);
 
     // Subscribe to progress updates and forward them to our proxy observable
-    this._workflowService.progress$.subscribe(progress => {
+    this._subscriptions.add(this._workflowService.progress$.subscribe(progress => {
       this._workflowProgressSubject.next(progress);
-    });
+      this._hydrateActiveJobFromWorkflowProgress(progress);
+    }));
   }
 
   async startTrainingWithStyles(): Promise<void> {
@@ -407,6 +411,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     this.isTrainingStarted = true;
     this.currentStep = 3;
+    this._setOptimisticActiveJob('training');
 
     try {
       // Lazy load the WorkflowOrchestrationService
@@ -618,6 +623,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
       "Training and generation will continue. You can safely leave this page — we'll email you when your photos are ready."
     );
 
+    // Ensure a visible in-progress state immediately (avoids lingering "Training failed" from the last run).
+    const progress = this._workflowProgressSubject.value;
+    if (progress?.isTraining) {
+      this._setOptimisticActiveJob('training');
+    } else if (progress?.isGenerating) {
+      this._setOptimisticActiveJob('generation');
+    } else if (this.isTrainingStarted) {
+      this._setOptimisticActiveJob('training');
+    }
+
     // Keep the user on the dashboard so they can continue to see progress.
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -641,19 +656,92 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private _startActiveJobPolling(): void {
-    // Avoid duplicate polling if Angular reuses the component (defensive).
     if (this._activeJobPolling) {
       return;
     }
 
-    const refresh = async () => {
-      await this._refreshActiveJobFromServer();
+    void this._refreshActiveJobFromServer();
+    this._activeJobPolling = interval(15000).subscribe(() => {
+      void this._refreshActiveJobFromServer();
+    });
+  }
+
+  private _ensureActiveJobPolling(): void {
+    const hasActiveJob = this.activeJob?.kind === 'training' || this.activeJob?.kind === 'generation';
+    if (hasActiveJob) {
+      this._startActiveJobPolling();
+      return;
+    }
+
+    if (this._activeJobPolling) {
+      this._activeJobPolling.unsubscribe();
+      this._activeJobPolling = undefined;
+    }
+  }
+
+  private _hydrateActiveJobFromWorkflowProgress(progress: WorkflowProgress): void {
+    // When a training/generation starts in the current session, show the banner immediately
+    // instead of waiting for the first server poll.
+    if (!progress?.isTraining && !progress?.isGenerating) {
+      return;
+    }
+
+    const kind: ActiveJobViewModel['kind'] = progress.isTraining ? 'training' : 'generation';
+    const title = kind === 'training' ? 'Training in progress' : 'Generating photos';
+    const defaultMessage =
+      kind === 'training'
+        ? 'Your AI model is training in the background.'
+        : 'Your photos are being generated in the background.';
+
+    const percent = Math.max(0, Math.min(100, Math.round(progress.progressPercentage || 0)));
+    const etaText = progress.estimatedCompletion ? `Est. ${progress.estimatedCompletion}` : undefined;
+
+    this.activeJob = {
+      kind,
+      title,
+      message: progress.progressMessage || defaultMessage,
+      progressPercent: percent,
+      etaText,
+      trainingRequestId: kind === 'training' ? progress.trainingId || null : undefined,
+      creditImpact: null,
     };
 
-    refresh();
-    this._activeJobPolling = interval(15000).subscribe(() => {
-      refresh();
-    });
+    this._cdr.detectChanges();
+    this._ensureActiveJobPolling();
+  }
+
+  private _setOptimisticActiveJob(kind: 'training' | 'generation'): void {
+    const title = kind === 'training' ? 'Training in progress' : 'Generating photos';
+    const message =
+      kind === 'training'
+        ? 'Your AI model is training in the background.'
+        : 'Your photos are being generated in the background.';
+
+    this.activeJob = {
+      kind,
+      title,
+      message,
+      progressPercent: 0,
+      etaText: undefined,
+      trainingRequestId: undefined,
+      creditImpact: null,
+    };
+
+    this._cdr.detectChanges();
+    this._ensureActiveJobPolling();
+  }
+
+  getModelStatusCardValue(state: any): string {
+    if (this.activeJob?.kind === 'training') {
+      return 'Training...';
+    }
+    if (this.activeJob?.kind === 'generation') {
+      return 'Generating...';
+    }
+    if (this.activeJob?.kind === 'error') {
+      return this.activeJob.title || 'Training failed';
+    }
+    return state?.modelStatus || 'Loading...';
   }
 
   private async _refreshActiveJobFromServer(): Promise<void> {
@@ -682,6 +770,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
 
     this._cdr.detectChanges();
+    this._ensureActiveJobPolling();
   }
 
   private _mapUnifiedStatusToActiveJob(unified: UnifiedModelStatusResponse): ActiveJobViewModel | null {
@@ -706,6 +795,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
       const rawErrorDetails = unified.reason || current?.errorMessage || 'Something went wrong.';
       const normalizedError = (rawErrorDetails || '').toLowerCase();
 
+      const isReplicateInterrupted =
+        normalizedError.includes('prediction interrupted') && normalizedError.includes('code: pa');
+
       // Some failures are not "training failed" but rather "the trained model is no longer available".
       // Adjust messaging to avoid confusing users about refunds/credits.
       const isModelMissing =
@@ -715,13 +807,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
       const errorDetails = isModelMissing
         ? 'Your trained model can’t be found anymore. It may have been deleted or expired.'
+        : isReplicateInterrupted
+          ? 'Replicate interrupted the training job (code: PA). This is on Replicate’s side; please retry. Your credits should be refunded.'
         : rawErrorDetails.length > 240
           ? `${rawErrorDetails.slice(0, 240)}…`
           : rawErrorDetails;
 
       return {
         kind: 'error',
-        title: isModelMissing ? 'Model unavailable' : 'Training failed',
+        title: isModelMissing ? 'Model unavailable' : isReplicateInterrupted ? 'Training interrupted' : 'Training failed',
         message: isModelMissing
           ? 'Your trained model is no longer available. You can retrain and generate photos again.'
           : 'Your model training did not complete.',

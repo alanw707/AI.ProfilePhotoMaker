@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
@@ -26,6 +27,7 @@ public class ReplicateApiClient : IReplicateApiClient
     private readonly Services.Storage.IStorageService _storageService;
     private readonly IWebhookUrlResolver _webhookUrlResolver;
     private readonly bool _mockEnabled;
+    private readonly bool _authConfigured;
 
     private static string S(string? value) => LoggingSanitizer.Sanitize(value);
     private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
@@ -55,11 +57,24 @@ public class ReplicateApiClient : IReplicateApiClient
         if (!_mockEnabled)
         {
             // Prefer explicit environment variable if present, then config binding
-            string? envToken = Environment.GetEnvironmentVariable("REPLICATE_API_TOKEN");
-            string? cfgToken = _configuration["Replicate:ApiToken"];
-            string apiToken = envToken ?? cfgToken
-                ?? throw new InvalidOperationException("Replicate API token not configured");
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Token", apiToken);
+            var envToken = (Environment.GetEnvironmentVariable("REPLICATE_API_TOKEN") ?? string.Empty).Trim();
+            var cfgToken = (_configuration["Replicate:ApiToken"] ?? string.Empty).Trim();
+            var apiToken = !string.IsNullOrWhiteSpace(envToken) ? envToken : cfgToken;
+
+            if (string.IsNullOrWhiteSpace(apiToken))
+            {
+                _authConfigured = false;
+                _logger.LogWarning("Replicate API token not configured; Replicate calls will fail until REPLICATE_API_TOKEN or Replicate:ApiToken is set.");
+            }
+            else
+            {
+                _authConfigured = true;
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Token", apiToken);
+            }
+        }
+        else
+        {
+            _authConfigured = true;
         }
     }
 
@@ -241,10 +256,15 @@ public class ReplicateApiClient : IReplicateApiClient
     /// <param name="userId">The user ID</param>
     /// <param name="imageZipUrl">URL to the zipped training images</param>
     /// <returns>The training ID and status</returns>
-    public async Task<ReplicateTrainingResult> CreateModelTrainingAsync(string userId, string imageZipUrl)
+    public async Task<ReplicateTrainingResult> CreateModelTrainingAsync(string userId, string imageZipUrl, string? modelRequestId = null)
     {
+        ModelCreationRequest? modelCreationRequest = null;
+
         try
         {
+            var normalizedZipUrl = await NormalizeImageUrlForExternalAccessAsync(imageZipUrl);
+            await PreflightExternalZipUrlAsync(normalizedZipUrl);
+
             // First, create the model to use as destination
             var modelName = $"user-{userId}-{DateTime.UtcNow:yyyyMMddHHmmss}";
             _logger.LogInformation("Creating model {ModelName} for user {UserId}", S(modelName), Sid(userId));
@@ -254,14 +274,15 @@ public class ReplicateApiClient : IReplicateApiClient
             _logger.LogInformation("Using destination for training: {Destination}", S(destination));
 
             // Create a model creation request record to track the training
-            var modelCreationRequest = new ModelCreationRequest
+            modelCreationRequest = new ModelCreationRequest
             {
+                Id = string.IsNullOrWhiteSpace(modelRequestId) ? Guid.NewGuid().ToString() : modelRequestId,
                 UserId = userId,
                 ModelName = modelName,
                 // Store full model ID in format owner/model-name for consistency with webhooks
                 ReplicateModelId = destination,
                 Status = ModelCreationStatus.Pending,
-                TrainingImageZipUrl = imageZipUrl,
+                TrainingImageZipUrl = normalizedZipUrl,
                 PendingTrainingRequestId = Guid.NewGuid().ToString()
             };
 
@@ -277,7 +298,7 @@ public class ReplicateApiClient : IReplicateApiClient
                 destination = destination,
                 input = new
                 {
-                    input_images = imageZipUrl,
+                    input_images = normalizedZipUrl,
                     trigger_word = $"user_{userId}",
                     lora_type = "subject",
                     training_steps = 2000
@@ -294,7 +315,7 @@ public class ReplicateApiClient : IReplicateApiClient
             var endpoint = $"models/replicate/fast-flux-trainer/versions/{versionId}/trainings";
 
             _logger.LogInformation("Creating training for user {UserId} at endpoint: {Endpoint} with ZIP URL: {ZipUrl}",
-                Sid(userId), S(endpoint), S(imageZipUrl));
+                Sid(userId), S(endpoint), S(normalizedZipUrl));
             var response = await _httpClient.PostAsync(endpoint, content);
 
             if (!response.IsSuccessStatusCode)
@@ -354,23 +375,99 @@ public class ReplicateApiClient : IReplicateApiClient
         catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
         {
             _logger.LogError(ex, "Replicate API authentication failed for user {UserId}", Sid(userId));
+            await MarkModelRequestFailedAsync(modelCreationRequest, $"Replicate API authentication failed. {ex.Message}");
             throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("429") || ex.Message.Contains("rate limit"))
         {
             _logger.LogWarning(ex, "Replicate API rate limit reached for user {UserId}", Sid(userId));
+            await MarkModelRequestFailedAsync(modelCreationRequest, $"Replicate API rate limit reached. {ex.Message}");
             throw new InvalidOperationException("Replicate API rate limit reached. Please try again later.", ex);
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("402") || ex.Message.Contains("payment"))
         {
             _logger.LogError(ex, "Replicate API payment required for user {UserId}", Sid(userId));
+            await MarkModelRequestFailedAsync(modelCreationRequest, $"Replicate API payment required. {ex.Message}");
             throw new InvalidOperationException("Replicate API payment required. Please check your billing.", ex);
+        }
+        catch (ReplicateApiException ex)
+        {
+            _logger.LogError(ex, "Replicate API error creating model training for user {UserId} ({StatusCode} {Code})", Sid(userId), (int)ex.StatusCode, S(ex.ErrorCode));
+            await MarkModelRequestFailedAsync(modelCreationRequest, $"{ex.ErrorCode}: {ex.Message}");
+            throw;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating model training for user {UserId}", Sid(userId));
+            await MarkModelRequestFailedAsync(modelCreationRequest, ex.Message);
             throw;
         }
+    }
+
+    private async Task MarkModelRequestFailedAsync(ModelCreationRequest? request, string? rawMessage)
+    {
+        if (request == null)
+        {
+            return;
+        }
+
+        // Ensure a failed Replicate call doesn't leave the dashboard stuck in "Training" forever.
+        if (request.Status != ModelCreationStatus.Pending && request.Status != ModelCreationStatus.Creating)
+        {
+            return;
+        }
+
+        if (request.CompletedAt.HasValue)
+        {
+            return;
+        }
+
+        var message = string.IsNullOrWhiteSpace(rawMessage) ? "Training failed to start." : rawMessage.Trim();
+        message = ScrubFailureMessage(message);
+        if (message.Length > 500)
+        {
+            message = message.Substring(0, 500) + "...";
+        }
+
+        try
+        {
+            request.Status = ModelCreationStatus.Failed;
+            request.ErrorMessage = message;
+            request.CompletedAt = DateTime.UtcNow;
+            _context.ModelCreationRequests.Update(request);
+            await _context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to mark model creation request {RequestId} as failed after Replicate error", Sid(request.Id));
+        }
+    }
+
+    private static string ScrubFailureMessage(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return "Training failed to start.";
+        }
+
+        // Avoid storing SAS tokens / secrets in DB error fields (user-visible).
+        // Strip query strings from any URLs present in the message.
+        var scrubbed = Regex.Replace(message, @"https?://\S+", match =>
+        {
+            var url = match.Value.TrimEnd('.', ',', ';', ')', ']');
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                return match.Value;
+            }
+
+            return uri.GetLeftPart(UriPartial.Path);
+        });
+
+        // Best-effort redaction for common token patterns.
+        scrubbed = Regex.Replace(scrubbed, @"(?i)(sig=)[^&\s]+", "$1[redacted]");
+        scrubbed = Regex.Replace(scrubbed, @"(?i)(token=)[^&\s]+", "$1[redacted]");
+
+        return scrubbed;
     }
 
     /// <summary>
@@ -382,6 +479,11 @@ public class ReplicateApiClient : IReplicateApiClient
     {
         try
         {
+            if (!_mockEnabled && !_authConfigured)
+            {
+                throw new UnauthorizedAccessException("Replicate API token not configured. Set REPLICATE_API_TOKEN (recommended) or Replicate:ApiToken.");
+            }
+
             var response = await _httpClient.GetAsync($"trainings/{trainingId}");
 
             if (!response.IsSuccessStatusCode)
@@ -777,6 +879,9 @@ public class ReplicateApiClient : IReplicateApiClient
     {
         try
         {
+            var normalizedZipUrl = await NormalizeImageUrlForExternalAccessAsync(imageZipUrl);
+            await PreflightExternalZipUrlAsync(normalizedZipUrl);
+
             _logger.LogInformation(
                 "Creating training for user {UserId} with destination {Destination}",
                 Sid(userId),
@@ -787,7 +892,7 @@ public class ReplicateApiClient : IReplicateApiClient
                 destination = destination,
                 input = new
                 {
-                    input_images = imageZipUrl,
+                    input_images = normalizedZipUrl,
                     trigger_word = $"user_{userId}",
                     lora_type = "subject",
                     training_steps = 2000
@@ -1069,7 +1174,7 @@ public class ReplicateApiClient : IReplicateApiClient
     /// - For Azure Blob URLs without SAS, generates a short-lived SAS URL using the storage service.
     /// Leaves other URLs unchanged.
     /// </summary>
-    private async Task<string> NormalizeImageUrlForExternalAccessAsync(string originalUrl)
+    internal async Task<string> NormalizeImageUrlForExternalAccessAsync(string originalUrl)
     {
         try
         {
@@ -1077,15 +1182,21 @@ public class ReplicateApiClient : IReplicateApiClient
             if (!Uri.TryCreate(originalUrl, UriKind.Absolute, out var uri)) return originalUrl;
 
             // Handle Azurite local URLs by routing through our externally accessible base URL
-            var isAzuriteLocal = (uri.Host.Equals("127.0.0.1") || uri.Host.Equals("localhost"))
+            var isAzuriteLocal = (uri.Host.Equals("127.0.0.1") || uri.Host.Equals("localhost") || uri.Host.Equals("azurite") || uri.Host.Equals("aipm-azurite"))
                                  && uri.Port == 10000
                                  && uri.AbsolutePath.StartsWith("/devstoreaccount1/", StringComparison.OrdinalIgnoreCase);
             if (isAzuriteLocal)
             {
                 var externalBase = _configuration["ExternalApiBaseUrl"]
+                                   ?? _configuration["Webhooks:NgrokTunnelUrl"]
                                    ?? _configuration["AppBaseUrl"]
                                    ?? "https://localhost:5001";
                 var rewritten = $"{externalBase.TrimEnd('/')}{uri.AbsolutePath}{uri.Query}";
+                if (externalBase.Contains("ngrok", StringComparison.OrdinalIgnoreCase)
+                    && !rewritten.Contains("ngrok-skip-browser-warning=", StringComparison.OrdinalIgnoreCase))
+                {
+                    rewritten += (rewritten.Contains('?') ? "&" : "?") + "ngrok-skip-browser-warning=true";
+                }
                 _logger.LogDebug(
                     "Rewriting Azurite URL for external access {Original} -> {Rewritten}",
                     S(originalUrl),
@@ -1135,6 +1246,52 @@ public class ReplicateApiClient : IReplicateApiClient
             _logger.LogWarning(ex, "Failed to normalize image URL for external access: {Url}", S(originalUrl));
             return originalUrl;
         }
+    }
+
+    private async Task PreflightExternalZipUrlAsync(string zipUrl)
+    {
+        if (_mockEnabled)
+        {
+            return;
+        }
+
+        if (!Uri.TryCreate(zipUrl, UriKind.Absolute, out var uri))
+        {
+            throw new InvalidOperationException("Training ZIP URL is not a valid absolute URL.");
+        }
+
+        using var client = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(10)
+        };
+
+        // Prefer HEAD (no body). If unsupported, fall back to a tiny ranged GET.
+        using var headRequest = new HttpRequestMessage(HttpMethod.Head, zipUrl);
+        using var headResponse = await client.SendAsync(headRequest, HttpCompletionOption.ResponseHeadersRead);
+        if (headResponse.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        if (headResponse.StatusCode is HttpStatusCode.MethodNotAllowed or HttpStatusCode.NotImplemented)
+        {
+            using var getRequest = new HttpRequestMessage(HttpMethod.Get, zipUrl);
+            getRequest.Headers.Range = new RangeHeaderValue(0, 0);
+            using var getResponse = await client.SendAsync(getRequest, HttpCompletionOption.ResponseHeadersRead);
+
+            if (getResponse.IsSuccessStatusCode || getResponse.StatusCode == HttpStatusCode.PartialContent)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"Training ZIP URL is not reachable ({(int)getResponse.StatusCode} {getResponse.StatusCode}). " +
+                $"Ensure your external base URL is correct and reachable: {uri.GetLeftPart(UriPartial.Authority)}");
+        }
+
+        throw new InvalidOperationException(
+            $"Training ZIP URL is not reachable ({(int)headResponse.StatusCode} {headResponse.StatusCode}). " +
+            $"Ensure your external base URL is correct and reachable: {uri.GetLeftPart(UriPartial.Authority)}");
     }
 
     /// <summary>

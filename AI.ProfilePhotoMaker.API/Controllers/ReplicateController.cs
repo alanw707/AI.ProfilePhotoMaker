@@ -110,8 +110,12 @@ public class ReplicateController : ControllerBase
             });
         }
 
+        // Create a stable job correlation id so credit usage/refunds can be attributed to this training request.
+        // This id is also used as the ModelCreationRequest.Id.
+        var trainingJobId = Guid.NewGuid().ToString();
+
         // Consume credits BEFORE calling Replicate; refund on failure
-        var trainingCredits = await _basicTierService.ConsumeCreditsAsync(userId, "model_training");
+        var trainingCredits = await _basicTierService.ConsumeCreditsAsync(userId, "model_training", trainingJobId);
         if (!trainingCredits.Success)
         {
             _logger.LogError("Failed to consume training credits for user {UserId} before starting Replicate training", Sid(userId));
@@ -141,7 +145,7 @@ public class ReplicateController : ControllerBase
                 });
             }
 
-            var result = await _replicateApiClient.CreateModelTrainingAsync(userId, externalImageZipUrl);
+            var result = await _replicateApiClient.CreateModelTrainingAsync(userId, externalImageZipUrl, trainingJobId);
 
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
 
@@ -889,8 +893,12 @@ public class ReplicateController : ControllerBase
             {
                 try
                 {
-                    using var httpClient = new System.Net.Http.HttpClient();
-                    var response = await httpClient.GetAsync(imageUrl);
+                    using var httpClient = new System.Net.Http.HttpClient
+                    {
+                        Timeout = TimeSpan.FromSeconds(5)
+                    };
+
+                    var response = await httpClient.GetAsync(imageUrl, HttpCompletionOption.ResponseHeadersRead, HttpContext.RequestAborted);
                     response.EnsureSuccessStatusCode();
                     var contentType = response.Content.Headers.ContentType?.MediaType?.ToLowerInvariant() ?? "image/jpeg";
                     var imageBytes = await response.Content.ReadAsByteArrayAsync();
@@ -1191,10 +1199,39 @@ public class ReplicateController : ControllerBase
     /// </summary>
     private string ConvertToExternalApiUrl(string originalUrl)
     {
-        // If already a fully qualified HTTP URL, return as-is unless it's localhost (handled later)
-        if (originalUrl.StartsWith("http://") || originalUrl.StartsWith("https://"))
+        if (string.IsNullOrWhiteSpace(originalUrl))
         {
             return originalUrl;
+        }
+
+        // Handle fully qualified URLs (rewrite internal/stale hosts when we have a public base configured)
+        if (Uri.TryCreate(originalUrl, UriKind.Absolute, out var absoluteUri))
+        {
+            var proxyBase = _configuration["ExternalApiBaseUrl"]
+                            ?? _configuration["Webhooks:NgrokTunnelUrl"]
+                            ?? _configuration["AppBaseUrl"];
+
+            if (string.IsNullOrWhiteSpace(proxyBase) || !Uri.TryCreate(proxyBase, UriKind.Absolute, out var proxyBaseUri))
+            {
+                return originalUrl;
+            }
+
+            var host = absoluteUri.Host.ToLowerInvariant();
+            var isLocalHost = host is "localhost" or "127.0.0.1";
+            var isAzuriteHost = host.Contains("azurite", StringComparison.OrdinalIgnoreCase);
+            var isNgrokHost = host.EndsWith("ngrok-free.app", StringComparison.OrdinalIgnoreCase);
+
+            var shouldRewrite =
+                isLocalHost
+                || isAzuriteHost
+                || (isNgrokHost && !string.Equals(proxyBaseUri.Host, absoluteUri.Host, StringComparison.OrdinalIgnoreCase));
+
+            if (!shouldRewrite)
+            {
+                return originalUrl;
+            }
+
+            return $"{proxyBaseUri.GetLeftPart(UriPartial.Authority).TrimEnd('/')}{absoluteUri.PathAndQuery}";
         }
 
         // If it's a relative path, convert to external API URL
@@ -1229,8 +1266,7 @@ public class ReplicateController : ControllerBase
             return originalUrl;
         }
 
-        Uri uri;
-        if (!Uri.TryCreate(originalUrl, UriKind.Absolute, out uri))
+        if (!Uri.TryCreate(originalUrl, UriKind.Absolute, out var uri))
         {
             return originalUrl;
         }

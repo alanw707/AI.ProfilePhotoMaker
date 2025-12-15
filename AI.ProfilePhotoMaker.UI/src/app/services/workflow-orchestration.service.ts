@@ -1781,8 +1781,12 @@ export class WorkflowOrchestrationService {
   }
 
   // Cleanup method
-  dispose(): void {
+  pause(): void {
     this._clearAllIntervals();
+  }
+
+  dispose(): void {
+    this.pause();
     this.resetProgress();
   }
 

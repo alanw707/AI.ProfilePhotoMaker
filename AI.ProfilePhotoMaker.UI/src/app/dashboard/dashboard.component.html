@@ -20,7 +20,7 @@
             clickAction="gallery"></app-stats-card>
           <app-stats-card
             icon="🤖"
-            [value]="(state$ | async)?.modelStatus || 'Loading...'"
+            [value]="getModelStatusCardValue(state$ | async)"
             label="Model Status"
             [isModelStatus]="true"></app-stats-card>
           <app-stats-card

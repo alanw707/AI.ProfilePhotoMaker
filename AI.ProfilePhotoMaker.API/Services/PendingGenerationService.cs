@@ -147,13 +147,15 @@ public class PendingGenerationService : IPendingGenerationService
                 ? modelRequest.TrainedModelVersion!
                 : $"{modelRequest.ReplicateModelId}:{modelRequest.TrainedModelVersion}";
 
+            var correlationId = $"pending-generation:{request.Id}";
+
             foreach (var style in styles)
             {
                 var requiredCredits = request.NumOutputsPerStyle * CreditCostConfig.GetCreditCost("styled_generation");
                 CreditConsumptionResult? consumed = null;
                 try
                 {
-                    consumed = await _basicTierService.ConsumeCreditsAsync(request.UserId, requiredCredits, "styled_generation");
+                    consumed = await _basicTierService.ConsumeCreditsAsync(request.UserId, requiredCredits, "styled_generation", correlationId);
                     if (!consumed.Success)
                     {
                         throw new InvalidOperationException("Insufficient credits for background generation");

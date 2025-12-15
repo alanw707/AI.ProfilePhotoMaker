@@ -20,17 +20,23 @@ public class ModelStatusController : ControllerBase
     private readonly ApplicationDbContext _context;
     private readonly ILogger<ModelStatusController> _logger;
     private readonly IReplicateApiClient _replicateApiClient;
+    private readonly IWebHostEnvironment _environment;
     private static string S(string? value) => LoggingSanitizer.Sanitize(value);
     private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
+    private static DateTime ToUtc(DateTime value) =>
+        value.Kind == DateTimeKind.Utc ? value : DateTime.SpecifyKind(value, DateTimeKind.Utc);
+    private static DateTime? ToUtc(DateTime? value) => value.HasValue ? ToUtc(value.Value) : null;
 
     public ModelStatusController(
         ApplicationDbContext context,
         ILogger<ModelStatusController> logger,
-        IReplicateApiClient replicateApiClient)
+        IReplicateApiClient replicateApiClient,
+        IWebHostEnvironment environment)
     {
         _context = context;
         _logger = logger;
         _replicateApiClient = replicateApiClient;
+        _environment = environment;
     }
 
     private string? GetCurrentUserId()
@@ -39,20 +45,80 @@ public class ModelStatusController : ControllerBase
     }
 
     /// <summary>
-    /// Debug endpoint to test model status without authentication
+    /// Debug endpoint to test model status (development only)
     /// </summary>
     [HttpGet("debug/{userId}")]
-    [AllowAnonymous]
     public async Task<IActionResult> GetDebug(string userId)
     {
-        // Load user images count for readiness
+        if (!_environment.IsDevelopment())
+        {
+            return NotFound();
+        }
+
+        var currentUserId = GetCurrentUserId();
+        if (string.IsNullOrEmpty(currentUserId))
+        {
+            return Unauthorized();
+        }
+
+        if (!string.Equals(currentUserId, userId, StringComparison.Ordinal))
+        {
+            return Forbid();
+        }
+
+        var response = await BuildModelStatusResponseAsync(userId);
+        if (response == null)
+        {
+            return NotFound("Profile not found");
+        }
+
+        return Ok(response);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Get()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var response = await BuildModelStatusResponseAsync(userId);
+            if (response == null)
+            {
+                return NotFound("Profile not found");
+            }
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            var userId = LoggingSanitizer.SanitizeId(GetCurrentUserId());
+            _logger.LogError(ex, "Failed to compute model status for user {UserId}", userId);
+            return StatusCode(500, new
+            {
+                success = false,
+                error = new
+                {
+                    code = "ModelStatusFailed",
+                    message = ex.Message,
+                    details = ex.ToString()
+                }
+            });
+        }
+    }
+
+    private async Task<ModelStatusResponse?> BuildModelStatusResponseAsync(string userId)
+    {
         var profile = await _context.UserProfiles
             .Include(p => p.ProcessedImages)
             .FirstOrDefaultAsync(p => p.UserId == userId);
 
         if (profile == null)
         {
-            return NotFound("Profile not found");
+            return null;
         }
 
         var totalUploadedImages = profile.ProcessedImages
@@ -61,7 +127,6 @@ public class ModelStatusController : ControllerBase
 
         var canStartTraining = totalUploadedImages >= 10;
 
-        // Model creation requests
         var latestTrainedModel = await _context.ModelCreationRequests
             .Where(m => m.UserId == userId && m.Status == ModelCreationStatus.Ready)
             .OrderByDescending(m => m.CompletedAt)
@@ -81,34 +146,49 @@ public class ModelStatusController : ControllerBase
             TrainedModelVersion = latestTrainedModel?.TrainedModelVersion,
             TotalUploadedImages = totalUploadedImages,
             CanStartTraining = canStartTraining,
-            CurrentRequest = latestRequest == null ? null : new
+            CurrentRequest = latestRequest == null ? null : new CurrentRequestDto
             {
-                id = latestRequest.Id,
-                status = latestRequest.Status.ToString().ToLower(),
-                trainingRequestId = latestRequest.PendingTrainingRequestId,
-                createdAt = latestRequest.CreatedAt,
-                completedAt = latestRequest.CompletedAt,
-                errorMessage = latestRequest.ErrorMessage
+                Id = latestRequest.Id,
+                Status = latestRequest.Status.ToString().ToLowerInvariant(),
+                TrainingRequestId = latestRequest.PendingTrainingRequestId,
+                CreatedAt = ToUtc(latestRequest.CreatedAt),
+                CompletedAt = ToUtc(latestRequest.CompletedAt),
+                ErrorMessage = latestRequest.ErrorMessage
             },
             GenerationStatus = generationStatus
         };
 
-        // Determine unified status code
-        var isGenerationInProgress = generationStatus != null &&
-            (string.Equals(generationStatus.Status, "queued", StringComparison.OrdinalIgnoreCase) ||
-             string.Equals(generationStatus.Status, "processing", StringComparison.OrdinalIgnoreCase));
+        var generationStatusText = generationStatus?.Status ?? string.Empty;
+        var generationIsQueued = string.Equals(generationStatusText, "queued", StringComparison.OrdinalIgnoreCase);
+        var generationIsProcessing = string.Equals(generationStatusText, "processing", StringComparison.OrdinalIgnoreCase);
+        var generationInProgress = generationIsQueued || generationIsProcessing;
 
-        if (latestRequest != null && latestRequest.Status == ModelCreationStatus.Failed)
-        {
-            response.StatusCode = UnifiedModelStatusCode.Failed;
-            response.Reason = latestRequest.ErrorMessage ?? "Latest training request failed";
-            response.CreditImpact = await GetTrainingCreditImpactAsync(userId, latestRequest);
-        }
-        else if (latestRequest != null && (latestRequest.Status == ModelCreationStatus.Pending || latestRequest.Status == ModelCreationStatus.Creating))
+        var hasActiveTraining = latestRequest != null &&
+            (latestRequest.Status == ModelCreationStatus.Pending || latestRequest.Status == ModelCreationStatus.Creating);
+
+        var trainingFailed = latestRequest != null && latestRequest.Status == ModelCreationStatus.Failed;
+
+        if (hasActiveTraining)
         {
             response.StatusCode = UnifiedModelStatusCode.Training;
         }
-        else if (isGenerationInProgress)
+        else if (trainingFailed)
+        {
+            // If something else is actively processing and is newer than the training failure, surface it.
+            var generationStartedAt = generationStatus?.StartedAt;
+            var trainingEndedAt = latestRequest!.CompletedAt ?? latestRequest.CreatedAt;
+            if (generationIsProcessing && generationStartedAt.HasValue && generationStartedAt.Value > trainingEndedAt)
+            {
+                response.StatusCode = UnifiedModelStatusCode.Generating;
+            }
+            else
+            {
+                response.StatusCode = UnifiedModelStatusCode.Failed;
+                response.Reason = latestRequest!.ErrorMessage ?? "Latest training request failed";
+                response.CreditImpact = await GetTrainingCreditImpactAsync(userId, latestRequest!);
+            }
+        }
+        else if (generationInProgress)
         {
             response.StatusCode = UnifiedModelStatusCode.Generating;
         }
@@ -135,127 +215,7 @@ public class ModelStatusController : ControllerBase
             response.CreditImpact = await GetGenerationCreditImpactAsync(userId, response.GenerationStatus);
         }
 
-        return Ok(response);
-    }
-
-    [HttpGet]
-    public async Task<IActionResult> Get()
-    {
-        try
-        {
-            var userId = GetCurrentUserId();
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized();
-            }
-
-            // Load user images count for readiness
-            var profile = await _context.UserProfiles
-                .Include(p => p.ProcessedImages)
-                .FirstOrDefaultAsync(p => p.UserId == userId);
-
-            if (profile == null)
-            {
-                return NotFound("Profile not found");
-            }
-
-            var totalUploadedImages = profile.ProcessedImages
-                .Where(i => i.Style == ImageConstants.OriginalStyle)
-                .Count();
-
-            var canStartTraining = totalUploadedImages >= 10;
-
-            // Model creation requests
-            var latestTrainedModel = await _context.ModelCreationRequests
-                .Where(m => m.UserId == userId && m.Status == ModelCreationStatus.Ready)
-                .OrderByDescending(m => m.CompletedAt)
-                .FirstOrDefaultAsync();
-
-            var latestRequest = await _context.ModelCreationRequests
-                .Where(r => r.UserId == userId)
-                .OrderByDescending(r => r.CreatedAt)
-                .FirstOrDefaultAsync();
-
-            var generationStatus = await GetLatestGenerationStatusAsync(userId);
-
-            var response = new ModelStatusResponse
-            {
-                HasTrainedModel = latestTrainedModel != null && !string.IsNullOrEmpty(latestTrainedModel.TrainedModelVersion),
-                TrainedModelId = latestTrainedModel?.ReplicateModelId,
-                TrainedModelVersion = latestTrainedModel?.TrainedModelVersion,
-                TotalUploadedImages = totalUploadedImages,
-                CanStartTraining = canStartTraining,
-                CurrentRequest = latestRequest == null ? null : new
-                {
-                    id = latestRequest.Id,
-                    status = latestRequest.Status.ToString().ToLower(),
-                    trainingRequestId = latestRequest.PendingTrainingRequestId,
-                    createdAt = latestRequest.CreatedAt,
-                    completedAt = latestRequest.CompletedAt,
-                    errorMessage = latestRequest.ErrorMessage
-                },
-                GenerationStatus = generationStatus
-            };
-
-            // Determine unified status code
-            var isGenerationInProgress = generationStatus != null &&
-                (string.Equals(generationStatus.Status, "queued", StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(generationStatus.Status, "processing", StringComparison.OrdinalIgnoreCase));
-
-            if (latestRequest != null && latestRequest.Status == ModelCreationStatus.Failed)
-            {
-                response.StatusCode = UnifiedModelStatusCode.Failed;
-                response.Reason = latestRequest.ErrorMessage ?? "Latest training request failed";
-                response.CreditImpact = await GetTrainingCreditImpactAsync(userId, latestRequest);
-            }
-            else if (latestRequest != null && (latestRequest.Status == ModelCreationStatus.Pending || latestRequest.Status == ModelCreationStatus.Creating))
-            {
-                response.StatusCode = UnifiedModelStatusCode.Training;
-            }
-            else if (isGenerationInProgress)
-            {
-                response.StatusCode = UnifiedModelStatusCode.Generating;
-            }
-            else if (response.HasTrainedModel)
-            {
-                response.StatusCode = UnifiedModelStatusCode.ModelReady;
-            }
-            else if (!canStartTraining)
-            {
-                response.StatusCode = UnifiedModelStatusCode.NotStarted;
-                response.Reason = totalUploadedImages == 0
-                    ? "No images uploaded"
-                    : $"Need at least 10 images (currently {totalUploadedImages})";
-            }
-            else
-            {
-                response.StatusCode = UnifiedModelStatusCode.ReadyForTraining;
-            }
-
-            if (response.GenerationStatus != null &&
-                (string.Equals(response.GenerationStatus.Status, "failed", StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(response.GenerationStatus.Status, "canceled", StringComparison.OrdinalIgnoreCase)))
-            {
-                response.CreditImpact = await GetGenerationCreditImpactAsync(userId, response.GenerationStatus);
-            }
-
-            return Ok(response);
-        }
-        catch (Exception ex)
-        {
-            var userId = LoggingSanitizer.SanitizeId(GetCurrentUserId());
-            _logger.LogError(ex, "Failed to compute model status for user {UserId}", userId);
-            return StatusCode(500, new
-            {
-                success = false,
-                error = new
-                {
-                    code = "ModelStatusFailed",
-                    message = ex.Message,
-                    details = ex.ToString()
-                }
-            });
-        }
+        return response;
     }
 
     private async Task<GenerationStatusDto?> GetLatestGenerationStatusAsync(string userId)
@@ -296,8 +256,8 @@ public class ModelStatusController : ControllerBase
                     PendingGenerationStatus.Succeeded => "succeeded",
                     _ => "unknown"
                 },
-                StartedAt = pendingGeneration.StartedAt ?? pendingGeneration.CreatedAt,
-                CompletedAt = pendingGeneration.CompletedAt,
+                StartedAt = ToUtc(pendingGeneration.StartedAt ?? pendingGeneration.CreatedAt),
+                CompletedAt = ToUtc(pendingGeneration.CompletedAt),
                 Error = pendingGeneration.ErrorMessage
             };
         }
@@ -317,8 +277,8 @@ public class ModelStatusController : ControllerBase
                         PendingGenerationStatus.Succeeded => "succeeded",
                         _ => "unknown"
                     },
-                    StartedAt = pendingGeneration.StartedAt ?? pendingGeneration.CreatedAt,
-                    CompletedAt = pendingGeneration.CompletedAt,
+                    StartedAt = ToUtc(pendingGeneration.StartedAt ?? pendingGeneration.CreatedAt),
+                    CompletedAt = ToUtc(pendingGeneration.CompletedAt),
                     Error = pendingGeneration.ErrorMessage
                 };
             }
@@ -334,8 +294,8 @@ public class ModelStatusController : ControllerBase
                 PredictionId = predictionStatus.Id ?? latestPrediction.Id,
                 Status = NormalizePredictionStatus(predictionStatus.Status),
                 Style = latestPrediction.Style,
-                StartedAt = predictionStatus.StartedAt ?? predictionStatus.CreatedAt,
-                CompletedAt = predictionStatus.CompletedAt,
+                StartedAt = ToUtc(predictionStatus.StartedAt ?? predictionStatus.CreatedAt),
+                CompletedAt = ToUtc(predictionStatus.CompletedAt),
                 OutputCount = predictionStatus.GeneratedImageUrls.Count(),
                 Error = predictionStatus.Error
             };
@@ -348,7 +308,7 @@ public class ModelStatusController : ControllerBase
                 PredictionId = latestPrediction.Id,
                 Status = "unknown",
                 Style = latestPrediction.Style,
-                StartedAt = latestPrediction.CreatedAt
+                StartedAt = ToUtc(latestPrediction.CreatedAt)
             };
         }
     }
@@ -374,6 +334,38 @@ public class ModelStatusController : ControllerBase
 
     private async Task<CreditImpactDto?> GetTrainingCreditImpactAsync(string userId, ModelCreationRequest request)
     {
+        // Prefer correlation-id based lookup when available; fall back to a time-window for legacy logs.
+        var correlationId = request.Id;
+        if (!string.IsNullOrWhiteSpace(correlationId))
+        {
+            var correlatedCharged = await _context.UsageLogs
+                .Where(l => l.UserId == userId &&
+                            l.Action == "model_training" &&
+                            l.Details != null &&
+                            l.Details.Contains($"correlationId={correlationId}") &&
+                            l.CreditsCost.HasValue)
+                .SumAsync(l => l.CreditsCost ?? 0);
+
+            var correlatedRefundedRaw = await _context.UsageLogs
+                .Where(l => l.UserId == userId &&
+                            l.Action == "model_training_refund" &&
+                            l.Details != null &&
+                            l.Details.Contains($"correlationId={correlationId}") &&
+                            l.CreditsCost.HasValue)
+                .SumAsync(l => l.CreditsCost ?? 0);
+
+            var correlatedRefunded = Math.Abs(correlatedRefundedRaw);
+            if (correlatedCharged != 0 || correlatedRefunded != 0)
+            {
+                return new CreditImpactDto
+                {
+                    ChargedCredits = correlatedCharged,
+                    RefundedCredits = correlatedRefunded,
+                    NetCredits = correlatedCharged - correlatedRefunded
+                };
+            }
+        }
+
         var windowStart = request.CreatedAt.AddMinutes(-1);
         var windowEnd = (request.CompletedAt ?? DateTime.UtcNow).AddMinutes(1);
 
@@ -426,6 +418,38 @@ public class ModelStatusController : ControllerBase
         {
             _logger.LogWarning(ex, "PendingGenerationRequests table not available; skipping generation credit impact calculation");
             return null;
+        }
+
+        // Prefer correlation-id based lookup when the generation came from a PendingGenerationRequest.
+        if (pending != null)
+        {
+            var correlationId = $"pending-generation:{pending.Id}";
+            var correlatedCharged = await _context.UsageLogs
+                .Where(l => l.UserId == userId &&
+                            l.Action == "styled_generation" &&
+                            l.Details != null &&
+                            l.Details.Contains($"correlationId={correlationId}") &&
+                            l.CreditsCost.HasValue)
+                .SumAsync(l => l.CreditsCost ?? 0);
+
+            var correlatedRefundedRaw = await _context.UsageLogs
+                .Where(l => l.UserId == userId &&
+                            l.Action == "styled_generation_refund" &&
+                            l.Details != null &&
+                            l.Details.Contains($"correlationId={correlationId}") &&
+                            l.CreditsCost.HasValue)
+                .SumAsync(l => l.CreditsCost ?? 0);
+
+            var correlatedRefunded = Math.Abs(correlatedRefundedRaw);
+            if (correlatedCharged != 0 || correlatedRefunded != 0)
+            {
+                return new CreditImpactDto
+                {
+                    ChargedCredits = correlatedCharged,
+                    RefundedCredits = correlatedRefunded,
+                    NetCredits = correlatedCharged - correlatedRefunded
+                };
+            }
         }
 
         var start = pending?.StartedAt ?? pending?.CreatedAt ?? generationStatus.StartedAt ?? DateTime.UtcNow;

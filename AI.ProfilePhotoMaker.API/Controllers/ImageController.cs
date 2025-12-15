@@ -655,9 +655,24 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     relativePath = "/" + relativePath;
                 }
 
-                // Priority 1: Use X-Forwarded-Host header (ngrok proxy context)
+                var allowedForwardedHosts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var configured in new[]
+                         {
+                             _configuration?["AppBaseUrl"],
+                             _configuration?["ExternalApiBaseUrl"],
+                             _configuration?["Webhooks:NgrokTunnelUrl"]
+                         })
+                {
+                    if (string.IsNullOrWhiteSpace(configured)) continue;
+                    if (Uri.TryCreate(configured, UriKind.Absolute, out var parsed) && !string.IsNullOrWhiteSpace(parsed.Host))
+                    {
+                        allowedForwardedHosts.Add(parsed.Host);
+                    }
+                }
+
+                // Priority 1: Use X-Forwarded-Host header only when it matches configured allowed hosts
                 var forwardedHost = Request?.Headers["X-Forwarded-Host"].FirstOrDefault();
-                if (!string.IsNullOrEmpty(forwardedHost))
+                if (!string.IsNullOrEmpty(forwardedHost) && allowedForwardedHosts.Contains(forwardedHost))
                 {
                     var forwardedScheme = Request?.Headers["X-Forwarded-Proto"].FirstOrDefault() ?? "https";
                     var result = $"{forwardedScheme}://{forwardedHost}{relativePath}";
@@ -688,6 +703,61 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 var safeBaseUrl = _configuration?["AppBaseUrl"] ?? "https://localhost:5032";
                 return $"{safeBaseUrl.TrimEnd('/')}{relativePath}";
             }
+        }
+
+        private string? RewriteStorageUrlForExternalAccess(string? url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return url;
+            }
+
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var parsed))
+            {
+                return url;
+            }
+
+            // Keep real Azure Blob URLs intact.
+            if (parsed.Host.Contains("blob.core.windows.net", StringComparison.OrdinalIgnoreCase))
+            {
+                return url;
+            }
+
+            // Only rewrite when the storage URL points to internal/local endpoints (e.g. docker service name).
+            var host = parsed.Host.ToLowerInvariant();
+            var isInternalBlobHost = host is "azurite" or "localhost" or "127.0.0.1";
+            if (!isInternalBlobHost)
+            {
+                return url;
+            }
+
+            // Prefer ngrok tunnel for external services (Replicate), then fall back.
+            var externalApiBaseUrl = _configuration?["ExternalApiBaseUrl"];
+            var ngrokBaseUrl = _configuration?["Webhooks:NgrokTunnelUrl"];
+
+            var externalBaseUrl =
+                !string.IsNullOrWhiteSpace(externalApiBaseUrl)
+                    ? externalApiBaseUrl
+                    : !string.IsNullOrWhiteSpace(ngrokBaseUrl)
+                        ? ngrokBaseUrl
+                        : _configuration?["AppBaseUrl"]
+                          ?? $"{Request?.Scheme ?? "https"}://{Request?.Host.ToString() ?? "localhost:5032"}";
+
+            if (string.IsNullOrWhiteSpace(externalBaseUrl))
+            {
+                return url;
+            }
+
+            var rewritten = $"{externalBaseUrl.TrimEnd('/')}{parsed.AbsolutePath}{parsed.Query}";
+
+            // Ngrok sometimes shows an interstitial unless this param is set; easiest for external services.
+            if (externalBaseUrl.Contains("ngrok", StringComparison.OrdinalIgnoreCase)
+                && !rewritten.Contains("ngrok-skip-browser-warning=", StringComparison.OrdinalIgnoreCase))
+            {
+                rewritten += (rewritten.Contains('?') ? "&" : "?") + "ngrok-skip-browser-warning=true";
+            }
+
+            return rewritten;
         }
 
         /// <summary>
@@ -753,19 +823,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 // Generate SAS URL for Replicate API access
                 var sasUrl = await _storageService.GenerateSasUrlAsync(zipStoragePath, TimeSpan.FromHours(2));
-
-                // For development, replace localhost with ngrok domain to allow external access
-                if (sasUrl != null && sasUrl.Contains("127.0.0.1:10000"))
-                {
-                    var ngrokDomain = _configuration["Webhooks:NgrokTunnelUrl"] ?? "https://clear-anteater-usually.ngrok-free.app";
-                    sasUrl = sasUrl.Replace("http://127.0.0.1:10000", ngrokDomain);
-
-                    // Add ngrok-skip-browser-warning parameter for API access
-                    var separator = sasUrl.Contains("?") ? "&" : "?";
-                    sasUrl += $"{separator}ngrok-skip-browser-warning=true";
-
-                    Logger.LogInformation("Converted localhost URL to ngrok domain: {NgrokUrl}", sasUrl);
-                }
+                sasUrl = RewriteStorageUrlForExternalAccess(sasUrl);
 
                 Logger.LogInformation("Created training ZIP for user {UserId} with {FileCount} images at {StoragePath}",
                     userId, validImages.Count, zipStoragePath);
@@ -864,6 +922,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     {
                         // Generate SAS URL for download (valid for 1 hour)
                         var downloadUrl = await _storageService.GenerateSasUrlAsync(zipStoragePath, TimeSpan.FromHours(1));
+                        downloadUrl = RewriteStorageUrlForExternalAccess(downloadUrl);
 
                         userZipFiles.Add(new
                         {
@@ -909,17 +968,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 // Generate SAS URL for access (valid for 2 hours for Replicate)
                 var publicUrl = await _storageService.GenerateSasUrlAsync(zipStoragePath, TimeSpan.FromHours(2));
-
-                // For development, replace localhost with ngrok domain to allow external access
-                if (publicUrl != null && publicUrl.Contains("127.0.0.1:10000"))
-                {
-                    var ngrokDomain = _configuration["Webhooks:NgrokTunnelUrl"] ?? "https://clear-anteater-usually.ngrok-free.app";
-                    publicUrl = publicUrl.Replace("http://127.0.0.1:10000", ngrokDomain);
-
-                    // Add ngrok-skip-browser-warning parameter for API access
-                    var separator = publicUrl.Contains("?") ? "&" : "?";
-                    publicUrl += $"{separator}ngrok-skip-browser-warning=true";
-                }
+                publicUrl = RewriteStorageUrlForExternalAccess(publicUrl);
 
                 return SuccessResponse(new
                 {

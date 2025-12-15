@@ -44,7 +44,7 @@ The source of truth for “what is running” should be server-side state (`/api
 ### Files to Reference
 
 **UI**
-- `AI.ProfilePhotoMaker.UI/src/app/dashboard/dashboard.component.ts` (disposes workflow service; `continueInBackground()` navigates away)
+- `AI.ProfilePhotoMaker.UI/src/app/dashboard/dashboard.component.ts` (pauses workflow timers; `continueInBackground()` keeps user on dashboard and scrolls to active job banner)
 - `AI.ProfilePhotoMaker.UI/src/app/dashboard/dashboard.component.html` (binds progress UI to `workflowProgress$`)
 - `AI.ProfilePhotoMaker.UI/src/app/services/workflow-orchestration.service.ts` (training/generation progress logic, polling, background queue)
 - `AI.ProfilePhotoMaker.UI/src/app/services/dashboard-coordinator.service.ts` (loads `getUnifiedModelStatus()`; current dashboard state source)
@@ -57,7 +57,7 @@ The source of truth for “what is running” should be server-side state (`/api
 - `AI.ProfilePhotoMaker.API/Controllers/ReplicateController.cs` (training, queue generation, generation; credit consumption/refunds in some paths)
 - `AI.ProfilePhotoMaker.API/Services/TrainingPollingService.cs` (finalizes training; refunds training credits on failure)
 - `AI.ProfilePhotoMaker.API/Services/PendingGenerationService.cs` + `AI.ProfilePhotoMaker.API/Models/PendingGenerationRequest.cs` (queued background generation + refund on failure per style)
-- `AI.ProfilePhotoMaker.API/Models/UsageLog.cs` + `AI.ProfilePhotoMaker.API/Services/BasicTierService.cs` (credit consumption logging; refunds currently do not log usage)
+- `AI.ProfilePhotoMaker.API/Models/UsageLog.cs` + `AI.ProfilePhotoMaker.API/Services/BasicTierService.cs` (credit consumption + refund logging via `*_refund` actions)
 
 ### Technical Decisions
 
@@ -86,7 +86,8 @@ The source of truth for “what is running” should be server-side state (`/api
   - Adjusted generation status selection to prefer newer queued background generation.
 
 - [x] Task 2: Provide credit impact for latest job (API)
-  - Implemented refund logging in `UsageLog` and derived job credit totals from `UsageLog` within a narrow time window.
+  - Implemented refund logging in `UsageLog` and tagged credit logs with `correlationId` in `UsageLog.Details` for accurate job attribution.
+  - `GET /api/model-status` uses correlationId first, then falls back to time-window heuristics for legacy rows.
 
 - [x] Task 3: Add a dashboard-level “Active Job” UI block (UI)
   - Add a prominent banner/card near the top of `/app/dashboard` that shows:
@@ -145,3 +146,49 @@ The source of truth for “what is running” should be server-side state (`/api
 - Credit refund behavior must be consistent with UX copy:
   - If the system fully refunds on job failure, say so and show amounts.
   - If partial success is possible, the UI must not claim a full refund when images were delivered.
+
+---
+
+## Dev Agent Record
+
+### File List
+- `.bmad/bmm/workflows/4-implementation/code-review/checklist.md`
+- `AI.ProfilePhotoMaker.API.Tests/Performance/UserProfileRepositoryPerformanceTests.cs`
+- `AI.ProfilePhotoMaker.API.Tests/Unit/ModelStatusCreditImpactTests.cs`
+- `AI.ProfilePhotoMaker.API.Tests/Unit/ReplicateApiClientUrlNormalizationTests.cs`
+- `AI.ProfilePhotoMaker.API.Tests/Unit/StripeClientFactoryTests.cs`
+- `AI.ProfilePhotoMaker.API/Configuration/EnvironmentConfiguration.cs`
+- `AI.ProfilePhotoMaker.API/Controllers/ImageController.cs`
+- `AI.ProfilePhotoMaker.API/Controllers/ModelStatusController.cs`
+- `AI.ProfilePhotoMaker.API/Controllers/ReplicateController.cs`
+- `AI.ProfilePhotoMaker.API/Middleware/StorageProxyMiddleware.cs`
+- `AI.ProfilePhotoMaker.API/Models/DTOs/ModelStatusDto.cs`
+- `AI.ProfilePhotoMaker.API/Program.cs`
+- `AI.ProfilePhotoMaker.API/Services/BasicTierService.cs`
+- `AI.ProfilePhotoMaker.API/Services/CreditConsumptionResult.cs`
+- `AI.ProfilePhotoMaker.API/Services/IBasicTierService.cs`
+- `AI.ProfilePhotoMaker.API/Services/ImageProcessing/ReplicateApiClient.cs`
+- `AI.ProfilePhotoMaker.API/Services/ImageProcessing/IReplicateApiClient.cs`
+- `AI.ProfilePhotoMaker.API/Services/ImageProcessing/MockReplicateApiClient.cs`
+- `AI.ProfilePhotoMaker.API/Services/PendingGenerationService.cs`
+- `AI.ProfilePhotoMaker.API/Services/Payments/StripeClientFactory.cs`
+- `AI.ProfilePhotoMaker.API/Services/Storage/AzureBlobStorageService.cs`
+- `AI.ProfilePhotoMaker.API/Services/TrainingPollingService.cs`
+- `AI.ProfilePhotoMaker.UI/src/app/dashboard/dashboard.component.html`
+- `AI.ProfilePhotoMaker.UI/src/app/dashboard/dashboard.component.ts`
+- `AI.ProfilePhotoMaker.UI/src/app/services/image-url.service.ts`
+- `AI.ProfilePhotoMaker.UI/src/app/services/workflow-orchestration.service.ts`
+- `dev-start.sh`
+- `docker-compose.yml`
+- `docs/sprint-artifacts/tech-spec-dashboard-background-progress.md`
+- `tests/e2e/dashboard-background-status.spec.js`
+
+### Change Log
+- Dashboard shows an “Active Job” banner from server-driven status and stops losing state on navigation.
+- Training/generation status UI no longer lingers on a stale “Training failed” when a new job begins.
+- Replicate ZIP URLs are normalized to the reserved ngrok domain and preflight-checked before training.
+- Local Azurite ZIP creation avoids transient 404 windows (overwrite upload behavior).
+- Storage proxy streams blob content (avoids buffering large ZIPs into memory).
+- Replicate training request records no longer get stuck in `Pending` when Replicate fails early.
+- Credit impact is correlated per job via `correlationId`, with legacy time-window fallback.
+- Production safety hardening: restrict forwarded host handling, re-enable startup environment validation for non-development, and lock down debug model-status endpoint.

@@ -77,7 +77,7 @@ public class ReplicateControllerAuthAndOwnershipTests
         // Credits sufficient so code reaches our InvalidUserContext gate
         mockBasic.Setup(s => s.GetCreditBreakdownAsync("user-123"))
                  .ReturnsAsync((999, 999));
-        mockBasic.Setup(s => s.ConsumeCreditsAsync("user-123", "model_training"))
+        mockBasic.Setup(s => s.ConsumeCreditsAsync("user-123", "model_training", It.IsAny<string?>()))
                  .ReturnsAsync(CreditConsumptionResult.Succeeded("model_training", 0, CreditCostConfig.GetCreditCost("model_training")));
         mockBasic.Setup(s => s.RefundCreditsAsync("user-123", It.IsAny<CreditConsumptionResult>()))
                  .ReturnsAsync(true);
@@ -305,7 +305,7 @@ public class ReplicateControllerAuthAndOwnershipTests
         var mockBasic = new Mock<IBasicTierService>(MockBehavior.Strict);
 
         mockBasic.Setup(b => b.GetAvailableCreditsAsync(userId)).ReturnsAsync(1);
-        mockBasic.Setup(b => b.ConsumeCreditsAsync(userId, It.IsAny<int>(), "photo_enhancement"))
+        mockBasic.Setup(b => b.ConsumeCreditsAsync(userId, It.IsAny<int>(), "photo_enhancement", It.IsAny<string?>()))
                  .ReturnsAsync(CreditConsumptionResult.Failed("photo_enhancement", "insufficient_credits"));
 
         var config = new ConfigurationBuilder()
@@ -344,7 +344,7 @@ public class ReplicateControllerAuthAndOwnershipTests
 
         mockBasic.Setup(b => b.GetAvailableCreditsAsync(userId)).ReturnsAsync(2);
         var consumption = CreditConsumptionResult.Succeeded("photo_enhancement", 1, 0);
-        mockBasic.Setup(b => b.ConsumeCreditsAsync(userId, It.IsAny<int>(), "photo_enhancement"))
+        mockBasic.Setup(b => b.ConsumeCreditsAsync(userId, It.IsAny<int>(), "photo_enhancement", It.IsAny<string?>()))
                  .ReturnsAsync(consumption);
         mockBasic.Setup(b => b.RefundCreditsAsync(userId, consumption)).ReturnsAsync(true);
 

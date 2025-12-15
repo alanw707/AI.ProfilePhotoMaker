@@ -62,32 +62,32 @@ public class BasicTierService : IBasicTierService
         return (profile?.Credits ?? 0, profile?.PurchasedCredits ?? 0);
     }
 
-    public Task<CreditConsumptionResult> ConsumeCreditsAsync(string userId, string action = "basic_generation")
+    public Task<CreditConsumptionResult> ConsumeCreditsAsync(string userId, string action = "basic_generation", string? correlationId = null)
     {
         var creditCost = CreditCostConfig.GetCreditCost(action);
         var canUseWeeklyCredits = CreditCostConfig.CanUseWeeklyCredits(action);
-        return ConsumeCreditsInternalAsync(userId, creditCost, action, canUseWeeklyCredits);
+        return ConsumeCreditsInternalAsync(userId, creditCost, action, canUseWeeklyCredits, correlationId);
     }
 
-    public Task<CreditConsumptionResult> ConsumeCreditsAsync(string userId, int customAmount, string action = "styled_generation")
+    public Task<CreditConsumptionResult> ConsumeCreditsAsync(string userId, int customAmount, string action = "styled_generation", string? correlationId = null)
     {
         var canUseWeeklyCredits = CreditCostConfig.CanUseWeeklyCredits(action);
-        return ConsumeCreditsInternalAsync(userId, customAmount, action, canUseWeeklyCredits);
+        return ConsumeCreditsInternalAsync(userId, customAmount, action, canUseWeeklyCredits, correlationId);
     }
 
-    private async Task<CreditConsumptionResult> ConsumeCreditsInternalAsync(string userId, int creditCost, string action, bool canUseWeeklyCredits)
+    private async Task<CreditConsumptionResult> ConsumeCreditsInternalAsync(string userId, int creditCost, string action, bool canUseWeeklyCredits, string? correlationId)
     {
         if (creditCost <= 0)
         {
             _logger.LogWarning("Rejected credit consumption for user {UserId}: non-positive creditCost {CreditCost} for action {Action}", userId, creditCost, action);
-            return CreditConsumptionResult.Failed(action, "invalid_credit_cost");
+            return CreditConsumptionResult.Failed(action, "invalid_credit_cost", correlationId);
         }
 
         var profile = await GetUserProfileWithCreditsAsync(userId);
         if (profile == null)
         {
             _logger.LogWarning("User profile not found for user {UserId}", userId);
-            return CreditConsumptionResult.Failed(action, "profile_not_found");
+            return CreditConsumptionResult.Failed(action, "profile_not_found", correlationId);
         }
 
         // Check if credits need to be reset first
@@ -100,7 +100,7 @@ public class BasicTierService : IBasicTierService
         if (profile == null)
         {
             _logger.LogWarning("User profile not found after reset for user {UserId}", userId);
-            return CreditConsumptionResult.Failed(action, "profile_not_found_post_reset");
+            return CreditConsumptionResult.Failed(action, "profile_not_found_post_reset", correlationId);
         }
 
         var totalAvailableCredits = profile.PurchasedCredits + (canUseWeeklyCredits ? profile.Credits : 0);
@@ -109,7 +109,7 @@ public class BasicTierService : IBasicTierService
         {
             _logger.LogWarning("Insufficient credits for user {UserId}. Available: {Available} (Purchased: {Purchased}, Weekly: {Weekly}), Required: {Required} for {Action}",
                 userId, totalAvailableCredits, profile.PurchasedCredits, canUseWeeklyCredits ? profile.Credits : 0, creditCost, action);
-            return CreditConsumptionResult.Failed(action, "insufficient_credits");
+            return CreditConsumptionResult.Failed(action, "insufficient_credits", correlationId);
         }
 
         // Prioritize weekly credits first, then purchased credits as fallback
@@ -136,7 +136,7 @@ public class BasicTierService : IBasicTierService
         if (creditsToConsume > 0)
         {
             _logger.LogError("Credit consumption calculation error for user {UserId}", userId);
-            return CreditConsumptionResult.Failed(action, "calculation_error");
+            return CreditConsumptionResult.Failed(action, "calculation_error", correlationId);
         }
 
         profile.UpdatedAt = DateTime.UtcNow;
@@ -144,13 +144,17 @@ public class BasicTierService : IBasicTierService
 
         // Log the usage with detailed breakdown
         var details = $"Consumed {creditCost} credits ({consumedFromPurchased} purchased + {consumedFromWeekly} weekly)";
+        if (!string.IsNullOrWhiteSpace(correlationId))
+        {
+            details = $"{details}; correlationId={correlationId}";
+        }
         var remainingCredits = profile.PurchasedCredits + profile.Credits;
         await LogUsageAsync(userId, action, details, creditCost, remainingCredits);
 
         _logger.LogInformation("User {UserId} consumed {Credits} credits for {Action}. Remaining: {Remaining} ({Purchased} purchased + {Weekly} weekly)",
             userId, creditCost, action, remainingCredits, profile.PurchasedCredits, profile.Credits);
 
-        return CreditConsumptionResult.Succeeded(action, consumedFromWeekly, consumedFromPurchased);
+        return CreditConsumptionResult.Succeeded(action, consumedFromWeekly, consumedFromPurchased, correlationId);
     }
 
     public async Task<bool> AddPurchasedCreditsAsync(string userId, int credits, string source = "credit_purchase")
@@ -245,6 +249,10 @@ public class BasicTierService : IBasicTierService
                     ? consumptionResult.Action
                     : $"{consumptionResult.Action}_refund";
                 var details = $"Refunded {totalRefunded} credits ({purchasedRefunded} purchased + {weeklyRefunded} weekly)";
+                if (!string.IsNullOrWhiteSpace(consumptionResult.CorrelationId))
+                {
+                    details = $"{details}; correlationId={consumptionResult.CorrelationId}";
+                }
                 var remainingCredits = profile.PurchasedCredits + profile.Credits;
                 await LogUsageAsync(userId, action, details, -totalRefunded, remainingCredits);
             }
