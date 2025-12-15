@@ -226,6 +226,14 @@ public class EnvironmentConfiguration
     /// </summary>
     private Task ValidateStripeConfigurationAsync(List<ValidationResult> results)
     {
+        var paymentSimulationEnabled = _configuration.GetValue<bool>("PaymentSimulation:Enabled");
+        var skipStripeIntegration = _configuration.GetValue<bool>("PaymentSimulation:SkipStripeIntegration");
+        if (paymentSimulationEnabled || skipStripeIntegration)
+        {
+            _logger.LogInformation("ℹ️ Stripe integration validation skipped (PaymentSimulation enabled or SkipStripeIntegration=true)");
+            return Task.CompletedTask;
+        }
+
         // All Stripe secrets are REQUIRED - referenced in infrastructure and application code
         var stripeSecretKey = GetEnvironmentVariable(STRIPE_SECRET_KEY);
         var stripePublishableKey = GetEnvironmentVariable(STRIPE_PUBLISHABLE_KEY);

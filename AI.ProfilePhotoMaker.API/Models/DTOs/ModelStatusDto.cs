@@ -24,8 +24,19 @@ public class ModelStatusResponse
     public string? Reason { get; set; }
     public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
 
-    public object? CurrentRequest { get; set; }
+    public CurrentRequestDto? CurrentRequest { get; set; }
     public GenerationStatusDto? GenerationStatus { get; set; }
+    public CreditImpactDto? CreditImpact { get; set; }
+}
+
+public class CurrentRequestDto
+{
+    public string? Id { get; set; }
+    public string? Status { get; set; }
+    public string? TrainingRequestId { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    public string? ErrorMessage { get; set; }
 }
 
 public class GenerationStatusDto
@@ -37,4 +48,11 @@ public class GenerationStatusDto
     public DateTime? CompletedAt { get; set; }
     public int? OutputCount { get; set; }
     public string? Error { get; set; }
+}
+
+public class CreditImpactDto
+{
+    public int ChargedCredits { get; set; }
+    public int RefundedCredits { get; set; }
+    public int NetCredits { get; set; }
 }

@@ -58,13 +58,14 @@ public class MockReplicateApiClient : IReplicateApiClient
         return Task.FromResult(full);
     }
 
-    public async Task<ReplicateTrainingResult> CreateModelTrainingAsync(string userId, string imageZipUrl)
+    public async Task<ReplicateTrainingResult> CreateModelTrainingAsync(string userId, string imageZipUrl, string? modelRequestId = null)
     {
         var modelName = $"user-{userId}-{DateTime.UtcNow:yyyyMMddHHmmss}";
         var destination = await CreateModelAsync(userId, modelName);
 
         var request = new ModelCreationRequest
         {
+            Id = string.IsNullOrWhiteSpace(modelRequestId) ? Guid.NewGuid().ToString() : modelRequestId,
             UserId = userId,
             ModelName = modelName,
             ReplicateModelId = destination,

@@ -1,4 +1,5 @@
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace AI.ProfilePhotoMaker.API.Middleware;
 
@@ -10,14 +11,20 @@ public class StorageProxyMiddleware
     private readonly RequestDelegate _next;
     private readonly ILogger<StorageProxyMiddleware> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly Uri _storageOrigin;
 
     private static string S(string? value) => LoggingSanitizer.Sanitize(value);
 
-    public StorageProxyMiddleware(RequestDelegate next, ILogger<StorageProxyMiddleware> logger, IHttpClientFactory httpClientFactory)
+    public StorageProxyMiddleware(
+        RequestDelegate next,
+        ILogger<StorageProxyMiddleware> logger,
+        IHttpClientFactory httpClientFactory,
+        IConfiguration configuration)
     {
         _next = next;
         _logger = logger;
         _httpClientFactory = httpClientFactory;
+        _storageOrigin = ResolveStorageOrigin(configuration);
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -44,8 +51,9 @@ public class StorageProxyMiddleware
         try
         {
             // Preserve query string (SAS tokens live here) when proxying to Azurite
-            var query = context.Request.QueryString.HasValue ? context.Request.QueryString.Value : string.Empty;
-            var azuriteUrl = $"http://127.0.0.1:10000{path}{query}";
+            var query = GetForwardedQueryString(context.Request.QueryString);
+            var relative = $"{path.TrimStart('/')}{query}";
+            var azuriteUrl = new Uri(_storageOrigin, relative).ToString();
 
             _logger.LogDebug("Proxying storage request: {Path} -> {AzuriteUrl}", S(path), S(azuriteUrl));
 
@@ -54,14 +62,14 @@ public class StorageProxyMiddleware
             // Build a proxied request that mirrors the original method and headers
             using var proxiedRequest = new HttpRequestMessage(new HttpMethod(context.Request.Method), azuriteUrl);
 
-            // Copy request headers (skip Host which is set by HttpClient)
-            foreach (var header in context.Request.Headers)
-            {
-                if (string.Equals(header.Key, "Host", StringComparison.OrdinalIgnoreCase)) continue;
-                proxiedRequest.Headers.TryAddWithoutValidation(header.Key, (IEnumerable<string>)header.Value);
-            }
-            // Add header used to bypass ngrok browser warning when applicable
-            proxiedRequest.Headers.TryAddWithoutValidation("ngrok-skip-browser-warning", "true");
+            // Only forward a small safe subset of headers. Azurite can reject unknown/forwarded headers
+            // that are common in reverse-proxy setups.
+            CopyHeaderIfPresent(context.Request.Headers, proxiedRequest, "Range");
+            CopyHeaderIfPresent(context.Request.Headers, proxiedRequest, "If-Modified-Since");
+            CopyHeaderIfPresent(context.Request.Headers, proxiedRequest, "If-None-Match");
+            CopyHeaderIfPresent(context.Request.Headers, proxiedRequest, "If-Match");
+            CopyHeaderIfPresent(context.Request.Headers, proxiedRequest, "If-Unmodified-Since");
+            CopyHeaderIfPresent(context.Request.Headers, proxiedRequest, "If-Range");
 
             // Forward body only for methods that typically have one
             if (HttpMethods.IsPost(context.Request.Method) || HttpMethods.IsPut(context.Request.Method) || HttpMethods.IsPatch(context.Request.Method))
@@ -95,18 +103,96 @@ public class StorageProxyMiddleware
                 return;
             }
 
-            // Stream body to the client for non-HEAD methods
-            var content = await response.Content.ReadAsByteArrayAsync();
-            await context.Response.Body.WriteAsync(content);
+            // Stream body to the client for non-HEAD methods (avoid buffering large blobs in memory)
+            await response.Content.CopyToAsync(context.Response.Body);
 
-            _logger.LogDebug("Storage proxy request successful: {Path}, Status: {StatusCode}, Size: {Size}",
-                S(path), context.Response.StatusCode, content.Length);
+            _logger.LogDebug("Storage proxy request successful: {Path}, Status: {StatusCode}",
+                S(path), context.Response.StatusCode);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error proxying storage request for path: {Path}", S(path));
             context.Response.StatusCode = 500;
             await context.Response.WriteAsync("Storage proxy error");
+        }
+    }
+
+    private static string GetForwardedQueryString(QueryString original)
+    {
+        if (!original.HasValue)
+        {
+            return string.Empty;
+        }
+
+        // ngrok's browser warning can be bypassed by adding `ngrok-skip-browser-warning=true` to the URL.
+        // Azurite rejects unknown query parameters, so strip this before proxying.
+        var parsed = QueryHelpers.ParseQuery(original.Value!);
+        if (!parsed.ContainsKey("ngrok-skip-browser-warning"))
+        {
+            return original.Value!;
+        }
+
+        var items = new List<KeyValuePair<string, string?>>();
+        foreach (var entry in parsed)
+        {
+            if (string.Equals(entry.Key, "ngrok-skip-browser-warning", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            foreach (var value in entry.Value)
+            {
+                items.Add(new KeyValuePair<string, string?>(entry.Key, value));
+            }
+        }
+
+        return QueryString.Create(items).Value ?? string.Empty;
+    }
+
+    private static Uri ResolveStorageOrigin(IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString("AzureStorage")
+                               ?? configuration["AzureStorage:ConnectionString"];
+
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            var blobEndpoint = TryReadConnectionStringValue(connectionString, "BlobEndpoint");
+            if (!string.IsNullOrWhiteSpace(blobEndpoint) && Uri.TryCreate(blobEndpoint, UriKind.Absolute, out var blobUri))
+            {
+                var origin = blobUri.GetLeftPart(UriPartial.Authority);
+                if (Uri.TryCreate(origin, UriKind.Absolute, out var originUri))
+                {
+                    return originUri;
+                }
+            }
+        }
+
+        // Fallback for dev environments where Azurite runs on the same host process.
+        return new Uri("http://127.0.0.1:10000");
+    }
+
+    private static string? TryReadConnectionStringValue(string connectionString, string key)
+    {
+        // Azure storage connection strings are ; separated key=value pairs.
+        foreach (var segment in connectionString.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var idx = segment.IndexOf('=', StringComparison.Ordinal);
+            if (idx <= 0) continue;
+
+            var segmentKey = segment[..idx];
+            if (!string.Equals(segmentKey, key, StringComparison.OrdinalIgnoreCase)) continue;
+
+            return segment[(idx + 1)..];
+        }
+
+        return null;
+    }
+
+    private static void CopyHeaderIfPresent(IHeaderDictionary source, HttpRequestMessage destination, string headerName)
+    {
+        if (source.TryGetValue(headerName, out var values) && values.Count > 0)
+        {
+            destination.Headers.TryAddWithoutValidation(headerName, (IEnumerable<string>)values);
         }
     }
 }

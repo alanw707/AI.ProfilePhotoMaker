@@ -8,6 +8,7 @@ This directory contains Playwright-based E2E coverage that targets the combined 
 - `stripe-checkout.spec.js` – local Stripe checkout flow validation (runs only when Stripe keys and test credentials are configured)
 - `photo-enhancement-credits.spec.ts` – regression that proves successful photo transforms immediately deduct credits (opt-in via env vars)
 - `pricing-scroll.spec.js` – UI-only check that pricing CTAs scroll to the billing form without submitting payment (opt-in via env var)
+- `dashboard-background-status.spec.js` – dashboard banner resume checks for background training/generation (stubs `/api/model-status`, opt-in via env var)
 - `playwright.config.js` – multi-environment configuration targeting hosted environments
 - `playwright.local.config.js` – local configuration that points to the dev stack on `http://localhost:4200`
 - `test-images/` – shared assets for upload scenarios
@@ -68,6 +69,21 @@ export RUN_PRICING_SCROLL=true
 
 cd tests/e2e
 npx playwright test pricing-scroll.spec.js --config playwright.local.config.js
+```
+
+### Dashboard Background Status (no Replicate)
+
+Validates that `/app/dashboard` shows persistent in-progress status after navigating away and back.
+This spec stubs `/api/model-status` so it can run without kicking off real training/generation.
+
+```bash
+export RUN_DASHBOARD_STATUS_TESTS=true
+# Optional credentials (defaults to STRIPE_E2E_* or testuser@example.com / TestPassword123!)
+# export DASHBOARD_E2E_EMAIL="testuser@example.com"
+# export DASHBOARD_E2E_PASSWORD="TestPassword123!"
+
+cd tests/e2e
+PW_TEST_HTML_REPORT_OPEN=never npx playwright test dashboard-background-status.spec.js --config playwright.local.config.js --reporter=list
 ```
 
 ### Stripe CLI (Webhooks)

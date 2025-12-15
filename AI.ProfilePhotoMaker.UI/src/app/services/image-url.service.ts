@@ -6,6 +6,24 @@ import { ConfigService } from './config.service';
 })
 export class ImageUrlService {
   constructor(private config: ConfigService) {}
+
+  private getApiOrigin(): string | null {
+    const apiUrl = this.config.getApiUrl();
+    if (apiUrl?.startsWith('http')) {
+      try {
+        return new URL(apiUrl).origin;
+      } catch {
+        // fall through
+      }
+    }
+
+    try {
+      const oauthBaseUrl = this.config.getOAuthBaseUrl();
+      return oauthBaseUrl?.startsWith('http') ? new URL(oauthBaseUrl).origin : null;
+    } catch {
+      return null;
+    }
+  }
   /**
    * Convert absolute image URLs to relative proxy URLs
    * This fixes the issue where API returns absolute URLs that bypass the proxy
@@ -17,6 +35,12 @@ export class ImageUrlService {
 
     // If it's already a relative URL, return as-is
     if (url.startsWith('/')) {
+      const apiOrigin = this.getApiOrigin();
+      // In docker-local, there is no Angular proxy; route Azurite-style paths through the API so StorageProxyMiddleware can serve them.
+      if (apiOrigin && apiOrigin !== window.location.origin && url.startsWith('/devstoreaccount')) {
+        return `${apiOrigin}${url}`;
+      }
+
       return url;
     }
 
@@ -29,7 +53,6 @@ export class ImageUrlService {
       const host = urlObj.host.toLowerCase();
 
       // In production/test, keep absolute Azure Blob URLs to avoid 404s
-      const isAzureBlob = host.includes('blob.core.windows.net');
       if (env === 'production' || env === 'test') {
         return url; // do not rewrite
       }
@@ -37,8 +60,18 @@ export class ImageUrlService {
       // In localhost/ngrok development, rewrite only local/Azurite URLs to proxy through the app
       const isLocalHost = host.includes('localhost') || host.startsWith('127.0.0.1');
       if (env === 'localhost' || env === 'ngrok') {
+        const isAzuriteHost =
+          host.startsWith('azurite') || host.includes('devstoreaccount1');
+        const isAzuritePath = urlObj.pathname.startsWith('/devstoreaccount');
+
         // For Azurite/local blob URLs, return pathname so Angular proxy can handle `/devstoreaccount1/...`
-        if (isLocalHost || isAzureBlob === false) {
+        if (isAzuritePath && (isLocalHost || isAzuriteHost)) {
+          const apiOrigin = this.getApiOrigin();
+          // If we're running without a proxy (docker-local), route through the API origin.
+          if (apiOrigin && apiOrigin !== window.location.origin && urlObj.pathname.startsWith('/devstoreaccount')) {
+            return `${apiOrigin}${urlObj.pathname}`;
+          }
+
           return urlObj.pathname;
         }
       }

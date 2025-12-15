@@ -95,6 +95,109 @@
 // All workflow styles are now handled in the _workflow.sass partial
 
 // =============================================================================
+// ACTIVE JOB BANNER
+// =============================================================================
+
+.active-job-section
+  .active-job-card
+    background: var(--card-bg)
+    border: 1px solid var(--border-color)
+    border-radius: 16px
+    padding: 16px 18px
+    box-shadow: var(--shadow-sm)
+    display: flex
+    flex-direction: column
+    gap: 12px
+
+    &.error
+      border-color: rgba(239, 68, 68, 0.35)
+      background: rgba(239, 68, 68, 0.06)
+
+  .active-job-header
+    display: flex
+    align-items: flex-start
+    justify-content: space-between
+    gap: 12px
+
+  .active-job-title
+    h3
+      margin: 0
+      font-size: 1.05rem
+      font-weight: 700
+
+    p
+      margin: 4px 0 0
+      color: var(--text-secondary)
+
+  .active-job-meta
+    .eta
+      font-size: 0.9rem
+      color: var(--text-secondary)
+      white-space: nowrap
+
+  .active-job-progress
+    display: flex
+    align-items: center
+    gap: 12px
+
+    .progress-bar
+      flex: 1
+      height: 10px
+      background: rgba(125, 211, 216, 0.15)
+      border-radius: 999px
+      overflow: hidden
+
+    .progress-fill
+      height: 100%
+      width: 0%
+      background: linear-gradient(90deg, var(--accent-primary) 0%, var(--primary-color) 100%)
+      border-radius: 999px
+      transition: width 0.35s ease
+
+    .progress-percent
+      font-weight: 700
+      min-width: 44px
+      text-align: right
+
+  .active-job-error
+    .error-details
+      margin: 0
+      color: var(--text-primary)
+
+    .credit-impact
+      margin-top: 8px
+      display: grid
+      gap: 6px
+
+      .credit-row
+        display: flex
+        justify-content: space-between
+        gap: 12px
+
+        .label
+          color: var(--text-secondary)
+
+        .value
+          font-weight: 700
+
+        &.net .value
+          color: rgba(239, 68, 68, 0.95)
+
+      .credit-hint
+        margin: 2px 0 0
+        font-size: 0.85rem
+        color: var(--text-secondary)
+
+    .error-actions
+      margin-top: 12px
+      text-align: center
+
+      .btn.btn-primary
+        @include shared.btn-primary
+        padding: 10px 18px
+        font-size: 0.9rem
+
+// =============================================================================
 // MODULAR STYLES IMPORTED AT TOP
 // =============================================================================
 // All modular styles are now imported at the top of the file

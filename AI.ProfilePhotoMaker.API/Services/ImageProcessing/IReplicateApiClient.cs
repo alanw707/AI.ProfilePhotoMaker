@@ -23,8 +23,9 @@ public interface IReplicateApiClient
     /// </summary>
     /// <param name="userId">The user ID</param>
     /// <param name="imageZipUrl">URL to the zipped training images</param>
+    /// <param name="modelRequestId">Optional stable id to use for the ModelCreationRequest record</param>
     /// <returns>The training ID and status</returns>
-    Task<ReplicateTrainingResult> CreateModelTrainingAsync(string userId, string imageZipUrl);
+    Task<ReplicateTrainingResult> CreateModelTrainingAsync(string userId, string imageZipUrl, string? modelRequestId = null);
 
     /// <summary>
     /// Creates a new training using an existing model destination (for polling-based flow)

@@ -54,10 +54,67 @@ public class TrainingPollingService : ITrainingPollingService
             var status = await _replicateApiClient.GetTrainingStatusAsync(trainingId);
             return status.IsCompleted || status.Status?.ToLower() == "failed" || status.Status?.ToLower() == "canceled";
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogError(ex, "Replicate authentication/configuration error while checking training status for {TrainingId}", S(trainingId));
+            await FailTrainingDueToReplicateAuthAsync(trainingId, ex.Message);
+            return false;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error checking training status for {TrainingId}", S(trainingId));
             return false;
+        }
+    }
+
+    private async Task FailTrainingDueToReplicateAuthAsync(string trainingId, string details)
+    {
+        using var scope = _serviceScopeFactory.CreateScope();
+        var scopedDbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var scopedBasicTierService = scope.ServiceProvider.GetRequiredService<IBasicTierService>();
+
+        try
+        {
+            var modelRequest = await scopedDbContext.ModelCreationRequests
+                .FirstOrDefaultAsync(r => r.PendingTrainingRequestId == trainingId);
+
+            if (modelRequest == null)
+            {
+                _logger.LogWarning("No model creation request found for training ID {TrainingId} while handling auth failure", S(trainingId));
+                return;
+            }
+
+            if (modelRequest.CompletedAt.HasValue || modelRequest.Status != ModelCreationStatus.Creating)
+            {
+                return;
+            }
+
+            modelRequest.Status = ModelCreationStatus.Failed;
+            modelRequest.ErrorMessage = $"Replicate API authentication/configuration error: {details}";
+            modelRequest.CompletedAt = DateTime.UtcNow;
+
+            await scopedDbContext.SaveChangesAsync();
+
+            // Refund training credits since we cannot poll/complete without Replicate credentials.
+            try
+            {
+                var refundResult = CreditConsumptionResult.Succeeded(
+                    "model_training_refund",
+                    weeklyCredits: 0,
+                    purchasedCredits: CreditCostConfig.ModelTraining,
+                    correlationId: modelRequest.Id);
+
+                await scopedBasicTierService.RefundCreditsAsync(modelRequest.UserId, refundResult);
+                _logger.LogInformation("Refunded training credits for user {UserId} after training {TrainingId} auth failure", Sid(modelRequest.UserId), S(trainingId));
+            }
+            catch (Exception refundEx)
+            {
+                _logger.LogError(refundEx, "Failed to refund credits for user {UserId} after training {TrainingId} auth failure", Sid(modelRequest.UserId), S(trainingId));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to mark training {TrainingId} as failed after Replicate auth error", S(trainingId));
         }
     }
 
@@ -248,7 +305,8 @@ public class TrainingPollingService : ITrainingPollingService
                     var refundResult = CreditConsumptionResult.Succeeded(
                         "model_training_refund",
                         weeklyCredits: 0,
-                        purchasedCredits: CreditCostConfig.ModelTraining);
+                        purchasedCredits: CreditCostConfig.ModelTraining,
+                        correlationId: modelRequest.Id);
 
                     await scopedBasicTierService.RefundCreditsAsync(modelRequest.UserId, refundResult);
                     _logger.LogInformation("Refunded training credits for user {UserId} after training {TrainingId} failed", Sid(modelRequest.UserId), S(trainingId));

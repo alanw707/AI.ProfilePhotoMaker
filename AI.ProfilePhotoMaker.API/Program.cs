@@ -111,6 +111,31 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
 
+    // Restrict forwarded host values to known application hosts to prevent host header injection.
+    // Note: ForwardedHeadersOptions.AllowedHosts supports wildcard patterns.
+    var allowedHosts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "*.aiprofilephotomaker.com"
+    };
+    foreach (var configured in new[]
+             {
+                 builder.Configuration["AppBaseUrl"],
+                 builder.Configuration["ExternalApiBaseUrl"],
+                 builder.Configuration["Webhooks:NgrokTunnelUrl"]
+             })
+    {
+        if (string.IsNullOrWhiteSpace(configured)) continue;
+        if (Uri.TryCreate(configured, UriKind.Absolute, out var parsed) && !string.IsNullOrWhiteSpace(parsed.Host))
+        {
+            allowedHosts.Add(parsed.Host);
+        }
+    }
+    options.AllowedHosts.Clear();
+    foreach (var host in allowedHosts)
+    {
+        options.AllowedHosts.Add(host);
+    }
+
     // Trust development proxy
     options.KnownProxies.Add(System.Net.IPAddress.Parse("127.0.0.1"));
 
@@ -185,9 +210,10 @@ builder.Services.AddSingleton(provider =>
     };
 
     Stripe.StripeConfiguration.AppInfo = appInfo;
-    Stripe.StripeConfiguration.ApiKey = stripeOptions.SecretKey;
+    var secretKey = AI.ProfilePhotoMaker.API.Services.Payments.StripeClientFactory.GetSafeSecretKey(stripeOptions.SecretKey);
+    Stripe.StripeConfiguration.ApiKey = secretKey;
 
-    return new Stripe.StripeClient(stripeOptions.SecretKey ?? string.Empty);
+    return AI.ProfilePhotoMaker.API.Services.Payments.StripeClientFactory.Create(secretKey);
 });
 
 builder.Services.AddScoped<IStripePaymentService, StripePaymentService>();
@@ -204,6 +230,10 @@ if (builder.Environment.IsEnvironment("Testing"))
     {
         options.UseInMemoryDatabase($"TestDb_{Guid.NewGuid()}");
     });
+
+    // Program config expects health check middleware; in tests we register a minimal health checks service
+    // (without database/migration checks) so startup doesn't fail.
+    builder.Services.AddHealthChecks();
 }
 else
 {
@@ -346,8 +376,13 @@ if (!enableReplicateMock)
     builder.Services.AddSingleton<Replicate.ReplicateApi>(provider =>
     {
         var configuration = provider.GetRequiredService<IConfiguration>();
-        var apiToken = configuration["Replicate:ApiToken"]
-            ?? throw new InvalidOperationException("Replicate API token not configured");
+        var envToken = (Environment.GetEnvironmentVariable(EnvironmentConfiguration.REPLICATE_API_TOKEN) ?? string.Empty).Trim();
+        var cfgToken = (configuration["Replicate:ApiToken"] ?? string.Empty).Trim();
+        var apiToken = !string.IsNullOrWhiteSpace(envToken) ? envToken : cfgToken;
+        if (string.IsNullOrEmpty(apiToken))
+        {
+            throw new InvalidOperationException("Replicate API token not configured");
+        }
         return new Replicate.ReplicateApi(apiToken);
     });
 }
@@ -398,7 +433,19 @@ if (!string.IsNullOrEmpty(azureStorageConnectionString))
 {
     builder.Services.AddSingleton<BlobServiceClient>(_ => new BlobServiceClient(azureStorageConnectionString));
     builder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
+}
+else
+{
+    builder.Services.AddScoped<IStorageService, LocalStorageService>();
+}
 
+var dpBuilder = builder.Services.AddDataProtection()
+    .SetApplicationName("AIProfilePhotoMaker");
+
+if (!builder.Environment.IsDevelopment()
+    && !builder.Environment.IsEnvironment("Testing")
+    && !string.IsNullOrEmpty(azureStorageConnectionString))
+{
     // Persist Data Protection keys to Azure Blob so cookies survive pod/revision restarts
     var dpContainer = new BlobContainerClient(azureStorageConnectionString, "dataprotection");
     try
@@ -413,19 +460,25 @@ if (!string.IsNullOrEmpty(azureStorageConnectionString))
         // Continue; if container truly doesn't exist and cannot be created due to perms,
         // app will still start but cookie protection may fail until container is provisioned.
     }
+
     var dpBlob = dpContainer.GetBlobClient("keys.xml");
-    builder.Services.AddDataProtection()
-        .SetApplicationName("AIProfilePhotoMaker")
-        .PersistKeysToAzureBlobStorage(dpBlob);
+    dpBuilder.PersistKeysToAzureBlobStorage(dpBlob);
 }
 else
 {
-    builder.Services.AddScoped<IStorageService, LocalStorageService>();
-
-    // Use file-based data protection for development (keys survive restarts)
-    builder.Services.AddDataProtection()
-        .SetApplicationName("AIProfilePhotoMaker")
-        .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "keys")));
+    // In Development, prefer local keys to avoid auth/login hanging if Azurite is misconfigured/unreachable.
+    // (Can be overridden by setting DataProtection:PersistKeysToAzureBlob=true.)
+    var persistToAzureBlobInDev = builder.Configuration.GetValue("DataProtection:PersistKeysToAzureBlob", false);
+    if (persistToAzureBlobInDev && !string.IsNullOrEmpty(azureStorageConnectionString))
+    {
+        var dpBlob = new BlobContainerClient(azureStorageConnectionString, "dataprotection")
+            .GetBlobClient("keys.xml");
+        dpBuilder.PersistKeysToAzureBlobStorage(dpBlob);
+    }
+    else
+    {
+        dpBuilder.PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "keys")));
+    }
 }
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Storage.StoragePathResolver>();
 
@@ -544,12 +597,11 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// TEMPORARY: Skip environment validation for testing authentication fix
-// Validate environment configuration before starting (skip in Testing)
-//if (!app.Environment.IsEnvironment("Testing"))
-//{
-//    await app.UseEnvironmentValidationAsync();
-//}
+// Validate environment configuration before starting (only enforce outside Development/Testing)
+if (!app.Environment.IsEnvironment("Testing") && !app.Environment.IsDevelopment())
+{
+    await app.UseEnvironmentValidationAsync();
+}
 
 // Apply database migrations using new architecture (only if enabled and not in Testing)
 if (!app.Environment.IsEnvironment("Testing"))

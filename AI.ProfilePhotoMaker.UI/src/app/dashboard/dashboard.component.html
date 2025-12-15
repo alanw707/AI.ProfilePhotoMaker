@@ -20,7 +20,7 @@
             clickAction="gallery"></app-stats-card>
           <app-stats-card
             icon="🤖"
-            [value]="(state$ | async)?.modelStatus || 'Loading...'"
+            [value]="getModelStatusCardValue(state$ | async)"
             label="Model Status"
             [isModelStatus]="true"></app-stats-card>
           <app-stats-card
@@ -31,6 +31,54 @@
             [isClickable]="true"
             clickAction="settings"
             [isLoading]="!(state$ | async)?.creditsInfo && !(state$ | async)?.userCreditStatus"></app-stats-card>
+        </div>
+      </section>
+
+      <!-- Active Job Banner (resumes after navigation) -->
+      <section class="active-job-section" *ngIf="activeJob as job">
+        <div class="active-job-card" [class.error]="job.kind === 'error'">
+          <div class="active-job-header">
+            <div class="active-job-title">
+              <h3>{{ job.title }}</h3>
+              <p>{{ job.message }}</p>
+            </div>
+            <div class="active-job-meta" *ngIf="job.etaText && job.kind !== 'error'">
+              <span class="eta">{{ job.etaText }}</span>
+            </div>
+          </div>
+
+          <div class="active-job-progress" *ngIf="job.kind !== 'error'">
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="job.progressPercent"></div>
+            </div>
+            <span class="progress-percent">{{ job.progressPercent }}%</span>
+          </div>
+
+          <div class="active-job-error" *ngIf="job.kind === 'error'">
+            <p class="error-details">{{ job.errorDetails }}</p>
+
+            <div class="credit-impact" *ngIf="job.creditImpact">
+              <div class="credit-row">
+                <span class="label">Credits charged:</span>
+                <span class="value">{{ job.creditImpact.chargedCredits }}</span>
+              </div>
+              <div class="credit-row">
+                <span class="label">Credits refunded:</span>
+                <span class="value">{{ job.creditImpact.refundedCredits }}</span>
+              </div>
+              <div class="credit-row net">
+                <span class="label">Net credits spent:</span>
+                <span class="value">{{ job.creditImpact.netCredits }}</span>
+              </div>
+              <p class="credit-hint">Net credits spent = charged - refunded.</p>
+            </div>
+
+            <div class="error-actions">
+              <button class="btn btn-primary btn-sm" type="button" (click)="purchaseCredits()">
+                Purchase Credits
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 

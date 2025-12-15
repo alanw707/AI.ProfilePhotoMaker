@@ -376,6 +376,13 @@ public class AzureBlobStorageService : BaseStorageService
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
             var blobClient = containerClient.GetBlobClient(blobPath.TrimStart('/'));
 
+            // For Azurite/local development, the blob containers are configured as public (`PublicAccessType.Blob`).
+            // Returning a plain URL avoids SAS version incompatibilities (Azurite may reject newer `sv` values).
+            if (IsAzuriteEndpoint(_blobServiceClient.Uri))
+            {
+                return Task.FromResult(blobClient.Uri.ToString());
+            }
+
             // Check if the blob client can generate SAS
             if (!blobClient.CanGenerateSasUri)
             {
@@ -458,6 +465,19 @@ public class AzureBlobStorageService : BaseStorageService
         return (containerName, blobPath);
     }
 
+    private static bool IsAzuriteEndpoint(Uri serviceUri)
+    {
+        if (serviceUri.Port == 10000)
+        {
+            return true;
+        }
+
+        var host = serviceUri.Host ?? string.Empty;
+        return host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+               || host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase)
+               || host.Contains("azurite", StringComparison.OrdinalIgnoreCase);
+    }
+
     public override async Task<string> SaveZipAsync(Stream zipStream, string storagePath)
     {
         ValidateStoragePath(storagePath);
@@ -483,17 +503,17 @@ public class AzureBlobStorageService : BaseStorageService
 
             var blobClient = containerClient.GetBlobClient(blobPath.TrimStart('/'));
 
-            // Set content type for ZIP files
-            var blobUploadOptions = new BlobUploadOptions
+            // Upload with overwrite to avoid a delete+upload window where external fetchers can see a 404.
+            if (zipStream.CanSeek)
             {
-                HttpHeaders = new BlobHttpHeaders
-                {
-                    ContentType = GetContentType(".zip")
-                }
-            };
+                zipStream.Position = 0;
+            }
 
-            await blobClient.DeleteIfExistsAsync();
-            await blobClient.UploadAsync(zipStream, blobUploadOptions);
+            await blobClient.UploadAsync(zipStream, overwrite: true);
+            await blobClient.SetHttpHeadersAsync(new BlobHttpHeaders
+            {
+                ContentType = GetContentType(".zip")
+            });
 
             LogOperation(LogLevel.Information, "SaveZipAsync", storagePath);
             return storagePath;
