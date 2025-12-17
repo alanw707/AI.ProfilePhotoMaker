@@ -483,6 +483,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
     }
   }
 
+  goToSupport(): void {
+    void this.router.navigate(['/app/support'], { queryParams: { category: 'Question' } });
+  }
+
   // Credit Management Methods
   loadCreditInfo() {
     // Subscribe to dashboard state for credit information with proper cleanup

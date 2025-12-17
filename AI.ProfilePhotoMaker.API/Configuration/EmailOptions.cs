@@ -37,4 +37,11 @@ public class EmailOptions
     /// Frontend base URL for CTA links in emails (e.g., https://app.aiprofilephotomaker.com)
     /// </summary>
     public string? FrontendBaseUrl { get; set; }
+
+    /// <summary>
+    /// Internal support inbox recipient for authenticated feedback submissions.
+    /// </summary>
+    public string? SupportToEmail { get; set; }
+
+    public string? SupportToName { get; set; }
 }

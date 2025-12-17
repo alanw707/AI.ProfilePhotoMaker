@@ -372,6 +372,8 @@
     .progress-actions
       display: flex
       justify-content: center
+      gap: 12px
+      flex-wrap: wrap
       
       .continue-background-btn
         background: linear-gradient(135deg, var(--accent-primary) 0%, var(--primary-hover) 100%)
@@ -393,6 +395,26 @@
         &:active
           transform: translateY(-1px)
           box-shadow: 0 2px 8px rgba(79, 209, 199, 0.3)
+
+      .contact-support-btn
+        background: transparent
+        color: var(--text-primary)
+        border: 1px solid var(--border-color)
+        padding: 14px 22px
+        border-radius: 12px
+        font-size: 14px
+        font-weight: 600
+        cursor: pointer
+        transition: all 0.3s ease
+        font-family: 'Poppins', sans-serif
+
+        &:hover
+          transform: translateY(-2px)
+          border-color: var(--accent-primary)
+          box-shadow: 0 6px 20px rgba(79, 209, 199, 0.15)
+
+        &:active
+          transform: translateY(-1px)
 
 @keyframes spin
   from

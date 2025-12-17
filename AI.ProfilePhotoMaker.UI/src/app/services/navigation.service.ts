@@ -133,6 +133,10 @@ export class NavigationService {
     return this.navigateTo('/app/settings');
   }
 
+  goToSupport(): Promise<boolean> {
+    return this.navigateTo('/app/support');
+  }
+
   /**
    * Navigate to public pages
    */

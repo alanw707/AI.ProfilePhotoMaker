@@ -77,6 +77,10 @@ export class ConfigService {
     return this.buildEndpointUrl('/model-creation/user/current');
   }
 
+  get feedbackUrl(): string {
+    return this.buildEndpointUrl('/feedback');
+  }
+
   /**
    * Build a complete endpoint URL based on environment configuration
    * @param endpoint - API endpoint path (e.g., '/auth/login')

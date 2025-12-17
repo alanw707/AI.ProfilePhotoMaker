@@ -24,6 +24,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
     public virtual DbSet<Subscription> Subscriptions { get; set; }
     public virtual DbSet<PaymentTransaction> PaymentTransactions { get; set; }
+    public virtual DbSet<FeedbackSubmission> FeedbackSubmissions { get; set; }
 
     // Premium Package management removed - replaced by unified CreditPackage system
 
@@ -43,6 +44,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         ConfigureUserStyleSelectionRelationships(builder);
         ConfigureSubscriptionRelationships(builder);
         ConfigurePaymentTransactionRelationships(builder);
+        ConfigureFeedbackSubmissionRelationships(builder);
         ConfigurePendingGenerationRelationships(builder);
         ConfigureCreditPackageRelationships(builder);
 
@@ -146,6 +148,18 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasOne(t => t.Subscription)
             .WithMany()
             .HasForeignKey(t => t.SubscriptionId);
+    }
+
+    private void ConfigureFeedbackSubmissionRelationships(ModelBuilder builder)
+    {
+        builder.Entity<FeedbackSubmission>()
+            .HasOne(fs => fs.User)
+            .WithMany()
+            .HasForeignKey(fs => fs.UserId);
+
+        builder.Entity<FeedbackSubmission>()
+            .HasIndex(fs => fs.UserId)
+            .HasDatabaseName("IX_FeedbackSubmissions_UserId");
     }
 
     private void ConfigurePendingGenerationRelationships(ModelBuilder builder)
