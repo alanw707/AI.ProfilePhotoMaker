@@ -13,16 +13,23 @@
 const { test, expect } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
+const { getHostname } = require('./setup/url-utils');
+
+const isProductionAppUrl = urlValue => getHostname(urlValue) === 'app.aiprofilephotomaker.com';
 
 // Test configuration
 const config = {
-  // Production URL (update as needed)
-  baseUrl: 'https://app.aiprofilephotomaker.com',
+  // UI base URL (can be overridden via TEST_BASE_URL)
+  baseUrl: process.env.TEST_BASE_URL || 'https://app.aiprofilephotomaker.com',
+  // API base URL (can be overridden via TEST_API_BASE_URL / API_BASE_URL)
+  apiBaseUrl: (process.env.TEST_API_BASE_URL || process.env.API_BASE_URL || 'https://api.aiprofilephotomaker.com')
+    .replace(/\/api\/?$/i, '')
+    .replace(/\/+$/, ''),
   
-  // Test credentials (create test user for this)
+  // Test credentials (create a dedicated test user for this)
   testUser: {
-    email: 'test.upload@example.com',
-    password: 'TestUpload123!'
+    email: process.env.UPLOAD_TEST_EMAIL || 'test.upload@example.com',
+    password: process.env.UPLOAD_TEST_PASSWORD || 'TestUpload123!'
   },
   
   // Test image path (create a small test image)
@@ -193,7 +200,7 @@ test.describe('Image Upload Flow Validation', () => {
    */
   async function validateStorageHealth(page) {
     try {
-      const healthUrl = `${config.baseUrl}/api/health/storage`;
+      const healthUrl = `${config.apiBaseUrl}/api/health/storage`;
       const response = await page.request.get(healthUrl);
       const healthData = await response.json();
       
@@ -218,19 +225,23 @@ test.describe('Image Upload Flow Validation', () => {
    * Validates image URL and determines storage configuration
    */
   async function validateImageUrl(page, imageUrl) {
+    const resolvedUrl = /^https?:\/\//i.test(imageUrl)
+      ? imageUrl
+      : new URL(imageUrl, config.apiBaseUrl).toString();
+
     // Analyze URL pattern to determine storage service
-    const urlAnalysis = analyzeImageUrl(imageUrl);
+    const urlAnalysis = analyzeImageUrl(resolvedUrl);
     console.log('📊 URL Analysis:', urlAnalysis);
     
     // Test image accessibility
-    const response = await page.request.get(imageUrl);
+    const response = await page.request.get(resolvedUrl);
     const isAccessible = response.ok();
     
     console.log(`🌐 Image accessibility: ${isAccessible ? '✅ Accessible' : '❌ Not accessible'} (Status: ${response.status()})`);
     
     if (!isAccessible) {
       console.error('🚨 Image upload issue detected:');
-      console.error(`   URL: ${imageUrl}`);
+      console.error(`   URL: ${resolvedUrl}`);
       console.error(`   Status: ${response.status()}`);
       console.error(`   Storage Type: ${urlAnalysis.storageType}`);
       
@@ -245,7 +256,7 @@ test.describe('Image Upload Flow Validation', () => {
     expect(isAccessible).toBeTruthy();
     
     // Validate correct storage type for environment
-    if (config.baseUrl.includes('app.aiprofilephotomaker.com')) {
+    if (isProductionAppUrl(config.baseUrl)) {
       // Production should use Azure Blob Storage
       expect(urlAnalysis.storageType).toBe('azure');
       console.log('✅ Production correctly using Azure Blob Storage');
@@ -286,7 +297,7 @@ test.describe('Storage Service Health Check', () => {
   
   test('should validate storage service configuration via health endpoint', async ({ page }) => {
     // Test the comprehensive storage health endpoint
-    const healthUrl = `${config.baseUrl}/api/health/storage`;
+    const healthUrl = `${config.apiBaseUrl}/api/health/storage`;
     
     console.log('🔍 Testing storage health endpoint:', healthUrl);
     
@@ -305,7 +316,7 @@ test.describe('Storage Service Health Check', () => {
         console.log(`📋 Storage Provider: ${healthData.provider}`);
         
         // For production, validate Azure Blob Storage is used
-        if (config.baseUrl.includes('app.aiprofilephotomaker.com')) {
+        if (isProductionAppUrl(config.baseUrl)) {
           expect(healthData.provider).toBe('AzureBlobStorage');
           console.log('✅ Production correctly configured with Azure Blob Storage');
           
@@ -323,18 +334,18 @@ test.describe('Storage Service Health Check', () => {
           console.log(`ℹ️ Non-production environment using: ${healthData.provider}`);
         }
         
-        // Validate operation test results
-        if (healthData.operations) {
-          console.log('🧪 Storage Operations Test Results:');
-          Object.entries(healthData.operations).forEach(([operation, success]) => {
-            console.log(`  ${operation}: ${success ? '✅ PASS' : '❌ FAIL'}`);
-          });
-          
-          // Critical operations must pass
-          expect(healthData.operations.upload).toBe(true);
-          expect(healthData.operations.exists).toBe(true);
-          expect(healthData.operations.delete).toBe(true);
-        }
+      // Validate operation test results
+      if (healthData.testResults) {
+        console.log('🧪 Storage Operations Test Results:');
+        Object.entries(healthData.testResults).forEach(([operation, success]) => {
+          console.log(`  ${operation}: ${success ? '✅ PASS' : '❌ FAIL'}`);
+        });
+        
+        // Critical operations must pass
+        expect(healthData.testResults.upload).toBe(true);
+        expect(healthData.testResults.exists).toBe(true);
+        expect(healthData.testResults.delete).toBe(true);
+      }
         
       } else {
         console.error('❌ Storage provider information missing from health response');
@@ -351,45 +362,34 @@ test.describe('Storage Service Health Check', () => {
     console.log('🧪 Testing end-to-end storage integration...');
     
     // Get baseline storage configuration
-    const storageHealthUrl = `${config.baseUrl}/api/health/storage`;
+    const storageHealthUrl = `${config.apiBaseUrl}/api/health/storage`;
     const storageHealth = await page.request.get(storageHealthUrl);
     const storageData = await storageHealth.json();
     
     console.log(`📊 Baseline Storage Config: ${storageData.provider} (Can Connect: ${storageData.canConnect})`);
     
-    // Test overall application health with storage focus
-    const comprehensiveHealthUrl = `${config.baseUrl}/api/health/comprehensive`;
+    // Test overall API health
+    const healthUrl = `${config.apiBaseUrl}/api/health`;
     
     try {
-      const healthResponse = await page.request.get(comprehensiveHealthUrl);
+      const healthResponse = await page.request.get(healthUrl);
       const healthData = await healthResponse.json();
       
-      console.log('🏥 Comprehensive Health Status:', healthData.status);
+      console.log('🏥 API Health Status:', healthData.status);
       
       // Validate overall system health
       expect(healthResponse.ok()).toBeTruthy();
-      expect(['Healthy', 'Degraded']).toContain(healthData.status);
-      
-      // Find storage component in comprehensive health
-      const storageComponent = healthData.components?.find(c => 
-        c.name?.toLowerCase().includes('storage') || 
-        c.type?.toLowerCase().includes('storage')
-      );
-      
-      if (storageComponent) {
-        console.log('💾 Storage Component Health:', storageComponent);
-        expect(storageComponent.status).toBe('Healthy');
-        
-        // Validate storage-specific metrics
-        if (storageComponent.details) {
-          console.log('📊 Storage Component Details:', JSON.stringify(storageComponent.details, null, 2));
-        }
-      } else {
-        console.warn('⚠️ Storage component not found in comprehensive health check');
+      expect(healthData.status).toBe('Healthy');
+
+      // Basic expected checks should be present
+      if (Array.isArray(healthData.checks)) {
+        const names = healthData.checks.map(c => c.name);
+        expect(names).toContain('database');
+        expect(names).toContain('migrations');
       }
       
     } catch (error) {
-      console.error('❌ Comprehensive health check failed:', error.message);
+      console.error('❌ API health check failed:', error.message);
       throw error;
     }
   });
@@ -397,7 +397,7 @@ test.describe('Storage Service Health Check', () => {
   test('should detect and report storage configuration issues', async ({ page }) => {
     console.log('🔍 Testing storage configuration issue detection...');
     
-    const storageHealthUrl = `${config.baseUrl}/api/health/storage`;
+    const storageHealthUrl = `${config.apiBaseUrl}/api/health/storage`;
     const response = await page.request.get(storageHealthUrl);
     const healthData = await response.json();
     
@@ -407,8 +407,8 @@ test.describe('Storage Service Health Check', () => {
       canConnect: healthData.canConnect,
       hasConnectionString: healthData.hasConnectionString,
       isEmulator: healthData.isEmulator,
-      environment: config.baseUrl.includes('app.aiprofilephotomaker.com') ? 'Production' : 'Development',
-      expectedProvider: config.baseUrl.includes('app.aiprofilephotomaker.com') ? 'AzureBlobStorage' : 'Any',
+      environment: isProductionAppUrl(config.baseUrl) ? 'Production' : 'Development',
+      expectedProvider: isProductionAppUrl(config.baseUrl) ? 'AzureBlobStorage' : 'Any',
       configurationValid: true,
       issues: [],
       recommendations: []

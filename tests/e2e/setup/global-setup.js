@@ -7,6 +7,7 @@
 const { chromium } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
+const { getHostAndPort, getHostname, isStagingAppBaseUrl } = require('./url-utils');
 
 async function globalSetup(config) {
   console.log('🚀 Starting E2E Test Global Setup...');
@@ -70,7 +71,12 @@ Tests will be skipped until this file exists.
  * Validates the target environment is healthy
  */
 async function validateEnvironmentHealth(config) {
-  const baseURL = config.projects[0]?.use?.baseURL || 'https://app.aiprofilephotomaker.com';
+  const baseURL =
+    process.env.TEST_BASE_URL ||
+    config.use?.baseURL ||
+    config.projects?.find(p => p?.use?.baseURL)?.use?.baseURL ||
+    'https://app.aiprofilephotomaker.com';
+  const apiBaseURL = resolveApiBaseUrl(baseURL);
   
   try {
     const browser = await chromium.launch({ headless: true });
@@ -86,21 +92,21 @@ async function validateEnvironmentHealth(config) {
     
     console.log('✅ Environment is accessible');
     
-    // Test API health endpoint
+    // Test API health endpoint (API is hosted on a separate origin in prod/docker-local)
     try {
-      const healthResponse = await page.request.get(`${baseURL}/api/health`);
+      const healthResponse = await page.request.get(`${apiBaseURL}/api/health`);
       if (healthResponse.ok()) {
         const healthData = await healthResponse.json();
         console.log(`🏥 API Health: ${healthData.status || 'Healthy'}`);
         
         // Test storage health specifically
-        const storageHealthResponse = await page.request.get(`${baseURL}/api/health/storage`);
+        const storageHealthResponse = await page.request.get(`${apiBaseURL}/api/health/storage`);
         if (storageHealthResponse.ok()) {
           const storageData = await storageHealthResponse.json();
           console.log(`💾 Storage Health: ${storageData.status} (${storageData.provider})`);
           
           // Warn if production is using LocalStorage
-          if (baseURL.includes('app.aiprofilephotomaker.com') && storageData.provider === 'LocalStorage') {
+          if (getHostname(apiBaseURL) === 'api.aiprofilephotomaker.com' && storageData.provider === 'LocalStorage') {
             console.warn('⚠️ WARNING: Production environment using LocalStorage - expect image upload failures');
           }
         }
@@ -115,6 +121,38 @@ async function validateEnvironmentHealth(config) {
     console.error('❌ Environment validation failed:', error.message);
     throw new Error(`Environment setup failed: ${error.message}`);
   }
+}
+
+function resolveApiBaseUrl(appBaseUrl) {
+  const explicit = process.env.TEST_API_BASE_URL || process.env.API_BASE_URL;
+  if (explicit) {
+    return explicit.replace(/\/+$/, '');
+  }
+
+  const { hostname, port } = getHostAndPort(appBaseUrl);
+
+  // Local docker/dev convention.
+  if ((hostname === 'localhost' || hostname === '127.0.0.1') && port === '4200') {
+    return 'http://localhost:5032';
+  }
+
+  // Production convention.
+  if (hostname === 'app.aiprofilephotomaker.com' || hostname === 'aiprofilephotomaker.com') {
+    return 'https://api.aiprofilephotomaker.com';
+  }
+
+  // Staging convention (best-effort).
+  if (isStagingAppBaseUrl(appBaseUrl)) {
+    return 'https://staging-api.aiprofilephotomaker.com';
+  }
+
+  // If appBaseUrl is already an API host, use it.
+  if (getHostname(appBaseUrl) === 'api.aiprofilephotomaker.com') {
+    return appBaseUrl.replace(/\/+$/, '');
+  }
+
+  // Default to production API.
+  return 'https://api.aiprofilephotomaker.com';
 }
 
 /**

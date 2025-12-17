@@ -131,7 +131,18 @@ public class StorageHealthService : IStorageHealthService
                 try
                 {
                     using var downloadedStream = await _storageService.GetImageAsync(uploadedPath);
-                    results["download"] = downloadedStream != null && downloadedStream.Length > 0;
+                    if (downloadedStream == null)
+                    {
+                        results["download"] = false;
+                    }
+                    else
+                    {
+                        // Some stream implementations (e.g., network streams) don't reliably report Length.
+                        // Validate by attempting to read at least 1 byte.
+                        var buffer = new byte[1];
+                        var bytesRead = await downloadedStream.ReadAsync(buffer, 0, 1, cancellationToken.Token);
+                        results["download"] = bytesRead > 0;
+                    }
                     _logger.LogDebug("Storage download test: {Result}", results["download"] ? "SUCCESS" : "FAILED");
                 }
                 catch (Exception ex)

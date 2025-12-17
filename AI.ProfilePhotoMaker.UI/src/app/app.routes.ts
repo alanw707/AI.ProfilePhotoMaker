@@ -130,6 +130,15 @@ export const routes: Routes = [
           hideNavigation: false,
         },
       },
+      {
+        path: 'support',
+        loadComponent: () => import('./pages/support/support.component').then(m => m.SupportComponent),
+        title: 'Support - AI Profile Photo Maker',
+        data: {
+          breadcrumb: 'Support',
+          hideNavigation: false,
+        },
+      },
     ],
   },
   // Legacy protected routes (for backwards compatibility)

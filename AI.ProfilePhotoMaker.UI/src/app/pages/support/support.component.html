@@ -1,0 +1,58 @@
+<div class="support-container">
+  <app-header-navigation></app-header-navigation>
+
+  <main class="support-main">
+    <div class="support-content">
+      <section class="page-header">
+        <div class="breadcrumb">
+          <a routerLink="/app/dashboard" class="breadcrumb-link">Dashboard</a>
+          <span class="breadcrumb-separator">/</span>
+          <a routerLink="/app/settings" class="breadcrumb-link">Settings</a>
+          <span class="breadcrumb-separator">/</span>
+          <span class="breadcrumb-current">Support</span>
+        </div>
+        <h1>Support</h1>
+        <p class="page-subtitle">
+          Report bugs, request features, or ask questions. We’ll reply to the email on your account.
+        </p>
+      </section>
+
+      <section class="support-card">
+        <div class="field">
+          <label for="category">Category</label>
+          <select id="category" [formControl]="form.controls.category">
+            <option *ngFor="let c of categories" [value]="c">{{ c }}</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="message">Message</label>
+          <textarea
+            id="message"
+            rows="8"
+            [formControl]="form.controls.message"
+            placeholder="Tell us what happened, what you expected, and what you saw. Include any IDs shown on-screen if available."></textarea>
+          <div class="field-hint">
+            <span *ngIf="form.controls.message.touched && form.controls.message.invalid" class="field-error">
+              Message must be 10–2000 characters.
+            </span>
+            <span class="field-count">{{ messageLength }}/2000</span>
+          </div>
+        </div>
+
+        <div class="privacy-note">
+          We’ll include basic technical context (current page URL and browser info) to help us debug.
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-secondary" type="button" (click)="backToSettings()">Back</button>
+          <button class="btn btn-primary" type="button" (click)="submit()" [disabled]="isSubmitting">
+            <span *ngIf="!isSubmitting">Send</span>
+            <span *ngIf="isSubmitting">Sending…</span>
+          </button>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+

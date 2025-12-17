@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { CacheManagerService } from './cache-manager.service';
 import { ICacheManagerService } from '../interfaces/service.interfaces';
 
@@ -101,28 +101,24 @@ describe('CacheManagerService', () => {
       expect(service.isCacheValid(key)).toBeTrue();
     });
 
-    it('should return false for expired cache entries', done => {
+    it('should return false for expired cache entries', fakeAsync(() => {
       const key = 'expired-test';
       service.setCachedData(key, 'test-data', 50); // 50ms duration
 
-      setTimeout(() => {
-        expect(service.isCacheValid(key)).toBeFalse();
-        done();
-      }, 100); // Check after 100ms
-    });
+      tick(100); // Check after 100ms
+      expect(service.isCacheValid(key)).toBeFalse();
+    }));
 
-    it('should automatically remove expired entries when checking validity', done => {
+    it('should automatically remove expired entries when checking validity', fakeAsync(() => {
       const key = 'auto-remove-test';
       service.setCachedData(key, 'test-data', 50);
 
-      setTimeout(() => {
-        service.isCacheValid(key); // This should remove the expired entry
-        expect(service.getCachedData(key)).toBeNull();
-        done();
-      }, 100);
-    });
+      tick(100);
+      service.isCacheValid(key); // This should remove the expired entry
+      expect(service.getCachedData(key)).toBeNull();
+    }));
 
-    it('should update last accessed time when checking valid cache', done => {
+    it('should update last accessed time when checking valid cache', fakeAsync(() => {
       const key = 'access-time-test';
       service.setCachedData(key, 'test-data', 5000);
 
@@ -130,13 +126,11 @@ describe('CacheManagerService', () => {
       service.isCacheValid(key);
 
       // Give a small delay to ensure time difference
-      setTimeout(() => {
-        service.isCacheValid(key);
-        // The lastAccessed time should be updated (hard to test precisely, but logic is sound)
-        expect(service.isCacheValid(key)).toBeTrue();
-        done();
-      }, 10);
-    });
+      tick(10);
+      service.isCacheValid(key);
+      // The lastAccessed time should be updated (hard to test precisely, but logic is sound)
+      expect(service.isCacheValid(key)).toBeTrue();
+    }));
   });
 
   describe('invalidateCache() and invalidateAllCache()', () => {
@@ -186,17 +180,15 @@ describe('CacheManagerService', () => {
       expect(service.shouldDebounceRequest(requestKey, debounceMs)).toBeTrue(); // Should be debounced
     });
 
-    it('should allow requests after debounce period', done => {
+    it('should allow requests after debounce period', fakeAsync(() => {
       const requestKey = 'delayed-test';
       const debounceMs = 100;
 
       service.shouldDebounceRequest(requestKey, debounceMs); // First request
 
-      setTimeout(() => {
-        expect(service.shouldDebounceRequest(requestKey, debounceMs)).toBeFalse();
-        done();
-      }, 150); // Wait longer than debounce period
-    });
+      tick(150); // Wait longer than debounce period
+      expect(service.shouldDebounceRequest(requestKey, debounceMs)).toBeFalse();
+    }));
 
     it('should handle different request keys independently', () => {
       const debounceMs = 1000;
@@ -264,19 +256,17 @@ describe('CacheManagerService', () => {
       expect(stats.expiredEntries).toBe(0);
     });
 
-    it('should count expired entries correctly', done => {
+    it('should count expired entries correctly', fakeAsync(() => {
       service.setCachedData('valid', 'value', 5000);
       service.setCachedData('expired', 'value', 50); // Will expire quickly
 
-      setTimeout(() => {
-        const stats = service.getCacheStats();
+      tick(100);
+      const stats = service.getCacheStats();
 
-        expect(stats.totalEntries).toBe(2);
-        expect(stats.validEntries).toBe(1);
-        expect(stats.expiredEntries).toBe(1);
-        done();
-      }, 100);
-    });
+      expect(stats.totalEntries).toBe(2);
+      expect(stats.validEntries).toBe(1);
+      expect(stats.expiredEntries).toBe(1);
+    }));
 
     it('should calculate cache hit ratio', () => {
       // Set up some requests
@@ -296,21 +286,19 @@ describe('CacheManagerService', () => {
   // Debug helpers are not part of current service API; skipping related tests
 
   describe('Cache Cleanup', () => {
-    it('should automatically clean expired entries during operations', done => {
+    it('should automatically clean expired entries during operations', fakeAsync(() => {
       // Add some entries that will expire quickly
       service.setCachedData('short1', 'value1', 50);
       service.setCachedData('short2', 'value2', 50);
       service.setCachedData('long', 'value3', 5000);
 
-      setTimeout(() => {
-        // Trigger cleanup by adding new data
-        service.setCachedData('new', 'value4', 5000);
+      tick(100);
+      // Trigger cleanup by adding new data
+      service.setCachedData('new', 'value4', 5000);
 
-        const stats = service.getCacheStats();
-        expect(stats.totalEntries).toBeLessThan(4); // Some expired entries should be cleaned
-        done();
-      }, 100);
-    });
+      const stats = service.getCacheStats();
+      expect(stats.totalEntries).toBeLessThan(4); // Some expired entries should be cleaned
+    }));
   });
 
   describe('Edge Cases', () => {
@@ -325,14 +313,13 @@ describe('CacheManagerService', () => {
       expect(retrieved).toEqual(largeData);
     });
 
-    it('should handle very short cache durations', () => {
+    it('should handle very short cache durations', fakeAsync(() => {
       service.setCachedData('short-lived', 'value', 1); // 1ms
 
       // Should be immediately expired
-      setTimeout(() => {
-        expect(service.isCacheValid('short-lived')).toBeFalse();
-      }, 5);
-    });
+      tick(5);
+      expect(service.isCacheValid('short-lived')).toBeFalse();
+    }));
 
     it('should handle zero duration cache', () => {
       service.setCachedData('zero-duration', 'value', 0);

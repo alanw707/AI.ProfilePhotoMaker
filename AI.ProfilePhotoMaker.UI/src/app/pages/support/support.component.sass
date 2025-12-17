@@ -1,0 +1,110 @@
+@use '../../shared/styles/index' as shared
+
+.support-container
+  @include shared.page-container
+
+.support-main
+  @include shared.content-container
+  max-width: 960px
+
+.page-header
+  margin-bottom: 20px
+
+  h1
+    margin: 8px 0
+
+  .page-subtitle
+    color: var(--text-secondary)
+
+.breadcrumb
+  display: flex
+  align-items: center
+  gap: 8px
+  font-size: 0.9rem
+
+  .breadcrumb-link
+    text-decoration: none
+
+  .breadcrumb-separator
+    opacity: 0.6
+
+  .breadcrumb-current
+    opacity: 0.9
+
+.support-card
+  @include shared.card-base
+  padding: 24px
+
+.field
+  @include shared.form-group
+  margin-bottom: 18px
+
+  label
+    font-weight: 600
+
+  select,
+  textarea
+    @include shared.form-control
+    font-size: 16px
+
+  // Browser dropdown menus are partly native; enforce a readable palette.
+  select
+    color-scheme: light
+
+    option
+      color: #111827
+      background: #ffffff
+
+  textarea
+    resize: vertical
+    min-height: 180px
+
+:host-context([data-theme="dark"]) .field select
+  color-scheme: dark
+
+  option
+    color: #f8fafc
+    background: #0f172a
+
+.field-hint
+  display: flex
+  justify-content: space-between
+  gap: 12px
+  font-size: 0.85rem
+  color: var(--text-tertiary)
+
+.field-error
+  color: var(--text-danger)
+
+.privacy-note
+  font-size: 0.9rem
+  color: var(--text-tertiary)
+  margin: 12px 0 20px
+
+.actions
+  display: flex
+  justify-content: flex-end
+  gap: 12px
+
+  .btn
+    @include shared.btn-base
+
+    &.btn-primary
+      @include shared.btn-primary
+
+    &.btn-secondary
+      @include shared.btn-secondary
+
+@media (max-width: 640px)
+  .support-main
+    padding: 16px
+
+  .support-card
+    padding: 16px
+
+  .actions
+    flex-direction: column-reverse
+    align-items: stretch
+
+    .btn
+      width: 100%

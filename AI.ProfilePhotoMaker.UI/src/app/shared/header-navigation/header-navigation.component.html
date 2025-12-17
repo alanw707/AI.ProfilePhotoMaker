@@ -108,6 +108,22 @@
         </svg>
         Settings
       </a>
+      <a
+        *ngIf="isAuthenticated"
+        routerLink="/app/support"
+        routerLinkActive="active"
+        class="nav-link"
+        (click)="closeMobileMenu()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M21 15a4 4 0 01-4 4H8l-5 3V7a4 4 0 014-4h10a4 4 0 014 4v8z"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linejoin="round" />
+          <path d="M8 9h8M8 13h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+        Support
+      </a>
     </nav>
 
     <div class="user-section">

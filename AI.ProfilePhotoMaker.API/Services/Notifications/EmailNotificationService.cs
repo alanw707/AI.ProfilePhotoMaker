@@ -80,7 +80,55 @@ public class EmailNotificationService : IEmailNotificationService
         return SendEmailAsync(email, subject, body, "purchase-receipt", userId);
     }
 
-    private async Task SendEmailAsync(string? toEmail, string subject, string htmlBody, string template, string? userId = null)
+    public Task SendSupportFeedbackReceivedAsync(string userId, string? userEmail, FeedbackSubmission submission)
+    {
+        var supportEmail = _options.SupportToEmail;
+        if (string.IsNullOrWhiteSpace(supportEmail))
+        {
+            _logger.LogInformation("Skipping support feedback email - missing support recipient for user {UserId}", Sid(userId));
+            return Task.CompletedTask;
+        }
+
+        var subject = $"New {submission.Category} report from {(string.IsNullOrWhiteSpace(userEmail) ? "user" : userEmail)}";
+        var safeCategory = WebUtility.HtmlEncode(submission.Category);
+        var safeUserEmail = WebUtility.HtmlEncode(userEmail ?? string.Empty);
+        var safePageUrl = WebUtility.HtmlEncode(submission.PageUrl ?? string.Empty);
+        var safeUserAgent = WebUtility.HtmlEncode(submission.UserAgent ?? string.Empty);
+        var safeMessage = WebUtility.HtmlEncode(submission.Message);
+        var safeCreated = WebUtility.HtmlEncode(submission.CreatedAtUtc.ToString("u"));
+
+        var body = $@"<p>New authenticated support message received.</p>
+                      <p><strong>Category:</strong> {safeCategory}<br/>
+                      <strong>UserId:</strong> {WebUtility.HtmlEncode(userId)}<br/>
+                      <strong>User email:</strong> {safeUserEmail}<br/>
+                      <strong>Created (UTC):</strong> {safeCreated}</p>
+                      <p><strong>Page:</strong> {safePageUrl}<br/>
+                      <strong>User agent:</strong> {safeUserAgent}</p>
+                      <p><strong>Message:</strong></p>
+                      <pre style=""white-space:pre-wrap;"">{safeMessage}</pre>";
+
+        return SendEmailAsync(
+            toEmail: supportEmail,
+            subject: subject,
+            htmlBody: body,
+            template: "support-feedback",
+            userId: userId,
+            replyToEmail: userEmail);
+    }
+
+    private Task SendEmailAsync(string? toEmail, string subject, string htmlBody, string template, string? userId = null)
+    {
+        return SendEmailAsync(toEmail, subject, htmlBody, template, userId, replyToEmail: null, replyToName: null);
+    }
+
+    private async Task SendEmailAsync(
+        string? toEmail,
+        string subject,
+        string htmlBody,
+        string template,
+        string? userId,
+        string? replyToEmail,
+        string? replyToName = null)
     {
         if (!_options.Enabled)
         {
@@ -110,14 +158,14 @@ public class EmailNotificationService : IEmailNotificationService
         var useApi = _options.UseApi && !string.IsNullOrWhiteSpace(_options.ApiKey);
         if (useApi)
         {
-            await SendEmailViaApiAsync(toEmail, subject, htmlBody, template, userId);
+            await SendEmailViaApiAsync(toEmail, subject, htmlBody, template, userId, replyToEmail, replyToName);
             return;
         }
 
         var canSmtp = !string.IsNullOrWhiteSpace(_options.SmtpHost);
         if (canSmtp)
         {
-            await SendEmailViaSmtpAsync(toEmail, subject, htmlBody, template, userId);
+            await SendEmailViaSmtpAsync(toEmail, subject, htmlBody, template, userId, replyToEmail, replyToName);
             return;
         }
 
@@ -128,7 +176,14 @@ public class EmailNotificationService : IEmailNotificationService
             template);
     }
 
-    private async Task SendEmailViaApiAsync(string toEmail, string subject, string htmlBody, string template, string? userId)
+    private async Task SendEmailViaApiAsync(
+        string toEmail,
+        string subject,
+        string htmlBody,
+        string template,
+        string? userId,
+        string? replyToEmail,
+        string? replyToName)
     {
         try
         {
@@ -136,13 +191,25 @@ public class EmailNotificationService : IEmailNotificationService
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             request.Headers.Add("api-key", _options.ApiKey);
 
-            var payload = new
+            object payload = new
             {
                 sender = new { name = _options.FromName ?? "AI Profile Photo Maker", email = _options.FromEmail },
                 to = new[] { new { email = toEmail } },
                 subject = _options.SandboxMode ? $"[SANDBOX] {subject}" : subject,
                 htmlContent = htmlBody
             };
+
+            if (!string.IsNullOrWhiteSpace(replyToEmail))
+            {
+                payload = new
+                {
+                    sender = new { name = _options.FromName ?? "AI Profile Photo Maker", email = _options.FromEmail },
+                    to = new[] { new { email = toEmail } },
+                    replyTo = new { email = replyToEmail, name = replyToName ?? replyToEmail },
+                    subject = _options.SandboxMode ? $"[SANDBOX] {subject}" : subject,
+                    htmlContent = htmlBody
+                };
+            }
 
             var json = JsonSerializer.Serialize(payload);
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -164,7 +231,14 @@ public class EmailNotificationService : IEmailNotificationService
         }
     }
 
-    private async Task SendEmailViaSmtpAsync(string toEmail, string subject, string htmlBody, string template, string? userId)
+    private async Task SendEmailViaSmtpAsync(
+        string toEmail,
+        string subject,
+        string htmlBody,
+        string template,
+        string? userId,
+        string? replyToEmail,
+        string? replyToName)
     {
         using var mail = new MailMessage
         {
@@ -174,6 +248,10 @@ public class EmailNotificationService : IEmailNotificationService
             IsBodyHtml = true
         };
         mail.To.Add(new MailAddress(toEmail));
+        if (!string.IsNullOrWhiteSpace(replyToEmail))
+        {
+            mail.ReplyToList.Add(new MailAddress(replyToEmail, replyToName ?? replyToEmail));
+        }
 
         using var client = new SmtpClient(_options.SmtpHost, _options.SmtpPort)
         {

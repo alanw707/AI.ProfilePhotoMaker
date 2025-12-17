@@ -1,5 +1,6 @@
 // @ts-check
 const { defineConfig, devices } = require('@playwright/test');
+const { isProductionAppBaseUrl } = require('./setup/url-utils');
 
 /**
  * Playwright Configuration for AI Profile Photo Maker E2E Tests
@@ -36,7 +37,7 @@ const baseProjects = [
       baseURL: process.env.TEST_BASE_URL || 'https://app.aiprofilephotomaker.com',
     },
     testMatch: '**/image-upload-validation.spec.js',
-    dependencies: ['production-validation'], // Run after main validation
+    ...(isProductionAppBaseUrl(process.env.TEST_BASE_URL) ? { dependencies: ['production-validation'] } : {}), // Run after main validation (prod only)
   },
 
   {
@@ -46,7 +47,7 @@ const baseProjects = [
       baseURL: process.env.TEST_BASE_URL || 'https://app.aiprofilephotomaker.com',
     },
     testMatch: '**/image-upload-validation.spec.js',
-    dependencies: ['production-validation'], // Run after main validation
+    ...(isProductionAppBaseUrl(process.env.TEST_BASE_URL) ? { dependencies: ['production-validation'] } : {}), // Run after main validation (prod only)
   },
 ];
 
@@ -56,6 +57,9 @@ const enableCreditProject =
 
 const enablePricingScroll =
   process.env.RUN_PRICING_SCROLL === 'true' || process.env.RUN_PRICING_SCROLL_TEST === 'true';
+
+const enableSupportResponsive =
+  process.env.RUN_SUPPORT_RESPONSIVE === 'true' || process.env.RUN_SUPPORT_RESPONSIVE_TEST === 'true';
 
 if (enableCreditProject) {
   baseProjects.push({
@@ -83,9 +87,22 @@ if (enablePricingScroll) {
   });
 }
 
+if (enableSupportResponsive) {
+  baseProjects.push({
+    name: 'support-responsive-local',
+    use: {
+      ...devices['Desktop Chrome'],
+      baseURL: process.env.TEST_BASE_URL || 'http://localhost:4200',
+      headless: true,
+    },
+    testMatch: '**/support-responsive.spec.js',
+    timeout: 120000,
+  });
+}
+
 module.exports = defineConfig({
   // Test directory
-  testDir: './tests/e2e',
+  testDir: '.',
   
   // Global test timeout
   timeout: 60000,

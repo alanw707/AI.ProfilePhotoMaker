@@ -28,6 +28,33 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private readonly ILogger<AuthController> _logger;
         private static string S(string? value) => LoggingSanitizer.Sanitize(value);
         private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
+        private static string LogSafe(string? value, int maxLength = 128)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            // Prevent log forging by stripping line breaks and control whitespace.
+            var cleaned = value
+                .ReplaceLineEndings(" ")
+                .Replace('\t', ' ')
+                .Trim();
+
+            return cleaned.Length <= maxLength ? cleaned : cleaned[..maxLength];
+        }
+
+        private static string HostForLog(string? url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return string.Empty;
+            }
+
+            return Uri.TryCreate(url, UriKind.Absolute, out var parsed)
+                ? parsed.Host
+                : LogSafe(url, 64);
+        }
 
         public AuthController(
             IAuthService authService,
@@ -124,7 +151,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return BadRequest(new { error = "Google OAuth is not configured" });
             }
 
-            var backendBaseUrl = ResolveBackendBaseUrl();
+            var backendBaseUrl = ResolveBackendBaseUrl(out var backendBaseUrlSource);
             var redirectUri = $"{backendBaseUrl}/api/auth/external-login-callback";
 
             // Generate state parameter for security
@@ -167,6 +194,22 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 $"response_type=code&" +
                 $"scope={Uri.EscapeDataString("openid profile email")}&" +
                 $"state={Uri.EscapeDataString(state)}";
+
+            if (_environment.IsDevelopment())
+            {
+                _logger.LogInformation(
+                    "Google OAuth URL generated (dev): backendBaseUrlSource={BackendBaseUrlSource} clientId={ClientId}",
+                    LogSafe(backendBaseUrlSource, 64),
+                    Sid(clientId));
+                return Ok(new
+                {
+                    authUrl,
+                    redirectUri,
+                    backendBaseUrl,
+                    backendBaseUrlSource,
+                    clientId = Sid(clientId)
+                });
+            }
 
             return Ok(new { authUrl });
         }
@@ -301,8 +344,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 // Compare state values - must match exactly
                 if (state != sessionState)
                 {
-                    _logger.LogError("OAuth state mismatch - potential CSRF attack. Expected: {ExpectedState}, Received: {ReceivedState}",
-                        S(sessionState), S(state));
+                    _logger.LogError("OAuth state mismatch - potential CSRF attack");
                     return Redirect($"{frontendBaseUrl}/auth/login?error=invalid_state");
                 }
 
@@ -438,8 +480,13 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             return (clientId ?? string.Empty, clientSecret ?? string.Empty);
         }
 
-        private string ResolveBackendBaseUrl()
+        private string ResolveBackendBaseUrl() => ResolveBackendBaseUrl(out _);
+
+        private string ResolveBackendBaseUrl(out string source)
         {
+            static string Normalize(string url) => url.TrimEnd('/');
+            source = "request";
+
             // First check if we're in Azure production environment
             var azureWebsiteName = Environment.GetEnvironmentVariable("WEBSITE_SITE_NAME");
 
@@ -450,7 +497,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 if (!string.IsNullOrWhiteSpace(productionOAuthBase))
                 {
-                    return productionOAuthBase;
+                    source = "azure-config";
+                    return Normalize(productionOAuthBase);
                 }
             }
 
@@ -461,7 +509,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             if (!string.IsNullOrEmpty(forwardedProto) && !string.IsNullOrEmpty(forwardedHost))
             {
                 var forwardedUrl = $"{forwardedProto}://{forwardedHost}";
-                return forwardedUrl;
+                source = "forwarded-headers";
+                return Normalize(forwardedUrl);
             }
 
             // Prefer explicit env override
@@ -469,30 +518,43 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             if (!string.IsNullOrWhiteSpace(envBase))
             {
-                return envBase;
+                source = "env";
+                return Normalize(envBase);
             }
 
-            // Check if we're clearly in development (localhost)
-            var isLocal = Request.Host.Host.Contains("localhost") || Request.Host.Host.Contains("127.0.0.1");
-
-            if (isLocal)
-            {
-                // Use current request URL for local development
-                var localUrl = $"{Request.Scheme}://{Request.Host.Value}";
-                return localUrl;
-            }
-
-            // For any other environment, try to use the configured OAuth base URL
+            // Prefer configured base URL, even for localhost requests (important when the API is behind a dev proxy)
             var cfgBase = _configuration["Authentication:OAuth:BaseUrl"];
 
             if (!string.IsNullOrWhiteSpace(cfgBase))
             {
-                return cfgBase;
+                source = "config";
+                return Normalize(cfgBase);
+            }
+
+            // Development fallback: Jwt:ValidIssuer typically points to the API origin
+            if (_environment.IsDevelopment())
+            {
+                var jwtIssuer = _configuration["Jwt:ValidIssuer"];
+
+                if (!string.IsNullOrWhiteSpace(jwtIssuer))
+                {
+                    source = "jwt-valid-issuer";
+                    return Normalize(jwtIssuer);
+                }
+            }
+
+            // Check if we're clearly in development (localhost)
+            var isLocalHost = Request.Host.Host.Contains("localhost") || Request.Host.Host.Contains("127.0.0.1");
+            if (isLocalHost)
+            {
+                var localUrl = $"{Request.Scheme}://{Request.Host.Value}";
+                source = "request-local";
+                return Normalize(localUrl);
             }
 
             // Last resort - use current request
             var fallbackUrl = $"{Request.Scheme}://{Request.Host.Value}";
-            return fallbackUrl;
+            return Normalize(fallbackUrl);
         }
 
         private async Task<GoogleUserInfo?> GetGoogleUserInfoAsync(string accessToken)

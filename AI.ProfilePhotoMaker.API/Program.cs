@@ -367,6 +367,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IBasicTierService, AI.ProfilePhotoMaker.API.Services.BasicTierService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IUserContextService, AI.ProfilePhotoMaker.API.Services.UserContextService>();
+builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.StartupDiagnosticsHostedService>();
 
 // Register Replicate SDK (skip in mock mode)
 var enableReplicateMock = (Environment.GetEnvironmentVariable("ENABLE_REPLICATE_MOCK") ?? string.Empty)

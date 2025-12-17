@@ -108,6 +108,22 @@ export class StyleSelectorComponent {
     this.continueInBackground.emit();
   }
 
+  onContactSupport(): void {
+    const prefill = [
+      this.progressMessage ? `Status: ${this.progressMessage}` : null,
+      this.modelStatus ? `Model status: ${this.modelStatus}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    void this._navigation.navigateTo('/app/support', {
+      queryParams: {
+        category: 'Bug',
+        message: prefill || 'I need help with training/generation.',
+      },
+    });
+  }
+
   onDismissSuccessMessage(): void {
     this.dismissSuccessMessage.emit();
   }
