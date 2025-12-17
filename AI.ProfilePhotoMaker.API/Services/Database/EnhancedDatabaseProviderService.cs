@@ -89,6 +89,17 @@ public class EnhancedDatabaseProviderService : IDatabaseProviderService
     {
         try
         {
+            // Priority 0: CI/CD (GitHub Actions) connection string passed explicitly for EF tooling.
+            // This enables `dotnet ef migrations list` and `dotnet ef database update` steps to run
+            // without requiring Container Apps environment variables to be set on the runner.
+            var workflowConnectionString = Environment.GetEnvironmentVariable("SQL_CONNECTION_STRING");
+            if (!string.IsNullOrEmpty(workflowConnectionString))
+            {
+                _logger.LogInformation("Using SQL connection string from CI/CD environment variable");
+                LogConnectionStringDetails(workflowConnectionString, "CI/CD");
+                return EnhanceConnectionString(workflowConnectionString);
+            }
+
             // Priority 1: Container Apps environment variable (already includes password)
             var containerAppConnString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
             if (!string.IsNullOrEmpty(containerAppConnString))
