@@ -13,6 +13,9 @@
 const { test, expect } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
+const { getHostname } = require('./setup/url-utils');
+
+const isProductionAppUrl = urlValue => getHostname(urlValue) === 'app.aiprofilephotomaker.com';
 
 // Test configuration
 const config = {
@@ -253,7 +256,7 @@ test.describe('Image Upload Flow Validation', () => {
     expect(isAccessible).toBeTruthy();
     
     // Validate correct storage type for environment
-    if (config.baseUrl.includes('app.aiprofilephotomaker.com')) {
+    if (isProductionAppUrl(config.baseUrl)) {
       // Production should use Azure Blob Storage
       expect(urlAnalysis.storageType).toBe('azure');
       console.log('✅ Production correctly using Azure Blob Storage');
@@ -313,7 +316,7 @@ test.describe('Storage Service Health Check', () => {
         console.log(`📋 Storage Provider: ${healthData.provider}`);
         
         // For production, validate Azure Blob Storage is used
-        if (config.baseUrl.includes('app.aiprofilephotomaker.com')) {
+        if (isProductionAppUrl(config.baseUrl)) {
           expect(healthData.provider).toBe('AzureBlobStorage');
           console.log('✅ Production correctly configured with Azure Blob Storage');
           
@@ -404,8 +407,8 @@ test.describe('Storage Service Health Check', () => {
       canConnect: healthData.canConnect,
       hasConnectionString: healthData.hasConnectionString,
       isEmulator: healthData.isEmulator,
-      environment: config.baseUrl.includes('app.aiprofilephotomaker.com') ? 'Production' : 'Development',
-      expectedProvider: config.baseUrl.includes('app.aiprofilephotomaker.com') ? 'AzureBlobStorage' : 'Any',
+      environment: isProductionAppUrl(config.baseUrl) ? 'Production' : 'Development',
+      expectedProvider: isProductionAppUrl(config.baseUrl) ? 'AzureBlobStorage' : 'Any',
       configurationValid: true,
       issues: [],
       recommendations: []

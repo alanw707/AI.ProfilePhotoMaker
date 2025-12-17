@@ -1,5 +1,6 @@
 // @ts-check
 const { defineConfig, devices } = require('@playwright/test');
+const { isProductionAppBaseUrl } = require('./setup/url-utils');
 
 /**
  * Playwright Configuration for AI Profile Photo Maker E2E Tests
@@ -36,9 +37,7 @@ const baseProjects = [
       baseURL: process.env.TEST_BASE_URL || 'https://app.aiprofilephotomaker.com',
     },
     testMatch: '**/image-upload-validation.spec.js',
-    ...(process.env.TEST_BASE_URL && !process.env.TEST_BASE_URL.includes('app.aiprofilephotomaker.com')
-      ? {}
-      : { dependencies: ['production-validation'] }), // Run after main validation (prod only)
+    ...(isProductionAppBaseUrl(process.env.TEST_BASE_URL) ? { dependencies: ['production-validation'] } : {}), // Run after main validation (prod only)
   },
 
   {
@@ -48,9 +47,7 @@ const baseProjects = [
       baseURL: process.env.TEST_BASE_URL || 'https://app.aiprofilephotomaker.com',
     },
     testMatch: '**/image-upload-validation.spec.js',
-    ...(process.env.TEST_BASE_URL && !process.env.TEST_BASE_URL.includes('app.aiprofilephotomaker.com')
-      ? {}
-      : { dependencies: ['production-validation'] }), // Run after main validation (prod only)
+    ...(isProductionAppBaseUrl(process.env.TEST_BASE_URL) ? { dependencies: ['production-validation'] } : {}), // Run after main validation (prod only)
   },
 ];
 

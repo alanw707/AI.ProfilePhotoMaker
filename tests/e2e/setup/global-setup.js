@@ -7,6 +7,7 @@
 const { chromium } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
+const { getHostAndPort, getHostname, isStagingAppBaseUrl } = require('./url-utils');
 
 async function globalSetup(config) {
   console.log('🚀 Starting E2E Test Global Setup...');
@@ -105,7 +106,7 @@ async function validateEnvironmentHealth(config) {
           console.log(`💾 Storage Health: ${storageData.status} (${storageData.provider})`);
           
           // Warn if production is using LocalStorage
-          if (apiBaseURL.includes('api.aiprofilephotomaker.com') && storageData.provider === 'LocalStorage') {
+          if (getHostname(apiBaseURL) === 'api.aiprofilephotomaker.com' && storageData.provider === 'LocalStorage') {
             console.warn('⚠️ WARNING: Production environment using LocalStorage - expect image upload failures');
           }
         }
@@ -128,23 +129,25 @@ function resolveApiBaseUrl(appBaseUrl) {
     return explicit.replace(/\/+$/, '');
   }
 
+  const { hostname, port } = getHostAndPort(appBaseUrl);
+
   // Local docker/dev convention.
-  if (appBaseUrl.includes('localhost:4200') || appBaseUrl.includes('127.0.0.1:4200')) {
+  if ((hostname === 'localhost' || hostname === '127.0.0.1') && port === '4200') {
     return 'http://localhost:5032';
   }
 
   // Production convention.
-  if (appBaseUrl.includes('app.aiprofilephotomaker.com') || appBaseUrl === 'https://aiprofilephotomaker.com') {
+  if (hostname === 'app.aiprofilephotomaker.com' || hostname === 'aiprofilephotomaker.com') {
     return 'https://api.aiprofilephotomaker.com';
   }
 
   // Staging convention (best-effort).
-  if (appBaseUrl.includes('staging-app.aiprofilephotomaker.com')) {
+  if (isStagingAppBaseUrl(appBaseUrl)) {
     return 'https://staging-api.aiprofilephotomaker.com';
   }
 
   // If appBaseUrl is already an API host, use it.
-  if (appBaseUrl.includes('api.aiprofilephotomaker.com')) {
+  if (getHostname(appBaseUrl) === 'api.aiprofilephotomaker.com') {
     return appBaseUrl.replace(/\/+$/, '');
   }
 
