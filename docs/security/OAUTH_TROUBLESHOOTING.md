@@ -2,266 +2,84 @@
 
 ## Overview
 
-This guide documents the OAuth implementation for AI.ProfilePhotoMaker using the standard ASP.NET Core OAuth flow, which works seamlessly across development (ngrok) and production environments.
+AI.ProfilePhotoMaker currently uses a manual Google OAuth flow implemented in `AI.ProfilePhotoMaker.API/Controllers/AuthController.cs`.
 
-## Architecture Overview
+Key idea: the API must generate a `redirect_uri` that exactly matches an authorized redirect URI in the Google OAuth Console.
 
-### OAuth Flow
+## OAuth Flow
+
 ```
-User → Angular (ngrok) → API Challenge → Google OAuth → API Callback (/signin-google) → Controller Callback → Angular (dashboard)
-```
-
-### Key Components
-- **Frontend**: Angular app served through ngrok proxy
-- **Backend**: .NET 8 API served through ngrok proxy  
-- **OAuth Middleware**: ASP.NET Core standard OAuth handling
-- **OAuth Provider**: Google OAuth 2.0
-
-## Implementation Approach
-
-### Standard ASP.NET Core OAuth Pattern
-
-We use the built-in OAuth middleware which handles:
-- State parameter generation and validation
-- Correlation cookie management
-- Authorization code exchange
-- User claims extraction
-
-**Key Configuration** in `Program.cs`:
-```csharp
-.AddGoogle(options =>
-{
-    options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "";
-    options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "";
-    options.CallbackPath = "/signin-google"; // Middleware handles this path
-    
-    // Cookie configuration for same-origin
-    options.CorrelationCookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
-    options.CorrelationCookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
-    options.CorrelationCookie.IsEssential = true;
-    options.CorrelationCookie.HttpOnly = true;
-    
-    // Simple error handling
-    options.Events.OnRemoteFailure = context =>
-    {
-        var errorMessage = context.Failure?.Message ?? "OAuth authentication failed";
-        var frontendUrl = context.Request.Headers["Origin"].FirstOrDefault() ?? 
-                        context.Request.Headers["Referer"].FirstOrDefault()?.Split('?')[0] ?? 
-                        builder.Configuration["AppBaseUrl"] ?? 
-                        "http://localhost:4200";
-                        
-        context.Response.Redirect($"{frontendUrl}/login?error=oauth_failed&message={Uri.EscapeDataString(errorMessage)}");
-        context.HandleResponse();
-        return Task.CompletedTask;
-    };
-})
+User → Angular → API (/api/auth/external-login/google) → Google OAuth → API (/api/auth/external-login-callback) → Angular (dashboard)
 ```
 
-### Controller Implementation
+## Key Configuration
 
-**File**: `AI.ProfilePhotoMaker.API/Controllers/AuthController.cs`
+- Frontend base URL: `AppBaseUrl`
+- Backend base URL used to construct `redirect_uri`:
+  - `Authentication:OAuth:BaseUrl` (recommended), or
+  - `OAUTH_BASE_URL` (env override)
+  - In development, `Jwt:ValidIssuer` is used as a fallback
+- Google OAuth credentials:
+  - `Authentication:Google:ClientId` / `Authentication:Google:ClientSecret`
+  - or `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
 
-1. **Initiate OAuth Challenge**:
-```csharp
-[HttpGet("external-login/{provider}")]
-public IActionResult ExternalLogin(string provider, string returnUrl = "", string frontendUrl = "")
-{
-    var properties = new AuthenticationProperties 
-    { 
-        RedirectUri = Url.Action("ExternalLoginCallback", "Auth", new { returnUrl, frontendUrl }),
-        Items = 
-        {
-            { "returnUrl", returnUrl },
-            { "frontendUrl", frontendUrl }
-        }
-    };
-    
-    return Challenge(properties, provider);
-}
-```
+## Development Setup (localhost)
 
-2. **Handle OAuth Callback** (called AFTER middleware processes authentication):
-```csharp
-[HttpGet("external-login/callback")]
-public async Task<IActionResult> ExternalLoginCallback(string returnUrl = "", string frontendUrl = "")
-{
-    // Get the external login info from the OAuth middleware
-    var info = await _signInManager.GetExternalLoginInfoAsync();
-    if (info == null)
-    {
-        return Redirect($"{targetFrontendUrl}{returnUrl}?error=external_login_failed");
-    }
-    
-    // Process user login/registration...
-}
-```
-
-## Configuration Steps
-
-### Development Setup (ngrok)
-
-1. **Create ngrok configuration** (`ngrok.yml`):
-   ```yaml
-   version: "2"
-   authtoken: YOUR_AUTH_TOKEN
-   tunnels:
-     frontend:
-       addr: 4200
-       proto: http
-       domain: awlocaldev.ngrok.app
-       inspect: false
-   ```
-
-2. **Configure Angular proxy** (`proxy.conf.json`):
+1. **Angular proxy**: ensure `/api` targets the API port:
    ```json
    {
      "/api": {
-       "target": "http://localhost:5035",
+       "target": "http://localhost:5032",
        "secure": false,
-       "changeOrigin": true,
-       "logLevel": "debug"
+       "changeOrigin": true
      }
    }
    ```
 
-3. **Update API configuration** (`appsettings.Development.json`):
-   ```json
-   {
-     "AppBaseUrl": "https://awlocaldev.ngrok.app",
-     "JWT": {
-       "ValidAudience": "https://awlocaldev.ngrok.app",
-       "ValidIssuer": "https://awlocaldev.ngrok.app"
-     }
-   }
-   ```
+2. **API config** (`AI.ProfilePhotoMaker.API/appsettings.Development.json`):
+   - `AppBaseUrl`: `http://localhost:4200`
+   - `Authentication:OAuth:BaseUrl`: `http://localhost:5032` (or set `OAUTH_BASE_URL`)
 
-4. **Update Google OAuth Console**:
-   - Authorized redirect URI: `https://awlocaldev.ngrok.app/signin-google`
+3. **Google OAuth Console**:
+   - Authorized redirect URI: `http://localhost:5032/api/auth/external-login-callback`
 
-5. **Start services**:
-   ```bash
-   # Terminal 1: Start API
-   cd AI.ProfilePhotoMaker.API
-   dotnet run
-   
-   # Terminal 2: Start Angular with ngrok config
-   cd AI.ProfilePhotoMaker.UI
-   npm run start:ngrok
-   
-   # Terminal 3: Start ngrok
-   ngrok start --config ngrok.yml frontend
-   ```
+## Development Setup (ngrok)
 
-### Production Setup
+If the API is reached via an ngrok domain (recommended for HTTPS):
 
-1. **Update configuration** (`appsettings.Production.json`):
-   ```json
-   {
-     "AppBaseUrl": "https://yourdomain.com"
-   }
-   ```
+1. Set `Authentication:OAuth:BaseUrl` (or `OAUTH_BASE_URL`) to your API ngrok origin, e.g. `https://your-api.ngrok.app`.
+2. Add this authorized redirect URI in Google OAuth Console:
+   - `https://your-api.ngrok.app/api/auth/external-login-callback`
 
-2. **Update Google OAuth Console**:
-   - Authorized redirect URI: `https://yourdomain.com/signin-google`
+## Production Setup
 
-3. **Deploy normally** - no code changes required!
+1. Confirm `Authentication:OAuth:BaseUrl` is set to the public API origin (e.g. `https://api.aiprofilephotomaker.com`).
+2. Ensure Google OAuth Console has the matching authorized redirect URI:
+   - `https://api.aiprofilephotomaker.com/api/auth/external-login-callback`
 
-## Common Issues and Solutions
+## Common Issues
 
-### Issue: "The oauth state was missing or invalid"
-**Causes**:
-- Callback path conflicts with controller routes
-- Cookie domain restrictions
-- Cross-origin cookie issues
+### Issue: `redirect_uri_mismatch`
 
-**Solution**: 
-- Use standard `/signin-google` callback path
-- Don't specify cookie domain (let browser handle same-origin)
-- Ensure proxy is configured correctly
+- The `redirect_uri` in the request must match an authorized redirect URI exactly (scheme, host, port, path).
+- If you initiate OAuth via an Angular dev proxy, make sure the API is not deriving the redirect origin from the proxied host (e.g. `localhost:4200`):
+  - Set `Authentication:OAuth:BaseUrl` (or `OAUTH_BASE_URL`) to `http://localhost:5032`
+- Ensure `Authentication:OAuth:BaseUrl` / `OAUTH_BASE_URL` does not end with a trailing slash (it would generate a double-slash path and fail the match).
+- Debug tip: call `GET /api/auth/google-oauth-url` and inspect the returned `redirectUri` + `backendBaseUrlSource` (development only) to see what Google expects to be authorized.
 
-### Issue: "redirect_uri_mismatch"
-**Solution**: 
-- Google Console must have exact redirect URI: `https://yourdomain.com/signin-google`
-- Note: It's `/signin-google`, not `/api/auth/external-login/callback`
+### Issue: OAuth callback returns `oauth_state missing/invalid`
 
-### Issue: OAuth succeeds but user not logged in
-**Solution**:
-- Verify JWT token is being generated in ExternalLoginCallback
-- Check Angular is processing token from URL parameters
-- Ensure localStorage is accessible
+- State is stored in session for CSRF protection.
+- If cookies/session are blocked/misconfigured (common with cross-origin setups), state validation can fail.
+- In development, the API may proceed without session state (reduced CSRF protection) if session initialization fails.
 
-### Issue: CORS errors during OAuth flow
-**Solution**:
-- Use proxy configuration to serve everything from same domain
-- Don't make cross-origin API calls during OAuth
+### Issue: OAuth succeeds but user isn’t logged in
 
-## Testing OAuth Flow
-
-### Successful Flow Logs
-```
-info: Microsoft.AspNetCore.Authentication.Google.GoogleHandler[4]
-      Google was successfully authenticated.
-info: Microsoft.AspNetCore.Authentication.Google.GoogleHandler[10]
-      AuthenticationScheme: Google signed in.
-Generated JWT token for user: user@example.com
-Redirecting to: https://awlocaldev.ngrok.app/dashboard?token=eyJhbG...
-```
-
-### Debug Checklist
-- [ ] ngrok running with correct domain
-- [ ] Angular proxy configured for /api routes
-- [ ] API AppBaseUrl matches ngrok domain
-- [ ] Google Console has correct redirect URI
-- [ ] Browser developer tools show cookies being set
-- [ ] JWT token appears in redirect URL
-
-## Security Best Practices
-
-### Development
-- Use HTTPS even in development (ngrok provides this)
-- Short-lived JWT tokens
-- Secure cookie settings
-
-### Production
-- HTTPS required
-- HttpOnly cookies for tokens (future enhancement)
-- Implement refresh tokens
-- Rate limiting on auth endpoints
-- CSRF protection
-
-## Key Differences from Previous Approach
-
-### Old Approach (Manual OAuth Handling)
-- Complex manual OAuth code exchange
-- Custom correlation cookie handling
-- Bypassed ASP.NET Core OAuth middleware
-- Required PKCE to be disabled
-- Fragile and environment-specific
-
-### New Approach (Standard ASP.NET Core)
-- Uses built-in OAuth middleware
-- Automatic state validation
-- Works identically in dev/prod
-- PKCE enabled by default
-- Robust and maintainable
+- Verify the callback redirects to `{AppBaseUrl}{returnUrl}`.
+- In development, verify the token is present in the redirect URL (e.g. `?token=...`) and Angular processes it.
 
 ## Quick Reference
 
-### OAuth Endpoints
-- Initiate: `GET /api/auth/external-login/google`
-- Callback (middleware): `/signin-google`
-- Callback (controller): `GET /api/auth/external-login/callback`
-
-### Configuration Files
-- `ngrok.yml` - ngrok tunnel configuration
-- `proxy.conf.json` - Angular proxy for API calls
-- `appsettings.Development.json` - API configuration
-- `angular.json` - Angular dev server settings
-
-### Required Google Console Settings
-- Authorized JavaScript origins: `https://awlocaldev.ngrok.app`
-- Authorized redirect URIs: `https://awlocaldev.ngrok.app/signin-google`
-
----
-
-*Updated to reflect standard ASP.NET Core OAuth implementation that works seamlessly across environments.*
+- Initiate (returns auth URL): `GET /api/auth/google-oauth-url`
+- Initiate (redirects to Google): `GET /api/auth/external-login/google`
+- Callback (Google redirects here): `GET /api/auth/external-login-callback`
