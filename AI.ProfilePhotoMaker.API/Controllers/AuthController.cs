@@ -198,9 +198,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             if (_environment.IsDevelopment())
             {
                 _logger.LogInformation(
-                    "Google OAuth URL generated (dev): redirectHost={RedirectHost} backendHost={BackendHost} backendBaseUrlSource={BackendBaseUrlSource} clientId={ClientId}",
-                    HostForLog(redirectUri),
-                    HostForLog(backendBaseUrl),
+                    "Google OAuth URL generated (dev): backendBaseUrlSource={BackendBaseUrlSource} clientId={ClientId}",
                     LogSafe(backendBaseUrlSource, 64),
                     Sid(clientId));
                 return Ok(new
@@ -346,8 +344,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 // Compare state values - must match exactly
                 if (state != sessionState)
                 {
-                    _logger.LogError("OAuth state mismatch - potential CSRF attack. ExpectedPrefix={ExpectedPrefix}, ReceivedPrefix={ReceivedPrefix}",
-                        LogSafe(sessionState, 16), LogSafe(state, 16));
+                    _logger.LogError("OAuth state mismatch - potential CSRF attack");
                     return Redirect($"{frontendBaseUrl}/auth/login?error=invalid_state");
                 }
 
