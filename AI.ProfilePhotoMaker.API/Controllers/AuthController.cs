@@ -28,6 +28,33 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private readonly ILogger<AuthController> _logger;
         private static string S(string? value) => LoggingSanitizer.Sanitize(value);
         private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
+        private static string LogSafe(string? value, int maxLength = 128)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            // Prevent log forging by stripping line breaks and control whitespace.
+            var cleaned = value
+                .ReplaceLineEndings(" ")
+                .Replace('\t', ' ')
+                .Trim();
+
+            return cleaned.Length <= maxLength ? cleaned : cleaned[..maxLength];
+        }
+
+        private static string HostForLog(string? url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return string.Empty;
+            }
+
+            return Uri.TryCreate(url, UriKind.Absolute, out var parsed)
+                ? parsed.Host
+                : LogSafe(url, 64);
+        }
 
         public AuthController(
             IAuthService authService,
@@ -171,9 +198,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             if (_environment.IsDevelopment())
             {
                 _logger.LogInformation(
-                    "Google OAuth URL generated (dev): redirectUri={RedirectUri} backendBaseUrl={BackendBaseUrl} clientId={ClientId}",
-                    redirectUri,
-                    backendBaseUrl,
+                    "Google OAuth URL generated (dev): redirectHost={RedirectHost} backendHost={BackendHost} backendBaseUrlSource={BackendBaseUrlSource} clientId={ClientId}",
+                    HostForLog(redirectUri),
+                    HostForLog(backendBaseUrl),
+                    LogSafe(backendBaseUrlSource, 64),
                     Sid(clientId));
                 return Ok(new
                 {
@@ -318,8 +346,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 // Compare state values - must match exactly
                 if (state != sessionState)
                 {
-                    _logger.LogError("OAuth state mismatch - potential CSRF attack. Expected: {ExpectedState}, Received: {ReceivedState}",
-                        S(sessionState), S(state));
+                    _logger.LogError("OAuth state mismatch - potential CSRF attack. ExpectedPrefix={ExpectedPrefix}, ReceivedPrefix={ReceivedPrefix}",
+                        LogSafe(sessionState, 16), LogSafe(state, 16));
                     return Redirect($"{frontendBaseUrl}/auth/login?error=invalid_state");
                 }
 
