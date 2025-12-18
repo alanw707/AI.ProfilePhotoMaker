@@ -13,4 +13,7 @@ public class EnhancePhotoRequestDto
     public bool IsDeblurRequest { get; set; } = false;
     public double DeblurStrength { get; set; } = 0.5; // Default deblur strength
     public string? PhotoId { get; set; } // To link to a specific photo if needed
+
+    // Optional: Cloudflare Turnstile verification token to guard expensive endpoints.
+    public string? TurnstileToken { get; set; }
 }

@@ -12,6 +12,10 @@ export class ConfigService {
     return environment.apiUrl || '/api';
   }
 
+  get turnstileSiteKey(): string {
+    return environment.turnstileSiteKey || '';
+  }
+
   get appBaseUrl(): string {
     return environment.baseUrl || '';
   }

@@ -7,6 +7,7 @@ using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services.Authentication;
 using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
+using AI.ProfilePhotoMaker.API.Services.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -26,6 +27,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private readonly HttpClient _httpClient;
         private readonly IWebHostEnvironment _environment;
         private readonly ILogger<AuthController> _logger;
+        private readonly ITurnstileVerificationService _turnstile;
         private static string S(string? value) => LoggingSanitizer.Sanitize(value);
         private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
         private static string LogSafe(string? value, int maxLength = 128)
@@ -64,7 +66,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             ApplicationDbContext context,
             HttpClient httpClient,
             IWebHostEnvironment environment,
-            ILogger<AuthController> logger)
+            ILogger<AuthController> logger,
+            ITurnstileVerificationService turnstile)
         {
             _authService = authService;
             _userManager = userManager;
@@ -74,6 +77,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             _httpClient = httpClient;
             _environment = environment;
             _logger = logger;
+            _turnstile = turnstile;
         }
 
         private CookieOptions BuildAuthCookieOptions(DateTimeOffset? expires = null)
@@ -111,6 +115,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
+            }
+
+            var turnstileOk = await _turnstile.VerifyAsync(model.TurnstileToken, HttpContext?.Connection?.RemoteIpAddress?.ToString());
+            if (!turnstileOk)
+            {
+                return BadRequest(new AuthResponseDto(false, "Bot verification failed. Please try again.", string.Empty, null));
             }
 
             var result = await _authService.RegisterAsync(model);

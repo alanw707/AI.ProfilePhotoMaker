@@ -143,10 +143,16 @@
         {{ error }}
       </div>
 
+      <app-turnstile
+        *ngIf="turnstileSiteKey"
+        [siteKey]="turnstileSiteKey"
+        (tokenChange)="onTurnstileTokenChange($event)"
+      ></app-turnstile>
+
       <button
         type="submit"
         class="btn btn-primary btn-block"
-        [disabled]="loading || registerForm.invalid"
+        [disabled]="loading || registerForm.invalid || (turnstileSiteKey && !turnstileToken)"
       >
         <span *ngIf="loading" class="spinner"></span>
         {{ loading ? 'Creating Account...' : 'Create Account' }}

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ViewChild } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -10,19 +10,24 @@ import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService, RegisterDto } from '../../services/auth.service';
 import { ConfigService } from '../../services/config.service';
+import { TurnstileComponent } from '../../shared/turnstile/turnstile.component';
+import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, TurnstileComponent],
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.sass'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RegisterComponent {
+  @ViewChild(TurnstileComponent) turnstile?: TurnstileComponent;
   registerForm: FormGroup;
   loading = false;
   error = '';
+  turnstileToken = '';
+  readonly turnstileSiteKey: string;
 
   constructor(
     private _formBuilder: FormBuilder,
@@ -31,6 +36,7 @@ export class RegisterComponent {
     private _configService: ConfigService,
     private _cdr: ChangeDetectorRef
   ) {
+    this.turnstileSiteKey = this._configService.turnstileSiteKey;
     this.registerForm = this._formBuilder.group(
       {
         firstName: ['', [Validators.required, Validators.minLength(2)]],
@@ -127,6 +133,11 @@ export class RegisterComponent {
     return error?.message || 'Registration failed. Please try again.';
   }
 
+  onTurnstileTokenChange(token: string): void {
+    this.turnstileToken = token;
+    this._cdr.markForCheck();
+  }
+
   onSubmit(): void {
     this.error = '';
 
@@ -135,6 +146,7 @@ export class RegisterComponent {
     }
 
     this.loading = true;
+    this._cdr.markForCheck();
     const registerData: RegisterDto = {
       firstName: this.f['firstName'].value,
       lastName: this.f['lastName'].value,
@@ -142,23 +154,43 @@ export class RegisterComponent {
       password: this.f['password'].value,
       gender: this.f['gender'].value,
       ethnicity: this.f['ethnicity'].value,
+      turnstileToken: this.turnstileSiteKey ? this.turnstileToken : undefined,
     };
 
-    this._authService.register(registerData).subscribe({
+    this._authService
+      .register(registerData)
+      .pipe(
+        finalize(() => {
+          this.loading = false;
+          this._cdr.markForCheck();
+        })
+      )
+      .subscribe({
       next: _response => {
         // Registration successful, navigate to dashboard
-        this._router.navigate(['/app/dashboard']).then(success => {
-          if (success === false) {
-            this.loading = false;
+        this._router
+          .navigate(['/app/dashboard'])
+          .then(success => {
+            if (success === false) {
+              this.error = 'Registration succeeded, but navigation failed. Please try logging in.';
+              this.turnstileToken = '';
+              this.turnstile?.reset();
+              this._cdr.markForCheck();
+            }
+          })
+          .catch(error => {
+            console.error('Registration navigation error:', error);
             this.error = 'Registration succeeded, but navigation failed. Please try logging in.';
+            this.turnstileToken = '';
+            this.turnstile?.reset();
             this._cdr.markForCheck();
-          }
-        });
+          });
       },
       error: error => {
         const apiMessage = this.extractErrorMessage(error);
         this.error = apiMessage;
-        this.loading = false;
+        this.turnstileToken = '';
+        this.turnstile?.reset();
         this._cdr.markForCheck();
       },
     });
@@ -175,15 +207,5 @@ export class RegisterComponent {
 
     const oauthUrl = `${oauthBaseUrl}/api/auth/external-login/Google?returnUrl=${encodeURIComponent(fullReturnUrl)}`;
     window.location.href = oauthUrl;
-  }
-
-  registerWithFacebook(): void {
-    // Placeholder for optional Facebook OAuth integration if product roadmap requires it
-    this.error = 'Facebook registration not yet implemented.';
-  }
-
-  registerWithApple(): void {
-    // Placeholder for optional Apple OAuth integration if product roadmap requires it
-    this.error = 'Apple registration not yet implemented.';
   }
 }

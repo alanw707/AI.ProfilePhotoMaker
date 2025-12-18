@@ -12,6 +12,7 @@ using AI.ProfilePhotoMaker.API.Services.Health;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using AI.ProfilePhotoMaker.API.Services.Payments;
 using AI.ProfilePhotoMaker.API.Services.Notifications;
+using AI.ProfilePhotoMaker.API.Services.Security;
 using AspNetCoreRateLimit;
 // using AI.ProfilePhotoMaker.API.Services.Monitoring; // Removed monitoring dependency
 using AI.ProfilePhotoMaker.API.Middleware;
@@ -497,6 +498,7 @@ builder.Services.AddScoped<IAsyncZipService, AsyncZipService>();
 
 // Email notifications (supports SMTP or Brevo API)
 builder.Services.AddHttpClient<IEmailNotificationService, EmailNotificationService>();
+builder.Services.AddHttpClient<ITurnstileVerificationService, TurnstileVerificationService>();
 
 builder.Services.AddDeploymentValidation(builder.Configuration);
 builder.Services.ConfigureDeploymentValidation(builder.Configuration, builder.Environment);

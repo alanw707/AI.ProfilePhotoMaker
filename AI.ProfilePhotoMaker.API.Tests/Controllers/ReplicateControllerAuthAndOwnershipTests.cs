@@ -7,6 +7,7 @@ using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Models.Replicate;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
+using AI.ProfilePhotoMaker.API.Services.Security;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -37,12 +38,17 @@ public class ReplicateControllerAuthAndOwnershipTests
         Mock<IBasicTierService>? mockBasic = null,
         Mock<IPendingGenerationService>? mockPending = null,
         IConfiguration? configuration = null,
-        Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>? storage = null)
+        Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>? storage = null,
+        Mock<ITurnstileVerificationService>? mockTurnstile = null)
     {
         mockReplicate ??= new Mock<IReplicateApiClient>(MockBehavior.Strict);
         mockBasic ??= new Mock<IBasicTierService>(MockBehavior.Strict);
         mockPending ??= new Mock<IPendingGenerationService>(MockBehavior.Strict);
         storage ??= new Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>(MockBehavior.Strict);
+        mockTurnstile ??= new Mock<ITurnstileVerificationService>(MockBehavior.Loose);
+        mockTurnstile
+            .Setup(s => s.VerifyAsync(It.IsAny<string?>(), It.IsAny<string?>()))
+            .ReturnsAsync(true);
 
         var config = configuration ?? new Mock<IConfiguration>().Object;
 
@@ -53,7 +59,8 @@ public class ReplicateControllerAuthAndOwnershipTests
             config,
             new NullLogger<ReplicateController>(),
             mockPending.Object,
-            storage.Object);
+            storage.Object,
+            mockTurnstile.Object);
 
         var httpContext = new DefaultHttpContext
         {
