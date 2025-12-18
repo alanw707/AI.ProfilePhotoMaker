@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -28,7 +28,8 @@ export class RegisterComponent {
     private _formBuilder: FormBuilder,
     private _authService: AuthService,
     private _router: Router,
-    private _configService: ConfigService
+    private _configService: ConfigService,
+    private _cdr: ChangeDetectorRef
   ) {
     this.registerForm = this._formBuilder.group(
       {
@@ -146,12 +147,19 @@ export class RegisterComponent {
     this._authService.register(registerData).subscribe({
       next: _response => {
         // Registration successful, navigate to dashboard
-        this._router.navigate(['/app/dashboard']);
+        this._router.navigate(['/app/dashboard']).then(success => {
+          if (success === false) {
+            this.loading = false;
+            this.error = 'Registration succeeded, but navigation failed. Please try logging in.';
+            this._cdr.markForCheck();
+          }
+        });
       },
       error: error => {
         const apiMessage = this.extractErrorMessage(error);
         this.error = apiMessage;
         this.loading = false;
+        this._cdr.markForCheck();
       },
     });
   }
