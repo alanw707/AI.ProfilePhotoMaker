@@ -124,6 +124,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
         // Add fake services to satisfy dependencies
         services.AddScoped<IStorageService, FakeStorageService>();
+        services.AddScoped<StoragePathResolver>();
         services.AddSingleton<AI.ProfilePhotoMaker.API.Services.Database.IDatabaseProviderService, FakeDatabaseProviderService>();
 
         // Seed initial data after services are built
