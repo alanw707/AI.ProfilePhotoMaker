@@ -6,7 +6,8 @@ public record RegisterDto(
     string FirstName,
     string LastName,
     string Gender,
-    string Ethnicity
+    string Ethnicity,
+    string? TurnstileToken = null
 );
 
 public record ProfileCompletionDto(

@@ -3,6 +3,7 @@ export const environment = {
   apiUrl: 'http://localhost:5032/api',
   baseUrl: 'http://localhost:5032',
   name: 'docker-local',
+  turnstileSiteKey: '',
   features: {
     debugMode: false,
     useProxy: false,

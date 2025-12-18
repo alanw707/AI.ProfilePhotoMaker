@@ -3,6 +3,7 @@ export const environment = {
   apiUrl: '/api', // Use proxy for simplicity in development
   baseUrl: '',
   name: 'development',
+  turnstileSiteKey: '',
   features: {
     debugMode: true,
     useProxy: true,

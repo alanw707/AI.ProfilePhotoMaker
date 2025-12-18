@@ -26,6 +26,7 @@ export interface RegisterDto {
   lastName: string;
   gender: string;
   ethnicity: string;
+  turnstileToken?: string;
 }
 
 export interface AuthResponseDto {

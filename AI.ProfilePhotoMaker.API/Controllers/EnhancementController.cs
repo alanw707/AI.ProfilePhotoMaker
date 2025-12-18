@@ -4,6 +4,7 @@ using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Services.Storage;
+using AI.ProfilePhotoMaker.API.Services.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +27,7 @@ public class EnhancementController : ControllerBase
     private readonly IWebHostEnvironment _environment;
     private readonly HttpClient _httpClient;
     private readonly IStorageService _storageService;
+    private readonly ITurnstileVerificationService _turnstile;
 
     private static string S(string? value) => LoggingSanitizer.Sanitize(value);
     private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
@@ -38,7 +40,8 @@ public class EnhancementController : ControllerBase
         IConfiguration configuration,
         IWebHostEnvironment environment,
         HttpClient httpClient,
-        IStorageService storageService)
+        IStorageService storageService,
+        ITurnstileVerificationService turnstile)
     {
         _openAIService = openAIService;
         _basicTierService = basicTierService;
@@ -47,6 +50,7 @@ public class EnhancementController : ControllerBase
         _environment = environment;
         _httpClient = httpClient;
         _storageService = storageService;
+        _turnstile = turnstile;
 
         // Configure HttpClient for OpenAI API health checks
         var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? configuration["OpenAI:ApiKey"];
@@ -146,6 +150,20 @@ public class EnhancementController : ControllerBase
 
         try
         {
+            var turnstileOk = await _turnstile.VerifyAsync(dto.TurnstileToken, HttpContext?.Connection?.RemoteIpAddress?.ToString());
+            if (!turnstileOk)
+            {
+                return Ok(new
+                {
+                    success = false,
+                    error = new
+                    {
+                        code = "BotVerificationFailed",
+                        message = "Bot verification failed. Please try again."
+                    }
+                });
+            }
+
             _logger.LogInformation("Starting OpenAI photo enhancement for user {UserId} with style {EnhancementType}", Sid(userId), S(dto.EnhancementType));
 
             // Normalize image URL so the API can fetch it in all dev setups

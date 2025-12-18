@@ -15,6 +15,8 @@ import { FileUploadService } from '../../services/file-upload.service';
 import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
 import { DashboardCoordinatorService } from '../../services/dashboard-coordinator.service';
 import { CreditService, UserCreditStatus } from '../../services/credit.service';
+import { ConfigService } from '../../services/config.service';
+import { TurnstileComponent } from '../../shared/turnstile/turnstile.component';
 import { Subscription, firstValueFrom } from 'rxjs';
 
 interface EnhancedImage {
@@ -25,13 +27,14 @@ interface EnhancedImage {
 @Component({
   selector: 'app-photo-enhancement',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, HeaderNavigationComponent],
+  imports: [CommonModule, FormsModule, RouterModule, HeaderNavigationComponent, TurnstileComponent],
   templateUrl: './photo-enhancement.component.html',
   styleUrls: ['./photo-enhancement.component.sass'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+  @ViewChild(TurnstileComponent) turnstile?: TurnstileComponent;
 
   selectedFile: File | null = null;
   imagePreview: string | null = null;
@@ -45,6 +48,8 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   isDragOver = false;
   isLoadingCredits = true;
   allowedTypes: string[] = ['image/jpeg', 'image/png', 'image/webp'];
+  turnstileToken = '';
+  readonly turnstileSiteKey: string;
 
   // Save to gallery state
   isSaving = false;
@@ -58,8 +63,11 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     private _fileUploadService: FileUploadService,
     private _stateService: DashboardCoordinatorService,
     private _creditService: CreditService,
+    private _configService: ConfigService,
     private _cdr: ChangeDetectorRef
-  ) {}
+  ) {
+    this.turnstileSiteKey = this._configService.turnstileSiteKey;
+  }
 
   // Get total available credits from internal sources only
   getTotalAvailableCredits(): number {
@@ -177,8 +185,19 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     this._cdr.detectChanges();
   }
 
+  onTurnstileTokenChange(token: string): void {
+    this.turnstileToken = token;
+    this._cdr.markForCheck();
+  }
+
   async startEnhancement() {
     if (!this.selectedFile || !this.hasEnoughCredits()) {
+      return;
+    }
+
+    if (this.turnstileSiteKey && !this.turnstileToken) {
+      this.errorMessage = 'Please complete the verification to continue.';
+      this._cdr.detectChanges();
       return;
     }
 
@@ -204,6 +223,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
         // Pass through the URL; backend will convert to external HTTPS if needed
         imageUrl: uploadResult.url,
         enhancementType: this.enhancementType,
+        turnstileToken: this.turnstileSiteKey ? this.turnstileToken : undefined,
       };
 
       const enhanceResponse = await firstValueFrom(
@@ -326,6 +346,12 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       this.errorMessage = errorMessage;
       this.isProcessing = false;
       this._cdr.detectChanges();
+    } finally {
+      if (this.turnstileSiteKey) {
+        this.turnstileToken = '';
+        this.turnstile?.reset();
+        this._cdr.markForCheck();
+      }
     }
   }
 

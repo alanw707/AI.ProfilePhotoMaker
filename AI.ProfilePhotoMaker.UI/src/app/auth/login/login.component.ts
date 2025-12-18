@@ -18,6 +18,7 @@ import { CommonModule } from '@angular/common';
 import { AuthService, LoginDto } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
 import { ConfigService } from '../../services/config.service';
+import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-login',
@@ -214,20 +215,33 @@ export class LoginComponent implements OnInit, OnDestroy {
       password: this.f['password'].value,
     };
 
-    this._authService.login(loginData).subscribe({
+    this._authService
+      .login(loginData)
+      .pipe(
+        finalize(() => {
+          this.loading = false;
+          this._cdr.markForCheck();
+        })
+      )
+      .subscribe({
       next: _response => {
-        this.loading = false;
-        this._router.navigate([this.returnUrl]).then(success => {
-          if (success === false) {
+        this._router
+          .navigate([this.returnUrl])
+          .then(success => {
+            if (success === false) {
+              this.error = 'Login succeeded, but navigation failed. Please try again.';
+              this._cdr.markForCheck();
+            }
+          })
+          .catch(error => {
+            console.error('Login navigation error:', error);
             this.error = 'Login succeeded, but navigation failed. Please try again.';
             this._cdr.markForCheck();
-          }
-        });
+          });
       },
       error: error => {
         console.error('Login error:', error);
         this.error = this._extractErrorMessage(error);
-        this.loading = false;
         this._cdr.markForCheck();
       },
     });
@@ -247,15 +261,5 @@ export class LoginComponent implements OnInit, OnDestroy {
     // Use standard OAuth flow - redirect to the external login endpoint
     const oauthUrl = `${oauthBaseUrl}/api/auth/external-login/google?returnUrl=${encodeURIComponent(this.returnUrl)}`;
     window.location.href = oauthUrl;
-  }
-
-  loginWithFacebook(): void {
-    // Placeholder for optional Facebook OAuth integration if product roadmap requires it
-    this.error = 'Facebook login not yet implemented.';
-  }
-
-  loginWithApple(): void {
-    // Placeholder for optional Apple OAuth integration if product roadmap requires it
-    this.error = 'Apple login not yet implemented.';
   }
 }

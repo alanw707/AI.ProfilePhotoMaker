@@ -286,4 +286,5 @@ export class ReplicateService {
 export interface EnhancePhotoRequest {
   imageUrl: string;
   enhancementType?: string;
+  turnstileToken?: string;
 }

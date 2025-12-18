@@ -3,6 +3,7 @@ using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
+using AI.ProfilePhotoMaker.API.Services.Security;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,6 +33,7 @@ public class ReplicateController : ControllerBase
     private readonly ILogger<ReplicateController> _logger;
     private readonly IPendingGenerationService _pendingGenerationService;
     private readonly IStorageService _storageService;
+    private readonly ITurnstileVerificationService _turnstile;
 
     private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
     private static string S(string? value) => LoggingSanitizer.Sanitize(value);
@@ -43,7 +45,8 @@ public class ReplicateController : ControllerBase
         IConfiguration configuration,
         ILogger<ReplicateController> logger,
         IPendingGenerationService pendingGenerationService,
-        IStorageService storageService)
+        IStorageService storageService,
+        ITurnstileVerificationService turnstile)
     {
         _replicateApiClient = replicateApiClient;
         _basicTierService = basicTierService;
@@ -52,6 +55,7 @@ public class ReplicateController : ControllerBase
         _logger = logger;
         _pendingGenerationService = pendingGenerationService;
         _storageService = storageService;
+        _turnstile = turnstile;
     }
 
     /// <summary>
@@ -1017,6 +1021,20 @@ public class ReplicateController : ControllerBase
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId))
             return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+
+        var turnstileOk = await _turnstile.VerifyAsync(dto.TurnstileToken, HttpContext?.Connection?.RemoteIpAddress?.ToString());
+        if (!turnstileOk)
+        {
+            return Ok(new
+            {
+                success = false,
+                error = new
+                {
+                    code = "BotVerificationFailed",
+                    message = "Bot verification failed. Please try again."
+                }
+            });
+        }
 
         // Check if user has available credits
         var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
