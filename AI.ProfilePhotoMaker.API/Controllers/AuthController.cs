@@ -76,6 +76,35 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             _logger = logger;
         }
 
+        private CookieOptions BuildAuthCookieOptions(DateTimeOffset? expires = null)
+        {
+            // Only set an explicit Domain when we are on our real domain; this prevents invalid cookies in tests/local.
+            var requestHost = Request?.Host.Host;
+            var configuredDomain = _configuration["Authentication:CookieDomain"];
+            string? domain = null;
+            if (!string.IsNullOrWhiteSpace(configuredDomain))
+            {
+                domain = configuredDomain;
+            }
+            else if (!string.IsNullOrWhiteSpace(requestHost) &&
+                     requestHost.EndsWith("aiprofilephotomaker.com", StringComparison.OrdinalIgnoreCase))
+            {
+                domain = ".aiprofilephotomaker.com";
+            }
+
+            var isHttps = Request?.IsHttps ?? !_environment.IsDevelopment();
+
+            return new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = isHttps,
+                SameSite = isHttps ? SameSiteMode.None : SameSiteMode.Lax,
+                Domain = domain,
+                Expires = expires,
+                Path = "/"
+            };
+        }
+
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto model)
         {
@@ -92,15 +121,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             // Set secure JWT cookie for session
             var cookieName = _configuration["Authentication:TokenCookieName"] ?? "AuthToken";
-            var cookieOptions = new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = !_environment.IsDevelopment(),
-                SameSite = _environment.IsDevelopment() ? SameSiteMode.Lax : SameSiteMode.None,
-                Domain = _environment.IsDevelopment() ? null : ".aiprofilephotomaker.com",
-                Expires = DateTimeOffset.UtcNow.AddHours(12),
-                Path = "/"
-            };
+            var cookieOptions = BuildAuthCookieOptions(DateTimeOffset.UtcNow.AddHours(12));
             if (!string.IsNullOrEmpty(result.Token))
             {
                 Response.Cookies.Append(cookieName, result.Token, cookieOptions);
@@ -125,15 +146,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             // Set secure JWT cookie for session
             var cookieName = _configuration["Authentication:TokenCookieName"] ?? "AuthToken";
-            var cookieOptions = new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = !_environment.IsDevelopment(),
-                SameSite = _environment.IsDevelopment() ? SameSiteMode.Lax : SameSiteMode.None,
-                Domain = _environment.IsDevelopment() ? null : ".aiprofilephotomaker.com",
-                Expires = DateTimeOffset.UtcNow.AddHours(12),
-                Path = "/"
-            };
+            var cookieOptions = BuildAuthCookieOptions(DateTimeOffset.UtcNow.AddHours(12));
             if (!string.IsNullOrEmpty(result.Token))
             {
                 Response.Cookies.Append(cookieName, result.Token, cookieOptions);
@@ -155,14 +168,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
 
             var cookieName = _configuration["Authentication:TokenCookieName"] ?? "AuthToken";
-            var cookieOptions = new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = !_environment.IsDevelopment(),
-                SameSite = _environment.IsDevelopment() ? SameSiteMode.Lax : SameSiteMode.None,
-                Domain = _environment.IsDevelopment() ? null : ".aiprofilephotomaker.com",
-                Path = "/"
-            };
+            var cookieOptions = BuildAuthCookieOptions();
 
             try
             {
