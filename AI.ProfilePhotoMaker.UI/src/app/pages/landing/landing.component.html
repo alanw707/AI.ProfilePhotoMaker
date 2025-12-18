@@ -97,6 +97,7 @@
             Reviews
           </a>
           <a
+            *ngIf="!isAuthenticated"
             (click)="navigateToLogin()"
             (keydown.enter)="navigateToLogin()"
             (keydown.space)="navigateToLogin()"
@@ -106,8 +107,19 @@
             aria-label="Navigate to Login page">
             Login
           </a>
+          <a
+            *ngIf="isAuthenticated"
+            (click)="logout()"
+            (keydown.enter)="logout()"
+            (keydown.space)="logout()"
+            tabindex="0"
+            role="button"
+            class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors"
+            aria-label="Logout">
+            Logout
+          </a>
           <button (click)="getStarted()" class="btn-primary px-6 py-2" style="border-radius: 8px !important">
-            Get Started
+            {{ isAuthenticated ? 'Go to Dashboard' : 'Get Started' }}
           </button>
         </div>
 
@@ -174,6 +186,7 @@
             Reviews
           </a>
           <a
+            *ngIf="!isAuthenticated"
             (click)="navigateToLogin()"
             (keydown.enter)="navigateToLogin()"
             (keydown.space)="navigateToLogin()"
@@ -183,8 +196,19 @@
             aria-label="Navigate to Login page">
             Login
           </a>
+          <a
+            *ngIf="isAuthenticated"
+            (click)="logout()"
+            (keydown.enter)="logout()"
+            (keydown.space)="logout()"
+            tabindex="0"
+            role="button"
+            class="block cursor-pointer text-gray-700 hover:text-primary-600 transition-colors"
+            aria-label="Logout">
+            Logout
+          </a>
           <button (click)="getStarted()" class="btn-primary w-full px-6 py-3" style="border-radius: 8px !important">
-            Get Started
+            {{ isAuthenticated ? 'Go to Dashboard' : 'Get Started' }}
           </button>
         </div>
       </div>
