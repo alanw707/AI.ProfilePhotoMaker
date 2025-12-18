@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
+using AI.ProfilePhotoMaker.API.Services.Security;
 using Moq;
 
 namespace AI.ProfilePhotoMaker.API.Tests.Integration;
@@ -54,7 +55,8 @@ public class ModelVersionMismatchFixTests : IClassFixture<CustomWebApplicationFa
             scope.ServiceProvider.GetRequiredService<IConfiguration>(),
             scope.ServiceProvider.GetRequiredService<ILogger<ReplicateController>>(),
             new Mock<IPendingGenerationService>().Object,
-            new Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>().Object
+            new Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>().Object,
+            new Mock<ITurnstileVerificationService>(MockBehavior.Loose).Object
         );
 
         var formatMethod = typeof(ReplicateController).GetMethod(
@@ -97,7 +99,8 @@ public class ModelVersionMismatchFixTests : IClassFixture<CustomWebApplicationFa
             spLegacy.GetRequiredService<IConfiguration>(),
             spLegacy.GetRequiredService<ILogger<ReplicateController>>(),
             new Mock<IPendingGenerationService>().Object,
-            new Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>().Object
+            new Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>().Object,
+            new Mock<ITurnstileVerificationService>(MockBehavior.Loose).Object
         );
         var formatMethod = typeof(ReplicateController).GetMethod(
             name: "FormatModelVersion",
@@ -129,7 +132,8 @@ public class ModelVersionMismatchFixTests : IClassFixture<CustomWebApplicationFa
             spClean.GetRequiredService<IConfiguration>(),
             spClean.GetRequiredService<ILogger<ReplicateController>>(),
             new Mock<IPendingGenerationService>().Object,
-            new Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>().Object
+            new Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>().Object,
+            new Mock<ITurnstileVerificationService>(MockBehavior.Loose).Object
         );
         var formatMethodClean = typeof(ReplicateController).GetMethod(
             name: "FormatModelVersion",

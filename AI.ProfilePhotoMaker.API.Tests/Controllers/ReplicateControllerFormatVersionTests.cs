@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
+using AI.ProfilePhotoMaker.API.Services.Security;
 using AI.ProfilePhotoMaker.API.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -40,7 +41,12 @@ public class ReplicateControllerFormatVersionTests
         var logger = new Mock<ILogger<ReplicateController>>().Object;
         var pending = new Mock<IPendingGenerationService>().Object;
         var storage = new Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>().Object;
-        return new ReplicateController(client, basic, db, config, logger, pending, storage);
+        var turnstile = new Mock<ITurnstileVerificationService>(MockBehavior.Loose);
+        turnstile
+            .Setup(s => s.VerifyAsync(It.IsAny<string?>(), It.IsAny<string?>()))
+            .ReturnsAsync(true);
+
+        return new ReplicateController(client, basic, db, config, logger, pending, storage, turnstile.Object);
     }
 
     /// <summary>
