@@ -3,6 +3,7 @@ using AI.ProfilePhotoMaker.API.Controllers;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
+using AI.ProfilePhotoMaker.API.Services.Storage;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
@@ -31,15 +32,26 @@ public class ProfileControllerDeleteModelTests
         // Arrange: in-memory db and real repository
         var db = CreateDb();
         var repo = new UserProfileRepository(db);
-        var env = Mock.Of<IWebHostEnvironment>();
+        var env = new Mock<IWebHostEnvironment>();
+        env.SetupGet(e => e.EnvironmentName).Returns("Development");
         var logger = Mock.Of<ILogger<ProfileController>>();
-        var config = Mock.Of<IConfiguration>();
+        var config = new ConfigurationBuilder().Build();
+        var storageService = new Mock<IStorageService>();
+        var pathResolver = new StoragePathResolver(env.Object, config, Mock.Of<ILogger<StoragePathResolver>>());
 
         // Replicate client mock: pretend models do not exist on remote to skip delete calls
         var replicate = new Mock<IReplicateApiClient>();
         replicate.Setup(x => x.CheckModelExistsAsync(It.IsAny<string>())).ReturnsAsync(false);
 
-        var controller = new ProfileController(repo, db, env, logger, config, replicate.Object);
+        var controller = new ProfileController(
+            repo,
+            db,
+            env.Object,
+            logger,
+            config,
+            replicate.Object,
+            storageService.Object,
+            pathResolver);
 
         var userId = "unit-user-comprehensive";
         controller.ControllerContext = new ControllerContext
@@ -136,15 +148,26 @@ public class ProfileControllerDeleteModelTests
         // Arrange: in-memory db and real repository
         var db = CreateDb();
         var repo = new UserProfileRepository(db);
-        var env = Mock.Of<IWebHostEnvironment>();
+        var env = new Mock<IWebHostEnvironment>();
+        env.SetupGet(e => e.EnvironmentName).Returns("Development");
         var logger = Mock.Of<ILogger<ProfileController>>();
-        var config = Mock.Of<IConfiguration>();
+        var config = new ConfigurationBuilder().Build();
+        var storageService = new Mock<IStorageService>();
+        var pathResolver = new StoragePathResolver(env.Object, config, Mock.Of<ILogger<StoragePathResolver>>());
 
         // Replicate client mock: pretend models do not exist on remote to skip delete calls
         var replicate = new Mock<IReplicateApiClient>();
         replicate.Setup(x => x.CheckModelExistsAsync(It.IsAny<string>())).ReturnsAsync(false);
 
-        var controller = new ProfileController(repo, db, env, logger, config, replicate.Object);
+        var controller = new ProfileController(
+            repo,
+            db,
+            env.Object,
+            logger,
+            config,
+            replicate.Object,
+            storageService.Object,
+            pathResolver);
 
         var userId = "unit-user-1";
         controller.ControllerContext = new ControllerContext

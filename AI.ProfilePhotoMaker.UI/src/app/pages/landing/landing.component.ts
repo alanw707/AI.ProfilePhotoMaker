@@ -10,6 +10,7 @@ import { CreditPackage, CreditService } from '../../services/credit.service';
 import { Style, StyleService } from '../../services/style.service';
 import { ConfigService } from '../../services/config.service';
 import { StylePreviewService } from '../../services/style-preview.service';
+import { AuthService } from '../../services/auth.service';
 
 interface Plan {
   name: string;
@@ -66,6 +67,7 @@ interface StyledPhoto {
 export class LandingComponent implements OnInit, OnDestroy {
   isScrolled = false;
   mobileMenuOpen = false;
+  isAuthenticated = false;
   currentBeforeAfterIndex = 0;
   currentTestimonialIndex = 0;
   isComparisonDragging = false;
@@ -199,6 +201,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     private _route: ActivatedRoute,
     public navigation: NavigationService,
     public themeService: ThemeService,
+    private _authService: AuthService,
     private _creditService: CreditService,
     private _styleService: StyleService,
     private _config: ConfigService,
@@ -208,6 +211,12 @@ export class LandingComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.isAuthenticated = this._authService.isAuthenticated();
+    this.themeSubscription.add(
+      this._authService.isAuthenticated$.subscribe(isAuth => {
+        this.isAuthenticated = isAuth;
+      })
+    );
     this.setupSEO();
     this.loadPackagesFromDatabase();
     this.loadAvailableStyles();
@@ -457,6 +466,11 @@ export class LandingComponent implements OnInit, OnDestroy {
     this.mobileMenuOpen = !this.mobileMenuOpen;
   }
 
+  logout(): void {
+    this.mobileMenuOpen = false;
+    this._authService.logout('home');
+  }
+
   toggleFAQ(index: number): void {
     this.faqs[index].open = !this.faqs[index].open;
   }
@@ -467,7 +481,11 @@ export class LandingComponent implements OnInit, OnDestroy {
   }
 
   getStarted(): void {
-    this.navigation.goToRegister();
+    if (this.isAuthenticated) {
+      void this.navigation.goToDashboard();
+      return;
+    }
+    void this.navigation.goToRegister();
   }
 
   loadAvailableStyles(): void {
@@ -821,7 +839,11 @@ export class LandingComponent implements OnInit, OnDestroy {
   }
 
   navigateToLogin(): void {
-    this.navigation.goToLogin();
+    if (this.isAuthenticated) {
+      void this.navigation.goToDashboard();
+      return;
+    }
+    void this.navigation.goToLogin();
   }
 
   navigateToDashboard(): void {

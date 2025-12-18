@@ -142,6 +142,40 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             return Ok(result);
         }
 
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            try
+            {
+                await _signInManager.SignOutAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Logout sign-out failed: {ErrorMessage}", S(ex.Message));
+            }
+
+            var cookieName = _configuration["Authentication:TokenCookieName"] ?? "AuthToken";
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = !_environment.IsDevelopment(),
+                SameSite = _environment.IsDevelopment() ? SameSiteMode.Lax : SameSiteMode.None,
+                Domain = _environment.IsDevelopment() ? null : ".aiprofilephotomaker.com",
+                Path = "/"
+            };
+
+            try
+            {
+                Response.Cookies.Delete(cookieName, cookieOptions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete auth cookie during logout: {ErrorMessage}", S(ex.Message));
+            }
+
+            return Ok(new { success = true });
+        }
+
         [HttpGet("google-oauth-url")]
         public IActionResult GetGoogleOAuthUrl(string returnUrl = "/app/dashboard")
         {

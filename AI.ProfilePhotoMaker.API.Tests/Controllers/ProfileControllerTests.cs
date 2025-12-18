@@ -14,6 +14,7 @@ using AI.ProfilePhotoMaker.API.Controllers;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
+using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using System.Linq.Expressions;
@@ -32,6 +33,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
         private readonly Mock<ILogger<ProfileController>> _mockLogger;
         private readonly Mock<IConfiguration> _mockConfiguration;
         private readonly Mock<IReplicateApiClient> _mockReplicateApiClient;
+        private readonly Mock<IStorageService> _mockStorageService;
         private readonly ProfileController _controller;
 
         public ProfileControllerTests()
@@ -50,9 +52,16 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             _mockContext = new Mock<ApplicationDbContext>(new DbContextOptions<ApplicationDbContext>());
 
             _mockEnvironment = new Mock<IWebHostEnvironment>();
+            _mockEnvironment.SetupGet(e => e.EnvironmentName).Returns("Development");
             _mockLogger = new Mock<ILogger<ProfileController>>();
             _mockConfiguration = new Mock<IConfiguration>();
             _mockReplicateApiClient = new Mock<IReplicateApiClient>();
+            _mockStorageService = new Mock<IStorageService>();
+
+            var pathResolver = new StoragePathResolver(
+                _mockEnvironment.Object,
+                _mockConfiguration.Object,
+                Mock.Of<ILogger<StoragePathResolver>>());
 
             _controller = new ProfileController(
                 _mockUserProfileRepository.Object,
@@ -60,7 +69,9 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
                 _mockEnvironment.Object,
                 _mockLogger.Object,
                 _mockConfiguration.Object,
-                _mockReplicateApiClient.Object
+                _mockReplicateApiClient.Object,
+                _mockStorageService.Object,
+                pathResolver
             );
 
             // Setup a default user for tests that require authentication

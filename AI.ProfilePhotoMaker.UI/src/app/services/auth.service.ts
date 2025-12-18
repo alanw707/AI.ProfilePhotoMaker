@@ -451,17 +451,33 @@ export class AuthService {
   /**
    * Enhanced logout with secure session cleanup
    */
-  logout(): void {
-    this.secureLogout('user_initiated');
+  logout(redirectTo: 'login' | 'home' = 'login'): void {
+    this.secureLogout('user_initiated', redirectTo);
   }
 
   /**
    * Secure logout with reason tracking and proper cleanup
    */
-  private secureLogout(reason: string): void {
+  private secureLogout(reason: string, redirectTo: 'login' | 'home' = 'login'): void {
     console.log(`🔒 Secure logout initiated - reason: ${reason}`);
 
     try {
+      // Best-effort: clear the server-side auth cookie (HttpOnly JWT cookie).
+      // Don't block logout UX if this fails.
+      try {
+        this._http
+          .post(this._config.buildApiEndpoint('auth/logout'), {}, { withCredentials: true })
+          .pipe(
+            catchError(error => {
+              console.warn('🔒 Logout cookie clear request failed:', error);
+              return of(null);
+            })
+          )
+          .subscribe();
+      } catch (error) {
+        console.warn('🔒 Logout cookie clear request failed to start:', error);
+      }
+
       // Clear all authentication data securely
       this.clearAllAuthData();
 
@@ -478,8 +494,12 @@ export class AuthService {
         console.error('🔒 Error updating current user subject:', subjectError);
       }
 
-      // Navigate to login with reason
-      this.navigateToLogin(reason);
+      // Navigate after logout
+      if (redirectTo === 'home') {
+        this.navigateToHome();
+      } else {
+        this.navigateToLogin(reason);
+      }
 
       console.log('🔒 Secure logout completed successfully');
     } catch (error) {
@@ -494,11 +514,11 @@ export class AuthService {
 
       // Fallback navigation
       try {
-        this._router.navigate(['/auth/login']);
+        this._router.navigate([redirectTo === 'home' ? '/' : '/auth/login']);
       } catch (navigationError) {
         console.error('🔒 Error navigating to login:', navigationError);
         // Ultimate fallback - force page reload
-        window.location.href = '/auth/login';
+        window.location.href = redirectTo === 'home' ? '/' : '/auth/login';
       }
     }
   }
@@ -553,6 +573,26 @@ export class AuthService {
     } catch (err) {
       console.error('❌ Failed to navigate to login page', err);
       window.location.href = '/auth/login';
+    }
+  }
+
+  private navigateToHome(): void {
+    try {
+      const navigationResult = this._router.navigate(['/']);
+      Promise.resolve(navigationResult)
+        .then(success => {
+          if (success === false) {
+            console.error('❌ Failed to navigate to home page');
+            window.location.href = '/';
+          }
+        })
+        .catch(err => {
+          console.error('❌ Error navigating to home page:', err);
+          window.location.href = '/';
+        });
+    } catch (err) {
+      console.error('❌ Failed to navigate to home page', err);
+      window.location.href = '/';
     }
   }
 
@@ -648,6 +688,30 @@ export class AuthService {
     // This prevents false logouts on page refresh while probeSession() runs async
     const user = this.getCurrentUser();
     return user !== null && !!(user.email || user.firstName || user.lastName);
+  }
+
+  public updateCachedUserProfile(update: { firstName?: string; lastName?: string; email?: string }): void {
+    try {
+      const current = this.getCurrentUser() || this._currentUserSubject.value;
+      const base: AuthResponseDto = {
+        token: current?.token || '',
+        email: current?.email || '',
+        firstName: current?.firstName || '',
+        lastName: current?.lastName || '',
+      };
+
+      const nextUser: AuthResponseDto = {
+        ...base,
+        email: update.email ?? base.email,
+        firstName: update.firstName ?? base.firstName,
+        lastName: update.lastName ?? base.lastName,
+      };
+
+      localStorage.setItem('currentUser', JSON.stringify(nextUser));
+      this._currentUserSubject.next(nextUser);
+    } catch (error) {
+      console.error('Failed to update cached user profile:', error);
+    }
   }
 
   private getCurrentUser(): AuthResponseDto | null {

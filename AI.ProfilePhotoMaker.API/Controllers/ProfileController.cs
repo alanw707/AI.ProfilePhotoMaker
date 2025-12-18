@@ -4,6 +4,7 @@ using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Constants;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
+using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +23,8 @@ public class ProfileController : ControllerBase
     private readonly ILogger<ProfileController> _logger;
     private readonly IConfiguration _configuration;
     private readonly IReplicateApiClient _replicateApiClient;
+    private readonly IStorageService _storageService;
+    private readonly StoragePathResolver _pathResolver;
 
     private static string S(string? value) => LoggingSanitizer.Sanitize(value);
     private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
@@ -32,7 +35,9 @@ public class ProfileController : ControllerBase
         IWebHostEnvironment environment,
         ILogger<ProfileController> logger,
         IConfiguration configuration,
-        IReplicateApiClient replicateApiClient)
+        IReplicateApiClient replicateApiClient,
+        IStorageService storageService,
+        StoragePathResolver pathResolver)
     {
         _userProfileRepository = userProfileRepository;
         _context = context;
@@ -40,6 +45,8 @@ public class ProfileController : ControllerBase
         _logger = logger;
         _configuration = configuration;
         _replicateApiClient = replicateApiClient;
+        _storageService = storageService;
+        _pathResolver = pathResolver;
     }
 
     [HttpGet]
@@ -327,7 +334,7 @@ public class ProfileController : ControllerBase
 
         try
         {
-            var profile = await _userProfileRepository.GetByUserIdAsync(userId);
+            var profile = await _userProfileRepository.GetByUserIdLightAsync(userId);
             if (profile == null)
                 return NotFound("Profile not found");
 
@@ -373,35 +380,63 @@ public class ProfileController : ControllerBase
 
         try
         {
-            var profile = await _userProfileRepository.GetByUserIdAsync(userId);
+            var profile = await _userProfileRepository.GetByUserIdLightAsync(userId);
             if (profile == null)
                 return NotFound("Profile not found");
 
             // Get only original upload photos (not generated ones)
-            var inputPhotos = profile.ProcessedImages
-                .Where(i => i.Style == ImageConstants.OriginalStyle)
-                .ToList();
+            var inputPhotos = await _context.ProcessedImages
+                .Where(i => i.UserProfileId == profile.Id && (i.IsOriginalUpload || i.Style == ImageConstants.OriginalStyle))
+                .ToListAsync();
 
             var deletedCount = 0;
-            var uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
+            var filesDeleted = 0;
+
+            // Best-effort delete any remaining upload files (new + legacy prefixes)
+            try
+            {
+                var uploadPrefix = _pathResolver.GetDirectoryPrefix(StorageType.Upload, userId);
+                if (await _storageService.DeleteDirectoryAsync(uploadPrefix))
+                {
+                    filesDeleted++;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete upload directory prefix for user {UserId}", Sid(userId));
+            }
+
+            try
+            {
+                var legacyUploadPrefix = $"uploads/{userId}/";
+                if (await _storageService.DeleteDirectoryAsync(legacyUploadPrefix))
+                {
+                    filesDeleted++;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete legacy upload directory prefix for user {UserId}", Sid(userId));
+            }
 
             foreach (var photo in inputPhotos)
             {
                 try
                 {
-                    // Mark as deleted in database (fields removed in cleanup)
-                    // photo.IsDeleted = true;
-                    // photo.DeletedAt = DateTime.UtcNow;
-                    // photo.UserRequestedDeletionDate = DateTime.UtcNow;
-
-                    // Delete physical file if it exists
-                    if (!string.IsNullOrEmpty(photo.OriginalImageUrl))
+                    if (!string.IsNullOrWhiteSpace(photo.OriginalImageUrl))
                     {
-                        var fileName = Path.GetFileName(photo.OriginalImageUrl);
-                        var filePath = Path.Combine(uploadDir, fileName);
-                        if (System.IO.File.Exists(filePath))
+                        if (await _storageService.DeleteImageAsync(photo.OriginalImageUrl))
                         {
-                            System.IO.File.Delete(filePath);
+                            filesDeleted++;
+                        }
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(photo.ProcessedImageUrl) &&
+                        !string.Equals(photo.ProcessedImageUrl, photo.OriginalImageUrl, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (await _storageService.DeleteImageAsync(photo.ProcessedImageUrl))
+                        {
+                            filesDeleted++;
                         }
                     }
 
@@ -413,9 +448,18 @@ public class ProfileController : ControllerBase
                 }
             }
 
+            if (inputPhotos.Count > 0)
+            {
+                _context.ProcessedImages.RemoveRange(inputPhotos);
+            }
+
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Deleted {DeletedCount} input photos for user {UserId}", deletedCount, Sid(userId));
+            _logger.LogInformation(
+                "Deleted {DeletedCount} input photos for user {UserId} (filesDeleted: {FilesDeleted})",
+                deletedCount,
+                Sid(userId),
+                filesDeleted);
 
             return Ok(new
             {
@@ -423,6 +467,7 @@ public class ProfileController : ControllerBase
                 data = new
                 {
                     deletedCount = deletedCount,
+                    filesDeleted = filesDeleted,
                     message = $"Successfully deleted {deletedCount} input photos"
                 },
                 error = (object?)null
@@ -603,119 +648,19 @@ public class ProfileController : ControllerBase
 
         try
         {
-            var profile = await _userProfileRepository.GetByUserIdAsync(userId);
+            var profile = await _userProfileRepository.GetByUserIdLightAsync(userId);
             if (profile == null)
                 return NotFound("Profile not found");
 
-            var deletionSummary = new
-            {
-                PhotosDeleted = 0,
-                ModelDeleted = false,
-                UsageLogsDeleted = 0,
-                FilesDeleted = 0
-            };
+            var summary = await PrepareUserDataDeletionAsync(
+                userId,
+                profile.Id,
+                includeFeedbackSubmissions: false);
 
-            // Delete all photos (mark as deleted and remove files)
-            var allPhotos = profile.ProcessedImages.Where(i => true).ToList();
-            var photosDeleted = 0;
-            var filesDeleted = 0;
-
-            var uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
-
-            foreach (var photo in allPhotos)
-            {
-                try
-                {
-                    // Mark as deleted in database (fields removed in cleanup)
-                    // photo.IsDeleted = true;
-                    // photo.DeletedAt = DateTime.UtcNow;
-                    // photo.UserRequestedDeletionDate = DateTime.UtcNow;
-
-                    // Delete physical file if it exists
-                    if (!string.IsNullOrEmpty(photo.OriginalImageUrl))
-                    {
-                        var fileName = Path.GetFileName(photo.OriginalImageUrl);
-                        var filePath = Path.Combine(uploadDir, fileName);
-                        if (System.IO.File.Exists(filePath))
-                        {
-                            System.IO.File.Delete(filePath);
-                            filesDeleted++;
-                        }
-                    }
-
-                    photosDeleted++;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to delete photo {PhotoId} for user {UserId}", photo.Id, Sid(userId));
-                }
-            }
-
-            // Delete entire upload directory if it exists
-            try
-            {
-                if (Directory.Exists(uploadDir))
-                {
-                    Directory.Delete(uploadDir, true);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to delete upload directory for user {UserId}", Sid(userId));
-            }
-
-            // Delete AI model
-            var modelDeleted = false;
-            // Check ModelCreationRequest table for any deletable model (Ready or Failed)
-            var hasModel = await GetAnyDeletableModelAsync(userId!) != null;
-            if (hasModel)
-            {
-                // Model deletion is now handled by dedicated DeleteAIModel endpoint
-                // which properly manages ModelCreationRequest records and Replicate cleanup
-                modelDeleted = true;
-            }
-
-            // Delete training ZIP files
-            try
-            {
-                var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
-                if (Directory.Exists(trainingZipsPath))
-                {
-                    var userZipFile = Path.Combine(trainingZipsPath, $"{userId}.zip");
-                    if (System.IO.File.Exists(userZipFile))
-                    {
-                        System.IO.File.Delete(userZipFile);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to delete training ZIP files for user {UserId}", Sid(userId));
-            }
-
-            // Delete usage logs (soft delete)
-            var usageLogsDeleted = 0;
-            foreach (var log in profile.UsageLogs)
-            {
-                _context.UsageLogs.Remove(log);
-                usageLogsDeleted++;
-            }
-
-            // Reset profile credits and subscription data (but keep basic profile info)
-            profile.Credits = 5; // Reset to default
-            profile.PurchasedCredits = 0;
-            profile.LastCreditReset = DateTime.UtcNow;
             profile.UpdatedAt = DateTime.UtcNow;
+            profile.LastModelSyncCheck = null;
 
             await _context.SaveChangesAsync();
-
-            var summary = new
-            {
-                PhotosDeleted = photosDeleted,
-                ModelDeleted = modelDeleted,
-                UsageLogsDeleted = usageLogsDeleted,
-                FilesDeleted = filesDeleted
-            };
 
             _logger.LogInformation("Deleted all data for user {UserId}: {@Summary}", Sid(userId), summary);
 
@@ -877,93 +822,253 @@ public class ProfileController : ControllerBase
     /// </summary>
     private async Task DeleteAllUserDataInternal(string userId, UserProfile profile)
     {
-        // Delete all photos (mark as deleted and remove files)
-        var allPhotos = profile.ProcessedImages.Where(i => true).ToList();
-        var uploadDir = Path.Combine(_environment.ContentRootPath, "uploads", userId);
+        await PrepareUserDataDeletionAsync(
+            userId,
+            profile.Id,
+            includeFeedbackSubmissions: true);
+    }
 
-        foreach (var photo in allPhotos)
-        {
-            try
-            {
-                // photo.IsDeleted = true; (field removed)
-                // photo.DeletedAt = DateTime.UtcNow; (field removed) 
-                // photo.UserRequestedDeletionDate = DateTime.UtcNow; (field removed)
+    private sealed record UserDataDeletionSummary(
+        int InputPhotosDeleted,
+        int GeneratedPhotosDeleted,
+        int ProcessedImagesDeleted,
+        int UsageLogsDeleted,
+        int ModelRequestsDeleted,
+        int PredictionsDeleted,
+        int PendingGenerationRequestsDeleted,
+        int UserStyleSelectionsDeleted,
+        int FeedbackSubmissionsDeleted,
+        int StorageDirectoriesDeleted,
+        int StorageFilesDeleted,
+        int StorageDeleteTimeouts,
+        int ReplicateModelDeleteAttempts,
+        int ReplicateModelDeleteTimeouts);
 
-                if (!string.IsNullOrEmpty(photo.OriginalImageUrl))
-                {
-                    var fileName = Path.GetFileName(photo.OriginalImageUrl);
-                    var filePath = Path.Combine(uploadDir, fileName);
-                    if (System.IO.File.Exists(filePath))
-                    {
-                        System.IO.File.Delete(filePath);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to delete photo {PhotoId} for user {UserId}", photo.Id, Sid(userId));
-            }
-        }
-
-        // Delete upload directory
-        try
-        {
-            if (Directory.Exists(uploadDir))
-            {
-                Directory.Delete(uploadDir, true);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to delete upload directory for user {UserId}", Sid(userId));
-        }
-
-        // Delete AI models: try remote delete for any with ReplicateModelId, then remove all rows
-        var userModels = await _context.ModelCreationRequests
-            .Where(m => m.UserId == userId && (m.Status == ModelCreationStatus.Ready || m.Status == ModelCreationStatus.Failed))
+    private async Task<UserDataDeletionSummary> PrepareUserDataDeletionAsync(
+        string userId,
+        int userProfileId,
+        bool includeFeedbackSubmissions)
+    {
+        // Fetch DB records to delete
+        var processedImages = await _context.ProcessedImages
+            .Where(i => i.UserProfileId == userProfileId)
             .ToListAsync();
-        foreach (var m in userModels)
+
+        var usageLogs = await _context.UsageLogs
+            .Where(l => l.UserId == userId)
+            .ToListAsync();
+
+        var modelRequests = await _context.ModelCreationRequests
+            .Where(m => m.UserId == userId)
+            .ToListAsync();
+
+        var predictions = await _context.Predictions
+            .Where(p => p.UserId == userId)
+            .ToListAsync();
+
+        var pendingGenerationRequests = await _context.PendingGenerationRequests
+            .Where(p => p.UserId == userId)
+            .ToListAsync();
+
+        var styleSelections = await _context.UserStyleSelections
+            .Where(s => s.UserProfileId == userProfileId)
+            .ToListAsync();
+
+        var feedbackSubmissions = includeFeedbackSubmissions
+            ? await _context.FeedbackSubmissions.Where(fs => fs.UserId == userId).ToListAsync()
+            : new List<FeedbackSubmission>();
+
+        // Delete storage content (best effort)
+        var storageDirectoriesDeleted = 0;
+        var storageFilesDeleted = 0;
+        var storageDeleteTimeouts = 0;
+
+        var directoryPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            if (!string.IsNullOrEmpty(m.ReplicateModelId))
+            _pathResolver.GetDirectoryPrefix(StorageType.Upload, userId),
+            _pathResolver.GetDirectoryPrefix(StorageType.Generated, userId),
+            _pathResolver.GetDirectoryPrefix(StorageType.Enhanced, userId),
+
+            // Legacy/non-environment-prefixed paths (older versions)
+            $"uploads/{userId}/",
+            $"generated/{userId}/",
+            $"enhanced/{userId}/"
+        };
+
+        foreach (var prefix in directoryPrefixes)
+        {
+            var (completed, success) = await TryDeleteStorageDirectoryAsync(prefix, TimeSpan.FromSeconds(5));
+            if (!completed)
             {
-                try
-                {
-                    var (success, errorMessage) = await _replicateApiClient.DeleteModelAsync(m.ReplicateModelId);
-                    if (!success)
-                    {
-                        _logger.LogWarning("Failed to delete model {ModelId} from Replicate: {Error}", S(m.ReplicateModelId), S(errorMessage));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to delete model from Replicate for user {UserId}", Sid(userId));
-                }
+                storageDeleteTimeouts++;
             }
-        }
-        if (userModels.Count > 0)
-        {
-            _context.ModelCreationRequests.RemoveRange(userModels);
+            if (success)
+            {
+                storageDirectoriesDeleted++;
+            }
         }
 
-        // Delete training ZIP files
+        var filePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // Training ZIP (current path resolver + legacy)
+        var zipFileName = $"{userId}.zip";
+        filePaths.Add(_pathResolver.GetPath(StorageType.TrainingZip, userId, zipFileName));
+        filePaths.Add($"training-zips/{zipFileName}");
+
+        foreach (var modelRequest in modelRequests)
+        {
+            if (!string.IsNullOrWhiteSpace(modelRequest.TrainingImageZipUrl))
+            {
+                filePaths.Add(modelRequest.TrainingImageZipUrl);
+            }
+        }
+
+        foreach (var img in processedImages)
+        {
+            if (!string.IsNullOrWhiteSpace(img.OriginalImageUrl))
+            {
+                filePaths.Add(img.OriginalImageUrl);
+            }
+
+            if (!string.IsNullOrWhiteSpace(img.ProcessedImageUrl))
+            {
+                filePaths.Add(img.ProcessedImageUrl);
+            }
+        }
+
+        foreach (var path in filePaths)
+        {
+            var (completed, success) = await TryDeleteStorageFileAsync(path, TimeSpan.FromSeconds(5));
+            if (!completed)
+            {
+                storageDeleteTimeouts++;
+            }
+            if (success)
+            {
+                storageFilesDeleted++;
+            }
+        }
+
+        // Delete Replicate models (best effort, with timeout)
+        var replicateModelDeleteAttempts = 0;
+        var replicateModelDeleteTimeouts = 0;
+        var replicateModelIds = modelRequests
+            .Select(m => m.ReplicateModelId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        foreach (var modelId in replicateModelIds)
+        {
+            replicateModelDeleteAttempts++;
+            var (completed, success) = await TryDeleteReplicateModelAsync(modelId!, TimeSpan.FromSeconds(20));
+            if (!completed)
+            {
+                replicateModelDeleteTimeouts++;
+            }
+
+            if (!success)
+            {
+                _logger.LogWarning("Replicate model delete failed for user {UserId}, model {ModelId}", Sid(userId), S(modelId));
+            }
+        }
+
+        // Remove DB records
+        _context.ProcessedImages.RemoveRange(processedImages);
+        _context.UsageLogs.RemoveRange(usageLogs);
+        _context.ModelCreationRequests.RemoveRange(modelRequests);
+        _context.Predictions.RemoveRange(predictions);
+        _context.PendingGenerationRequests.RemoveRange(pendingGenerationRequests);
+        _context.UserStyleSelections.RemoveRange(styleSelections);
+        if (includeFeedbackSubmissions && feedbackSubmissions.Count > 0)
+        {
+            _context.FeedbackSubmissions.RemoveRange(feedbackSubmissions);
+        }
+
+        var inputPhotosDeleted = processedImages.Count(i => i.IsOriginalUpload || i.Style == ImageConstants.OriginalStyle);
+        var generatedPhotosDeleted = processedImages.Count(i => i.IsGenerated);
+
+        return new UserDataDeletionSummary(
+            InputPhotosDeleted: inputPhotosDeleted,
+            GeneratedPhotosDeleted: generatedPhotosDeleted,
+            ProcessedImagesDeleted: processedImages.Count,
+            UsageLogsDeleted: usageLogs.Count,
+            ModelRequestsDeleted: modelRequests.Count,
+            PredictionsDeleted: predictions.Count,
+            PendingGenerationRequestsDeleted: pendingGenerationRequests.Count,
+            UserStyleSelectionsDeleted: styleSelections.Count,
+            FeedbackSubmissionsDeleted: feedbackSubmissions.Count,
+            StorageDirectoriesDeleted: storageDirectoriesDeleted,
+            StorageFilesDeleted: storageFilesDeleted,
+            StorageDeleteTimeouts: storageDeleteTimeouts,
+            ReplicateModelDeleteAttempts: replicateModelDeleteAttempts,
+            ReplicateModelDeleteTimeouts: replicateModelDeleteTimeouts);
+    }
+
+    private async Task<(bool Completed, bool Success)> TryDeleteReplicateModelAsync(string modelId, TimeSpan timeout)
+    {
         try
         {
-            var trainingZipsPath = Path.Combine(_environment.ContentRootPath, "training-zips");
-            if (Directory.Exists(trainingZipsPath))
+            var deleteTask = _replicateApiClient.DeleteModelAsync(modelId);
+            var completed = await Task.WhenAny(deleteTask, Task.Delay(timeout));
+            if (completed != deleteTask)
             {
-                var userZipFile = Path.Combine(trainingZipsPath, $"{userId}.zip");
-                if (System.IO.File.Exists(userZipFile))
-                {
-                    System.IO.File.Delete(userZipFile);
-                }
+                return (Completed: false, Success: false);
             }
+
+            var (success, _) = await deleteTask;
+            return (Completed: true, Success: success);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to delete training ZIP files for user {UserId}", Sid(userId));
+            _logger.LogWarning(ex, "Replicate model delete threw for model {ModelId}", S(modelId));
+            return (Completed: true, Success: false);
         }
+    }
 
-        // Delete usage logs
-        _context.UsageLogs.RemoveRange(profile.UsageLogs);
+    private async Task<(bool Completed, bool Success)> TryDeleteStorageDirectoryAsync(string directoryPrefix, TimeSpan timeout)
+    {
+        try
+        {
+            var deleteTask = _storageService.DeleteDirectoryAsync(directoryPrefix);
+            var completed = await Task.WhenAny(deleteTask, Task.Delay(timeout));
+            if (completed != deleteTask)
+            {
+                _logger.LogWarning(
+                    "Storage directory deletion timed out for user directory {Prefix}",
+                    S(directoryPrefix));
+                return (Completed: false, Success: false);
+            }
+
+            return (Completed: true, Success: await deleteTask);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to delete storage directory {Prefix}", S(directoryPrefix));
+            return (Completed: true, Success: false);
+        }
+    }
+
+    private async Task<(bool Completed, bool Success)> TryDeleteStorageFileAsync(string storagePath, TimeSpan timeout)
+    {
+        try
+        {
+            var deleteTask = _storageService.DeleteImageAsync(storagePath);
+            var completed = await Task.WhenAny(deleteTask, Task.Delay(timeout));
+            if (completed != deleteTask)
+            {
+                _logger.LogWarning(
+                    "Storage file deletion timed out for path {Path}",
+                    S(storagePath));
+                return (Completed: false, Success: false);
+            }
+
+            return (Completed: true, Success: await deleteTask);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to delete storage file {Path}", S(storagePath));
+            return (Completed: true, Success: false);
+        }
     }
 }
