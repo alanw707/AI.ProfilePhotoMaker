@@ -241,6 +241,9 @@ describe('AuthService', () => {
 
     it('should logout and clear session data', () => {
       service.logout();
+      const req = httpMock.expectOne('/api/auth/logout');
+      expect(req.request.method).toBe('POST');
+      req.flush({ success: true });
 
       expect(localStorage.getItem('auth_token')).toBeNull();
       expect(service.isAuthenticated()).toBeFalse();
@@ -255,10 +258,16 @@ describe('AuthService', () => {
       });
 
       service.logout();
+      const req = httpMock.expectOne('/api/auth/logout');
+      expect(req.request.method).toBe('POST');
+      req.flush({ success: true });
     });
 
     it('should navigate to login page after logout', () => {
       service.logout();
+      const req = httpMock.expectOne('/api/auth/logout');
+      expect(req.request.method).toBe('POST');
+      req.flush({ success: true });
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/auth/login'], { queryParams: {} });
     });
   });
@@ -407,6 +416,9 @@ describe('AuthService Integration Tests', () => {
 
       // Logout
       service.logout();
+      const logoutReq = httpMock.expectOne('/api/auth/logout');
+      expect(logoutReq.request.method).toBe('POST');
+      logoutReq.flush({ success: true });
       expect(service.isAuthenticated()).toBeFalse();
 
       done();
