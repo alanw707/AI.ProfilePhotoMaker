@@ -66,6 +66,21 @@ export class SettingsComponent implements OnInit, OnDestroy {
   confirmationTitle = '';
   confirmationMessage = '';
 
+  // Profile Edit Modal State
+  showEditProfileModal = false;
+  isUpdatingProfile = false;
+  editProfileModel: {
+    firstName: string;
+    lastName: string;
+    gender: string;
+    ethnicity: string;
+  } = {
+    firstName: '',
+    lastName: '',
+    gender: '',
+    ethnicity: '',
+  };
+
   // Credit Management State
   creditsInfo: any = null;
   userCreditStatus: any = null;
@@ -174,7 +189,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
   async loadDataStats() {
     try {
       // Load data stats from API
-      const statsResponse = await firstValueFrom(this.profileService.getDataStats());
+      const statsResponse = await firstValueFrom(
+        this.profileService.getDataStats().pipe(timeout({ first: 10000 }))
+      );
       if (statsResponse?.success) {
         this.dataStats = {
           inputPhotos: statsResponse.data.inputPhotos || 0,
@@ -230,11 +247,199 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   // Navigation Methods
   editProfile() {
-    // For now, just show a notification. In a full implementation, this would open an edit modal
-    this.notificationService.info(
-      'Feature Coming Soon',
-      'Profile editing will be available in a future update.'
+    void this.openEditProfileModal();
+  }
+
+  async openEditProfileModal() {
+    if (!this.userProfile) {
+      await this.loadUserProfileAsync();
+    }
+
+    if (!this.userProfile) {
+      this.notificationService.error(
+        'Profile Unavailable',
+        'Unable to load your profile. Please refresh and try again.'
+      );
+      return;
+    }
+
+    // Ensure other modals are closed
+    this.showConfirmationModal = false;
+
+    this.editProfileModel = {
+      firstName: this.userProfile.firstName || '',
+      lastName: this.userProfile.lastName || '',
+      gender: this.mapGenderToSelectValue(this.userProfile.gender),
+      ethnicity: this.mapEthnicityToSelectValue(this.userProfile.ethnicity),
+    };
+
+    this.showEditProfileModal = true;
+  }
+
+  cancelEditProfile() {
+    if (this.isUpdatingProfile) {
+      return;
+    }
+    this.showEditProfileModal = false;
+    this.isUpdatingProfile = false;
+  }
+
+  canSaveProfile(): boolean {
+    const firstName = (this.editProfileModel.firstName || '').trim();
+    const lastName = (this.editProfileModel.lastName || '').trim();
+    return (
+      !this.isUpdatingProfile &&
+      firstName.length > 0 &&
+      lastName.length > 0 &&
+      firstName.length <= 50 &&
+      lastName.length <= 50
     );
+  }
+
+  async saveProfile() {
+    if (!this.canSaveProfile()) {
+      return;
+    }
+
+    this.isUpdatingProfile = true;
+    this.cdr.detectChanges();
+
+    try {
+      const firstName = this.editProfileModel.firstName.trim();
+      const lastName = this.editProfileModel.lastName.trim();
+
+      const response = await firstValueFrom(
+        this.profileService
+          .updateProfile({
+            firstName,
+            lastName,
+            gender: this.normalizeOptionalField(this.editProfileModel.gender),
+            ethnicity: this.normalizeOptionalField(this.editProfileModel.ethnicity),
+          })
+          .pipe(timeout({ first: 30000 }))
+      );
+
+      if (response?.success) {
+        this.userProfile = response.data;
+
+        // Keep header display name in sync without requiring a reload.
+        this.authService.updateCachedUserProfile({
+          firstName,
+          lastName,
+        });
+
+        this.notificationService.success('Profile Updated', 'Your profile information has been saved.');
+        this.showEditProfileModal = false;
+      } else {
+        throw new Error(response?.error?.message || 'Failed to update profile');
+      }
+    } catch (error) {
+      if (error instanceof TimeoutError) {
+        this.notificationService.error(
+          'Update Timed Out',
+          'Profile update is taking too long. Please try again.'
+        );
+      } else {
+        this.notificationService.error('Update Failed', 'Failed to update your profile. Please try again.');
+      }
+      console.error('Profile update failed:', error);
+    } finally {
+      this.isUpdatingProfile = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  private normalizeOptionalField(value: string): string | undefined {
+    const trimmed = (value || '').trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+
+  private normalizeSelectValue(value?: string): string {
+    const normalized = (value || '').trim();
+    return normalized;
+  }
+
+  private mapGenderToSelectValue(value?: string): string {
+    const normalized = this.normalizeSelectValue(value);
+    if (!normalized) {
+      return '';
+    }
+
+    const lower = normalized.toLowerCase();
+    const compact = lower.replace(/[_\s]+/g, '-');
+
+    if (compact === 'male') {
+      return 'male';
+    }
+    if (compact === 'female') {
+      return 'female';
+    }
+    if (compact === 'non-binary' || compact === 'nonbinary') {
+      return 'non-binary';
+    }
+    if (
+      compact === 'prefer-not-to-say' ||
+      (lower.includes('prefer') && lower.includes('not') && lower.includes('say'))
+    ) {
+      return 'prefer-not-to-say';
+    }
+
+    return '';
+  }
+
+  private mapEthnicityToSelectValue(value?: string): string {
+    const normalized = this.normalizeSelectValue(value);
+    if (!normalized) {
+      return '';
+    }
+
+    const lower = normalized.toLowerCase();
+    const compact = lower.replace(/[_\s]+/g, '-');
+
+    const allowed = [
+      'asian',
+      'black',
+      'hispanic',
+      'white',
+      'native-american',
+      'pacific-islander',
+      'mixed',
+      'other',
+      'prefer-not-to-say',
+    ];
+    if (allowed.includes(compact)) {
+      return compact;
+    }
+
+    if (lower.includes('prefer') && lower.includes('not') && lower.includes('say')) {
+      return 'prefer-not-to-say';
+    }
+    if (lower.includes('asian')) {
+      return 'asian';
+    }
+    if (lower.includes('black') || lower.includes('african')) {
+      return 'black';
+    }
+    if (lower.includes('hispanic') || lower.includes('latino')) {
+      return 'hispanic';
+    }
+    if (lower.includes('white') || lower.includes('caucasian')) {
+      return 'white';
+    }
+    if (lower.includes('native')) {
+      return 'native-american';
+    }
+    if (lower.includes('pacific')) {
+      return 'pacific-islander';
+    }
+    if (lower.includes('mixed') || lower.includes('multiracial')) {
+      return 'mixed';
+    }
+    if (lower === 'other') {
+      return 'other';
+    }
+
+    return '';
   }
 
   // Data Management Methods
@@ -338,7 +543,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   private async deleteInputPhotos() {
     try {
-      const response = await firstValueFrom(this.profileService.deleteInputPhotos());
+      const response = await firstValueFrom(
+        this.profileService.deleteInputPhotos().pipe(timeout({ first: 120000 }))
+      );
       if (response?.success) {
         this.notificationService.success(
           'Photos Deleted',
@@ -362,7 +569,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   private async deleteAIModel() {
     try {
-      const response = await firstValueFrom(this.profileService.deleteAIModel());
+      const response = await firstValueFrom(
+        this.profileService.deleteAIModel().pipe(timeout({ first: 120000 }))
+      );
       if (response?.success) {
         this.notificationService.success(
           'AI Model Deleted',
@@ -393,7 +602,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   private async deleteAllData() {
     try {
-      const response = await firstValueFrom(this.profileService.deleteAllUserData());
+      const response = await firstValueFrom(
+        this.profileService.deleteAllUserData().pipe(timeout({ first: 120000 }))
+      );
       if (response?.success) {
         this.notificationService.success(
           'All Data Deleted',
@@ -407,12 +618,15 @@ export class SettingsComponent implements OnInit, OnDestroy {
           totalDataSize: 0,
           accountAge: this.dataStats.accountAge,
         };
-        // Refresh stats, but don't fail the overall delete if this errors
-        try {
-          await this.loadDataStats();
-        } catch (refreshErr) {
+        // Close modal and reset state immediately so the UI doesn't feel stuck
+        this.isDeleting = false;
+        this.showConfirmationModal = false;
+        this.cdr.detectChanges();
+
+        // Refresh stats in the background; don't block UI/closing
+        this.loadDataStats().catch(refreshErr => {
           console.warn('Post-delete stats refresh failed:', refreshErr);
-        }
+        });
       } else {
         throw new Error(response?.error?.message || 'Failed to delete all data');
       }
@@ -424,7 +638,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   private async deleteAccount() {
     try {
-      const response = await firstValueFrom(this.profileService.deleteUserAccount());
+      const response = await firstValueFrom(
+        this.profileService.deleteUserAccount().pipe(timeout({ first: 120000 }))
+      );
       if (response?.success) {
         this.notificationService.success(
           'Account Deleted',
@@ -448,7 +664,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.isExporting = true;
 
     try {
-      const blob = await firstValueFrom(this.profileService.exportUserData());
+      const blob = await firstValueFrom(
+        this.profileService.exportUserData().pipe(timeout({ first: 120000 }))
+      );
       if (blob) {
         // Create download link
         const url = window.URL.createObjectURL(blob);

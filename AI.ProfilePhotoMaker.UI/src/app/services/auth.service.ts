@@ -650,6 +650,30 @@ export class AuthService {
     return user !== null && !!(user.email || user.firstName || user.lastName);
   }
 
+  public updateCachedUserProfile(update: { firstName?: string; lastName?: string; email?: string }): void {
+    try {
+      const current = this.getCurrentUser() || this._currentUserSubject.value;
+      const base: AuthResponseDto = {
+        token: current?.token || '',
+        email: current?.email || '',
+        firstName: current?.firstName || '',
+        lastName: current?.lastName || '',
+      };
+
+      const nextUser: AuthResponseDto = {
+        ...base,
+        email: update.email ?? base.email,
+        firstName: update.firstName ?? base.firstName,
+        lastName: update.lastName ?? base.lastName,
+      };
+
+      localStorage.setItem('currentUser', JSON.stringify(nextUser));
+      this._currentUserSubject.next(nextUser);
+    } catch (error) {
+      console.error('Failed to update cached user profile:', error);
+    }
+  }
+
   private getCurrentUser(): AuthResponseDto | null {
     // Try both storage keys for backwards compatibility
     let userStr = localStorage.getItem('currentUser');

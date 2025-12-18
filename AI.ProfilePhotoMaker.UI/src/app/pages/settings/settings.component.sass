@@ -451,6 +451,57 @@
       outline: none
       border-color: var(--accent-color)
 
+.profile-edit-body
+  text-align: left
+
+.profile-edit-subtitle
+  margin-top: 0
+
+.profile-edit-body .profile-edit-hint
+  font-size: 0.85rem
+  color: var(--text-secondary)
+  margin: 1rem 0 0 0
+
+.profile-edit-form
+  .form-row
+    display: grid
+    grid-template-columns: 1fr 1fr
+    gap: 1rem
+    margin-bottom: 1rem
+
+  .form-group
+    display: flex
+    flex-direction: column
+    gap: 8px
+
+  label
+    font-size: 0.9rem
+    font-weight: 600
+    color: var(--text-primary)
+
+  .form-control
+    width: 100%
+    padding: 12px
+    border: 1px solid var(--border-color)
+    border-radius: 6px
+    background: var(--bg-primary)
+    color: var(--text-primary)
+    font-size: 1rem
+    color-scheme: dark
+
+    &::placeholder
+      color: var(--text-secondary)
+      opacity: 0.8
+
+    &:focus
+      outline: none
+      border-color: var(--accent-color)
+
+  select.form-control
+    option
+      background: var(--bg-secondary)
+      color: var(--text-primary)
+
 .modal-footer
   display: flex
   gap: 12px
@@ -495,6 +546,10 @@
     max-width: none
 
 @media (max-width: 480px)
+  .profile-edit-form
+    .form-row
+      grid-template-columns: 1fr
+
   .data-stats
     grid-template-columns: 1fr
   
