@@ -40,6 +40,30 @@ public class AuthService : IAuthService
         _legacyOptions = legacyOptions.Value;
     }
 
+    private async Task<string> GenerateUniqueUserNameFromEmailAsync(string email)
+    {
+        // Use the full email as username to avoid collisions across domains (e.g., alanw707@gmail.com vs alanw707@hotmail.com)
+        var baseUserName = email.Trim();
+        if (string.IsNullOrWhiteSpace(baseUserName))
+        {
+            return Guid.NewGuid().ToString("N");
+        }
+
+        // Extremely defensive: ensure uniqueness even if an existing record already uses the email as UserName.
+        var existing = await _userManager.FindByNameAsync(baseUserName);
+        if (existing == null)
+        {
+            return baseUserName;
+        }
+
+        const int maxLength = 256;
+        var suffix = "-" + Guid.NewGuid().ToString("N")[..8];
+        var trimmed = baseUserName.Length + suffix.Length <= maxLength
+            ? baseUserName
+            : baseUserName[..(maxLength - suffix.Length)];
+        return trimmed + suffix;
+    }
+
     public async Task<AuthResponseDto> RegisterAsync(RegisterDto model)
     {
         var userExists = await _userManager.FindByEmailAsync(model.Email);
@@ -48,8 +72,7 @@ public class AuthService : IAuthService
             return new AuthResponseDto(false, "User already exists!", "", DateTime.MinValue);
         }
 
-        // Auto-generate username from email (use email prefix before @)
-        var userName = model.Email.Split('@')[0];
+        var userName = await GenerateUniqueUserNameFromEmailAsync(model.Email);
         ApplicationUser user = new ApplicationUser(userName, model.Email, model.FirstName, model.LastName);
 
         var result = await _userManager.CreateAsync(user, model.Password);
@@ -236,7 +259,7 @@ public class AuthService : IAuthService
         }
 
         // Create new user
-        var userName = email.Split('@')[0];
+        var userName = await GenerateUniqueUserNameFromEmailAsync(email);
         var newUser = new ApplicationUser(userName, email, firstName, lastName);
 
         var createResult = await _userManager.CreateAsync(newUser);

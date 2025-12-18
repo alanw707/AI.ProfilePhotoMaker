@@ -105,6 +105,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         services.AddHttpContextAccessor();
         services.AddMemoryCache();
         services.AddDistributedMemoryCache();
+        services.AddHttpClient();
 
         // Add application services with mocks
         services.AddScoped<IAuthService, AuthService>();
