@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  inject,
+  OnDestroy,
+  OnInit,
+} from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -32,6 +39,7 @@ export class LoginComponent implements OnInit, OnDestroy {
   private readonly _authService = inject(AuthService);
   private readonly _router = inject(Router);
   private readonly _route = inject(ActivatedRoute);
+  private readonly _cdr = inject(ChangeDetectorRef);
   public readonly themeService = inject(ThemeService);
   private readonly _configService = inject(ConfigService);
 
@@ -78,6 +86,7 @@ export class LoginComponent implements OnInit, OnDestroy {
 
       if (params['error']) {
         this.error = 'OAuth login failed: ' + params['error'];
+        this._cdr.markForCheck();
       }
     });
   }
@@ -97,6 +106,7 @@ export class LoginComponent implements OnInit, OnDestroy {
       } catch (error) {
         console.error('Error handling OAuth callback:', error);
         this.error = 'Failed to process OAuth token';
+        this._cdr.markForCheck();
       }
       return true;
     }
@@ -117,6 +127,7 @@ export class LoginComponent implements OnInit, OnDestroy {
       } catch (error) {
         console.error('Error parsing returnUrl:', error);
         this.error = 'Failed to parse OAuth response';
+        this._cdr.markForCheck();
       }
       return true;
     }
@@ -138,6 +149,7 @@ export class LoginComponent implements OnInit, OnDestroy {
       } catch (error) {
         console.error('Error parsing URL fragment:', error);
         this.error = 'Failed to parse OAuth response';
+        this._cdr.markForCheck();
       }
       return true;
     }
@@ -165,6 +177,29 @@ export class LoginComponent implements OnInit, OnDestroy {
     return this.loginForm.controls;
   }
 
+  private _extractErrorMessage(error: any): string {
+    if (error?.error?.message) {
+      return error.error.message;
+    }
+
+    // ASP.NET model state validation: { errors: { Field: [msg] } }
+    if (error?.error?.errors) {
+      const allErrors = Object.values(error.error.errors)
+        .flat()
+        .filter(Boolean)
+        .join(' ');
+      if (allErrors) {
+        return allErrors;
+      }
+    }
+
+    if (error?.message) {
+      return error.message;
+    }
+
+    return 'Login failed. Please check your email and password and try again.';
+  }
+
   onSubmit(): void {
     this.error = '';
 
@@ -173,6 +208,7 @@ export class LoginComponent implements OnInit, OnDestroy {
     }
 
     this.loading = true;
+    this._cdr.markForCheck();
     const loginData: LoginDto = {
       email: this.f['email'].value,
       password: this.f['password'].value,
@@ -181,12 +217,18 @@ export class LoginComponent implements OnInit, OnDestroy {
     this._authService.login(loginData).subscribe({
       next: _response => {
         this.loading = false;
-        this._router.navigate([this.returnUrl]);
+        this._router.navigate([this.returnUrl]).then(success => {
+          if (success === false) {
+            this.error = 'Login succeeded, but navigation failed. Please try again.';
+            this._cdr.markForCheck();
+          }
+        });
       },
       error: error => {
         console.error('Login error:', error);
-        this.error = error.message || 'Login failed. Please try again.';
+        this.error = this._extractErrorMessage(error);
         this.loading = false;
+        this._cdr.markForCheck();
       },
     });
   }
