@@ -50,6 +50,10 @@ param openAiApiKey string
 @description('Brevo API key (xkeysib-...) for sending email via API')
 param emailApiKey string
 
+@secure()
+@description('Cloudflare Turnstile secret key for bot verification')
+param turnstileSecretKey string
+
 // Generate unique names
 var uniqueSuffix = uniqueString(resourceGroup().id)
 
@@ -390,6 +394,10 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
           name: 'email-api-key'
           value: emailApiKey
         }
+        {
+          name: 'turnstile-secret-key'
+          value: turnstileSecretKey
+        }
       ]
     }
     template: {
@@ -558,6 +566,17 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'Email__ApiKey'
               secretRef: 'email-api-key'
+            }
+
+            // Cloudflare Turnstile bot verification (optional, but recommended for production).
+            // Provide both env var names for compatibility with current API configuration.
+            {
+              name: 'TURNSTILE_SECRET_KEY'
+              secretRef: 'turnstile-secret-key'
+            }
+            {
+              name: 'Turnstile__SecretKey'
+              secretRef: 'turnstile-secret-key'
             }
             
             // OpenAI Configuration
