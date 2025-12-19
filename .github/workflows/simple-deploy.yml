@@ -90,7 +90,8 @@ jobs:
           STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+          # Back-compat: allow common typo secret name; prefer TURNSTILE_SECRET_KEY.
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY || secrets.TURNSITE_SECRET_KEY }}
         run: |
           echo "🔍 Validating GitHub Actions secrets for deployment..."
           
@@ -541,7 +542,7 @@ jobs:
                 "value": "${{ secrets.EMAIL__APIKEY }}"
               },
               "turnstileSecretKey": {
-                "value": "${{ secrets.TURNSTILE_SECRET_KEY }}"
+                "value": "${{ secrets.TURNSTILE_SECRET_KEY || secrets.TURNSITE_SECRET_KEY }}"
               }
             }
           }
@@ -922,7 +923,7 @@ jobs:
               replicate-token='${{ secrets.REPLICATE_API_TOKEN }}' \
               replicate-webhook-secret='${{ secrets.REPLICATE_WEBHOOK_SECRET }}' \
               email-api-key='${{ secrets.EMAIL__APIKEY }}' \
-              turnstile-secret-key='${{ secrets.TURNSTILE_SECRET_KEY }}'
+              turnstile-secret-key='${{ secrets.TURNSTILE_SECRET_KEY || secrets.TURNSITE_SECRET_KEY }}'
 
           # Ensure API path is enabled
           az containerapp update \
