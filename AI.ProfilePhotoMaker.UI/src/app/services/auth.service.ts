@@ -553,6 +553,15 @@ export class AuthService {
   }
 
   /**
+   * Clear cached auth state without navigating (useful for guest guard checks).
+   */
+  public clearAuthCache(): void {
+    this.clearAllAuthData();
+    this._isAuthenticatedSubject.next(false);
+    this._currentUserSubject.next(null);
+  }
+
+  /**
    * Clear all authentication-related data
    */
   private clearAllAuthData(): void {
