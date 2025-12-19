@@ -39,6 +39,29 @@
         </div>
       </section>
 
+      <!-- Email Verification Gate -->
+      <section class="verification-section" *ngIf="!isLoadingAccountStatus && !isEmailConfirmed">
+        <div class="verification-card">
+          <div class="verification-icon">📧</div>
+          <div class="verification-content">
+            <h3>Verify your email to unlock Photo Transform</h3>
+            <p>
+              Please confirm your email address to protect your account. Check your inbox (and spam).
+            </p>
+            <button
+              class="btn btn-secondary"
+              type="button"
+              (click)="resendVerificationEmail()"
+              [disabled]="isResendingVerificationEmail">
+              {{ isResendingVerificationEmail ? 'Sending…' : 'Resend verification email' }}
+            </button>
+            <div class="verification-message" *ngIf="verificationMessage">
+              {{ verificationMessage }}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Upload Section -->
       <section class="upload-section" *ngIf="!selectedFile && !isProcessing">
         <div
@@ -134,16 +157,23 @@
 	          </div>
 
           <app-turnstile
-            *ngIf="turnstileSiteKey"
+            *ngIf="turnstileSiteKey && isEmailConfirmed"
             [siteKey]="turnstileSiteKey"
             (tokenChange)="onTurnstileTokenChange($event)"
           ></app-turnstile>
 
-	          <button class="btn btn-primary enhance-btn" (click)="startEnhancement()" [disabled]="!hasEnoughCredits()">
-	            <span *ngIf="hasEnoughCredits()">
+	          <button
+              class="btn btn-primary enhance-btn"
+              type="button"
+              (click)="startEnhancement()"
+              [disabled]="!isEmailConfirmed || !hasEnoughCredits()">
+	            <span *ngIf="!isEmailConfirmed">Verify Email to Continue</span>
+	            <span *ngIf="isEmailConfirmed && hasEnoughCredits()">
 	              Transform Photo ({{ getRequiredCredits() }} credit{{ getRequiredCredits() > 1 ? 's' : '' }})
 	            </span>
-	            <span *ngIf="!hasEnoughCredits()">Not Enough Credits ({{ getRequiredCredits() }} required)</span>
+	            <span *ngIf="isEmailConfirmed && !hasEnoughCredits()">
+                Not Enough Credits ({{ getRequiredCredits() }} required)
+              </span>
 	          </button>
 	        </div>
 	      </section>

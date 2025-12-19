@@ -63,6 +63,16 @@ Additional helpers (credential sync, rollbacks, diagnostics) are available in [`
 - **UI:** `npm run test` inside `AI.ProfilePhotoMaker.UI`
 - **E2E:** Playwright scenarios live under `tests/e2e/`
 
+### Email verification (local)
+
+When email delivery is not configured locally, you can still smoke-test the “email verified required” flow in development:
+
+```bash
+./scripts/dev-email-verification-smoke.sh
+```
+
+Set `TURNSTILE_TOKEN` if your local environment has Turnstile enabled.
+
 CI runs CodeQL, static analysis, and targeted regression suites on every PR.
 
 ## 📁 Repository Layout

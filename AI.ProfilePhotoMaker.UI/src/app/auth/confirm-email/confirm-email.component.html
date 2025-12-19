@@ -1,0 +1,29 @@
+<div class="confirm-container">
+  <div class="confirm-card">
+    <div class="confirm-header">
+      <h1>AI Profile Photo Maker</h1>
+      <h2>Email Verification</h2>
+
+      <p *ngIf="isLoading">Verifying your email address…</p>
+
+      <p *ngIf="!isLoading && isSuccess">
+        Your email is confirmed. You can now use Photo Transform.
+      </p>
+
+      <p *ngIf="!isLoading && error" class="error-text">
+        {{ error }}
+      </p>
+    </div>
+
+    <div class="confirm-actions" *ngIf="!isLoading">
+      <button class="btn btn-primary" (click)="goToDashboard()" *ngIf="isAuthenticated">
+        Go to Dashboard
+      </button>
+      <button class="btn btn-primary" (click)="goToLogin()" *ngIf="!isAuthenticated">
+        Sign In
+      </button>
+      <a routerLink="/" class="btn btn-outline">Home</a>
+    </div>
+  </div>
+</div>
+

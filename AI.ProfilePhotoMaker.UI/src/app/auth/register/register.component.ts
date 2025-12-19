@@ -173,9 +173,9 @@ export class RegisterComponent {
       )
       .subscribe({
       next: _response => {
-        // Registration successful, navigate to dashboard
+        // Registration successful. Require email verification before accessing /app.
         this._router
-          .navigate(['/app/dashboard'])
+          .navigate(['/auth/verify-email'])
           .then(success => {
             if (success === false) {
               this.error = 'Registration succeeded, but navigation failed. Please try logging in.';

@@ -38,19 +38,26 @@ export class AppComponent implements OnInit {
   private _handleOAuthCallback(): void {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
-    const shouldHandleToken =
-      !!token && (!environment.production || environment.name === 'docker-local');
+    const host = window.location.hostname || '';
+    const isDevLikeOrigin =
+      host.includes('localhost') || host.includes('127.0.0.1') || host.includes('ngrok') || environment.name === 'docker-local';
+    const shouldHandleToken = !!token && isDevLikeOrigin;
 
     if (shouldHandleToken) {
       // In development OAuth flow, set cookie via same-origin endpoint then clean URL
       const setCookieUrl = this._config.getFullUrl('/auth/set-cookie');
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 2500);
 
       fetch(setCookieUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
         credentials: 'include',
+        signal: controller.signal,
       }).finally(() => {
+        clearTimeout(timeout);
         const cleanUrl = window.location.origin + window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
         this._router.navigate(['/app/dashboard']);

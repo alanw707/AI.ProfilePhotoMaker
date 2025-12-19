@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Security;
+using AI.ProfilePhotoMaker.API.Tests.Infrastructure;
 using Moq;
 
 namespace AI.ProfilePhotoMaker.API.Tests.Integration;
@@ -51,6 +52,7 @@ public class ModelVersionMismatchFixTests : IClassFixture<CustomWebApplicationFa
         var controller = new ReplicateController(
             scope.ServiceProvider.GetRequiredService<IReplicateApiClient>(),
             scope.ServiceProvider.GetRequiredService<IBasicTierService>(),
+            UserManagerMockFactory.Create().Object,
             dbContext,
             scope.ServiceProvider.GetRequiredService<IConfiguration>(),
             scope.ServiceProvider.GetRequiredService<ILogger<ReplicateController>>(),
@@ -95,6 +97,7 @@ public class ModelVersionMismatchFixTests : IClassFixture<CustomWebApplicationFa
         var controller = new ReplicateController(
             spLegacy.GetRequiredService<IReplicateApiClient>(),
             spLegacy.GetRequiredService<IBasicTierService>(),
+            UserManagerMockFactory.Create().Object,
             spLegacy.GetRequiredService<ApplicationDbContext>(),
             spLegacy.GetRequiredService<IConfiguration>(),
             spLegacy.GetRequiredService<ILogger<ReplicateController>>(),
@@ -128,6 +131,7 @@ public class ModelVersionMismatchFixTests : IClassFixture<CustomWebApplicationFa
         var controllerClean = new ReplicateController(
             spClean.GetRequiredService<IReplicateApiClient>(),
             spClean.GetRequiredService<IBasicTierService>(),
+            UserManagerMockFactory.Create().Object,
             spClean.GetRequiredService<ApplicationDbContext>(),
             spClean.GetRequiredService<IConfiguration>(),
             spClean.GetRequiredService<ILogger<ReplicateController>>(),

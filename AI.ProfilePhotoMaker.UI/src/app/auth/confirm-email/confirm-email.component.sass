@@ -1,0 +1,64 @@
+@use '../../shared/styles/index' as shared
+
+.confirm-container
+  min-height: 100vh
+  display: flex
+  align-items: center
+  justify-content: center
+  background: var(--bg-gradient)
+  padding: 20px
+
+.confirm-card
+  @include shared.card-base
+  box-shadow: var(--shadow-md)
+  background: var(--card-bg)
+  padding: 28px
+  max-width: 520px
+  width: 100%
+
+.confirm-header
+  text-align: center
+  margin-bottom: 18px
+
+  h1
+    color: var(--text-primary)
+    font-size: 22px
+    font-weight: 700
+    margin-bottom: 6px
+
+  h2
+    color: var(--text-primary)
+    font-size: 18px
+    font-weight: 600
+    margin-bottom: 10px
+
+  p
+    color: var(--text-secondary)
+    font-size: 14px
+    margin: 0
+
+  .error-text
+    color: var(--text-danger)
+
+.confirm-actions
+  display: flex
+  gap: 12px
+  justify-content: center
+  flex-wrap: wrap
+
+  .btn
+    @include shared.btn-base
+
+    &.btn-primary
+      @include shared.btn-primary
+
+    &.btn-outline
+      background: transparent
+      color: var(--primary)
+      border: 2px solid var(--primary)
+      text-decoration: none
+
+      &:hover
+        background: var(--primary)
+        color: white
+

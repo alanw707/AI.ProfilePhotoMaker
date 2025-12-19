@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Security;
+using AI.ProfilePhotoMaker.API.Tests.Infrastructure;
 using AI.ProfilePhotoMaker.API.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,6 +26,7 @@ public class ReplicateControllerFormatVersionTests
     {
         var client = new Mock<IReplicateApiClient>(MockBehavior.Strict).Object;
         var basic = new Mock<IBasicTierService>(MockBehavior.Strict).Object;
+        var userManager = UserManagerMockFactory.Create().Object;
 
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase($"TestDb_{Guid.NewGuid()}")
@@ -46,7 +48,7 @@ public class ReplicateControllerFormatVersionTests
             .Setup(s => s.VerifyAsync(It.IsAny<string?>(), It.IsAny<string?>()))
             .ReturnsAsync(true);
 
-        return new ReplicateController(client, basic, db, config, logger, pending, storage, turnstile.Object);
+        return new ReplicateController(client, basic, userManager, db, config, logger, pending, storage, turnstile.Object);
     }
 
     /// <summary>
