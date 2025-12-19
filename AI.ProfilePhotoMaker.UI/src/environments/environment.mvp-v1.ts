@@ -3,7 +3,7 @@ export const environment = {
   apiUrl: 'https://api.aiprofilephotomaker.com/api',
   baseUrl: 'https://api.aiprofilephotomaker.com',
   name: 'mvp-v1',
-  turnstileSiteKey: '0x4AAAAAAACHclVWNAEwekFCK',
+  turnstileSiteKey: '0x4AAAAAACHclVWNAEwekFCK',
   features: {
     debugMode: false,
     useProxy: false,
