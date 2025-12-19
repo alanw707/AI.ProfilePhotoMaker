@@ -196,7 +196,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     }
 
     if (this.turnstileSiteKey && !this.turnstileToken) {
-      this.errorMessage = 'Please complete the verification to continue.';
+      this.errorMessage = this.turnstile?.error || 'Please complete the verification to continue.';
       this._cdr.detectChanges();
       return;
     }

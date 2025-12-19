@@ -69,12 +69,40 @@ export class TurnstileComponent implements AfterViewInit, OnDestroy {
   @ViewChild('container', { static: true }) containerRef!: ElementRef<HTMLDivElement>;
 
   error = '';
+  errorCode = '';
   private _widgetId?: string;
 
   constructor(
     private _zone: NgZone,
     private _cdr: ChangeDetectorRef
   ) {}
+
+  private getFriendlyErrorMessage(code?: string): string {
+    if (!code) {
+      return 'Bot protection failed. Please refresh and try again.';
+    }
+
+    // See: https://developers.cloudflare.com/turnstile/troubleshooting/client-side-errors/error-codes/
+    const base = code.trim();
+
+    if (base === '400020' || base === '110100' || base === '110110') {
+      return `Bot protection is unavailable right now (code ${base}). Please refresh and try again.`;
+    }
+
+    if (base === '110200') {
+      return `Bot protection is not available for this domain (code ${base}). Please refresh and try again.`;
+    }
+
+    if (base === '200500') {
+      return `Bot protection was blocked by your browser (code ${base}). Disable content blockers and refresh.`;
+    }
+
+    if (base.startsWith('11060') || base.startsWith('11062')) {
+      return `Bot protection timed out (code ${base}). Please retry.`;
+    }
+
+    return `Bot protection failed (code ${base}). Please refresh and try again.`;
+  }
 
   async ngAfterViewInit(): Promise<void> {
     if (!this.siteKey) {
@@ -95,15 +123,29 @@ export class TurnstileComponent implements AfterViewInit, OnDestroy {
         sitekey: this.siteKey,
         theme: this.theme,
         callback: (token: string) => {
-          this._zone.run(() => this.tokenChange.emit(token));
+          this._zone.run(() => {
+            this.error = '';
+            this.errorCode = '';
+            this.tokenChange.emit(token);
+            this._cdr.markForCheck();
+          });
         },
       };
 
       options['expired-callback'] = () => {
-        this._zone.run(() => this.tokenChange.emit(''));
+        this._zone.run(() => {
+          this.tokenChange.emit('');
+          this._cdr.markForCheck();
+        });
       };
-      options['error-callback'] = () => {
-        this._zone.run(() => this.tokenChange.emit(''));
+      options['error-callback'] = (code?: string) => {
+        this._zone.run(() => {
+          this.errorCode = (code ?? '').trim();
+          this.error = this.getFriendlyErrorMessage(this.errorCode);
+          this.tokenChange.emit('');
+          this._cdr.markForCheck();
+        });
+        return true;
       };
 
       this._widgetId = turnstile.render(this.containerRef.nativeElement, options);
@@ -114,6 +156,10 @@ export class TurnstileComponent implements AfterViewInit, OnDestroy {
   }
 
   reset(): void {
+    this.error = '';
+    this.errorCode = '';
+    this._cdr.markForCheck();
+
     if (!this._widgetId) {
       return;
     }
