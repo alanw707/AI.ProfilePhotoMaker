@@ -90,6 +90,18 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     return totalCredits >= requiredCredits;
   }
 
+  requiresTurnstile(): boolean {
+    return !!this.turnstileSiteKey;
+  }
+
+  canStartEnhancement(): boolean {
+    return (
+      !this.isProcessing &&
+      this.hasEnoughCredits() &&
+      (!this.requiresTurnstile() || !!this.turnstileToken)
+    );
+  }
+
   ngOnInit() {
     // Load user credit status
     const currentState = this._stateService.getState();
@@ -196,7 +208,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     }
 
     if (this.turnstileSiteKey && !this.turnstileToken) {
-      this.errorMessage = this.turnstile?.error || 'Please complete the verification to continue.';
+      this.errorMessage = this.turnstile?.error || 'Complete the bot check above to continue.';
       this._cdr.detectChanges();
       return;
     }
