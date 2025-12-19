@@ -16,7 +16,9 @@ export class ConfirmEmailComponent implements OnInit {
   isLoading = true;
   isSuccess = false;
   error = '';
-  isAuthenticated = false;
+  isSessionValid = false;
+  isSessionChecked = false;
+  sessionMessage = '';
 
   private readonly _route = inject(ActivatedRoute);
   private readonly _router = inject(Router);
@@ -24,14 +26,15 @@ export class ConfirmEmailComponent implements OnInit {
   private readonly _cdr = inject(ChangeDetectorRef);
 
   ngOnInit(): void {
-    this.isAuthenticated = this._authService.isAuthenticated();
-
     const result = this._route.snapshot.queryParamMap.get('result');
     if (result) {
       this.isLoading = false;
       this.isSuccess = result === 'success';
       this.error = this.isSuccess ? '' : 'Email verification failed. Please request a new verification email.';
       this._cdr.markForCheck();
+      if (this.isSuccess) {
+        this.checkSession(true);
+      }
       return;
     }
 
@@ -58,6 +61,7 @@ export class ConfirmEmailComponent implements OnInit {
           if (response?.success) {
             this.isSuccess = true;
             this.error = '';
+            this.checkSession(true);
           } else {
             this.isSuccess = false;
             this.error = response?.error?.message || 'Email verification failed. Please try again.';
@@ -76,13 +80,58 @@ export class ConfirmEmailComponent implements OnInit {
       });
   }
 
-  goToDashboard(): void {
+  private checkSession(autoRedirect: boolean): void {
+    this.isSessionChecked = false;
+    this.sessionMessage = '';
+    this._cdr.markForCheck();
+
+    this._authService
+      .validateSession()
+      .pipe(
+        finalize(() => {
+          this.isSessionChecked = true;
+          this._cdr.markForCheck();
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.isSessionValid = true;
+          if (autoRedirect) {
+            this.goToDashboard(true);
+          }
+        },
+        error: err => {
+          this.isSessionValid = false;
+          if (err?.status === 401 || err?.status === 403) {
+            if (autoRedirect) {
+              this.goToLogin();
+              return;
+            }
+            this.sessionMessage = 'Please sign in to continue to your dashboard.';
+          } else {
+            this.sessionMessage = 'Unable to verify your session right now. Please try again.';
+          }
+        },
+      });
+  }
+
+  goToDashboard(skipSessionCheck = false): void {
+    if (!skipSessionCheck && !this.isSessionValid) {
+      this.goToLogin();
+      return;
+    }
+
     const redirectUrl = sessionStorage.getItem('redirectUrl') || '/app/dashboard';
     sessionStorage.removeItem('redirectUrl');
     void this._router.navigateByUrl(redirectUrl);
   }
 
   goToLogin(): void {
-    void this._router.navigate(['/auth/login']);
+    void this._router.navigate(['/auth/login'], {
+      queryParams: {
+        message: 'Email verified. Please sign in to continue.',
+        returnUrl: '/app/dashboard',
+      },
+    });
   }
 }
