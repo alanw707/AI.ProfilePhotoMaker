@@ -127,10 +127,11 @@ export class ConfirmEmailComponent implements OnInit {
   }
 
   goToLogin(): void {
+    const redirectUrl = sessionStorage.getItem('redirectUrl') || '/app/dashboard';
     void this._router.navigate(['/auth/login'], {
       queryParams: {
         message: 'Email verified. Please sign in to continue.',
-        returnUrl: '/app/dashboard',
+        returnUrl: redirectUrl,
       },
     });
   }
