@@ -10,6 +10,8 @@ using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
 using AI.ProfilePhotoMaker.API.Services.Database;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
+using AI.ProfilePhotoMaker.API.Services.Notifications;
+using AI.ProfilePhotoMaker.API.Services.Security;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using Azure.Storage.Sas;
 using AI.ProfilePhotoMaker.API.Middleware;
@@ -106,6 +108,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         services.AddMemoryCache();
         services.AddDistributedMemoryCache();
         services.AddHttpClient();
+        services.AddSingleton<ITurnstileVerificationService, AllowAllTurnstileVerificationService>();
+        services.AddSingleton<IEmailNotificationService, NoopEmailNotificationService>();
 
         // Add application services with mocks
         services.AddScoped<IAuthService, AuthService>();
@@ -216,6 +220,27 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             EnableDetailedErrors = true,
             EnableSensitiveDataLogging = true
         };
+    }
+
+    private sealed class AllowAllTurnstileVerificationService : ITurnstileVerificationService
+    {
+        public bool IsEnabled => false;
+
+        public Task<bool> VerifyAsync(string? token, string? remoteIp)
+        {
+            return Task.FromResult(true);
+        }
+    }
+
+    private sealed class NoopEmailNotificationService : IEmailNotificationService
+    {
+        public Task SendTrainingCompletedAsync(string userId, string? email, string? modelName, string? modelVersion) => Task.CompletedTask;
+        public Task SendGenerationCompletedAsync(string userId, string? email, string? style, int imageCount, string? jobId = null) => Task.CompletedTask;
+        public Task SendGenerationFailedAsync(string userId, string? email, string? style, string? error, string? jobId = null) => Task.CompletedTask;
+        public Task SendPurchaseReceiptAsync(string userId, string? email, CreditPurchase purchase) => Task.CompletedTask;
+        public Task SendSupportFeedbackReceivedAsync(string userId, string? userEmail, FeedbackSubmission submission) => Task.CompletedTask;
+        public Task SendEmailVerificationAsync(string userId, string? email, string encodedToken) => Task.CompletedTask;
+        public Task SendWelcomeAsync(string userId, string? email, string? firstName = null) => Task.CompletedTask;
     }
 
     private sealed class FakeStorageService : IStorageService

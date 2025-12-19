@@ -1,0 +1,86 @@
+@use '../../shared/styles/index' as shared
+
+.verify-container
+  min-height: 100vh
+  display: flex
+  align-items: center
+  justify-content: center
+  background: var(--bg-gradient)
+  padding: 20px
+
+.verify-card
+  @include shared.card-base
+  box-shadow: var(--shadow-md)
+  background: var(--card-bg)
+  padding: 28px
+  max-width: 560px
+  width: 100%
+
+.verify-header
+  text-align: center
+  margin-bottom: 18px
+
+  h1
+    color: var(--text-primary)
+    font-size: 22px
+    font-weight: 700
+    margin-bottom: 6px
+
+  h2
+    color: var(--text-primary)
+    font-size: 18px
+    font-weight: 600
+    margin-bottom: 10px
+
+  p
+    color: var(--text-secondary)
+    font-size: 14px
+    margin: 0
+
+.status
+  color: var(--text-secondary)
+  font-size: 14px
+  text-align: center
+  margin: 10px 0 16px
+
+  &.success
+    color: var(--text-primary)
+
+.actions
+  display: flex
+  gap: 12px
+  justify-content: center
+  flex-wrap: wrap
+
+  .btn
+    @include shared.btn-base
+
+    &.btn-primary
+      @include shared.btn-primary
+
+    &.btn-secondary
+      background: var(--surface-secondary)
+      color: var(--text-primary)
+      border: 1px solid var(--border-color)
+
+      &:hover
+        background: var(--surface-tertiary)
+
+    &.btn-outline
+      background: transparent
+      color: var(--primary)
+      border: 2px solid var(--primary)
+
+      &:hover
+        background: var(--primary)
+        color: white
+
+.note
+  margin-top: 14px
+  color: var(--text-secondary)
+  font-size: 13px
+  text-align: center
+
+  &.error
+    color: var(--text-danger)
+

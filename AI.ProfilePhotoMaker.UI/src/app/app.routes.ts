@@ -59,6 +59,20 @@ export const routes: Routes = [
         title: 'Complete Profile - AI Profile Photo Maker',
         data: { hideNavigation: false },
       },
+      {
+        path: 'confirm-email',
+        loadComponent: () =>
+          import('./auth/confirm-email/confirm-email.component').then(m => m.ConfirmEmailComponent),
+        title: 'Confirm Email - AI Profile Photo Maker',
+        data: { hideNavigation: false },
+      },
+      {
+        path: 'verify-email',
+        loadComponent: () =>
+          import('./auth/verify-email/verify-email.component').then(m => m.VerifyEmailComponent),
+        title: 'Verify Email - AI Profile Photo Maker',
+        data: { hideNavigation: false },
+      },
     ],
   },
   // Legacy auth routes (for backwards compatibility)

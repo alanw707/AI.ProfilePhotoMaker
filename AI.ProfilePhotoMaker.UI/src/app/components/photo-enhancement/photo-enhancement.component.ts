@@ -16,8 +16,9 @@ import { HeaderNavigationComponent } from '../../shared/header-navigation/header
 import { DashboardCoordinatorService } from '../../services/dashboard-coordinator.service';
 import { CreditService, UserCreditStatus } from '../../services/credit.service';
 import { ConfigService } from '../../services/config.service';
+import { AuthService } from '../../services/auth.service';
 import { TurnstileComponent } from '../../shared/turnstile/turnstile.component';
-import { Subscription, firstValueFrom } from 'rxjs';
+import { finalize, Subscription, firstValueFrom } from 'rxjs';
 
 interface EnhancedImage {
   url: string;
@@ -47,6 +48,10 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   errorMessage = '';
   isDragOver = false;
   isLoadingCredits = true;
+  isLoadingAccountStatus = true;
+  isEmailConfirmed = true;
+  isResendingVerificationEmail = false;
+  verificationMessage = '';
   allowedTypes: string[] = ['image/jpeg', 'image/png', 'image/webp'];
   turnstileToken = '';
   readonly turnstileSiteKey: string;
@@ -64,6 +69,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     private _stateService: DashboardCoordinatorService,
     private _creditService: CreditService,
     private _configService: ConfigService,
+    private _authService: AuthService,
     private _cdr: ChangeDetectorRef
   ) {
     this.turnstileSiteKey = this._configService.turnstileSiteKey;
@@ -91,6 +97,8 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.loadAccountStatus();
+
     // Load user credit status
     const currentState = this._stateService.getState();
 
@@ -191,6 +199,13 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   }
 
   async startEnhancement() {
+    if (!this.isEmailConfirmed) {
+      this.verificationMessage =
+        'Please verify your email address to use Photo Transform. Check your inbox (and spam) or resend verification.';
+      this._cdr.detectChanges();
+      return;
+    }
+
     if (!this.selectedFile || !this.hasEnoughCredits()) {
       return;
     }
@@ -545,5 +560,61 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     } catch (refreshError) {
       console.warn('Failed to refresh credits after enhancement', refreshError);
     }
+  }
+
+  private loadAccountStatus(): void {
+    this.isLoadingAccountStatus = true;
+    this._authService.getAccountStatus().subscribe({
+      next: response => {
+        if (response?.success && typeof response?.data?.emailConfirmed === 'boolean') {
+          this.isEmailConfirmed = response.data.emailConfirmed;
+        }
+        this.isLoadingAccountStatus = false;
+        this._cdr.markForCheck();
+      },
+      error: () => {
+        // Non-blocking: backend will enforce verification for sensitive operations
+        this.isLoadingAccountStatus = false;
+        this._cdr.markForCheck();
+      },
+    });
+  }
+
+  resendVerificationEmail(): void {
+    if (this.isResendingVerificationEmail) {
+      return;
+    }
+
+    this.verificationMessage = '';
+    this.isResendingVerificationEmail = true;
+    this._cdr.markForCheck();
+
+    this._authService
+      .resendConfirmationEmail()
+      .pipe(
+        finalize(() => {
+          this.isResendingVerificationEmail = false;
+          this._cdr.markForCheck();
+        })
+      )
+      .subscribe({
+        next: response => {
+          if (response?.success) {
+            this.verificationMessage = 'Verification email sent. Please check your inbox (and spam).';
+          } else {
+            this.verificationMessage =
+              response?.error?.message || 'Failed to send verification email. Please try again.';
+          }
+          this._cdr.markForCheck();
+        },
+        error: error => {
+          this.verificationMessage =
+            error?.error?.error?.message ||
+            error?.error?.message ||
+            error?.message ||
+            'Failed to send verification email. Please try again.';
+          this._cdr.markForCheck();
+        },
+      });
   }
 }

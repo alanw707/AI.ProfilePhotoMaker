@@ -7,10 +7,13 @@ using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services.Authentication;
 using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
+using AI.ProfilePhotoMaker.API.Services.Notifications;
 using AI.ProfilePhotoMaker.API.Services.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.EntityFrameworkCore;
 
 namespace AI.ProfilePhotoMaker.API.Controllers
@@ -28,6 +31,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private readonly IWebHostEnvironment _environment;
         private readonly ILogger<AuthController> _logger;
         private readonly ITurnstileVerificationService _turnstile;
+        private readonly IEmailNotificationService _emailNotificationService;
+        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IMemoryCache _cache;
         private static string S(string? value) => LoggingSanitizer.Sanitize(value);
         private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
         private static string LogSafe(string? value, int maxLength = 128)
@@ -67,7 +73,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             HttpClient httpClient,
             IWebHostEnvironment environment,
             ILogger<AuthController> logger,
-            ITurnstileVerificationService turnstile)
+            ITurnstileVerificationService turnstile,
+            IEmailNotificationService emailNotificationService,
+            IServiceScopeFactory scopeFactory,
+            IMemoryCache cache)
         {
             _authService = authService;
             _userManager = userManager;
@@ -78,6 +87,76 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             _environment = environment;
             _logger = logger;
             _turnstile = turnstile;
+            _emailNotificationService = emailNotificationService;
+            _scopeFactory = scopeFactory;
+            _cache = cache;
+        }
+
+        private void QueueSignupEmails(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return;
+            }
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = _scopeFactory.CreateScope();
+                    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+                    var emailService = scope.ServiceProvider.GetRequiredService<IEmailNotificationService>();
+
+                    var user = await userManager.FindByEmailAsync(email);
+                    if (user == null || string.IsNullOrWhiteSpace(user.Email))
+                    {
+                        return;
+                    }
+
+                    await emailService.SendWelcomeAsync(user.Id, user.Email, user.FirstName);
+
+                    if (!user.EmailConfirmed)
+                    {
+                        var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
+                        var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+                        await emailService.SendEmailVerificationAsync(user.Id, user.Email, encodedToken);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to send signup emails for {Email}", Sid(email));
+                }
+            });
+        }
+
+        private void QueueWelcomeEmail(string userId)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return;
+            }
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = _scopeFactory.CreateScope();
+                    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+                    var emailService = scope.ServiceProvider.GetRequiredService<IEmailNotificationService>();
+
+                    var user = await userManager.FindByIdAsync(userId);
+                    if (user == null || string.IsNullOrWhiteSpace(user.Email))
+                    {
+                        return;
+                    }
+
+                    await emailService.SendWelcomeAsync(user.Id, user.Email, user.FirstName);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to send welcome email for user {UserId}", Sid(userId));
+                }
+            });
         }
 
         private CookieOptions BuildAuthCookieOptions(DateTimeOffset? expires = null)
@@ -129,6 +208,9 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return BadRequest(result);
             }
 
+            // Fire-and-forget emails (welcome + verification) so signup stays fast and resilient.
+            QueueSignupEmails(model.Email);
+
             // Set secure JWT cookie for session
             var cookieName = _configuration["Authentication:TokenCookieName"] ?? "AuthToken";
             var cookieOptions = BuildAuthCookieOptions(DateTimeOffset.UtcNow.AddHours(12));
@@ -138,6 +220,187 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
 
             return Ok(result);
+        }
+
+        [HttpGet("account-status")]
+        [Authorize]
+        public async Task<IActionResult> GetAccountStatus()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+            }
+
+            return Ok(new
+            {
+                success = true,
+                data = new { emailConfirmed = user.EmailConfirmed },
+                error = (object?)null
+            });
+        }
+
+        [HttpPost("resend-confirmation-email")]
+        [Authorize]
+        public async Task<IActionResult> ResendConfirmationEmail()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+            }
+
+            if (user.EmailConfirmed)
+            {
+                return Ok(new { success = true, data = new { emailConfirmed = true }, error = (object?)null });
+            }
+
+            if (string.IsNullOrWhiteSpace(user.Email))
+            {
+                return BadRequest(new { success = false, error = new { code = "MissingEmail", message = "User email address is missing." } });
+            }
+
+            var throttleKey = $"email-confirm-resend:{user.Id}";
+            if (_cache.TryGetValue(throttleKey, out _))
+            {
+                return StatusCode(429, new
+                {
+                    success = false,
+                    error = new
+                    {
+                        code = "TooManyRequests",
+                        message = "Please wait a moment before requesting another verification email."
+                    }
+                });
+            }
+
+            try
+            {
+                var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+                await _emailNotificationService.SendEmailVerificationAsync(user.Id, user.Email, encodedToken);
+                _cache.Set(throttleKey, true, TimeSpan.FromMinutes(1));
+                return Ok(new { success = true, data = new { emailConfirmed = false }, error = (object?)null });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to resend email verification link for user {UserId}", Sid(user.Id));
+                return StatusCode(500, new { success = false, error = new { code = "EmailSendFailed", message = "Failed to send verification email. Please try again later." } });
+            }
+        }
+
+        [HttpPost("confirm-email")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailRequest payload)
+        {
+            if (payload == null || string.IsNullOrWhiteSpace(payload.UserId) || string.IsNullOrWhiteSpace(payload.Token))
+            {
+                return BadRequest(new { success = false, error = new { code = "InvalidRequest", message = "Missing userId or token." } });
+            }
+
+            var user = await _userManager.FindByIdAsync(payload.UserId);
+            if (user == null)
+            {
+                return BadRequest(new { success = false, error = new { code = "UserNotFound", message = "User not found." } });
+            }
+
+            string decodedToken;
+            try
+            {
+                decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(payload.Token));
+            }
+            catch
+            {
+                // Backward compatibility: token might already be raw/unencoded
+                decodedToken = payload.Token;
+            }
+
+            var confirmResult = await _userManager.ConfirmEmailAsync(user, decodedToken);
+            if (!confirmResult.Succeeded)
+            {
+                var message = string.Join("; ", confirmResult.Errors.Select(e => e.Description));
+                return BadRequest(new
+                {
+                    success = false,
+                    error = new
+                    {
+                        code = "ConfirmEmailFailed",
+                        message = string.IsNullOrWhiteSpace(message) ? "Email confirmation failed." : message
+                    }
+                });
+            }
+
+            return Ok(new { success = true, data = new { emailConfirmed = true }, error = (object?)null });
+        }
+
+        // Browser-friendly verification endpoint for email links (confirms then redirects to the UI).
+        [HttpGet("confirm-email")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ConfirmEmailRedirect([FromQuery] string? userId, [FromQuery] string? token)
+        {
+            var frontendBaseUrl = _configuration["AppBaseUrl"] ?? "http://localhost:4200";
+            var baseRedirect = $"{frontendBaseUrl.TrimEnd('/')}/auth/confirm-email";
+
+            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(token))
+            {
+                return Redirect($"{baseRedirect}?result=failed");
+            }
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return Redirect($"{baseRedirect}?result=failed");
+            }
+
+            string decodedToken;
+            try
+            {
+                decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(token));
+            }
+            catch
+            {
+                decodedToken = token;
+            }
+
+            var confirmResult = await _userManager.ConfirmEmailAsync(user, decodedToken);
+            if (!confirmResult.Succeeded)
+            {
+                return Redirect($"{baseRedirect}?result=failed");
+            }
+
+            return Redirect($"{baseRedirect}?result=success");
+        }
+
+        // Development-only helper: confirms the current user's email without a token.
+        // This is used for local testing when email delivery is disabled.
+        [HttpPost("dev/confirm-email")]
+        [Authorize]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        public async Task<IActionResult> DevConfirmEmail()
+        {
+            if (!_environment.IsDevelopment())
+            {
+                return NotFound();
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+            }
+
+            if (!user.EmailConfirmed)
+            {
+                user.EmailConfirmed = true;
+                var update = await _userManager.UpdateAsync(user);
+                if (!update.Succeeded)
+                {
+                    var message = string.Join("; ", update.Errors.Select(e => e.Description));
+                    return StatusCode(500, new { success = false, error = new { code = "UpdateFailed", message = string.IsNullOrWhiteSpace(message) ? "Failed to confirm email." : message } });
+                }
+            }
+
+            return Ok(new { success = true, data = new { emailConfirmed = true }, error = (object?)null });
         }
 
         [HttpPost("login")]
@@ -673,6 +936,15 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                     _logger.LogError(ex, "Failed to create user profile during OAuth user creation");
                     throw; // Re-throw to handle at higher level
                 }
+
+                try
+                {
+                    QueueWelcomeEmail(user.Id);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to send welcome email for OAuth user {UserId}", Sid(user.Id));
+                }
             }
             else
             {
@@ -828,6 +1100,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return StatusCode(500, new { error = "Failed to set cookie" });
             }
         }
+    }
+
+    public class ConfirmEmailRequest
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string Token { get; set; } = string.Empty;
     }
 
     // DTOs for Google OAuth
