@@ -9,4 +9,6 @@ public interface IEmailNotificationService
     Task SendGenerationFailedAsync(string userId, string? email, string? style, string? error, string? jobId = null);
     Task SendPurchaseReceiptAsync(string userId, string? email, CreditPurchase purchase);
     Task SendSupportFeedbackReceivedAsync(string userId, string? userEmail, FeedbackSubmission submission);
+    Task SendEmailVerificationAsync(string userId, string? email, string encodedToken);
+    Task SendWelcomeAsync(string userId, string? email, string? firstName = null);
 }

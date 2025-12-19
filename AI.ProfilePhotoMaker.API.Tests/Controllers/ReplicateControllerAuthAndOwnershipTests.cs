@@ -8,6 +8,7 @@ using AI.ProfilePhotoMaker.API.Models.Replicate;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Security;
+using AI.ProfilePhotoMaker.API.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -51,10 +52,15 @@ public class ReplicateControllerAuthAndOwnershipTests
             .ReturnsAsync(true);
 
         var config = configuration ?? new Mock<IConfiguration>().Object;
+        var userManagerMock = UserManagerMockFactory.Create();
+        userManagerMock
+            .Setup(m => m.FindByIdAsync(It.IsAny<string>()))
+            .ReturnsAsync((string id) => new ApplicationUser { Id = id, Email = $"{id}@example.com", EmailConfirmed = true });
 
         var controller = new ReplicateController(
             mockReplicate.Object,
             mockBasic.Object,
+            userManagerMock.Object,
             db,
             config,
             new NullLogger<ReplicateController>(),

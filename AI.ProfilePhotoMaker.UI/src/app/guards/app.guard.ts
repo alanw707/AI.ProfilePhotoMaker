@@ -7,15 +7,13 @@ import {
   RouterStateSnapshot,
 } from '@angular/router';
 import { Observable, of } from 'rxjs';
-import { switchMap, tap, catchError } from 'rxjs/operators';
+import { switchMap, catchError, take } from 'rxjs/operators';
 import { AuthService } from '../services/auth.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AppGuard implements CanActivate, CanActivateChild {
-  private _currentCheck?: Observable<boolean>;
-
   constructor(
     private _authService: AuthService,
     private _router: Router
@@ -36,12 +34,8 @@ export class AppGuard implements CanActivate, CanActivateChild {
   }
 
   private _checkAuth(redirectUrl: string): Observable<boolean> {
-    // Deduplicate concurrent guard executions for same URL
-    if (this._currentCheck) {
-      return this._currentCheck;
-    }
-
-    const check$ = this._authService.isAuthenticated$.pipe(
+    return this._authService.isAuthenticated$.pipe(
+      take(1),
       switchMap(isAuthenticated => {
         if (!isAuthenticated) {
           sessionStorage.setItem('redirectUrl', redirectUrl);
@@ -54,50 +48,75 @@ export class AppGuard implements CanActivate, CanActivateChild {
           return of(false);
         }
 
-        if (redirectUrl.includes('/auth/complete-profile')) {
-          return of(true);
-        }
-
-        // Run validation and profile-check in the background to avoid race
-        this._authService
-          .validateSession()
-          .pipe(catchError(() => of('retry' as const)))
-          .subscribe(result => {
-            const doProfileCheck = () =>
-              this._authService
-                .checkProfileCompletion()
-                .pipe(catchError(() => of({ isCompleted: true } as any)))
-                .subscribe(status => {
-                  if (status && !status.isCompleted) {
-                    this._router.navigate(['/auth/complete-profile']);
-                  }
-                });
-
-            if (result === 'retry') {
-              setTimeout(() => {
-                this._authService
-                  .validateSession()
-                  .pipe(catchError(() => of('fail' as const)))
-                  .subscribe(second => {
-                    if (second === 'fail') {
-                      this._authService.logout();
-                    } else {
-                      doProfileCheck();
-                    }
-                  });
-              }, 300);
-            } else {
-              doProfileCheck();
+        // Enforce email verification for all /app routes.
+        return this._authService.getAccountStatus().pipe(
+          take(1),
+          switchMap(status => {
+            const emailConfirmed = !!status?.data?.emailConfirmed;
+            if (!emailConfirmed) {
+              sessionStorage.setItem('redirectUrl', redirectUrl);
+              this._router.navigate(['/auth/verify-email']);
+              return of(false);
             }
-          });
 
-        return of(true);
+            // Run validation and profile-check in the background to avoid race
+            this._authService
+              .validateSession()
+              .pipe(catchError(() => of('retry' as const)))
+              .subscribe(result => {
+                const doProfileCheck = () =>
+                  this._authService
+                    .checkProfileCompletion()
+                    .pipe(catchError(() => of({ isCompleted: true } as any)))
+                    .subscribe(profileStatus => {
+                      if (profileStatus && !profileStatus.isCompleted) {
+                        this._router.navigate(['/auth/complete-profile']);
+                      }
+                    });
+
+                if (result === 'retry') {
+                  setTimeout(() => {
+                    this._authService
+                      .validateSession()
+                      .pipe(catchError(() => of('fail' as const)))
+                      .subscribe(second => {
+                        if (second === 'fail') {
+                          this._authService.logout();
+                        } else {
+                          doProfileCheck();
+                        }
+                      });
+                  }, 300);
+                } else {
+                  doProfileCheck();
+                }
+              });
+
+            return of(true);
+          }),
+          // Fail closed: if we can't verify email status, block /app and send user to login/verify.
+          catchError(err => {
+            sessionStorage.setItem('redirectUrl', redirectUrl);
+
+            if (err?.status === 401 || err?.status === 403) {
+              this._router.navigate(['/auth/login'], {
+                queryParams: {
+                  message: 'Please sign in again to continue.',
+                  returnUrl: redirectUrl,
+                },
+              });
+            } else {
+              this._router.navigate(['/auth/verify-email'], {
+                queryParams: {
+                  message: 'Unable to verify your email status right now. Please try again.',
+                },
+              });
+            }
+
+            return of(false);
+          })
+        );
       }),
-      // Clear guard deduplication when complete
-      tap(() => (this._currentCheck = undefined))
     );
-
-    this._currentCheck = check$;
-    return check$;
   }
 }

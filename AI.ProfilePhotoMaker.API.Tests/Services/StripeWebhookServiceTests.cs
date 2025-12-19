@@ -519,6 +519,8 @@ public class StripeWebhookServiceTests
         public Task SendGenerationFailedAsync(string userId, string? email, string? style, string? error, string? jobId = null) => Task.CompletedTask;
         public Task SendPurchaseReceiptAsync(string userId, string? email, CreditPurchase purchase) => Task.CompletedTask;
         public Task SendSupportFeedbackReceivedAsync(string userId, string? userEmail, FeedbackSubmission submission) => Task.CompletedTask;
+        public Task SendEmailVerificationAsync(string userId, string? email, string encodedToken) => Task.CompletedTask;
+        public Task SendWelcomeAsync(string userId, string? email, string? firstName = null) => Task.CompletedTask;
     }
 
     private static ApplicationDbContext CreateContext()

@@ -1,0 +1,41 @@
+<div class="verify-container">
+  <div class="verify-card">
+    <div class="verify-header">
+      <h1>AI Profile Photo Maker</h1>
+      <h2>Verify your email</h2>
+      <p>
+        We sent you a verification email. Please confirm your email address to continue.
+      </p>
+    </div>
+
+    <div *ngIf="isLoading" class="status">
+      Checking verification status…
+    </div>
+
+    <div *ngIf="!isLoading && isEmailConfirmed" class="status success">
+      Email verified. Redirecting…
+    </div>
+
+    <div *ngIf="!isLoading && !isEmailConfirmed" class="actions">
+      <button class="btn btn-primary" type="button" (click)="refreshStatus()">
+        I’ve verified — continue
+      </button>
+      <button class="btn btn-secondary" type="button" (click)="resend()" [disabled]="isResending">
+        {{ isResending ? 'Sending…' : 'Resend verification email' }}
+      </button>
+      <button
+        *ngIf="showDevBypass"
+        class="btn btn-outline"
+        type="button"
+        (click)="devConfirm()"
+        [disabled]="isDevConfirming"
+      >
+        {{ isDevConfirming ? 'Confirming…' : 'Dev: Mark verified' }}
+      </button>
+      <button class="btn btn-outline" type="button" (click)="logout()">Logout</button>
+    </div>
+
+    <div *ngIf="message" class="note">{{ message }}</div>
+    <div *ngIf="error" class="note error">{{ error }}</div>
+  </div>
+</div>

@@ -9,7 +9,8 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
-import { CreditService, UserCreditStatus } from '../../services/credit.service';
+import { UserCreditStatus } from '../../services/credit.service';
+import { SubscriptionStateService } from '../../services/subscription-state.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -27,14 +28,14 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
   isMobileMenuOpen = false;
   isAuthenticated = false;
   private _userSubscription?: Subscription;
-  private _creditSubscription?: Subscription;
   private _authSubscription?: Subscription;
+  private _subscriptionStateSubscription?: Subscription;
 
   constructor(
     private _authService: AuthService,
     private _router: Router,
     public themeService: ThemeService,
-    private _creditService: CreditService,
+    private _subscriptionState: SubscriptionStateService,
     private _cdr: ChangeDetectorRef
   ) {}
 
@@ -55,9 +56,9 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
           : (this.userEmail || '').trim();
         this.userName = fullName || emailPrefix || 'User';
 
-        // Only load credit status when authenticated - add small delay for auth token
+        // Ensure subscription state has current credits (small delay for cookie/session settle)
         setTimeout(() => {
-          this.loadCreditStatus();
+          void this._subscriptionState.refreshInternalCredits();
         }, 100);
         this._cdr.markForCheck();
       } else {
@@ -68,38 +69,23 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
         this._cdr.markForCheck();
       }
     });
+
+    this._subscriptionStateSubscription = this._subscriptionState.state$.subscribe(state => {
+      this.userCreditStatus = this.isAuthenticated ? state.userCreditStatus : null;
+      this._cdr.markForCheck();
+    });
   }
 
   ngOnDestroy(): void {
     if (this._userSubscription) {
       this._userSubscription.unsubscribe();
     }
-    if (this._creditSubscription) {
-      this._creditSubscription.unsubscribe();
-    }
     if (this._authSubscription) {
       this._authSubscription.unsubscribe();
     }
-  }
-
-  loadCreditStatus(): void {
-    this._creditSubscription = this._creditService.getCreditStatus().subscribe({
-      next: response => {
-        if (response.success) {
-          this.userCreditStatus = response.data;
-          // Force change detection to update the view
-          this._cdr.detectChanges();
-        } else {
-          this.userCreditStatus = null;
-          this._cdr.detectChanges();
-        }
-      },
-      error: error => {
-        console.error('Failed to load credit status:', error);
-        this.userCreditStatus = null;
-        this._cdr.detectChanges();
-      },
-    });
+    if (this._subscriptionStateSubscription) {
+      this._subscriptionStateSubscription.unsubscribe();
+    }
   }
 
   toggleTheme(): void {

@@ -1,4 +1,5 @@
 using AI.ProfilePhotoMaker.API.Models.DTOs;
+using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Services;
@@ -6,6 +7,7 @@ using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using AI.ProfilePhotoMaker.API.Services.Security;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -22,6 +24,7 @@ public class EnhancementController : ControllerBase
 {
     private readonly OpenAIImageGenerationService _openAIService;
     private readonly IBasicTierService _basicTierService;
+    private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _dbContext;
     private readonly ILogger<EnhancementController> _logger;
     private readonly IWebHostEnvironment _environment;
@@ -35,6 +38,7 @@ public class EnhancementController : ControllerBase
     public EnhancementController(
         OpenAIImageGenerationService openAIService,
         IBasicTierService basicTierService,
+        UserManager<ApplicationUser> userManager,
         ApplicationDbContext dbContext,
         ILogger<EnhancementController> logger,
         IConfiguration configuration,
@@ -45,6 +49,7 @@ public class EnhancementController : ControllerBase
     {
         _openAIService = openAIService;
         _basicTierService = basicTierService;
+        _userManager = userManager;
         _dbContext = dbContext;
         _logger = logger;
         _environment = environment;
@@ -144,6 +149,33 @@ public class EnhancementController : ControllerBase
                 {
                     code = "Unauthorized",
                     message = "User authentication required"
+                }
+            });
+        }
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            return Unauthorized(new
+            {
+                success = false,
+                error = new
+                {
+                    code = "Unauthorized",
+                    message = "User authentication required"
+                }
+            });
+        }
+
+        if (!user.EmailConfirmed)
+        {
+            return Ok(new
+            {
+                success = false,
+                error = new
+                {
+                    code = "EmailNotVerified",
+                    message = "Please verify your email address before using Photo Transform. Check your inbox (and spam) or resend verification from the app."
                 }
             });
         }

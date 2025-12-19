@@ -6,6 +6,7 @@ using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Services.Security;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -28,6 +29,7 @@ public class ReplicateController : ControllerBase
 {
     private readonly IReplicateApiClient _replicateApiClient;
     private readonly IBasicTierService _basicTierService;
+    private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _dbContext;
     private readonly IConfiguration _configuration;
     private readonly ILogger<ReplicateController> _logger;
@@ -41,6 +43,7 @@ public class ReplicateController : ControllerBase
     public ReplicateController(
         IReplicateApiClient replicateApiClient,
         IBasicTierService basicTierService,
+        UserManager<ApplicationUser> userManager,
         ApplicationDbContext dbContext,
         IConfiguration configuration,
         ILogger<ReplicateController> logger,
@@ -50,6 +53,7 @@ public class ReplicateController : ControllerBase
     {
         _replicateApiClient = replicateApiClient;
         _basicTierService = basicTierService;
+        _userManager = userManager;
         _dbContext = dbContext;
         _configuration = configuration;
         _logger = logger;
@@ -1021,6 +1025,25 @@ public class ReplicateController : ControllerBase
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId))
             return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+        }
+
+        if (!user.EmailConfirmed)
+        {
+            return Ok(new
+            {
+                success = false,
+                error = new
+                {
+                    code = "EmailNotVerified",
+                    message = "Please verify your email address before using Photo Transform. Check your inbox (and spam) or resend verification from the app."
+                }
+            });
+        }
 
         var turnstileOk = await _turnstile.VerifyAsync(dto.TurnstileToken, HttpContext?.Connection?.RemoteIpAddress?.ToString());
         if (!turnstileOk)

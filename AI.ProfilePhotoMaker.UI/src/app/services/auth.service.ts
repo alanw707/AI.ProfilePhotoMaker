@@ -61,6 +61,12 @@ export interface ApiAuthResponseDto {
   lastName?: string;
 }
 
+export interface AccountStatusResponse {
+  success: boolean;
+  data: { emailConfirmed: boolean };
+  error: { code: string; message: string } | null;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -77,6 +83,8 @@ export class AuthService {
   private _profileStatusInFlight$?: Observable<ProfileCompletionCheckDto>;
   // De-duplication holder for session validation checks
   private _validateSessionInFlight$?: Observable<any>;
+  // De-duplication holder for account status checks
+  private _accountStatusInFlight$?: Observable<AccountStatusResponse>;
 
   constructor(
     private _http: HttpClient,
@@ -158,6 +166,42 @@ export class AuthService {
     } catch (error) {
       console.error('🔒 Token validation error:', error);
       this.secureLogout('token_invalid');
+    }
+  }
+
+  private shouldSetCookieForDevFlow(): boolean {
+    if (environment.production) {
+      return false;
+    }
+
+    // Extra safeguard: only run this helper on local/ngrok/docker-like origins.
+    const host = window.location.hostname || '';
+    return (
+      host.includes('localhost') ||
+      host.includes('127.0.0.1') ||
+      host.includes('ngrok') ||
+      environment.name === 'docker-local'
+    );
+  }
+
+  private async setCookieForDevFlow(token: string): Promise<void> {
+    const setCookieUrl = this._config.getFullUrl('/auth/set-cookie');
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 2500);
+
+      await fetch(setCookieUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+        credentials: 'include',
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+    } catch {
+      // Best-effort only; do not block login/signup if cookie setting fails.
     }
   }
 
@@ -399,16 +443,8 @@ export class AuthService {
         }),
         switchMap(async response => {
           // In development only, ensure cookie is set via same-origin endpoint (proxy)
-          if (!environment.production && response.token) {
-            try {
-              const setCookieUrl = this._config.getFullUrl('/auth/set-cookie');
-              await fetch(setCookieUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: response.token }),
-                credentials: 'include',
-              });
-            } catch {}
+          if (response.token && this.shouldSetCookieForDevFlow()) {
+            await this.setCookieForDevFlow(response.token);
           }
           this.setSecureSession(response);
           return response;
@@ -432,16 +468,8 @@ export class AuthService {
           } as AuthResponseDto;
         }),
         switchMap(async response => {
-          if (!environment.production && response.token) {
-            try {
-              const setCookieUrl = this._config.getFullUrl('/auth/set-cookie');
-              await fetch(setCookieUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: response.token }),
-                credentials: 'include',
-              });
-            } catch {}
+          if (response.token && this.shouldSetCookieForDevFlow()) {
+            await this.setCookieForDevFlow(response.token);
           }
           this.setSecureSession(response);
           return response;
@@ -819,5 +847,39 @@ export class AuthService {
       this._config.buildApiEndpoint('auth/complete-profile'),
       profileData
     );
+  }
+
+  getAccountStatus(): Observable<AccountStatusResponse> {
+    if (this._accountStatusInFlight$) {
+      return this._accountStatusInFlight$;
+    }
+
+    const req$ = this._http
+      .get<AccountStatusResponse>(this._config.buildApiEndpoint('auth/account-status'))
+      .pipe(
+        shareReplay(1),
+        finalize(() => (this._accountStatusInFlight$ = undefined))
+      );
+
+    this._accountStatusInFlight$ = req$;
+    return req$;
+  }
+
+  resendConfirmationEmail(): Observable<AccountStatusResponse> {
+    return this._http.post<AccountStatusResponse>(
+      this._config.buildApiEndpoint('auth/resend-confirmation-email'),
+      {}
+    );
+  }
+
+  devConfirmEmail(): Observable<AccountStatusResponse> {
+    return this._http.post<AccountStatusResponse>(this._config.buildApiEndpoint('auth/dev/confirm-email'), {});
+  }
+
+  confirmEmail(userId: string, token: string): Observable<AccountStatusResponse> {
+    return this._http.post<AccountStatusResponse>(this._config.buildApiEndpoint('auth/confirm-email'), {
+      userId,
+      token,
+    });
   }
 }
