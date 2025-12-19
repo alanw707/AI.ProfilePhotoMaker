@@ -145,6 +145,12 @@ export class RegisterComponent {
       return;
     }
 
+    if (this.turnstileSiteKey && !this.turnstileToken) {
+      this.error = this.turnstile?.error || 'Please complete the verification to continue.';
+      this._cdr.markForCheck();
+      return;
+    }
+
     this.loading = true;
     this._cdr.markForCheck();
     const registerData: RegisterDto = {

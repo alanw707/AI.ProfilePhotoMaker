@@ -139,7 +139,7 @@
             (tokenChange)="onTurnstileTokenChange($event)"
           ></app-turnstile>
 
-	          <button class="btn btn-primary enhance-btn" (click)="startEnhancement()" [disabled]="!hasEnoughCredits() || (turnstileSiteKey && !turnstileToken)">
+	          <button class="btn btn-primary enhance-btn" (click)="startEnhancement()" [disabled]="!hasEnoughCredits()">
 	            <span *ngIf="hasEnoughCredits()">
 	              Transform Photo ({{ getRequiredCredits() }} credit{{ getRequiredCredits() > 1 ? 's' : '' }})
 	            </span>

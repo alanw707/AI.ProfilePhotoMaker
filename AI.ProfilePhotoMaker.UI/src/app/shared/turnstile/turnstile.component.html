@@ -1,4 +1,5 @@
 <div class="turnstile" #container></div>
 <div *ngIf="error" class="turnstile-error" role="alert">
-  {{ error }}
+  <span>{{ error }}</span>
+  <button type="button" class="turnstile-retry" (click)="reset()">Retry</button>
 </div>
