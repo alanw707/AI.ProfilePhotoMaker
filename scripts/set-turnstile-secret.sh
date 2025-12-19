@@ -30,12 +30,19 @@ fi
 
 echo "Updating Turnstile secret key for API container app '${API_APP_NAME}' in resource group '${RESOURCE_GROUP}'..."
 
-# Do not echo the secret value.
+# Do not echo the secret value. Prefer Container App secrets so the value is not stored as a plain env var.
+az containerapp secret set \
+  --name "${API_APP_NAME}" \
+  --resource-group "${RESOURCE_GROUP}" \
+  --secrets "turnstile-secret-key=${TURNSTILE_SECRET_KEY}" \
+  >/dev/null
+
+# Force a new revision so the app reads updated secrets at startup.
+REV_TS=$(date +%s)
 az containerapp update \
   --name "${API_APP_NAME}" \
   --resource-group "${RESOURCE_GROUP}" \
-  --set-env-vars "TURNSTILE_SECRET_KEY=${TURNSTILE_SECRET_KEY}" "Turnstile__SecretKey=${TURNSTILE_SECRET_KEY}" \
+  --set-env-vars REVISION_ROLL_TIMESTAMP=$REV_TS \
   >/dev/null
 
 echo "Done. A new revision should be rolling out now."
-
