@@ -57,8 +57,21 @@ export class VerifyEmailComponent implements OnInit {
             this.continue();
           }
         },
-        error: () => {
-          this.error = 'Unable to check verification status. Please refresh and try again.';
+        error: err => {
+          if (err?.status === 401 || err?.status === 403) {
+            void this._router.navigate(['/auth/login'], {
+              queryParams: {
+                message: 'Please sign in to continue.',
+                returnUrl: '/app/dashboard',
+              },
+            });
+            return;
+          }
+          this.error =
+            err?.error?.error?.message ||
+            err?.error?.message ||
+            err?.message ||
+            'Unable to check verification status. Please refresh and try again.';
         },
       });
   }
@@ -90,6 +103,15 @@ export class VerifyEmailComponent implements OnInit {
           }
         },
         error: err => {
+          if (err?.status === 401 || err?.status === 403) {
+            void this._router.navigate(['/auth/login'], {
+              queryParams: {
+                message: 'Please sign in to continue.',
+                returnUrl: '/app/dashboard',
+              },
+            });
+            return;
+          }
           this.error =
             err?.error?.error?.message ||
             err?.error?.message ||

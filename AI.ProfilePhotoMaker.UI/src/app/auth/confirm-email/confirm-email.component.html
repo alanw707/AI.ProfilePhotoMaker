@@ -13,17 +13,20 @@
       <p *ngIf="!isLoading && error" class="error-text">
         {{ error }}
       </p>
+
+      <p *ngIf="!isLoading && !error && sessionMessage" class="info-text">
+        {{ sessionMessage }}
+      </p>
     </div>
 
     <div class="confirm-actions" *ngIf="!isLoading">
-      <button class="btn btn-primary" (click)="goToDashboard()" *ngIf="isAuthenticated">
+      <button class="btn btn-primary" (click)="goToDashboard()" *ngIf="isSessionChecked && isSessionValid">
         Go to Dashboard
       </button>
-      <button class="btn btn-primary" (click)="goToLogin()" *ngIf="!isAuthenticated">
+      <button class="btn btn-primary" (click)="goToLogin()" *ngIf="isSessionChecked && !isSessionValid">
         Sign In
       </button>
       <a routerLink="/" class="btn btn-outline">Home</a>
     </div>
   </div>
 </div>
-
