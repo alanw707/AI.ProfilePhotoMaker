@@ -162,11 +162,15 @@
             (tokenChange)="onTurnstileTokenChange($event)"
           ></app-turnstile>
 
+          <p *ngIf="turnstileSiteKey && isEmailConfirmed && !turnstileToken" class="turnstile-hint">
+            Complete the bot check above to enable Transform.
+          </p>
+
 	          <button
               class="btn btn-primary enhance-btn"
               type="button"
               (click)="startEnhancement()"
-              [disabled]="!isEmailConfirmed || !hasEnoughCredits()">
+              [disabled]="!isEmailConfirmed || !canStartEnhancement()">
 	            <span *ngIf="!isEmailConfirmed">Verify Email to Continue</span>
 	            <span *ngIf="isEmailConfirmed && hasEnoughCredits()">
 	              Transform Photo ({{ getRequiredCredits() }} credit{{ getRequiredCredits() > 1 ? 's' : '' }})
