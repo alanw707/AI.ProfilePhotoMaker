@@ -71,13 +71,14 @@ services:
       Email__Enabled: ${Email__Enabled:-false}
       Email__Username: ${Email__Username}
       Email__Password: ${Email__Password}
-      Email__FromEmail: ${Email__FromEmail:-no-reply@aiprofilephotomaker.com}
+      Email__FromEmail: ${Email__FromEmail:-no-reply@mail.aiprofilephotomaker.com}
       Email__FromName: ${Email__FromName:-AI Profile Photo Maker}
       Email__SmtpHost: ${Email__SmtpHost:-smtp-relay.brevo.com}
       Email__SmtpPort: ${Email__SmtpPort:-465}
       Email__EnableSsl: ${Email__EnableSsl:-true}
       Email__UseApi: ${Email__UseApi:-false}
       Email__ApiKey: ${Email__ApiKey:-}
+      Email__DedicatedIp: ${Email__DedicatedIp:-}
       Email__SandboxMode: ${Email__SandboxMode:-true}
       Email__FrontendBaseUrl: ${Email__FrontendBaseUrl:-http://localhost:4200}
       # Use a docker-specific connection string so host env vars (often pointing to localhost)

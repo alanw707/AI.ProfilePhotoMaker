@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using System.Net;
-using System.Net.Mail;
 using System.Net.Http.Headers;
+using System.Net.Mail;
+using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
 using AI.ProfilePhotoMaker.API.Configuration;
@@ -217,16 +219,21 @@ public class EmailNotificationService : IEmailNotificationService
 
         var useApi = _options.UseApi && !string.IsNullOrWhiteSpace(_options.ApiKey);
         var wrappedHtml = WrapEmail(subject, htmlBody);
+        var textBody = EmailContentBuilder.BuildTextContent(wrappedHtml);
+        if (useApi && !string.IsNullOrWhiteSpace(_options.DedicatedIp))
+        {
+            _logger.LogInformation("Brevo dedicated IP enabled for {Template}", template);
+        }
         if (useApi)
         {
-            await SendEmailViaApiAsync(toEmail, subject, wrappedHtml, template, userId, replyToEmail, replyToName);
+            await SendEmailViaApiAsync(toEmail, subject, wrappedHtml, textBody, template, userId, replyToEmail, replyToName);
             return;
         }
 
         var canSmtp = !string.IsNullOrWhiteSpace(_options.SmtpHost);
         if (canSmtp)
         {
-            await SendEmailViaSmtpAsync(toEmail, subject, wrappedHtml, template, userId, replyToEmail, replyToName);
+            await SendEmailViaSmtpAsync(toEmail, subject, wrappedHtml, textBody, template, userId, replyToEmail, replyToName);
             return;
         }
 
@@ -241,6 +248,7 @@ public class EmailNotificationService : IEmailNotificationService
         string toEmail,
         string subject,
         string htmlBody,
+        string textBody,
         string template,
         string? userId,
         string? replyToEmail,
@@ -252,37 +260,50 @@ public class EmailNotificationService : IEmailNotificationService
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             request.Headers.Add("api-key", _options.ApiKey);
 
-            object payload = new
+            var payload = new Dictionary<string, object>
             {
-                sender = new { name = _options.FromName ?? "AI Profile Photo Maker", email = _options.FromEmail },
-                to = new[] { new { email = toEmail } },
-                subject = _options.SandboxMode ? $"[SANDBOX] {subject}" : subject,
-                htmlContent = htmlBody
+                ["sender"] = new { name = _options.FromName ?? "AI Profile Photo Maker", email = _options.FromEmail },
+                ["to"] = new[] { new { email = toEmail } },
+                ["subject"] = _options.SandboxMode ? $"[SANDBOX] {subject}" : subject,
+                ["htmlContent"] = htmlBody
             };
+
+            if (!string.IsNullOrWhiteSpace(textBody))
+            {
+                payload["textContent"] = textBody;
+            }
+
+            var headers = BuildApiHeaders();
+            if (headers is { Count: > 0 })
+            {
+                payload["headers"] = headers;
+            }
 
             if (!string.IsNullOrWhiteSpace(replyToEmail))
             {
-                payload = new
-                {
-                    sender = new { name = _options.FromName ?? "AI Profile Photo Maker", email = _options.FromEmail },
-                    to = new[] { new { email = toEmail } },
-                    replyTo = new { email = replyToEmail, name = replyToName ?? replyToEmail },
-                    subject = _options.SandboxMode ? $"[SANDBOX] {subject}" : subject,
-                    htmlContent = htmlBody
-                };
+                payload["replyTo"] = new { email = replyToEmail, name = replyToName ?? replyToEmail };
             }
 
             var json = JsonSerializer.Serialize(payload);
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var response = await _httpClient.SendAsync(request);
+            var body = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
             {
-                _logger.LogInformation("Sent {Template} email via API to {Recipient} for user {UserId}", template, S(toEmail), Sid(userId));
+                var messageId = TryExtractMessageId(body);
+                if (!string.IsNullOrWhiteSpace(messageId))
+                {
+                    _logger.LogInformation("Sent {Template} email via API to {Recipient} for user {UserId} (MessageId={MessageId})",
+                        template, S(toEmail), Sid(userId), S(messageId));
+                }
+                else
+                {
+                    _logger.LogInformation("Sent {Template} email via API to {Recipient} for user {UserId}", template, S(toEmail), Sid(userId));
+                }
             }
             else
             {
-                var body = await response.Content.ReadAsStringAsync();
                 _logger.LogWarning("Failed API email send {Template} for user {UserId}. Status {Status}: {Body}", template, Sid(userId), response.StatusCode, S(body));
             }
         }
@@ -296,22 +317,32 @@ public class EmailNotificationService : IEmailNotificationService
         string toEmail,
         string subject,
         string htmlBody,
+        string textBody,
         string template,
         string? userId,
         string? replyToEmail,
         string? replyToName)
     {
+        var hasText = !string.IsNullOrWhiteSpace(textBody);
+        var hasHtml = !string.IsNullOrWhiteSpace(htmlBody);
+
         using var mail = new MailMessage
         {
             From = new MailAddress(_options.FromEmail!, _options.FromName ?? "AI Profile Photo Maker"),
             Subject = _options.SandboxMode ? $"[SANDBOX] {subject}" : subject,
-            Body = htmlBody,
-            IsBodyHtml = true
+            Body = hasText ? textBody : htmlBody,
+            IsBodyHtml = !hasText && hasHtml,
+            BodyEncoding = Encoding.UTF8
         };
         mail.To.Add(new MailAddress(toEmail));
         if (!string.IsNullOrWhiteSpace(replyToEmail))
         {
             mail.ReplyToList.Add(new MailAddress(replyToEmail, replyToName ?? replyToEmail));
+        }
+
+        if (hasText && hasHtml)
+        {
+            mail.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(htmlBody, Encoding.UTF8, MediaTypeNames.Text.Html));
         }
 
         using var client = new SmtpClient(_options.SmtpHost, _options.SmtpPort)
@@ -333,6 +364,57 @@ public class EmailNotificationService : IEmailNotificationService
         {
             _logger.LogWarning("Failed SMTP email send {Template} for user {UserId}: {Reason}", template, Sid(userId), S(ex.Message));
         }
+    }
+
+    private Dictionary<string, string>? BuildApiHeaders()
+    {
+        Dictionary<string, string>? headers = null;
+
+        if (_options.ApiHeaders != null)
+        {
+            foreach (var entry in _options.ApiHeaders)
+            {
+                if (string.IsNullOrWhiteSpace(entry.Key) || string.IsNullOrWhiteSpace(entry.Value))
+                {
+                    continue;
+                }
+
+                headers ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                headers[entry.Key] = entry.Value;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(_options.DedicatedIp))
+        {
+            headers ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            headers["sender.ip"] = _options.DedicatedIp;
+        }
+
+        return headers;
+    }
+
+    private static string? TryExtractMessageId(string body)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            if (document.RootElement.TryGetProperty("messageId", out var messageId) &&
+                messageId.ValueKind == JsonValueKind.String)
+            {
+                return messageId.GetString();
+            }
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+
+        return null;
     }
 
     private string? BuildCtaLink(string? relativePath)

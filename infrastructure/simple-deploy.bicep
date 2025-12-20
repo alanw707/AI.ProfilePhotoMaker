@@ -545,7 +545,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             }
             {
               name: 'Email__FromEmail'
-              value: 'no-reply@aiprofilephotomaker.com'
+              value: 'no-reply@mail.aiprofilephotomaker.com'
             }
             {
               name: 'Email__FromName'
@@ -566,6 +566,10 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'Email__ApiKey'
               secretRef: 'email-api-key'
+            }
+            {
+              name: 'Email__DedicatedIp'
+              value: ''
             }
 
             // Cloudflare Turnstile bot verification (optional, but recommended for production).
