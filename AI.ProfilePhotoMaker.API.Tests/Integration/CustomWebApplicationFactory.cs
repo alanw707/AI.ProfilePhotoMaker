@@ -52,6 +52,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable("GOOGLE_CLIENT_ID", "1234567890-test.apps.googleusercontent.com");
         Environment.SetEnvironmentVariable("GOOGLE_CLIENT_SECRET", "GOCSPX-dummy-secret-1234567890");
         Environment.SetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING", "UseDevelopmentStorage=true");
+        Environment.SetEnvironmentVariable("OPENAI__ApiKey", "test-openai-key");
 
         return Host.CreateDefaultBuilder()
             .ConfigureWebHostDefaults(webBuilder =>
@@ -108,6 +109,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         services.AddMemoryCache();
         services.AddDistributedMemoryCache();
         services.AddHttpClient();
+        services.AddSingleton<FakeOpenAiHttpMessageHandler>();
+        services.AddSingleton<IHttpClientFactory, FakeHttpClientFactory>();
+        services.AddSingleton(sp => new HttpClient(sp.GetRequiredService<FakeOpenAiHttpMessageHandler>(), disposeHandler: false));
         services.AddSingleton<ITurnstileVerificationService, AllowAllTurnstileVerificationService>();
         services.AddSingleton<IEmailNotificationService, NoopEmailNotificationService>();
 
@@ -117,6 +121,13 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         services.AddScoped<AI.ProfilePhotoMaker.API.Services.IUserContextService, AI.ProfilePhotoMaker.API.Services.UserContextService>();
         services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository, AI.ProfilePhotoMaker.API.Data.UserProfileRepository>();
         services.AddScoped<AI.ProfilePhotoMaker.API.Services.IPendingGenerationService, AI.ProfilePhotoMaker.API.Services.PendingGenerationService>();
+        services.AddScoped<OpenAIImageGenerationService>(sp =>
+            new OpenAIImageGenerationService(
+                new HttpClient(sp.GetRequiredService<FakeOpenAiHttpMessageHandler>(), disposeHandler: false),
+                sp.GetRequiredService<IHttpClientFactory>(),
+                sp.GetRequiredService<IConfiguration>(),
+                sp.GetRequiredService<ILogger<OpenAIImageGenerationService>>(),
+                sp.GetRequiredService<IStorageService>()));
 
         // Add mock Replicate services
         services.AddScoped<IReplicateApiClient, MockReplicateApiClient>();

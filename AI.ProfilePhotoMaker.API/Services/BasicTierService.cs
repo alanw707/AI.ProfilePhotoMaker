@@ -1,6 +1,9 @@
+using System.Linq.Expressions;
+using System.Reflection;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 
 namespace AI.ProfilePhotoMaker.API.Services;
 
@@ -10,11 +13,35 @@ public class BasicTierService : IBasicTierService
     private readonly ILogger<BasicTierService> _logger;
     private const int WeeklyCredits = 5;
     private const int DaysInWeek = 7;
+    private static readonly MethodInfo? ExecuteUpdateAsyncMethod = typeof(RelationalQueryableExtensions)
+        .GetMethods(BindingFlags.Public | BindingFlags.Static)
+        .FirstOrDefault(method => method.Name == "ExecuteUpdateAsync" && method.GetParameters().Length == 3);
 
     public BasicTierService(ApplicationDbContext context, ILogger<BasicTierService> logger)
     {
         _context = context;
         _logger = logger;
+    }
+
+    private static Task<int>? ExecuteUpdateAsyncIfAvailable<T>(
+        IQueryable<T> query,
+        Expression<Func<SetPropertyCalls<T>, SetPropertyCalls<T>>> updateExpression,
+        CancellationToken cancellationToken)
+    {
+        if (ExecuteUpdateAsyncMethod == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var method = ExecuteUpdateAsyncMethod.MakeGenericMethod(typeof(T));
+            return method.Invoke(null, new object?[] { query, updateExpression, cancellationToken }) as Task<int>;
+        }
+        catch (TargetInvocationException)
+        {
+            return null;
+        }
     }
 
     public async Task<bool> HasAvailableCreditsAsync(string userId)
@@ -116,20 +143,20 @@ public class BasicTierService : IBasicTierService
         var creditsToConsume = creditCost;
         var consumedFromPurchased = 0;
         var consumedFromWeekly = 0;
+        var startingWeeklyCredits = profile.Credits;
+        var startingPurchasedCredits = profile.PurchasedCredits;
 
         // First, use weekly credits if operation allows
-        if (canUseWeeklyCredits && profile.Credits > 0)
+        if (canUseWeeklyCredits && startingWeeklyCredits > 0)
         {
-            consumedFromWeekly = Math.Min(creditsToConsume, profile.Credits);
-            profile.Credits -= consumedFromWeekly;
+            consumedFromWeekly = Math.Min(creditsToConsume, startingWeeklyCredits);
             creditsToConsume -= consumedFromWeekly;
         }
 
         // Then use purchased credits if still need credits
-        if (creditsToConsume > 0 && profile.PurchasedCredits > 0)
+        if (creditsToConsume > 0 && startingPurchasedCredits > 0)
         {
-            consumedFromPurchased = Math.Min(creditsToConsume, profile.PurchasedCredits);
-            profile.PurchasedCredits -= consumedFromPurchased;
+            consumedFromPurchased = Math.Min(creditsToConsume, startingPurchasedCredits);
             creditsToConsume -= consumedFromPurchased;
         }
 
@@ -139,8 +166,63 @@ public class BasicTierService : IBasicTierService
             return CreditConsumptionResult.Failed(action, "calculation_error", correlationId);
         }
 
-        profile.UpdatedAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
+        var updatedAt = DateTime.UtcNow;
+        var newWeeklyCredits = startingWeeklyCredits - consumedFromWeekly;
+        var newPurchasedCredits = startingPurchasedCredits - consumedFromPurchased;
+        var rowsAffected = 0;
+
+        var useExecuteUpdate = _context.Database.IsRelational();
+        if (useExecuteUpdate)
+        {
+            var updateExpression = (Expression<Func<SetPropertyCalls<UserProfile>, SetPropertyCalls<UserProfile>>>)(updates => updates
+                .SetProperty(p => p.Credits, newWeeklyCredits)
+                .SetProperty(p => p.PurchasedCredits, newPurchasedCredits)
+                .SetProperty(p => p.UpdatedAt, updatedAt));
+
+            var executeUpdateTask = ExecuteUpdateAsyncIfAvailable(
+                _context.UserProfiles.Where(p => p.UserId == userId),
+                updateExpression,
+                CancellationToken.None);
+
+            if (executeUpdateTask == null)
+            {
+                _logger.LogWarning("ExecuteUpdateAsync not available; falling back to tracked update for user {UserId}", userId);
+                useExecuteUpdate = false;
+            }
+            else
+            {
+                try
+                {
+                    rowsAffected = await executeUpdateTask;
+                    if (rowsAffected == 1)
+                    {
+                        profile.Credits = newWeeklyCredits;
+                        profile.PurchasedCredits = newPurchasedCredits;
+                        profile.UpdatedAt = updatedAt;
+                        _context.Entry(profile).State = EntityState.Unchanged;
+                    }
+                }
+                catch (NotSupportedException ex)
+                {
+                    _logger.LogWarning(ex, "ExecuteUpdateAsync not supported; falling back to tracked update for user {UserId}", userId);
+                    useExecuteUpdate = false;
+                }
+            }
+        }
+
+        if (!useExecuteUpdate)
+        {
+            profile.Credits = newWeeklyCredits;
+            profile.PurchasedCredits = newPurchasedCredits;
+            profile.UpdatedAt = updatedAt;
+            rowsAffected = await _context.SaveChangesAsync();
+        }
+
+        if (rowsAffected != 1)
+        {
+            _logger.LogError("Failed to persist credit deduction for user {UserId}. Rows affected: {RowsAffected}", userId, rowsAffected);
+            return CreditConsumptionResult.Failed(action, "credit_persistence_failed", correlationId);
+        }
 
         // Log the usage with detailed breakdown
         var details = $"Consumed {creditCost} credits ({consumedFromPurchased} purchased + {consumedFromWeekly} weekly)";
@@ -148,11 +230,11 @@ public class BasicTierService : IBasicTierService
         {
             details = $"{details}; correlationId={correlationId}";
         }
-        var remainingCredits = profile.PurchasedCredits + profile.Credits;
+        var remainingCredits = newPurchasedCredits + newWeeklyCredits;
         await LogUsageAsync(userId, action, details, creditCost, remainingCredits);
 
         _logger.LogInformation("User {UserId} consumed {Credits} credits for {Action}. Remaining: {Remaining} ({Purchased} purchased + {Weekly} weekly)",
-            userId, creditCost, action, remainingCredits, profile.PurchasedCredits, profile.Credits);
+            userId, creditCost, action, remainingCredits, newPurchasedCredits, newWeeklyCredits);
 
         return CreditConsumptionResult.Succeeded(action, consumedFromWeekly, consumedFromPurchased, correlationId);
     }
