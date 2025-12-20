@@ -18,7 +18,7 @@
   "AppBaseUrl": "http://localhost:4200",
   "Email": {
     "Enabled": true,
-    "FromEmail": "no-reply@aiprofilephotomaker.com",
+    "FromEmail": "no-reply@mail.aiprofilephotomaker.com",
     "FromName": "AI Profile Photo Maker",
     "SmtpHost": "smtp-relay.brevo.com",
     "SmtpPort": 465,
@@ -27,6 +27,8 @@
     "Password": "STORED_IN_USER_SECRETS",
     "UseApi": false,
     "ApiKey": "STORED_IN_USER_SECRETS",
+    "DedicatedIp": "",
+    "ApiHeaders": {},
     "SandboxMode": true,
     "FrontendBaseUrl": "http://localhost:4200"
   },

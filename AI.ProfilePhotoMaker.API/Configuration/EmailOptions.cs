@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace AI.ProfilePhotoMaker.API.Configuration;
 
 public class EmailOptions
@@ -27,6 +29,16 @@ public class EmailOptions
     /// Brevo API key (xkeysib-...), used when UseApi is true.
     /// </summary>
     public string? ApiKey { get; set; }
+
+    /// <summary>
+    /// Optional custom headers for Brevo API sends (for example: sender.ip).
+    /// </summary>
+    public Dictionary<string, string>? ApiHeaders { get; set; }
+
+    /// <summary>
+    /// Dedicated IP address to use for Brevo API sends.
+    /// </summary>
+    public string? DedicatedIp { get; set; }
 
     /// <summary>
     /// When true, tag emails as sandbox to avoid confusing users in lower environments.

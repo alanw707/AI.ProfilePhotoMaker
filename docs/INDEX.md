@@ -15,14 +15,17 @@ System design, components, and architectural decisions.
 ### 🚀 [Deployment](./deployment/)
 Infrastructure deployment, CI/CD pipelines, and deployment strategies.
 
+- **[DEPLOYMENT_GUIDE.md](./deployment/DEPLOYMENT_GUIDE.md)** - Canonical deployment guide
 - **[DEPLOYMENT_MILESTONE_DOCUMENTATION.md](./deployment/DEPLOYMENT_MILESTONE_DOCUMENTATION.md)** - ⭐ Complete deployment milestone documentation with issue resolution
 - **[DEPLOYMENT_CHECKLIST.md](./deployment/DEPLOYMENT_CHECKLIST.md)** - OAuth deployment checklist and quick commands
-- **[DEPLOYMENT_OPTIONS.md](./deployment/DEPLOYMENT_OPTIONS.md)** - Available deployment options and recommendations
-- **[DEPLOYMENT_STRATEGY.md](./deployment/DEPLOYMENT_STRATEGY.md)** - Overall deployment strategy and approach
+- **[LAUNCH_READINESS_CHECKLIST.md](./deployment/LAUNCH_READINESS_CHECKLIST.md)** - GA launch readiness gates (PRD-aligned)
+- **[GO_NO_GO_SUMMARY.md](./deployment/GO_NO_GO_SUMMARY.md)** - Go/No-Go decision snapshot
+- **[DOCS_CODE_AUDIT.md](./deployment/DOCS_CODE_AUDIT.md)** - Documentation and code audit (desk review)
 - **[OPTION_A_IMPLEMENTATION.md](./deployment/OPTION_A_IMPLEMENTATION.md)** - Two-phase deployment implementation details
-- **[WORKFLOW_VALIDATION.md](./deployment/WORKFLOW_VALIDATION.md)** - CI/CD workflow validation and testing results
 - **[SECRETS_CONFIGURATION.md](./deployment/SECRETS_CONFIGURATION.md)** - Azure deployment secrets configuration guide
 - **[AZURE_CLI_SETUP.md](./deployment/AZURE_CLI_SETUP.md)** - Azure CLI installation and service principal setup
+- **[LOCAL-BUILD-WORKFLOW.md](./LOCAL-BUILD-WORKFLOW.md)** - Local image build and deploy workflow
+- **[infrastructure-validation.md](./infrastructure-validation.md)** - Infrastructure configuration validation system
 
 ### 🛡️ [Security](./security/)
 Security implementation, authentication, and compliance documentation.
@@ -44,8 +47,9 @@ Operational procedures, API documentation, and system management.
 
 - **[MILESTONE_ACHIEVEMENT_SUMMARY.md](./operations/MILESTONE_ACHIEVEMENT_SUMMARY.md)** - ⭐ Major milestone achievements and success metrics
 - **[API_REFERENCE.md](./operations/API_REFERENCE.md)** - Complete API documentation and endpoints
-- **[Webhook Integration Guide](../webhooks/INTEGRATION.md)** - Architecture, endpoints, and security
+- **[Webhook Integration Guide](./webhooks/INTEGRATION.md)** - Architecture, endpoints, and security
 - **[OPERATIONAL_RUNBOOK.md](./operations/OPERATIONAL_RUNBOOK.md)** - Production operations, monitoring, and incident response
+- **[EMAIL_DELIVERABILITY.md](./operations/EMAIL_DELIVERABILITY.md)** - Transactional email deliverability, DNS, and Brevo setup
 - **[CREDIT_SYSTEM.md](./operations/CREDIT_SYSTEM.md)** - Credit system implementation and management
 - **[GALLERY_MANAGEMENT.md](./operations/GALLERY_MANAGEMENT.md)** - Gallery features and management procedures
 - **[PHOTO_PROCESSING.md](./operations/PHOTO_PROCESSING.md)** - Photo processing pipeline and AI integration
@@ -59,6 +63,7 @@ Operational procedures, API documentation, and system management.
 - **Architecture Overview**: `docs/architecture/ARCHITECTURE_OVERVIEW.md`
 - **Environment & Secrets**: `docs/setup/ENVIRONMENT_SETUP.md`, `docs/ENVIRONMENT_VARIABLES.md`, `docs/SECRET_MANAGEMENT_WORKFLOW.md`
 - **Plan & Backlog**: `docs/development/PROJECT_PLAN.md`, `docs/development/DEVELOPMENT_BACKLOG.md`
+- **Launch Readiness**: `docs/deployment/LAUNCH_READINESS_CHECKLIST.md`, `docs/deployment/GO_NO_GO_SUMMARY.md`
 - **Operations & API**: `docs/operations/API_REFERENCE.md`, `docs/operations/OPERATIONAL_RUNBOOK.md`, `docs/operations/CREDIT_SYSTEM.md`
 
 ---
@@ -96,7 +101,7 @@ Operational procedures, API documentation, and system management.
 
 ### For DevOps/Infrastructure
 - Begin with [Cloud Architecture](./architecture/cloud-architecture.md)
-- Review [Deployment Strategy](./deployment/DEPLOYMENT_STRATEGY.md)
+- Review [Deployment Guide](./deployment/DEPLOYMENT_GUIDE.md)
 - Study [Deployment Milestone Documentation](./deployment/DEPLOYMENT_MILESTONE_DOCUMENTATION.md)
 
 ### For Security Teams
@@ -122,18 +127,34 @@ Operational procedures, API documentation, and system management.
 - Test reports: 
   - API Playwright Agent Collaboration Report: `AI.ProfilePhotoMaker.API/tests/playwright/AGENT-COLLABORATION-REPORT.md`
   - API Playwright Final Validation Summary: `AI.ProfilePhotoMaker.API/tests/playwright/FINAL-VALIDATION-SUMMARY.md`
+- ClaudeDocs (generated reports): `docs/claudedocs-index.md`
+
+## 🧭 Optional / Design References
+
+- `docs/SignalR-Integration-Example.md` (optional real-time enhancement updates)
+- `docs/replicate-workflow-implementation-plan.md` (design plan for Replicate robustness and mocking)
+
+## 🗄️ Historical / Archived References
+
+- `docs/deployment/DEPLOYMENT_OPTIONS.md` (archived option analysis)
+- `docs/deployment/DEPLOYMENT_STRATEGY.md` (archived strategy reference)
+- `docs/deployment/WORKFLOW_VALIDATION.md` (archived CI/CD validation report)
+- `docs/PRODUCTION_MIGRATION_GUIDE.md` (one-time migration playbook)
+- `docs/unified-secrets-management.md` (archived deep-dive)
+- `docs/TROUBLESHOOTING-IMAGE-UPLOAD.md` (resolved production issue)
+- `docs/refactor/playwright-suite-overview.md` (archived refactor note)
+- `docs/refactor/cleanup-checklist.md` (archived checklist)
 
 ---
 
 ## 🚀 Current Status
 
-**✅ PRODUCTION READY**
+**GA readiness in progress**
 
-- **Frontend Application**: https://aipm-web-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io
-- **Backend API**: https://aipm-api-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io
-- **Infrastructure**: Fully deployed on Azure Container Apps
-- **Security**: All controls implemented and validated
-- **CI/CD**: Automated GitHub Actions pipeline operational
+- Readiness gates tracked in `docs/deployment/LAUNCH_READINESS_CHECKLIST.md`
+- Go/No-Go snapshot in `docs/deployment/GO_NO_GO_SUMMARY.md`
+- Latest backlog update: `docs/development/DEVELOPMENT_BACKLOG.md` (93% complete; 5-6 weeks remaining as of 2025-12-03)
+- Environment endpoints (last known, verify before use): https://aipm-web-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io and https://aipm-api-v1.bravehill-124f6a57.eastus2.azurecontainerapps.io
 
 ---
 
@@ -147,7 +168,7 @@ The AI Profile Photo Maker is a full-stack web application that uses AI to gener
 - **Self-Healing Gallery**: Automatic repair of database-filesystem inconsistencies
 - **Photo Enhancement**: One-click photo improvement using AI
   - See: [OpenAI Enhancement (gpt-image-1)](./OPENAI-ENHANCEMENT.md)
-- **OAuth Integration**: Google, Facebook, and Apple sign-in support
+- **OAuth Integration**: Google sign-in support
 
 ### Architecture Highlights
 
@@ -161,13 +182,11 @@ Frontend (Angular 19) ↔ Backend (.NET 8 API) ↔ External APIs
 
 ---
 
-## 📊 Documentation Metrics
+## 📊 Documentation Notes
 
-- **Total Documents**: 16 comprehensive documents
-- **Categories**: 5 organized categories
-- **Key Milestone Docs**: 3 major milestone documents created
-- **Security Coverage**: 100% - All security aspects documented
-- **Deployment Coverage**: 100% - Complete deployment process documented
+- Canonical entry point: `docs/INDEX.md`
+- Launch readiness artifacts: `docs/deployment/LAUNCH_READINESS_CHECKLIST.md`, `docs/deployment/GO_NO_GO_SUMMARY.md`
+- Generated reports: `docs/claudedocs-index.md`
 
 ---
 
@@ -195,7 +214,8 @@ Frontend (Angular 19) ↔ Backend (.NET 8 API) ↔ External APIs
 - **Deployment Milestone Documentation**: August 5, 2025
 - **Security Review Summary**: August 5, 2025
 - **Milestone Achievement Summary**: August 5, 2025
-- **Documentation Index**: August 5, 2025
+- **Launch Readiness Artifacts**: December 19, 2025
+- **Documentation Index**: December 19, 2025
 
 ### Maintenance Schedule
 - **Weekly**: Update operational metrics and status
