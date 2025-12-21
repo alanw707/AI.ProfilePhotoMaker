@@ -4,6 +4,8 @@
 
 The AI Profile Photo Maker API is a RESTful API built with .NET 8 that provides endpoints for authentication, image processing, style selection, credit management, and more. All endpoints return JSON responses and require JWT authentication unless otherwise specified.
 
+> Status: Partial reference. For the most current endpoint behavior, confirm against `docs/product/PRD.md` and the API controllers in `AI.ProfilePhotoMaker.API/Controllers/`.
+
 ## Base URL
 
 - Development: `http://localhost:5035/api`
@@ -243,42 +245,81 @@ Authorization: Bearer <token>
 
 ### Image Generation
 
+Note: current generation endpoints are `/replicate/generate` and `/replicate/generate/batch`. See `docs/product/PRD.md` for the authoritative list.
+
 #### Generate Images
 ```http
-POST /image/generate
+POST /replicate/generate
 Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "styleIds": [1, 3, 5]
+  "trainedModelVersion": "owner/model:version",
+  "style": "linkedin",
+  "numOutputs": 2
 }
 ```
 
 **Response:**
 ```json
 {
-  "generationId": "gen-id",
-  "stylesQueued": 3,
-  "estimatedCredits": 30,
-  "message": "Image generation started"
+  "success": true,
+  "data": {
+    "prediction": { "id": "pred-id" },
+    "creditsRemaining": 85,
+    "creditsCost": 10
+  }
 }
 ```
 
-#### Enhance Photo
+#### Enhance Photo (Replicate / OpenAI)
 ```http
-POST /image/enhance
+POST /replicate/enhance
 Authorization: Bearer <token>
-Content-Type: multipart/form-data
+Content-Type: application/json
 
-file: [binary data]
+{
+  "imageUrl": "https://...",
+  "enhancementType": "professional",
+  "turnstileToken": "optional"
+}
 ```
 
-**Response:**
+```http
+POST /enhancement/enhance
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "imageUrl": "https://...",
+  "enhancementType": "chibi",
+  "turnstileToken": "optional"
+}
+```
+
+**Response (Replicate):**
 ```json
 {
-  "enhancedImageUrl": "/enhanced/user-id/image.jpg",
-  "creditsUsed": 1,
-  "remainingCredits": 99
+  "success": true,
+  "data": {
+    "prediction": { "id": "pred-id" },
+    "creditsRemaining": 98,
+    "enhancementType": "professional"
+  }
+}
+```
+
+**Response (OpenAI):**
+```json
+{
+  "success": true,
+  "data": {
+    "provider": "OpenAI",
+    "Output": ["https://..."],
+    "dataUrl": "data:image/png;base64,...",
+    "creditsRemaining": 97,
+    "enhancementType": "chibi"
+  }
 }
 ```
 

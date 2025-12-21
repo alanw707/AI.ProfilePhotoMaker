@@ -26,7 +26,8 @@ public class RegisterUsernameCollisionIntegrationTests : IClassFixture<CustomWeb
             FirstName: "Test",
             LastName: "User",
             Gender: "male",
-            Ethnicity: "asian"
+            Ethnicity: "asian",
+            AgeConfirmed: true
         );
 
         var second = new RegisterDto(
@@ -35,7 +36,8 @@ public class RegisterUsernameCollisionIntegrationTests : IClassFixture<CustomWeb
             FirstName: "Test",
             LastName: "User",
             Gender: "male",
-            Ethnicity: "asian"
+            Ethnicity: "asian",
+            AgeConfirmed: true
         );
 
         var firstResponse = await _client.PostAsJsonAsync("/api/auth/register", first);

@@ -47,8 +47,8 @@ param stripeWebhookSecret string
 param openAiApiKey string
 
 @secure()
-@description('Brevo API key (xkeysib-...) for sending email via API')
-param emailApiKey string
+@description('Postmark server token for transactional email')
+param postmarkServerToken string
 
 @secure()
 @description('Cloudflare Turnstile secret key for bot verification')
@@ -391,8 +391,8 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
           identity: backendUserIdentity.id
         }
         {
-          name: 'email-api-key'
-          value: emailApiKey
+          name: 'postmark-server-token'
+          value: postmarkServerToken
         }
         {
           name: 'turnstile-secret-key'
@@ -534,7 +534,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               name: 'STRIPE_WEBHOOK_SECRET'
               secretRef: 'stripe-webhook-secret'
             }
-            // Email / notifications (Brevo SMTP)
+            // Email / notifications (Postmark API)
             {
               name: 'Email__Username'
               value: ''
@@ -564,12 +564,8 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
               value: 'true'
             }
             {
-              name: 'Email__ApiKey'
-              secretRef: 'email-api-key'
-            }
-            {
-              name: 'Email__DedicatedIp'
-              value: ''
+              name: 'Email__PostmarkServerToken'
+              secretRef: 'postmark-server-token'
             }
 
             // Cloudflare Turnstile bot verification (optional, but recommended for production).

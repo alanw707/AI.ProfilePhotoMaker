@@ -1,10 +1,10 @@
 ## Product Requirements Document (PRD) — AI.ProfilePhotoMaker
 
-Version: 1.1  
-Last updated: 2025-11-15
+Version: 1.2  
+Last updated: 2025-12-19
 
 ### 1) Product Summary
-- AI-powered profile/headshot photo maker with: user auth (email/password + Google OAuth), photo upload, custom model training on Replicate, styled image generation, photo enhancement, credits/credit packages, and automated data retention.
+- AI-powered profile/headshot photo maker with: user auth (email/password + Google OAuth), photo upload, custom model training on Replicate, styled image generation, photo enhancement (Replicate + OpenAI styles), credits/credit packages, and automated data retention.
 - Tech: ASP.NET Core Web API + Angular frontend, EF Core + SQL Server, optional Azure Blob Storage.
 
 ### 2) Goals
@@ -52,16 +52,17 @@ Styles & Selection
 
 Custom Model Training (Replicate)
 - Training requires purchased credits (15 credits). Prevent retrain when a READY model already exists.
-- Webhook `POST /api/webhooks/replicate/training-complete` updates model record and can auto-kick off generation for selected styles.
+- Training completion is detected via background polling; status endpoints reflect progress and final readiness.
 - Endpoints: `POST /api/replicate/train`, `GET /api/replicate/train/status/{trainingId}`.
 
 Styled Image Generation (Replicate)
 - Requires purchased credits (5 credits per image output). Generates 1–4 images per request; batch generation supported across multiple styles.
 - Endpoints: `POST /api/replicate/generate`, `POST /api/replicate/generate/batch`, `GET /api/replicate/generate/status/{predictionId}`.
 
-Photo Enhancement (Kontext Pro)
-- Basic tier feature using weekly credits (1 per enhancement). Enhances a single uploaded image.
-- Endpoint: `POST /api/replicate/enhance`.
+Photo Enhancement (Replicate + OpenAI)
+- Basic tier feature using weekly credits. Standard enhancements use Replicate Kontext Pro (1 credit).
+- Stylized enhancements (OpenAI gpt-image-1) use 2 credits and return direct image output instead of a Replicate prediction wrapper.
+- Endpoints: `POST /api/replicate/enhance` (Replicate), `POST /api/enhancement/enhance` (OpenAI).
 
 Credits & Payments
 - Weekly free credits for Basic tier: 5, reset every 7 days.
@@ -80,8 +81,8 @@ Webhooks & File Downloading
 - Training ZIP: requires ≥ 10 original uploads.
 - Credits:
   - Weekly (Basic): 5; resets every 7 days.
-  - Costs: enhancement = 1 (allows weekly), model_training = 15 (purchased only), styled_generation = 5 per image (purchased only).
-  - Consumption occurs after successful Replicate API call.
+  - Costs: enhancement = 1 (Replicate) or 2 (OpenAI styles, allows weekly), model_training = 15 (purchased only), styled_generation = 5 per image (purchased only).
+  - Consumption occurs before external API calls; failures refund credits.
 - Generation: 1–4 outputs per style per request; batch generation allowed; model availability checked.
 - Retention: originals 7 days; generated 30 days; scheduled at record creation and enforced by background job.
 
@@ -95,7 +96,8 @@ Webhooks & File Downloading
 - UsageLog: action, creditsCost, creditsRemaining.
 
 ### 9) External Services & Config
-- Replicate API: training, prediction, enhancement; webhooks for training/prediction complete; signature validation with 5-minute timestamp window.
+- Replicate API: training, prediction, enhancement; prediction-complete webhook uses signature validation with 5-minute timestamp window; training completion uses polling.
+- OpenAI API: gpt-image-1 photo enhancement for select styles; requires `OPENAI_API_KEY`.
 - Stripe: library wired; dev uses simulation flags; payment webhook handler exists but full flow is not enforced in UI yet.
 - Storage: Local or Azure Blob Storage chosen by connection string.
 
@@ -124,7 +126,7 @@ Webhooks & File Downloading
 - Training ZIP created when ≥10 images exist; returns public URL.
 - Training endpoint blocks when READY model exists; requires 15 purchased credits; consumes after starting.
 - Generation requires purchased credits (5 per output); generation fails gracefully when model unavailable.
-- Enhancement consumes 1 weekly credit; returns prediction and remaining credits.
+- Enhancement consumes 1 weekly credit (Replicate) or 2 credits (OpenAI styles); returns prediction or direct output plus remaining credits.
 - Retention background job sets and deletes data per policy; manual endpoints work.
 - Credit status/packaging endpoints return typed data; purchase adds credits to account.
 - Webhook ingestion persists generated images and sets retention; downloads images locally.
@@ -161,4 +163,3 @@ Webhooks & File Downloading
 - Credit: `/api/credit/*`
 - Retention: `/api/retentionpolicy/*`
 - Webhooks: `/api/webhooks/replicate/*`
-

@@ -144,6 +144,26 @@
         </div>
       </div>
 
+      <!-- Age Confirmation -->
+      <div>
+        <div class="flex items-start gap-3">
+          <input
+            id="ageConfirmed"
+            type="checkbox"
+            formControlName="ageConfirmed"
+            class="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+          <label for="ageConfirmed" class="text-sm text-gray-700 dark:text-gray-300">
+            I confirm that I am at least 13 years old and have read the
+            <a routerLink="/legal/children-privacy" class="text-indigo-600 hover:text-indigo-500 underline">
+              Children's Privacy Policy
+            </a>.
+          </label>
+        </div>
+        <div *ngIf="shouldShowAgeError()" class="mt-1 text-sm text-red-600 dark:text-red-400">
+          You must confirm you are at least 13 years old to continue.
+        </div>
+      </div>
+
       <!-- Submit Button -->
       <div>
         <button

@@ -5,11 +5,12 @@ import { AuthService } from './services/auth.service';
 import { ThemeService } from './services/theme.service';
 import { ConfigService } from './services/config.service';
 import { NotificationComponent } from './components/shared/notification/notification.component';
+import { CookieConsentComponent } from './components/shared/cookie-consent/cookie-consent.component';
 import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, NotificationComponent],
+  imports: [RouterOutlet, NotificationComponent, CookieConsentComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.sass',
   changeDetection: ChangeDetectionStrategy.OnPush,

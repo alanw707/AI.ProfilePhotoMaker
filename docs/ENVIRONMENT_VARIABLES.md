@@ -29,10 +29,9 @@ This document provides a comprehensive mapping of all environment variables used
 | Payment | `STRIPE_SECRET_KEY` | `STRIPE_SECRET_KEY` | All | Required for payments |
 | Payment | `STRIPE_PUBLISHABLE_KEY` | `STRIPE_PUBLISHABLE_KEY` | All | Required for payments |
 | Payment | `STRIPE_WEBHOOK_SECRET` | `STRIPE_WEBHOOK_SECRET` | All | Required for payments |
-| Email | `Email__UseApi` | `Email:UseApi` | All | Use Brevo API when true |
-| Email | `Email__ApiKey` | `Email:ApiKey` | Production | Brevo API key |
+| Email | `Email__UseApi` | `Email:UseApi` | All | Use Postmark API when true |
+| Email | `Email__PostmarkServerToken` | `Email:PostmarkServerToken` | Production | Postmark server token |
 | Email | `Email__FromEmail` | `Email:FromEmail` | All | Transactional sender address |
-| Email | `Email__DedicatedIp` | `Email:DedicatedIp` | Production | Optional dedicated IP for Brevo |
 | Email | `Email__FrontendBaseUrl` | `Email:FrontendBaseUrl` | All | Base URL for CTA links |
 
 ## Infrastructure vs Application Mapping
@@ -111,21 +110,17 @@ Some variables support both environment variable and configuration key formats:
 - `AZURE_STORAGE_CONNECTION_STRING` (**CRITICAL**: Real Azure Storage, not development storage)
 - `AZURE_STORAGE_CONTAINER_NAME` (**CRITICAL**: Container name for blob storage)
 
-### Email (Brevo) Configuration
+### Email (Postmark) Configuration
 
 Email settings are configured under the `Email` section in appsettings or via `Email__*` environment variables.
 
 **Common variables:**
 - `Email__Enabled` (true/false)
-- `Email__UseApi` (true/false) and `Email__ApiKey` (Brevo API key)
+- `Email__UseApi` (true/false) and `Email__PostmarkServerToken` (Postmark server token)
 - `Email__FromEmail` (use `no-reply@mail.aiprofilephotomaker.com` for transactional)
 - `Email__FromName`
-- `Email__DedicatedIp` (optional, adds Brevo `sender.ip` header for dedicated IP sending)
 - `Email__FrontendBaseUrl` (CTA links)
 - `Email__SandboxMode` (prefixes subjects with `[SANDBOX]` when true)
-
-**Optional JSON-only settings:**
-- `Email:ApiHeaders` (map of custom headers for Brevo API sends; prefer appsettings JSON over env vars)
 
 **Why Azure Storage is Critical in Production:**
 - Containerized environments cannot access local `/uploads` paths

@@ -6,15 +6,15 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { Router, RouterModule } from '@angular/router';
 import { AuthService, ProfileCompletionDto } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-complete-profile',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule],
   templateUrl: './complete-profile.component.html',
   styleUrls: ['./complete-profile.component.sass'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,6 +35,7 @@ export class CompleteProfileComponent implements OnInit {
       lastName: ['', [Validators.required, Validators.minLength(2)]],
       gender: ['', Validators.required],
       ethnicity: ['', Validators.required],
+      ageConfirmed: [false, Validators.requiredTrue],
     });
   }
 
@@ -70,6 +71,10 @@ export class CompleteProfileComponent implements OnInit {
     return this.f['ethnicity'].invalid && this.f['ethnicity'].touched;
   }
 
+  shouldShowAgeError(): boolean {
+    return this.f['ageConfirmed'].invalid && this.f['ageConfirmed'].touched;
+  }
+
   onSubmit(): void {
     this.error = '';
 
@@ -87,6 +92,7 @@ export class CompleteProfileComponent implements OnInit {
       lastName: this.f['lastName'].value,
       gender: this.f['gender'].value,
       ethnicity: this.f['ethnicity'].value,
+      ageConfirmed: this.f['ageConfirmed'].value,
     };
 
     this._authService.completeProfile(profileData).subscribe({
@@ -101,7 +107,7 @@ export class CompleteProfileComponent implements OnInit {
       },
       error: error => {
         this.loading = false;
-        this.error = error.message || 'Profile completion failed. Please try again.';
+        this.error = error?.error?.error || error?.message || 'Profile completion failed. Please try again.';
       },
     });
   }

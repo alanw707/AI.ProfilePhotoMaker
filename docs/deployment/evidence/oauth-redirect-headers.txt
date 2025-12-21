@@ -1,0 +1,19 @@
+HTTP/2 302 
+date: Sat, 20 Dec 2025 03:11:33 GMT
+content-length: 0
+location: https://accounts.google.com/o/oauth2/v2/auth?client_id=116968296687-fievkkqa9kdb2e3p1l11shh25bk751l4.apps.googleusercontent.com&redirect_uri=https%3A%2F%2Fapi.aiprofilephotomaker.com%2Fapi%2Fauth%2Fexternal-login-callback&response_type=code&scope=openid%20profile%20email&state=df988002-08b5-427f-b96a-f2cdda5ecf64
+server: cloudflare
+cache-control: no-cache,no-store
+expires: -1
+pragma: no-cache
+x-robots-tag: noindex, nofollow, noarchive, nosnippet
+x-rate-limit-limit: 1m
+x-rate-limit-remaining: 199
+x-rate-limit-reset: 2025-12-20T03:12:33.4426195Z
+set-cookie: AIPM.Session=CfDJ8LmazdEOpM1OgW%2BTFSWe1nAT9%2FocUhTWD7pGYOD6xMRzfOFNTdPuhSjo5Nut55xKlyT2xolXpg1a%2Ffpip%2FDkEOWs4Fy3uCGfT6NEflqaw2MBbBdqOYom5n0%2BqBHYuIb5toGBDErgqGz9oESAB7ndbzvH3rfzMRhBzu6f%2FjmZey29; domain=.aiprofilephotomaker.com; path=/; secure; samesite=none; httponly
+cf-cache-status: DYNAMIC
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=OtnlnRjuBVeEgUFgLkopqfKF9wBRxY1sFchE5WJ2ncqaZH7GjeB%2Bj0ydGniSUyJ9zzNr2MbjBpS6LpSB2g%2FQDSLoOm8VUK4gQAcCVw%2FCjwmFlz7BRGBz%2Bts%3D"}]}
+cf-ray: 9b0bf3f8aac38f16-LAS
+alt-svc: h3=":443"; ma=86400
+

@@ -223,10 +223,76 @@ export const routes: Routes = [
         title: 'Terms of Service - AI Profile Photo Maker',
       },
       {
+        path: 'retention-policy',
+        loadComponent: () =>
+          import('./pages/retention-policy/retention-policy.component').then(
+            m => m.RetentionPolicyComponent
+          ),
+        title: 'Data Retention Policy - AI Profile Photo Maker',
+      },
+      {
+        path: 'refund-policy',
+        loadComponent: () =>
+          import('./pages/refund-policy/refund-policy.component').then(
+            m => m.RefundPolicyComponent
+          ),
+        title: 'Refund Policy - AI Profile Photo Maker',
+      },
+      {
         path: 'cookies',
         loadComponent: () =>
-          import('./pages/privacy/privacy.component').then(m => m.PrivacyComponent),
+          import('./pages/cookies/cookies.component').then(m => m.CookiesComponent),
         title: 'Cookie Policy - AI Profile Photo Maker',
+      },
+      {
+        path: 'subprocessors',
+        loadComponent: () =>
+          import('./pages/subprocessors/subprocessors.component').then(m => m.SubprocessorsComponent),
+        title: 'Subprocessors - AI Profile Photo Maker',
+      },
+      {
+        path: 'ai-transparency',
+        loadComponent: () =>
+          import('./pages/ai-transparency/ai-transparency.component').then(
+            m => m.AiTransparencyComponent
+          ),
+        title: 'AI Transparency - AI Profile Photo Maker',
+      },
+      {
+        path: 'acceptable-use',
+        loadComponent: () =>
+          import('./pages/acceptable-use/acceptable-use.component').then(
+            m => m.AcceptableUseComponent
+          ),
+        title: 'Acceptable Use Policy - AI Profile Photo Maker',
+      },
+      {
+        path: 'ip-dmca',
+        loadComponent: () =>
+          import('./pages/ip-dmca/ip-dmca.component').then(m => m.IpDmcaComponent),
+        title: 'IP / DMCA Policy - AI Profile Photo Maker',
+      },
+      {
+        path: 'security',
+        loadComponent: () =>
+          import('./pages/security/security.component').then(m => m.SecurityComponent),
+        title: 'Security & Trust - AI Profile Photo Maker',
+      },
+      {
+        path: 'biometric-consent',
+        loadComponent: () =>
+          import('./pages/biometric-consent/biometric-consent.component').then(
+            m => m.BiometricConsentComponent
+          ),
+        title: 'Biometric Consent - AI Profile Photo Maker',
+      },
+      {
+        path: 'children-privacy',
+        loadComponent: () =>
+          import('./pages/children-privacy/children-privacy.component').then(
+            m => m.ChildrenPrivacyComponent
+          ),
+        title: "Children's Privacy - AI Profile Photo Maker",
       },
     ],
   },

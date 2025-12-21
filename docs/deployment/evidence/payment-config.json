@@ -1,0 +1,1 @@
+{"success":true,"data":{"paymentSimulation":{"enabled":false,"skipStripeIntegration":false,"reason":null},"stripe":{"enabled":true,"publishableKey":"pk_live_51S8L1fLxCaLUJOXxlHVTOnQ3PcpL7w22j2X0ux2Bga0TvOBOXkRxxczLxkGWEchQHNp5iB7gKQwpRuSGnZXrRvx000KcX09Fb4","webhookConfigured":true}},"message":null,"error":null}

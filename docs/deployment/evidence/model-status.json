@@ -1,0 +1,21 @@
+{
+  "canStartTraining": false,
+  "creditImpact": null,
+  "currentRequest": null,
+  "generationStatus": {
+    "completedAt": "2025-12-19T23:57:57.998521Z",
+    "error": null,
+    "outputCount": 0,
+    "predictionId": "8trxpajx3hrmc0cv7469c1txqw",
+    "startedAt": "2025-12-19T23:57:50.246513Z",
+    "status": "succeeded",
+    "style": "enhancement:background"
+  },
+  "hasTrainedModel": false,
+  "lastUpdated": "2025-12-20T03:15:25.7779097Z",
+  "reason": "No images uploaded",
+  "statusCode": "NotStarted",
+  "totalUploadedImages": 0,
+  "trainedModelId": null,
+  "trainedModelVersion": null
+}

@@ -36,15 +36,15 @@ sequenceDiagram
     participant API
     participant Storage
     participant Replicate
-    participant Webhook
+    participant Poller
 
     User->>API: Upload selfies
     API->>Storage: Store images
     API->>API: Create ZIP file
     API->>Replicate: Start training
     Replicate-->>API: Training ID
-    Replicate->>Webhook: Training complete
-    Webhook->>API: Update model status
+    Poller->>Replicate: Check training status
+    Poller->>API: Update model status when ready
     API->>Storage: Store model version
 ```
 
@@ -52,20 +52,22 @@ sequenceDiagram
 
 - **Model**: Fast FLUX Trainer (`replicate/fast-flux-trainer`)
 - **Training Time**: ~30 minutes
-- **Input Requirements**: 5-20 high-quality selfies
+- **Input Requirements**: 10-20 high-quality selfies
 - **Output**: Custom LoRA model for user
 
 #### Webhook Integration
 
+Training completion uses background polling. Webhooks are used for prediction completion (generated images).
+
 ```csharp
-[HttpPost("replicate-webhook")]
+[HttpPost("prediction-complete")]
 [ReplicateSignatureValidation]
 public async Task<IActionResult> HandleReplicateWebhook(
     [FromBody] JsonDocument body)
 {
     // Validate webhook signature
-    // Update model training status
-    // Trigger initial image generation
+    // Persist generated images
+    // Update retention metadata
 }
 ```
 
@@ -101,34 +103,28 @@ The system supports 23+ professional photo styles:
 #### Enhancement Features
 
 1. **AI-Powered Enhancement**
-   - Uses FLUX Kontext Pro model
-   - Improves lighting and clarity
-   - Maintains natural appearance
-   - Real-time preview
+   - Standard enhancements use Replicate FLUX Kontext Pro
+   - Stylized enhancements use OpenAI gpt-image-1 (select styles)
+   - Improves lighting and clarity while maintaining natural appearance
+   - UI routes to the correct provider based on `enhancementType`
 
 2. **Credit System**
-   - 5 free enhancements per week (Basic tier)
-   - 1 credit per enhancement
-   - Unlimited for Premium users
+   - Weekly credits available (Basic tier)
+   - Replicate enhancements cost 1 credit
+   - OpenAI styles cost 2 credits
 
 3. **Enhancement Process**
 
 ```typescript
-async enhancePhoto(file: File): Promise<EnhancedImage> {
-  // Validate image
-  const validation = await this.imageQualityService.validate(file);
-  
-  // Check credits
-  const hasCredits = await this.creditService.checkCredits(1);
-  
-  // Process enhancement
-  const enhanced = await this.api.post('/api/image/enhance', {
-    image: file,
-    model: 'flux-kontext-pro'
-  });
-  
-  return enhanced;
-}
+const openAIStyles = ['chibi', 'pixar_3d', 'studio_ghibli'];
+const isOpenAI = openAIStyles.includes(enhancementType);
+const endpoint = isOpenAI ? '/api/enhancement/enhance' : '/api/replicate/enhance';
+
+const result = await http.post(endpoint, {
+  imageUrl,
+  enhancementType,
+  turnstileToken
+});
 ```
 
 ## Technical Implementation

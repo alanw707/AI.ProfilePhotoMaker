@@ -19,6 +19,7 @@ import { ConfigService } from '../../services/config.service';
 import { AuthService } from '../../services/auth.service';
 import { TurnstileComponent } from '../../shared/turnstile/turnstile.component';
 import { finalize, Subscription, firstValueFrom } from 'rxjs';
+import { BiometricConsentService } from '../../services/biometric-consent.service';
 
 interface EnhancedImage {
   url: string;
@@ -53,6 +54,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   isResendingVerificationEmail = false;
   verificationMessage = '';
   allowedTypes: string[] = ['image/jpeg', 'image/png', 'image/webp'];
+  biometricConsentAccepted = false;
   turnstileToken = '';
   readonly turnstileSiteKey: string;
 
@@ -62,6 +64,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
   isSaved = false;
 
   private _stateSubscription!: Subscription;
+  private _consentSubscription?: Subscription;
 
   constructor(
     private _replicateService: ReplicateService,
@@ -70,6 +73,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     private _creditService: CreditService,
     private _configService: ConfigService,
     private _authService: AuthService,
+    private _biometricConsentService: BiometricConsentService,
     private _cdr: ChangeDetectorRef
   ) {
     this.turnstileSiteKey = this._configService.turnstileSiteKey;
@@ -104,7 +108,8 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     return (
       !this.isProcessing &&
       this.hasEnoughCredits() &&
-      (!this.requiresTurnstile() || !!this.turnstileToken)
+      (!this.requiresTurnstile() || !!this.turnstileToken) &&
+      this.biometricConsentAccepted
     );
   }
 
@@ -127,12 +132,18 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       this.isLoadingCredits = state.isLoading;
       this._cdr.detectChanges();
     });
+
+    this._consentSubscription = this._biometricConsentService.consent$.subscribe(consent => {
+      this.biometricConsentAccepted = !!consent?.accepted;
+      this._cdr.markForCheck();
+    });
   }
 
   ngOnDestroy() {
     if (this._stateSubscription) {
       this._stateSubscription.unsubscribe();
     }
+    this._consentSubscription?.unsubscribe();
   }
 
   triggerFileUpload() {
@@ -210,10 +221,26 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
     this._cdr.markForCheck();
   }
 
+  onBiometricConsentChange(accepted: boolean): void {
+    if (accepted) {
+      this._biometricConsentService.acceptConsent();
+    } else {
+      this._biometricConsentService.revokeConsent();
+    }
+    this._cdr.markForCheck();
+  }
+
   async startEnhancement() {
     if (!this.isEmailConfirmed) {
       this.verificationMessage =
         'Please verify your email address to use Photo Transform. Check your inbox (and spam) or resend verification.';
+      this._cdr.detectChanges();
+      return;
+    }
+
+    if (!this.biometricConsentAccepted) {
+      this.errorMessage =
+        'Please accept the biometric consent notice before transforming your photo.';
       this._cdr.detectChanges();
       return;
     }

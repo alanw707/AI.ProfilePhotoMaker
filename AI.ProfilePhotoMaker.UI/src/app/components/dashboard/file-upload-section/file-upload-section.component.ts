@@ -14,12 +14,14 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
+import { RouterModule } from '@angular/router';
+import { firstValueFrom, Subscription } from 'rxjs';
 
 import { FileUploadService } from '../../../services/file-upload.service';
 import { NotificationService } from '../../../services/notification.service';
 import { FileSecurityService } from '../../../services/file-security.service';
 import { FaceDetectionService } from '../../../services/face-detection.service';
+import { BiometricConsentService } from '../../../services/biometric-consent.service';
 
 import {
   QualityCheckError,
@@ -30,7 +32,7 @@ import {
 @Component({
   selector: 'app-file-upload-section',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './file-upload-section.component.html',
   styleUrls: ['./file-upload-section.component.sass'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -67,6 +69,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   qualityCheckProgress = '';
   qualityCheckErrors: QualityCheckError[] = [];
   invalidFilesFeedback: { fileName: string; reason: string }[] = [];
+  biometricConsentAccepted = false;
 
   // Global tooltip state
   activeTooltipError: QualityCheckError | null = null;
@@ -75,6 +78,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   // Document-level modal elements
   private _modalBackdrop: HTMLElement | null = null;
   private _modalElement: HTMLElement | null = null;
+  private _consentSubscription?: Subscription;
 
   // File preview cache for memory management
   private _filePreviewCache = new Map<File, string>();
@@ -86,6 +90,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
     private _fileUploadService: FileUploadService,
     private _notificationService: NotificationService,
     private _fileSecurityService: FileSecurityService,
+    private _biometricConsentService: BiometricConsentService,
     private _ngZone: NgZone,
     private _cdr: ChangeDetectorRef,
     private _injector: Injector
@@ -96,6 +101,11 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
     // Close popups when clicking outside
     document.addEventListener('click', this._closeAllPopups.bind(this));
+
+    this._consentSubscription = this._biometricConsentService.consent$.subscribe(consent => {
+      this.biometricConsentAccepted = !!consent?.accepted;
+      this._cdr.markForCheck();
+    });
   }
 
   // Lazy loading method for face detection service
@@ -109,6 +119,7 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this._cleanupFilePreviewCache();
     document.removeEventListener('click', this._closeAllPopups.bind(this));
+    this._consentSubscription?.unsubscribe();
 
     // Clean up any open modals
     this._removeDocumentLevelModal();
@@ -677,6 +688,14 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
 
   // Upload Process
   uploadImages(): void {
+    if (!this.biometricConsentAccepted) {
+      this._notificationService.error(
+        'Biometric Consent Required',
+        'Please review and accept the biometric consent notice before uploading photos.'
+      );
+      return;
+    }
+
     if (this.selectedFiles.length === 0) {
       this._notificationService.error('No Files Selected', 'Please select files to upload');
       return;
@@ -1342,8 +1361,18 @@ export class FileUploadSectionComponent implements OnInit, OnDestroy {
       this.hasSelectedFiles() &&
       !this.isUploading &&
       !this.isCheckingQuality &&
-      this.getValidFilesCount() > 0
+      this.getValidFilesCount() > 0 &&
+      this.biometricConsentAccepted
     );
+  }
+
+  onBiometricConsentChange(accepted: boolean): void {
+    if (accepted) {
+      this._biometricConsentService.acceptConsent();
+    } else {
+      this._biometricConsentService.revokeConsent();
+    }
+    this._cdr.markForCheck();
   }
 
   // Compact error message utility
