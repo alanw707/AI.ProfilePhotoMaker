@@ -117,7 +117,7 @@ Email settings are configured under the `Email` section in appsettings or via `E
 **Common variables:**
 - `Email__Enabled` (true/false)
 - `Email__UseApi` (true/false) and `Email__PostmarkServerToken` (Postmark server token)
-- `Email__FromEmail` (use `no-reply@mail.aiprofilephotomaker.com` for transactional)
+- `Email__FromEmail` (use `no-reply@aiprofilephotomaker.com` for transactional)
 - `Email__FromName`
 - `Email__FrontendBaseUrl` (CTA links)
 - `Email__SandboxMode` (prefixes subjects with `[SANDBOX]` when true)

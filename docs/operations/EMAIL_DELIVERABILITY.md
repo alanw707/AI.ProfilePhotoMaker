@@ -5,25 +5,25 @@ This guide documents the operational steps needed to improve deliverability of t
 ## Objectives
 
 - Align SPF/DKIM/DMARC with the transactional sender domain.
-- Use a dedicated transactional subdomain.
+- Use a dedicated transactional sender address on the verified domain.
 - Ensure plain-text parts are included in every transactional email.
 - Route sends through the Postmark API for primary transactional delivery.
 
 ## Recommended Domain Setup
 
-Use a dedicated transactional subdomain for sending:
+Use a dedicated transactional sender address on the verified domain:
 
-- Sender: `no-reply@mail.aiprofilephotomaker.com`
+- Sender: `no-reply@aiprofilephotomaker.com`
 - API base URLs stay unchanged.
 
 ## DNS Records
 
-Create/verify the following records for the transactional subdomain.
+Create/verify the following records for the transactional sender domain.
 
-### SPF (mail subdomain)
+### SPF (root domain)
 
 ```
-mail.aiprofilephotomaker.com TXT "v=spf1 include:spf.mtasv.net -all"
+aiprofilephotomaker.com TXT "v=spf1 include:spf.mtasv.net -all"
 ```
 
 ### DKIM (Postmark-provided CNAMEs)
@@ -31,35 +31,35 @@ mail.aiprofilephotomaker.com TXT "v=spf1 include:spf.mtasv.net -all"
 Postmark will provide the DKIM selectors for the subdomain. Example (use the exact records Postmark gives you):
 
 ```
-postmark1._domainkey.mail.aiprofilephotomaker.com CNAME <postmark-provided>
-postmark2._domainkey.mail.aiprofilephotomaker.com CNAME <postmark-provided>
+postmark1._domainkey.aiprofilephotomaker.com CNAME <postmark-provided>
+postmark2._domainkey.aiprofilephotomaker.com CNAME <postmark-provided>
 ```
 
-### DMARC (mail subdomain)
+### DMARC (root domain)
 
 Start relaxed while validating, then tighten after Inbox placement stabilizes:
 
 ```
-_dmarc.mail.aiprofilephotomaker.com TXT "v=DMARC1; p=none; adkim=r; aspf=r; rua=mailto:dmarc_rua@onsecureserver.net;"
+_dmarc.aiprofilephotomaker.com TXT "v=DMARC1; p=none; adkim=r; aspf=r; rua=mailto:dmarc_rua@onsecureserver.net;"
 ```
 
 After validation:
 
 ```
-_dmarc.mail.aiprofilephotomaker.com TXT "v=DMARC1; p=quarantine; adkim=r; aspf=r; rua=mailto:dmarc_rua@onsecureserver.net;"
+_dmarc.aiprofilephotomaker.com TXT "v=DMARC1; p=quarantine; adkim=r; aspf=r; rua=mailto:dmarc_rua@onsecureserver.net;"
 ```
 
 ## Postmark Configuration (Primary)
 
 1. Create a Postmark account and a Server (capture the Server API token).
-2. Verify the sender domain `mail.aiprofilephotomaker.com`.
+2. Verify the sender domain `aiprofilephotomaker.com`.
 3. Add Postmark DKIM/SPF records in Cloudflare (DNS only).
 4. Confirm a Message Stream (defaults to `outbound`).
 
 ## Application Configuration
 
 - Set `Email__UseApi=true` and provide `Email__PostmarkServerToken` in production.
-- Set `Email__FromEmail=no-reply@mail.aiprofilephotomaker.com`.
+- Set `Email__FromEmail=no-reply@aiprofilephotomaker.com`.
 - Optionally set `Email__PostmarkMessageStream` (defaults to `outbound`).
 - Keep `Email__FrontendBaseUrl` set to `https://app.aiprofilephotomaker.com`.
 
@@ -78,4 +78,4 @@ _dmarc.mail.aiprofilephotomaker.com TXT "v=DMARC1; p=quarantine; adkim=r; aspf=r
 
 ## Notes
 
-- If root domain (`aiprofilephotomaker.com`) is used as the From domain, update SPF to include Postmark.
+- If you switch to a dedicated subdomain later, update SPF/DKIM/DMARC for that subdomain accordingly.

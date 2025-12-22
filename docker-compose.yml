@@ -71,7 +71,7 @@ services:
       Email__Enabled: ${Email__Enabled:-false}
       Email__Username: ${Email__Username}
       Email__Password: ${Email__Password}
-      Email__FromEmail: ${Email__FromEmail:-no-reply@mail.aiprofilephotomaker.com}
+      Email__FromEmail: ${Email__FromEmail:-no-reply@aiprofilephotomaker.com}
       Email__FromName: ${Email__FromName:-AI Profile Photo Maker}
       Email__SmtpHost: ${Email__SmtpHost:-}
       Email__SmtpPort: ${Email__SmtpPort:-465}
