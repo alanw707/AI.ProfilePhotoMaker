@@ -26,7 +26,7 @@ public class EmailNotificationServiceTests
             UseApi = true,
             PostmarkServerToken = "test-token",
             PostmarkMessageStream = "outbound",
-            FromEmail = "no-reply@mail.aiprofilephotomaker.com",
+            FromEmail = "no-reply@aiprofilephotomaker.com",
             FromName = "AI Profile Photo Maker",
             FrontendBaseUrl = "https://app.aiprofilephotomaker.com",
             SandboxMode = false
@@ -48,7 +48,7 @@ public class EmailNotificationServiceTests
 
         using var document = JsonDocument.Parse(handler.LastBody ?? string.Empty);
         var root = document.RootElement;
-        Assert.Equal("AI Profile Photo Maker <no-reply@mail.aiprofilephotomaker.com>", root.GetProperty("From").GetString());
+        Assert.Equal("AI Profile Photo Maker <no-reply@aiprofilephotomaker.com>", root.GetProperty("From").GetString());
         Assert.Equal("outbound", root.GetProperty("MessageStream").GetString());
         Assert.True(root.TryGetProperty("TextBody", out var textBody));
         Assert.False(string.IsNullOrWhiteSpace(textBody.GetString()));
@@ -64,7 +64,7 @@ public class EmailNotificationServiceTests
             Enabled = true,
             UseApi = true,
             PostmarkServerToken = "REPLACE_WITH_POSTMARK_SERVER_TOKEN",
-            FromEmail = "no-reply@mail.aiprofilephotomaker.com",
+            FromEmail = "no-reply@aiprofilephotomaker.com",
             FromName = "AI Profile Photo Maker",
             FrontendBaseUrl = "https://app.aiprofilephotomaker.com",
             SandboxMode = false

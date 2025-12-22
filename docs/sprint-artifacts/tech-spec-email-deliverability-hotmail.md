@@ -53,7 +53,7 @@ Improve deliverability by hardening authentication alignment, reducing spam sign
 
 - Prefer Postmark API for production sends and explicitly include `TextBody`.
 - Add a small HTML-to-text builder for transactional messages; avoid external dependencies.
-- Move From address to a transactional subdomain (e.g., `no-reply@mail.aiprofilephotomaker.com`).
+- Move From address to the transactional sender domain (e.g., `no-reply@aiprofilephotomaker.com`).
 
 ## Implementation Plan
 
@@ -66,14 +66,14 @@ Improve deliverability by hardening authentication alignment, reducing spam sign
   - For SMTP: set `Body` to text and add HTML as an alternate view, or use `AlternateViews` with both.
 - [x] Task 3: Add Postmark API configuration and ensure TextBody + MessageStream are included; add tests.
 - [x] Task 4: Update default configuration to use Postmark in production and local templates.
-- [x] Task 5: Implement transactional subdomain support.
-  - Update `FromEmail` (and optionally `ReplyTo`) to `no-reply@mail.aiprofilephotomaker.com`.
-  - Ensure Postmark sender/domain configuration supports the subdomain.
+- [x] Task 5: Implement transactional sender domain support.
+  - Update `FromEmail` (and optionally `ReplyTo`) to `no-reply@aiprofilephotomaker.com`.
+  - Ensure Postmark sender/domain configuration supports the sender domain.
 - [ ] Task 6: Update DNS records:
-  - SPF for `mail.aiprofilephotomaker.com` to include Postmark (e.g., `v=spf1 include:spf.mtasv.net -all`).
-  - DKIM for the transactional subdomain (Postmark-provided CNAMEs).
-  - DMARC for subdomain (start at `p=none` and move to `p=quarantine` after validation).
-  - Ensure root domain SPF still includes any needed senders (Cloudflare + Postmark if root domain is used).
+  - SPF for `aiprofilephotomaker.com` to include Postmark (e.g., `v=spf1 include:spf.mtasv.net -all`).
+  - DKIM for the transactional sender domain (Postmark-provided CNAMEs).
+  - DMARC for sender domain (start at `p=none` and move to `p=quarantine` after validation).
+  - If a dedicated subdomain is adopted later, add SPF/DKIM/DMARC records for that subdomain.
 - [x] Task 7: Log Postmark MessageID on API success for troubleshooting and support.
 - [x] Task 8: Update operational docs with Postmark setup and verification checklist.
 

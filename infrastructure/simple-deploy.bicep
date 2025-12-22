@@ -545,7 +545,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             }
             {
               name: 'Email__FromEmail'
-              value: 'no-reply@mail.aiprofilephotomaker.com'
+              value: 'no-reply@aiprofilephotomaker.com'
             }
             {
               name: 'Email__FromName'
