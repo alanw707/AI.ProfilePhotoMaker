@@ -67,18 +67,18 @@ services:
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
       STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
-      # Email / Brevo SMTP (optional for local testing)
+      # Email (SMTP or API providers, optional for local testing)
       Email__Enabled: ${Email__Enabled:-false}
       Email__Username: ${Email__Username}
       Email__Password: ${Email__Password}
       Email__FromEmail: ${Email__FromEmail:-no-reply@mail.aiprofilephotomaker.com}
       Email__FromName: ${Email__FromName:-AI Profile Photo Maker}
-      Email__SmtpHost: ${Email__SmtpHost:-smtp-relay.brevo.com}
+      Email__SmtpHost: ${Email__SmtpHost:-}
       Email__SmtpPort: ${Email__SmtpPort:-465}
       Email__EnableSsl: ${Email__EnableSsl:-true}
-      Email__UseApi: ${Email__UseApi:-false}
-      Email__ApiKey: ${Email__ApiKey:-}
-      Email__DedicatedIp: ${Email__DedicatedIp:-}
+      Email__UseApi: ${Email__UseApi:-true}
+      Email__PostmarkServerToken: ${Email__PostmarkServerToken:-}
+      Email__PostmarkMessageStream: ${Email__PostmarkMessageStream:-outbound}
       Email__SandboxMode: ${Email__SandboxMode:-true}
       Email__FrontendBaseUrl: ${Email__FrontendBaseUrl:-http://localhost:4200}
       # Use a docker-specific connection string so host env vars (often pointing to localhost)

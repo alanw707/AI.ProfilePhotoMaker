@@ -13,7 +13,7 @@ import { Meta, Title } from '@angular/platform-browser';
         <h1 class="text-4xl font-bold text-gray-900 mb-8">Terms of Service</h1>
 
         <div class="bg-white rounded-lg shadow-sm p-8 prose prose-gray max-w-none">
-          <p class="text-gray-600 mb-6">Last updated: January 28, 2024</p>
+          <p class="text-gray-600 mb-6">Last updated: December 19, 2025</p>
 
           <h2 class="text-2xl font-semibold mt-8 mb-4">1. Acceptance of Terms</h2>
           <p>
@@ -24,30 +24,47 @@ import { Meta, Title } from '@angular/platform-browser';
           <h2 class="text-2xl font-semibold mt-8 mb-4">2. Use License</h2>
           <p>
             We grant you a personal, non-exclusive, non-transferable license to use our service for
-            creating AI-enhanced profile photos. You retain all rights to your original photos and
-            the enhanced versions we create.
+            creating AI-enhanced profile photos. You retain all rights to your original photos. We
+            grant you a license to use the AI-generated outputs created for you.
           </p>
 
           <h2 class="text-2xl font-semibold mt-8 mb-4">3. User Obligations</h2>
           <p>
             You agree to use the service only for lawful purposes and in accordance with these
             Terms. You must not upload inappropriate, offensive, or copyrighted content that you
-            don't own.
+            do not own or have rights to use.
           </p>
 
-          <h2 class="text-2xl font-semibold mt-8 mb-4">4. Payment Terms</h2>
+          <h2 class="text-2xl font-semibold mt-8 mb-4">4. AI Processing</h2>
+          <p>
+            By using the service, you direct us to process your photos using third-party AI
+            providers to create outputs. You are responsible for ensuring you have the rights and
+            permissions to upload and process the photos you submit.
+          </p>
+
+          <h2 class="text-2xl font-semibold mt-8 mb-4">5. Privacy and Data</h2>
+          <p>
+            Our Privacy Policy explains how we collect, use, retain, and share data, including
+            retention of input photos and generated images. Data export currently includes account
+            metadata and usage records, not photo files. By using the service, you agree to the
+            Privacy Policy.
+          </p>
+
+          <h2 class="text-2xl font-semibold mt-8 mb-4">6. Payment Terms</h2>
           <p>
             Purchases are final and non-refundable, except as required by law or as explicitly
-            stated in our refund policy. We offer a 7-day satisfaction guarantee.
+            stated in our
+            <a routerLink="/legal/refund-policy">Refund Policy</a>. We offer a 7-day satisfaction
+            guarantee.
           </p>
 
-          <h2 class="text-2xl font-semibold mt-8 mb-4">5. Limitation of Liability</h2>
+          <h2 class="text-2xl font-semibold mt-8 mb-4">7. Limitation of Liability</h2>
           <p>
             AI Profile Photo Maker shall not be liable for any indirect, incidental, special,
             consequential, or punitive damages resulting from your use of the service.
           </p>
 
-          <h2 class="text-2xl font-semibold mt-8 mb-4">6. Contact Information</h2>
+          <h2 class="text-2xl font-semibold mt-8 mb-4">8. Contact Information</h2>
           <p>
             For any questions regarding these Terms of Service, please contact us at
             legal&#64;aiprofilephotomaker.com.

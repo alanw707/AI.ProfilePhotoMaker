@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace AI.ProfilePhotoMaker.API.Configuration;
 
 public class EmailOptions
@@ -21,24 +19,19 @@ public class EmailOptions
     public string? Password { get; set; }
 
     /// <summary>
-    /// When true, use Brevo HTTP API instead of SMTP for sending.
+    /// When true, use the Postmark API instead of SMTP for sending.
     /// </summary>
     public bool UseApi { get; set; } = false;
 
     /// <summary>
-    /// Brevo API key (xkeysib-...), used when UseApi is true.
+    /// Postmark server token, used when UseApi is true.
     /// </summary>
-    public string? ApiKey { get; set; }
+    public string? PostmarkServerToken { get; set; }
 
     /// <summary>
-    /// Optional custom headers for Brevo API sends (for example: sender.ip).
+    /// Optional message stream for Postmark (default: outbound).
     /// </summary>
-    public Dictionary<string, string>? ApiHeaders { get; set; }
-
-    /// <summary>
-    /// Dedicated IP address to use for Brevo API sends.
-    /// </summary>
-    public string? DedicatedIp { get; set; }
+    public string? PostmarkMessageStream { get; set; }
 
     /// <summary>
     /// When true, tag emails as sandbox to avoid confusing users in lower environments.

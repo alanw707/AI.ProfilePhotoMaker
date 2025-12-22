@@ -83,7 +83,7 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
           REPLICATE_WEBHOOK_SECRET: ${{ secrets.REPLICATE_WEBHOOK_SECRET }}
-          EMAIL__APIKEY: ${{ secrets.EMAIL__APIKEY }}
+          EMAIL__POSTMARK_SERVER_TOKEN: ${{ secrets.EMAIL__POSTMARK_SERVER_TOKEN }}
           EMAIL__USEAPI: ${{ secrets.EMAIL__USEAPI }}
           SQL_ADMIN_PASSWORD: ${{ secrets.SQL_ADMIN_PASSWORD }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
@@ -151,7 +151,7 @@ jobs:
           fi
           validate_secret "REPLICATE_API_TOKEN" "$REPLICATE_API_TOKEN" 20 || ((errors++))
           validate_secret "REPLICATE_WEBHOOK_SECRET" "$REPLICATE_WEBHOOK_SECRET" 32 || ((errors++))
-          validate_secret "EMAIL__APIKEY" "$EMAIL__APIKEY" 20 || ((errors++))
+          validate_secret "EMAIL__POSTMARK_SERVER_TOKEN" "$EMAIL__POSTMARK_SERVER_TOKEN" 20 || ((errors++))
           validate_secret "EMAIL__USEAPI" "$EMAIL__USEAPI" 4 || ((errors++))
           
           # Enhanced Google OAuth validation (detect the current production issue)
@@ -538,8 +538,8 @@ jobs:
               "openAiApiKey": {
                 "value": "${{ secrets.OPENAI_API_KEY }}"
               },
-              "emailApiKey": {
-                "value": "${{ secrets.EMAIL__APIKEY }}"
+              "postmarkServerToken": {
+                "value": "${{ secrets.EMAIL__POSTMARK_SERVER_TOKEN }}"
               },
               "turnstileSecretKey": {
                 "value": "${{ secrets.TURNSITE_SECRET_KEY }}"
@@ -922,14 +922,14 @@ jobs:
             --secrets \
               replicate-token='${{ secrets.REPLICATE_API_TOKEN }}' \
               replicate-webhook-secret='${{ secrets.REPLICATE_WEBHOOK_SECRET }}' \
-              email-api-key='${{ secrets.EMAIL__APIKEY }}' \
+              postmark-server-token='${{ secrets.EMAIL__POSTMARK_SERVER_TOKEN }}' \
               turnstile-secret-key='${{ secrets.TURNSITE_SECRET_KEY }}'
 
           # Ensure API path is enabled
           az containerapp update \
             --name aipm-api-v1 \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --set-env-vars Email__UseApi=true
+            --set-env-vars Email__UseApi=true Email__PostmarkServerToken=secretref:postmark-server-token
 
           # Force a new revision so app reads updated secrets at startup
           REV_TS=$(date +%s)

@@ -359,7 +359,7 @@
                     clip-rule="evenodd"></path>
                 </svg>
               </div>
-              <span class="trust-text">100% privacy guaranteed</span>
+              <span class="trust-text">Privacy-first handling</span>
             </div>
           </div>
           <div class="trust-stats">
@@ -672,71 +672,40 @@
   </section>
 
   <!-- Footer -->
-  <footer class="landing-footer text-white py-12">
+  <footer class="landing-footer text-white py-10">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="grid md:grid-cols-4 gap-8 mb-8">
-        <!-- Company -->
-        <div>
-          <h3 class="font-semibold text-lg mb-4">Company</h3>
-          <ul class="space-y-2">
-            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">About Us</a></li>
-            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Careers</a></li>
-            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Press</a></li>
-            <li>
-              <a
-                routerLink="/help"
-                class="text-gray-400 hover:text-white transition-colors"
-                aria-label="Navigate to help and support">
-                Contact
-              </a>
-            </li>
-          </ul>
-        </div>
-
+      <div class="grid md:grid-cols-2 gap-6 mb-6">
         <!-- Product -->
         <div>
           <h3 class="font-semibold text-lg mb-4">Product</h3>
           <ul class="space-y-2">
-            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Features</a></li>
             <li>
-              <a
-                (click)="navigateToPricing()"
-                (keydown.enter)="navigateToPricing()"
-                (keydown.space)="navigateToPricing()"
-                tabindex="0"
-                role="button"
-                class="cursor-pointer text-gray-400 hover:text-white transition-colors"
-                aria-label="Navigate to Pricing page">
+              <a routerLink="/features" class="text-gray-400 hover:text-white transition-colors">
+                Features
+              </a>
+            </li>
+            <li>
+              <a routerLink="/examples" class="text-gray-400 hover:text-white transition-colors">
+                Examples
+              </a>
+            </li>
+            <li>
+              <a routerLink="/help" class="text-gray-400 hover:text-white transition-colors">
+                FAQ
+              </a>
+            </li>
+            <li>
+              <a routerLink="/pricing" class="text-gray-400 hover:text-white transition-colors">
                 Pricing
               </a>
             </li>
-            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">API</a></li>
-            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Integrations</a></li>
-          </ul>
-        </div>
-
-        <!-- Resources -->
-        <div>
-          <h3 class="font-semibold text-lg mb-4">Resources</h3>
-          <ul class="space-y-2">
-            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Blog</a></li>
-            <li>
-              <a
-                routerLink="/help"
-                class="text-gray-400 hover:text-white transition-colors"
-                aria-label="Navigate to help and FAQ">
-                Help Center
-              </a>
-            </li>
-            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Tutorials</a></li>
-            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Status</a></li>
           </ul>
         </div>
 
         <!-- Legal -->
         <div>
           <h3 class="font-semibold text-lg mb-4">Legal</h3>
-          <ul class="space-y-2">
+          <ul class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
             <li>
               <a routerLink="/legal/privacy" class="text-gray-400 hover:text-white transition-colors">Privacy Policy</a>
             </li>
@@ -744,9 +713,60 @@
               <a routerLink="/legal/terms" class="text-gray-400 hover:text-white transition-colors">Terms of Service</a>
             </li>
             <li>
+              <a routerLink="/legal/refund-policy" class="text-gray-400 hover:text-white transition-colors">Refund Policy</a>
+            </li>
+            <li>
+              <a routerLink="/legal/retention-policy" class="text-gray-400 hover:text-white transition-colors">
+                Data Retention
+              </a>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="text-gray-400 hover:text-white transition-colors"
+                (click)="openCookiePreferences()"
+                aria-label="Open cookie preferences">
+                Cookie Preferences
+              </button>
+            </li>
+            <li>
               <a routerLink="/legal/cookies" class="text-gray-400 hover:text-white transition-colors">Cookie Policy</a>
             </li>
-            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">GDPR</a></li>
+            <li>
+              <a routerLink="/legal/subprocessors" class="text-gray-400 hover:text-white transition-colors">
+                Subprocessors
+              </a>
+            </li>
+            <li>
+              <a routerLink="/legal/ai-transparency" class="text-gray-400 hover:text-white transition-colors">
+                AI Transparency
+              </a>
+            </li>
+            <li>
+              <a routerLink="/legal/acceptable-use" class="text-gray-400 hover:text-white transition-colors">
+                Acceptable Use
+              </a>
+            </li>
+            <li>
+              <a routerLink="/legal/ip-dmca" class="text-gray-400 hover:text-white transition-colors">
+                IP / DMCA
+              </a>
+            </li>
+            <li>
+              <a routerLink="/legal/security" class="text-gray-400 hover:text-white transition-colors">
+                Security & Trust
+              </a>
+            </li>
+            <li>
+              <a routerLink="/legal/biometric-consent" class="text-gray-400 hover:text-white transition-colors">
+                Biometric Consent
+              </a>
+            </li>
+            <li>
+              <a routerLink="/legal/children-privacy" class="text-gray-400 hover:text-white transition-colors">
+                Children's Privacy
+              </a>
+            </li>
           </ul>
         </div>
       </div>

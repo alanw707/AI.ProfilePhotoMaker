@@ -166,6 +166,23 @@
             Complete the bot check above to enable Transform.
           </p>
 
+          <div class="biometric-consent" *ngIf="isEmailConfirmed">
+            <label class="consent-checkbox">
+              <input
+                type="checkbox"
+                [ngModel]="biometricConsentAccepted"
+                (ngModelChange)="onBiometricConsentChange($event)" />
+              <span>
+                I consent to the collection and use of my biometric data (face geometry) to process
+                this photo. I have read the
+                <a routerLink="/legal/biometric-consent">Biometric Consent & Retention Notice</a>.
+              </span>
+            </label>
+            <p class="consent-hint" *ngIf="!biometricConsentAccepted">
+              Consent is required before transforming photos.
+            </p>
+          </div>
+
 	          <button
               class="btn btn-primary enhance-btn"
               type="button"

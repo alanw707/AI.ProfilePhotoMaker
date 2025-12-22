@@ -49,7 +49,7 @@ Operational procedures, API documentation, and system management.
 - **[API_REFERENCE.md](./operations/API_REFERENCE.md)** - Complete API documentation and endpoints
 - **[Webhook Integration Guide](./webhooks/INTEGRATION.md)** - Architecture, endpoints, and security
 - **[OPERATIONAL_RUNBOOK.md](./operations/OPERATIONAL_RUNBOOK.md)** - Production operations, monitoring, and incident response
-- **[EMAIL_DELIVERABILITY.md](./operations/EMAIL_DELIVERABILITY.md)** - Transactional email deliverability, DNS, and Brevo setup
+- **[EMAIL_DELIVERABILITY.md](./operations/EMAIL_DELIVERABILITY.md)** - Transactional email deliverability, DNS, and Postmark setup
 - **[CREDIT_SYSTEM.md](./operations/CREDIT_SYSTEM.md)** - Credit system implementation and management
 - **[GALLERY_MANAGEMENT.md](./operations/GALLERY_MANAGEMENT.md)** - Gallery features and management procedures
 - **[PHOTO_PROCESSING.md](./operations/PHOTO_PROCESSING.md)** - Photo processing pipeline and AI integration

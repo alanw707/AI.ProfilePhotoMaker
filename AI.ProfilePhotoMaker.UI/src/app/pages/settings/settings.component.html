@@ -90,32 +90,32 @@
               <div class="policy-content">
                 <div class="policy-item">
                   <div class="policy-icon">📁</div>
-                  <div class="policy-text">
-                    <strong>Input Photos:</strong>
-                    Stored permanently until you delete them or your account
-                  </div>
+                <div class="policy-text">
+                  <strong>Input Photos:</strong>
+                    Retained up to 7 days after upload unless you delete them sooner
                 </div>
-                <div class="policy-item">
-                  <div class="policy-icon">⏰</div>
-                  <div class="policy-text">
-                    <strong>Generated Photos:</strong>
-                    Available for download for 1 hour after creation
-                  </div>
+              </div>
+              <div class="policy-item">
+                <div class="policy-icon">⏰</div>
+                <div class="policy-text">
+                  <strong>Generated Photos:</strong>
+                    Retained up to 30 days after creation unless you delete them sooner
                 </div>
-                <div class="policy-item">
-                  <div class="policy-icon">🧠</div>
-                  <div class="policy-text">
-                    <strong>AI Models:</strong>
-                    Stored permanently for premium users, automatically expire for basic users
-                  </div>
+              </div>
+              <div class="policy-item">
+                <div class="policy-icon">🧠</div>
+                <div class="policy-text">
+                  <strong>AI Models:</strong>
+                    Retained while your model exists; deleted when you delete the model or account
                 </div>
-                <div class="policy-item">
-                  <div class="policy-icon">📊</div>
-                  <div class="policy-text">
-                    <strong>Usage Logs:</strong>
-                    Kept for billing and analytics purposes, automatically cleaned after 1 year
-                  </div>
+              </div>
+              <div class="policy-item">
+                <div class="policy-icon">📊</div>
+                <div class="policy-text">
+                  <strong>Usage Logs:</strong>
+                    Retained for billing and analytics as needed; deleted when you delete your account
                 </div>
+              </div>
                 <div class="policy-item">
                   <div class="policy-icon">📸</div>
                   <div class="policy-text">
@@ -160,6 +160,16 @@
           <div class="section-content">
             <!-- Individual Data Actions -->
             <div class="data-actions">
+              <div class="action-item">
+                <div class="action-info">
+                  <h4>Cookie Preferences</h4>
+                  <p>Manage your non-essential cookie choices for this device.</p>
+                </div>
+                <button class="btn btn-secondary" type="button" (click)="openCookiePreferences()">
+                  Manage Cookies
+                </button>
+              </div>
+
               <div class="action-item">
                 <div class="action-info">
                   <h4>Delete Input Photos</h4>

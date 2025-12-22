@@ -13,7 +13,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService, LoginDto } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
@@ -23,7 +23,7 @@ import { finalize } from 'rxjs';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.sass'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,6 +33,7 @@ export class LoginComponent implements OnInit, OnDestroy {
   loading = false;
   error = '';
   returnUrl = '';
+  googleAgeConfirmed = false;
   private _authSub?: any;
 
   // Use inject function to reduce constructor parameters
@@ -253,6 +254,12 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   navigateToRegister(): void {
     this._router.navigate(['/auth/register']);
+  }
+
+  onGoogleAgeChange(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.googleAgeConfirmed = target.checked;
+    this._cdr.markForCheck();
   }
 
   loginWithGoogle(): void {

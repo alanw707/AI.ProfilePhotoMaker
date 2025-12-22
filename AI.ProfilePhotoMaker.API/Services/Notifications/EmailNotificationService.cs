@@ -204,10 +204,12 @@ public class EmailNotificationService : IEmailNotificationService
             return;
         }
 
-        _logger.LogInformation("Email config for {Template}: UseApi={UseApi}, ApiKeySet={ApiKeySet}, SmtpHost={SmtpHost}, UsernameSet={UsernameSet}",
+        var hasPostmarkToken = HasUsablePostmarkToken(_options.PostmarkServerToken);
+
+        _logger.LogInformation("Email config for {Template}: UseApi={UseApi}, PostmarkTokenSet={PostmarkTokenSet}, SmtpHost={SmtpHost}, UsernameSet={UsernameSet}",
             template,
             _options.UseApi,
-            !string.IsNullOrWhiteSpace(_options.ApiKey),
+            hasPostmarkToken,
             S(_options.SmtpHost),
             !string.IsNullOrWhiteSpace(_options.Username));
 
@@ -217,16 +219,17 @@ public class EmailNotificationService : IEmailNotificationService
             return;
         }
 
-        var useApi = _options.UseApi && !string.IsNullOrWhiteSpace(_options.ApiKey);
+        var useApi = _options.UseApi && hasPostmarkToken;
         var wrappedHtml = WrapEmail(subject, htmlBody);
         var textBody = EmailContentBuilder.BuildTextContent(wrappedHtml);
-        if (useApi && !string.IsNullOrWhiteSpace(_options.DedicatedIp))
+
+        if (_options.UseApi && !useApi)
         {
-            _logger.LogInformation("Brevo dedicated IP enabled for {Template}", template);
+            _logger.LogWarning("Email API enabled but missing Postmark server token; falling back to SMTP when available.");
         }
         if (useApi)
         {
-            await SendEmailViaApiAsync(toEmail, subject, wrappedHtml, textBody, template, userId, replyToEmail, replyToName);
+            await SendEmailViaPostmarkAsync(toEmail, subject, wrappedHtml, textBody, template, userId, replyToEmail, replyToName);
             return;
         }
 
@@ -237,14 +240,14 @@ public class EmailNotificationService : IEmailNotificationService
             return;
         }
 
-        _logger.LogWarning("No email delivery path available (UseApi={UseApi}, ApiKeySet={ApiKeySet}, SmtpHost={SmtpHost}) for {Template}",
+        _logger.LogWarning("No email delivery path available (UseApi={UseApi}, PostmarkTokenSet={PostmarkTokenSet}, SmtpHost={SmtpHost}) for {Template}",
             _options.UseApi,
-            !string.IsNullOrWhiteSpace(_options.ApiKey),
+            hasPostmarkToken,
             S(_options.SmtpHost),
             template);
     }
 
-    private async Task SendEmailViaApiAsync(
+    private async Task SendEmailViaPostmarkAsync(
         string toEmail,
         string subject,
         string htmlBody,
@@ -256,32 +259,32 @@ public class EmailNotificationService : IEmailNotificationService
     {
         try
         {
-            var request = new HttpRequestMessage(HttpMethod.Post, "https://api.brevo.com/v3/smtp/email");
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://api.postmarkapp.com/email");
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            request.Headers.Add("api-key", _options.ApiKey);
+            request.Headers.Add("X-Postmark-Server-Token", _options.PostmarkServerToken);
 
             var payload = new Dictionary<string, object>
             {
-                ["sender"] = new { name = _options.FromName ?? "AI Profile Photo Maker", email = _options.FromEmail },
-                ["to"] = new[] { new { email = toEmail } },
-                ["subject"] = _options.SandboxMode ? $"[SANDBOX] {subject}" : subject,
-                ["htmlContent"] = htmlBody
+                ["From"] = BuildPostmarkFromAddress(),
+                ["To"] = toEmail,
+                ["Subject"] = _options.SandboxMode ? $"[SANDBOX] {subject}" : subject,
+                ["HtmlBody"] = htmlBody,
+                ["Tag"] = template
             };
 
             if (!string.IsNullOrWhiteSpace(textBody))
             {
-                payload["textContent"] = textBody;
+                payload["TextBody"] = textBody;
             }
 
-            var headers = BuildApiHeaders();
-            if (headers is { Count: > 0 })
+            if (!string.IsNullOrWhiteSpace(_options.PostmarkMessageStream))
             {
-                payload["headers"] = headers;
+                payload["MessageStream"] = _options.PostmarkMessageStream;
             }
 
             if (!string.IsNullOrWhiteSpace(replyToEmail))
             {
-                payload["replyTo"] = new { email = replyToEmail, name = replyToName ?? replyToEmail };
+                payload["ReplyTo"] = replyToName is null ? replyToEmail : $"{replyToName} <{replyToEmail}>";
             }
 
             var json = JsonSerializer.Serialize(payload);
@@ -291,25 +294,25 @@ public class EmailNotificationService : IEmailNotificationService
             var body = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
             {
-                var messageId = TryExtractMessageId(body);
+                var messageId = TryExtractPostmarkMessageId(body);
                 if (!string.IsNullOrWhiteSpace(messageId))
                 {
-                    _logger.LogInformation("Sent {Template} email via API to {Recipient} for user {UserId} (MessageId={MessageId})",
+                    _logger.LogInformation("Sent {Template} email via Postmark API to {Recipient} for user {UserId} (MessageId={MessageId})",
                         template, S(toEmail), Sid(userId), S(messageId));
                 }
                 else
                 {
-                    _logger.LogInformation("Sent {Template} email via API to {Recipient} for user {UserId}", template, S(toEmail), Sid(userId));
+                    _logger.LogInformation("Sent {Template} email via Postmark API to {Recipient} for user {UserId}", template, S(toEmail), Sid(userId));
                 }
             }
             else
             {
-                _logger.LogWarning("Failed API email send {Template} for user {UserId}. Status {Status}: {Body}", template, Sid(userId), response.StatusCode, S(body));
+                _logger.LogWarning("Failed Postmark API email send {Template} for user {UserId}. Status {Status}: {Body}", template, Sid(userId), response.StatusCode, S(body));
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Failed API email send {Template} for user {UserId}: {Reason}", template, Sid(userId), S(ex.Message));
+            _logger.LogWarning("Failed Postmark API email send {Template} for user {UserId}: {Reason}", template, Sid(userId), S(ex.Message));
         }
     }
 
@@ -366,34 +369,7 @@ public class EmailNotificationService : IEmailNotificationService
         }
     }
 
-    private Dictionary<string, string>? BuildApiHeaders()
-    {
-        Dictionary<string, string>? headers = null;
-
-        if (_options.ApiHeaders != null)
-        {
-            foreach (var entry in _options.ApiHeaders)
-            {
-                if (string.IsNullOrWhiteSpace(entry.Key) || string.IsNullOrWhiteSpace(entry.Value))
-                {
-                    continue;
-                }
-
-                headers ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                headers[entry.Key] = entry.Value;
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(_options.DedicatedIp))
-        {
-            headers ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            headers["sender.ip"] = _options.DedicatedIp;
-        }
-
-        return headers;
-    }
-
-    private static string? TryExtractMessageId(string body)
+    private static string? TryExtractPostmarkMessageId(string body)
     {
         if (string.IsNullOrWhiteSpace(body))
         {
@@ -403,7 +379,7 @@ public class EmailNotificationService : IEmailNotificationService
         try
         {
             using var document = JsonDocument.Parse(body);
-            if (document.RootElement.TryGetProperty("messageId", out var messageId) &&
+            if (document.RootElement.TryGetProperty("MessageID", out var messageId) &&
                 messageId.ValueKind == JsonValueKind.String)
             {
                 return messageId.GetString();
@@ -415,6 +391,21 @@ public class EmailNotificationService : IEmailNotificationService
         }
 
         return null;
+    }
+
+    private string BuildPostmarkFromAddress()
+    {
+        if (string.IsNullOrWhiteSpace(_options.FromEmail))
+        {
+            return string.Empty;
+        }
+
+        if (string.IsNullOrWhiteSpace(_options.FromName))
+        {
+            return _options.FromEmail;
+        }
+
+        return $"{_options.FromName} <{_options.FromEmail}>";
     }
 
     private string? BuildCtaLink(string? relativePath)
@@ -431,6 +422,24 @@ public class EmailNotificationService : IEmailNotificationService
         }
 
         return $"{baseUrl}/{relativePath.TrimStart('/')}";
+    }
+
+    private static bool HasUsablePostmarkToken(string? token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return false;
+        }
+
+        return !IsPlaceholderValue(token);
+    }
+
+    private static bool IsPlaceholderValue(string value)
+    {
+        return value.StartsWith("REPLACE_WITH_", StringComparison.OrdinalIgnoreCase)
+               || value.Contains("STORED_IN_USER_SECRETS", StringComparison.OrdinalIgnoreCase)
+               || value.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase)
+               || value.StartsWith("your_", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string BuildPrimaryButton(string label, string? url)

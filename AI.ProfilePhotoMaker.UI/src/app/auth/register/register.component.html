@@ -139,6 +139,19 @@
         </div>
       </div>
 
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" formControlName="ageConfirmed" />
+          <span>
+            I confirm that I am at least 13 years old and have read the
+            <a routerLink="/legal/children-privacy">Children's Privacy Policy</a>.
+          </span>
+        </label>
+        <div *ngIf="shouldShowAgeError()" class="invalid-feedback">
+          You must confirm you are at least 13 years old to create an account.
+        </div>
+      </div>
+
       <div *ngIf="error" class="alert alert-danger">
         {{ error }}
       </div>

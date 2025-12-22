@@ -7,6 +7,7 @@ public record RegisterDto(
     string LastName,
     string Gender,
     string Ethnicity,
+    bool AgeConfirmed,
     string? TurnstileToken = null
 );
 
@@ -14,7 +15,8 @@ public record ProfileCompletionDto(
     string FirstName,
     string LastName,
     string Gender,
-    string Ethnicity
+    string Ethnicity,
+    bool AgeConfirmed
 );
 
 public record ProfileCompletionCheckDto(

@@ -6,8 +6,8 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { Router, RouterModule } from '@angular/router';
 import { AuthService, RegisterDto } from '../../services/auth.service';
 import { ConfigService } from '../../services/config.service';
 import { TurnstileComponent } from '../../shared/turnstile/turnstile.component';
@@ -16,7 +16,7 @@ import { finalize } from 'rxjs';
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, TurnstileComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, TurnstileComponent],
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.sass'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -53,6 +53,7 @@ export class RegisterComponent {
         confirmPassword: ['', Validators.required],
         gender: ['', Validators.required],
         ethnicity: ['', Validators.required],
+        ageConfirmed: [false, Validators.requiredTrue],
       },
       {
         validators: this.passwordMatchValidator,
@@ -98,6 +99,10 @@ export class RegisterComponent {
 
   shouldShowEthnicityError(): boolean {
     return this.f['ethnicity'].invalid && this.f['ethnicity'].touched;
+  }
+
+  shouldShowAgeError(): boolean {
+    return this.f['ageConfirmed'].invalid && this.f['ageConfirmed'].touched;
   }
 
   passwordMatchValidator(control: AbstractControl): Record<string, boolean> | null {
@@ -160,6 +165,7 @@ export class RegisterComponent {
       password: this.f['password'].value,
       gender: this.f['gender'].value,
       ethnicity: this.f['ethnicity'].value,
+      ageConfirmed: this.f['ageConfirmed'].value,
       turnstileToken: this.turnstileSiteKey ? this.turnstileToken : undefined,
     };
 

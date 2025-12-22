@@ -196,6 +196,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return BadRequest(ModelState);
             }
 
+            if (!model.AgeConfirmed)
+            {
+                return BadRequest(new AuthResponseDto(false, "Age confirmation is required to create an account.", string.Empty, null));
+            }
+
             var turnstileOk = await _turnstile.VerifyAsync(model.TurnstileToken, HttpContext?.Connection?.RemoteIpAddress?.ToString());
             if (!turnstileOk)
             {
@@ -1015,6 +1020,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
+            }
+
+            if (!model.AgeConfirmed)
+            {
+                return BadRequest(new { success = false, error = "Age confirmation is required to complete profile." });
             }
 
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

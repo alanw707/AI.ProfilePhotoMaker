@@ -11,6 +11,7 @@ import { Style, StyleService } from '../../services/style.service';
 import { ConfigService } from '../../services/config.service';
 import { StylePreviewService } from '../../services/style-preview.service';
 import { AuthService } from '../../services/auth.service';
+import { CookieConsentService } from '../../services/cookie-consent.service';
 
 interface Plan {
   name: string;
@@ -205,7 +206,8 @@ export class LandingComponent implements OnInit, OnDestroy {
     private _creditService: CreditService,
     private _styleService: StyleService,
     private _config: ConfigService,
-    private _stylePreviewService: StylePreviewService
+    private _stylePreviewService: StylePreviewService,
+    private _cookieConsentService: CookieConsentService
   ) {
     this.currentTheme$ = this.themeService.theme$;
   }
@@ -231,6 +233,10 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   toggleTheme(): void {
     this.themeService.toggleTheme();
+  }
+
+  openCookiePreferences(): void {
+    this._cookieConsentService.requestPreferencesOpen();
   }
 
   loadPackagesFromDatabase(): void {

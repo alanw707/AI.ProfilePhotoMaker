@@ -169,6 +169,7 @@ describe('AuthService', () => {
         lastName: 'User',
         gender: 'prefer-not-to-say',
         ethnicity: 'prefer-not-to-say',
+        ageConfirmed: true,
       };
       const mockResponse = {
         isSuccess: true,
@@ -205,6 +206,7 @@ describe('AuthService', () => {
         lastName: '',
         gender: '',
         ethnicity: '',
+        ageConfirmed: false,
       };
       const errorResponse = {
         isSuccess: false,

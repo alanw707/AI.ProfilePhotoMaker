@@ -496,7 +496,7 @@ builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.Health.IDependencyH
 builder.Services.AddScoped<IAsyncFileService, AsyncFileService>();
 builder.Services.AddScoped<IAsyncZipService, AsyncZipService>();
 
-// Email notifications (supports SMTP or Brevo API)
+// Email notifications (supports SMTP or Postmark API)
 builder.Services.AddHttpClient<IEmailNotificationService, EmailNotificationService>();
 builder.Services.AddHttpClient<ITurnstileVerificationService, TurnstileVerificationService>();
 

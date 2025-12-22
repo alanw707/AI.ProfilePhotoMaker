@@ -1,0 +1,47 @@
+{
+  "repository_type": "monorepo",
+  "parts": [
+    {
+      "part_id": "api",
+      "root_path": "AI.ProfilePhotoMaker.API",
+      "project_type": "backend"
+    },
+    {
+      "part_id": "ui",
+      "root_path": "AI.ProfilePhotoMaker.UI",
+      "project_type": "web"
+    }
+  ],
+  "integration_points": [
+    {
+      "from": "ui",
+      "to": "api",
+      "type": "REST",
+      "details": "Angular services call ASP.NET Core endpoints"
+    },
+    {
+      "from": "api",
+      "to": "sqlserver",
+      "type": "EF Core",
+      "details": "ApplicationDbContext and migrations"
+    },
+    {
+      "from": "api",
+      "to": "azure-blob",
+      "type": "storage",
+      "details": "Image storage"
+    },
+    {
+      "from": "api",
+      "to": "stripe",
+      "type": "payments",
+      "details": "Stripe webhooks + payment sessions"
+    },
+    {
+      "from": "api",
+      "to": "replicate/openai",
+      "type": "model inference",
+      "details": "Enhancement + generation"
+    }
+  ]
+}

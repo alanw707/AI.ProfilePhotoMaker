@@ -26,6 +26,7 @@ export interface RegisterDto {
   lastName: string;
   gender: string;
   ethnicity: string;
+  ageConfirmed: boolean;
   turnstileToken?: string;
 }
 
@@ -41,6 +42,7 @@ export interface ProfileCompletionDto {
   lastName: string;
   gender: string;
   ethnicity: string;
+  ageConfirmed: boolean;
 }
 
 export interface ProfileCompletionCheckDto {

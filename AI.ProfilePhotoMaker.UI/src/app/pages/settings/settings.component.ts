@@ -8,6 +8,7 @@ import { ProfileService, UserProfile } from '../../services/profile.service';
 import { FileUploadService } from '../../services/file-upload.service';
 import { NotificationService } from '../../services/notification.service';
 import { DashboardCoordinatorService } from '../../services/dashboard-coordinator.service';
+import { CookieConsentService } from '../../services/cookie-consent.service';
 import { AccountInfoComponent } from '../../components/settings/account-info/account-info.component';
 import { CreditManagementComponent } from '../../components/settings/credit-management/credit-management.component';
 import { firstValueFrom, timeout, Subscription, TimeoutError } from 'rxjs';
@@ -95,6 +96,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     private fileUploadService: FileUploadService,
     private notificationService: NotificationService,
     private dashboardStateService: DashboardCoordinatorService,
+    private cookieConsentService: CookieConsentService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -134,6 +136,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
       }
     });
     this.subscriptions = [];
+  }
+
+  openCookiePreferences(): void {
+    this.cookieConsentService.requestPreferencesOpen();
   }
 
   loadUserInfo() {

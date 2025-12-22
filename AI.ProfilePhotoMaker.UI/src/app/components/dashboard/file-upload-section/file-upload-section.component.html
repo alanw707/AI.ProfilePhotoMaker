@@ -544,6 +544,23 @@
     </div>
   </div>
 
+  <div *ngIf="showSelectedFiles" class="biometric-consent">
+    <label class="consent-checkbox">
+      <input
+        type="checkbox"
+        [ngModel]="biometricConsentAccepted"
+        (ngModelChange)="onBiometricConsentChange($event)" />
+      <span>
+        I consent to the collection and use of my biometric data (face geometry) to train my model
+        and generate images. I have read the
+        <a routerLink="/legal/biometric-consent">Biometric Consent & Retention Notice</a>.
+      </span>
+    </label>
+    <p class="consent-hint" *ngIf="!biometricConsentAccepted">
+      Consent is required before uploading photos.
+    </p>
+  </div>
+
   <!-- Upload Actions -->
   <div *ngIf="showSelectedFiles" class="upload-actions">
     <div class="actions-left">
