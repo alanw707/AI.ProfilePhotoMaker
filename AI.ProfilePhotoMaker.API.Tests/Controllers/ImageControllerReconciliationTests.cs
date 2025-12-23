@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using AI.ProfilePhotoMaker.API.Controllers;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
+using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using System.Collections.Generic;
@@ -95,6 +96,10 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
                 .ReturnsAsync((string uid) => _context.UserProfiles
                     .Include(u => u.ProcessedImages)
                     .FirstOrDefault(u => u.UserId == uid));
+            _mockUserProfileRepository
+                .Setup(r => r.GetByUserIdLightAsync(It.IsAny<string>()))
+                .ReturnsAsync((string uid) => _context.UserProfiles
+                    .FirstOrDefault(u => u.UserId == uid));
 
             // Map storage paths to temp disk for existence checks
             string MapToDisk(string storagePath)
@@ -112,6 +117,9 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
                 return Path.Combine(_testContentRoot, storagePath.TrimStart('/'));
             }
 
+            _mockStorageService
+                .Setup(s => s.SaveImageToPathAsync(It.IsAny<Stream>(), It.IsAny<string>()))
+                .ReturnsAsync((Stream _, string sp) => sp);
             _mockStorageService
                 .Setup(s => s.ExistsAsync(It.IsAny<string>()))
                 .ReturnsAsync((string sp) => File.Exists(MapToDisk(sp)));
@@ -463,6 +471,38 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             var remainingImage = await _context.ProcessedImages.FirstAsync();
             remainingImage.Id.Should().Be(1); // Valid generated image should remain
             remainingImage.Style.Should().Be("Professional");
+        }
+
+        [Fact]
+        public async Task SaveEnhancedImage_DoesNotModifyCredits()
+        {
+            var userId = "test-user-123";
+            var profile = new UserProfile
+            {
+                UserId = userId,
+                FirstName = "Test",
+                LastName = "User",
+                Credits = 3,
+                PurchasedCredits = 2
+            };
+
+            _context.UserProfiles.Add(profile);
+            await _context.SaveChangesAsync();
+
+            var dto = new SaveEnhancedImageDto
+            {
+                Base64ImageData = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=",
+                EnhancementType = "professional"
+            };
+
+            var result = await _controller.SaveEnhancedImage(dto);
+
+            result.Should().BeOfType<OkObjectResult>();
+            (await _context.ProcessedImages.CountAsync()).Should().Be(1);
+
+            var refreshed = await _context.UserProfiles.FirstAsync(u => u.UserId == userId);
+            refreshed.Credits.Should().Be(3);
+            refreshed.PurchasedCredits.Should().Be(2);
         }
 
         public void Dispose()
