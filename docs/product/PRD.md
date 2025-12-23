@@ -11,7 +11,7 @@ Last updated: 2025-12-19
 - Enable users to generate professional profile photos from their selfies using AI styles.
 - Provide a basic tier with weekly free credits, and paid credits via credit packages (Stripe PaymentIntents + webhooks in production, with simulation mode for development).
 - Ensure reliability via hybrid DB/filesystem syncing and webhook-driven flows.
-- Enforce privacy via retention: input photos deleted after 7 days, generated photos after 30 days (target behavior; automated cleanup is being phased in via background jobs).
+- Enforce privacy via retention: input photos deleted after 30 days, generated photos after 30 days (target behavior; automated cleanup is being phased in via background jobs).
 
 ### 3) Non‑Goals
 - No full subscription billing lifecycle in MVP (credit packages are primary; Stripe webhook flow drives credit awards, but not all UI flows are strictly payment-gated yet).
@@ -70,7 +70,7 @@ Credits & Payments
 - Endpoints: `GET /api/credit/status`, `GET /api/credit/packages` (public), `POST /api/credit/purchase`, `GET /api/credit/history`, `POST /api/credit/create-payment-intent` (Stripe PaymentIntent), `GET /api/credit/costs`, `GET /api/credit/payment-config`.
 
 Retention & Privacy
-- Retention policy: input photos (original uploads) deleted after 7 days; AI generated photos deleted after 30 days. Background services and tooling implement this over time; manual endpoints exist to inspect/delete expired images in early MVP deployments.
+- Retention policy: input photos (original uploads) deleted after 30 days; AI generated photos deleted after 30 days. Background services and tooling implement this over time; manual endpoints exist to inspect/delete expired images in early MVP deployments.
 - Endpoints: `GET /api/retentionpolicy/expired-images`, `POST /api/retentionpolicy/delete-expired`, `POST /api/retentionpolicy/initialize-retention-dates`, `GET /api/retentionpolicy/policy-info`.
 
 Webhooks & File Downloading
@@ -84,7 +84,7 @@ Webhooks & File Downloading
   - Costs: enhancement = 1 (Replicate) or 2 (OpenAI styles, allows weekly), model_training = 15 (purchased only), styled_generation = 5 per image (purchased only).
   - Consumption occurs before external API calls; failures refund credits.
 - Generation: 1–4 outputs per style per request; batch generation allowed; model availability checked.
-- Retention: originals 7 days; generated 30 days; scheduled at record creation and enforced by background job.
+- Retention: originals 30 days; generated 30 days; scheduled at record creation and enforced by background job.
 
 ### 8) Data Model (high‑level)
 - ApplicationUser (Identity)
@@ -107,7 +107,7 @@ Webhooks & File Downloading
 - Webhook HMAC validation, 5‑minute window; rejection on invalid signatures.
 - File validation: size, extension, and magic bytes; path traversal guarded on delete.
 - CORS policies per environment; static file responses include content type, caching, and limited headers.
-- Data retention strictly enforced (7/30 days); user-initiated deletion/export flows available.
+- Data retention strictly enforced (30/30 days); user-initiated deletion/export flows available.
 
 ### 11) Performance & Reliability
 - Background jobs: weekly credit reset (service code), retention cleanup, model expiration checks.
@@ -119,7 +119,7 @@ Webhooks & File Downloading
 - Enhancement flow: upload/select photo → enhance → preview/download.
 - Credits UI: view status, packages list (public), purchase flow (mock PaymentIntent in dev), history.
 - Gallery: shows original/generate counts, download links, delete.
-- Settings: data export, delete photos/model/all data, delete account, retention notice (7/30 days).
+- Settings: data export, delete photos/model/all data, delete account, retention notice (30/30 days).
 
 ### 13) Acceptance Criteria (MVP)
 - Upload rejects >20 images or invalid types/sizes; success returns absolute URLs.
@@ -151,7 +151,7 @@ Webhooks & File Downloading
 - Production: enable Stripe keys, webhook secret; disable payment simulation; confirm CORS origins.
 
 ### 18) Compliance & Data Retention
-- Originals deleted after 7 days; generated images after 30 days; user-initiated deletion and data export supported.
+- Originals deleted after 30 days; generated images after 30 days; user-initiated deletion and data export supported.
 - SQL backup retention per infra templates; Blob Storage soft delete (7 days) if enabled.
 
 ### 19) Appendix — Representative API Map

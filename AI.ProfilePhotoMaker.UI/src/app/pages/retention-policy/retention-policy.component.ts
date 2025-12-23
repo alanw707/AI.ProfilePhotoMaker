@@ -13,7 +13,7 @@ import { Meta, Title } from '@angular/platform-browser';
         <h1 class="text-4xl font-bold text-gray-900 mb-8">Data Retention Policy</h1>
 
         <div class="bg-white rounded-lg shadow-sm p-8 prose prose-gray max-w-none">
-          <p class="text-gray-600 mb-6">Last updated: December 20, 2025</p>
+          <p class="text-gray-600 mb-6">Last updated: December 23, 2025</p>
 
           <h2 class="text-2xl font-semibold mt-8 mb-4">1. Scope</h2>
           <p>
@@ -24,11 +24,12 @@ import { Meta, Title } from '@angular/platform-browser';
 
           <h2 class="text-2xl font-semibold mt-8 mb-4">2. Retention Schedule</h2>
           <ul>
-            <li><strong>Input photos:</strong> retained up to 7 days after upload.</li>
+            <li><strong>Input photos:</strong> retained up to 30 days after upload.</li>
             <li><strong>Generated images:</strong> retained up to 30 days after creation.</li>
             <li>
-              <strong>AI models and training files:</strong> retained while your model exists and
-              deleted when you delete the model or your account.
+              <strong>AI models and training files:</strong> retained while your headshot images
+              remain available, then deleted after those images expire or if you delete the model
+              or your account.
             </li>
             <li>
               <strong>Account and billing records:</strong> retained as required by law and

@@ -1,4 +1,6 @@
-﻿namespace AI.ProfilePhotoMaker.API.Models.DTOs;
+﻿using AI.ProfilePhotoMaker.API.Models.Validation;
+
+namespace AI.ProfilePhotoMaker.API.Models.DTOs;
 
 public record RegisterDto(
     string Email,
@@ -7,6 +9,7 @@ public record RegisterDto(
     string LastName,
     string Gender,
     string Ethnicity,
+    [property: RequireTrue(ErrorMessage = "Age confirmation is required to create an account.")]
     bool AgeConfirmed,
     string? TurnstileToken = null
 );
@@ -16,6 +19,7 @@ public record ProfileCompletionDto(
     string LastName,
     string Gender,
     string Ethnicity,
+    [property: RequireTrue(ErrorMessage = "Age confirmation is required to complete profile.")]
     bool AgeConfirmed
 );
 

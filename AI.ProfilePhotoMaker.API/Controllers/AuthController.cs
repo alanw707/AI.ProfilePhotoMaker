@@ -193,12 +193,13 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
-            }
+                if (ModelState.TryGetValue(nameof(RegisterDto.AgeConfirmed), out var ageConfirmation) &&
+                    ageConfirmation.Errors.Count > 0)
+                {
+                    return BadRequest(new AuthResponseDto(false, "Age confirmation is required to create an account.", string.Empty, null));
+                }
 
-            if (!model.AgeConfirmed)
-            {
-                return BadRequest(new AuthResponseDto(false, "Age confirmation is required to create an account.", string.Empty, null));
+                return BadRequest(ModelState);
             }
 
             var turnstileOk = await _turnstile.VerifyAsync(model.TurnstileToken, HttpContext?.Connection?.RemoteIpAddress?.ToString());
@@ -1019,12 +1020,13 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
-            }
+                if (ModelState.TryGetValue(nameof(ProfileCompletionDto.AgeConfirmed), out var ageConfirmation) &&
+                    ageConfirmation.Errors.Count > 0)
+                {
+                    return BadRequest(new { success = false, error = "Age confirmation is required to complete profile." });
+                }
 
-            if (!model.AgeConfirmed)
-            {
-                return BadRequest(new { success = false, error = "Age confirmation is required to complete profile." });
+                return BadRequest(ModelState);
             }
 
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

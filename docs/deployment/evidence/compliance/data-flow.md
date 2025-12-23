@@ -1,6 +1,6 @@
 # Data Flow Inventory (Compliance Evidence)
 
-Last updated: 2025-12-20  
+Last updated: 2025-12-23  
 Status: Draft - engineering verified.
 
 ## 1. Data sources
@@ -15,7 +15,7 @@ Status: Draft - engineering verified.
 - Outputs are stored in storage and referenced in the database for gallery and downloads.
 
 ## 3. Retention and deletion
-- Input photos: deleted after 7 days.
+- Input photos: deleted after 30 days.
 - Generated images: deleted after 30 days.
 - Retention policy endpoints expose and enforce the schedule; background services perform cleanup.
 - Users can delete photos, models, all data, or their entire account from Settings.

@@ -107,8 +107,8 @@ public class RetentionPolicyController : ControllerBase
             {
                 originalUploads = new
                 {
-                    retentionPeriod = "7 days",
-                    description = "Input photos (original uploads) are deleted after 7 days"
+                    retentionPeriod = "30 days",
+                    description = "Input photos (original uploads) are deleted after 30 days"
                 },
                 generatedImages = new
                 {

@@ -128,7 +128,7 @@ This project plan outlines the major milestones, features, and tasks required to
    - [x] **NEW**: Hybrid filesystem-database approach for reliability
    - [x] **NEW**: Self-healing mechanism for missing database records
    - [x] **NEW**: Dashboard and gallery auto-repair functionality
-   - [ ] Enforce data retention (delete after 7 days)
+   - [ ] Enforce data retention (delete after 30 days)
 
 7. **Payments & Transactions** 🔄 IN PROGRESS (90%)
    - [x] Integrate Stripe payment intents + webhook fulfillment

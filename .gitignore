@@ -101,6 +101,8 @@ package-lock.json
 # Temporary downloads and artifacts
 .downloads/
 .playwright-mcp/
+.cursor/rules/bmad/
+.github/agents/
 
 # Test artifacts - screenshots and results
 **/screenshots/*.png
@@ -123,6 +125,7 @@ AI.ProfilePhotoMaker.API/tests/playwright/results/
 claude-*.md
 *-analysis.md
 .serena/
+_bmap/
 
 # General build results
 **/[Bb]in/

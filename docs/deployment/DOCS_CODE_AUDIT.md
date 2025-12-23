@@ -55,7 +55,7 @@ Resolved: moved into a "Historical/Archived" section of the index (no file moves
 | AC-3 | Training blocks when READY model exists; requires 15 purchased credits; consumes after starting. | `ReplicateController.cs` (`TrainModel`) | Checks READY model; uses `CreditCostConfig.ModelTraining` (15). |
 | AC-4 | Generation requires purchased credits (5 per output); fails gracefully when model unavailable. | `ReplicateController.cs` (`Generate`, `GenerateBatch`) | Uses `CreditCostConfig.StyledGeneration` (5) and availability checks. |
 | AC-5 | Enhancement consumes 1 weekly credit (Replicate) or 2 credits (OpenAI styles); returns output and remaining credits. | `ReplicateController.cs` (`EnhancePhoto`), `EnhancementController.cs` | Dual-provider behavior documented in PRD. |
-| AC-6 | Retention background job sets and deletes data per policy; manual endpoints work. | `RetentionPolicyBackgroundService.cs`, `RetentionPolicyController.cs` | 7/30 day policy exposed in controller. |
+| AC-6 | Retention background job sets and deletes data per policy; manual endpoints work. | `RetentionPolicyBackgroundService.cs`, `RetentionPolicyController.cs` | 30/30 day policy exposed in controller. |
 | AC-7 | Credit status/package endpoints return typed data; purchase adds credits to account. | `CreditController.cs`, `CreditCostConfig.cs` | Status + packages + purchase endpoints in controller. |
 | AC-8 | Webhook ingestion persists generated images and sets retention; downloads images locally. | `ReplicateWebhookController.cs` | Downloads images, stores URLs, sets retention date. |
 

@@ -59,7 +59,7 @@
 
 **Tasks:**
 - [ ] Create background cleanup service
-- [ ] Implement 7-day image deletion policy
+- [ ] Implement 30-day image deletion policy
 - [ ] Add configurable retention settings
 - [ ] Test cleanup process thoroughly
 
@@ -308,7 +308,7 @@ QA Engineer (50%):
 ### **Sprint 1 Success Metrics**
 - [ ] 100% payment success rate in testing
 - [ ] Rate limiting blocks >95% of abuse attempts  
-- [ ] Data retention removes files within 7-day window
+- [ ] Data retention removes files within 30-day window
 - [ ] Zero critical security vulnerabilities
 
 ### **Sprint 2 Success Metrics**

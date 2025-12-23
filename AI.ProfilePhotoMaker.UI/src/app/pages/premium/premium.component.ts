@@ -51,7 +51,7 @@ import { LoggingService } from '../../services/logging.service';
                   <div class="feature-icon">🔒</div>
                   <h3>Privacy First</h3>
                   <p>
-                    Input photos deleted after 7 days, AI headshots stored 30 days. Full data
+                    Input photos deleted after 30 days, AI headshots stored 30 days. Full data
                     control in account settings.
                   </p>
                 </div>
