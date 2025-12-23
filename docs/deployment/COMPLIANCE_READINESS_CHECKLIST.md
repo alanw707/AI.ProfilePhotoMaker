@@ -1,13 +1,13 @@
 # Compliance and Legal Readiness Checklist (GA Launch)
 
-Last updated: 2025-12-19  
+Last updated: 2025-12-23  
 Scope: AI.ProfilePhotoMaker global baseline (US/UK/EU/CA). Not legal advice.
 
 ## Product data flow summary (from PRD + code)
 - Users upload photos that are stored on the app server (local or Azure Blob storage).
 - Custom model training and styled image generation use Replicate.
 - Photo enhancement uses Replicate or OpenAI (gpt-image-1).
-- API retention policy: original uploads deleted after 7 days; generated images deleted after 30 days (background job every 6 hours).
+- API retention policy: original uploads deleted after 30 days; generated images deleted after 30 days (background job every 6 hours).
 - User data controls: delete input photos, delete AI model, delete all data, delete account, and export data (JSON metadata only).
 
 ## Required legal pages (jurisdictional)
@@ -35,7 +35,7 @@ Scope: AI.ProfilePhotoMaker global baseline (US/UK/EU/CA). Not legal advice.
 | --- | --- | --- | --- | --- |
 | CC-1 | Data flow inventory and purpose limitation | PRD data flow summary | Updated in docs (needs validation) | `docs/deployment/evidence/compliance/data-flow.md` |
 | CC-2 | Lawful basis + biometric consent capture | Consent UI gating + local storage | Updated in UI (server-side record pending) | `docs/deployment/evidence/compliance/biometric-consent-flow.md` |
-| CC-3 | Retention enforcement (7/30 days) | API policy and background job | Partial (runtime evidence pending) | `docs/deployment/evidence/retention-policy.json` |
+| CC-3 | Retention enforcement (30/30 days) | API policy + background job (production) | Partial (production still 7-day originals) | `docs/deployment/evidence/retention-policy-production.json`, `docs/deployment/evidence/retention-expired-images-production.json`, `docs/deployment/evidence/retention-delete-expired-production.json`, `docs/deployment/evidence/retention-background-production.json` |
 | CC-4 | Third-party retention alignment (Replicate) | No public disclosure | Partial (predictions + privacy policy + terms; training retention pending) | `docs/deployment/evidence/compliance/third-party-retention.md` |
 | CC-5 | DSAR workflow (access/delete/export) | API endpoints exist | Partial (export metadata only, documented) | `docs/deployment/evidence/compliance/dsar.md` |
 | CC-6 | Age gate / parental consent | UI age gate + policy | Implemented in UI + API validation | `docs/deployment/evidence/compliance/age-gate.md` |
@@ -44,9 +44,9 @@ Scope: AI.ProfilePhotoMaker global baseline (US/UK/EU/CA). Not legal advice.
 | CC-9 | Security disclosure (encryption, access control, monitoring) | No public documentation | Updated in UI + security docs | `docs/deployment/evidence/compliance/security-controls.md` |
 
 ## Gap summary (top issues)
-1. Third-party retention alignment needs training retention confirmation (CC-4).
-2. DSAR export is metadata only (CC-5).
-3. Retention enforcement runtime evidence pending (CC-3).
+1. Retention policy still reports 7-day originals in production (CC-3).
+2. Third-party retention alignment needs training retention confirmation (CC-4).
+3. DSAR export is metadata only (CC-5).
 
 ## Evidence placeholders (store under docs/deployment/evidence)
 - `docs/deployment/evidence/legal/privacy-policy.md`

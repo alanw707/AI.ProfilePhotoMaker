@@ -1,11 +1,11 @@
 # MVP Launch Readiness Checklist
 
-Last updated: 2025-12-19  
+Last updated: 2025-12-23  
 Source of truth: `docs/product/PRD.md` (Version 1.2, 2025-12-19)
 
 ## Launch Definition
 - Launch type: GA
-- Target date: ASAP (TBD)
+- Target date: TBD
 - Scope: MVP per PRD (see Non-Goals)
 
 ## Status Legend
@@ -14,28 +14,32 @@ Source of truth: `docs/product/PRD.md` (Version 1.2, 2025-12-19)
 - Blocked
 - Done
 
+## Evidence Policy
+- Desk review evidence (`docs/deployment/DOCS_CODE_AUDIT.md`) is provisional.
+- Go/No-Go requires runtime artifacts captured in `docs/deployment/evidence/`.
+
 ## Go/No-Go Gates (MVP Acceptance Criteria)
 Provisional desk-review evidence is summarized in `docs/deployment/DOCS_CODE_AUDIT.md`. Replace with runtime artifacts before GO.
 | ID | Requirement | Owner | Status | Evidence |
 | --- | --- | --- | --- | --- |
-| AC-1 | Upload rejects >20 images or invalid types/sizes; success returns absolute URLs. | Alan | Not Started | Doc: `docs/deployment/DOCS_CODE_AUDIT.md`; Code: `AI.ProfilePhotoMaker.API/Controllers/ImageController.cs` |
-| AC-2 | Training ZIP created when >=10 images exist; returns public URL. | Alan | Not Started | Doc: `docs/product/PRD.md`; Code: `AI.ProfilePhotoMaker.API/Controllers/ImageController.cs` |
-| AC-3 | Training blocks when READY model exists; requires 15 purchased credits; consumes after starting. | Alan | In Progress | Doc: `docs/product/PRD.md`; Code: `AI.ProfilePhotoMaker.API/Controllers/ReplicateController.cs`, `AI.ProfilePhotoMaker.API/Models/CreditCostConfig.cs` |
-| AC-4 | Generation requires purchased credits (5 per output); fails gracefully when model unavailable. | Alan | In Progress | Doc: `docs/product/PRD.md`; Code: `AI.ProfilePhotoMaker.API/Controllers/ReplicateController.cs`, `AI.ProfilePhotoMaker.API/Models/CreditCostConfig.cs`; Evidence: `docs/deployment/evidence/model-status.json` (no trained model, purchased credits = 0) |
-| AC-5 | Enhancement consumes 1 weekly credit (Replicate) or 2 credits (OpenAI styles); returns output and remaining credits. | Alan | Not Started | Doc: `docs/OPENAI-ENHANCEMENT.md`; Code: `AI.ProfilePhotoMaker.API/Controllers/ReplicateController.cs`, `AI.ProfilePhotoMaker.API/Controllers/EnhancementController.cs`, `AI.ProfilePhotoMaker.UI/src/app/services/replicate.service.ts` |
-| AC-6 | Retention background job sets and deletes data per policy; manual endpoints work. | Alan | Not Started | Doc: `docs/product/PRD.md`; Code: `AI.ProfilePhotoMaker.API/Services/RetentionPolicyBackgroundService.cs`, `AI.ProfilePhotoMaker.API/Controllers/RetentionPolicyController.cs`; Evidence: `docs/deployment/evidence/retention-policy.json` |
-| AC-7 | Credit status/package endpoints return typed data; purchase adds credits to account. | Alan | In Progress | Doc: `docs/product/PRD.md`; Code: `AI.ProfilePhotoMaker.API/Controllers/CreditController.cs` |
-| AC-8 | Webhook ingestion persists generated images and sets retention; downloads images locally. | Alan | Not Started | Doc: `docs/product/PRD.md`; Code: `AI.ProfilePhotoMaker.API/Controllers/ReplicateWebhookController.cs` |
+| AC-1 | Upload rejects >20 images or invalid types/sizes; success returns absolute URLs. | Alan | Done | Doc: `docs/deployment/DOCS_CODE_AUDIT.md`; Code: `AI.ProfilePhotoMaker.API/Controllers/ImageController.cs`; Evidence: `docs/deployment/evidence/upload-validation-production.json`. |
+| AC-2 | Training ZIP created when >=10 images exist; returns public URL. | Alan | Done | Doc: `docs/product/PRD.md`; Code: `AI.ProfilePhotoMaker.API/Controllers/ImageController.cs`; Evidence: `docs/deployment/evidence/training-zip-production.json`. |
+| AC-3 | Training blocks when READY model exists; requires 15 purchased credits; consumes after starting. | Alan | In Progress | Doc: `docs/product/PRD.md`; Code: `AI.ProfilePhotoMaker.API/Controllers/ReplicateController.cs`, `AI.ProfilePhotoMaker.API/Models/CreditCostConfig.cs`; Evidence: `docs/deployment/evidence/training-start-production.json` (credit deduction). READY-model block still pending. |
+| AC-4 | Generation requires purchased credits (5 per output); fails gracefully when model unavailable. | Alan | In Progress | Doc: `docs/product/PRD.md`; Code: `AI.ProfilePhotoMaker.API/Controllers/ReplicateController.cs`, `AI.ProfilePhotoMaker.API/Models/CreditCostConfig.cs`; Evidence: `docs/deployment/evidence/generation-insufficient-credits.json`, `docs/deployment/evidence/model-status.json`. |
+| AC-5 | Enhancement consumes 1 weekly credit (Replicate) or 2 credits (OpenAI styles); returns output and remaining credits. | Alan | Done | Doc: `docs/OPENAI-ENHANCEMENT.md`; Code: `AI.ProfilePhotoMaker.API/Controllers/ReplicateController.cs`, `AI.ProfilePhotoMaker.API/Controllers/EnhancementController.cs`, `AI.ProfilePhotoMaker.UI/src/app/services/replicate.service.ts`; Evidence: owner attestation; runtime capture pending (`docs/deployment/evidence/enhancement-production.json` blocked by Turnstile token). |
+| AC-6 | Retention background job sets and deletes data per policy; manual endpoints work. | Alan | In Progress | Doc: `docs/product/PRD.md`; Code: `AI.ProfilePhotoMaker.API/Services/RetentionPolicyBackgroundService.cs`, `AI.ProfilePhotoMaker.API/Controllers/RetentionPolicyController.cs`; Evidence (production background job): `docs/deployment/evidence/retention-background-production.json`, `docs/deployment/evidence/retention-background-production.log`, `docs/deployment/evidence/retention-background-production.md`. Evidence (production manual endpoints): `docs/deployment/evidence/retention-policy-production.json`, `docs/deployment/evidence/retention-policy-production.log`, `docs/deployment/evidence/retention-policy-production.md`, `docs/deployment/evidence/retention-expired-images-production.json`, `docs/deployment/evidence/retention-expired-images-production.log`, `docs/deployment/evidence/retention-expired-images-production.md`, `docs/deployment/evidence/retention-delete-expired-production.json`, `docs/deployment/evidence/retention-delete-expired-production.log`, `docs/deployment/evidence/retention-delete-expired-production.md`. Production policy still reports 7-day originals; deploy 30/30 policy update. |
+| AC-7 | Credit status/package endpoints return typed data; purchase adds credits to account. | Alan | Done | Doc: `docs/product/PRD.md`; Code: `AI.ProfilePhotoMaker.API/Controllers/CreditController.cs`; Evidence: `docs/deployment/evidence/credit-status-packages-production.json`, `docs/deployment/evidence/credit-history-production.json`. |
+| AC-8 | Webhook ingestion persists generated images and sets retention; downloads images locally. | Alan | Done | Doc: `docs/product/PRD.md`; Code: `AI.ProfilePhotoMaker.API/Controllers/ReplicateWebhookController.cs`; Evidence: owner attestation; runtime capture pending (prediction-complete webhook run). |
 
 ## Production Configuration Checks (PRD Rollout Dependencies)
 | ID | Requirement | Owner | Status | Evidence |
 | --- | --- | --- | --- | --- |
-| PC-1 | DB migrations apply at startup and schema is current. | Alan | In Progress | Doc: `docs/product/PRD.md` |
-| PC-2 | Replicate API token configured; training/generation/enhancement succeed. | Alan | In Progress | Doc: `docs/setup/ENVIRONMENT_SETUP.md`, `docs/ENVIRONMENT_VARIABLES.md` |
-| PC-3 | Stripe keys and webhook secret configured; payment simulation disabled in prod. | Alan | In Progress | Doc: `docs/setup/ENVIRONMENT_SETUP.md`, `docs/ENVIRONMENT_VARIABLES.md`; Evidence: `docs/deployment/evidence/payment-config.json` |
-| PC-4 | CORS origins set for production UI domain(s). | Alan | In Progress | Doc: `docs/product/PRD.md` |
-| PC-5 | OAuth configuration validated (see `docs/deployment/DEPLOYMENT_CHECKLIST.md`). | Alan | In Progress | Doc: `docs/deployment/DEPLOYMENT_CHECKLIST.md`; Evidence: `docs/deployment/evidence/oauth-redirect-headers.txt` |
-| PC-6 | Storage configured (local or Azure Blob) and image URLs resolve. | Alan | In Progress | Doc: `docs/setup/ENVIRONMENT_SETUP.md`, `docs/ENVIRONMENT_VARIABLES.md` |
+| PC-1 | DB migrations apply at startup and schema is current. | Alan | Done | Doc: `docs/product/PRD.md`; Evidence: `docs/deployment/evidence/api-health-production.json`. |
+| PC-2 | Replicate API token configured; training/generation/enhancement succeed. | Alan | In Progress | Doc: `docs/setup/ENVIRONMENT_SETUP.md`, `docs/ENVIRONMENT_VARIABLES.md`; Evidence (partial): `docs/deployment/evidence/replicate-health-production.json` (external URL accessibility false). |
+| PC-3 | Stripe keys and webhook secret configured; payment simulation disabled in prod. | Alan | In Progress | Doc: `docs/setup/ENVIRONMENT_SETUP.md`, `docs/ENVIRONMENT_VARIABLES.md`; Evidence: `docs/deployment/evidence/payment-config.json`. |
+| PC-4 | CORS origins set for production UI domain(s). | Alan | Done | Doc: `docs/product/PRD.md`; Evidence: `docs/deployment/evidence/cors-config-production.txt`. |
+| PC-5 | OAuth configuration validated (see `docs/deployment/DEPLOYMENT_CHECKLIST.md`). | Alan | In Progress | Doc: `docs/deployment/DEPLOYMENT_CHECKLIST.md`; Evidence: `docs/deployment/evidence/oauth-redirect-headers.txt`. |
+| PC-6 | Storage configured (local or Azure Blob) and image URLs resolve. | Alan | Done | Doc: `docs/setup/ENVIRONMENT_SETUP.md`, `docs/ENVIRONMENT_VARIABLES.md`; Evidence: `docs/deployment/evidence/storage-url-check-production.txt`. |
 
 ## Non-Goals (MVP Exclusions)
 - No subscription billing lifecycle.

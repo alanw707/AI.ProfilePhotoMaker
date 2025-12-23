@@ -93,7 +93,7 @@ import { Meta, Title } from '@angular/platform-browser';
           <h2 class="text-2xl font-semibold mt-8 mb-4">7. Retention</h2>
           <p>We retain data based on the service requirements and our retention policy:</p>
           <ul>
-            <li>Input photos: retained up to 7 days after upload unless you delete them sooner.</li>
+            <li>Input photos: retained up to 30 days after upload unless you delete them sooner.</li>
             <li>
               Generated images: retained up to 30 days after creation unless you delete them
               sooner.

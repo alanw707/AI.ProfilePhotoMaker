@@ -1,0 +1,7 @@
+Environment: production
+API base: https://api.aiprofilephotomaker.com
+Endpoint: GET /api/RetentionPolicy/expired-images
+Auth: Bearer token (redacted)
+Command:
+curl -s -H "Authorization: Bearer ***REDACTED***" \
+  https://api.aiprofilephotomaker.com/api/RetentionPolicy/expired-images

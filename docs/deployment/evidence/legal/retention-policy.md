@@ -1,15 +1,15 @@
 # Data Retention Policy (Draft)
 
-Last updated: 2025-12-20  
+Last updated: 2025-12-23  
 Status: Published in UI (legal review pending).
 
 ## 1. Scope
 This policy explains how long AI Profile Photo Maker retains data related to your account, photos, and AI outputs.
 
 ## 2. Retention schedule
-- Input photos: retained up to 7 days after upload.
+- Input photos: retained up to 30 days after upload.
 - Generated images: retained up to 30 days after creation.
-- AI models and training files: retained while your model exists; deleted when you delete the model or your account.
+- AI models and training files: retained while your headshot images remain available; deleted after those images expire or if you delete the model or your account.
 - Account and billing records: retained as required by law and operational needs.
 
 ## 3. User controls

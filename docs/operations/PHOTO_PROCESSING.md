@@ -257,7 +257,7 @@ public async Task<IActionResult> ReconcileImages()
 
 ### Cleanup & Retention
 
-- Automatic cleanup after 7 days (configurable)
+- Automatic cleanup after 30 days (configurable)
 - Background service runs daily
 - Preserves database records with soft delete
 - Removes physical files to save storage

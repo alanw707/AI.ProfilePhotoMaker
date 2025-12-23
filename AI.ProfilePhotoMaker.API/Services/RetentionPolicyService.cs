@@ -2,6 +2,7 @@ using AI.ProfilePhotoMaker.API.Configuration;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
+using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -13,6 +14,7 @@ public class RetentionPolicyService : IRetentionPolicyService
     private readonly ApplicationDbContext _context;
     private readonly IStorageService _storageService;
     private readonly StoragePathResolver _pathResolver;
+    private readonly IReplicateApiClient _replicateApiClient;
     private readonly ILogger<RetentionPolicyService> _logger;
     private readonly LegacyCompatibilityOptions _legacyOptions;
 
@@ -23,25 +25,33 @@ public class RetentionPolicyService : IRetentionPolicyService
         ApplicationDbContext context,
         IStorageService storageService,
         StoragePathResolver pathResolver,
+        IReplicateApiClient replicateApiClient,
         ILogger<RetentionPolicyService> logger,
         IOptions<LegacyCompatibilityOptions> legacyOptions)
     {
         _context = context;
         _storageService = storageService;
         _pathResolver = pathResolver;
+        _replicateApiClient = replicateApiClient;
         _logger = logger;
         _legacyOptions = legacyOptions.Value;
     }
 
     public async Task<int> DeleteExpiredImagesAsync()
     {
-        var expiredImages = await GetExpiredImagesForDeletion();
+        var expiredImages = await GetExpiredImagesForDeletion(includeUserProfile: true);
         var deletedCount = 0;
+        var affectedUserIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var image in expiredImages)
         {
             try
             {
+                if (image.UserProfile?.UserId is { Length: > 0 } userId)
+                {
+                    affectedUserIds.Add(userId);
+                }
+
                 // Delete physical files first
                 await DeletePhysicalFiles(image);
 
@@ -59,6 +69,18 @@ public class RetentionPolicyService : IRetentionPolicyService
                 _logger.LogError(ex,
                     "Failed to delete expired image {ImageId}: {Error}",
                     image.Id, S(ex.Message));
+            }
+        }
+
+        if (affectedUserIds.Count > 0)
+        {
+            var replicateDeletes = await CleanupReplicateModelsForUsersAsync(affectedUserIds);
+            if (replicateDeletes > 0)
+            {
+                _logger.LogInformation(
+                    "Retention policy cleanup deleted {ModelCount} Replicate model(s) for {UserCount} user(s) with no remaining headshot images",
+                    replicateDeletes,
+                    affectedUserIds.Count);
             }
         }
 
@@ -106,12 +128,95 @@ public class RetentionPolicyService : IRetentionPolicyService
         }
     }
 
-    private async Task<List<Models.ProcessedImage>> GetExpiredImagesForDeletion()
+    private async Task<List<Models.ProcessedImage>> GetExpiredImagesForDeletion(bool includeUserProfile = false)
     {
         var now = DateTime.UtcNow;
-        return await _context.ProcessedImages
+        var query = _context.ProcessedImages.AsQueryable();
+        if (includeUserProfile)
+        {
+            query = query.Include(img => img.UserProfile);
+        }
+
+        return await query
             .Where(img => img.ScheduledDeletionDate <= now)
             .ToListAsync();
+    }
+
+    private async Task<int> CleanupReplicateModelsForUsersAsync(HashSet<string> userIds)
+    {
+        var usersWithHeadshotImages = await _context.ProcessedImages
+            .Include(img => img.UserProfile)
+            .Where(img => userIds.Contains(img.UserProfile.UserId))
+            .Where(img => img.IsGenerated)
+            .Where(img =>
+                string.IsNullOrEmpty(img.Style) ||
+                (!EF.Functions.Like(img.Style, "Enhanced%") &&
+                 img.Style != "Background Remover" &&
+                 img.Style != "Social Media" &&
+                 img.Style != "Cartoon"))
+            .Select(img => img.UserProfile.UserId)
+            .Distinct()
+            .ToListAsync();
+
+        var usersWithoutHeadshotImages = userIds
+            .Where(userId => !usersWithHeadshotImages.Contains(userId, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+
+        if (!usersWithoutHeadshotImages.Any())
+        {
+            return 0;
+        }
+
+        var modelRequests = await _context.ModelCreationRequests
+            .Where(request => usersWithoutHeadshotImages.Contains(request.UserId))
+            .Where(request => !string.IsNullOrWhiteSpace(request.ReplicateModelId))
+            .Where(request => request.Status == ModelCreationStatus.Ready || request.Status == ModelCreationStatus.Failed)
+            .ToListAsync();
+
+        if (!modelRequests.Any())
+        {
+            return 0;
+        }
+
+        var deletedModels = 0;
+        foreach (var modelGroup in modelRequests
+                     .GroupBy(request => request.ReplicateModelId!, StringComparer.OrdinalIgnoreCase))
+        {
+            var modelId = modelGroup.Key;
+            try
+            {
+                var (success, errorMessage) = await _replicateApiClient.DeleteModelAsync(modelId);
+                if (success)
+                {
+                    foreach (var request in modelGroup)
+                    {
+                        request.Status = ModelCreationStatus.Failed;
+                        request.ErrorMessage = "Deleted by retention policy after headshot images expired.";
+                        request.TrainedModelVersion = null;
+                    }
+
+                    deletedModels++;
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Retention policy failed to delete Replicate model {ModelId}: {Error}",
+                        S(modelId),
+                        S(errorMessage));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Retention policy error deleting Replicate model {ModelId}", S(modelId));
+            }
+        }
+
+        if (deletedModels > 0)
+        {
+            await _context.SaveChangesAsync();
+        }
+
+        return deletedModels;
     }
 
     private async Task DeletePhysicalFiles(Models.ProcessedImage image)

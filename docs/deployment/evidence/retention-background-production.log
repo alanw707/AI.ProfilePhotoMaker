@@ -1,0 +1,16 @@
+Environment: production
+Azure resource group: aiprofilemaker-v1
+Container app: aipm-api-v1
+Log Analytics workspace: aipm-logs-v1
+Query:
+ContainerAppConsoleLogs_CL
+| where ContainerAppName_s == 'aipm-api-v1'
+| where TimeGenerated > ago(2d)
+| where Log_s contains 'Retention Policy Background Service' or Log_s contains 'Retention policy check'
+| project TimeGenerated, Log_s
+| order by TimeGenerated desc
+| take 50
+
+Command:
+az monitor log-analytics query --workspace 1812648f-ed7d-45b7-b716-92cd197a40ed \
+  --analytics-query "ContainerAppConsoleLogs_CL | where ContainerAppName_s == 'aipm-api-v1' | where TimeGenerated > ago(2d) | where Log_s contains 'Retention Policy Background Service' or Log_s contains 'Retention policy check' | project TimeGenerated, Log_s | order by TimeGenerated desc | take 50" -o json

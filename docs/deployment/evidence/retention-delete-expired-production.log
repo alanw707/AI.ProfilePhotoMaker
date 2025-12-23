@@ -1,0 +1,7 @@
+Environment: production
+API base: https://api.aiprofilephotomaker.com
+Endpoint: POST /api/RetentionPolicy/delete-expired
+Auth: Bearer token (redacted)
+Command:
+curl -s -X POST -H "Authorization: Bearer ***REDACTED***" \
+  https://api.aiprofilephotomaker.com/api/RetentionPolicy/delete-expired

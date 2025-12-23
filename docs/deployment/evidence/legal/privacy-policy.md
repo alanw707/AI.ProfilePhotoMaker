@@ -1,6 +1,6 @@
 # Privacy Policy (Draft)
 
-Last updated: 2025-12-20  
+Last updated: 2025-12-23  
 Status: Published in UI (legal review pending). Aligns to PRD v1.2 and current API retention behavior.
 
 ## 1. Scope
@@ -47,9 +47,9 @@ We do not sell personal information or share it for cross-context behavioral adv
 
 ## 7. Retention
 We retain data as follows (target behavior per PRD and current API policy):
-- Input photos: retained up to 7 days after upload, unless you delete earlier.
+- Input photos: retained up to 30 days after upload, unless you delete earlier.
 - Generated images: retained up to 30 days after creation, unless you delete earlier.
-- Model artifacts and training files: retained while your model exists; deleted when you delete the model or account.
+- Model artifacts and training files: retained while your headshot images remain available; deleted after those images expire or if you delete the model or account.
 - Account and billing records: retained as needed to provide the service, comply with law, and resolve disputes.
 
 Backups may retain data for a limited period. If cloud storage soft-delete is enabled, deleted blobs may be retained for up to 7 days.

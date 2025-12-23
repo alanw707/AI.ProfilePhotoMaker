@@ -177,7 +177,7 @@ public class ReplicateWebhookController : ControllerBase
                             // Both URLs will use local path when download succeeds, ensuring consistent local serving
                         };
 
-                        // Set scheduled deletion date based on retention policy (7 days for generated images)
+                        // Set scheduled deletion date based on retention policy (30 days for generated images)
                         processedImage.SetScheduledDeletionDate();
 
                         _dbContext.ProcessedImages.Add(processedImage);

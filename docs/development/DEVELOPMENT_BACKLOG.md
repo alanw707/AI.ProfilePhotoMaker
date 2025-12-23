@@ -122,7 +122,7 @@ services.AddRateLimiter(options =>
 - **Complexity**: Medium
 
 **Subtasks:**
-- [ ] Implement automatic 7-day image deletion
+- [ ] Implement automatic 30-day image deletion
 - [ ] Create background service for cleanup
 - [ ] Add configurable retention policies
 - [ ] Implement soft delete with recovery period
@@ -458,7 +458,7 @@ WebhookIntegrationTests
 
 ### **Week 2 Priorities**
 1. Implement distributed rate limiting (Redis) with client handling + monitoring
-2. Implement data retention/cleanup system (7-day deletion, logging)
+2. Implement data retention/cleanup system (30-day deletion, logging)
 3. Begin comprehensive test suite development (backend + UI; target critical flows)
 
 ### **Immediate Actions Required**
