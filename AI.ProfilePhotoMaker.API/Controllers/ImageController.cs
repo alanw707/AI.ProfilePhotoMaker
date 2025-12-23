@@ -1222,7 +1222,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             if (authCheck != null) return authCheck;
             var userId = GetCurrentUserId()!;
 
-            var profile = await _userContextService.GetUserProfileAsync(userId);
+            // Use a fresh, lightweight profile read to avoid cached credit data.
+            var profile = await _userProfileRepository.GetByUserIdLightAsync(userId);
             if (profile == null)
             {
                 return ErrorResponse("ProfileNotFound", "User profile not found");
@@ -1284,8 +1285,13 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 // Set scheduled deletion date based on retention policy
                 processedImage.SetScheduledDeletionDate();
 
-                profile.ProcessedImages.Add(processedImage);
-                await _userProfileRepository.UpdateAsync(profile);
+                if (Context == null)
+                {
+                    return ErrorResponse("ServerError", "Database context unavailable", 500);
+                }
+
+                Context.ProcessedImages.Add(processedImage);
+                await Context.SaveChangesAsync();
 
                 Logger.LogInformation("Saved enhanced image {FileName} for user {UserId} with type {EnhancementType}",
                     fileName, userId, dto.EnhancementType);
