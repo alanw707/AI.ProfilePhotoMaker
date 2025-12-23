@@ -1,0 +1,14 @@
+{
+  "environment": "production",
+  "request": {
+    "userId": "29825f8b-beec-4b9e-99bc-a1f5641832c4",
+    "imageZipUrl": "https://aipmstv16j74jubocuukg.blob.core.windows.net/profile-images/prod/training-zips/29825f8b-beec-4b9e-99bc-a1f5641832c4.zip?REDACTED_SAS=true"
+  },
+  "response": {
+    "success": false,
+    "error": {
+      "code": "InsufficientCredits",
+      "message": "Model training requires 15 purchased credits. You have 0 purchased credits. Please purchase more credits to train custom models."
+    }
+  }
+}

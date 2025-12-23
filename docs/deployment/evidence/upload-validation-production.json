@@ -1,0 +1,40 @@
+{
+  "environment": "production",
+  "cases": {
+    "too_many": {
+      "success": false,
+      "error": {
+        "code": "TooManyImages",
+        "message": "Maximum 20 images allowed"
+      }
+    },
+    "invalid_type": {
+      "success": false,
+      "error": {
+        "code": "InvalidImage",
+        "message": "Invalid image file: invalid.txt"
+      }
+    },
+    "valid_upload": {
+      "success": true,
+      "data": {
+        "profileId": 14,
+        "uploadedFiles": [
+          {
+            "fileName": "49568f2a-ad6c-4db7-92e0-5e0e5cec24d9_selfie.jpg",
+            "size": 997,
+            "url": "https://aipmstv16j74jubocuukg.blob.core.windows.net/profile-images/prod/uploads/29825f8b-beec-4b9e-99bc-a1f5641832c4/49568f2a-ad6c-4db7-92e0-5e0e5cec24d9_selfie.jpg"
+          }
+        ],
+        "uploadedImageIds": [
+          135
+        ],
+        "zipCreated": false,
+        "zipPath": null,
+        "message": "Images uploaded successfully."
+      },
+      "message": null,
+      "error": null
+    }
+  }
+}

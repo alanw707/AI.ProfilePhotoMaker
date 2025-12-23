@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "data": {
+    "apiConnected": true,
+    "tokenValid": true,
+    "canCreateModels": true,
+    "accountStatus": "Active",
+    "configurationValid": true,
+    "externalUrlAccessible": false,
+    "error": null
+  },
+  "error": null
+}

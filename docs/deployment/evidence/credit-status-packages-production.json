@@ -1,0 +1,64 @@
+{
+  "environment": "production",
+  "statusBefore": {
+    "success": true,
+    "data": {
+      "totalCredits": 51,
+      "weeklyCredits": 1,
+      "purchasedCredits": 50,
+      "lastCreditReset": "2025-12-22T16:23:13.7007928",
+      "nextResetDate": "2025-12-29T16:23:13.7007928"
+    },
+    "message": null,
+    "error": null
+  },
+  "statusAfter": {
+    "success": true,
+    "data": {
+      "totalCredits": 36,
+      "weeklyCredits": 1,
+      "purchasedCredits": 35,
+      "lastCreditReset": "2025-12-22T16:23:13.7007928",
+      "nextResetDate": "2025-12-29T16:23:13.7007928"
+    },
+    "message": null,
+    "error": null
+  },
+  "packages": {
+    "success": true,
+    "data": [
+      {
+        "id": 1,
+        "name": "Starter Pack",
+        "credits": 50,
+        "bonusCredits": 0,
+        "totalCredits": 50,
+        "price": 9.99,
+        "description": "Perfect for trying out custom training and styled generations",
+        "displayOrder": 1
+      },
+      {
+        "id": 2,
+        "name": "Professional Pack",
+        "credits": 120,
+        "bonusCredits": 30,
+        "totalCredits": 150,
+        "price": 19.99,
+        "description": "Most popular - great for professionals",
+        "displayOrder": 2
+      },
+      {
+        "id": 3,
+        "name": "Studio Pack",
+        "credits": 300,
+        "bonusCredits": 100,
+        "totalCredits": 400,
+        "price": 39.99,
+        "description": "Best value for content creators and businesses",
+        "displayOrder": 3
+      }
+    ],
+    "message": null,
+    "error": null
+  }
+}

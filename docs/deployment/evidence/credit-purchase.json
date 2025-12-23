@@ -1,0 +1,101 @@
+{
+  "environment": "local",
+  "packages": {
+    "success": true,
+    "data": [
+      {
+        "id": 1,
+        "name": "Starter Pack",
+        "credits": 50,
+        "bonusCredits": 0,
+        "totalCredits": 50,
+        "price": 9.99,
+        "description": "Perfect for trying out custom training and styled generations",
+        "displayOrder": 1
+      },
+      {
+        "id": 2,
+        "name": "Professional Pack",
+        "credits": 120,
+        "bonusCredits": 30,
+        "totalCredits": 150,
+        "price": 19.99,
+        "description": "Most popular - great for professionals",
+        "displayOrder": 2
+      },
+      {
+        "id": 3,
+        "name": "Studio Pack",
+        "credits": 300,
+        "bonusCredits": 100,
+        "totalCredits": 400,
+        "price": 39.99,
+        "description": "Best value for content creators and businesses",
+        "displayOrder": 3
+      }
+    ],
+    "message": null,
+    "error": null
+  },
+  "statusBefore": {
+    "success": true,
+    "data": {
+      "totalCredits": 5,
+      "weeklyCredits": 5,
+      "purchasedCredits": 0,
+      "lastCreditReset": "2025-12-23T06:58:56.0763833",
+      "nextResetDate": "2025-12-30T06:58:56.0763833"
+    },
+    "message": null,
+    "error": null
+  },
+  "paymentConfig": {
+    "success": true,
+    "data": {
+      "paymentSimulation": {
+        "enabled": false,
+        "skipStripeIntegration": false,
+        "reason": null
+      },
+      "stripe": {
+        "enabled": true,
+        "publishableKey": "pk_test_51SAUm1Q9oQqusZy7T3EznneWJYQZrpHbS4xMdmwM2aXmRAjM6G3D9d9ASTEBBfHD7ZMwKcVAUFrxihNnOKZHz5Bh007YjPGtzy",
+        "webhookConfigured": true
+      }
+    },
+    "message": null,
+    "error": null
+  },
+  "paymentIntent": {
+    "success": true,
+    "data": {
+      "paymentIntentId": "pi_3ShVZVQ9oQqusZy71KkeOZum",
+      "clientSecret": "***REDACTED***",
+      "publishableKey": "pk_test_51SAUm1Q9oQqusZy7T3EznneWJYQZrpHbS4xMdmwM2aXmRAjM6G3D9d9ASTEBBfHD7ZMwKcVAUFrxihNnOKZHz5Bh007YjPGtzy",
+      "paymentTransactionId": "1006",
+      "packageId": 1,
+      "isSimulation": false
+    },
+    "message": null,
+    "error": null
+  },
+  "purchase": {
+    "success": false,
+    "error": {
+      "code": "PaymentPending",
+      "message": "Payment is still processing."
+    }
+  },
+  "statusAfter": {
+    "success": true,
+    "data": {
+      "totalCredits": 5,
+      "weeklyCredits": 5,
+      "purchasedCredits": 0,
+      "lastCreditReset": "2025-12-23T06:58:56.0763833",
+      "nextResetDate": "2025-12-30T06:58:56.0763833"
+    },
+    "message": null,
+    "error": null
+  }
+}

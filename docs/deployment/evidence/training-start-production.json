@@ -1,0 +1,61 @@
+{
+  "environment": "production",
+  "request": {
+    "userId": "29825f8b-beec-4b9e-99bc-a1f5641832c4",
+    "imageZipUrl": "https://aipmstv16j74jubocuukg.blob.core.windows.net/profile-images/prod/training-zips/29825f8b-beec-4b9e-99bc-a1f5641832c4.zip?REDACTED_SAS=true"
+  },
+  "response": {
+    "success": true,
+    "data": {
+      "prediction": {
+        "id": "s3dm7y4tc1rmt0cv9e8sv5jft8",
+        "status": "starting",
+        "version": "56cb4a6447e586e40c6834a7a48b649336ade35325479817ada41cd3d8dcc175",
+        "input": {
+          "input_images": "https://aipmstv16j74jubocuukg.blob.core.windows.net/profile-images/prod/training-zips/29825f8b-beec-4b9e-99bc-a1f5641832c4.zip?REDACTED_SAS=true",
+          "lora_type": "subject",
+          "training_steps": 2000,
+          "trigger_word": "user_29825f8b-beec-4b9e-99bc-a1f5641832c4"
+        },
+        "output": null,
+        "error": null,
+        "logs": "",
+        "webhook": null,
+        "urls": {
+          "get": "https://api.replicate.com/v1/predictions/s3dm7y4tc1rmt0cv9e8sv5jft8",
+          "cancel": "https://api.replicate.com/v1/predictions/s3dm7y4tc1rmt0cv9e8sv5jft8/cancel"
+        },
+        "created_at": "2025-12-23T14:16:32.096Z",
+        "started_at": null,
+        "completed_at": null
+      },
+      "creditsRemaining": 51,
+      "creditsCost": 15
+    },
+    "error": null
+  },
+  "creditStatusBefore": {
+    "success": true,
+    "data": {
+      "totalCredits": 51,
+      "weeklyCredits": 1,
+      "purchasedCredits": 50,
+      "lastCreditReset": "2025-12-22T16:23:13.7007928",
+      "nextResetDate": "2025-12-29T16:23:13.7007928"
+    },
+    "message": null,
+    "error": null
+  },
+  "creditStatusAfter": {
+    "success": true,
+    "data": {
+      "totalCredits": 36,
+      "weeklyCredits": 1,
+      "purchasedCredits": 35,
+      "lastCreditReset": "2025-12-22T16:23:13.7007928",
+      "nextResetDate": "2025-12-29T16:23:13.7007928"
+    },
+    "message": null,
+    "error": null
+  }
+}
