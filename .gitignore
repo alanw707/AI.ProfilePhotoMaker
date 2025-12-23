@@ -101,6 +101,8 @@ package-lock.json
 # Temporary downloads and artifacts
 .downloads/
 .playwright-mcp/
+.cursor/rules/bmad/
+.github/agents/
 
 # Test artifacts - screenshots and results
 **/screenshots/*.png
