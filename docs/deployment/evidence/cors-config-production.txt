@@ -1,0 +1,15 @@
+HTTP/2 204 
+date: Tue, 23 Dec 2025 13:29:31 GMT
+server: cloudflare
+access-control-allow-credentials: true
+access-control-allow-methods: GET
+access-control-allow-origin: https://app.aiprofilephotomaker.com
+access-control-max-age: 600
+vary: Origin
+x-robots-tag: noindex, nofollow, noarchive, nosnippet
+cf-cache-status: DYNAMIC
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=iu3xD%2FdShOOBXmn9f%2BFvWgYODtGgYVAG2mq%2FnT3p%2FD7MSTKc9%2BQ7k2rzzD3POjLLd9WVkrdehvnX6UOZvMjmfKvi33WqgkzJ9hbHpFz87Vbi2SLSVNoX8wI%3D"}]}
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+cf-ray: 9b283553fd9809fb-LAS
+alt-svc: h3=":443"; ma=86400
+

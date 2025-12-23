@@ -1,0 +1,27 @@
+{
+  "status": "Healthy",
+  "checks": [
+    {
+      "name": "database",
+      "status": "Healthy",
+      "description": "Database connection is healthy",
+      "data": {
+        "provider": "SqlServer",
+        "connection_masked": "Not configured",
+        "can_connect": true
+      }
+    },
+    {
+      "name": "migrations",
+      "status": "Healthy",
+      "description": "All migrations applied",
+      "data": {
+        "can_connect": true,
+        "database_exists": true,
+        "applied_count": 11,
+        "pending_count": 0
+      }
+    }
+  ],
+  "timestamp": "2025-12-23T13:51:07.7960304Z"
+}

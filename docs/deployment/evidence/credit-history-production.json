@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": 9,
+      "purchaseDate": "2025-12-23T14:13:22.2978697",
+      "creditsAwarded": 50,
+      "amountPaid": 9.99,
+      "status": 1,
+      "packageName": "Starter Pack"
+    }
+  ],
+  "message": null,
+  "error": null
+}

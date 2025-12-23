@@ -1,0 +1,14 @@
+HTTP/1.1 200 OK
+Content-Length: 997
+Content-Type: image/jpeg
+Content-MD5: Kwif8O1IY4v77bf71unGJw==
+Last-Modified: Tue, 23 Dec 2025 13:29:29 GMT
+ETag: 0x8DE42274CCFAAC8
+Vary: Origin
+Server: Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
+x-ms-request-id: 94881289-e01e-006b-3310-740c0f000000
+x-ms-version: 2009-09-19
+x-ms-lease-status: unlocked
+x-ms-blob-type: BlockBlob
+Date: Tue, 23 Dec 2025 13:30:22 GMT
+

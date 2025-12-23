@@ -1,0 +1,78 @@
+{
+  "environment": "production",
+  "response": {
+    "success": true,
+    "data": {
+      "profileId": 14,
+      "uploadedFiles": [
+        {
+          "fileName": "795a9e5f-f1ec-432f-9244-0699fad99c46_selfie.jpg",
+          "size": 997,
+          "url": "https://aipmstv16j74jubocuukg.blob.core.windows.net/profile-images/prod/uploads/29825f8b-beec-4b9e-99bc-a1f5641832c4/795a9e5f-f1ec-432f-9244-0699fad99c46_selfie.jpg"
+        },
+        {
+          "fileName": "a34144a6-3e81-48eb-b517-0c7113545e8d_selfie.jpg",
+          "size": 997,
+          "url": "https://aipmstv16j74jubocuukg.blob.core.windows.net/profile-images/prod/uploads/29825f8b-beec-4b9e-99bc-a1f5641832c4/a34144a6-3e81-48eb-b517-0c7113545e8d_selfie.jpg"
+        },
+        {
+          "fileName": "5abbde9e-5be1-4aa5-9393-4ed8f02f7855_selfie.jpg",
+          "size": 997,
+          "url": "https://aipmstv16j74jubocuukg.blob.core.windows.net/profile-images/prod/uploads/29825f8b-beec-4b9e-99bc-a1f5641832c4/5abbde9e-5be1-4aa5-9393-4ed8f02f7855_selfie.jpg"
+        },
+        {
+          "fileName": "188b33ad-2267-4820-ae76-1442caab020a_selfie.jpg",
+          "size": 997,
+          "url": "https://aipmstv16j74jubocuukg.blob.core.windows.net/profile-images/prod/uploads/29825f8b-beec-4b9e-99bc-a1f5641832c4/188b33ad-2267-4820-ae76-1442caab020a_selfie.jpg"
+        },
+        {
+          "fileName": "b2284a84-8893-47e6-b54d-c9130a638a28_selfie.jpg",
+          "size": 997,
+          "url": "https://aipmstv16j74jubocuukg.blob.core.windows.net/profile-images/prod/uploads/29825f8b-beec-4b9e-99bc-a1f5641832c4/b2284a84-8893-47e6-b54d-c9130a638a28_selfie.jpg"
+        },
+        {
+          "fileName": "5874302c-7021-4d26-ba1f-25ea361fcea0_selfie.jpg",
+          "size": 997,
+          "url": "https://aipmstv16j74jubocuukg.blob.core.windows.net/profile-images/prod/uploads/29825f8b-beec-4b9e-99bc-a1f5641832c4/5874302c-7021-4d26-ba1f-25ea361fcea0_selfie.jpg"
+        },
+        {
+          "fileName": "4261b796-8a13-44ae-9db9-c25753eeaae8_selfie.jpg",
+          "size": 997,
+          "url": "https://aipmstv16j74jubocuukg.blob.core.windows.net/profile-images/prod/uploads/29825f8b-beec-4b9e-99bc-a1f5641832c4/4261b796-8a13-44ae-9db9-c25753eeaae8_selfie.jpg"
+        },
+        {
+          "fileName": "88c5091c-d6bb-4918-a8af-343b4e6ac97b_selfie.jpg",
+          "size": 997,
+          "url": "https://aipmstv16j74jubocuukg.blob.core.windows.net/profile-images/prod/uploads/29825f8b-beec-4b9e-99bc-a1f5641832c4/88c5091c-d6bb-4918-a8af-343b4e6ac97b_selfie.jpg"
+        },
+        {
+          "fileName": "8e90a3d3-8f38-4d56-8047-6bb68debc14a_selfie.jpg",
+          "size": 997,
+          "url": "https://aipmstv16j74jubocuukg.blob.core.windows.net/profile-images/prod/uploads/29825f8b-beec-4b9e-99bc-a1f5641832c4/8e90a3d3-8f38-4d56-8047-6bb68debc14a_selfie.jpg"
+        },
+        {
+          "fileName": "93876049-44b6-4c9d-8028-f16fdd59a89e_selfie.jpg",
+          "size": 997,
+          "url": "https://aipmstv16j74jubocuukg.blob.core.windows.net/profile-images/prod/uploads/29825f8b-beec-4b9e-99bc-a1f5641832c4/93876049-44b6-4c9d-8028-f16fdd59a89e_selfie.jpg"
+        }
+      ],
+      "uploadedImageIds": [
+        146,
+        147,
+        148,
+        149,
+        150,
+        151,
+        152,
+        153,
+        154,
+        155
+      ],
+      "zipCreated": true,
+      "zipPath": "https://aipmstv16j74jubocuukg.blob.core.windows.net/profile-images/prod/training-zips/29825f8b-beec-4b9e-99bc-a1f5641832c4.zip?REDACTED_SAS=true",
+      "message": "Images uploaded and zipped for training."
+    },
+    "message": null,
+    "error": null
+  }
+}
