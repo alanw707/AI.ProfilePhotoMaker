@@ -28,4 +28,4 @@
 - Tokens/PII removed: not applicable (log analytics query only)
 
 ## Notes
-- Retention policy endpoint still reports 7-day original uploads.
+- Retention policy validated at 30/30 days (see policy evidence).

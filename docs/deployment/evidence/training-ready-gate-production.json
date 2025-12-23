@@ -1,0 +1,7 @@
+{
+  "success": false,
+  "error": {
+    "code": "ModelAlreadyTrained",
+    "message": "You already have a trained model (alanw707/user-29825f8b-beec-4b9e-99bc-a1f5641832c4-20251223174618). You can generate photos using your existing model instead of training a new one."
+  }
+}

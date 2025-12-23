@@ -1,0 +1,27 @@
+{
+  "success": true,
+  "message": "Found 1 model creation requests for current user",
+  "data": {
+    "totalRequests": 1,
+    "hasTrainedModel": true,
+    "latestTrainedModel": {
+      "requestId": "77227083-3e1d-4c8c-a100-368192ee9b6c",
+      "modelName": "user-29825f8b-beec-4b9e-99bc-a1f5641832c4-20251223174618",
+      "replicateModelId": "alanw707/user-29825f8b-beec-4b9e-99bc-a1f5641832c4-20251223174618",
+      "trainedModelVersion": "0fadcfe26ad725c96c52d18095db4dcf739ea1b9606f1396bc72457704bb37b9",
+      "completedAt": "2025-12-23T17:51:09.8593422"
+    },
+    "allRequests": [
+      {
+        "requestId": "77227083-3e1d-4c8c-a100-368192ee9b6c",
+        "modelName": "user-29825f8b-beec-4b9e-99bc-a1f5641832c4-20251223174618",
+        "replicateModelId": "alanw707/user-29825f8b-beec-4b9e-99bc-a1f5641832c4-20251223174618",
+        "trainedModelVersion": "0fadcfe26ad725c96c52d18095db4dcf739ea1b9606f1396bc72457704bb37b9",
+        "status": "ready",
+        "createdAt": "2025-12-23T17:46:18.4365718",
+        "completedAt": "2025-12-23T17:51:09.8593422",
+        "errorMessage": null
+      }
+    ]
+  }
+}

@@ -4,7 +4,7 @@
 - Evidence ID: prod-ac6-retention-policy
 - Requirement ID (AC/PC): AC-6
 - Environment: production
-- Date: 2025-12-23T15:27:58Z
+- Date: 2025-12-23T17:24:01Z
 - Operator: Alan
 
 ## Inputs
@@ -17,8 +17,8 @@
 
 ## Output Summary
 - Expected result: retention schedule returned for uploads and generated images (30/30 days).
-- Actual result: policy returned with 7-day uploads, 30-day generated images.
-- Pass/Fail: Fail (policy mismatch; deployment pending).
+- Actual result: policy returned with 30-day uploads, 30-day generated images.
+- Pass/Fail: Pass (policy matches 30/30 days).
 
 ## Evidence Files
 - `docs/deployment/evidence/retention-policy-production.json`
@@ -28,4 +28,4 @@
 - Tokens/PII removed: yes (auth token redacted)
 
 ## Notes
-- Production still reports 7-day retention for original uploads.
+- Retention policy now matches 30/30 day schedule.

@@ -1,1 +1,17 @@
-{"success":true,"retentionPolicy":{"originalUploads":{"retentionPeriod":"7 days","description":"Input photos (original uploads) are deleted after 7 days"},"generatedImages":{"retentionPeriod":"30 days","description":"AI headshots (generated photos) are deleted after 30 days"},"backgroundService":{"checkInterval":"Every 6 hours","description":"Background service automatically checks and deletes expired images"}}}
+{
+  "success": true,
+  "retentionPolicy": {
+    "originalUploads": {
+      "retentionPeriod": "30 days",
+      "description": "Input photos (original uploads) are deleted after 30 days"
+    },
+    "generatedImages": {
+      "retentionPeriod": "30 days",
+      "description": "AI headshots (generated photos) are deleted after 30 days"
+    },
+    "backgroundService": {
+      "checkInterval": "Every 6 hours",
+      "description": "Background service automatically checks and deletes expired images"
+    }
+  }
+}

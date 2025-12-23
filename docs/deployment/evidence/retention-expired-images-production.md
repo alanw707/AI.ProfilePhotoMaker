@@ -4,7 +4,7 @@
 - Evidence ID: prod-ac6-retention-expired-images
 - Requirement ID (AC/PC): AC-6
 - Environment: production
-- Date: 2025-12-23T15:27:58Z
+- Date: 2025-12-23T17:24:01Z
 - Operator: Alan
 
 ## Inputs
@@ -28,4 +28,4 @@
 - Tokens/PII removed: yes (auth token redacted)
 
 ## Notes
-- Retention policy endpoint still reports 7-day original uploads.
+- Retention policy validated at 30/30 days (see policy evidence).
