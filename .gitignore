@@ -125,7 +125,6 @@ AI.ProfilePhotoMaker.API/tests/playwright/results/
 claude-*.md
 *-analysis.md
 .serena/
-_bmap/
 
 # General build results
 **/[Bb]in/

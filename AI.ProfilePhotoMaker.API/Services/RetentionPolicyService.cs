@@ -495,4 +495,35 @@ public class RetentionPolicyService : IRetentionPolicyService
 
         return deletedCount;
     }
+
+    public async Task<Dictionary<string, (string? Email, List<ProcessedImage> Images)>> GetImagesApproachingDeletionAsync(int daysBeforeDeletion, int windowSizeDays = 1)
+    {
+        var now = DateTime.UtcNow;
+        var windowStart = now.AddDays(daysBeforeDeletion - windowSizeDays / 2.0);
+        var windowEnd = now.AddDays(daysBeforeDeletion + windowSizeDays / 2.0);
+
+        var images = await _context.ProcessedImages
+            .Include(img => img.UserProfile)
+            .ThenInclude(up => up.User)
+            .Where(img => img.ScheduledDeletionDate >= windowStart && img.ScheduledDeletionDate <= windowEnd)
+            .ToListAsync();
+
+        var result = new Dictionary<string, (string? Email, List<ProcessedImage> Images)>(StringComparer.OrdinalIgnoreCase);
+
+        var groupedByUser = images
+            .Where(img => !string.IsNullOrWhiteSpace(img.UserProfile?.UserId))
+            .GroupBy(img => img.UserProfile!.UserId, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var userGroup in groupedByUser)
+        {
+            var userId = userGroup.Key;
+            var firstImage = userGroup.First();
+            var email = firstImage.UserProfile?.User?.Email;
+            var userImages = userGroup.ToList();
+
+            result[userId] = (email, userImages);
+        }
+
+        return result;
+    }
 }

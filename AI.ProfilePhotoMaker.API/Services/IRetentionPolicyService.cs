@@ -63,4 +63,12 @@ public interface IRetentionPolicyService
     /// <param name="maxAge">Maximum age of files to keep (older files will be deleted) - typically 1 hour for enhanced images</param>
     /// <returns>Number of enhanced images cleaned up</returns>
     Task<int> CleanupOrphanedEnhancedImagesAsync(TimeSpan maxAge);
+
+    /// <summary>
+    /// Gets images that are scheduled for deletion within the specified number of days, grouped by user
+    /// </summary>
+    /// <param name="daysBeforeDeletion">Number of days before deletion (e.g., 14 for 14-day warning, 7 for 7-day warning)</param>
+    /// <param name="windowSizeDays">Size of the window in days to check (default 1 day). Images with ScheduledDeletionDate between (now + daysBeforeDeletion - windowSizeDays/2) and (now + daysBeforeDeletion + windowSizeDays/2) will be included</param>
+    /// <returns>Dictionary keyed by userId, containing email and list of images approaching deletion</returns>
+    Task<Dictionary<string, (string? Email, List<ProcessedImage> Images)>> GetImagesApproachingDeletionAsync(int daysBeforeDeletion, int windowSizeDays = 1);
 }
