@@ -27,6 +27,7 @@ interface Testimonial {
   role: string;
   content: string;
   avatar: string;
+  rating: number;
 }
 
 interface FAQ {
@@ -124,25 +125,28 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   testimonials: Testimonial[] = [
     {
-      name: 'Job seeker',
-      role: 'Resume + LinkedIn update',
+      name: 'Sarah Johnson',
+      role: 'Marketing Director',
       content:
-        'I used the free enhancements to get my photos looking clean and professional, then upgraded for a full LinkedIn-ready set.',
+        'The AI transformed my casual selfie into a professional headshot that looks like it was taken in a studio. Amazing!',
       avatar: '👩‍💼',
+      rating: 5,
     },
     {
-      name: 'Founder',
-      role: 'Personal brand refresh',
+      name: 'Michael Chen',
+      role: 'Software Engineer',
       content:
-        'Fast turnaround and realistic results. The style options made it easy to find something that fits my industry.',
+        'Finally updated my LinkedIn photo after years. The quality is incredible and it only took minutes!',
       avatar: '👨‍💻',
+      rating: 5,
     },
     {
-      name: 'Freelancer',
-      role: 'Client-facing profile',
+      name: 'Emily Rodriguez',
+      role: 'Freelance Designer',
       content:
-        'The enhancements helped my inputs look consistent. Great for keeping a polished look across platforms.',
+        'I use different styles for different platforms. The variety and quality are unmatched. Worth every penny!',
       avatar: '👩‍🎨',
+      rating: 5,
     },
   ];
 
