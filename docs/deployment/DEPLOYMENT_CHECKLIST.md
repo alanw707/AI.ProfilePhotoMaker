@@ -14,7 +14,7 @@ This will:
 ### Step 2: Verify OAuth is Working
 ```bash
 # Test OAuth endpoint (should return 302 redirect)
-curl -I https://api.aiprofilephotomaker.com/api/auth/external-login/google
+curl -I "https://api.aiprofilephotomaker.com/api/auth/external-login/google?ageConfirmed=true"
 
 # Check application logs for errors
 az monitor log-analytics query \
@@ -90,7 +90,7 @@ az deployment group create \
 ./scripts/deploy-with-oauth.sh
 
 # Test OAuth endpoint
-curl -I https://api.aiprofilephotomaker.com/api/auth/external-login/google
+curl -I "https://api.aiprofilephotomaker.com/api/auth/external-login/google?ageConfirmed=true"
 
 # View OAuth logs
 az monitor log-analytics query \
@@ -138,4 +138,3 @@ The deployment is successful when:
 - ✅ All future deployments include OAuth configuration automatically
 - ✅ No manual Azure Portal/CLI configuration required
 - ✅ Infrastructure is fully reproducible from code
-

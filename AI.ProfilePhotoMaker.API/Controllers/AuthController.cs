@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using AI.ProfilePhotoMaker.API.Constants;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
@@ -412,6 +413,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto model)
         {
+            if (!model.AgeConfirmed)
+            {
+                return BadRequest(new AuthResponseDto(false, AuthValidationMessages.AgeConfirmationRequiredToSignIn, string.Empty, null));
+            }
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
@@ -534,11 +540,19 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         [HttpGet("external-login/{provider}")]
-        public IActionResult ExternalLogin(string provider, string returnUrl = "/app/dashboard")
+        public IActionResult ExternalLogin(string provider, string returnUrl = "/app/dashboard", bool ageConfirmed = false)
         {
             if (provider.ToLower() != "google")
             {
                 return BadRequest(new { error = $"{provider} OAuth not implemented yet" });
+            }
+
+            if (!ageConfirmed)
+            {
+                var frontendBaseUrl = GetFrontendBaseUrl();
+                var safeReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/app/dashboard" : returnUrl;
+                var encodedReturnUrl = Uri.EscapeDataString(safeReturnUrl);
+                return Redirect($"{frontendBaseUrl}/auth/login?error=age_confirmation_required&returnUrl={encodedReturnUrl}");
             }
 
             var (clientId, _) = GetGoogleClientSettings();

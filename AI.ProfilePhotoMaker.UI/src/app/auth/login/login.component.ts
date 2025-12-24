@@ -33,7 +33,9 @@ export class LoginComponent implements OnInit, OnDestroy {
   loading = false;
   error = '';
   returnUrl = '';
-  googleAgeConfirmed = false;
+  readonly ageConfirmationMessage = 'Age confirmation is required to sign in.';
+  readonly ageConfirmErrorId = 'age-confirmation-error';
+  submitAttempted = false;
   private _authSub?: any;
 
   // Use inject function to reduce constructor parameters
@@ -49,6 +51,7 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.loginForm = this._formBuilder.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]],
+      ageConfirmed: [false, [Validators.requiredTrue]],
     });
 
     // Get return URL from route parameters or default to profile
@@ -195,6 +198,22 @@ export class LoginComponent implements OnInit, OnDestroy {
       }
     }
 
+    if (typeof error?.error === 'string') {
+      return error.error;
+    }
+
+    if (typeof error?.error?.error === 'string') {
+      return error.error.error;
+    }
+
+    if (error?.error?.detail) {
+      return error.error.detail;
+    }
+
+    if (error?.error?.title) {
+      return error.error.title;
+    }
+
     if (error?.message) {
       return error.message;
     }
@@ -204,8 +223,11 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   onSubmit(): void {
     this.error = '';
+    this.submitAttempted = true;
 
     if (this.loginForm.invalid) {
+      this.loginForm.markAllAsTouched();
+      this._cdr.markForCheck();
       return;
     }
 
@@ -214,6 +236,7 @@ export class LoginComponent implements OnInit, OnDestroy {
     const loginData: LoginDto = {
       email: this.f['email'].value,
       password: this.f['password'].value,
+      ageConfirmed: this.f['ageConfirmed'].value,
     };
 
     this._authService
@@ -256,17 +279,18 @@ export class LoginComponent implements OnInit, OnDestroy {
     this._router.navigate(['/auth/register']);
   }
 
-  onGoogleAgeChange(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    this.googleAgeConfirmed = target.checked;
-    this._cdr.markForCheck();
-  }
-
   loginWithGoogle(): void {
+    this.submitAttempted = true;
+    if (this.f['ageConfirmed'].value !== true) {
+      this.f['ageConfirmed'].markAsTouched();
+      this._cdr.markForCheck();
+      return;
+    }
+
     // Get OAuth base URL from config service via constructor injection
     const oauthBaseUrl = this._configService.getOAuthBaseUrl();
     // Use standard OAuth flow - redirect to the external login endpoint
-    const oauthUrl = `${oauthBaseUrl}/api/auth/external-login/google?returnUrl=${encodeURIComponent(this.returnUrl)}`;
+    const oauthUrl = `${oauthBaseUrl}/api/auth/external-login/google?returnUrl=${encodeURIComponent(this.returnUrl)}&ageConfirmed=true`;
     window.location.href = oauthUrl;
   }
 }

@@ -80,6 +80,27 @@
       font-size: 12px
       margin-top: 5px
 
+  .age-confirm
+    .checkbox-label
+      display: flex
+      align-items: flex-start
+      gap: 8px
+      font-size: 13px
+      color: var(--text-secondary)
+
+      input
+        margin-top: 3px
+
+      a
+        color: var(--accent-primary)
+        text-decoration: underline
+
+      .age-confirm-note
+        display: block
+        margin-top: 4px
+        font-size: 12px
+        color: var(--text-secondary)
+
   .alert
     padding: 12px 16px
     border-radius: 8px
@@ -96,6 +117,17 @@
 
     &.btn-primary
       @include shared.btn-primary
+
+    &.btn-disabled
+      opacity: 0.6
+      cursor: not-allowed
+      box-shadow: none
+      background: linear-gradient(135deg, var(--accent-primary) 0%, var(--primary-hover) 100%)
+
+      &:hover
+        transform: none
+        box-shadow: none
+        background: linear-gradient(135deg, var(--accent-primary) 0%, var(--primary-hover) 100%)
 
     &.btn-block
       width: 100%
@@ -150,20 +182,6 @@
       &:hover:not(:disabled)
         border-color: #4285f4
         box-shadow: 0 8px 24px rgba(66, 133, 244, 0.2)
-
-  .google-age-confirm
-    display: flex
-    align-items: flex-start
-    gap: 8px
-    font-size: 13px
-    color: var(--text-secondary)
-
-    input
-      margin-top: 3px
-
-    a
-      color: var(--accent-primary)
-      text-decoration: underline
 
 .login-footer
   text-align: center

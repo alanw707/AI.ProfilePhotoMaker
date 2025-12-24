@@ -1,9 +1,12 @@
 using System.Net.Http.Headers;
 using System.Text;
+using System.Linq;
 using Azure.Storage.Blobs;
 using AI.ProfilePhotoMaker.API;
+using AI.ProfilePhotoMaker.API.Constants;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
+using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Tests.Infrastructure;
 using AI.ProfilePhotoMaker.API.Services.Authentication;
 using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
@@ -21,6 +24,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
@@ -74,6 +79,37 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             {
                 options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
             });
+
+        services.Configure<ApiBehaviorOptions>(options =>
+        {
+            options.InvalidModelStateResponseFactory = context =>
+            {
+                var routeValues = context.ActionDescriptor.RouteValues;
+                var isAuthLogin = routeValues.TryGetValue("controller", out var controller) &&
+                                  routeValues.TryGetValue("action", out var action) &&
+                                  string.Equals(controller, "Auth", StringComparison.OrdinalIgnoreCase) &&
+                                  string.Equals(action, "Login", StringComparison.OrdinalIgnoreCase);
+
+                if (isAuthLogin)
+                {
+                    var ageGateFailed = context.ModelState
+                        .Where(entry => entry.Key.Contains(nameof(LoginDto.AgeConfirmed), StringComparison.OrdinalIgnoreCase))
+                        .SelectMany(entry => entry.Value?.Errors ?? Enumerable.Empty<ModelError>())
+                        .Any();
+
+                    if (ageGateFailed)
+                    {
+                        return new BadRequestObjectResult(new AuthResponseDto(
+                            false,
+                            AuthValidationMessages.AgeConfirmationRequiredToSignIn,
+                            string.Empty,
+                            null));
+                    }
+                }
+
+                return new BadRequestObjectResult(new ValidationProblemDetails(context.ModelState));
+            };
+        });
 
         // Add InMemory database with shared name for test consistency
         services.AddDbContext<ApplicationDbContext>(options =>

@@ -1,6 +1,6 @@
 # Age Gate (Implementation Notes)
 
-Last updated: 2025-12-19  
+Last updated: 2025-12-24  
 Status: Evidence captured (production); legal review pending.
 
 ## Evidence (production)
@@ -12,13 +12,15 @@ Status: Evidence captured (production); legal review pending.
 
 ## Where Age Gate Is Enforced
 - Email registration form requires confirmation of age 13+.
+- Email sign-in requires confirmation of age 13+.
 - Google OAuth login is disabled until age confirmation is checked.
-- API registration and profile completion endpoints reject requests without age confirmation.
+- API registration, login, and profile completion endpoints reject requests without age confirmation.
 
 ## Behavior
 - Registration form cannot submit unless the 13+ checkbox is checked.
+- Login form cannot submit unless the 13+ checkbox is checked.
 - Google sign-in button is disabled until the user confirms 13+.
-- API rejects register and complete-profile requests when age confirmation is false or missing.
+- API rejects register, login, and complete-profile requests when age confirmation is false or missing.
 
 ## Code References
 - `AI.ProfilePhotoMaker.UI/src/app/auth/register/register.component.ts`
