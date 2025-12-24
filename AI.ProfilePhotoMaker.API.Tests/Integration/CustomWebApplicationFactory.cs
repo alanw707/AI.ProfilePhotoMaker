@@ -252,6 +252,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         public Task SendSupportFeedbackReceivedAsync(string userId, string? userEmail, FeedbackSubmission submission) => Task.CompletedTask;
         public Task SendEmailVerificationAsync(string userId, string? email, string encodedToken) => Task.CompletedTask;
         public Task SendWelcomeAsync(string userId, string? email, string? firstName = null) => Task.CompletedTask;
+        public Task SendRetentionDeletionWarningAsync(string userId, string? email, int imageCount, DateTime deletionDate, int daysUntilDeletion) => Task.CompletedTask;
     }
 
     private sealed class FakeStorageService : IStorageService

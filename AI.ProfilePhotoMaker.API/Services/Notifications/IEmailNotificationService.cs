@@ -11,4 +11,5 @@ public interface IEmailNotificationService
     Task SendSupportFeedbackReceivedAsync(string userId, string? userEmail, FeedbackSubmission submission);
     Task SendEmailVerificationAsync(string userId, string? email, string encodedToken);
     Task SendWelcomeAsync(string userId, string? email, string? firstName = null);
+    Task SendRetentionDeletionWarningAsync(string userId, string? email, int imageCount, DateTime deletionDate, int daysUntilDeletion);
 }

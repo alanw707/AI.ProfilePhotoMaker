@@ -142,6 +142,46 @@ public class EmailNotificationService : IEmailNotificationService
         return SendEmailAsync(email, subject, body, "welcome", userId);
     }
 
+    public Task SendRetentionDeletionWarningAsync(string userId, string? email, int imageCount, DateTime deletionDate, int daysUntilDeletion)
+    {
+        // Determine subject and message based on days until deletion
+        string subject;
+        string messageIntro;
+        
+        if (daysUntilDeletion == 14)
+        {
+            subject = "Reminder: Your photos will be deleted in 14 days";
+            messageIntro = "This is a friendly reminder that your photos will be automatically deleted in 14 days per our data retention policy.";
+        }
+        else if (daysUntilDeletion == 7)
+        {
+            subject = "Reminder: Your photos will be deleted in 7 days";
+            messageIntro = "This is a final reminder that your photos will be automatically deleted in 7 days per our data retention policy.";
+        }
+        else
+        {
+            // Generic message for any other number of days
+            subject = $"Reminder: Your photos will be deleted in {daysUntilDeletion} days";
+            messageIntro = $"This is a reminder that your photos will be automatically deleted in {daysUntilDeletion} days per our data retention policy.";
+        }
+
+        var cta = BuildCtaLink("app/gallery");
+        var safeDeletionDate = WebUtility.HtmlEncode(deletionDate.ToString("MMMM d, yyyy"));
+        var imageCountText = imageCount == 1 ? "1 photo" : $"{imageCount} photos";
+
+        var body = $@"<p style=""margin:0 0 16px;"">{messageIntro}</p>
+                      <p style=""margin:0 0 16px;"">
+                        <strong>Images scheduled for deletion:</strong> {imageCountText}<br/>
+                        <strong>Deletion date:</strong> {safeDeletionDate}
+                      </p>
+                      <p style=""margin:0 0 16px;"">If you'd like to keep any of these photos, please download them from your gallery before the deletion date. After deletion, they cannot be recovered.</p>
+                      {BuildPrimaryButton("View my gallery", cta)}
+                      <p style=""margin:24px 0 0; font-size:14px; color:#475569;"">This is an automated reminder about our 30-day data retention policy. If you have any questions, please reply to this email.</p>";
+
+        var templateTag = $"retention-deletion-warning-{daysUntilDeletion}d";
+        return SendEmailAsync(email, subject, body, templateTag, userId);
+    }
+
     public Task SendSupportFeedbackReceivedAsync(string userId, string? userEmail, FeedbackSubmission submission)
     {
         var supportEmail = _options.SupportToEmail;
