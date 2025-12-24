@@ -542,10 +542,12 @@ public class ReplicateApiClient : IReplicateApiClient
             // Get style template from database and create prompt
             var stylePrompts = await GetStylePromptsFromDatabase(style);
             string stylePrompt = CreateFluxStylePrompt(stylePrompts.PromptTemplate, userInfo, userId);
+            string negativePrompt = CreateFluxNegativePrompt(stylePrompts.NegativePromptTemplate, userInfo);
 
             _logger.LogInformation("Generating images with model version: {ModelVersion} for user: {UserId}, style: {Style}",
                 S(trainedModelVersion), Sid(userId), S(style));
             _logger.LogInformation("Generated prompt: {Prompt}", S(stylePrompt));
+            _logger.LogInformation("Generated negative prompt: {NegativePrompt}", S(negativePrompt));
 
             // Get webhook URL for async processing
             var webhookUrl = await _webhookUrlResolver.GetWebhookUrlAsync("/api/webhooks/replicate/prediction-complete");
@@ -561,6 +563,7 @@ public class ReplicateApiClient : IReplicateApiClient
                     ["height"] = 520,
                     ["prompt"] = stylePrompt,
                     ["txt"] = stylePrompt, // Required by trained LoRA models
+                    ["negative_prompt"] = negativePrompt,
                     ["go_fast"] = false,
                     ["lora_scale"] = 1,
                     ["megapixels"] = "1",
@@ -804,6 +807,32 @@ public class ReplicateApiClient : IReplicateApiClient
         _logger.LogInformation("Generated prompt with trigger word: {Prompt}", S(result));
 
         return result;
+    }
+
+    /// <summary>
+    /// Creates a negative prompt by replacing placeholders in the template (no trigger word).
+    /// </summary>
+    private static string CreateFluxNegativePrompt(string negativePromptTemplate, UserInfo? userInfo)
+    {
+        if (string.IsNullOrWhiteSpace(negativePromptTemplate))
+        {
+            return string.Empty;
+        }
+
+        // Replace placeholders without using the trained model trigger word.
+        string gender = userInfo?.Gender?.ToLower() ?? "person";
+        string ethnicity = userInfo?.Ethnicity?.ToLower() ?? "";
+
+        string genderEthnicityCombo = !string.IsNullOrEmpty(ethnicity) ? $"{gender} {ethnicity}" : gender;
+
+        string result = negativePromptTemplate
+            .Replace("{gender} {ethnicity}", genderEthnicityCombo)
+            .Replace("{gender}", gender)
+            .Replace("{ethnicity}", ethnicity)
+            .Replace("{subject}", "person");
+
+        // Clean up extra spaces
+        return result.Replace("  ", " ").Trim();
     }
 
     /// <summary>
