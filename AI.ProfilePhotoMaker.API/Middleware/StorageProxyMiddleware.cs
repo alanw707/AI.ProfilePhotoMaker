@@ -1,4 +1,5 @@
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.WebUtilities;
 
 namespace AI.ProfilePhotoMaker.API.Middleware;
@@ -38,6 +39,15 @@ public class StorageProxyMiddleware
         if (pathForCheck?.StartsWith("/devstoreaccount1/") == true && originalPath != null)
         {
             _logger.LogInformation("Storage proxy middleware intercepting request: {Path}", S(originalPath));
+
+            // Handle CORS preflight locally (Azurite doesn't speak CORS).
+            if (HttpMethods.IsOptions(context.Request.Method))
+            {
+                await ApplyCorsHeadersAsync(context);
+                context.Response.StatusCode = StatusCodes.Status204NoContent;
+                return;
+            }
+
             await ProxyStorageRequest(context, originalPath);
             return;
         }
@@ -96,6 +106,9 @@ public class StorageProxyMiddleware
             // Remove transfer-encoding header to avoid chunking issues
             context.Response.Headers.Remove("transfer-encoding");
 
+            // Add CORS headers for browser fetch() usage in docker-local and other cross-origin dev setups.
+            await ApplyCorsHeadersAsync(context);
+
             // For HEAD, do not write a response body
             if (HttpMethods.IsHead(context.Request.Method))
             {
@@ -112,9 +125,32 @@ public class StorageProxyMiddleware
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error proxying storage request for path: {Path}", S(path));
+            await ApplyCorsHeadersAsync(context);
             context.Response.StatusCode = 500;
             await context.Response.WriteAsync("Storage proxy error");
         }
+    }
+
+    private static async Task ApplyCorsHeadersAsync(HttpContext context)
+    {
+        if (!context.Request.Headers.ContainsKey("Origin"))
+        {
+            return;
+        }
+
+        var environment = context.RequestServices.GetRequiredService<IWebHostEnvironment>();
+        var policyName = environment.IsDevelopment() ? "AllowDevelopment" : "V1Production";
+
+        var policyProvider = context.RequestServices.GetRequiredService<ICorsPolicyProvider>();
+        var corsPolicy = await policyProvider.GetPolicyAsync(context, policyName);
+        if (corsPolicy == null)
+        {
+            return;
+        }
+
+        var corsService = context.RequestServices.GetRequiredService<ICorsService>();
+        var corsResult = corsService.EvaluatePolicy(context, corsPolicy);
+        corsService.ApplyResult(corsResult, context.Response);
     }
 
     private static string GetForwardedQueryString(QueryString original)

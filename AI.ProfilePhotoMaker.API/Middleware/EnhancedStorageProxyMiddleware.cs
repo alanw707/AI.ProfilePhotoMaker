@@ -1,5 +1,6 @@
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Services.Storage;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 
 namespace AI.ProfilePhotoMaker.API.Middleware;
 
@@ -36,6 +37,15 @@ public class EnhancedStorageProxyMiddleware
 
         // Get storage service from request scope
         var storageService = context.RequestServices.GetRequiredService<IStorageService>();
+
+        // Handle CORS preflight locally for proxied storage routes.
+        if (HttpMethods.IsOptions(context.Request.Method)
+            && (path?.StartsWith("/devstoreaccount1/") == true || path?.StartsWith("/profile-images/") == true))
+        {
+            await ApplyCorsHeadersAsync(context);
+            context.Response.StatusCode = StatusCodes.Status204NoContent;
+            return;
+        }
 
         // Handle Azurite requests (development)
         if (path?.StartsWith("/devstoreaccount1/") == true)
@@ -93,6 +103,7 @@ public class EnhancedStorageProxyMiddleware
             {
                 _logger.LogWarning("Azurite request failed: {StatusCode} for {Path}", response.StatusCode, S(path));
                 context.Response.StatusCode = (int)response.StatusCode;
+                await ApplyCorsHeadersAsync(context);
                 return;
             }
 
@@ -102,6 +113,8 @@ public class EnhancedStorageProxyMiddleware
             foreach (var header in response.Content.Headers)
                 context.Response.Headers[header.Key] = new Microsoft.Extensions.Primitives.StringValues(header.Value.ToArray());
             context.Response.Headers.Remove("transfer-encoding");
+
+            await ApplyCorsHeadersAsync(context);
 
             // For HEAD requests, do not write a body
             if (HttpMethods.IsHead(context.Request.Method))
@@ -126,6 +139,7 @@ public class EnhancedStorageProxyMiddleware
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error proxying Azurite request for path: {Path}", S(path));
+            await ApplyCorsHeadersAsync(context);
             context.Response.StatusCode = 500;
             await context.Response.WriteAsync("Azurite proxy error");
         }
@@ -150,6 +164,7 @@ public class EnhancedStorageProxyMiddleware
             {
                 var exists = await storageService.ExistsAsync(storagePath);
                 context.Response.StatusCode = exists ? 200 : 404;
+                await ApplyCorsHeadersAsync(context);
                 if (exists)
                 {
                     // Minimal headers for caching
@@ -167,6 +182,7 @@ public class EnhancedStorageProxyMiddleware
             {
                 _logger.LogWarning("Image not found in storage: {StoragePath}", S(storagePath));
                 context.Response.StatusCode = 404;
+                await ApplyCorsHeadersAsync(context);
                 await context.Response.WriteAsync("Image not found");
                 return;
             }
@@ -178,6 +194,7 @@ public class EnhancedStorageProxyMiddleware
             // Add cache headers for performance (1 year for images)
             context.Response.Headers["Cache-Control"] = "public, max-age=31536000, immutable";
             context.Response.Headers["ETag"] = $"\"{storagePath.GetHashCode():X}\"";
+            await ApplyCorsHeadersAsync(context);
 
             // Stream the image to the response
             await imageStream.CopyToAsync(context.Response.Body);
@@ -188,9 +205,30 @@ public class EnhancedStorageProxyMiddleware
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error serving image from storage: {Path}", S(path));
+            await ApplyCorsHeadersAsync(context);
             context.Response.StatusCode = 500;
             await context.Response.WriteAsync("Storage proxy error");
         }
+    }
+
+    private async Task ApplyCorsHeadersAsync(HttpContext context)
+    {
+        if (!context.Request.Headers.ContainsKey("Origin"))
+        {
+            return;
+        }
+
+        var policyName = _environment.IsDevelopment() ? "AllowDevelopment" : "V1Production";
+        var policyProvider = context.RequestServices.GetRequiredService<ICorsPolicyProvider>();
+        var corsPolicy = await policyProvider.GetPolicyAsync(context, policyName);
+        if (corsPolicy == null)
+        {
+            return;
+        }
+
+        var corsService = context.RequestServices.GetRequiredService<ICorsService>();
+        var corsResult = corsService.EvaluatePolicy(context, corsPolicy);
+        corsService.ApplyResult(corsResult, context.Response);
     }
 
     /// <summary>
