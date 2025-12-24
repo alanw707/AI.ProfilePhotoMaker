@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-12-23 — Alpha.20 Output Folder Update
+
+🎉🎉 Happy Holidays and New Year 🍾🍾
+
+IMPORTANT Changes with Version Alpha.20 - PLEASE READ THIS if upgrading from earlier Alpha Versions:
+
+1. The BMad Core default output folder has changed from docs to `_bmad-output`. `docs` is meant for long-term artifacts, which you can always decide to move content to.
+
+2. If utilizing the BMad Method Module (BMM) please be aware of the following important recent changes:
+
+- Phases 1-3 (Analysis, Planning, Solutioning) will now default output to _bmad-output/planning-artifacts
+- Phase 4 (Implementation) will now default output to _bmad-output/implementation-artifacts
+- Long term project knowledge (research, docs, references, document-project output) will now default to docs/
+
+IT IS STRONGLY SUGGESTED to align with these folder conventions instead of dumping all to docs/ - if you are upgrading from a prior
+version where all output was going to docs or docs/sprint-artifacts, it is suggested to reset configs to these new values.
+
+If you have anything in progress, you can move what was in sprint-artifacts to _bmad-output/implementation-artifacts, and if you had brainstorming
+content, a PRD, UX or Architecture, you can move the content to _bmad-output/planning-artifacts.
+
 ## 2025-08-22 — Enhanced Photo Webhook Migration & Performance Optimization
 
 ### Major Architectural Improvements

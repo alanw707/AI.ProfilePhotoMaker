@@ -43,7 +43,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         /// <summary>
         /// Security gate: All endpoints first check environment to prevent accidental production exposure
         /// </summary>
-        private ActionResult ValidateEnvironment()
+        private ActionResult? ValidateEnvironment()
         {
             if (_environment.IsProduction())
             {

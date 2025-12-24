@@ -9,6 +9,8 @@ public class RetentionPolicyBackgroundService : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<RetentionPolicyBackgroundService> _logger;
     private readonly TimeSpan _checkInterval = TimeSpan.FromHours(6); // Check every 6 hours
+    private readonly Dictionary<int, Dictionary<string, DateTime>> _sentDeletionWarnings = new();
+    private readonly object _notificationLock = new();
 
     public RetentionPolicyBackgroundService(
         IServiceProvider serviceProvider,
@@ -160,14 +162,18 @@ public class RetentionPolicyBackgroundService : BackgroundService
         {
             // Notification windows: 14 days and 7 days before deletion
             var notificationWindows = new[] { 14, 7 };
+            const int notificationWindowSizeDays = 2; // 13-15 days, 6-8 days
             var totalSent = 0;
             var totalSkipped = 0;
             var totalErrors = 0;
+            var totalDuplicates = 0;
 
             foreach (var daysBeforeDeletion in notificationWindows)
             {
-                // Use 1-day window to check for images approaching deletion
-                var imagesByUser = await retentionService.GetImagesApproachingDeletionAsync(daysBeforeDeletion, windowSizeDays: 1);
+                // Use 2-day window to check for images approaching deletion
+                var imagesByUser = await retentionService.GetImagesApproachingDeletionAsync(
+                    daysBeforeDeletion,
+                    windowSizeDays: notificationWindowSizeDays);
 
                 if (!imagesByUser.Any())
                 {
@@ -182,6 +188,7 @@ public class RetentionPolicyBackgroundService : BackgroundService
                 var sentForWindow = 0;
                 var skippedForWindow = 0;
                 var errorsForWindow = 0;
+                var duplicatesForWindow = 0;
 
                 foreach (var (userId, (email, images)) in imagesByUser)
                 {
@@ -195,6 +202,14 @@ public class RetentionPolicyBackgroundService : BackgroundService
 
                     // Determine the earliest deletion date for this user's images (use the first image's deletion date)
                     var earliestDeletionDate = images.Min(img => img.ScheduledDeletionDate);
+                    if (IsDeletionWarningAlreadySent(daysBeforeDeletion, userId, earliestDeletionDate))
+                    {
+                        duplicatesForWindow++;
+                        _logger.LogDebug(
+                            "Skipping duplicate {DaysBeforeDeletion}-day deletion warning for user {UserId} (deletion date {DeletionDate})",
+                            daysBeforeDeletion, userId, earliestDeletionDate.Date);
+                        continue;
+                    }
 
                     try
                     {
@@ -205,6 +220,7 @@ public class RetentionPolicyBackgroundService : BackgroundService
                             earliestDeletionDate,
                             daysBeforeDeletion);
 
+                        MarkDeletionWarningSent(daysBeforeDeletion, userId, earliestDeletionDate);
                         sentForWindow++;
                         _logger.LogDebug(
                             "Sent {DaysBeforeDeletion}-day deletion warning to user {UserId} for {ImageCount} image(s)",
@@ -222,26 +238,81 @@ public class RetentionPolicyBackgroundService : BackgroundService
                 totalSent += sentForWindow;
                 totalSkipped += skippedForWindow;
                 totalErrors += errorsForWindow;
+                totalDuplicates += duplicatesForWindow;
 
-                if (sentForWindow > 0 || errorsForWindow > 0)
+                if (sentForWindow > 0 || errorsForWindow > 0 || duplicatesForWindow > 0)
                 {
                     _logger.LogInformation(
-                        "{DaysBeforeDeletion}-day deletion warnings: {SentCount} sent, {SkippedCount} skipped (no email), {ErrorCount} errors",
-                        daysBeforeDeletion, sentForWindow, skippedForWindow, errorsForWindow);
+                        "{DaysBeforeDeletion}-day deletion warnings: {SentCount} sent, {SkippedCount} skipped (no email), {DuplicateCount} duplicates, {ErrorCount} errors",
+                        daysBeforeDeletion, sentForWindow, skippedForWindow, duplicatesForWindow, errorsForWindow);
                 }
             }
 
-            if (totalSent > 0 || totalErrors > 0)
+            if (totalSent > 0 || totalErrors > 0 || totalDuplicates > 0)
             {
                 _logger.LogInformation(
-                    "Deletion warning notifications completed: {TotalSent} sent, {TotalSkipped} skipped, {TotalErrors} errors",
-                    totalSent, totalSkipped, totalErrors);
+                    "Deletion warning notifications completed: {TotalSent} sent, {TotalSkipped} skipped, {TotalDuplicates} duplicates, {TotalErrors} errors",
+                    totalSent, totalSkipped, totalDuplicates, totalErrors);
             }
         }
         catch (Exception ex)
         {
             // Log but don't throw - notification failures shouldn't block deletion process
             _logger.LogError(ex, "Error sending deletion warning notifications: {Error}", ex.Message);
+        }
+    }
+
+    private bool IsDeletionWarningAlreadySent(int daysBeforeDeletion, string userId, DateTime deletionDate)
+    {
+        var notificationKey = $"{userId}:{deletionDate:yyyyMMdd}";
+
+        lock (_notificationLock)
+        {
+            PruneDeletionWarningCache(DateTime.UtcNow);
+
+            return _sentDeletionWarnings.TryGetValue(daysBeforeDeletion, out var sentForWindow)
+                   && sentForWindow.ContainsKey(notificationKey);
+        }
+    }
+
+    private void MarkDeletionWarningSent(int daysBeforeDeletion, string userId, DateTime deletionDate)
+    {
+        var notificationKey = $"{userId}:{deletionDate:yyyyMMdd}";
+        var deletionDay = deletionDate.Date;
+
+        lock (_notificationLock)
+        {
+            PruneDeletionWarningCache(DateTime.UtcNow);
+
+            if (!_sentDeletionWarnings.TryGetValue(daysBeforeDeletion, out var sentForWindow))
+            {
+                sentForWindow = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+                _sentDeletionWarnings[daysBeforeDeletion] = sentForWindow;
+            }
+
+            sentForWindow[notificationKey] = deletionDay;
+        }
+    }
+
+    private void PruneDeletionWarningCache(DateTime now)
+    {
+        var cutoffDate = now.Date.AddDays(-1);
+        if (_sentDeletionWarnings.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var window in _sentDeletionWarnings.Values)
+        {
+            var staleKeys = window
+                .Where(entry => entry.Value.Date < cutoffDate)
+                .Select(entry => entry.Key)
+                .ToList();
+
+            foreach (var key in staleKeys)
+            {
+                window.Remove(key);
+            }
         }
     }
 }

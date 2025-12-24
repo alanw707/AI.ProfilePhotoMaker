@@ -150,7 +150,7 @@ public class EmailNotificationService : IEmailNotificationService
         
         if (daysUntilDeletion == 14)
         {
-            subject = "Reminder: Your photos will be deleted soon";
+            subject = "Reminder: Your photos will be deleted in 14 days";
             messageIntro = "This is a friendly reminder that your photos will be automatically deleted in 14 days per our data retention policy.";
         }
         else if (daysUntilDeletion == 7)
