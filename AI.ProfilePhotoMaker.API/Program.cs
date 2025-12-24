@@ -1,8 +1,10 @@
 using System.Text;
 using Azure.Storage.Blobs;
+using AI.ProfilePhotoMaker.API.Constants;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Extensions;
 using AI.ProfilePhotoMaker.API.Models;
+using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services.Authentication;
 using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
 using AI.ProfilePhotoMaker.API.Services.Database;
@@ -28,6 +30,8 @@ using Azure.Extensions.AspNetCore.DataProtection.Blobs;
 using System.Security.Claims;
 using Serilog;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Options;
 // NOTE: Microsoft.AspNetCore.TestHost removed to prevent production container crashes
 
@@ -518,6 +522,37 @@ builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.RetentionPol
 
 // Model sync health monitoring - removed dependency
 // builder.Services.AddModelSyncHealthMonitoring();
+
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var routeValues = context.ActionDescriptor.RouteValues;
+        var isAuthLogin = routeValues.TryGetValue("controller", out var controller) &&
+                          routeValues.TryGetValue("action", out var action) &&
+                          string.Equals(controller, "Auth", StringComparison.OrdinalIgnoreCase) &&
+                          string.Equals(action, "Login", StringComparison.OrdinalIgnoreCase);
+
+        if (isAuthLogin)
+        {
+            var ageGateFailed = context.ModelState
+                .Where(entry => entry.Key.Contains(nameof(LoginDto.AgeConfirmed), StringComparison.OrdinalIgnoreCase))
+                .SelectMany(entry => entry.Value?.Errors ?? Enumerable.Empty<ModelError>())
+                .Any();
+
+            if (ageGateFailed)
+            {
+                return new BadRequestObjectResult(new AuthResponseDto(
+                    false,
+                    AuthValidationMessages.AgeConfirmationRequiredToSignIn,
+                    string.Empty,
+                    null));
+            }
+        }
+
+        return new BadRequestObjectResult(new ValidationProblemDetails(context.ModelState));
+    };
+});
 
 builder.Services.AddControllers().AddJsonOptions(options =>
 {

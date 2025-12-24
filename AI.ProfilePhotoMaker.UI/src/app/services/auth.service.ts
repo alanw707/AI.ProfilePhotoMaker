@@ -17,6 +17,7 @@ import { environment } from '../../environments/environment';
 export interface LoginDto {
   email: string;
   password: string;
+  ageConfirmed: boolean;
 }
 
 export interface RegisterDto {

@@ -56,10 +56,36 @@
         {{ error }}
       </div>
 
+      <div class="form-group age-confirm">
+        <label class="checkbox-label">
+          <input
+            type="checkbox"
+            formControlName="ageConfirmed"
+            aria-required="true"
+            [attr.aria-invalid]="f['ageConfirmed'].invalid && (f['ageConfirmed'].touched || submitAttempted)"
+            [attr.aria-describedby]="f['ageConfirmed'].invalid && (f['ageConfirmed'].touched || submitAttempted) ? ageConfirmErrorId : null"
+          />
+          <span>
+            I confirm I am at least 13 years old and have read the
+            <a routerLink="/legal/children-privacy">Children's Privacy Policy</a>.
+            <span class="age-confirm-note">Required for email and Google sign-in.</span>
+          </span>
+        </label>
+        <div
+          *ngIf="f['ageConfirmed'].invalid && (f['ageConfirmed'].touched || submitAttempted)"
+          class="invalid-feedback"
+          [id]="ageConfirmErrorId"
+        >
+          {{ ageConfirmationMessage }}
+        </div>
+      </div>
+
       <button
         type="submit"
         class="btn btn-primary btn-block"
-        [disabled]="loading || loginForm.invalid"
+        [disabled]="loading || f['email'].invalid || f['password'].invalid"
+        [class.btn-disabled]="f['ageConfirmed'].value !== true"
+        [attr.aria-disabled]="f['ageConfirmed'].value !== true"
       >
         <span *ngIf="loading" class="spinner"></span>
         {{ loading ? 'Signing In...' : 'Sign In' }}
@@ -75,7 +101,7 @@
         type="button"
         class="btn btn-google"
         (click)="loginWithGoogle()"
-        [disabled]="loading || !googleAgeConfirmed"
+        [disabled]="loading || f['ageConfirmed'].value !== true"
       >
         <svg viewBox="0 0 24 24" width="20" height="20">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -85,13 +111,6 @@
         </svg>
         Continue with Google
       </button>
-      <label class="google-age-confirm">
-        <input type="checkbox" (change)="onGoogleAgeChange($event)" />
-        <span>
-          I confirm I am at least 13 years old and have read the
-          <a routerLink="/legal/children-privacy">Children's Privacy Policy</a>.
-        </span>
-      </label>
     </div>
 
     <div class="login-footer">

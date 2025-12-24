@@ -80,19 +80,14 @@ Content-Type: application/json
 
 {
   "email": "user@example.com",
-  "password": "SecurePass123!"
+  "password": "SecurePass123!",
+  "ageConfirmed": true
 }
 ```
 
 #### OAuth Login
 ```http
-POST /auth/external-login
-Content-Type: application/json
-
-{
-  "provider": "Google|Facebook|Apple",
-  "idToken": "oauth-provider-token"
-}
+GET /auth/external-login/{provider}?returnUrl=/app/dashboard&ageConfirmed=true
 ```
 
 #### Get User Info

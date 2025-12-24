@@ -14,6 +14,10 @@ Deep scan based on controller attributes and routes.
 - Base Route: `api/[controller]`
 - Auth: unspecified
 
+Notes:
+- `POST /api/Auth/login` requires `ageConfirmed=true` in the JSON payload.
+- `GET /api/Auth/external-login/{provider}` requires `ageConfirmed=true` as a query parameter.
+
 | Method | Path | Action | Auth |
 | --- | --- | --- | --- |
 | POST | `/api/Auth/register` | Register | unspecified |
@@ -284,4 +288,3 @@ Deep scan based on controller attributes and routes.
 | --- | --- | --- | --- |
 | GET | `/api/StylePreview/url/{styleName}` | GetStylePreviewUrl | unspecified |
 | GET | `/api/StylePreview/list` | ListStylePreviews | unspecified |
-

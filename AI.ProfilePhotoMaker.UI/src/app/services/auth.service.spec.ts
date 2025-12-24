@@ -47,7 +47,11 @@ describe('AuthService', () => {
 
   describe('Login Functionality', () => {
     it('should login with valid credentials', done => {
-      const loginData: LoginDto = { email: 'test@example.com', password: 'password123' };
+      const loginData: LoginDto = {
+        email: 'test@example.com',
+        password: 'password123',
+        ageConfirmed: true,
+      };
       const mockResponse = {
         isSuccess: true,
         message: 'Login successful',
@@ -83,7 +87,11 @@ describe('AuthService', () => {
     });
 
     it('should handle login errors', done => {
-      const loginData: LoginDto = { email: 'test@example.com', password: 'wrong-password' };
+      const loginData: LoginDto = {
+        email: 'test@example.com',
+        password: 'wrong-password',
+        ageConfirmed: true,
+      };
       const errorResponse = {
         isSuccess: false,
         message: 'Invalid credentials',
@@ -104,7 +112,11 @@ describe('AuthService', () => {
     });
 
     it('should persist currentUser on successful login', done => {
-      const loginData: LoginDto = { email: 'test@example.com', password: 'password123' };
+      const loginData: LoginDto = {
+        email: 'test@example.com',
+        password: 'password123',
+        ageConfirmed: true,
+      };
       const mockResponse = {
         isSuccess: true,
         message: 'Login successful',
@@ -142,7 +154,11 @@ describe('AuthService', () => {
         }
       });
 
-      const loginData: LoginDto = { email: 'test@example.com', password: 'password123' };
+      const loginData: LoginDto = {
+        email: 'test@example.com',
+        password: 'password123',
+        ageConfirmed: true,
+      };
       const mockResponse = {
         isSuccess: true,
         message: 'Login successful',
@@ -346,7 +362,11 @@ describe('AuthService', () => {
 
   describe('Error Handling', () => {
     it('should handle network errors during login', done => {
-      const loginData: LoginDto = { email: 'test@example.com', password: 'password123' };
+      const loginData: LoginDto = {
+        email: 'test@example.com',
+        password: 'password123',
+        ageConfirmed: true,
+      };
 
       service.login(loginData).subscribe({
         next: () => fail('Expected network error'),
@@ -358,7 +378,11 @@ describe('AuthService', () => {
     });
 
     it('should handle 401 unauthorized responses', done => {
-      const loginData: LoginDto = { email: 'test@example.com', password: 'password123' };
+      const loginData: LoginDto = {
+        email: 'test@example.com',
+        password: 'password123',
+        ageConfirmed: true,
+      };
 
       service.login(loginData).subscribe({
         next: () => fail('Expected 401 error'),
@@ -401,7 +425,11 @@ describe('AuthService Integration Tests', () => {
   // initializes its state on construction and via probeSession().
 
   it('should complete login flow', done => {
-    const loginData: LoginDto = { email: 'test@example.com', password: 'password123' };
+    const loginData: LoginDto = {
+      email: 'test@example.com',
+      password: 'password123',
+      ageConfirmed: true,
+    };
     const mockResponse = {
       isSuccess: true,
       message: 'Login successful',

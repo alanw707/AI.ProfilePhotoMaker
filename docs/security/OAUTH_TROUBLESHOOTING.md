@@ -9,7 +9,7 @@ Key idea: the API must generate a `redirect_uri` that exactly matches an authori
 ## OAuth Flow
 
 ```
-User → Angular → API (/api/auth/external-login/google) → Google OAuth → API (/api/auth/external-login-callback) → Angular (dashboard)
+User → Angular → API (/api/auth/external-login/google?ageConfirmed=true) → Google OAuth → API (/api/auth/external-login-callback) → Angular (dashboard)
 ```
 
 ## Key Configuration
@@ -81,5 +81,5 @@ If the API is reached via an ngrok domain (recommended for HTTPS):
 ## Quick Reference
 
 - Initiate (returns auth URL): `GET /api/auth/google-oauth-url`
-- Initiate (redirects to Google): `GET /api/auth/external-login/google`
+- Initiate (redirects to Google): `GET /api/auth/external-login/google?ageConfirmed=true`
 - Callback (Google redirects here): `GET /api/auth/external-login-callback`
