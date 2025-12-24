@@ -17,9 +17,11 @@ public class RetentionPolicyService : IRetentionPolicyService
     private readonly IReplicateApiClient _replicateApiClient;
     private readonly ILogger<RetentionPolicyService> _logger;
     private readonly LegacyCompatibilityOptions _legacyOptions;
+    private readonly TimeProvider _timeProvider;
 
     private static string S(string? value) => LoggingSanitizer.Sanitize(value);
     private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
+    private DateTime UtcNow => _timeProvider.GetUtcNow().UtcDateTime;
 
     public RetentionPolicyService(
         ApplicationDbContext context,
@@ -27,7 +29,8 @@ public class RetentionPolicyService : IRetentionPolicyService
         StoragePathResolver pathResolver,
         IReplicateApiClient replicateApiClient,
         ILogger<RetentionPolicyService> logger,
-        IOptions<LegacyCompatibilityOptions> legacyOptions)
+        IOptions<LegacyCompatibilityOptions> legacyOptions,
+        TimeProvider timeProvider)
     {
         _context = context;
         _storageService = storageService;
@@ -35,6 +38,7 @@ public class RetentionPolicyService : IRetentionPolicyService
         _replicateApiClient = replicateApiClient;
         _logger = logger;
         _legacyOptions = legacyOptions.Value;
+        _timeProvider = timeProvider;
     }
 
     public async Task<int> DeleteExpiredImagesAsync()
@@ -130,7 +134,7 @@ public class RetentionPolicyService : IRetentionPolicyService
 
     private async Task<List<Models.ProcessedImage>> GetExpiredImagesForDeletion(bool includeUserProfile = false)
     {
-        var now = DateTime.UtcNow;
+        var now = UtcNow;
         var query = _context.ProcessedImages.AsQueryable();
         if (includeUserProfile)
         {
@@ -281,7 +285,7 @@ public class RetentionPolicyService : IRetentionPolicyService
         }
 
         // Mark for immediate deletion by setting scheduled deletion to now
-        image.ScheduledDeletionDate = DateTime.UtcNow;
+        image.ScheduledDeletionDate = UtcNow;
 
         await _context.SaveChangesAsync();
         _logger.LogInformation("Image {ImageId} marked for immediate deletion by user {UserId}", imageId, Sid(userId));
@@ -303,7 +307,7 @@ public class RetentionPolicyService : IRetentionPolicyService
         var count = userProfile.ProcessedImages.Count;
         foreach (var image in userProfile.ProcessedImages)
         {
-            image.ScheduledDeletionDate = DateTime.UtcNow;
+            image.ScheduledDeletionDate = UtcNow;
         }
 
         await _context.SaveChangesAsync();
@@ -314,7 +318,7 @@ public class RetentionPolicyService : IRetentionPolicyService
 
     public async Task<List<ProcessedImage>> GetImagesScheduledForDeletionAsync(string userId)
     {
-        var now = DateTime.UtcNow;
+        var now = UtcNow;
         return await _context.ProcessedImages
             .Include(img => img.UserProfile)
             .Where(img => img.UserProfile.UserId == userId && img.ScheduledDeletionDate <= now.AddDays(1))
@@ -353,7 +357,8 @@ public class RetentionPolicyService : IRetentionPolicyService
     public async Task<int> CleanupOrphanedEnhancedImagesAsync(TimeSpan maxAge)
     {
         var deletedCount = 0;
-        var cutoffTime = DateTime.UtcNow.Subtract(maxAge);
+        var now = UtcNow;
+        var cutoffTime = now.Subtract(maxAge);
 
         try
         {
@@ -458,7 +463,7 @@ public class RetentionPolicyService : IRetentionPolicyService
                                 "Deleted orphaned enhanced image: {FilePath} (created: {CreatedAt}, age: {Age})",
                                 S(filePath),
                                 fileInfo.CreatedAt,
-                                DateTime.UtcNow.Subtract(fileInfo.CreatedAt));
+                                now.Subtract(fileInfo.CreatedAt));
                         }
                         else
                         {
@@ -498,7 +503,7 @@ public class RetentionPolicyService : IRetentionPolicyService
 
     public async Task<Dictionary<string, (string? Email, List<ProcessedImage> Images)>> GetImagesApproachingDeletionAsync(int daysBeforeDeletion, int windowSizeDays = 1)
     {
-        var now = DateTime.UtcNow;
+        var now = UtcNow;
         var windowStart = now.AddDays(daysBeforeDeletion - windowSizeDays / 2.0);
         var windowEnd = now.AddDays(daysBeforeDeletion + windowSizeDays / 2.0);
 

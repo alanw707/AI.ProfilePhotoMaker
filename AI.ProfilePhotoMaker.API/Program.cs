@@ -175,6 +175,11 @@ builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>()
 
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
 builder.Services.Configure<StripeOptions>(builder.Configuration.GetSection(StripeOptions.SectionName));
+builder.Services.Configure<RetentionPolicyBackgroundServiceOptions>(
+    builder.Configuration.GetSection(RetentionPolicyBackgroundServiceOptions.SectionName));
+builder.Services.Configure<RetentionNotificationOptions>(
+    builder.Configuration.GetSection(RetentionNotificationOptions.SectionName));
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
 builder.Services.PostConfigure<StripeOptions>(options =>
 {

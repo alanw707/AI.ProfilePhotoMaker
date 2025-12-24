@@ -1,3 +1,5 @@
+using AI.ProfilePhotoMaker.API.Configuration;
+using Microsoft.Extensions.Options;
 using AI.ProfilePhotoMaker.API.Services.Notifications;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -8,16 +10,24 @@ public class RetentionPolicyBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<RetentionPolicyBackgroundService> _logger;
-    private readonly TimeSpan _checkInterval = TimeSpan.FromHours(6); // Check every 6 hours
+    private readonly RetentionPolicyBackgroundServiceOptions _options;
+    private readonly RetentionNotificationOptions _notificationOptions;
+    private readonly TimeProvider _timeProvider;
     private readonly Dictionary<int, Dictionary<string, DateTime>> _sentDeletionWarnings = new();
     private readonly object _notificationLock = new();
 
     public RetentionPolicyBackgroundService(
         IServiceProvider serviceProvider,
-        ILogger<RetentionPolicyBackgroundService> logger)
+        ILogger<RetentionPolicyBackgroundService> logger,
+        IOptions<RetentionPolicyBackgroundServiceOptions> options,
+        IOptions<RetentionNotificationOptions> notificationOptions,
+        TimeProvider timeProvider)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
+        _options = options.Value;
+        _notificationOptions = notificationOptions.Value;
+        _timeProvider = timeProvider;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -27,14 +37,14 @@ public class RetentionPolicyBackgroundService : BackgroundService
         try
         {
             // Wait a bit before starting the first check to let the application start up
-            await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+            await Task.Delay(_options.InitialDelay, stoppingToken);
 
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
                     await PerformRetentionPolicyCheck();
-                    await Task.Delay(_checkInterval, stoppingToken);
+                    await Task.Delay(_options.CheckInterval, stoppingToken);
                 }
                 catch (TaskCanceledException)
                 {
@@ -56,7 +66,7 @@ public class RetentionPolicyBackgroundService : BackgroundService
                         try
                         {
                             // Wait a shorter time before retrying if there was an error
-                            await Task.Delay(TimeSpan.FromMinutes(30), stoppingToken);
+                            await Task.Delay(_options.ErrorRetryDelay, stoppingToken);
                         }
                         catch (TaskCanceledException)
                         {
@@ -86,7 +96,8 @@ public class RetentionPolicyBackgroundService : BackgroundService
         _logger.LogInformation("Retention Policy Background Service stopped");
     }
 
-    private async Task PerformRetentionPolicyCheck()
+    // Internal for integration tests; scheduled execution occurs via ExecuteAsync.
+    internal async Task PerformRetentionPolicyCheck()
     {
         using var scope = _serviceProvider.CreateScope();
         var retentionService = scope.ServiceProvider.GetRequiredService<IRetentionPolicyService>();
@@ -161,14 +172,16 @@ public class RetentionPolicyBackgroundService : BackgroundService
         try
         {
             // Notification windows: 14 days and 7 days before deletion
-            var notificationWindows = new[] { 14, 7 };
+            var notificationWindows = _notificationOptions.NotificationDays?.Length > 0
+                ? _notificationOptions.NotificationDays
+                : new[] { 14, 7 };
             const int notificationWindowSizeDays = 2; // 13-15 days, 6-8 days
             var totalSent = 0;
             var totalSkipped = 0;
             var totalErrors = 0;
             var totalDuplicates = 0;
 
-            foreach (var daysBeforeDeletion in notificationWindows)
+            foreach (var daysBeforeDeletion in notificationWindows.Distinct())
             {
                 // Use 2-day window to check for images approaching deletion
                 var imagesByUser = await retentionService.GetImagesApproachingDeletionAsync(
@@ -268,7 +281,7 @@ public class RetentionPolicyBackgroundService : BackgroundService
 
         lock (_notificationLock)
         {
-            PruneDeletionWarningCache(DateTime.UtcNow);
+            PruneDeletionWarningCache(_timeProvider.GetUtcNow().UtcDateTime);
 
             return _sentDeletionWarnings.TryGetValue(daysBeforeDeletion, out var sentForWindow)
                    && sentForWindow.ContainsKey(notificationKey);
@@ -282,7 +295,7 @@ public class RetentionPolicyBackgroundService : BackgroundService
 
         lock (_notificationLock)
         {
-            PruneDeletionWarningCache(DateTime.UtcNow);
+            PruneDeletionWarningCache(_timeProvider.GetUtcNow().UtcDateTime);
 
             if (!_sentDeletionWarnings.TryGetValue(daysBeforeDeletion, out var sentForWindow))
             {

@@ -4,6 +4,7 @@ using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Storage;
+using AI.ProfilePhotoMaker.API.Tests.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -21,7 +22,8 @@ public class RetentionPolicyServiceTests
     {
         using var context = CreateContext();
         var user = await SeedUserAsync(context, "user14@example.com");
-        var now = DateTime.UtcNow;
+        var timeProvider = new TestTimeProvider(new DateTimeOffset(2030, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        var now = timeProvider.GetUtcNow().UtcDateTime;
 
         var inWindow = new ProcessedImage
         {
@@ -39,7 +41,7 @@ public class RetentionPolicyServiceTests
         context.ProcessedImages.AddRange(inWindow, outWindow);
         await context.SaveChangesAsync();
 
-        var service = CreateService(context);
+        var service = CreateService(context, timeProvider);
         var results = await service.GetImagesApproachingDeletionAsync(14, windowSizeDays: 2);
 
         Assert.True(results.TryGetValue(user.UserId, out var entry));
@@ -53,7 +55,8 @@ public class RetentionPolicyServiceTests
     {
         using var context = CreateContext();
         var user = await SeedUserAsync(context, "user7@example.com");
-        var now = DateTime.UtcNow;
+        var timeProvider = new TestTimeProvider(new DateTimeOffset(2030, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        var now = timeProvider.GetUtcNow().UtcDateTime;
 
         var inWindow = new ProcessedImage
         {
@@ -71,7 +74,7 @@ public class RetentionPolicyServiceTests
         context.ProcessedImages.AddRange(inWindow, outWindow);
         await context.SaveChangesAsync();
 
-        var service = CreateService(context);
+        var service = CreateService(context, timeProvider);
         var results = await service.GetImagesApproachingDeletionAsync(7, windowSizeDays: 2);
 
         Assert.True(results.TryGetValue(user.UserId, out var entry));
@@ -88,7 +91,7 @@ public class RetentionPolicyServiceTests
         return new ApplicationDbContext(options);
     }
 
-    private static RetentionPolicyService CreateService(ApplicationDbContext context)
+    private static RetentionPolicyService CreateService(ApplicationDbContext context, TimeProvider? timeProvider = null)
     {
         var storageService = new Mock<IStorageService>().Object;
         var replicateClient = new Mock<IReplicateApiClient>().Object;
@@ -104,7 +107,8 @@ public class RetentionPolicyServiceTests
             pathResolver,
             replicateClient,
             NullLogger<RetentionPolicyService>.Instance,
-            Options.Create(new LegacyCompatibilityOptions()));
+            Options.Create(new LegacyCompatibilityOptions()),
+            timeProvider ?? TimeProvider.System);
     }
 
     private static async Task<UserProfile> SeedUserAsync(ApplicationDbContext context, string email)
