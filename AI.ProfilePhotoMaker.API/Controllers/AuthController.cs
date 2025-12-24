@@ -413,11 +413,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto model)
         {
-            if (!model.AgeConfirmed)
-            {
-                return BadRequest(new AuthResponseDto(false, AuthValidationMessages.AgeConfirmationRequiredToSignIn, string.Empty, null));
-            }
-
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
@@ -481,11 +476,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             // Generate state parameter for security
             var state = Guid.NewGuid().ToString();
+            var safeReturnUrl = NormalizeReturnUrl(returnUrl);
 
             try
             {
                 HttpContext.Session.SetString("oauth_state", state);
-                HttpContext.Session.SetString("oauth_return_url", returnUrl);
+                HttpContext.Session.SetString("oauth_return_url", safeReturnUrl);
             }
             catch (Exception ex)
             {
@@ -542,15 +538,16 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         [HttpGet("external-login/{provider}")]
         public IActionResult ExternalLogin(string provider, string returnUrl = "/app/dashboard", bool ageConfirmed = false)
         {
-            if (provider.ToLower() != "google")
+            if (!string.Equals(provider, "google", StringComparison.OrdinalIgnoreCase))
             {
                 return BadRequest(new { error = $"{provider} OAuth not implemented yet" });
             }
 
+            var safeReturnUrl = NormalizeReturnUrl(returnUrl);
+
             if (!ageConfirmed)
             {
                 var frontendBaseUrl = GetFrontendBaseUrl();
-                var safeReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/app/dashboard" : returnUrl;
                 var encodedReturnUrl = Uri.EscapeDataString(safeReturnUrl);
                 return Redirect($"{frontendBaseUrl}/auth/login?error=age_confirmation_required&returnUrl={encodedReturnUrl}");
             }
@@ -567,7 +564,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             try
             {
                 HttpContext.Session.SetString("oauth_state", state);
-                HttpContext.Session.SetString("oauth_return_url", returnUrl);
+                HttpContext.Session.SetString("oauth_return_url", safeReturnUrl);
             }
             catch (Exception ex)
             {
@@ -612,7 +609,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         public async Task<IActionResult> ExternalLoginCallback(string? code = null, string? state = null, string? error = null)
         {
 
-            var frontendBaseUrl = _configuration["AppBaseUrl"] ?? "http://localhost:4200";
+            var frontendBaseUrl = GetFrontendBaseUrl();
 
             string? returnUrl = null;
             string? sessionState = null;
@@ -628,10 +625,13 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 sessionState = null; // Will trigger session_expired error below
             }
 
+            returnUrl = NormalizeReturnUrl(returnUrl);
+
             // Handle OAuth errors
             if (!string.IsNullOrEmpty(error))
             {
-                return Redirect($"{frontendBaseUrl}/auth/login?error=oauth_{error}");
+                var encodedError = Uri.EscapeDataString($"oauth_{error}");
+                return Redirect($"{frontendBaseUrl}/auth/login?error={encodedError}");
             }
 
             // Validate state parameter - CRITICAL SECURITY CHECK
@@ -732,7 +732,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 // In development, include token for frontend to set cookie on 4200 origin via proxy
                 if (_environment.IsDevelopment())
                 {
-                    return Redirect($"{frontendBaseUrl}{returnUrl}?token={tokenInfo.Token}");
+                    var separator = returnUrl.Contains('?', StringComparison.Ordinal) ? "&" : "?";
+                    return Redirect($"{frontendBaseUrl}{returnUrl}{separator}token={Uri.EscapeDataString(tokenInfo.Token)}");
                 }
                 // In production, cookie-only flow
                 return Redirect($"{frontendBaseUrl}{returnUrl}");
@@ -1062,30 +1063,35 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         /// </summary>
         private string GetFrontendBaseUrl()
         {
-            // Check referer header first (most reliable for OAuth flows)
-            var referer = Request.Headers["Referer"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(referer))
+            var configured = _configuration["AppBaseUrl"];
+            if (!string.IsNullOrWhiteSpace(configured))
             {
-                try
-                {
-                    var uri = new Uri(referer);
-                    return $"{uri.Scheme}://{uri.Host}{(uri.Port != 80 && uri.Port != 443 ? $":{uri.Port}" : "")}";
-                }
-                catch
-                {
-                    // Ignore parsing errors
-                }
+                return configured.TrimEnd('/');
             }
 
-            // Check Origin header
-            var origin = Request.Headers["Origin"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(origin))
+            return _environment.IsDevelopment() ? "http://localhost:4200" : "https://app.aiprofilephotomaker.com";
+        }
+
+        private string NormalizeReturnUrl(string? returnUrl)
+        {
+            if (string.IsNullOrWhiteSpace(returnUrl))
             {
-                return origin;
+                return "/app/dashboard";
             }
 
-            // Default to localhost for development
-            return "http://localhost:4200";
+            // Prevent open-redirects and unexpected protocol/host injection.
+            if (!Url.IsLocalUrl(returnUrl))
+            {
+                return "/app/dashboard";
+            }
+
+            // Url.IsLocalUrl also allows "~/" which isn't useful for our SPA routing.
+            if (returnUrl.StartsWith("~/", StringComparison.Ordinal))
+            {
+                return "/" + returnUrl[2..];
+            }
+
+            return returnUrl.StartsWith("/", StringComparison.Ordinal) ? returnUrl : "/app/dashboard";
         }
 
         [HttpPost("set-cookie")]
