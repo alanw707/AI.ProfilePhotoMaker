@@ -83,7 +83,7 @@
       <button
         type="submit"
         class="btn btn-primary btn-block"
-        [disabled]="loading || f['email'].invalid || f['password'].invalid"
+        [disabled]="loading || f['email'].invalid || f['password'].invalid || f['ageConfirmed'].value !== true"
         [class.btn-disabled]="f['ageConfirmed'].value !== true"
         [attr.aria-disabled]="f['ageConfirmed'].value !== true"
       >
