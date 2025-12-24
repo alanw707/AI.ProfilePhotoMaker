@@ -68,6 +68,12 @@ import { LoggingService } from '../../services/logging.service';
 
           <!-- Credit Packages Section -->
           <section id="packages-section" class="packages-section">
+            <p class="text-center text-sm text-gray-600 mb-6">
+              14-day satisfaction guarantee —
+              <a routerLink="/legal/refund-policy" class="text-primary-600 hover:underline"
+                >see Refund Policy</a
+              >
+            </p>
             <app-credit-packages (packagePurchased)="onCreditPackagePurchased($event)">
             </app-credit-packages>
           </section>

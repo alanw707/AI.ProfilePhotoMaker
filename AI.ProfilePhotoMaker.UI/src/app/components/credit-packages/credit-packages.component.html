@@ -285,6 +285,10 @@
         <button class="purchase-btn" [disabled]="isPurchasing || isStripePaymentActive" (click)="purchasePackage(pkg)">
           {{ isPurchasing || isStripePaymentActive ? 'Processing...' : 'Purchase Credits' }}
         </button>
+        <p class="mt-3 text-sm text-gray-600">
+          14-day satisfaction guarantee —
+          <a routerLink="/legal/refund-policy" class="text-primary-600 hover:underline">see Refund Policy</a>
+        </p>
       </div>
     </div>
   </div>
@@ -294,7 +298,7 @@
     <div class="retention-details">
       <div class="retention-item">
         <span class="data-type">Input Photos:</span>
-        <span class="retention-period">Deleted after 7 days</span>
+        <span class="retention-period">Deleted after 30 days</span>
       </div>
       <div class="retention-item">
         <span class="data-type">AI Headshots:</span>
