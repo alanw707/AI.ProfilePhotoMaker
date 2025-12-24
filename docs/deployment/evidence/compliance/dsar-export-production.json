@@ -1,0 +1,157 @@
+{
+  "Profile": {
+    "Id": 14,
+    "FirstName": "***REDACTED***",
+    "LastName": "***REDACTED***",
+    "Gender": "***REDACTED***",
+    "Ethnicity": "***REDACTED***",
+    "SubscriptionTier": 0,
+    "Credits": 0,
+    "PurchasedCredits": 29,
+    "CreatedAt": "***REDACTED***",
+    "UpdatedAt": "***REDACTED***",
+    "HasTrainedModel": true,
+    "ModelTrainedAt": "***REDACTED***"
+  },
+  "Images": [
+    {
+      "Id": 156,
+      "Style": "***REDACTED***",
+      "IsGenerated": false,
+      "IsOriginalUpload": true,
+      "CreatedAt": "***REDACTED***",
+      "HasOriginalFile": true,
+      "HasProcessedFile": true
+    },
+    {
+      "Id": 157,
+      "Style": "***REDACTED***",
+      "IsGenerated": false,
+      "IsOriginalUpload": true,
+      "CreatedAt": "***REDACTED***",
+      "HasOriginalFile": true,
+      "HasProcessedFile": true
+    },
+    {
+      "Id": 158,
+      "Style": "***REDACTED***",
+      "IsGenerated": false,
+      "IsOriginalUpload": true,
+      "CreatedAt": "***REDACTED***",
+      "HasOriginalFile": true,
+      "HasProcessedFile": true
+    },
+    {
+      "Id": 159,
+      "Style": "***REDACTED***",
+      "IsGenerated": false,
+      "IsOriginalUpload": true,
+      "CreatedAt": "***REDACTED***",
+      "HasOriginalFile": true,
+      "HasProcessedFile": true
+    },
+    {
+      "Id": 160,
+      "Style": "***REDACTED***",
+      "IsGenerated": false,
+      "IsOriginalUpload": true,
+      "CreatedAt": "***REDACTED***",
+      "HasOriginalFile": true,
+      "HasProcessedFile": true
+    },
+    {
+      "Id": 161,
+      "Style": "***REDACTED***",
+      "IsGenerated": false,
+      "IsOriginalUpload": true,
+      "CreatedAt": "***REDACTED***",
+      "HasOriginalFile": true,
+      "HasProcessedFile": true
+    },
+    {
+      "Id": 162,
+      "Style": "***REDACTED***",
+      "IsGenerated": false,
+      "IsOriginalUpload": true,
+      "CreatedAt": "***REDACTED***",
+      "HasOriginalFile": true,
+      "HasProcessedFile": true
+    },
+    {
+      "Id": 163,
+      "Style": "***REDACTED***",
+      "IsGenerated": false,
+      "IsOriginalUpload": true,
+      "CreatedAt": "***REDACTED***",
+      "HasOriginalFile": true,
+      "HasProcessedFile": true
+    },
+    {
+      "Id": 164,
+      "Style": "***REDACTED***",
+      "IsGenerated": false,
+      "IsOriginalUpload": true,
+      "CreatedAt": "***REDACTED***",
+      "HasOriginalFile": true,
+      "HasProcessedFile": true
+    },
+    {
+      "Id": 165,
+      "Style": "***REDACTED***",
+      "IsGenerated": false,
+      "IsOriginalUpload": true,
+      "CreatedAt": "***REDACTED***",
+      "HasOriginalFile": true,
+      "HasProcessedFile": true
+    },
+    {
+      "Id": 166,
+      "Style": "***REDACTED***",
+      "IsGenerated": false,
+      "IsOriginalUpload": true,
+      "CreatedAt": "***REDACTED***",
+      "HasOriginalFile": true,
+      "HasProcessedFile": true
+    },
+    {
+      "Id": 167,
+      "Style": "***REDACTED***",
+      "IsGenerated": true,
+      "IsOriginalUpload": false,
+      "CreatedAt": "***REDACTED***",
+      "HasOriginalFile": true,
+      "HasProcessedFile": true
+    },
+    {
+      "Id": 168,
+      "Style": "***REDACTED***",
+      "IsGenerated": true,
+      "IsOriginalUpload": false,
+      "CreatedAt": "***REDACTED***",
+      "HasOriginalFile": true,
+      "HasProcessedFile": true
+    },
+    {
+      "Id": 169,
+      "Style": "***REDACTED***",
+      "IsGenerated": true,
+      "IsOriginalUpload": false,
+      "CreatedAt": "***REDACTED***",
+      "HasOriginalFile": false,
+      "HasProcessedFile": true
+    }
+  ],
+  "UsageLogs": [],
+  "Statistics": {
+    "TotalImages": 14,
+    "OriginalUploads": 11,
+    "GeneratedImages": 3,
+    "TotalCreditsUsed": 0,
+    "AccountAge": 1
+  },
+  "ExportInfo": {
+    "ExportedAt": "***REDACTED***",
+    "UserId": "***REDACTED***",
+    "Version": "***REDACTED***"
+  }
+}

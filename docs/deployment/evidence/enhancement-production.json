@@ -1,14 +1,22 @@
 {
-  "environment": "production",
-  "request": {
-    "imageUrl": "https://aipmstv16j74jubocuukg.blob.core.windows.net/profile-images/prod/uploads/29825f8b-beec-4b9e-99bc-a1f5641832c4/e5622ed8-201e-44ba-93ff-bddea590c99c_selfie.jpg",
-    "enhancementType": "professional"
+  "replicate": {
+    "status": 200,
+    "json": {
+      "success": false,
+      "error": {
+        "code": "***REDACTED***",
+        "message": "***REDACTED***"
+      }
+    }
   },
-  "response": {
-    "success": false,
-    "error": {
-      "code": "BotVerificationFailed",
-      "message": "Bot verification failed. Please try again."
+  "openai": {
+    "status": 200,
+    "json": {
+      "success": false,
+      "error": {
+        "code": "***REDACTED***",
+        "message": "***REDACTED***"
+      }
     }
   }
 }

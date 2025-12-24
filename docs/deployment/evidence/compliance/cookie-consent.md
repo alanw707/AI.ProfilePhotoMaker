@@ -1,7 +1,7 @@
 # Cookie Consent Banner (Implementation Notes)
 
 Last updated: 2025-12-19  
-Status: Implemented in UI (legal review pending).
+Status: Not doing (analytics deferred); consent evidence captured.
 
 ## Goal
 Provide a consent banner for non-essential cookies (EU/UK ePrivacy + GDPR), while keeping essential cookies available for authentication and security.
@@ -30,7 +30,8 @@ Provide a consent banner for non-essential cookies (EU/UK ePrivacy + GDPR), whil
 - `AI.ProfilePhotoMaker.UI/src/app/components/shared/cookie-consent/cookie-consent.component.ts`
 - `AI.ProfilePhotoMaker.UI/src/app/app.component.html`
 
-## Evidence to Attach
+## Evidence captured
+- Capture date: 2025-12-23 (production UI).
 - Screenshot of banner: `docs/deployment/evidence/cookie-consent-banner.png`.
 - Screenshot of preferences modal: `docs/deployment/evidence/cookie-consent-preferences.png`.
 - JSON snapshot of consent state: `docs/deployment/evidence/compliance/cookie-consent-state.json`.

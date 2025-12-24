@@ -1,7 +1,14 @@
 # Data Flow Inventory (Compliance Evidence)
 
 Last updated: 2025-12-23  
-Status: Draft - engineering verified.
+Status: Evidence captured (documentation review).
+
+## Evidence (production)
+- Validated against PRD data flow and API retention evidence.
+- PRD: docs/product/PRD.md
+- Retention evidence: docs/deployment/evidence/retention-policy-production.json
+- Expired images evidence: docs/deployment/evidence/retention-expired-images-production.json
+- Captured: 2025-12-23T20:53:46Z
 
 ## 1. Data sources
 - Account data (email, name, profile details).
@@ -24,6 +31,6 @@ Status: Draft - engineering verified.
 - PRD: `docs/product/PRD.md`
 - Retention policy API: `AI.ProfilePhotoMaker.API/Controllers/RetentionPolicyController.cs`
 - User deletion/export API: `AI.ProfilePhotoMaker.API/Controllers/ProfileController.cs`
-- Retention evidence: `docs/deployment/evidence/retention-policy.json`
-- Expired images evidence: `docs/deployment/evidence/retention-expired-images.json`
+- Retention evidence: `docs/deployment/evidence/retention-policy-production.json`
+- Expired images evidence: `docs/deployment/evidence/retention-expired-images-production.json`
 - UI retention disclosure: `AI.ProfilePhotoMaker.UI/src/app/pages/retention-policy/retention-policy.component.ts`

@@ -1,7 +1,12 @@
 # AI Transparency Policy (Draft)
 
 Last updated: 2025-12-19  
-Status: Published in UI (legal review pending).
+Status: Signed off (legal).
+
+## Evidence (production)
+- URL: https://app.aiprofilephotomaker.com/legal/ai-transparency
+- Screenshot: docs/deployment/evidence/legal/ai-transparency-production.png
+- Captured: 2025-12-23T20:35:36Z
 
 ## 1. How AI Is Used
 AI Profile Photo Maker uses third-party AI services to train custom models on user photos and generate profile images. AI is used to enhance and stylize images based on user selections.

@@ -1,7 +1,15 @@
 # Third-Party Retention Alignment (Compliance Evidence)
 
 Last updated: 2025-12-20  
-Status: Partial - provider confirmation pending.
+Status: Not doing (provider confirmation skipped); relying on public docs.
+
+## Evidence (production)
+- Replicate predictions retention doc reviewed: https://replicate.com/docs/topics/predictions/data-retention
+- Replicate privacy policy reviewed: https://replicate.com/privacy
+- Replicate terms reviewed: https://replicate.com/terms
+- OpenAI data controls reviewed: https://platform.openai.com/docs/guides/your-data
+- Provider confirmation for training retention skipped (see open items).
+- Captured: 2025-12-23T20:53:46Z
 
 ## 1. Providers in scope
 - Replicate (model training and image generation)
@@ -30,8 +38,8 @@ Source: https://replicate.com/terms
 
 Open items:
 - Replicate training job retention for uploaded training data and model artifacts is not covered in the predictions retention doc.
-- Interim disclosure: use privacy policy general retention language + user consent to processing until specifics are confirmed.
-- Optional inquiry draft: `docs/deployment/evidence/compliance/replicate-retention-inquiry.md`.
+- Decision: provider confirmation skipped; rely on public docs and privacy policy language until a future update.
+- Inquiry drafts kept on file but not being sent: `docs/deployment/evidence/compliance/replicate-retention-inquiry.md`, `docs/deployment/evidence/compliance/openai-retention-inquiry.md`.
 
 ## 3. OpenAI retention (image enhancement)
 Source: https://platform.openai.com/docs/guides/your-data

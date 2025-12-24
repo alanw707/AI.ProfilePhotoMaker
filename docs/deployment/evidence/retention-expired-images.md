@@ -4,6 +4,7 @@
 - Evidence ID: local-preflight-ac6-retention-expired-images
 - Requirement ID (AC/PC): AC-6
 - Environment: local
+- Status: Deprecated (production evidence is authoritative)
 - Date: 2025-12-22T07:02:20-08:00
 - Operator: Alan
 
@@ -22,9 +23,12 @@
 
 ## Evidence Files
 - `docs/deployment/evidence/retention-expired-images.json`
+- `docs/deployment/evidence/retention-expired-images-production.json`
+- `docs/deployment/evidence/retention-expired-images-production.log`
 
 ## Redactions
 - Tokens/PII removed: not applicable
 
 ## Notes
 - Replace with production evidence before Go/No-Go.
+- Production evidence is authoritative; local preflight evidence retained for history.

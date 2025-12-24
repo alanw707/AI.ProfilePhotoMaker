@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "data": {
+    "totalCredits": 29,
+    "weeklyCredits": 0,
+    "purchasedCredits": 29,
+    "lastCreditReset": "***REDACTED***",
+    "nextResetDate": "***REDACTED***"
+  },
+  "message": null,
+  "error": null
+}

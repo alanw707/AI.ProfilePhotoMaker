@@ -1,7 +1,12 @@
 # IP / DMCA Policy (Draft)
 
 Last updated: 2025-12-19  
-Status: Published in UI (legal review pending).
+Status: Signed off (legal).
+
+## Evidence (production)
+- URL: https://app.aiprofilephotomaker.com/legal/ip-dmca
+- Screenshot: docs/deployment/evidence/legal/ip-dmca-production.png
+- Captured: 2025-12-23T20:35:36Z
 
 ## 1. Copyright and IP
 You may only upload content that you own or have permission to use. We respect intellectual property rights.

@@ -1,7 +1,12 @@
 # Biometric Consent & Retention Notice (Draft)
 
 Last updated: 2025-12-23  
-Status: Published in UI (legal review pending).
+Status: Signed off (legal).
+
+## Evidence (production)
+- URL: https://app.aiprofilephotomaker.com/legal/biometric-consent
+- Screenshot: docs/deployment/evidence/legal/biometric-consent-production.png
+- Captured: 2025-12-23T20:35:36Z
 
 ## 1. Biometric Data Notice
 We may process biometric data such as face geometry to train your model and generate AI images, at your direction.

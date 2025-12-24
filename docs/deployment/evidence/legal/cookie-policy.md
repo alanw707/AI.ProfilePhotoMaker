@@ -1,7 +1,12 @@
 # Cookie Policy (Draft)
 
 Last updated: 2025-12-19  
-Status: Published in UI (legal review pending).
+Status: Signed off (legal).
+
+## Evidence (production)
+- URL: https://app.aiprofilephotomaker.com/legal/cookies
+- Screenshot: docs/deployment/evidence/legal/cookie-policy-production.png
+- Captured: 2025-12-23T20:35:36Z
 
 ## 1. Scope
 This Cookie Policy explains how AI Profile Photo Maker uses cookies and similar technologies (such as local storage).

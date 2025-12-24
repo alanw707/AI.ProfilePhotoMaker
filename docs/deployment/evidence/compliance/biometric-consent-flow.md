@@ -1,7 +1,14 @@
 # Biometric Consent Flow (Implementation Notes)
 
-Last updated: 2025-12-19  
-Status: Implemented in UI (legal review pending).
+Last updated: 2025-12-23
+Status: Evidence captured (production).
+
+## Evidence (production)
+- Legal disclosure URL: https://app.aiprofilephotomaker.com/legal/biometric-consent
+- Screenshot: docs/deployment/evidence/legal/biometric-consent-production.png
+- Dashboard upload consent: docs/deployment/evidence/compliance/biometric-consent-dashboard-production.png
+- Photo transform consent: docs/deployment/evidence/compliance/biometric-consent-enhance-production.png
+- Captured: 2025-12-23T21:34:14Z
 
 ## Where Consent Is Collected
 - Training upload flow (Dashboard > Upload Selfies).

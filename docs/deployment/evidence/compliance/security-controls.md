@@ -1,7 +1,12 @@
 # Security Controls Disclosure Evidence
 
 Last updated: 2025-12-20  
-Status: Published in UI; technical docs available.
+Status: Evidence captured (production).
+
+## Evidence (production)
+- URL: https://app.aiprofilephotomaker.com/legal/security
+- Screenshot: docs/deployment/evidence/legal/security-production.png
+- Captured: 2025-12-23T20:53:46Z
 
 ## 1. UI disclosure
 - Legal page: `/legal/security`

@@ -1,7 +1,12 @@
 # Security & Trust (Draft)
 
 Last updated: 2025-12-19  
-Status: Published in UI (legal review pending).
+Status: Signed off (legal).
+
+## Evidence (production)
+- URL: https://app.aiprofilephotomaker.com/legal/security
+- Screenshot: docs/deployment/evidence/legal/security-production.png
+- Captured: 2025-12-23T20:35:36Z
 
 ## 1. Security Controls
 - Access controls and authentication safeguards to protect accounts.

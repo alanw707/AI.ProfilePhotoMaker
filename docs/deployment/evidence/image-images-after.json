@@ -1,0 +1,156 @@
+{
+  "success": true,
+  "data": {
+    "totalImages": 16,
+    "originalUploads": 11,
+    "generatedImages": 5,
+    "images": [
+      {
+        "id": 171,
+        "originalImageUrl": "***REDACTED***",
+        "processedImageUrl": "***REDACTED***",
+        "style": "***REDACTED***",
+        "createdAt": "***REDACTED***",
+        "isOriginalUpload": false,
+        "isGenerated": true
+      },
+      {
+        "id": 170,
+        "originalImageUrl": "***REDACTED***",
+        "processedImageUrl": "***REDACTED***",
+        "style": "***REDACTED***",
+        "createdAt": "***REDACTED***",
+        "isOriginalUpload": false,
+        "isGenerated": true
+      },
+      {
+        "id": 169,
+        "originalImageUrl": null,
+        "processedImageUrl": "***REDACTED***",
+        "style": "***REDACTED***",
+        "createdAt": "***REDACTED***",
+        "isOriginalUpload": false,
+        "isGenerated": true
+      },
+      {
+        "id": 168,
+        "originalImageUrl": "***REDACTED***",
+        "processedImageUrl": "***REDACTED***",
+        "style": "***REDACTED***",
+        "createdAt": "***REDACTED***",
+        "isOriginalUpload": false,
+        "isGenerated": true
+      },
+      {
+        "id": 167,
+        "originalImageUrl": "***REDACTED***",
+        "processedImageUrl": "***REDACTED***",
+        "style": "***REDACTED***",
+        "createdAt": "***REDACTED***",
+        "isOriginalUpload": false,
+        "isGenerated": true
+      },
+      {
+        "id": 166,
+        "originalImageUrl": "***REDACTED***",
+        "processedImageUrl": "***REDACTED***",
+        "style": "***REDACTED***",
+        "createdAt": "***REDACTED***",
+        "isOriginalUpload": true,
+        "isGenerated": false
+      },
+      {
+        "id": 165,
+        "originalImageUrl": "***REDACTED***",
+        "processedImageUrl": "***REDACTED***",
+        "style": "***REDACTED***",
+        "createdAt": "***REDACTED***",
+        "isOriginalUpload": true,
+        "isGenerated": false
+      },
+      {
+        "id": 164,
+        "originalImageUrl": "***REDACTED***",
+        "processedImageUrl": "***REDACTED***",
+        "style": "***REDACTED***",
+        "createdAt": "***REDACTED***",
+        "isOriginalUpload": true,
+        "isGenerated": false
+      },
+      {
+        "id": 163,
+        "originalImageUrl": "***REDACTED***",
+        "processedImageUrl": "***REDACTED***",
+        "style": "***REDACTED***",
+        "createdAt": "***REDACTED***",
+        "isOriginalUpload": true,
+        "isGenerated": false
+      },
+      {
+        "id": 162,
+        "originalImageUrl": "***REDACTED***",
+        "processedImageUrl": "***REDACTED***",
+        "style": "***REDACTED***",
+        "createdAt": "***REDACTED***",
+        "isOriginalUpload": true,
+        "isGenerated": false
+      },
+      {
+        "id": 161,
+        "originalImageUrl": "***REDACTED***",
+        "processedImageUrl": "***REDACTED***",
+        "style": "***REDACTED***",
+        "createdAt": "***REDACTED***",
+        "isOriginalUpload": true,
+        "isGenerated": false
+      },
+      {
+        "id": 160,
+        "originalImageUrl": "***REDACTED***",
+        "processedImageUrl": "***REDACTED***",
+        "style": "***REDACTED***",
+        "createdAt": "***REDACTED***",
+        "isOriginalUpload": true,
+        "isGenerated": false
+      },
+      {
+        "id": 159,
+        "originalImageUrl": "***REDACTED***",
+        "processedImageUrl": "***REDACTED***",
+        "style": "***REDACTED***",
+        "createdAt": "***REDACTED***",
+        "isOriginalUpload": true,
+        "isGenerated": false
+      },
+      {
+        "id": 158,
+        "originalImageUrl": "***REDACTED***",
+        "processedImageUrl": "***REDACTED***",
+        "style": "***REDACTED***",
+        "createdAt": "***REDACTED***",
+        "isOriginalUpload": true,
+        "isGenerated": false
+      },
+      {
+        "id": 157,
+        "originalImageUrl": "***REDACTED***",
+        "processedImageUrl": "***REDACTED***",
+        "style": "***REDACTED***",
+        "createdAt": "***REDACTED***",
+        "isOriginalUpload": true,
+        "isGenerated": false
+      },
+      {
+        "id": 156,
+        "originalImageUrl": "***REDACTED***",
+        "processedImageUrl": "***REDACTED***",
+        "style": "***REDACTED***",
+        "createdAt": "***REDACTED***",
+        "isOriginalUpload": true,
+        "isGenerated": false
+      }
+    ]
+  },
+  "message": null,
+  "error": null
+}

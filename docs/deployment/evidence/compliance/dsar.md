@@ -1,7 +1,13 @@
 # DSAR Workflow Evidence
 
-Last updated: 2025-12-20  
-Status: Implemented (export metadata only).
+Last updated: 2025-12-23
+Status: Done (production; metadata-only export).
+
+## Evidence (production)
+- Settings UI: docs/deployment/evidence/compliance/dsar-settings-production.png
+- Redacted export JSON: docs/deployment/evidence/compliance/dsar-export-production.json
+- API endpoints documented in code references below.
+- Captured: 2025-12-23T21:34:14Z
 
 ## 1. User self-service (UI)
 - Settings page allows users to export data, delete photos, delete models, delete all data, or delete their account.

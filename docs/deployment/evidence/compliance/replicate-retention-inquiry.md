@@ -1,13 +1,13 @@
 # Replicate Training Retention Inquiry
 
-Last updated: 2025-12-20  
-Status: Draft email prepared; on hold (using general consent disclosure).
+Last updated: 2025-12-23  
+Status: Draft email prepared; ready to send.
 
 ## Purpose
 Request written confirmation of retention periods for training inputs and model artifacts so we can align our user-facing retention disclosures.
 
 ## Draft email
-To: privacy@replicate.com
+To: privacy@replicate.com  
 Subject: Request for training data & model artifact retention details (Replicate API)
 
 Hello Replicate team,

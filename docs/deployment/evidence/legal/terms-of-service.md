@@ -1,7 +1,12 @@
 # Terms of Service (Draft)
 
 Last updated: 2025-12-19  
-Status: Published in UI (legal review pending).
+Status: Signed off (legal).
+
+## Evidence (production)
+- URL: https://app.aiprofilephotomaker.com/legal/terms
+- Screenshot: docs/deployment/evidence/legal/terms-of-service-production.png
+- Captured: 2025-12-23T20:35:36Z
 
 ## 1. Acceptance of Terms
 By accessing and using AI Profile Photo Maker, you agree to these Terms.

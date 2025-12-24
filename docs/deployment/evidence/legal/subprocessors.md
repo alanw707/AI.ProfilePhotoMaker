@@ -1,7 +1,12 @@
 # Subprocessors (Third-Party Processors)
 
 Last updated: 2025-12-20  
-Status: Published in UI (legal review pending).
+Status: Signed off (legal).
+
+## Evidence (production)
+- URL: https://app.aiprofilephotomaker.com/legal/subprocessors
+- Screenshot: docs/deployment/evidence/legal/subprocessors-production.png
+- Captured: 2025-12-23T20:35:36Z
 
 This list covers third-party service providers that process user data on our behalf. Update this list when providers change.
 

@@ -1,7 +1,14 @@
 # Age Gate (Implementation Notes)
 
 Last updated: 2025-12-19  
-Status: Implemented in UI + API (legal review pending).
+Status: Evidence captured (production); legal review pending.
+
+## Evidence (production)
+- URL: https://app.aiprofilephotomaker.com/auth/register
+- Screenshot: docs/deployment/evidence/compliance/age-gate-register-production.png
+- URL: https://app.aiprofilephotomaker.com/auth/login
+- Screenshot: docs/deployment/evidence/compliance/age-gate-login-production.png
+- Captured: 2025-12-23T20:53:46Z
 
 ## Where Age Gate Is Enforced
 - Email registration form requires confirmation of age 13+.

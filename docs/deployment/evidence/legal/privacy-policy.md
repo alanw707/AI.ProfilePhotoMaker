@@ -1,7 +1,12 @@
 # Privacy Policy (Draft)
 
 Last updated: 2025-12-23  
-Status: Published in UI (legal review pending). Aligns to PRD v1.2 and current API retention behavior.
+Status: Signed off (legal). Aligns to PRD v1.2 and current API retention behavior.
+
+## Evidence (production)
+- URL: https://app.aiprofilephotomaker.com/legal/privacy
+- Screenshot: docs/deployment/evidence/legal/privacy-policy-production.png
+- Captured: 2025-12-23T20:35:36Z
 
 ## 1. Scope
 This Privacy Policy explains how AI Profile Photo Maker ("we", "us", "our") collects, uses, shares, and retains personal information when you use our website and services.

@@ -1,7 +1,12 @@
 # Children's Privacy Policy (Draft)
 
 Last updated: 2025-12-19  
-Status: Published in UI (legal review pending).
+Status: Signed off (legal).
+
+## Evidence (production)
+- URL: https://app.aiprofilephotomaker.com/legal/children-privacy
+- Screenshot: docs/deployment/evidence/legal/children-privacy-production.png
+- Captured: 2025-12-23T20:35:36Z
 
 ## 1. Not for Children Under 13
 AI Profile Photo Maker is not directed to children under 13. If you are under 13, do not use the service or provide personal information.

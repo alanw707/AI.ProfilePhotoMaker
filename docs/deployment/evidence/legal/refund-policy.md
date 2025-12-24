@@ -1,7 +1,12 @@
 # Refund Policy (Draft)
 
 Last updated: 2025-12-20  
-Status: Published in UI (legal review pending).
+Status: Signed off (legal).
+
+## Evidence (production)
+- URL: https://app.aiprofilephotomaker.com/legal/refund-policy
+- Screenshot: docs/deployment/evidence/legal/refund-policy-production.png
+- Captured: 2025-12-23T20:35:36Z
 
 ## 1. Scope
 This policy explains when refunds are available for AI Profile Photo Maker purchases. It applies to credit packages and subscriptions unless required by law to provide additional rights.

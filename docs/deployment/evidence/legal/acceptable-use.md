@@ -1,7 +1,12 @@
 # Acceptable Use Policy (Draft)
 
 Last updated: 2025-12-19  
-Status: Published in UI (legal review pending).
+Status: Signed off (legal).
+
+## Evidence (production)
+- URL: https://app.aiprofilephotomaker.com/legal/acceptable-use
+- Screenshot: docs/deployment/evidence/legal/acceptable-use-production.png
+- Captured: 2025-12-23T20:35:36Z
 
 ## 1. Summary
 Use the service only for lawful purposes. You are responsible for the content you upload and generate.

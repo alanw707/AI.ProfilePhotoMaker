@@ -1,0 +1,43 @@
+{
+  "success": true,
+  "data": {
+    "id": "***REDACTED***",
+    "version": "***REDACTED***",
+    "status": "***REDACTED***",
+    "input": {
+      "aspect_ratio": "***REDACTED***",
+      "extra_lora_scale": 1,
+      "go_fast": false,
+      "guidance_scale": 3,
+      "height": 520,
+      "lora_scale": 1,
+      "megapixels": "***REDACTED***",
+      "model": "***REDACTED***",
+      "num_inference_steps": 28,
+      "num_outputs": 2,
+      "output_format": "***REDACTED***",
+      "output_quality": 80,
+      "prompt": "***REDACTED***",
+      "prompt_strength": 0.8,
+      "replicate_weights": "***REDACTED***",
+      "style": "***REDACTED***",
+      "txt": "***REDACTED***",
+      "user_id": "***REDACTED***",
+      "width": 520
+    },
+    "output": [
+      "***REDACTED***",
+      "***REDACTED***"
+    ],
+    "error": null,
+    "webhook": "***REDACTED***",
+    "urls": {
+      "get": "***REDACTED***",
+      "cancel": "***REDACTED***"
+    },
+    "createdAt": "***REDACTED***",
+    "completedAt": "***REDACTED***",
+    "dataUrl": "***REDACTED***"
+  },
+  "error": null
+}
