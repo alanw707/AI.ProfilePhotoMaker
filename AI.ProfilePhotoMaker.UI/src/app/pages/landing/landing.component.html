@@ -278,7 +278,7 @@
       <div class="hero-badge">
         <div class="badge-glow"></div>
         <span class="badge-icon animate-bounce">✨</span>
-        <span class="badge-text">Transform your photos with our latest AI models in seconds</span>
+        <span class="badge-text">Transform your photos with our latest AI models in minutes</span>
         <div class="badge-shimmer"></div>
       </div>
     </div>
@@ -314,7 +314,7 @@
               <div class="btn-background"></div>
               <div class="btn-content">
                 <span class="btn-icon">🚀</span>
-                <span class="btn-text">Start Free Trial</span>
+                <span class="btn-text">Start with free enhancements</span>
                 <span class="btn-arrow">→</span>
               </div>
               <div class="btn-glow"></div>
@@ -340,7 +340,7 @@
                     clip-rule="evenodd"></path>
                 </svg>
               </div>
-              <span class="trust-text">No credit card required</span>
+              <span class="trust-text">Free weekly enhancement credits</span>
             </div>
             <div class="trust-item">
               <div class="trust-icon">
@@ -348,7 +348,7 @@
                   <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
               </div>
-              <span class="trust-text">2,847+ happy customers</span>
+              <span class="trust-text">No credit card required</span>
             </div>
             <div class="trust-item">
               <div class="trust-icon">
@@ -362,15 +362,18 @@
               <span class="trust-text">Privacy-first handling</span>
             </div>
           </div>
+          <p class="mt-4 text-sm text-gray-500">
+            Start free with enhancements. Headshot generation requires purchased credits and model training.
+          </p>
           <div class="trust-stats">
             <div class="stat-item">
-              <span class="stat-number">4.9★</span>
-              <span class="stat-label">Average Rating</span>
+              <span class="stat-number">5</span>
+              <span class="stat-label">Free weekly credits</span>
             </div>
             <div class="stat-divider"></div>
             <div class="stat-item">
-              <span class="stat-number">&lt;2min</span>
-              <span class="stat-label">Processing Time</span>
+              <span class="stat-number">Minutes</span>
+              <span class="stat-label">Typical results</span>
             </div>
             <div class="stat-divider"></div>
             <div class="stat-item">
@@ -491,13 +494,13 @@
             </div>
             <div class="stat-divider"></div>
             <div class="stat-item">
-              <span class="stat-number">4.9★</span>
-              <span class="stat-label">Average Rating</span>
+              <span class="stat-number">5</span>
+              <span class="stat-label">Free weekly credits</span>
             </div>
             <div class="stat-divider"></div>
             <div class="stat-item">
-              <span class="stat-number">&lt;2min</span>
-              <span class="stat-label">Processing Time</span>
+              <span class="stat-number">Minutes</span>
+              <span class="stat-label">Typical results</span>
             </div>
           </div>
           <p class="summary-text">
@@ -510,10 +513,13 @@
         <div class="showcase-cta">
           <button (click)="getStarted()" class="btn-primary showcase-btn">
             <span class="btn-icon">🚀</span>
-            <span class="btn-text">Try All Styles Free</span>
+            <span class="btn-text">Try free enhancements</span>
             <span class="btn-arrow">→</span>
           </button>
-          <p class="cta-subtext">Start with 5 free photos • No credit card required • All styles included</p>
+          <p class="cta-subtext">
+            Free weekly enhancement credits • No credit card required • Headshot generation requires purchased credits
+            and model training
+          </p>
         </div>
       </div>
     </div>
@@ -583,11 +589,9 @@
   <section *ngIf="!showNotFound" id="testimonials" class="testimonials-section py-16 md:py-24">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
       <div class="text-center mb-12 md:mb-16">
-        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-          Loved by Thousands of Professionals
-        </h2>
+        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Built for LinkedIn-first profiles</h2>
         <p class="text-xl text-gray-600 max-w-3xl mx-auto">
-          Join 2,847+ satisfied customers who've transformed their profile photos
+          Start free with enhancements, then upgrade when you're ready for full headshot generation
         </p>
       </div>
 
@@ -599,18 +603,6 @@
               <h4 class="font-semibold text-gray-900">{{ testimonial.name }}</h4>
               <p class="text-sm text-gray-600">{{ testimonial.role }}</p>
             </div>
-          </div>
-
-          <!-- Star rating -->
-          <div class="flex mb-4">
-            <svg
-              *ngFor="let star of [1, 2, 3, 4, 5]"
-              class="w-5 h-5 text-yellow-400"
-              fill="currentColor"
-              viewBox="0 0 20 20">
-              <path
-                d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-            </svg>
           </div>
 
           <p class="text-gray-700 italic">"{{ testimonial.content }}"</p>
@@ -659,15 +651,15 @@
     <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
       <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">Ready to Transform Your Profile Photo?</h2>
       <p class="text-xl mb-8 max-w-2xl mx-auto opacity-90">
-        Join thousands of professionals who've upgraded their online presence with AI-enhanced photos
+        Upgrade your online presence with AI-enhanced photos
       </p>
       <button
         (click)="getStarted()"
         class="bg-white text-primary-600 px-8 py-4 text-lg font-semibold hover:bg-gray-100 transform hover:scale-105 transition-all duration-200 shadow-lg"
         style="border-radius: 8px !important">
-        Start Your Free Trial Now →
+        Start with free enhancements →
       </button>
-      <p class="mt-4 opacity-75">No credit card required • 5 free photos</p>
+      <p class="mt-4 opacity-75">Free weekly enhancement credits • No credit card required</p>
     </div>
   </section>
 

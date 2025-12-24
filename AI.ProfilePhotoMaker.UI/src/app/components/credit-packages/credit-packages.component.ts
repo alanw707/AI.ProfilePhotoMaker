@@ -28,6 +28,7 @@ import {
   StripeCardElementOptions,
   PaymentMethodCreateParams,
 } from '@stripe/stripe-js';
+import { RouterModule } from '@angular/router';
 
 interface BillingDetailsForm {
   name: string;
@@ -43,7 +44,7 @@ interface BillingDetailsForm {
 @Component({
   selector: 'app-credit-packages',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './credit-packages.component.html',
   styleUrls: ['./credit-packages.component.sass'],
   changeDetection: ChangeDetectionStrategy.OnPush,

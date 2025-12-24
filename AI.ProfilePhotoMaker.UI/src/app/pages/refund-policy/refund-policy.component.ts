@@ -22,15 +22,15 @@ import { Meta, Title } from '@angular/platform-browser';
             law to provide additional rights.
           </p>
 
-          <h2 class="text-2xl font-semibold mt-8 mb-4">2. 7-Day Satisfaction Guarantee</h2>
+          <h2 class="text-2xl font-semibold mt-8 mb-4">2. 14-Day Satisfaction Guarantee</h2>
           <p>
-            We offer a 7-day satisfaction guarantee from the date of purchase. If you are not
-            satisfied, contact us within 7 days and we will review your request.
+            We offer a 14-day satisfaction guarantee from the date of purchase. If you are not
+            satisfied, contact us within 14 days and we will review your request.
           </p>
 
           <h2 class="text-2xl font-semibold mt-8 mb-4">3. Eligibility</h2>
           <ul>
-            <li>Requests must be submitted within 7 days of purchase.</li>
+            <li>Requests must be submitted within 14 days of purchase.</li>
             <li>Refunds may be adjusted if credits have been heavily used.</li>
             <li>We may decline refunds for misuse, abuse, or policy violations.</li>
           </ul>

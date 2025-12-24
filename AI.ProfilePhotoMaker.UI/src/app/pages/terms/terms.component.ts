@@ -54,7 +54,7 @@ import { Meta, Title } from '@angular/platform-browser';
           <p>
             Purchases are final and non-refundable, except as required by law or as explicitly
             stated in our
-            <a routerLink="/legal/refund-policy">Refund Policy</a>. We offer a 7-day satisfaction
+            <a routerLink="/legal/refund-policy">Refund Policy</a>. We offer a 14-day satisfaction
             guarantee.
           </p>
 

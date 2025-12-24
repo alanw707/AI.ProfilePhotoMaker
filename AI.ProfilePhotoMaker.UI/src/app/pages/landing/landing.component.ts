@@ -27,7 +27,6 @@ interface Testimonial {
   role: string;
   content: string;
   avatar: string;
-  rating: number;
 }
 
 interface FAQ {
@@ -125,28 +124,25 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   testimonials: Testimonial[] = [
     {
-      name: 'Sarah Johnson',
-      role: 'Marketing Director',
+      name: 'Job seeker',
+      role: 'Resume + LinkedIn update',
       content:
-        'The AI transformed my casual selfie into a professional headshot that looks like it was taken in a studio. Amazing!',
+        'I used the free enhancements to get my photos looking clean and professional, then upgraded for a full LinkedIn-ready set.',
       avatar: '👩‍💼',
-      rating: 5,
     },
     {
-      name: 'Michael Chen',
-      role: 'Software Engineer',
+      name: 'Founder',
+      role: 'Personal brand refresh',
       content:
-        'Finally updated my LinkedIn photo after years. The quality is incredible and it only took 2 minutes!',
+        'Fast turnaround and realistic results. The style options made it easy to find something that fits my industry.',
       avatar: '👨‍💻',
-      rating: 5,
     },
     {
-      name: 'Emily Rodriguez',
-      role: 'Freelance Designer',
+      name: 'Freelancer',
+      role: 'Client-facing profile',
       content:
-        'I use different styles for different platforms. The variety and quality are unmatched. Worth every penny!',
+        'The enhancements helped my inputs look consistent. Great for keeping a polished look across platforms.',
       avatar: '👩‍🎨',
-      rating: 5,
     },
   ];
 
@@ -159,12 +155,12 @@ export class LandingComponent implements OnInit, OnDestroy {
     {
       question: 'What photo formats are supported?',
       answer:
-        'We support all major image formats including JPG, PNG, WEBP, and HEIF. Photos should be at least 512x512 pixels for best results.',
+        'We support JPG/JPEG, PNG, and WEBP. Photos should be at least 512x512 pixels for best results.',
     },
     {
       question: 'Are my photos safe and private?',
       answer:
-        'Absolutely! All photos are encrypted during upload and processing. We automatically delete your original photos after 24 hours and never share your data with third parties.',
+        'Absolutely! All photos are encrypted during upload and processing. We typically delete your original photos within 30 days and never share your data with third parties.',
     },
     {
       question: 'Can I use the photos commercially?',
@@ -174,7 +170,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     {
       question: "What if I'm not satisfied with the results?",
       answer:
-        "We offer a 100% satisfaction guarantee. If you're not happy with your enhanced photos, contact us within 7 days for a full refund.",
+        "We offer a 14-day satisfaction guarantee. If you're not happy with your results, contact us within 14 days for a refund.",
     },
     {
       question: 'Do you offer team or enterprise plans?',
@@ -189,10 +185,10 @@ export class LandingComponent implements OnInit, OnDestroy {
   stylesLoadError = false;
 
   stats = [
-    { value: '2,847+', label: 'Happy Customers' },
-    { value: '4.9/5', label: 'Average Rating' },
-    { value: '< 2min', label: 'Processing Time' },
-    { value: '100%', label: 'Privacy Guaranteed' },
+    { value: '5', label: 'Free weekly credits' },
+    { value: 'Minutes', label: 'Typical results' },
+    { value: '20+', label: 'Styles' },
+    { value: 'Privacy-first', label: 'Handling' },
   ];
 
   constructor(
@@ -343,7 +339,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     this._meta.updateTag({
       name: 'description',
       content:
-        'Create stunning professional profile photos with AI in seconds. Perfect for LinkedIn, dating apps, resumes, and social media. Transform casual selfies into polished headshots. Try free - no credit card required.',
+        'Create LinkedIn-ready profile photos with AI in minutes. Start with free weekly enhancement credits (no credit card required), then upgrade for full headshot generation.',
     });
     this._meta.updateTag({
       name: 'keywords',
@@ -362,13 +358,13 @@ export class LandingComponent implements OnInit, OnDestroy {
     this._meta.updateTag({
       property: 'og:description',
       content:
-        'Transform your casual photos into professional headshots with AI. Perfect for LinkedIn, resumes, and social media. Try free today!',
+        'Transform your casual photos into professional profile photos with AI. Start free with weekly enhancement credits, then upgrade for full headshot generation.',
     });
     this._meta.updateTag({ property: 'og:type', content: 'website' });
     this._meta.updateTag({ property: 'og:url', content: 'https://aiprofilephotomaker.com' });
     this._meta.updateTag({
       property: 'og:image',
-      content: 'https://aiprofilephotomaker.com/assets/og-image.jpg',
+      content: 'https://aiprofilephotomaker.com/assets/og-image.svg',
     });
     this._meta.updateTag({ property: 'og:image:width', content: '1200' });
     this._meta.updateTag({ property: 'og:image:height', content: '630' });
@@ -383,11 +379,11 @@ export class LandingComponent implements OnInit, OnDestroy {
     this._meta.updateTag({
       name: 'twitter:description',
       content:
-        'Transform casual photos into professional headshots in seconds. Perfect for LinkedIn, dating apps & social media.',
+        'Create LinkedIn-ready profile photos in minutes. Start with free weekly enhancement credits, then upgrade for full headshot generation.',
     });
     this._meta.updateTag({
       name: 'twitter:image',
-      content: 'https://aiprofilephotomaker.com/assets/twitter-card.jpg',
+      content: 'https://aiprofilephotomaker.com/assets/twitter-card.svg',
     });
     this._meta.updateTag({ name: 'twitter:creator', content: '@aiprofilephoto' });
 
@@ -402,25 +398,18 @@ export class LandingComponent implements OnInit, OnDestroy {
       '@type': 'SoftwareApplication',
       name: 'AI Profile Photo Maker',
       description:
-        'Transform casual photos into professional headshots with AI technology. Create stunning LinkedIn photos, dating app profiles, and social media pictures in seconds.',
+        'Transform casual photos into professional profile photos with AI technology. Create stunning LinkedIn photos, resumes, and social media pictures in minutes.',
       applicationCategory: 'PhotographyApplication',
       operatingSystem: 'Web',
       url: 'https://aiprofilephotomaker.com',
       image: 'https://aiprofilephotomaker.com/assets/Logo.PNG',
-      screenshot: 'https://aiprofilephotomaker.com/assets/screenshot.jpg',
+      screenshot: 'https://aiprofilephotomaker.com/assets/og-image.svg',
       offers: {
         '@type': 'AggregateOffer',
         lowPrice: '9.99',
-        highPrice: '79.99',
+        highPrice: '39.99',
         priceCurrency: 'USD',
         offerCount: '3',
-      },
-      aggregateRating: {
-        '@type': 'AggregateRating',
-        ratingValue: '4.9',
-        reviewCount: '2847',
-        bestRating: '5',
-        worstRating: '1',
       },
       creator: {
         '@type': 'Organization',
@@ -431,7 +420,7 @@ export class LandingComponent implements OnInit, OnDestroy {
       featureList: [
         'AI-powered photo enhancement',
         '20+ professional style options',
-        'Instant processing',
+        'Minutes typical results',
         'Privacy-first approach',
         'HD quality output',
         'Cross-platform compatibility',
