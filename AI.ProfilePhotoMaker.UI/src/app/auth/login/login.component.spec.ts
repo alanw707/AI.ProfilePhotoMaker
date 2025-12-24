@@ -52,7 +52,7 @@ describe('LoginComponent', () => {
     fixture.detectChanges();
   });
 
-  it('keeps submit enabled when only age confirmation is missing', () => {
+  it('disables submit when age confirmation is missing', () => {
     component.loginForm.setValue({
       email: 'test@example.com',
       password: 'Password123!',
@@ -66,7 +66,7 @@ describe('LoginComponent', () => {
     );
 
     expect(button).withContext('submit button should exist').not.toBeNull();
-    expect(button?.disabled).toBeFalse();
+    expect(button?.disabled).toBeTrue();
     expect(button?.getAttribute('aria-disabled')).toBe('true');
   });
 
