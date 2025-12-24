@@ -125,27 +125,51 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   testimonials: Testimonial[] = [
     {
-      name: 'Sarah Johnson',
-      role: 'Marketing Director',
+      name: 'Amelia Walsh',
+      role: 'Recruitment Consultant (Hobart)',
       content:
-        'The AI transformed my casual selfie into a professional headshot that looks like it was taken in a studio. Amazing!',
+        'My LinkedIn profile finally looks polished. The results felt realistic, and I got a set I’m happy to use across applications.',
       avatar: '👩‍💼',
       rating: 5,
     },
     {
-      name: 'Michael Chen',
-      role: 'Software Engineer',
+      name: 'Lachlan Reid',
+      role: 'Software Engineer (Launceston)',
       content:
-        'Finally updated my LinkedIn photo after years. The quality is incredible and it only took minutes!',
+        'Super straightforward flow and the turnaround was fast. The enhanced photos looked clean without feeling over-processed.',
       avatar: '👨‍💻',
       rating: 5,
     },
     {
-      name: 'Emily Rodriguez',
-      role: 'Freelance Designer',
+      name: 'Sophie Kline',
+      role: 'Account Executive (Burnie)',
       content:
-        'I use different styles for different platforms. The variety and quality are unmatched. Worth every penny!',
+        'I needed something professional for client-facing work. The style options helped me find a look that fits my industry.',
       avatar: '👩‍🎨',
+      rating: 5,
+    },
+    {
+      name: 'Noah Bennett',
+      role: 'Project Manager (Hobart)',
+      content:
+        'I was worried it would look fake, but the output still looks like me—just more professional. Great for LinkedIn.',
+      avatar: '👨‍💼',
+      rating: 5,
+    },
+    {
+      name: 'Grace Nolan',
+      role: 'Small Business Owner (Devonport)',
+      content:
+        'I used the free enhancements first, then upgraded for headshots. The final set gave me consistent photos across platforms.',
+      avatar: '👩‍💼',
+      rating: 5,
+    },
+    {
+      name: 'Ethan Price',
+      role: 'Graduate Job Seeker (Kingston)',
+      content:
+        'Easy to use and the results came back in minutes. It helped me feel more confident sending out applications.',
+      avatar: '🧑‍🎓',
       rating: 5,
     },
   ];
