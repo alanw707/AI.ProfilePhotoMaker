@@ -459,9 +459,16 @@ Downloading ${downloadableImages.length} completed image${downloadableImages.len
     this.isDownloading = true;
     this.downloadProgress = 0;
 
+    const env = this._config.getCurrentEnvironment();
+    const isProdLike = env === 'production' || env === 'test';
+    const headers = isProdLike
+      ? {}
+      : ({ 'ngrok-skip-browser-warning': 'true' } as Record<string, string>);
+
     try {
       const zip = new jsZip();
       const imageFolder = zip.folder('profile-photos');
+      let addedCount = 0;
 
       for (let i = 0; i < images.length; i++) {
         const image = images[i];
@@ -475,9 +482,7 @@ Downloading ${downloadableImages.length} completed image${downloadableImages.len
             mode: 'cors',
             cache: 'no-cache',
             credentials: 'omit',
-            headers: {
-              'ngrok-skip-browser-warning': 'true',
-            },
+            headers,
           });
 
           if (!response.ok) {
@@ -520,9 +525,19 @@ Downloading ${downloadableImages.length} completed image${downloadableImages.len
           } else {
             zip.file(filename, blob);
           }
+
+          addedCount++;
         } catch {
+          this._logger.warn('Skipping image download for zip (failed to fetch)', {
+            imageId: image.id,
+            style: image.title,
+          });
           // Continue with other images instead of failing completely
         }
+      }
+
+      if (addedCount === 0) {
+        throw new Error('No images could be downloaded for the zip file');
       }
 
       this.downloadProgress = 95;
@@ -552,8 +567,9 @@ Downloading ${downloadableImages.length} completed image${downloadableImages.len
         document.body.removeChild(link);
         window.URL.revokeObjectURL(zipUrl);
       }, 100);
-    } catch {
-      alert('Failed to create zip file. Please try downloading images individually.');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      alert(`Failed to create zip file: ${errorMessage}\n\nPlease try downloading images individually.`);
     } finally {
       this.isDownloading = false;
       this.downloadProgress = 0;
