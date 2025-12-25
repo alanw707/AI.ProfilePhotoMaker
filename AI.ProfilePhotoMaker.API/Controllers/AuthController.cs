@@ -630,8 +630,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             // Handle OAuth errors
             if (!string.IsNullOrEmpty(error))
             {
-                var encodedError = Uri.EscapeDataString($"oauth_{error}");
-                return Redirect($"{frontendBaseUrl}/auth/login?error={encodedError}");
+                _logger.LogWarning("OAuth callback returned error from provider: {OAuthError}", error);
+                return Redirect($"{frontendBaseUrl}/auth/login?error=oauth_error");
             }
 
             // Validate state parameter - CRITICAL SECURITY CHECK
@@ -1093,6 +1093,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             return returnUrl.StartsWith("/", StringComparison.Ordinal) ? returnUrl : "/app/dashboard";
         }
+
 
         [HttpPost("set-cookie")]
         [ApiExplorerSettings(IgnoreApi = true)]
