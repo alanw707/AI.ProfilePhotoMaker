@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
 import { AuthService } from '../../services/auth.service';
-import { Meta, Title } from '@angular/platform-browser';
 
 import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
 import { CreditPackagesComponent } from '../../components/credit-packages/credit-packages.component';
