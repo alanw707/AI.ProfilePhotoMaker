@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { AuthService } from './services/auth.service';
@@ -22,6 +23,7 @@ export class AppComponent implements OnInit {
   private readonly _authService = inject(AuthService);
   private readonly _themeService = inject(ThemeService);
   private readonly _config = inject(ConfigService);
+  private readonly _document = inject(DOCUMENT);
 
   ngOnInit(): void {
     // Initialize theme service to ensure proper theme application
@@ -33,7 +35,11 @@ export class AppComponent implements OnInit {
     // Probe session only when navigating to protected routes
     this._router.events
       .pipe(filter(e => e instanceof NavigationEnd))
-      .subscribe(e => this._authService.probeSessionForUrl((e as NavigationEnd).urlAfterRedirects));
+      .subscribe(e => {
+        const navigation = e as NavigationEnd;
+        this._authService.probeSessionForUrl(navigation.urlAfterRedirects);
+        this._updateCanonicalUrl(navigation.urlAfterRedirects);
+      });
   }
 
   private _handleOAuthCallback(): void {
@@ -64,5 +70,21 @@ export class AppComponent implements OnInit {
         this._router.navigate(['/app/dashboard']);
       });
     }
+  }
+
+  private _updateCanonicalUrl(url: string): void {
+    const origin = this._document.location?.origin ?? window.location.origin;
+    const canonicalUrl = new URL(url, origin);
+    canonicalUrl.search = '';
+    canonicalUrl.hash = '';
+
+    let canonicalLink = this._document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!canonicalLink) {
+      canonicalLink = this._document.createElement('link');
+      canonicalLink.setAttribute('rel', 'canonical');
+      this._document.head.appendChild(canonicalLink);
+    }
+
+    canonicalLink.setAttribute('href', canonicalUrl.toString());
   }
 }
