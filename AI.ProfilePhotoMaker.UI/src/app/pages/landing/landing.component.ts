@@ -76,6 +76,8 @@ export class LandingComponent implements OnInit, OnDestroy {
   newsletterEmail = '';
   showThankYou = false;
   showNotFound = false;
+  private readonly structuredDataId = 'landing-structured-data';
+  private readonly faqStructuredDataId = 'landing-faq-structured-data';
 
   // Theme-related properties
   currentTheme$!: Observable<string>;
@@ -253,6 +255,16 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.themeSubscription.unsubscribe();
+
+    const structuredDataScript = document.getElementById(this.structuredDataId);
+    if (structuredDataScript) {
+      structuredDataScript.remove();
+    }
+
+    const faqDataScript = document.getElementById(this.faqStructuredDataId);
+    if (faqDataScript) {
+      faqDataScript.remove();
+    }
   }
 
   toggleTheme(): void {
@@ -358,6 +370,7 @@ export class LandingComponent implements OnInit, OnDestroy {
   }
 
   setupSEO(): void {
+    this.setCanonicalUrl('https://app.aiprofilephotomaker.com/');
     // Set page title
     this._title.setTitle(
       'AI Profile Photo Maker - Transform Your Photos into Professional Headshots | Instant AI Enhancement'
@@ -455,7 +468,13 @@ export class LandingComponent implements OnInit, OnDestroy {
       ],
     };
 
+    const existingStructuredData = document.getElementById(this.structuredDataId);
+    if (existingStructuredData) {
+      existingStructuredData.remove();
+    }
+
     const script = document.createElement('script');
+    script.id = this.structuredDataId;
     script.type = 'application/ld+json';
     script.text = JSON.stringify(structuredData);
     document.head.appendChild(script);
@@ -474,7 +493,13 @@ export class LandingComponent implements OnInit, OnDestroy {
       })),
     };
 
+    const existingFaqData = document.getElementById(this.faqStructuredDataId);
+    if (existingFaqData) {
+      existingFaqData.remove();
+    }
+
     const faqScript = document.createElement('script');
+    faqScript.id = this.faqStructuredDataId;
     faqScript.type = 'application/ld+json';
     faqScript.text = JSON.stringify(faqData);
     document.head.appendChild(faqScript);
@@ -496,6 +521,16 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   toggleFAQ(index: number): void {
     this.faqs[index].open = !this.faqs[index].open;
+  }
+
+  private setCanonicalUrl(url: string): void {
+    let canonical = document.querySelector("link[rel='canonical']") as HTMLLinkElement | null;
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute('href', url);
   }
 
   private isLandingSection(sectionId: string): sectionId is 'features' | 'examples' | 'pricing' | 'testimonials' | 'faq' {
