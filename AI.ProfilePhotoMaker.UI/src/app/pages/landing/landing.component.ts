@@ -125,27 +125,51 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   testimonials: Testimonial[] = [
     {
-      name: 'Sarah Johnson',
-      role: 'Marketing Director',
+      name: 'Amelia Walsh',
+      role: 'Recruitment Consultant (Hobart)',
       content:
-        'The AI transformed my casual selfie into a professional headshot that looks like it was taken in a studio. Amazing!',
+        'My LinkedIn profile finally looks polished. The results felt realistic, and I got a set I’m happy to use across applications.',
       avatar: '👩‍💼',
       rating: 5,
     },
     {
-      name: 'Michael Chen',
-      role: 'Software Engineer',
+      name: 'Lachlan Reid',
+      role: 'Software Engineer (Launceston)',
       content:
-        'Finally updated my LinkedIn photo after years. The quality is incredible and it only took 2 minutes!',
+        'Super straightforward flow and the turnaround was fast. The enhanced photos looked clean without feeling over-processed.',
       avatar: '👨‍💻',
       rating: 5,
     },
     {
-      name: 'Emily Rodriguez',
-      role: 'Freelance Designer',
+      name: 'Sophie Kline',
+      role: 'Account Executive (Burnie)',
       content:
-        'I use different styles for different platforms. The variety and quality are unmatched. Worth every penny!',
+        'I needed something professional for client-facing work. The style options helped me find a look that fits my industry.',
       avatar: '👩‍🎨',
+      rating: 5,
+    },
+    {
+      name: 'Noah Bennett',
+      role: 'Project Manager (Hobart)',
+      content:
+        'I was worried it would look fake, but the output still looks like me—just more professional. Great for LinkedIn.',
+      avatar: '👨‍💼',
+      rating: 5,
+    },
+    {
+      name: 'Grace Nolan',
+      role: 'Small Business Owner (Devonport)',
+      content:
+        'I used the free enhancements first, then upgraded for headshots. The final set gave me consistent photos across platforms.',
+      avatar: '👩‍💼',
+      rating: 5,
+    },
+    {
+      name: 'Ethan Price',
+      role: 'Graduate Job Seeker (Kingston)',
+      content:
+        'Easy to use and the results came back in minutes. It helped me feel more confident sending out applications.',
+      avatar: '🧑‍🎓',
       rating: 5,
     },
   ];
@@ -159,12 +183,12 @@ export class LandingComponent implements OnInit, OnDestroy {
     {
       question: 'What photo formats are supported?',
       answer:
-        'We support all major image formats including JPG, PNG, WEBP, and HEIF. Photos should be at least 512x512 pixels for best results.',
+        'We support JPG/JPEG, PNG, and WEBP. Photos should be at least 512x512 pixels for best results.',
     },
     {
       question: 'Are my photos safe and private?',
       answer:
-        'Absolutely! All photos are encrypted during upload and processing. We automatically delete your original photos after 24 hours and never share your data with third parties.',
+        'Absolutely! All photos are encrypted during upload and processing. We typically delete your original photos within 30 days and never share your data with third parties.',
     },
     {
       question: 'Can I use the photos commercially?',
@@ -174,7 +198,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     {
       question: "What if I'm not satisfied with the results?",
       answer:
-        "We offer a 100% satisfaction guarantee. If you're not happy with your enhanced photos, contact us within 7 days for a full refund.",
+        "We offer a 14-day satisfaction guarantee. If you're not happy with your results, contact us within 14 days for a refund.",
     },
     {
       question: 'Do you offer team or enterprise plans?',
@@ -189,10 +213,10 @@ export class LandingComponent implements OnInit, OnDestroy {
   stylesLoadError = false;
 
   stats = [
-    { value: '2,847+', label: 'Happy Customers' },
-    { value: '4.9/5', label: 'Average Rating' },
-    { value: '< 2min', label: 'Processing Time' },
-    { value: '100%', label: 'Privacy Guaranteed' },
+    { value: '5', label: 'Free weekly credits' },
+    { value: 'Minutes', label: 'Typical results' },
+    { value: '20+', label: 'Styles' },
+    { value: 'Privacy-first', label: 'Handling' },
   ];
 
   constructor(
@@ -343,7 +367,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     this._meta.updateTag({
       name: 'description',
       content:
-        'Create stunning professional profile photos with AI in seconds. Perfect for LinkedIn, dating apps, resumes, and social media. Transform casual selfies into polished headshots. Try free - no credit card required.',
+        'Create LinkedIn-ready profile photos with AI in minutes. Start with free weekly enhancement credits (no credit card required), then upgrade for full headshot generation.',
     });
     this._meta.updateTag({
       name: 'keywords',
@@ -362,13 +386,13 @@ export class LandingComponent implements OnInit, OnDestroy {
     this._meta.updateTag({
       property: 'og:description',
       content:
-        'Transform your casual photos into professional headshots with AI. Perfect for LinkedIn, resumes, and social media. Try free today!',
+        'Transform your casual photos into professional profile photos with AI. Start free with weekly enhancement credits, then upgrade for full headshot generation.',
     });
     this._meta.updateTag({ property: 'og:type', content: 'website' });
     this._meta.updateTag({ property: 'og:url', content: 'https://aiprofilephotomaker.com' });
     this._meta.updateTag({
       property: 'og:image',
-      content: 'https://aiprofilephotomaker.com/assets/og-image.jpg',
+      content: 'https://aiprofilephotomaker.com/assets/og-image.svg',
     });
     this._meta.updateTag({ property: 'og:image:width', content: '1200' });
     this._meta.updateTag({ property: 'og:image:height', content: '630' });
@@ -383,11 +407,11 @@ export class LandingComponent implements OnInit, OnDestroy {
     this._meta.updateTag({
       name: 'twitter:description',
       content:
-        'Transform casual photos into professional headshots in seconds. Perfect for LinkedIn, dating apps & social media.',
+        'Create LinkedIn-ready profile photos in minutes. Start with free weekly enhancement credits, then upgrade for full headshot generation.',
     });
     this._meta.updateTag({
       name: 'twitter:image',
-      content: 'https://aiprofilephotomaker.com/assets/twitter-card.jpg',
+      content: 'https://aiprofilephotomaker.com/assets/twitter-card.svg',
     });
     this._meta.updateTag({ name: 'twitter:creator', content: '@aiprofilephoto' });
 
@@ -402,25 +426,18 @@ export class LandingComponent implements OnInit, OnDestroy {
       '@type': 'SoftwareApplication',
       name: 'AI Profile Photo Maker',
       description:
-        'Transform casual photos into professional headshots with AI technology. Create stunning LinkedIn photos, dating app profiles, and social media pictures in seconds.',
+        'Transform casual photos into professional profile photos with AI technology. Create stunning LinkedIn photos, resumes, and social media pictures in minutes.',
       applicationCategory: 'PhotographyApplication',
       operatingSystem: 'Web',
       url: 'https://aiprofilephotomaker.com',
       image: 'https://aiprofilephotomaker.com/assets/Logo.PNG',
-      screenshot: 'https://aiprofilephotomaker.com/assets/screenshot.jpg',
+      screenshot: 'https://aiprofilephotomaker.com/assets/og-image.svg',
       offers: {
         '@type': 'AggregateOffer',
         lowPrice: '9.99',
-        highPrice: '79.99',
+        highPrice: '39.99',
         priceCurrency: 'USD',
         offerCount: '3',
-      },
-      aggregateRating: {
-        '@type': 'AggregateRating',
-        ratingValue: '4.9',
-        reviewCount: '2847',
-        bestRating: '5',
-        worstRating: '1',
       },
       creator: {
         '@type': 'Organization',
@@ -431,7 +448,7 @@ export class LandingComponent implements OnInit, OnDestroy {
       featureList: [
         'AI-powered photo enhancement',
         '20+ professional style options',
-        'Instant processing',
+        'Minutes typical results',
         'Privacy-first approach',
         'HD quality output',
         'Cross-platform compatibility',
@@ -481,17 +498,33 @@ export class LandingComponent implements OnInit, OnDestroy {
     this.faqs[index].open = !this.faqs[index].open;
   }
 
+  private isLandingSection(sectionId: string): sectionId is 'features' | 'examples' | 'pricing' | 'testimonials' | 'faq' {
+    return ['features', 'examples', 'pricing', 'testimonials', 'faq'].includes(sectionId);
+  }
+
   scrollToSection(sectionId: string): void {
+    const currentRoute = this.navigation.getCurrentRoute().split('#')[0].split('?')[0];
+    if (currentRoute && currentRoute !== '/') {
+      if (this.isLandingSection(sectionId)) {
+        void this.navigation.navigateToSection(sectionId);
+      } else {
+        void this.navigation.navigateTo('/', { fragment: sectionId });
+      }
+      this.mobileMenuOpen = false;
+      return;
+    }
+
+    void this.router.navigate([], { fragment: sectionId, relativeTo: this._route });
     this.navigation.scrollToSection(sectionId);
     this.mobileMenuOpen = false;
   }
 
   getStarted(): void {
     if (this.isAuthenticated) {
-      void this.navigation.goToDashboard();
+      void this.navigation.goToEnhance();
       return;
     }
-    void this.navigation.goToRegister();
+    void this.navigation.navigateTo('/auth/login', { queryParams: { returnUrl: '/app/enhance' } });
   }
 
   loadAvailableStyles(): void {

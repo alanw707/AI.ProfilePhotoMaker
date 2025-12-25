@@ -10,6 +10,17 @@
 
 const { test, expect } = require('@playwright/test');
 
+const apiBaseUrl = process.env.TEST_API_URL || 'http://localhost:5032';
+
+async function confirmEmailForTest(page) {
+  const response = await page.request.post(`${apiBaseUrl}/api/auth/dev/confirm-email`, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!response.ok()) {
+    throw new Error(`Dev email confirmation failed: ${response.status()}`);
+  }
+}
+
 test.describe('Support form responsive', () => {
   test('renders correctly across viewports', async ({ page }, testInfo) => {
     const timestamp = Date.now();
@@ -18,6 +29,10 @@ test.describe('Support form responsive', () => {
 
     await page.goto('/auth/register');
     await expect(page.getByRole('heading', { name: /Create Account/i })).toBeVisible();
+    const acceptCookies = page.getByRole('button', { name: /Accept All/i });
+    if (await acceptCookies.isVisible()) {
+      await acceptCookies.click();
+    }
 
     await page.fill('#firstName', 'Local');
     await page.fill('#lastName', 'Tester');
@@ -26,8 +41,12 @@ test.describe('Support form responsive', () => {
     await page.fill('#email', email);
     await page.fill('#password', password);
     await page.fill('#confirmPassword', password);
+    await page.check('input[formcontrolname="ageConfirmed"]');
 
     await page.click('button[type="submit"]');
+    await page.waitForURL('**/auth/verify-email', { timeout: 30000 });
+    await confirmEmailForTest(page);
+    await page.goto('/app/dashboard');
     await page.waitForURL('**/app/**', { timeout: 30000 });
 
     await page.goto('/app/support');

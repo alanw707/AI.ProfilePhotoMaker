@@ -55,6 +55,7 @@ jobs:
       - name: 🧪 Test Frontend
         env:
           CI: true
+          HUSKY: 0
         run: |
           cd AI.ProfilePhotoMaker.UI
           npm ci

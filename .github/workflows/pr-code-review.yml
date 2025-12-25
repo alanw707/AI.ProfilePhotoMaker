@@ -94,6 +94,7 @@ jobs:
   codeql:
     name: 🛡️ CodeQL (C# + JS)
     runs-on: ubuntu-latest
+    if: ${{ vars.CODEQL_ADVANCED_ENABLED == 'true' }}
     permissions:
       actions: read
       contents: read
@@ -103,19 +104,19 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🛡️ Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: 'csharp,javascript'
 
       - name: 🏗️ Autobuild
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@v4
 
       - name: 🔍 Analyze
         continue-on-error: true
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: '/language:all'
       - name: 📝 Note on CodeQL default setup
         if: ${{ always() }}
         run: |
-          echo "If Code Scanning default setup is enabled, this advanced CodeQL job may be skipped or set to continue-on-error to avoid conflicts."
+          echo "Set CODEQL_ADVANCED_ENABLED=true to run this job. Leave it unset when CodeQL default setup is enabled to avoid SARIF upload conflicts."
