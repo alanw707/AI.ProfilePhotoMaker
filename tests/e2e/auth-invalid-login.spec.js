@@ -20,6 +20,7 @@ test.describe('Auth invalid login', () => {
 
     await page.fill('#email', email);
     await page.fill('#password', password);
+    await page.check('input[formcontrolname="ageConfirmed"]');
 
     const submitButton = page.locator('button[type="submit"]');
     await expect(submitButton).toBeEnabled();
@@ -39,4 +40,3 @@ test.describe('Auth invalid login', () => {
     await expect(page).toHaveURL(/\/auth\/login/);
   });
 });
-

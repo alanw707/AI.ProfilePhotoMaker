@@ -49,8 +49,9 @@ test.describe('Credit purchase idempotency (API)', () => {
         password: config.password,
         firstName: 'Idempotency',
         lastName: 'Test',
-        gender: 'Prefer not to say',
+        gender: 'prefer-not-to-say',
         ethnicity: 'other',
+        ageConfirmed: true,
       }),
     });
     expect(registerResp.ok).toBeTruthy();

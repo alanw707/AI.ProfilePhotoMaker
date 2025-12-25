@@ -104,7 +104,8 @@
             tabindex="0"
             role="button"
             class="cursor-pointer text-gray-700 hover:text-primary-600 transition-colors"
-            aria-label="Navigate to Login page">
+            aria-label="Navigate to Login page"
+            data-testid="login-button">
             Login
           </a>
           <a
@@ -193,7 +194,8 @@
             tabindex="0"
             role="button"
             class="block cursor-pointer text-gray-700 hover:text-primary-600 transition-colors"
-            aria-label="Navigate to Login page">
+            aria-label="Navigate to Login page"
+            data-testid="login-button">
             Login
           </a>
           <a
@@ -695,9 +697,12 @@
               </a>
             </li>
             <li>
-              <a routerLink="/help" class="text-gray-400 hover:text-white transition-colors">
+              <button
+                type="button"
+                class="text-gray-400 hover:text-white transition-colors"
+                (click)="scrollToSection('faq')">
                 FAQ
-              </a>
+              </button>
             </li>
             <li>
               <a routerLink="/pricing" class="text-gray-400 hover:text-white transition-colors">

@@ -498,17 +498,33 @@ export class LandingComponent implements OnInit, OnDestroy {
     this.faqs[index].open = !this.faqs[index].open;
   }
 
+  private isLandingSection(sectionId: string): sectionId is 'features' | 'examples' | 'pricing' | 'testimonials' | 'faq' {
+    return ['features', 'examples', 'pricing', 'testimonials', 'faq'].includes(sectionId);
+  }
+
   scrollToSection(sectionId: string): void {
+    const currentRoute = this.navigation.getCurrentRoute().split('#')[0].split('?')[0];
+    if (currentRoute && currentRoute !== '/') {
+      if (this.isLandingSection(sectionId)) {
+        void this.navigation.navigateToSection(sectionId);
+      } else {
+        void this.navigation.navigateTo('/', { fragment: sectionId });
+      }
+      this.mobileMenuOpen = false;
+      return;
+    }
+
+    void this.router.navigate([], { fragment: sectionId, relativeTo: this._route });
     this.navigation.scrollToSection(sectionId);
     this.mobileMenuOpen = false;
   }
 
   getStarted(): void {
     if (this.isAuthenticated) {
-      void this.navigation.goToDashboard();
+      void this.navigation.goToEnhance();
       return;
     }
-    void this.navigation.goToRegister();
+    void this.navigation.navigateTo('/auth/login', { queryParams: { returnUrl: '/app/enhance' } });
   }
 
   loadAvailableStyles(): void {
