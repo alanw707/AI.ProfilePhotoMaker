@@ -389,10 +389,10 @@ export class LandingComponent implements OnInit, OnDestroy {
         'Transform your casual photos into professional profile photos with AI. Start free with weekly enhancement credits, then upgrade for full headshot generation.',
     });
     this._meta.updateTag({ property: 'og:type', content: 'website' });
-    this._meta.updateTag({ property: 'og:url', content: 'https://aiprofilephotomaker.com' });
+    this._meta.updateTag({ property: 'og:url', content: 'https://app.aiprofilephotomaker.com/' });
     this._meta.updateTag({
       property: 'og:image',
-      content: 'https://aiprofilephotomaker.com/assets/og-image.svg',
+      content: 'https://app.aiprofilephotomaker.com/assets/og-image.svg',
     });
     this._meta.updateTag({ property: 'og:image:width', content: '1200' });
     this._meta.updateTag({ property: 'og:image:height', content: '630' });
@@ -411,7 +411,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     });
     this._meta.updateTag({
       name: 'twitter:image',
-      content: 'https://aiprofilephotomaker.com/assets/twitter-card.svg',
+      content: 'https://app.aiprofilephotomaker.com/assets/twitter-card.svg',
     });
     this._meta.updateTag({ name: 'twitter:creator', content: '@aiprofilephoto' });
 
@@ -429,9 +429,9 @@ export class LandingComponent implements OnInit, OnDestroy {
         'Transform casual photos into professional profile photos with AI technology. Create stunning LinkedIn photos, resumes, and social media pictures in minutes.',
       applicationCategory: 'PhotographyApplication',
       operatingSystem: 'Web',
-      url: 'https://aiprofilephotomaker.com',
-      image: 'https://aiprofilephotomaker.com/assets/Logo.PNG',
-      screenshot: 'https://aiprofilephotomaker.com/assets/og-image.svg',
+      url: 'https://app.aiprofilephotomaker.com/',
+      image: 'https://app.aiprofilephotomaker.com/assets/Logo.PNG',
+      screenshot: 'https://app.aiprofilephotomaker.com/assets/og-image.svg',
       offers: {
         '@type': 'AggregateOffer',
         lowPrice: '9.99',
@@ -442,7 +442,7 @@ export class LandingComponent implements OnInit, OnDestroy {
       creator: {
         '@type': 'Organization',
         name: 'AI Profile Photo Maker',
-        url: 'https://aiprofilephotomaker.com',
+        url: 'https://app.aiprofilephotomaker.com/',
       },
       datePublished: '2024-01-01',
       featureList: [

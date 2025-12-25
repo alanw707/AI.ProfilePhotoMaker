@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { Meta, Title } from '@angular/platform-browser';
 
 import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
 import { CreditPackagesComponent } from '../../components/credit-packages/credit-packages.component';
@@ -163,11 +164,14 @@ export class PremiumComponent implements OnInit {
     private router: Router,
     private creditService: CreditService,
     private notificationService: NotificationService,
-    private logging: LoggingService
+    private logging: LoggingService,
+    private meta: Meta,
+    private title: Title
   ) {}
 
   ngOnInit() {
     this.logging.debug('Premium page initialized');
+    this.setupSeo();
 
     // Only load credit status if authenticated
     if (this.authService.isAuthenticated()) {
@@ -200,5 +204,74 @@ export class PremiumComponent implements OnInit {
 
     // Redirect to dashboard to start the workflow
     this.router.navigate(['/app/dashboard']);
+  }
+
+  private setupSeo(): void {
+    const title = 'Pricing Plans - AI Profile Photo Maker';
+    const description =
+      'Choose the perfect plan for your AI profile photo needs. Simple, transparent pricing with no hidden fees.';
+    const url = 'https://app.aiprofilephotomaker.com/pricing';
+    const ogImage = 'https://app.aiprofilephotomaker.com/assets/og-image.svg';
+    const twitterImage = 'https://app.aiprofilephotomaker.com/assets/twitter-card.svg';
+
+    this.title.setTitle(title);
+    this.meta.updateTag({ name: 'description', content: description });
+    this.meta.updateTag({
+      name: 'keywords',
+      content: 'AI photo pricing, profile photo plans, professional headshot cost',
+    });
+    this.meta.updateTag({ name: 'robots', content: 'index, follow' });
+
+    this.meta.updateTag({ property: 'og:title', content: title });
+    this.meta.updateTag({ property: 'og:description', content: description });
+    this.meta.updateTag({ property: 'og:type', content: 'website' });
+    this.meta.updateTag({ property: 'og:url', content: url });
+    this.meta.updateTag({ property: 'og:image', content: ogImage });
+    this.meta.updateTag({ property: 'og:site_name', content: 'AI Profile Photo Maker' });
+
+    this.meta.updateTag({ property: 'twitter:card', content: 'summary_large_image' });
+    this.meta.updateTag({ property: 'twitter:title', content: title });
+    this.meta.updateTag({ property: 'twitter:description', content: description });
+    this.meta.updateTag({ property: 'twitter:image', content: twitterImage });
+    this.meta.updateTag({ property: 'twitter:url', content: url });
+
+    const pricingSchema = {
+      '@context': 'https://schema.org',
+      '@type': 'OfferCatalog',
+      name: 'AI Profile Photo Maker Pricing',
+      description,
+      url,
+      itemListElement: [
+        {
+          '@type': 'Offer',
+          name: 'Starter Pack',
+          price: '9.00',
+          priceCurrency: 'USD',
+          category: 'AI photo credits',
+          url,
+        },
+        {
+          '@type': 'Offer',
+          name: 'Professional Pack',
+          price: '19.00',
+          priceCurrency: 'USD',
+          category: 'AI photo credits',
+          url,
+        },
+        {
+          '@type': 'Offer',
+          name: 'Studio Pack',
+          price: '39.00',
+          priceCurrency: 'USD',
+          category: 'AI photo credits',
+          url,
+        },
+      ],
+    };
+
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.text = JSON.stringify(pricingSchema);
+    document.head.appendChild(script);
   }
 }
