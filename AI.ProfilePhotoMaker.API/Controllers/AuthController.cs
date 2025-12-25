@@ -630,7 +630,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             // Handle OAuth errors
             if (!string.IsNullOrEmpty(error))
             {
-                _logger.LogWarning("OAuth callback returned error from provider: {OAuthError}", error);
+                _logger.LogWarning("OAuth callback returned error from provider: {OAuthError}", S(error));
                 return Redirect($"{frontendBaseUrl}/auth/login?error=oauth_error");
             }
 
