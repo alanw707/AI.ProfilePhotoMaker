@@ -41,7 +41,7 @@ import { Meta, Title } from '@angular/platform-browser';
           <h2 class="text-2xl font-semibold mt-8 mb-4">4. Incident Reporting</h2>
           <p>
             If you believe your account or data is at risk, contact us immediately at
-            security&#64;aiprofilephotomaker.com.
+            support&#64;aiprofilephotomaker.com.
           </p>
 
           <h2 class="text-2xl font-semibold mt-8 mb-4">5. Responsible Disclosure</h2>

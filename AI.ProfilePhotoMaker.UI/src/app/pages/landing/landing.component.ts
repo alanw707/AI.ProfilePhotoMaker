@@ -26,7 +26,8 @@ interface Testimonial {
   name: string;
   role: string;
   content: string;
-  avatar: string;
+  style: string;
+  imageUrl: string;
   rating: number;
 }
 
@@ -125,56 +126,7 @@ export class LandingComponent implements OnInit, OnDestroy {
   plans: Plan[] = [];
   isLoadingPackages = true;
 
-  testimonials: Testimonial[] = [
-    {
-      name: 'Amelia Walsh',
-      role: 'Recruitment Consultant (Hobart)',
-      content:
-        'My LinkedIn profile finally looks polished. The results felt realistic, and I got a set I’m happy to use across applications.',
-      avatar: '👩‍💼',
-      rating: 5,
-    },
-    {
-      name: 'Lachlan Reid',
-      role: 'Software Engineer (Launceston)',
-      content:
-        'Super straightforward flow and the turnaround was fast. The enhanced photos looked clean without feeling over-processed.',
-      avatar: '👨‍💻',
-      rating: 5,
-    },
-    {
-      name: 'Sophie Kline',
-      role: 'Account Executive (Burnie)',
-      content:
-        'I needed something professional for client-facing work. The style options helped me find a look that fits my industry.',
-      avatar: '👩‍🎨',
-      rating: 5,
-    },
-    {
-      name: 'Noah Bennett',
-      role: 'Project Manager (Hobart)',
-      content:
-        'I was worried it would look fake, but the output still looks like me—just more professional. Great for LinkedIn.',
-      avatar: '👨‍💼',
-      rating: 5,
-    },
-    {
-      name: 'Grace Nolan',
-      role: 'Small Business Owner (Devonport)',
-      content:
-        'I used the free enhancements first, then upgraded for headshots. The final set gave me consistent photos across platforms.',
-      avatar: '👩‍💼',
-      rating: 5,
-    },
-    {
-      name: 'Ethan Price',
-      role: 'Graduate Job Seeker (Kingston)',
-      content:
-        'Easy to use and the results came back in minutes. It helped me feel more confident sending out applications.',
-      avatar: '🧑‍🎓',
-      rating: 5,
-    },
-  ];
+  testimonials: Testimonial[] = [];
 
   faqs: FAQ[] = [
     {
@@ -198,6 +150,11 @@ export class LandingComponent implements OnInit, OnDestroy {
         'Yes! You have full commercial rights to all enhanced photos. Use them for LinkedIn, resumes, websites, business cards, or any other purpose.',
     },
     {
+      question: 'How do credit packages work?',
+      answer:
+        'Credit packages are one-time purchases that unlock headshot style generations and model training. Credits never expire, so you can use them whenever you are ready.',
+    },
+    {
       question: "What if I'm not satisfied with the results?",
       answer:
         "We offer a 14-day satisfaction guarantee. If you're not happy with your results, contact us within 14 days for a refund.",
@@ -213,6 +170,8 @@ export class LandingComponent implements OnInit, OnDestroy {
   availableStyles: Style[] = [];
   isLoadingStyles = true;
   stylesLoadError = false;
+  private styledGenerationCost = 0;
+  private modelTrainingCost = 0;
 
   stats = [
     { value: '5', label: 'Free weekly credits' },
@@ -236,6 +195,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     private _cookieConsentService: CookieConsentService
   ) {
     this.currentTheme$ = this.themeService.theme$;
+    this.setFallbackCreditCosts();
   }
 
   ngOnInit(): void {
@@ -246,6 +206,7 @@ export class LandingComponent implements OnInit, OnDestroy {
       })
     );
     this.setupSEO();
+    this.initializeTestimonials();
     this.loadPackagesFromDatabase();
     this.loadAvailableStyles();
     this.startTestimonialRotation();
@@ -277,6 +238,27 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   loadPackagesFromDatabase(): void {
     this.isLoadingPackages = true;
+    this._creditService.getCreditCosts().subscribe({
+      next: response => {
+        if (response?.success && response.data) {
+          const styledCost = response.data.styledGeneration.cost;
+          const trainingCost = response.data.modelTraining.cost;
+          this.styledGenerationCost = styledCost > 0 ? styledCost : this.styledGenerationCost;
+          this.modelTrainingCost = trainingCost > 0 ? trainingCost : this.modelTrainingCost;
+        } else {
+          this.setFallbackCreditCosts();
+        }
+        this.fetchPackagesFromDatabase();
+      },
+      error: error => {
+        console.error('Failed to load credit costs:', error);
+        this.setFallbackCreditCosts();
+        this.fetchPackagesFromDatabase();
+      },
+    });
+  }
+
+  private fetchPackagesFromDatabase(): void {
     this._creditService.getCreditPackages().subscribe({
       next: response => {
         if (response && response.success && response.data) {
@@ -303,24 +285,37 @@ export class LandingComponent implements OnInit, OnDestroy {
   }
 
   private getPackageFeatures(pkg: CreditPackage): string[] {
-    if (pkg.name === 'Starter Pack') {
+    return this.buildPackageFeatures(pkg.name, pkg.totalCredits);
+  }
+
+  private buildPackageFeatures(packageName: string, totalCredits: number): string[] {
+    const normalizedName = packageName.toLowerCase();
+    const styledPhotoFeature = this.getStyledPhotoFeature(totalCredits);
+    const trainingFeature = this.getTrainingFeature(totalCredits);
+
+    if (normalizedName.includes('starter')) {
       return [
-        `${pkg.totalCredits} AI-enhanced photos`,
+        styledPhotoFeature,
+        trainingFeature,
         'Basic styles',
         'Standard resolution',
         'Email support',
       ];
-    } else if (pkg.name === 'Professional Pack') {
+    }
+    if (normalizedName.includes('professional')) {
       return [
-        `${pkg.totalCredits} AI-enhanced photos`,
+        styledPhotoFeature,
+        trainingFeature,
         'All premium styles',
         'HD resolution',
         'Priority processing',
         'Download all formats',
       ];
-    } else if (pkg.name === 'Studio Pack') {
+    }
+    if (normalizedName.includes('studio')) {
       return [
-        `${pkg.totalCredits} AI-enhanced photos`,
+        styledPhotoFeature,
+        trainingFeature,
         'All premium styles',
         'HD+ resolution',
         'Priority support',
@@ -328,7 +323,30 @@ export class LandingComponent implements OnInit, OnDestroy {
         'Commercial license',
       ];
     }
-    return [];
+    return [styledPhotoFeature, trainingFeature];
+  }
+
+  private getStyledPhotoFeature(totalCredits: number): string {
+    const count = this.getStyledGenerationCount(totalCredits);
+    const label = count === 1 ? 'headshot style photo' : 'headshot style photos';
+    return `~${count} ${label}`;
+  }
+
+  private getTrainingFeature(totalCredits: number): string {
+    const trainingCost = this.modelTrainingCost || this._creditService.getCreditCostSync('model_training');
+    if (totalCredits >= trainingCost) {
+      return 'Model training included';
+    }
+    return `Model training available with ${trainingCost}+ credits`;
+  }
+
+  private getStyledGenerationCount(totalCredits: number): number {
+    const styledCost =
+      this.styledGenerationCost || this._creditService.getCreditCostSync('styled_generation');
+    if (styledCost <= 0) {
+      return 0;
+    }
+    return Math.floor(totalCredits / styledCost);
   }
 
   private setDefaultPackages(): void {
@@ -336,37 +354,29 @@ export class LandingComponent implements OnInit, OnDestroy {
       {
         name: 'Starter',
         price: '$9',
-        features: ['50 AI-enhanced photos', 'Basic styles', 'Standard resolution', 'Email support'],
+        features: this.buildPackageFeatures('Starter', 50),
         creditCount: '50 credits',
       },
       {
         name: 'Professional',
         price: '$19',
         originalPrice: '$29',
-        features: [
-          '150 AI-enhanced photos',
-          'All premium styles',
-          'HD resolution',
-          'Priority processing',
-          'Download all formats',
-        ],
+        features: this.buildPackageFeatures('Professional', 150),
         recommended: true,
         creditCount: '150 credits',
       },
       {
         name: 'Studio',
         price: '$39',
-        features: [
-          '400 AI-enhanced photos',
-          'All premium styles',
-          'HD+ resolution',
-          'Priority support',
-          'Advanced editing',
-          'Commercial license',
-        ],
+        features: this.buildPackageFeatures('Studio', 400),
         creditCount: '400 credits',
       },
     ];
+  }
+
+  private setFallbackCreditCosts(): void {
+    this.styledGenerationCost = this._creditService.getCreditCostSync('styled_generation');
+    this.modelTrainingCost = this._creditService.getCreditCostSync('model_training');
   }
 
   setupSEO(): void {
@@ -826,6 +836,64 @@ export class LandingComponent implements OnInit, OnDestroy {
     setInterval(() => {
       this.currentTestimonialIndex = (this.currentTestimonialIndex + 1) % this.testimonials.length;
     }, 5000);
+  }
+
+  private initializeTestimonials(): void {
+    const testimonialData: Omit<Testimonial, 'imageUrl'>[] = [
+      {
+        name: 'Amelia Walsh',
+        role: 'Recruitment Consultant (Hobart)',
+        content:
+          'My LinkedIn profile finally looks polished. The results felt realistic, and I got a set I’m happy to use across applications.',
+        style: 'linkedin',
+        rating: 5,
+      },
+      {
+        name: 'Lachlan Reid',
+        role: 'Software Engineer (Launceston)',
+        content:
+          'Super straightforward flow and the turnaround was fast. The enhanced photos looked clean without feeling over-processed.',
+        style: 'tech-professional',
+        rating: 5,
+      },
+      {
+        name: 'Sophie Kline',
+        role: 'Account Executive (Burnie)',
+        content:
+          'I needed something professional for client-facing work. The style options helped me find a look that fits my industry.',
+        style: 'consultant',
+        rating: 5,
+      },
+      {
+        name: 'Noah Bennett',
+        role: 'Project Manager (Hobart)',
+        content:
+          'I was worried it would look fake, but the output still looks like me—just more professional. Great for LinkedIn.',
+        style: 'executive',
+        rating: 5,
+      },
+      {
+        name: 'Grace Nolan',
+        role: 'Small Business Owner (Devonport)',
+        content:
+          'I used the free enhancements first, then upgraded for headshots. The final set gave me consistent photos across platforms.',
+        style: 'entrepreneur',
+        rating: 5,
+      },
+      {
+        name: 'Ethan Price',
+        role: 'Graduate Job Seeker (Kingston)',
+        content:
+          'Easy to use and the results came back in minutes. It helped me feel more confident sending out applications.',
+        style: 'creative',
+        rating: 5,
+      },
+    ];
+
+    this.testimonials = testimonialData.map(testimonial => ({
+      ...testimonial,
+      imageUrl: this._stylePreviewService.getCachedUrl(testimonial.style),
+    }));
   }
 
   observeElements(): void {

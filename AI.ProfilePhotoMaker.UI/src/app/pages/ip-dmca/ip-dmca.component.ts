@@ -42,7 +42,7 @@ import { Meta, Title } from '@angular/platform-browser';
 
           <h2 class="text-2xl font-semibold mt-8 mb-4">4. Contact</h2>
           <p>
-            Send IP/DMCA requests to legal&#64;aiprofilephotomaker.com.
+            Send IP/DMCA requests to support&#64;aiprofilephotomaker.com.
           </p>
         </div>
 

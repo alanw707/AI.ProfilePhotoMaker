@@ -127,7 +127,7 @@ import { Meta, Title } from '@angular/platform-browser';
           </p>
           <p>
             You can delete photos, models, or your account in Settings. For requests, contact us at
-            privacy&#64;aiprofilephotomaker.com.
+            support&#64;aiprofilephotomaker.com.
           </p>
 
           <h2 class="text-2xl font-semibold mt-8 mb-4">9. International Transfers</h2>
@@ -162,7 +162,7 @@ import { Meta, Title } from '@angular/platform-browser';
           <h2 class="text-2xl font-semibold mt-8 mb-4">13. Contact Us</h2>
           <p>
             If you have any questions about this Privacy Policy, please contact us at
-            privacy&#64;aiprofilephotomaker.com.
+            support&#64;aiprofilephotomaker.com.
           </p>
         </div>
 

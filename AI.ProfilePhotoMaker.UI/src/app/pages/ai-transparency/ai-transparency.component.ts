@@ -45,7 +45,7 @@ import { Meta, Title } from '@angular/platform-browser';
 
           <h2 class="text-2xl font-semibold mt-8 mb-4">5. Contact</h2>
           <p>
-            Questions about AI usage? Contact us at legal&#64;aiprofilephotomaker.com.
+            Questions about AI usage? Contact us at support&#64;aiprofilephotomaker.com.
           </p>
         </div>
 

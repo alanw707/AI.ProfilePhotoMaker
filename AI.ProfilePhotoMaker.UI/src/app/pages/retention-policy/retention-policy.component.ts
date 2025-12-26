@@ -65,7 +65,7 @@ import { Meta, Title } from '@angular/platform-browser';
           <h2 class="text-2xl font-semibold mt-8 mb-4">6. Contact Us</h2>
           <p>
             If you have questions about retention, contact us at
-            privacy&#64;aiprofilephotomaker.com.
+            support&#64;aiprofilephotomaker.com.
           </p>
         </div>
 
