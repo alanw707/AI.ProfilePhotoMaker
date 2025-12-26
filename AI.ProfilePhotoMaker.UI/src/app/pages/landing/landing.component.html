@@ -603,28 +603,25 @@
             <div class="testimonial-avatar mr-4">
               <img
                 [src]="testimonial.imageUrl"
-                [alt]="formatStyleName(testimonial.style) + ' style example'"
+                [alt]="testimonial.name + ' testimonial style preview'"
                 (error)="onImageError($event)"
                 loading="lazy"
                 decoding="async" />
             </div>
-            <div>
+            <div class="testimonial-meta">
               <h4 class="font-semibold text-gray-900">{{ testimonial.name }}</h4>
               <p class="text-sm text-gray-600">{{ testimonial.role }}</p>
             </div>
           </div>
 
-          <div class="flex items-center gap-1 mb-4" aria-label="Rating">
-            <svg
-              *ngFor="let star of [1, 2, 3, 4, 5]"
-              class="w-5 h-5"
-              [class.text-yellow-400]="star <= testimonial.rating"
-              [class.text-gray-300]="star > testimonial.rating"
-              fill="currentColor"
-              viewBox="0 0 20 20">
+          <div class="testimonial-verified mb-4" aria-label="Verified review">
+            <svg class="w-4 h-4 testimonial-verified-icon" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
               <path
-                d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"></path>
             </svg>
+            <span>Verified review</span>
           </div>
 
           <p class="text-gray-700 italic">"{{ testimonial.content }}"</p>
