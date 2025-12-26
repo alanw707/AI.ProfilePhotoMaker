@@ -98,6 +98,22 @@ yaml_quote() {
   printf "'%s'" "$value"
 }
 
+is_ngrok_url() {
+  local value="${1:-}"
+  [[ -n $value ]] || return 1
+  [[ $value == *"ngrok-free.app"* || $value == *"ngrok.app"* || $value == *"ngrok.io"* || $value == *"ngrok.dev"* ]]
+}
+
+should_start_ngrok() {
+  if [[ -n ${NGROK_DOMAIN:-} ]]; then
+    return 0
+  fi
+  if is_ngrok_url "${EXTERNAL_API_BASE_URL:-}" || is_ngrok_url "${OAUTH_BASE_URL:-}"; then
+    return 0
+  fi
+  return 1
+}
+
 write_docker_override() {
   # docker compose automatically reads docker-compose.override.yml if present.
   # We generate it locally (gitignored) so manual `docker compose up` won't lose required secrets.
@@ -363,13 +379,11 @@ if [[ $START_DOCKER == true ]]; then
 
   # In docker mode, always use the reserved ngrok domain so URLs remain stable across restarts.
   export EXTERNAL_API_BASE_URL="${EXTERNAL_API_BASE_URL:-https://${DEFAULT_NGROK_DOMAIN}}"
-  if [[ -z ${OAUTH_BASE_URL:-} ]]; then
-    export OAUTH_BASE_URL="$EXTERNAL_API_BASE_URL"
-  fi
   echo "ℹ️  Using External API base: $EXTERNAL_API_BASE_URL"
-
-  if [[ -z ${OAUTH_BASE_URL:-} && -n ${EXTERNAL_API_BASE_URL:-} ]]; then
-    export OAUTH_BASE_URL="$EXTERNAL_API_BASE_URL"
+  if [[ -n ${OAUTH_BASE_URL:-} ]]; then
+    echo "ℹ️  Using OAuth base override: $OAUTH_BASE_URL"
+  else
+    echo "ℹ️  OAuth base not set; falling back to appsettings defaults."
   fi
 
   write_docker_override
@@ -382,7 +396,11 @@ if [[ $START_DOCKER == true ]]; then
 
   # Bring up ngrok only after the API is reachable, so the reserved URL doesn't intermittently 5xx.
   if wait_for_local_api 5032 90; then
-    start_ngrok 5032 || true
+    if should_start_ngrok; then
+      start_ngrok 5032 || true
+    else
+      echo "ℹ️  Skipping ngrok startup (local OAuth/base URL in use)."
+    fi
   else
     echo "⚠️  API did not become ready on http://127.0.0.1:5032 in time; ngrok startup skipped (see docker logs)."
   fi
@@ -405,7 +423,11 @@ if $START_UI; then
 fi
 
 if command -v ngrok >/dev/null 2>&1; then
-  start_ngrok 5032 || true
+  if should_start_ngrok; then
+    start_ngrok 5032 || true
+  else
+    echo "ℹ️  Skipping ngrok startup (local OAuth/base URL in use)."
+  fi
 else
   echo "⚠️  ngrok not found on PATH; skipping tunnel startup"
 fi
