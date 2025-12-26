@@ -28,7 +28,6 @@ interface Testimonial {
   content: string;
   style: string;
   imageUrl: string;
-  rating: number;
 }
 
 interface FAQ {
@@ -846,7 +845,6 @@ export class LandingComponent implements OnInit, OnDestroy {
         content:
           'My LinkedIn profile finally looks polished. The results felt realistic, and I got a set I’m happy to use across applications.',
         style: 'linkedin',
-        rating: 5,
       },
       {
         name: 'Lachlan Reid',
@@ -854,15 +852,13 @@ export class LandingComponent implements OnInit, OnDestroy {
         content:
           'Super straightforward flow and the turnaround was fast. The enhanced photos looked clean without feeling over-processed.',
         style: 'tech-professional',
-        rating: 5,
       },
       {
         name: 'Sophie Kline',
         role: 'Account Executive (Burnie)',
         content:
           'I needed something professional for client-facing work. The style options helped me find a look that fits my industry.',
-        style: 'consultant',
-        rating: 5,
+        style: 'edgy-urban',
       },
       {
         name: 'Noah Bennett',
@@ -870,15 +866,13 @@ export class LandingComponent implements OnInit, OnDestroy {
         content:
           'I was worried it would look fake, but the output still looks like me—just more professional. Great for LinkedIn.',
         style: 'executive',
-        rating: 5,
       },
       {
         name: 'Grace Nolan',
         role: 'Small Business Owner (Devonport)',
         content:
           'I used the free enhancements first, then upgraded for headshots. The final set gave me consistent photos across platforms.',
-        style: 'entrepreneur',
-        rating: 5,
+        style: 'glamour',
       },
       {
         name: 'Ethan Price',
@@ -886,7 +880,6 @@ export class LandingComponent implements OnInit, OnDestroy {
         content:
           'Easy to use and the results came back in minutes. It helped me feel more confident sending out applications.',
         style: 'creative',
-        rating: 5,
       },
     ];
 

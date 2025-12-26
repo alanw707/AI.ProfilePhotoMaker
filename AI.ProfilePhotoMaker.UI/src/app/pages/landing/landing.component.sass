@@ -1704,9 +1704,9 @@ header
       transform: translateY(-2px)
 
 .testimonial-avatar
-  width: 56px
-  height: 56px
-  border-radius: 16px
+  width: 72px
+  height: 72px
+  border-radius: 18px
   overflow: hidden
   flex-shrink: 0
   background: var(--surface-secondary)
@@ -1718,6 +1718,35 @@ header
     height: 100%
     object-fit: cover
     display: block
+
+.testimonial-verified
+  display: inline-flex
+  align-items: center
+  gap: 8px
+  color: var(--text-tertiary)
+  font-size: 0.75rem
+  font-weight: 600
+  line-height: 1.2
+  text-transform: uppercase
+  letter-spacing: 0.08em
+
+.testimonial-verified-icon
+  color: var(--accent-success)
+
+.testimonial-meta
+  min-width: 0
+
+@media (max-width: 900px)
+  .testimonial-avatar
+    width: 68px
+    height: 68px
+    border-radius: 17px
+
+@media (max-width: 640px)
+  .testimonial-avatar
+    width: 64px
+    height: 64px
+    border-radius: 16px
 
 // =============================================================================
 // GLOBAL COLOR OVERRIDES
