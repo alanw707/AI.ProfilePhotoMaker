@@ -244,6 +244,7 @@ jobs:
           PENDING=$(dotnet ef migrations list \
             --project AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj \
             --context ApplicationDbContext --verbose \
+            --connection "$SQL_CONNECTION_STRING" \
             | awk '/\[/ {print $0}' | grep -v '\[Applied\]' || true)
 
           if [ -z "$PENDING" ]; then
