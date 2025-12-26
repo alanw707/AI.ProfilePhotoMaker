@@ -138,13 +138,13 @@ public class RetentionPolicyBackgroundServiceTests
     }
 
     [Fact]
-    public async Task PerformRetentionPolicyCheck_IncludesFourteenDayWindowBoundaries()
+    public async Task PerformRetentionPolicyCheck_OnlyMatchesExactFourteenDayDate()
     {
         var timeProvider = CreateTimeProvider();
         using var harness = CreateHarness(timeProvider: timeProvider);
         var baseTime = timeProvider.GetUtcNow().UtcDateTime;
 
-        await SeedUserWithImagesAsync(harness, "user-13", "user13@example.com", baseTime.AddDays(13), imageCount: 1);
+        await SeedUserWithImagesAsync(harness, "user-14", "user14@example.com", baseTime.AddDays(14), imageCount: 1);
         await SeedUserWithImagesAsync(harness, "user-15", "user15@example.com", baseTime.AddDays(15), imageCount: 1);
 
         await harness.BackgroundService.PerformRetentionPolicyCheck();
@@ -153,19 +153,18 @@ public class RetentionPolicyBackgroundServiceTests
             .Where(call => call.DaysUntilDeletion == 14)
             .ToList();
 
-        Assert.Equal(2, fourteenDayCalls.Count);
-        Assert.Contains(fourteenDayCalls, call => call.UserId == "user-13");
-        Assert.Contains(fourteenDayCalls, call => call.UserId == "user-15");
+        Assert.Single(fourteenDayCalls);
+        Assert.Contains(fourteenDayCalls, call => call.UserId == "user-14");
     }
 
     [Fact]
-    public async Task PerformRetentionPolicyCheck_IncludesSevenDayWindowBoundaries()
+    public async Task PerformRetentionPolicyCheck_OnlyMatchesExactSevenDayDate()
     {
         var timeProvider = CreateTimeProvider();
         using var harness = CreateHarness(timeProvider: timeProvider);
         var baseTime = timeProvider.GetUtcNow().UtcDateTime;
 
-        await SeedUserWithImagesAsync(harness, "user-6", "user6@example.com", baseTime.AddDays(6), imageCount: 1);
+        await SeedUserWithImagesAsync(harness, "user-7", "user7@example.com", baseTime.AddDays(7), imageCount: 1);
         await SeedUserWithImagesAsync(harness, "user-8", "user8@example.com", baseTime.AddDays(8), imageCount: 1);
 
         await harness.BackgroundService.PerformRetentionPolicyCheck();
@@ -174,28 +173,8 @@ public class RetentionPolicyBackgroundServiceTests
             .Where(call => call.DaysUntilDeletion == 7)
             .ToList();
 
-        Assert.Equal(2, sevenDayCalls.Count);
-        Assert.Contains(sevenDayCalls, call => call.UserId == "user-6");
-        Assert.Contains(sevenDayCalls, call => call.UserId == "user-8");
-    }
-
-    [Fact]
-    public async Task PerformRetentionPolicyCheck_UsesEarliestDeletionDatePerUser()
-    {
-        var timeProvider = CreateTimeProvider();
-        using var harness = CreateHarness(timeProvider: timeProvider);
-        var userId = "user-earliest";
-        var baseTime = timeProvider.GetUtcNow().UtcDateTime;
-        var earliestDeletionDate = baseTime.AddDays(14);
-        var laterDeletionDate = baseTime.AddDays(15);
-
-        await SeedUserWithImagesAsync(harness, userId, "earliest@example.com", earliestDeletionDate, imageCount: 1);
-        await AddImagesForExistingUserAsync(harness, userId, laterDeletionDate, imageCount: 1);
-
-        await harness.BackgroundService.PerformRetentionPolicyCheck();
-
-        var call = Assert.Single(harness.EmailService.RetentionWarningCalls);
-        Assert.Equal(earliestDeletionDate.Date, call.DeletionDate.Date);
+        Assert.Single(sevenDayCalls);
+        Assert.Contains(sevenDayCalls, call => call.UserId == "user-7");
     }
 
     [Fact]
@@ -308,11 +287,21 @@ public class RetentionPolicyBackgroundServiceTests
         RetentionPolicyBackgroundServiceOptions options)
     {
         var services = new ServiceCollection();
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        services.AddSingleton(connection);
+        services.AddDbContext<ApplicationDbContext>(dbOptions => dbOptions.UseSqlite(connection));
         services.AddSingleton<IRetentionPolicyService>(retentionService);
         services.AddSingleton<IEmailNotificationService, CapturingEmailNotificationService>();
         var timeProvider = TimeProvider.System;
 
         var provider = services.BuildServiceProvider();
+        using (var scope = provider.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.Database.EnsureCreated();
+        }
 
         return new SchedulerHarness(
             provider,
@@ -322,7 +311,8 @@ public class RetentionPolicyBackgroundServiceTests
                 NullLogger<RetentionPolicyBackgroundService>.Instance,
                 Options.Create(options),
                 Options.Create(new RetentionNotificationOptions()),
-                timeProvider));
+                timeProvider),
+            connection);
     }
 
     private static async Task SeedUserWithImagesAsync(
@@ -336,35 +326,6 @@ public class RetentionPolicyBackgroundServiceTests
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         var profile = await SeedUserAsync(db, userId, email);
-
-        var images = new List<ProcessedImage>();
-        for (var i = 0; i < imageCount; i++)
-        {
-            images.Add(new ProcessedImage
-            {
-                UserProfileId = profile.Id,
-                UserProfile = profile,
-                IsGenerated = true,
-                ProcessedImageUrl = $"generated/{userId}/{Guid.NewGuid():N}.jpg",
-                OriginalImageUrl = $"uploads/{userId}/{Guid.NewGuid():N}.jpg",
-                ScheduledDeletionDate = deletionDate
-            });
-        }
-
-        db.ProcessedImages.AddRange(images);
-        await db.SaveChangesAsync();
-    }
-
-    private static async Task AddImagesForExistingUserAsync(
-        TestHarness harness,
-        string userId,
-        DateTime deletionDate,
-        int imageCount)
-    {
-        using var scope = harness.Provider.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        var profile = await db.UserProfiles.FirstAsync(p => p.UserId == userId);
 
         var images = new List<ProcessedImage>();
         for (var i = 0; i < imageCount; i++)
@@ -453,20 +414,24 @@ public class RetentionPolicyBackgroundServiceTests
         public SchedulerHarness(
             ServiceProvider provider,
             TrackingRetentionPolicyService retentionService,
-            RetentionPolicyBackgroundService backgroundService)
+            RetentionPolicyBackgroundService backgroundService,
+            SqliteConnection connection)
         {
             Provider = provider;
             RetentionService = retentionService;
             BackgroundService = backgroundService;
+            Connection = connection;
         }
 
         public ServiceProvider Provider { get; }
         public TrackingRetentionPolicyService RetentionService { get; }
         public RetentionPolicyBackgroundService BackgroundService { get; }
+        public SqliteConnection Connection { get; }
 
         public void Dispose()
         {
             Provider.Dispose();
+            Connection.Dispose();
         }
     }
 

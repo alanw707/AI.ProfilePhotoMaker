@@ -1,6 +1,10 @@
 using AI.ProfilePhotoMaker.API.Configuration;
+using AI.ProfilePhotoMaker.API.Data;
+using AI.ProfilePhotoMaker.API.Models;
 using Microsoft.Extensions.Options;
 using AI.ProfilePhotoMaker.API.Services.Notifications;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -13,8 +17,6 @@ public class RetentionPolicyBackgroundService : BackgroundService
     private readonly RetentionPolicyBackgroundServiceOptions _options;
     private readonly RetentionNotificationOptions _notificationOptions;
     private readonly TimeProvider _timeProvider;
-    private readonly Dictionary<int, Dictionary<string, DateTime>> _sentDeletionWarnings = new();
-    private readonly object _notificationLock = new();
 
     public RetentionPolicyBackgroundService(
         IServiceProvider serviceProvider,
@@ -101,6 +103,7 @@ public class RetentionPolicyBackgroundService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var retentionService = scope.ServiceProvider.GetRequiredService<IRetentionPolicyService>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         try
         {
@@ -111,7 +114,7 @@ public class RetentionPolicyBackgroundService : BackgroundService
 
             // Send deletion warning notifications
             var emailService = scope.ServiceProvider.GetRequiredService<IEmailNotificationService>();
-            await SendDeletionWarningNotificationsAsync(retentionService, emailService);
+            await SendDeletionWarningNotificationsAsync(retentionService, emailService, dbContext);
 
             // Get expired images for logging purposes
             var expiredImages = await retentionService.GetExpiredImagesAsync();
@@ -167,7 +170,8 @@ public class RetentionPolicyBackgroundService : BackgroundService
 
     private async Task SendDeletionWarningNotificationsAsync(
         IRetentionPolicyService retentionService,
-        IEmailNotificationService emailService)
+        IEmailNotificationService emailService,
+        ApplicationDbContext dbContext)
     {
         try
         {
@@ -175,7 +179,7 @@ public class RetentionPolicyBackgroundService : BackgroundService
             var notificationWindows = _notificationOptions.NotificationDays?.Length > 0
                 ? _notificationOptions.NotificationDays
                 : new[] { 14, 7 };
-            const int notificationWindowSizeDays = 2; // 13-15 days, 6-8 days
+            const int notificationWindowSizeDays = 1;
             var totalSent = 0;
             var totalSkipped = 0;
             var totalErrors = 0;
@@ -213,38 +217,46 @@ public class RetentionPolicyBackgroundService : BackgroundService
                         continue;
                     }
 
-                    // Determine the earliest deletion date for this user's images (use the first image's deletion date)
-                    var earliestDeletionDate = images.Min(img => img.ScheduledDeletionDate);
-                    if (IsDeletionWarningAlreadySent(daysBeforeDeletion, userId, earliestDeletionDate))
-                    {
-                        duplicatesForWindow++;
-                        _logger.LogDebug(
-                            "Skipping duplicate {DaysBeforeDeletion}-day deletion warning for user {UserId} (deletion date {DeletionDate})",
-                            daysBeforeDeletion, userId, earliestDeletionDate.Date);
-                        continue;
-                    }
+                    var imagesByDeletionDate = images
+                        .GroupBy(img => img.ScheduledDeletionDate.Date)
+                        .OrderBy(group => group.Key);
 
-                    try
+                    foreach (var imageGroup in imagesByDeletionDate)
                     {
-                        await emailService.SendRetentionDeletionWarningAsync(
-                            userId,
-                            email,
-                            images.Count,
-                            earliestDeletionDate,
-                            daysBeforeDeletion);
+                        var deletionDate = imageGroup.Key;
+                        var imageCount = imageGroup.Count();
+                        if (await IsDeletionWarningAlreadySentAsync(dbContext, daysBeforeDeletion, userId, deletionDate))
+                        {
+                            duplicatesForWindow++;
+                            _logger.LogDebug(
+                                "Skipping duplicate {DaysBeforeDeletion}-day deletion warning for user {UserId} (deletion date {DeletionDate})",
+                                daysBeforeDeletion, userId, deletionDate);
+                            continue;
+                        }
 
-                        MarkDeletionWarningSent(daysBeforeDeletion, userId, earliestDeletionDate);
-                        sentForWindow++;
-                        _logger.LogDebug(
-                            "Sent {DaysBeforeDeletion}-day deletion warning to user {UserId} for {ImageCount} image(s)",
-                            daysBeforeDeletion, userId, images.Count);
-                    }
-                    catch (Exception ex)
-                    {
-                        errorsForWindow++;
-                        _logger.LogWarning(ex,
-                            "Failed to send {DaysBeforeDeletion}-day deletion warning to user {UserId}: {Error}",
-                            daysBeforeDeletion, userId, ex.Message);
+                        try
+                        {
+                            await emailService.SendRetentionDeletionWarningAsync(
+                                userId,
+                                email,
+                                imageCount,
+                                deletionDate,
+                                daysBeforeDeletion);
+
+                            sentForWindow++;
+                            _logger.LogDebug(
+                                "Sent {DaysBeforeDeletion}-day deletion warning to user {UserId} for {ImageCount} image(s)",
+                                daysBeforeDeletion, userId, imageCount);
+
+                            await TryLogDeletionWarningAsync(dbContext, daysBeforeDeletion, userId, deletionDate);
+                        }
+                        catch (Exception ex)
+                        {
+                            errorsForWindow++;
+                            _logger.LogWarning(ex,
+                                "Failed to send {DaysBeforeDeletion}-day deletion warning to user {UserId}: {Error}",
+                                daysBeforeDeletion, userId, ex.Message);
+                        }
                     }
                 }
 
@@ -275,57 +287,67 @@ public class RetentionPolicyBackgroundService : BackgroundService
         }
     }
 
-    private bool IsDeletionWarningAlreadySent(int daysBeforeDeletion, string userId, DateTime deletionDate)
+    private async Task<bool> IsDeletionWarningAlreadySentAsync(
+        ApplicationDbContext dbContext,
+        int daysBeforeDeletion,
+        string userId,
+        DateTime deletionDate)
     {
-        var notificationKey = $"{userId}:{deletionDate:yyyyMMdd}";
-
-        lock (_notificationLock)
-        {
-            PruneDeletionWarningCache(_timeProvider.GetUtcNow().UtcDateTime);
-
-            return _sentDeletionWarnings.TryGetValue(daysBeforeDeletion, out var sentForWindow)
-                   && sentForWindow.ContainsKey(notificationKey);
-        }
-    }
-
-    private void MarkDeletionWarningSent(int daysBeforeDeletion, string userId, DateTime deletionDate)
-    {
-        var notificationKey = $"{userId}:{deletionDate:yyyyMMdd}";
         var deletionDay = deletionDate.Date;
 
-        lock (_notificationLock)
+        return await dbContext.RetentionDeletionWarningLogs
+            .AsNoTracking()
+            .AnyAsync(log =>
+                log.UserId == userId &&
+                log.DaysBeforeDeletion == daysBeforeDeletion &&
+                log.DeletionDate == deletionDay);
+    }
+
+    private async Task<bool> TryLogDeletionWarningAsync(
+        ApplicationDbContext dbContext,
+        int daysBeforeDeletion,
+        string userId,
+        DateTime deletionDate)
+    {
+        var logEntry = new RetentionDeletionWarningLog
         {
-            PruneDeletionWarningCache(_timeProvider.GetUtcNow().UtcDateTime);
+            UserId = userId,
+            DaysBeforeDeletion = daysBeforeDeletion,
+            DeletionDate = deletionDate.Date,
+            SentAtUtc = _timeProvider.GetUtcNow().UtcDateTime
+        };
 
-            if (!_sentDeletionWarnings.TryGetValue(daysBeforeDeletion, out var sentForWindow))
-            {
-                sentForWindow = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
-                _sentDeletionWarnings[daysBeforeDeletion] = sentForWindow;
-            }
+        dbContext.RetentionDeletionWarningLogs.Add(logEntry);
 
-            sentForWindow[notificationKey] = deletionDay;
+        try
+        {
+            await dbContext.SaveChangesAsync();
+            return true;
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+        {
+            _logger.LogDebug(
+                "Retention deletion warning already logged for user {UserId} on {DeletionDate} ({DaysBeforeDeletion}-day)",
+                userId, deletionDate.Date, daysBeforeDeletion);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Failed to record retention deletion warning for user {UserId} on {DeletionDate} ({DaysBeforeDeletion}-day)",
+                userId, deletionDate.Date, daysBeforeDeletion);
+            return false;
         }
     }
 
-    private void PruneDeletionWarningCache(DateTime now)
+    private static bool IsUniqueConstraintViolation(DbUpdateException exception)
     {
-        var cutoffDate = now.Date.AddDays(-1);
-        if (_sentDeletionWarnings.Count == 0)
+        if (exception.InnerException is SqlException sqlException)
         {
-            return;
+            return sqlException.Number is 2601 or 2627;
         }
 
-        foreach (var window in _sentDeletionWarnings.Values)
-        {
-            var staleKeys = window
-                .Where(entry => entry.Value.Date < cutoffDate)
-                .Select(entry => entry.Key)
-                .ToList();
-
-            foreach (var key in staleKeys)
-            {
-                window.Remove(key);
-            }
-        }
+        return false;
     }
 }

@@ -503,14 +503,27 @@ public class RetentionPolicyService : IRetentionPolicyService
 
     public async Task<Dictionary<string, (string? Email, List<ProcessedImage> Images)>> GetImagesApproachingDeletionAsync(int daysBeforeDeletion, int windowSizeDays = 1)
     {
-        var now = UtcNow;
-        var windowStart = now.AddDays(daysBeforeDeletion - windowSizeDays / 2.0);
-        var windowEnd = now.AddDays(daysBeforeDeletion + windowSizeDays / 2.0);
+        var nowDate = UtcNow.Date;
+        DateTime windowStart;
+        DateTime windowEnd;
+
+        if (windowSizeDays <= 1)
+        {
+            var targetDate = nowDate.AddDays(daysBeforeDeletion);
+            windowStart = targetDate;
+            windowEnd = targetDate.AddDays(1);
+        }
+        else
+        {
+            var halfWindow = windowSizeDays / 2;
+            windowStart = nowDate.AddDays(daysBeforeDeletion - halfWindow);
+            windowEnd = windowStart.AddDays(windowSizeDays);
+        }
 
         var images = await _context.ProcessedImages
             .Include(img => img.UserProfile)
             .ThenInclude(up => up.User)
-            .Where(img => img.ScheduledDeletionDate >= windowStart && img.ScheduledDeletionDate <= windowEnd)
+            .Where(img => img.ScheduledDeletionDate >= windowStart && img.ScheduledDeletionDate < windowEnd)
             .ToListAsync();
 
         var result = new Dictionary<string, (string? Email, List<ProcessedImage> Images)>(StringComparer.OrdinalIgnoreCase);

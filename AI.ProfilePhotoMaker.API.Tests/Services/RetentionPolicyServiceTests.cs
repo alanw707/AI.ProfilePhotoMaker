@@ -18,7 +18,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Services;
 public class RetentionPolicyServiceTests
 {
     [Fact]
-    public async Task GetImagesApproachingDeletionAsync_ReturnsResultsForFourteenDayWindow()
+    public async Task GetImagesApproachingDeletionAsync_ReturnsResultsForExactFourteenDayDate()
     {
         using var context = CreateContext();
         var user = await SeedUserAsync(context, "user14@example.com");
@@ -42,7 +42,7 @@ public class RetentionPolicyServiceTests
         await context.SaveChangesAsync();
 
         var service = CreateService(context, timeProvider);
-        var results = await service.GetImagesApproachingDeletionAsync(14, windowSizeDays: 2);
+        var results = await service.GetImagesApproachingDeletionAsync(14, windowSizeDays: 1);
 
         Assert.True(results.TryGetValue(user.UserId, out var entry));
         Assert.Equal("user14@example.com", entry.Email);
@@ -51,7 +51,7 @@ public class RetentionPolicyServiceTests
     }
 
     [Fact]
-    public async Task GetImagesApproachingDeletionAsync_ReturnsResultsForSevenDayWindow()
+    public async Task GetImagesApproachingDeletionAsync_ReturnsResultsForExactSevenDayDate()
     {
         using var context = CreateContext();
         var user = await SeedUserAsync(context, "user7@example.com");
@@ -75,7 +75,7 @@ public class RetentionPolicyServiceTests
         await context.SaveChangesAsync();
 
         var service = CreateService(context, timeProvider);
-        var results = await service.GetImagesApproachingDeletionAsync(7, windowSizeDays: 2);
+        var results = await service.GetImagesApproachingDeletionAsync(7, windowSizeDays: 1);
 
         Assert.True(results.TryGetValue(user.UserId, out var entry));
         Assert.Equal("user7@example.com", entry.Email);

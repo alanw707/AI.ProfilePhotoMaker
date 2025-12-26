@@ -19,6 +19,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<UsageLog> UsageLogs { get; set; }
     public virtual DbSet<Prediction> Predictions { get; set; }
     public virtual DbSet<PendingGenerationRequest> PendingGenerationRequests { get; set; }
+    public virtual DbSet<RetentionDeletionWarningLog> RetentionDeletionWarningLogs { get; set; }
 
     // Subscription management
     public virtual DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
@@ -47,6 +48,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         ConfigureFeedbackSubmissionRelationships(builder);
         ConfigurePendingGenerationRelationships(builder);
         ConfigureCreditPackageRelationships(builder);
+        ConfigureRetentionDeletionWarningLogRelationships(builder);
 
         // Configure indexes for performance - ENHANCED FOR OPTIMIZATION
         ConfigurePerformanceIndexes(builder);
@@ -167,6 +169,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<PendingGenerationRequest>()
             .HasIndex(p => new { p.UserId, p.TrainingRequestId })
             .HasDatabaseName("IX_PendingGeneration_UserId_TrainingId")
+            .IsUnique();
+    }
+
+    private void ConfigureRetentionDeletionWarningLogRelationships(ModelBuilder builder)
+    {
+        builder.Entity<RetentionDeletionWarningLog>()
+            .HasIndex(log => new { log.UserId, log.DaysBeforeDeletion, log.DeletionDate })
+            .HasDatabaseName("IX_RetentionDeletionWarningLogs_UserId_DaysBeforeDeletion_DeletionDate")
             .IsUnique();
     }
 
