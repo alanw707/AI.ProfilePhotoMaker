@@ -103,6 +103,7 @@ package-lock.json
 .playwright-mcp/
 .cursor/rules/bmad/
 .github/agents/
+memory-bank/
 
 # Test artifacts - screenshots and results
 **/screenshots/*.png
