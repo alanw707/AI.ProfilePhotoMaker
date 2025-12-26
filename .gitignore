@@ -207,3 +207,8 @@ deployment-params.*.json
 .env.production
 .env.secrets
 deployment-secrets.env
+
+# Allow tracked BMAD implementation artifacts
+!/_bmad-output/
+!/_bmad-output/implementation-artifacts/
+!/_bmad-output/implementation-artifacts/**
