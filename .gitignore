@@ -173,6 +173,8 @@ current-lint-errors.json
 
 # Cache files
 **/.cache/
+.venv-favicon/
+.venv-playwright/
 infrastructure/venv-azure/
 
 # Build and publish artifacts (should not be in source control)
