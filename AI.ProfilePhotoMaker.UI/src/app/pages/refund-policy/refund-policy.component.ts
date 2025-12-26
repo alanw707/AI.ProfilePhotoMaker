@@ -18,8 +18,8 @@ import { Meta, Title } from '@angular/platform-browser';
           <h2 class="text-2xl font-semibold mt-8 mb-4">1. Scope</h2>
           <p>
             This Refund Policy explains when refunds are available for AI Profile Photo Maker
-            purchases. It applies to paid credit packages and subscriptions unless required by
-            law to provide additional rights.
+            purchases. It applies to paid credit packages unless required by law to provide
+            additional rights.
           </p>
 
           <h2 class="text-2xl font-semibold mt-8 mb-4">2. 14-Day Satisfaction Guarantee</h2>
@@ -35,21 +35,15 @@ import { Meta, Title } from '@angular/platform-browser';
             <li>We may decline refunds for misuse, abuse, or policy violations.</li>
           </ul>
 
-          <h2 class="text-2xl font-semibold mt-8 mb-4">4. Subscriptions and Cancellations</h2>
+          <h2 class="text-2xl font-semibold mt-8 mb-4">4. How to Request a Refund</h2>
           <p>
-            You can cancel a subscription at any time. Cancellation takes effect at the end of the
-            current billing period unless required by law.
-          </p>
-
-          <h2 class="text-2xl font-semibold mt-8 mb-4">5. How to Request a Refund</h2>
-          <p>
-            Email legal&#64;aiprofilephotomaker.com with your account email, purchase details, and
+            Email support&#64;aiprofilephotomaker.com with your account email, purchase details, and
             reason for the request. We will respond with next steps.
           </p>
 
-          <h2 class="text-2xl font-semibold mt-8 mb-4">6. Contact Us</h2>
+          <h2 class="text-2xl font-semibold mt-8 mb-4">5. Contact Us</h2>
           <p>
-            Questions about refunds? Contact legal&#64;aiprofilephotomaker.com.
+            Questions about refunds? Contact support&#64;aiprofilephotomaker.com.
           </p>
         </div>
 
@@ -73,7 +67,7 @@ export class RefundPolicyComponent implements OnInit {
     this.title.setTitle('Refund Policy - AI Profile Photo Maker');
     this.meta.updateTag({
       name: 'description',
-      content: 'Refund Policy for AI Profile Photo Maker purchases and subscriptions.',
+      content: 'Refund Policy for AI Profile Photo Maker purchases and credit packages.',
     });
     this.meta.updateTag({ name: 'robots', content: 'index, follow' });
   }

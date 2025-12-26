@@ -54,12 +54,12 @@ import { Meta, Title } from '@angular/platform-browser';
           <h2 class="text-2xl font-semibold mt-8 mb-4">5. Withdrawal</h2>
           <p>
             You can withdraw consent by deleting your photos, model, or account in Settings. For
-            assistance, contact us at privacy&#64;aiprofilephotomaker.com.
+            assistance, contact us at support&#64;aiprofilephotomaker.com.
           </p>
 
           <h2 class="text-2xl font-semibold mt-8 mb-4">6. Contact</h2>
           <p>
-            Questions about biometric data? Contact us at privacy&#64;aiprofilephotomaker.com.
+            Questions about biometric data? Contact us at support&#64;aiprofilephotomaker.com.
           </p>
         </div>
 

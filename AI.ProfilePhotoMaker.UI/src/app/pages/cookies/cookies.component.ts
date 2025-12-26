@@ -69,7 +69,7 @@ import { CookieConsentService } from '../../services/cookie-consent.service';
           <h2 class="text-2xl font-semibold mt-8 mb-4">7. Contact Us</h2>
           <p>
             If you have questions about this Cookie Policy, contact us at
-            privacy&#64;aiprofilephotomaker.com.
+            support&#64;aiprofilephotomaker.com.
           </p>
         </div>
 

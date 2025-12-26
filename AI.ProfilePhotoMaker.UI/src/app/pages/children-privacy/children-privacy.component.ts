@@ -29,7 +29,7 @@ import { Meta, Title } from '@angular/platform-browser';
 
           <h2 class="text-2xl font-semibold mt-8 mb-4">3. Contact</h2>
           <p>
-            For children's privacy questions, contact us at privacy&#64;aiprofilephotomaker.com.
+            For children's privacy questions, contact us at support&#64;aiprofilephotomaker.com.
           </p>
         </div>
 

@@ -67,7 +67,7 @@ import { Meta, Title } from '@angular/platform-browser';
           <h2 class="text-2xl font-semibold mt-8 mb-4">8. Contact Information</h2>
           <p>
             For any questions regarding these Terms of Service, please contact us at
-            legal&#64;aiprofilephotomaker.com.
+            support&#64;aiprofilephotomaker.com.
           </p>
         </div>
 
