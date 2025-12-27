@@ -72,11 +72,11 @@ Introduce style-aware generation tuning in the backend:
   - Prompt modifier uses only allowed phrases and never banned ones.
 
 ### Acceptance Criteria
-- [ ] Casual/relaxed styles produce visibly less waxy/airbrushed skin (manual verification by Alan).
-- [ ] Pro styles remain polished but slightly more realistic (manual verification).
-- [ ] No UI changes; no new user controls.
-- [ ] Enhancement/transform workflows unchanged.
-- [ ] Style generation remains functional for unclassified styles (no regressions).
+- [x] Casual/relaxed styles produce visibly less waxy/airbrushed skin (manual verification by Alan).
+- [x] Pro styles remain polished but slightly more realistic (manual verification).
+- [x] No UI changes; no new user controls.
+- [x] Enhancement/transform workflows unchanged.
+- [x] Style generation remains functional for unclassified styles (no regressions).
 
 ## Additional Context
 
@@ -94,5 +94,5 @@ Introduce style-aware generation tuning in the backend:
 
 ## Review Notes
 - Adversarial review completed.
-- Findings: 10 total, 10 fixed, 0 skipped.
-- Resolution approach: auto-fix.
+- Findings: 10 total, 6 fixed, 4 skipped.
+- Resolution approach: walk-through.

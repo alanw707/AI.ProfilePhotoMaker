@@ -4,6 +4,8 @@ using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Models.Replicate;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 
@@ -16,6 +18,7 @@ public class MockReplicateApiClient : IReplicateApiClient
     private static readonly Dictionary<string, HashSet<string>> ModelVersions = new();
     private readonly ApplicationDbContext _context;
     private readonly ILogger<MockReplicateApiClient> _logger;
+    private readonly IConfiguration _configuration;
     private static string S(string? value) => LoggingSanitizer.Sanitize(value);
     private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
@@ -31,10 +34,14 @@ public class MockReplicateApiClient : IReplicateApiClient
         ModelVersions.Clear();
     }
 
-    public MockReplicateApiClient(ApplicationDbContext context, ILogger<MockReplicateApiClient> logger)
+    public MockReplicateApiClient(
+        ApplicationDbContext context,
+        ILogger<MockReplicateApiClient> logger,
+        IConfiguration? configuration = null)
     {
         _context = context;
         _logger = logger;
+        _configuration = configuration ?? new ConfigurationBuilder().Build();
     }
 
     public Task<string> CreateModelAsync(string userId, string modelName, string? description = null)
@@ -143,6 +150,12 @@ public class MockReplicateApiClient : IReplicateApiClient
 
     public async Task<ReplicatePredictionResult> GenerateImagesAsync(string trainedModelVersion, string userId, string style, UserInfo? userInfo = null, int numOutputs = 2)
     {
+        var stylePrompts = await GetStylePromptsFromDatabase(style);
+        var stylePrompt = CreateFluxStylePrompt(stylePrompts.PromptTemplate, userInfo, userId);
+        var negativePrompt = CreateFluxNegativePrompt(stylePrompts.NegativePromptTemplate, userInfo);
+        var tuning = ReplicateApiClient.ResolveStyleTuning(_configuration, style);
+        stylePrompt = ReplicateApiClient.ApplyRealismModifier(stylePrompt);
+
         var id = Guid.NewGuid().ToString();
         var result = new ReplicatePredictionResult
         {
@@ -150,7 +163,16 @@ public class MockReplicateApiClient : IReplicateApiClient
             Version = trainedModelVersion,
             Status = "starting",
             CreatedAt = DateTime.UtcNow,
-            Input = new Dictionary<string, object> { { "user_id", userId }, { "style", style } },
+            Input = new Dictionary<string, object>
+            {
+                { "user_id", userId },
+                { "style", style },
+                { "prompt", stylePrompt },
+                { "txt", stylePrompt },
+                { "negative_prompt", negativePrompt },
+                { "guidance_scale", tuning.GuidanceScale },
+                { "num_inference_steps", tuning.NumInferenceSteps }
+            },
             Urls = new ReplicateUrls { Get = $"/mock/predictions/{id}" }
         };
         Predictions[id] = result;
@@ -195,6 +217,91 @@ public class MockReplicateApiClient : IReplicateApiClient
     {
         // Return prediction id for convenience
         return Task.FromResult(Guid.NewGuid().ToString());
+    }
+
+    private async Task<(string PromptTemplate, string NegativePromptTemplate)> GetStylePromptsFromDatabase(string styleName)
+    {
+        if (string.IsNullOrWhiteSpace(styleName))
+        {
+            return GetFallbackPrompts();
+        }
+
+        var style = await _context.Styles
+            .Where(s => s.Name.ToLower() == styleName.ToLower() && s.IsActive)
+            .Select(s => new { s.PromptTemplate, s.NegativePromptTemplate })
+            .FirstOrDefaultAsync();
+
+        if (style == null)
+        {
+            // Fallback to corporate style (exists in database)
+            var defaultStyle = await _context.Styles
+                .Where(s => s.Name.ToLower() == "corporate" && s.IsActive)
+                .Select(s => new { s.PromptTemplate, s.NegativePromptTemplate })
+                .FirstOrDefaultAsync();
+
+            if (defaultStyle == null)
+            {
+                // Ultimate fallback if no styles exist in database
+                return GetFallbackPrompts();
+            }
+
+            return (defaultStyle.PromptTemplate, defaultStyle.NegativePromptTemplate);
+        }
+
+        return (style.PromptTemplate, style.NegativePromptTemplate);
+    }
+
+    private static (string PromptTemplate, string NegativePromptTemplate) GetFallbackPrompts()
+    {
+        return (
+            "professional portrait of a {gender} {ethnicity}, {subject}, composition: well-balanced frame with subject focus, lighting: flattering soft light with subtle highlighting, color palette: balanced natural tones, mood: confident and approachable, technical details: high resolution with excellent clarity, additional elements: simple professional background, appropriate attire for industry",
+            "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation"
+        );
+    }
+
+    private static string CreateFluxStylePrompt(string promptTemplate, UserInfo? userInfo, string userId)
+    {
+        // For trained models, use the trigger word as the subject to activate the trained model
+        string triggerWord = $"user_{userId}";
+
+        // Replace all placeholders in the template
+        string gender = userInfo?.Gender?.ToLower() ?? "person";
+        string ethnicity = userInfo?.Ethnicity?.ToLower() ?? "";
+
+        // Handle gender + ethnicity combination properly
+        string genderEthnicityCombo = !string.IsNullOrEmpty(ethnicity) ? $"{gender} {ethnicity}" : gender;
+
+        string result = promptTemplate
+            .Replace("{subject}", triggerWord)  // Use trigger word as subject for trained models
+            .Replace("{gender} {ethnicity}", genderEthnicityCombo)
+            .Replace("{gender}", gender)
+            .Replace("{ethnicity}", ethnicity);
+
+        // Clean up extra spaces
+        return result.Replace("  ", " ").Trim();
+    }
+
+    private static string CreateFluxNegativePrompt(string negativePromptTemplate, UserInfo? userInfo)
+    {
+        if (string.IsNullOrWhiteSpace(negativePromptTemplate))
+        {
+            return string.Empty;
+        }
+
+        // Replace placeholders without using the trained model trigger word.
+        string gender = userInfo?.Gender?.ToLower() ?? "person";
+        string ethnicity = userInfo?.Ethnicity?.ToLower() ?? "";
+
+        string genderEthnicityCombo = !string.IsNullOrEmpty(ethnicity) ? $"{gender} {ethnicity}" : gender;
+
+        string result = negativePromptTemplate
+            .Replace("{gender} {ethnicity}", genderEthnicityCombo)
+            .Replace("{gender}", gender)
+            .Replace("{ethnicity}", ethnicity)
+            .Replace("{subject}", "person");
+
+        // Clean up extra spaces
+        return result.Replace("  ", " ").Trim();
     }
 
 
