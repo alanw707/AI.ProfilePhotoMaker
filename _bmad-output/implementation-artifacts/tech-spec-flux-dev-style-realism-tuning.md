@@ -94,5 +94,5 @@ Introduce style-aware generation tuning in the backend:
 
 ## Review Notes
 - Adversarial review completed.
-- Findings: 10 total, 8 fixed, 2 skipped.
+- Findings: 10 total, 10 fixed, 0 skipped.
 - Resolution approach: auto-fix.
