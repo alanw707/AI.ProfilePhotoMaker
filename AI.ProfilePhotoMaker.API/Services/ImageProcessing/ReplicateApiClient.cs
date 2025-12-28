@@ -20,6 +20,22 @@ public class ReplicateApiClient : IReplicateApiClient
 {
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, ReplicatePredictionResult> s_mockPredictions
         = new();
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<IConfiguration, StyleTuningCacheEntry> s_styleTuningCache = new();
+    private static readonly string[] s_realismPromptModifiers =
+    {
+        "natural skin texture",
+        "subtle skin pores",
+        "soft natural sheen",
+        "realistic skin detail",
+        "unretouched look",
+        "candid lighting"
+    };
+    private const double DefaultGuidanceScale = 3.0;
+    private const int DefaultNumInferenceSteps = 28;
+    private const double DefaultProGuidanceScale = 2.8;
+    private const int DefaultProNumInferenceSteps = 34;
+    private const double DefaultCasualGuidanceScale = 2.3;
+    private const int DefaultCasualNumInferenceSteps = 40;
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
     private readonly ILogger<ReplicateApiClient> _logger;
@@ -543,9 +559,17 @@ public class ReplicateApiClient : IReplicateApiClient
             var stylePrompts = await GetStylePromptsFromDatabase(style);
             string stylePrompt = CreateFluxStylePrompt(stylePrompts.PromptTemplate, userInfo, userId);
             string negativePrompt = CreateFluxNegativePrompt(stylePrompts.NegativePromptTemplate, userInfo);
+            var styleTuning = ResolveStyleTuning(_configuration, style);
+            stylePrompt = ApplyRealismModifier(stylePrompt);
 
             _logger.LogInformation("Generating images with model version: {ModelVersion} for user: {UserId}, style: {Style}",
                 S(trainedModelVersion), Sid(userId), S(style));
+            _logger.LogDebug(
+                "Resolved style tuning for {Style} ({Group}) => guidance {GuidanceScale}, steps {NumInferenceSteps}",
+                S(style),
+                styleTuning.Group,
+                styleTuning.GuidanceScale,
+                styleTuning.NumInferenceSteps);
             _logger.LogInformation("Generated prompt: {Prompt}", S(stylePrompt));
             _logger.LogInformation("Generated negative prompt: {NegativePrompt}", S(negativePrompt));
 
@@ -570,11 +594,11 @@ public class ReplicateApiClient : IReplicateApiClient
                     ["num_outputs"] = Math.Max(1, Math.Min(4, numOutputs)), // Clamp between 1-4
                     ["aspect_ratio"] = "1:1",
                     ["output_format"] = "png",
-                    ["guidance_scale"] = 3,
+                    ["guidance_scale"] = styleTuning.GuidanceScale,
                     ["output_quality"] = 80,
                     ["prompt_strength"] = 0.8,
                     ["extra_lora_scale"] = 1,
-                    ["num_inference_steps"] = 28,
+                    ["num_inference_steps"] = styleTuning.NumInferenceSteps,
                     // Metadata for webhook processing
                     ["user_id"] = userId,
                     ["style"] = style
@@ -834,6 +858,160 @@ public class ReplicateApiClient : IReplicateApiClient
         // Clean up extra spaces
         return result.Replace("  ", " ").Trim();
     }
+
+    internal static StyleTuningResult ResolveStyleTuning(IConfiguration configuration, string styleName)
+    {
+        var config = LoadStyleTuningConfig(configuration);
+        if (string.IsNullOrWhiteSpace(styleName))
+        {
+            return new StyleTuningResult(config.DefaultGuidanceScale, config.DefaultNumInferenceSteps, "default");
+        }
+
+        var trimmedStyle = styleName.Trim();
+        if (config.ProStyles.Contains(trimmedStyle))
+        {
+            return new StyleTuningResult(config.ProGuidanceScale, config.ProNumInferenceSteps, "pro");
+        }
+
+        if (config.CasualRelaxedStyles.Contains(trimmedStyle))
+        {
+            return new StyleTuningResult(config.CasualGuidanceScale, config.CasualNumInferenceSteps, "casual");
+        }
+
+        return new StyleTuningResult(config.DefaultGuidanceScale, config.DefaultNumInferenceSteps, "default");
+    }
+
+    internal static string ApplyRealismModifier(string prompt, Random? random = null)
+    {
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            return prompt;
+        }
+
+        var availableModifiers = s_realismPromptModifiers
+            .Where(modifier => !prompt.Contains(modifier, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        if (availableModifiers.Length == 0)
+        {
+            return prompt;
+        }
+
+        var rng = random ?? Random.Shared;
+        var modifierSelection = availableModifiers[rng.Next(availableModifiers.Length)];
+        var trimmedPrompt = prompt.TrimEnd();
+        var separator = trimmedPrompt.EndsWith(",", StringComparison.Ordinal) ? " " : ", ";
+        return $"{trimmedPrompt}{separator}{modifierSelection}";
+    }
+
+    private static StyleTuningConfig LoadStyleTuningConfig(IConfiguration configuration)
+    {
+        if (!s_styleTuningCache.TryGetValue(configuration, out var cached) || cached.Token.HasChanged)
+        {
+            var config = BuildStyleTuningConfig(configuration);
+            var token = configuration.GetReloadToken();
+            cached = new StyleTuningCacheEntry(config, token);
+            s_styleTuningCache.Remove(configuration);
+            s_styleTuningCache.Add(configuration, cached);
+        }
+
+        return cached.Config;
+    }
+
+    private static StyleTuningConfig BuildStyleTuningConfig(IConfiguration configuration)
+    {
+        var config = CreateDefaultStyleTuningConfig();
+        var section = configuration.GetSection("Replicate:StyleTuning");
+        if (section == null || !section.Exists())
+        {
+            return config;
+        }
+
+        config.DefaultGuidanceScale = ClampGuidanceScale(section.GetValue("DefaultGuidanceScale", config.DefaultGuidanceScale));
+        config.DefaultNumInferenceSteps = ClampInferenceSteps(section.GetValue("DefaultNumInferenceSteps", config.DefaultNumInferenceSteps));
+        config.ProGuidanceScale = ClampGuidanceScale(section.GetValue("ProGuidanceScale", config.ProGuidanceScale));
+        config.ProNumInferenceSteps = ClampInferenceSteps(section.GetValue("ProNumInferenceSteps", config.ProNumInferenceSteps));
+        config.CasualGuidanceScale = ClampGuidanceScale(section.GetValue("CasualGuidanceScale", config.CasualGuidanceScale));
+        config.CasualNumInferenceSteps = ClampInferenceSteps(section.GetValue("CasualNumInferenceSteps", config.CasualNumInferenceSteps));
+
+        foreach (var style in section.GetSection("ProStyles").Get<string[]>() ?? Array.Empty<string>())
+        {
+            AddStyleName(config.ProStyles, style);
+        }
+
+        foreach (var style in section.GetSection("CasualRelaxedStyles").Get<string[]>() ?? Array.Empty<string>())
+        {
+            AddStyleName(config.CasualRelaxedStyles, style);
+        }
+
+        return config;
+    }
+
+    private static StyleTuningConfig CreateDefaultStyleTuningConfig()
+    {
+        return new StyleTuningConfig
+        {
+            DefaultGuidanceScale = DefaultGuidanceScale,
+            DefaultNumInferenceSteps = DefaultNumInferenceSteps,
+            ProGuidanceScale = DefaultProGuidanceScale,
+            ProNumInferenceSteps = DefaultProNumInferenceSteps,
+            CasualGuidanceScale = DefaultCasualGuidanceScale,
+            CasualNumInferenceSteps = DefaultCasualNumInferenceSteps
+        };
+    }
+
+    private static double ClampGuidanceScale(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultGuidanceScale;
+        }
+
+        return Math.Clamp(value, 0.1, 20.0);
+    }
+
+    private static int ClampInferenceSteps(int value)
+    {
+        if (value <= 0)
+        {
+            return DefaultNumInferenceSteps;
+        }
+
+        return Math.Clamp(value, 1, 80);
+    }
+
+    private static void AddStyleName(HashSet<string> target, string? styleName)
+    {
+        if (!string.IsNullOrWhiteSpace(styleName))
+        {
+            target.Add(styleName.Trim());
+        }
+    }
+
+    private sealed class StyleTuningConfig
+    {
+        public double DefaultGuidanceScale { get; set; }
+        public int DefaultNumInferenceSteps { get; set; }
+        public double ProGuidanceScale { get; set; }
+        public int ProNumInferenceSteps { get; set; }
+        public double CasualGuidanceScale { get; set; }
+        public int CasualNumInferenceSteps { get; set; }
+        public HashSet<string> ProStyles { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> CasualRelaxedStyles { get; } = new(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private sealed class StyleTuningCacheEntry
+    {
+        public StyleTuningCacheEntry(StyleTuningConfig config, Microsoft.Extensions.Primitives.IChangeToken token)
+        {
+            Config = config;
+            Token = token;
+        }
+
+        public StyleTuningConfig Config { get; }
+        public Microsoft.Extensions.Primitives.IChangeToken Token { get; }
+    }
+
+    internal readonly record struct StyleTuningResult(double GuidanceScale, int NumInferenceSteps, string Group);
 
     /// <summary>
     /// Creates a FLUX.1 style prompt for basic tier (without trigger word)

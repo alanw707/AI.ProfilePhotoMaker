@@ -99,7 +99,7 @@ public class TrainingPollingService : ITrainingPollingService
             try
             {
                 var refundResult = CreditConsumptionResult.Succeeded(
-                    "model_training_refund",
+                    "model_training",
                     weeklyCredits: 0,
                     purchasedCredits: CreditCostConfig.ModelTraining,
                     correlationId: modelRequest.Id);
@@ -303,7 +303,7 @@ public class TrainingPollingService : ITrainingPollingService
                 try
                 {
                     var refundResult = CreditConsumptionResult.Succeeded(
-                        "model_training_refund",
+                        "model_training",
                         weeklyCredits: 0,
                         purchasedCredits: CreditCostConfig.ModelTraining,
                         correlationId: modelRequest.Id);
