@@ -4,6 +4,9 @@ export const environment = {
   baseUrl: 'https://api.aiprofilephotomaker.com',
   name: 'production',
   turnstileSiteKey: '0x4AAAAAACHclVWNAEwekFCK',
+  analytics: {
+    ga4MeasurementId: 'G-FYQMYY2PJD',
+  },
   features: {
     debugMode: false,
     useProxy: false,

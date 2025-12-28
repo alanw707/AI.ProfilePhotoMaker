@@ -5,6 +5,7 @@ import { filter } from 'rxjs/operators';
 import { AuthService } from './services/auth.service';
 import { ThemeService } from './services/theme.service';
 import { ConfigService } from './services/config.service';
+import { AnalyticsService } from './services/analytics.service';
 import { NotificationComponent } from './components/shared/notification/notification.component';
 import { CookieConsentComponent } from './components/shared/cookie-consent/cookie-consent.component';
 import { environment } from '../environments/environment';
@@ -23,11 +24,15 @@ export class AppComponent implements OnInit {
   private readonly _authService = inject(AuthService);
   private readonly _themeService = inject(ThemeService);
   private readonly _config = inject(ConfigService);
+  private readonly _analyticsService = inject(AnalyticsService);
   private readonly _document = inject(DOCUMENT);
 
   ngOnInit(): void {
     // Initialize theme service to ensure proper theme application
     this._themeService.setTheme(this._themeService.getCurrentTheme());
+
+    // Initialize analytics tracking once consent is granted
+    this._analyticsService.init();
 
     // Clean up OAuth URL token if present and navigate
     this._handleOAuthCallback();

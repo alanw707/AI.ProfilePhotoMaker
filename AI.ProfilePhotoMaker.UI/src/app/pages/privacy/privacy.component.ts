@@ -13,7 +13,7 @@ import { Meta, Title } from '@angular/platform-browser';
         <h1 class="text-4xl font-bold text-gray-900 mb-8">Privacy Policy</h1>
 
         <div class="bg-white rounded-lg shadow-sm p-8 prose prose-gray max-w-none">
-          <p class="text-gray-600 mb-6">Last updated: December 20, 2025</p>
+          <p class="text-gray-600 mb-6">Last updated: December 25, 2025</p>
 
           <h2 class="text-2xl font-semibold mt-8 mb-4">1. Scope</h2>
           <p>
@@ -35,6 +35,10 @@ import { Meta, Title } from '@angular/platform-browser';
               <strong>Usage and activity:</strong> credits usage, feature activity, and timestamps.
             </li>
             <li>
+              <strong>Analytics data:</strong> page views and device metadata collected via Google
+              Analytics 4 when you opt in to analytics cookies.
+            </li>
+            <li>
               <strong>Device and technical data:</strong> IP address, browser type, and diagnostics.
             </li>
             <li>
@@ -50,7 +54,8 @@ import { Meta, Title } from '@angular/platform-browser';
           <p>
             We use information to provide the service, authenticate users, process payments, manage
             credits, maintain security and reliability, comply with legal obligations, and improve
-            the product.
+            the product. If you opt in to analytics cookies, we use Google Analytics 4 to understand
+            usage trends and improve the experience.
           </p>
 
           <h2 class="text-2xl font-semibold mt-8 mb-4">4. Legal Bases (EEA/UK)</h2>
@@ -78,6 +83,7 @@ import { Meta, Title } from '@angular/platform-browser';
             <li>OpenAI for select photo enhancements.</li>
             <li>Stripe for payments and billing.</li>
             <li>Google for optional OAuth login.</li>
+            <li>Google Analytics 4 for usage analytics when you consent.</li>
             <li>Hosting and storage providers if configured.</li>
           </ul>
           <p>
@@ -128,6 +134,10 @@ import { Meta, Title } from '@angular/platform-browser';
           <p>
             You can delete photos, models, or your account in Settings. For requests, contact us at
             support&#64;aiprofilephotomaker.com.
+          </p>
+          <p>
+            You can manage analytics consent at any time via the Cookie Preferences link in the
+            app.
           </p>
 
           <h2 class="text-2xl font-semibold mt-8 mb-4">9. International Transfers</h2>
