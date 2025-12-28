@@ -50,3 +50,8 @@ status: draft
 ## Compliance updates
 - Cookie Policy updated to mention GA4 analytics and consent.
 - Privacy Policy updated to mention GA4 data and opt-out controls.
+
+## Status update (2025-12-28)
+- Merged to `main` via PR #261; Playwright e2e passed locally.
+- CI deploy failed on `build:mvp-v1` because `environment.mvp-v1.ts` lacked `analytics`.
+- Fix in progress on branch `fix/ga4-env-mvp`; production GA4 validation pending successful deploy.
