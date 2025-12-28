@@ -61,3 +61,7 @@ Focus on intent clusters where trust and outcomes matter, not just price. Build 
 - Publish P0 pages and 3 pillar pages with strong internal linking.
 - Create 2 comparison pages using verified competitor claims.
 - Add analytics goals for enhancer starts and paid conversion from SEO.
+
+## Status update (2025-12-28)
+- GA4 implementation merged; deployment retry in progress after CI fix.
+- Marketing rollout paused until production GA4 validation is complete.

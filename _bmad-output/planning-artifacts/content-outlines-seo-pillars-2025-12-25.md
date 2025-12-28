@@ -57,3 +57,6 @@ status: draft
 ## Notes
 - Keep all competitor claims sourced and verifiable.
 - Use consistent CTA placement above the fold and after each major section.
+
+## Status update (2025-12-28)
+- Waiting on production GA4 validation before content publishing.

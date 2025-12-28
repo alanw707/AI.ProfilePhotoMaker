@@ -4,6 +4,9 @@ export const environment = {
   baseUrl: 'http://localhost:5032',
   name: 'docker-local',
   turnstileSiteKey: '',
+  analytics: {
+    ga4MeasurementId: 'G-FYQMYY2PJD',
+  },
   features: {
     debugMode: false,
     useProxy: false,
