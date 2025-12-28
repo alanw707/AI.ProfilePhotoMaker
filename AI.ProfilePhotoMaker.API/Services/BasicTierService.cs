@@ -270,6 +270,47 @@ public class BasicTierService : IBasicTierService
             return true;
         }
 
+        var correlationId = consumptionResult.CorrelationId;
+        if (!string.IsNullOrWhiteSpace(correlationId))
+        {
+            var chargeAction = NormalizeChargeAction(consumptionResult.Action);
+            var refundAction = BuildRefundAction(consumptionResult.Action);
+
+            var chargeExists = await _context.UsageLogs
+                .AnyAsync(l => l.UserId == userId &&
+                               l.Action == chargeAction &&
+                               l.CreditsCost.HasValue &&
+                               l.CreditsCost > 0 &&
+                               l.Details != null &&
+                               l.Details.Contains($"correlationId={correlationId}"));
+
+            if (!chargeExists)
+            {
+                _logger.LogWarning(
+                    "Skipping refund for user {UserId} action {Action} with correlationId {CorrelationId}: no charge usage log found",
+                    userId,
+                    chargeAction,
+                    correlationId);
+                return true;
+            }
+
+            var refundExists = await _context.UsageLogs
+                .AnyAsync(l => l.UserId == userId &&
+                               l.Action == refundAction &&
+                               l.Details != null &&
+                               l.Details.Contains($"correlationId={correlationId}"));
+
+            if (refundExists)
+            {
+                _logger.LogInformation(
+                    "Skipping duplicate refund for user {UserId} action {Action} with correlationId {CorrelationId}",
+                    userId,
+                    refundAction,
+                    correlationId);
+                return true;
+            }
+        }
+
         var profile = await GetUserProfileWithCreditsAsync(userId);
         if (profile == null)
         {
@@ -327,9 +368,7 @@ public class BasicTierService : IBasicTierService
             var totalRefunded = weeklyRefunded + purchasedRefunded;
             if (totalRefunded > 0)
             {
-                var action = consumptionResult.Action.EndsWith("_refund", StringComparison.OrdinalIgnoreCase)
-                    ? consumptionResult.Action
-                    : $"{consumptionResult.Action}_refund";
+                var action = BuildRefundAction(consumptionResult.Action);
                 var details = $"Refunded {totalRefunded} credits ({purchasedRefunded} purchased + {weeklyRefunded} weekly)";
                 if (!string.IsNullOrWhiteSpace(consumptionResult.CorrelationId))
                 {
@@ -486,5 +525,21 @@ public class BasicTierService : IBasicTierService
     {
         var daysSinceReset = (DateTime.UtcNow - lastReset).TotalDays;
         return daysSinceReset >= DaysInWeek;
+    }
+
+    private static string NormalizeChargeAction(string action)
+    {
+        const string refundSuffix = "_refund";
+        return action.EndsWith(refundSuffix, StringComparison.OrdinalIgnoreCase)
+            ? action[..^refundSuffix.Length]
+            : action;
+    }
+
+    private static string BuildRefundAction(string action)
+    {
+        const string refundSuffix = "_refund";
+        return action.EndsWith(refundSuffix, StringComparison.OrdinalIgnoreCase)
+            ? action
+            : $"{action}{refundSuffix}";
     }
 }

@@ -423,6 +423,7 @@ public class ReplicateController : ControllerBase
         // Check if user has sufficient purchased credits for styled generation (5 credits per image)
         var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
         var requiredCredits = dto.NumOutputs * CreditCostConfig.GetCreditCost("styled_generation");
+        var correlationId = $"styled_generation:{Guid.NewGuid()}";
 
         if (purchasedCredits < requiredCredits)
         {
@@ -539,7 +540,7 @@ public class ReplicateController : ControllerBase
             }
 
             // Consume credits BEFORE calling Replicate; refund on failure
-            creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, requiredCredits, "styled_generation");
+            creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, requiredCredits, "styled_generation", correlationId);
             if (!creditConsumed.Success)
             {
                 _logger.LogError("Failed to consume styled generation credits for user {UserId} before Replicate call", Sid(userId));
@@ -633,6 +634,7 @@ public class ReplicateController : ControllerBase
         var costPerImage = CreditCostConfig.GetCreditCost("styled_generation");
         var totalImages = dto.Styles.Count * dto.NumOutputsPerStyle;
         var requiredCredits = totalImages * costPerImage;
+        var correlationId = $"styled_generation:{Guid.NewGuid()}";
 
         // Check if user has sufficient purchased credits for styled generation
         var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
@@ -728,7 +730,7 @@ public class ReplicateController : ControllerBase
             var results = new List<StyleGenerationResult>();
 
             // Consume credits BEFORE calling Replicate; refund on failure
-            creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, requiredCredits, "styled_generation");
+            creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, requiredCredits, "styled_generation", correlationId);
             if (!creditConsumed.Success)
             {
                 _logger.LogError("Failed to consume batch styled generation credits for user {UserId} before Replicate calls", Sid(userId));
@@ -799,7 +801,11 @@ public class ReplicateController : ControllerBase
                 refundWeekly = Math.Min(creditConsumed.WeeklyCreditsConsumed, refundTotal);
                 refundPurchased = Math.Min(creditConsumed.PurchasedCreditsConsumed, refundTotal - refundWeekly);
 
-                var refundResult = CreditConsumptionResult.Succeeded("styled_generation_refund", refundWeekly, refundPurchased);
+                var refundResult = CreditConsumptionResult.Succeeded(
+                    "styled_generation",
+                    refundWeekly,
+                    refundPurchased,
+                    creditConsumed?.CorrelationId ?? correlationId);
                 await _basicTierService.RefundCreditsAsync(userId, refundResult);
             }
 
@@ -1102,8 +1108,14 @@ public class ReplicateController : ControllerBase
                 LoggingSanitizer.Sanitize(dto.ImageUrl),
                 LoggingSanitizer.Sanitize(externalImageUrl));
 
+            var correlationId = $"photo_enhancement:{Guid.NewGuid()}";
+
             // Consume credit BEFORE calling Replicate to avoid post-hoc refunds/race conditions
-            creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, CreditCostConfig.PhotoEnhancement, "photo_enhancement");
+            creditConsumed = await _basicTierService.ConsumeCreditsAsync(
+                userId,
+                CreditCostConfig.PhotoEnhancement,
+                "photo_enhancement",
+                correlationId);
             if (creditConsumed is null || !creditConsumed.Success)
             {
                 _logger.LogError("Failed to consume credits for photo enhancement for user {UserId}", Sid(userId));

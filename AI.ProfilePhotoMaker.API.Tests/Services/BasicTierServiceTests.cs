@@ -91,6 +91,81 @@ public class BasicTierServiceTests
         Assert.Equal(2, profile.PurchasedCredits);
     }
 
+    [Fact]
+    public async Task RefundCreditsAsync_SkipsWhenChargeLogMissingWithCorrelationId()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserProfileAsync(context, weeklyCredits: 2, purchasedCredits: 1);
+        var service = CreateService(context);
+
+        var correlationId = $"photo_enhancement:{Guid.NewGuid()}";
+        var consumption = CreditConsumptionResult.Succeeded("photo_enhancement", weeklyCredits: 1, purchasedCredits: 0, correlationId: correlationId);
+
+        var refunded = await service.RefundCreditsAsync(userId, consumption);
+        Assert.True(refunded);
+
+        var profile = await context.UserProfiles.FirstAsync(p => p.UserId == userId);
+        Assert.Equal(2, profile.Credits);
+        Assert.Equal(1, profile.PurchasedCredits);
+    }
+
+    [Fact]
+    public async Task RefundCreditsAsync_RefundsWhenChargeLogPresentWithCorrelationId()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserProfileAsync(context, weeklyCredits: 2, purchasedCredits: 2);
+        var service = CreateService(context);
+
+        var correlationId = $"photo_enhancement:{Guid.NewGuid()}";
+        var consumption = await service.ConsumeCreditsAsync(userId, 2, "photo_enhancement", correlationId);
+        Assert.True(consumption.Success);
+
+        var refunded = await service.RefundCreditsAsync(userId, consumption);
+        Assert.True(refunded);
+
+        var profile = await context.UserProfiles.FirstAsync(p => p.UserId == userId);
+        Assert.Equal(2, profile.Credits);
+        Assert.Equal(2, profile.PurchasedCredits);
+
+        var refundLog = await context.UsageLogs
+            .FirstOrDefaultAsync(l => l.UserId == userId
+                                      && l.Action == "photo_enhancement_refund"
+                                      && l.Details != null
+                                      && l.Details.Contains($"correlationId={correlationId}"));
+        Assert.NotNull(refundLog);
+    }
+
+    [Fact]
+    public async Task RefundCreditsAsync_SkipsDuplicateRefundWithCorrelationId()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserProfileAsync(context, weeklyCredits: 2, purchasedCredits: 0);
+        var service = CreateService(context);
+
+        var correlationId = $"photo_enhancement:{Guid.NewGuid()}";
+        var consumption = await service.ConsumeCreditsAsync(userId, 2, "photo_enhancement", correlationId);
+        Assert.True(consumption.Success);
+
+        var firstRefund = await service.RefundCreditsAsync(userId, consumption);
+        Assert.True(firstRefund);
+
+        var secondRefund = await service.RefundCreditsAsync(userId, consumption);
+        Assert.True(secondRefund);
+
+        var profile = await context.UserProfiles.FirstAsync(p => p.UserId == userId);
+        Assert.Equal(2, profile.Credits);
+        Assert.Equal(0, profile.PurchasedCredits);
+
+        var refundLogs = await context.UsageLogs
+            .Where(l => l.UserId == userId
+                        && l.Action == "photo_enhancement_refund"
+                        && l.Details != null
+                        && l.Details.Contains($"correlationId={correlationId}"))
+            .ToListAsync();
+
+        Assert.Single(refundLogs);
+    }
+
     private static ApplicationDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()

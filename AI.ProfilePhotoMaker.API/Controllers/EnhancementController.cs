@@ -220,7 +220,8 @@ public class EnhancementController : ControllerBase
 
             // Consume credits BEFORE API call to prevent race conditions
             // Use photo_enhancement action so weekly credits are eligible
-            creditConsumptionResult = await _basicTierService.ConsumeCreditsAsync(userId, 2, "photo_enhancement");
+            var correlationId = $"photo_enhancement:{Guid.NewGuid()}";
+            creditConsumptionResult = await _basicTierService.ConsumeCreditsAsync(userId, 2, "photo_enhancement", correlationId);
 
             if (creditConsumptionResult == null || !creditConsumptionResult.Success)
             {
