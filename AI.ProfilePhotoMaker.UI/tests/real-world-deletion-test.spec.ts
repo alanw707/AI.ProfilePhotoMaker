@@ -13,16 +13,41 @@ async function bootstrapSession(page) {
     localStorage.setItem('currentUser', JSON.stringify(user));
   }, STUB_USER);
 
-  await page.route('**/api/auth/validate-session', route => {
-    route.fulfill({ status: 200, contentType: 'text/plain', body: 'OK' });
-  });
-
   await page.route('**/api/**', route => {
-    if (!route.request().url().includes('/api/auth/validate-session')) {
-      const method = route.request().method();
-      const body = method === 'GET' ? '{}' : '{"success":true}';
-      route.fulfill({ status: 200, contentType: 'application/json', body });
+    const url = route.request().url();
+
+    if (url.includes('/api/auth/validate-session')) {
+      route.fulfill({ status: 200, contentType: 'text/plain', body: 'OK' });
+      return;
     }
+
+    if (url.includes('/api/auth/account-status')) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: { emailConfirmed: true }, error: null }),
+      });
+      return;
+    }
+
+    if (url.includes('/api/auth/profile-completion-status')) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          isCompleted: true,
+          hasFirstName: true,
+          hasLastName: true,
+          hasGender: true,
+          hasEthnicity: true,
+        }),
+      });
+      return;
+    }
+
+    const method = route.request().method();
+    const body = method === 'GET' ? '{}' : '{"success":true}';
+    route.fulfill({ status: 200, contentType: 'application/json', body });
   });
 }
 

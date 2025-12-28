@@ -4,6 +4,9 @@ export const environment = {
   baseUrl: '',
   name: 'development',
   turnstileSiteKey: '',
+  analytics: {
+    ga4MeasurementId: '',
+  },
   features: {
     debugMode: true,
     useProxy: true,

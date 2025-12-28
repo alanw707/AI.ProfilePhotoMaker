@@ -31,6 +31,17 @@ test.describe('Dashboard Model Status Display', () => {
         return;
       }
 
+      if (url.includes('/api/auth/account-status')) {
+        await route.fulfill(
+          jsonResponse({
+            data: {
+              emailConfirmed: true,
+            },
+          })
+        );
+        return;
+      }
+
       if (url.includes('/api/auth/profile-completion-status')) {
         await route.fulfill(
           jsonResponse({
@@ -195,6 +206,6 @@ test.describe('Dashboard Model Status Display', () => {
 
     await page.goto(`${BASE_URL}/app/dashboard`);
 
-    await expect(page.getByText('Ready for training')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Ready for Training')).toBeVisible({ timeout: 15000 });
   });
 });

@@ -14,7 +14,7 @@ import { CookieConsentService } from '../../services/cookie-consent.service';
         <h1 class="text-4xl font-bold text-gray-900 mb-8">Cookie Policy</h1>
 
         <div class="bg-white rounded-lg shadow-sm p-8 prose prose-gray max-w-none">
-          <p class="text-gray-600 mb-6">Last updated: December 19, 2025</p>
+          <p class="text-gray-600 mb-6">Last updated: December 25, 2025</p>
 
           <h2 class="text-2xl font-semibold mt-8 mb-4">1. Scope</h2>
           <p>
@@ -29,21 +29,23 @@ import { CookieConsentService } from '../../services/cookie-consent.service';
           </p>
 
           <h2 class="text-2xl font-semibold mt-8 mb-4">3. How We Use Cookies</h2>
-          <p>We currently use cookies or similar storage for:</p>
+          <p>We use cookies or similar storage for:</p>
           <ul>
             <li>Authentication and session management.</li>
             <li>Security and fraud prevention.</li>
             <li>Remembering preferences and settings.</li>
+            <li>
+              Analytics (Google Analytics 4) to understand usage and improve the product when you
+              opt in to analytics cookies.
+            </li>
           </ul>
-          <p>
-            If we add analytics or marketing cookies in the future, we will update this policy and
-            request consent where required by law.
-          </p>
+          <p>Analytics cookies are only set after you grant consent.</p>
 
           <h2 class="text-2xl font-semibold mt-8 mb-4">4. Third-Party Cookies</h2>
           <p>
             Some third-party services may set cookies during their workflows, such as Google OAuth
-            login or Stripe payments. These providers control their own cookies.
+            login or Stripe payments. We also use Google Analytics 4 when you opt in to analytics
+            cookies. These providers control their own cookies.
           </p>
 
           <h2 class="text-2xl font-semibold mt-8 mb-4">5. Your Choices</h2>
