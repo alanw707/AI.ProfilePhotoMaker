@@ -47,13 +47,6 @@ export const STYLE_PREVIEW_TEST_CASES: StylePreviewTestCase[] = [
     category: 'professional'
   },
   {
-    styleName: 'legal',
-    fileName: 'legal.jpg',
-    expectedUrl: `${AZURE_BLOB_BASE_URL}/legal.jpg`,
-    description: 'Legal professional headshot style',
-    category: 'professional'
-  },
-  {
     styleName: 'medical',
     fileName: 'medical.jpg',
     expectedUrl: `${AZURE_BLOB_BASE_URL}/medical.jpg`,
@@ -107,13 +100,6 @@ export const STYLE_PREVIEW_TEST_CASES: StylePreviewTestCase[] = [
     category: 'creative'
   },
   {
-    styleName: 'author',
-    fileName: 'author.jpg',
-    expectedUrl: `${AZURE_BLOB_BASE_URL}/author.jpg`,
-    description: 'Author headshot style',
-    category: 'creative'
-  },
-  {
     styleName: 'influencer',
     fileName: 'influencer.jpg',
     expectedUrl: `${AZURE_BLOB_BASE_URL}/influencer.jpg`,
@@ -132,6 +118,27 @@ export const STYLE_PREVIEW_TEST_CASES: StylePreviewTestCase[] = [
     fileName: 'digital-nomad.jpg',
     expectedUrl: `${AZURE_BLOB_BASE_URL}/digital-nomad.jpg`,
     description: 'Digital nomad lifestyle headshot',
+    category: 'lifestyle'
+  },
+  {
+    styleName: 'retro-wave',
+    fileName: 'retro-wave.jpg',
+    expectedUrl: `${AZURE_BLOB_BASE_URL}/retro-wave.jpg`,
+    description: 'Retro wave lifestyle headshot',
+    category: 'lifestyle'
+  },
+  {
+    styleName: 'night-out',
+    fileName: 'night-out.jpg',
+    expectedUrl: `${AZURE_BLOB_BASE_URL}/night-out.jpg`,
+    description: 'Night out lifestyle headshot',
+    category: 'lifestyle'
+  },
+  {
+    styleName: 'digital-native',
+    fileName: 'digital-native.jpg',
+    expectedUrl: `${AZURE_BLOB_BASE_URL}/digital-native.jpg`,
+    description: 'Digital native creator headshot',
     category: 'lifestyle'
   },
 
@@ -156,13 +163,6 @@ export const STYLE_PREVIEW_TEST_CASES: StylePreviewTestCase[] = [
     fileName: 'fitness.jpg',
     expectedUrl: `${AZURE_BLOB_BASE_URL}/fitness.jpg`,
     description: 'Fitness professional headshot style',
-    category: 'specialized'
-  },
-  {
-    styleName: 'spiritual',
-    fileName: 'spiritual.jpg',
-    expectedUrl: `${AZURE_BLOB_BASE_URL}/spiritual.jpg`,
-    description: 'Spiritual/wellness headshot style',
     category: 'specialized'
   }
 ];

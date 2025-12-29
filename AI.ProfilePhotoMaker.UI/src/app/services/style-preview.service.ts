@@ -96,9 +96,7 @@ export class StylePreviewService {
       'executive',
       'consultant',
       'linkedin',
-      'legal',
       'medical',
-      'author',
       'entrepreneur',
       'startup',
       'tech-professional',
@@ -111,7 +109,9 @@ export class StylePreviewService {
       'glamour',
       'academic',
       'fitness',
-      'spiritual',
+      'retro-wave',
+      'night-out',
+      'digital-native',
     ];
 
     const urlMap = new Map<string, string>();
