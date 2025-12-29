@@ -102,10 +102,10 @@ public class StylePreviewController : ControllerBase
             // Define the known styles (should match what's in the database)
             var knownStyles = new[]
             {
-                "corporate", "executive", "consultant", "linkedin", "legal",
-                "medical", "author", "entrepreneur", "startup", "tech-professional",
-                "influencer", "digital-nomad", "creative", "casual", "artistic",
-                "edgy-urban", "glamour", "academic", "fitness", "spiritual"
+                "corporate", "executive", "consultant", "linkedin", "medical",
+                "academic", "entrepreneur", "startup", "tech-professional", "influencer",
+                "digital-nomad", "creative", "casual", "artistic", "edgy-urban",
+                "glamour", "fitness", "retro-wave", "night-out", "digital-native"
             };
 
             var previews = new List<object>();
