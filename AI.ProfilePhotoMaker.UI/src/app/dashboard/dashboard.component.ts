@@ -151,6 +151,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.creditService.getWeeklyCredits(state.userCreditStatus, state.creditsInfo);
   }
 
+  getHeadshotEligibleCredits(): number {
+    const state = this.stateService.getState();
+    return (
+      state.userCreditStatus?.purchasedCredits ??
+      (state.creditsInfo as { purchasedCredits?: number })?.purchasedCredits ??
+      0
+    );
+  }
+
   onCreditAction(event: { action: string; context?: string }): void {
     switch (event.action) {
       case 'purchase':

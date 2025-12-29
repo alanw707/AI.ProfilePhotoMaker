@@ -6,7 +6,7 @@ import {
   OnInit,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
 import { UserCreditStatus } from '../../services/credit.service';
@@ -27,9 +27,11 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
   userCreditStatus: UserCreditStatus | null = null;
   isMobileMenuOpen = false;
   isAuthenticated = false;
+  isHeadshotContext = false;
   private _userSubscription?: Subscription;
   private _authSubscription?: Subscription;
   private _subscriptionStateSubscription?: Subscription;
+  private _routerSubscription?: Subscription;
 
   constructor(
     private _authService: AuthService,
@@ -40,6 +42,14 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.isHeadshotContext = this._router.url.includes('/app/dashboard');
+    this._routerSubscription = this._router.events.subscribe(event => {
+      if (event instanceof NavigationEnd) {
+        this.isHeadshotContext = event.urlAfterRedirects.includes('/app/dashboard');
+        this._cdr.markForCheck();
+      }
+    });
+
     // Track authentication state explicitly to control header UI
     this._authSubscription = this._authService.isAuthenticated$.subscribe(isAuth => {
       this.isAuthenticated = isAuth;
@@ -86,6 +96,9 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
     if (this._subscriptionStateSubscription) {
       this._subscriptionStateSubscription.unsubscribe();
     }
+    if (this._routerSubscription) {
+      this._routerSubscription.unsubscribe();
+    }
   }
 
   toggleTheme(): void {
@@ -107,5 +120,19 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
     this.isMobileMenuOpen = false;
     // Always restore body scrolling when menu closes
     document.body.style.overflow = 'auto';
+  }
+
+  getHeaderCreditLabel(): string {
+    return this.isHeadshotContext ? 'Headshot Credits' : 'Total Credits';
+  }
+
+  getHeaderCreditCount(): number {
+    if (!this.userCreditStatus) {
+      return 0;
+    }
+
+    return this.isHeadshotContext
+      ? this.userCreditStatus.purchasedCredits || 0
+      : this.userCreditStatus.totalCredits || 0;
   }
 }

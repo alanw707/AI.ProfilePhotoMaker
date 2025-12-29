@@ -58,6 +58,16 @@ describe('CreditDisplayComponent', () => {
       expect(component.getTotalAvailableCredits()).toBe(3);
     });
 
+    it('should fallback to creditsInfo for purchased credits when userCreditStatus is null', () => {
+      component.userCreditStatus = null;
+      component.creditsInfo = {
+        availableCredits: 3,
+        purchasedCredits: 7,
+      };
+
+      expect(component.getPurchasedCredits()).toBe(7);
+    });
+
     it('should return 0 when no credit information is available', () => {
       component.userCreditStatus = null;
       component.creditsInfo = null;
@@ -141,6 +151,39 @@ describe('CreditDisplayComponent', () => {
       };
 
       expect(component.getCreditSubtitleText()).toBe('Purchase credits to get started');
+    });
+  });
+
+  describe('Headshot Context', () => {
+    it('should display purchased credits only for headshots', () => {
+      component.displayContext = 'headshots';
+      component.userCreditStatus = {
+        weeklyCredits: 5,
+        purchasedCredits: 8,
+      };
+
+      expect(component.getCreditDisplayText()).toBe('Eligible Headshot Credits: 8');
+      expect(component.getCreditSubtitleText()).toBe("Weekly credits can't be used for headshots.");
+    });
+
+    it('should show purchase prompt when only weekly credits exist', () => {
+      component.displayContext = 'headshots';
+      component.userCreditStatus = {
+        weeklyCredits: 5,
+        purchasedCredits: 0,
+      };
+
+      expect(component.shouldShowPurchasePrompt()).toBe(true);
+    });
+
+    it('should use purchased credit icon in headshot context', () => {
+      component.displayContext = 'headshots';
+      component.userCreditStatus = {
+        weeklyCredits: 5,
+        purchasedCredits: 1,
+      };
+
+      expect(component.getCreditIcon()).toBe('💰');
     });
   });
 
@@ -286,6 +329,7 @@ describe('CreditDisplayComponent', () => {
       expect(component.totalCredits).toBe(0);
       expect(component.hasEnoughCredits).toBeTrue();
       expect(component.remainingCredits).toBe(0);
+      expect(component.displayContext).toBe('default');
     });
 
     it('should handle undefined userCreditStatus properties', () => {
