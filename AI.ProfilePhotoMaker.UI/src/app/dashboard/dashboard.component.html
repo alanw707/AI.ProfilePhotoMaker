@@ -24,9 +24,9 @@
             label="Model Status"
             [isModelStatus]="true"></app-stats-card>
           <app-stats-card
-            icon="💎"
-            [value]="(state$ | async)?.totalCredits || 0"
-            label="Credits"
+            icon="💰"
+            [value]="getHeadshotEligibleCredits()"
+            label="Headshot Credits"
             [showCard]="true"
             [isClickable]="true"
             clickAction="settings"
@@ -144,6 +144,7 @@
             [creditsInfo]="(state$ | async)?.creditsInfo"
             [userCreditStatus]="(state$ | async)?.userCreditStatus"
             [isLoading]="!(state$ | async)?.creditsInfo && !(state$ | async)?.userCreditStatus"
+            displayContext="headshots"
             [showPurchasePrompt]="true"
             (creditActionRequested)="onCreditAction($event)"></app-credit-display>
         </div>

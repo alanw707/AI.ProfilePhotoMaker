@@ -134,9 +134,9 @@
           class="credit-display"
           *ngIf="userCreditStatus"
           routerLink="/app/settings"
-          [attr.title]="'Total Credits: ' + (userCreditStatus.totalCredits || 0)">
-          <div class="credit-icon">💎</div>
-          <div class="credit-amount">{{ userCreditStatus.totalCredits || 0 }}</div>
+          [attr.title]="getHeaderCreditLabel() + ': ' + getHeaderCreditCount()">
+          <div class="credit-icon">{{ isHeadshotContext ? '💰' : '💎' }}</div>
+          <div class="credit-amount">{{ getHeaderCreditCount() }}</div>
         </div>
 
         <div class="user-info">

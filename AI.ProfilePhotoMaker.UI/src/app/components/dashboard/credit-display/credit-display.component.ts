@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 
 export interface CreditInfo {
   availableCredits: number;
+  purchasedCredits?: number;
   totalCredits?: number;
   [key: string]: unknown;
 }
@@ -19,6 +20,8 @@ export interface CreditActionEvent {
   action: 'purchase' | 'upgrade' | 'viewPackages';
   context?: string;
 }
+
+export type CreditDisplayContext = 'default' | 'headshots';
 
 @Component({
   selector: 'app-credit-display',
@@ -42,6 +45,7 @@ export class CreditDisplayComponent {
   @Input() totalCredits = 0;
   @Input() hasEnoughCredits = true;
   @Input() remainingCredits = 0;
+  @Input() displayContext: CreditDisplayContext = 'default';
 
   @Output() creditActionRequested = new EventEmitter<CreditActionEvent>();
 
@@ -60,7 +64,11 @@ export class CreditDisplayComponent {
    * Gets the number of purchased credits
    */
   getPurchasedCredits(): number {
-    return this.userCreditStatus?.purchasedCredits || 0;
+    return (
+      this.userCreditStatus?.purchasedCredits ??
+      this.creditsInfo?.purchasedCredits ??
+      0
+    );
   }
 
   /**
@@ -75,6 +83,11 @@ export class CreditDisplayComponent {
    * Gets the display text for credit counts
    */
   getCreditDisplayText(): string {
+    if (this.isHeadshotContext()) {
+      const eligibleCredits = this.getHeadshotEligibleCredits();
+      return `Eligible Headshot Credits: ${eligibleCredits}`;
+    }
+
     const totalCredits = this.getTotalAvailableCredits();
     const weeklyCredits = this.getWeeklyCredits();
     const purchasedCredits = this.getPurchasedCredits();
@@ -98,6 +111,10 @@ export class CreditDisplayComponent {
    * Gets the subtitle text for credit display
    */
   getCreditSubtitleText(): string {
+    if (this.isHeadshotContext()) {
+      return "Weekly credits can't be used for headshots.";
+    }
+
     const purchasedCredits = this.getPurchasedCredits();
     const weeklyCredits = this.getWeeklyCredits();
 
@@ -116,6 +133,14 @@ export class CreditDisplayComponent {
    * Determines if we should show a purchase prompt
    */
   shouldShowPurchasePrompt(): boolean {
+    if (this.isHeadshotContext()) {
+      const eligibleCredits = this.getHeadshotEligibleCredits();
+      return (
+        eligibleCredits === 0 ||
+        (this.requiredCredits > 0 && eligibleCredits < this.requiredCredits)
+      );
+    }
+
     const totalCredits = this.getTotalAvailableCredits();
     const purchasedCredits = this.getPurchasedCredits();
     
@@ -142,6 +167,10 @@ export class CreditDisplayComponent {
    * Gets the appropriate icon for the credit display
    */
   getCreditIcon(): string {
+    if (this.isHeadshotContext()) {
+      return this.getHeadshotEligibleCredits() > 0 ? '💰' : '💎';
+    }
+
     const purchasedCredits = this.getPurchasedCredits();
     const weeklyCredits = this.getWeeklyCredits();
     
@@ -154,5 +183,13 @@ export class CreditDisplayComponent {
     } else {
       return '💎';
     }
+  }
+
+  private isHeadshotContext(): boolean {
+    return this.displayContext === 'headshots';
+  }
+
+  private getHeadshotEligibleCredits(): number {
+    return this.getPurchasedCredits();
   }
 }
