@@ -219,6 +219,14 @@ https://app.aiprofilephotomaker.com/pricing?utm_source=facebook&utm_medium=socia
 - **Weekly:** top 2 creatives, underperformers, update copy/creative.
 - **Targets to start:** CTR >= 1%, checkout-start >= 3%, purchase >= 1.5%.
 
+## KPI Summary Table (Weekly)
+| Metric | Target | Green | Yellow | Red | Action |
+| --- | --- | --- | --- | --- | --- |
+| CTR | >= 1.0% | >= 1.0% | 0.7% - 0.99% | < 0.7% | Refresh hook line and creative thumbnail |
+| Checkout-start rate | >= 3.0% | >= 3.0% | 2.0% - 2.99% | < 2.0% | Test homepage vs /pricing, adjust CTA |
+| Purchase rate | >= 1.5% | >= 1.5% | 1.0% - 1.49% | < 1.0% | Pause weakest creatives, boost winners |
+| CPA (paid) | Target CPA | <= target | 1.1x target | > 1.1x target | Narrow audience, reduce spend |
+
 ## Daily Runbook (5 minutes)
 - Check sessions by utm_campaign and utm_content for the last 24 hours.
 - Log CTR, checkout-start, purchase rate for each creative id.
@@ -268,3 +276,12 @@ https://app.aiprofilephotomaker.com/pricing?utm_source=facebook&utm_medium=socia
 - [ ] Create 2 assets (promise + testimonial).
 - [ ] Schedule Day 1 posts.
 - [ ] Confirm tracking or set traffic objective.
+
+## Next Step Task List (Day 0, in order)
+1. Confirm landing page and CTA copy on `/pricing`.
+2. Decide testimonial permissions (confirm names or anonymize).
+3. Verify GA4 + pixel/Insight Tag status (if missing, set paid objective to Traffic).
+4. Lock UTM templates and generate platform links for Day 1.
+5. Create 2 assets (promise card + testimonial card).
+6. Schedule Day 1 posts (LinkedIn, IG, X, FB) at peak times.
+7. Set up the tracking sheet using `_bmad-output/implementation-artifacts/marketing-tracking-template.csv`.

@@ -1,2 +1,2 @@
-date,platform,post_day,creative_id,utm_content,utm_medium,utm_source,utm_campaign,link_url,impressions,clicks,ctr,checkout_starts,purchases,notes
-YYYY-MM-DD,linkedin,Day 1,promise-01,promise-01,social,linkedin,social-quick-win-2025-12,https://app.aiprofilephotomaker.com/pricing?...,,,,,,,
+date,channel,post_day,message_type,creative_id,asset_link,utm_content,utm_medium,utm_source,utm_campaign,link_url,status,impressions,clicks,ctr,checkout_starts,purchases,replies,notes
+YYYY-MM-DD,linkedin,Day 1,promise,promise-01,link-to-asset,promise-01,social,linkedin,social-quick-win-2025-12,https://app.aiprofilephotomaker.com/pricing?... ,scheduled,,,,,,,,
