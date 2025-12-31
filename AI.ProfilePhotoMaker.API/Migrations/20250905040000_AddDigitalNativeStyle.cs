@@ -13,16 +13,19 @@ namespace AI.ProfilePhotoMaker.API.Migrations
         {
             // Add digital-native style as a new entry using direct SQL to avoid seeding issues
             migrationBuilder.Sql(@"
-                INSERT INTO Styles (Name, Description, PromptTemplate, NegativePromptTemplate, IsActive, CreatedAt, UpdatedAt)
-                VALUES (
-                    'digital-native', 
-                    'Modern tech creator portrait',
-                    '{subject}, professional portrait of {gender} {ethnicity}, modern digital creator aesthetic, subtle RGB accent lighting, clean tech-inspired background, confident creative expression, contemporary casual style, soft purple and cyan color accents, approachable online personality',
-                    'outdated technology, old fashioned, formal business, analog aesthetic, traditional office',
-                    1,
-                    GETUTCDATE(),
-                    GETUTCDATE()
-                )
+                IF NOT EXISTS (SELECT 1 FROM Styles WHERE Name = 'digital-native')
+                BEGIN
+                    INSERT INTO Styles (Name, Description, PromptTemplate, NegativePromptTemplate, IsActive, CreatedAt, UpdatedAt)
+                    VALUES (
+                        'digital-native', 
+                        'Modern tech creator portrait',
+                        '{subject}, professional portrait of {gender} {ethnicity}, modern digital creator aesthetic, subtle RGB accent lighting, clean tech-inspired background, confident creative expression, contemporary casual style, soft purple and cyan color accents, approachable online personality',
+                        'outdated technology, old fashioned, formal business, analog aesthetic, traditional office',
+                        1,
+                        GETUTCDATE(),
+                        GETUTCDATE()
+                    )
+                END
             ");
         }
 

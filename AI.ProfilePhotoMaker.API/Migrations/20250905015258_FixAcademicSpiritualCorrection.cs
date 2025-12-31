@@ -14,18 +14,18 @@ namespace AI.ProfilePhotoMaker.API.Migrations
             var updateTime = new DateTime(2025, 9, 5, 1, 52, 57, 540, DateTimeKind.Utc);
 
             // Step 1: Restore Academic to ID 20 (production had Academic at ID 20, not Spiritual)
-            migrationBuilder.UpdateData(
-                table: "Styles",
-                keyColumn: "Id",
-                keyValue: 20,
-                columns: new[] { "Name", "Description", "PromptTemplate", "NegativePromptTemplate", "UpdatedAt" },
-                values: new object[] {
-                    "academic",
-                    "Academic professional style",
-                    "academic professional portrait, scholarly appearance, intellectual style, educational setting",
-                    "unprofessional, casual, distracting elements",
-                    updateTime
-                });
+            migrationBuilder.Sql($@"
+                IF NOT EXISTS (SELECT 1 FROM Styles WHERE Name = 'academic' AND Id <> 20)
+                BEGIN
+                    UPDATE Styles
+                    SET Name = 'academic',
+                        Description = 'Academic professional style',
+                        PromptTemplate = 'academic professional portrait, scholarly appearance, intellectual style, educational setting',
+                        NegativePromptTemplate = 'unprofessional, casual, distracting elements',
+                        UpdatedAt = '{updateTime:O}'
+                    WHERE Id = 20;
+                END
+            ");
 
             // Step 2: Remove Spiritual style (deactivate it)
             migrationBuilder.Sql(@"

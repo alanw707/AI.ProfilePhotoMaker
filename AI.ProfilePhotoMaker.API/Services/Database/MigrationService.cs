@@ -1,6 +1,8 @@
+using System.Data.Common;
 using System.Diagnostics;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace AI.ProfilePhotoMaker.API.Services.Database;
@@ -345,9 +347,9 @@ public class MigrationService : IMigrationService
                     THEN 1 ELSE 0 
                 END";
 
-            using var connection = _context.Database.GetDbConnection();
+            await using var connection = CreateStandaloneConnection();
             await connection.OpenAsync();
-            using var command = connection.CreateCommand();
+            await using var command = connection.CreateCommand();
             command.CommandText = tableExistsQuery;
             var tableExists = Convert.ToBoolean(await command.ExecuteScalarAsync());
 
@@ -401,11 +403,10 @@ public class MigrationService : IMigrationService
                 VALUES (@migrationId, '8.0.7');
             END";
 
-        using var connection = _context.Database.GetDbConnection();
-        if (connection.State != System.Data.ConnectionState.Open)
-            await connection.OpenAsync();
+        await using var connection = CreateStandaloneConnection();
+        await connection.OpenAsync();
 
-        using var command = connection.CreateCommand();
+        await using var command = connection.CreateCommand();
         command.CommandText = insertMigrationQuery;
 
         var parameter = command.CreateParameter();
@@ -416,5 +417,11 @@ public class MigrationService : IMigrationService
         await command.ExecuteNonQueryAsync();
 
         _logger.LogInformation("Marked migration {MigrationId} as applied", migrationId);
+    }
+
+    private DbConnection CreateStandaloneConnection()
+    {
+        var connectionString = _databaseProvider.GetConnectionString();
+        return new SqlConnection(connectionString);
     }
 }
