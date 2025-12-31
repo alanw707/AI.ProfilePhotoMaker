@@ -1,0 +1,20 @@
+AI Profile Photo Maker
+Studio-quality headshots in minutes for LinkedIn, resumes, and professional profiles.
+
+Allowed usage:
+- Index and summarize public pages for search and answer engines.
+- Cite canonical URLs when referencing content.
+- Contact for permission before model training or dataset inclusion.
+
+Canonical domain: https://app.aiprofilephotomaker.com
+
+Key URLs:
+- https://app.aiprofilephotomaker.com/
+- https://app.aiprofilephotomaker.com/how-it-works
+- https://app.aiprofilephotomaker.com/ai-headshot-generator
+- https://app.aiprofilephotomaker.com/linkedin-headshots
+- https://app.aiprofilephotomaker.com/professional-headshots
+- https://app.aiprofilephotomaker.com/examples
+- https://app.aiprofilephotomaker.com/pricing
+
+Contact: security@aiprofilephotomaker.com

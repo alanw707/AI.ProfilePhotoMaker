@@ -1,0 +1,17 @@
+AI Usage Policy
+
+Canonical domain: https://app.aiprofilephotomaker.com
+
+Summary:
+- Public content may be indexed for discovery and answer engines.
+- Cite canonical URLs when referencing content.
+- For model training, redistribution, or dataset inclusion, request permission.
+
+Primary pages:
+- https://app.aiprofilephotomaker.com/
+- https://app.aiprofilephotomaker.com/how-it-works
+- https://app.aiprofilephotomaker.com/ai-headshot-generator
+- https://app.aiprofilephotomaker.com/examples
+- https://app.aiprofilephotomaker.com/pricing
+
+Contact: security@aiprofilephotomaker.com

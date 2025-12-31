@@ -115,6 +115,7 @@ inspection-*.png
 *.spec.ts
 monitor-*.sh
 test-*.sh
+!AI.ProfilePhotoMaker.UI/tests/seo-metadata-smoke.spec.ts
 AI.ProfilePhotoMaker.API/tests/playwright/screenshots/
 AI.ProfilePhotoMaker.API/tests/playwright/results/
 

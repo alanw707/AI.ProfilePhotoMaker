@@ -1,0 +1,406 @@
+@use '../../../shared/styles/index' as shared
+@tailwind utilities
+
+.seo-page
+  @include shared.page-container
+  color: var(--text-primary)
+  background: var(--bg-primary)
+
+.seo-header
+  position: sticky
+  top: 0
+  z-index: 20
+  background: rgba(233, 236, 239, 0.9)
+  backdrop-filter: blur(10px)
+  border-bottom: 1px solid var(--border-color)
+
+  [data-theme='dark'] &
+    background: rgba(26, 29, 35, 0.9)
+
+.nav-content
+  @include shared.content-container
+  display: flex
+  align-items: center
+  justify-content: space-between
+  gap: 24px
+
+.logo
+  display: flex
+  align-items: center
+  gap: 12px
+  text-decoration: none
+  color: inherit
+  font-weight: 600
+
+  img
+    width: 40px
+    height: 40px
+
+.nav-links
+  display: flex
+  gap: 20px
+
+  a
+    text-decoration: none
+    color: var(--text-secondary)
+    font-weight: 500
+
+    &:hover
+      color: var(--accent-primary)
+
+.nav-actions
+  display: flex
+  gap: 12px
+
+.btn
+  &.btn-primary
+    @include shared.btn-primary
+
+  &.btn-secondary
+    @include shared.btn-secondary
+
+.hero
+  position: relative
+  padding: 120px 0 80px
+  background: var(--hero-bg)
+  overflow: hidden
+
+  &::before
+    content: ''
+    position: absolute
+    top: -120px
+    right: -120px
+    width: 320px
+    height: 320px
+    border-radius: 999px
+    background: radial-gradient(circle, rgba(79, 209, 199, 0.25), transparent 70%)
+    filter: blur(10px)
+    opacity: 0.7
+
+  &::after
+    content: ''
+    position: absolute
+    bottom: -140px
+    left: -140px
+    width: 360px
+    height: 360px
+    border-radius: 999px
+    background: radial-gradient(circle, rgba(79, 130, 246, 0.2), transparent 70%)
+    filter: blur(16px)
+    opacity: 0.6
+
+.hero-grid
+  position: relative
+  display: grid
+  grid-template-columns: repeat(2, minmax(0, 1fr))
+  gap: 48px
+  align-items: center
+
+.hero-copy
+  max-width: 560px
+
+  h1
+    font-size: 3rem
+    line-height: 1.1
+    margin-bottom: 20px
+
+.eyebrow
+  text-transform: uppercase
+  letter-spacing: 0.08em
+  font-weight: 600
+  font-size: 0.8rem
+  color: var(--accent-primary)
+  margin-bottom: 16px
+
+.subhead
+  font-size: 1.1rem
+  color: var(--text-secondary)
+  margin-bottom: 28px
+
+.cta-row
+  display: flex
+  gap: 12px
+  flex-wrap: wrap
+
+.hero-panel
+  display: flex
+  justify-content: flex-end
+
+.panel-card
+  @include shared.card-base
+  padding: 28px
+  min-width: 260px
+  max-width: 320px
+  background: var(--card-bg)
+  border: 1px solid var(--border-color)
+
+.panel-title
+  font-weight: 600
+  margin-bottom: 16px
+
+.panel-summary
+  color: var(--text-secondary)
+
+.panel-highlights
+  display: grid
+  gap: 16px
+
+.highlight
+  display: flex
+  align-items: baseline
+  gap: 12px
+
+.highlight-value
+  font-size: 1.6rem
+  font-weight: 700
+  color: var(--accent-primary)
+
+.highlight-label
+  color: var(--text-secondary)
+  font-size: 0.95rem
+
+.page-section
+  padding: 80px 0
+
+.section-header
+  max-width: 720px
+  margin-bottom: 32px
+
+  h2
+    font-size: 2rem
+
+  p
+    color: var(--text-secondary)
+    margin-top: 12px
+
+.steps-grid,
+.cards-grid,
+.showcase-grid,
+.testimonials-grid,
+.related-grid
+  display: grid
+  gap: 24px
+
+.steps-grid
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))
+
+.step-card
+  @include shared.card-base
+  padding: 24px
+
+.step-number
+  width: 36px
+  height: 36px
+  border-radius: 50%
+  display: grid
+  place-items: center
+  background: var(--accent-primary)
+  color: white
+  font-weight: 700
+  margin-bottom: 16px
+
+.cards-grid
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr))
+
+.card
+  @include shared.card-base
+  padding: 24px
+
+.bullet-grid
+  ul
+    list-style: none
+    display: grid
+    gap: 12px
+
+  li
+    padding: 16px 20px
+    border-radius: 12px
+    background: var(--card-bg)
+    border: 1px solid var(--border-color)
+    box-shadow: var(--shadow-sm)
+
+.showcase-grid
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))
+
+.showcase-item
+  @include shared.card-base
+  padding: 20px
+
+.showcase-visual
+  display: grid
+  grid-template-columns: repeat(2, minmax(0, 1fr))
+  gap: 8px
+  margin-bottom: 16px
+
+  .before,
+  .after
+    border-radius: 10px
+    padding: 28px 12px
+    text-align: center
+    font-weight: 600
+    color: var(--text-primary)
+
+  .before
+    background: linear-gradient(135deg, rgba(148, 163, 184, 0.4), rgba(148, 163, 184, 0.15))
+
+  .after
+    background: linear-gradient(135deg, rgba(79, 209, 199, 0.35), rgba(79, 209, 199, 0.1))
+
+.testimonials-grid
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr))
+
+.testimonial-card
+  @include shared.card-base
+  padding: 24px
+
+  .quote
+    font-size: 1rem
+    margin-bottom: 16px
+    color: var(--text-secondary)
+
+  .author
+    display: flex
+    flex-direction: column
+
+  .name
+    font-weight: 600
+
+  .role
+    color: var(--text-tertiary)
+    font-size: 0.9rem
+
+.comparison-table
+  @include shared.card-base
+  padding: 24px
+
+  table
+    width: 100%
+    border-collapse: collapse
+
+  th,
+  td
+    border-bottom: 1px solid var(--border-color)
+    padding: 12px
+    text-align: left
+    vertical-align: top
+
+  th
+    font-weight: 600
+
+  .row-label
+    font-weight: 600
+    color: var(--text-primary)
+
+.comparison-note
+  margin-top: 16px
+  color: var(--text-tertiary)
+
+.faq-grid
+  display: grid
+  gap: 12px
+
+.faq-item
+  @include shared.card-base
+  padding: 16px 20px
+
+  summary
+    font-weight: 600
+    cursor: pointer
+
+  p
+    margin-top: 12px
+    color: var(--text-secondary)
+
+.related-grid
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))
+
+.related-card
+  @include shared.card-base
+  padding: 20px
+  text-decoration: none
+  color: inherit
+  display: flex
+  align-items: center
+  justify-content: space-between
+
+  &:hover
+    box-shadow: var(--shadow-lg)
+
+.arrow
+  color: var(--accent-primary)
+
+.cta-section
+  padding: 0 0 100px
+
+.cta-card
+  @include shared.card-base
+  padding: 32px
+  display: flex
+  align-items: center
+  justify-content: space-between
+  gap: 24px
+
+.seo-footer
+  border-top: 1px solid var(--border-color)
+  padding: 32px 0
+
+.footer-content
+  display: flex
+  align-items: center
+  justify-content: space-between
+  gap: 24px
+
+.footer-brand
+  display: flex
+  align-items: center
+  gap: 16px
+
+  img
+    width: 40px
+    height: 40px
+
+.footer-links
+  display: flex
+  gap: 16px
+
+  a
+    text-decoration: none
+    color: var(--text-secondary)
+
+    &:hover
+      color: var(--accent-primary)
+
+@media (max-width: 960px)
+  .nav-links
+    display: none
+
+  .nav-actions
+    display: none
+
+  .hero
+    padding-top: 96px
+
+  .hero-grid
+    grid-template-columns: 1fr
+
+  .hero-panel
+    justify-content: flex-start
+
+  .cta-card
+    flex-direction: column
+    align-items: flex-start
+
+  .footer-content
+    flex-direction: column
+    align-items: flex-start
+
+@media (max-width: 640px)
+  .hero-copy h1
+    font-size: 2.3rem
+
+  .cta-row
+    flex-direction: column
+    align-items: stretch
+
+  .cta-row .btn
+    width: 100%

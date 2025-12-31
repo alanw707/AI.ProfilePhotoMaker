@@ -51,8 +51,10 @@ test.describe('Auto-Repair Service Functional Tests', () => {
         }
 
         // Check if Angular services are accessible
-        const hasAngular = typeof (window as any).ng !== 'undefined';
-        const hasBootstrap = hasAngular && !!(window as any).ng?.getInjector;
+        const hasAngularDevTools = typeof (window as any).ng !== 'undefined';
+        const hasDebugContext = !!(window as any).__APP_DEBUG__?.injector;
+        const hasAppRoot = !!document.querySelector('app-root');
+        const hasBootstrap = hasAngularDevTools || hasDebugContext;
         
         // Check for service-related console logs
         const consoleLogs = (window as any).testConsoleLogs || [];
@@ -64,11 +66,13 @@ test.describe('Auto-Repair Service Functional Tests', () => {
         );
 
         return {
-          hasAngular,
+          hasAngular: hasAngularDevTools,
+          hasDebugContext,
+          hasAppRoot,
           hasBootstrap,
           serviceRelatedLogs: serviceRelatedLogs.slice(0, 5), // First 5 relevant logs
           totalConsoleMessages: consoleLogs.length,
-          available: hasAngular
+          available: hasAppRoot && hasBootstrap
         };
       } catch (error) {
         return {
@@ -81,7 +85,8 @@ test.describe('Auto-Repair Service Functional Tests', () => {
     console.log('🔍 Service initialization check:', serviceCheck);
     
     expect(serviceCheck.available).toBe(true);
-    expect(serviceCheck.hasAngular).toBe(true);
+    expect(serviceCheck.hasAppRoot).toBe(true);
+    expect(serviceCheck.hasDebugContext || serviceCheck.hasAngular).toBe(true);
   });
 
   test('should test auto-repair configuration loading', async () => {

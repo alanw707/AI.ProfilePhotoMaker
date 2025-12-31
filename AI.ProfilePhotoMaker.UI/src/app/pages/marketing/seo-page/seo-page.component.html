@@ -1,0 +1,217 @@
+<div class="seo-page" *ngIf="page as currentPage">
+  <header class="seo-header">
+    <div class="nav-content">
+      <a class="logo" routerLink="/" aria-label="AI Profile Photo Maker home">
+        <img src="/assets/Logo.PNG" alt="AI Profile Photo Maker" />
+        <span>AI Profile Photo Maker</span>
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a routerLink="/how-it-works">How it works</a>
+        <a routerLink="/examples">Examples</a>
+        <a routerLink="/ai-headshot-generator">AI headshot generator</a>
+        <a routerLink="/pricing" [queryParams]="getQueryParamsForHref('/pricing')">Pricing</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="btn btn-secondary" routerLink="/auth/login">Login</a>
+        <a
+          class="btn btn-primary"
+          routerLink="/auth/register"
+          (click)="onCtaClick('nav_primary', 'Get your headshot in minutes', '/auth/register')">
+          Get your headshot in minutes
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="content-container hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow" *ngIf="currentPage.hero.eyebrow">{{ currentPage.hero.eyebrow }}</p>
+          <h1>{{ currentPage.h1 }}</h1>
+          <p class="subhead">{{ currentPage.hero.subhead }}</p>
+          <div class="cta-row">
+            <a
+              class="btn btn-primary"
+              [routerLink]="currentPage.hero.ctaHref"
+              [queryParams]="getQueryParamsForHref(currentPage.hero.ctaHref)"
+              (click)="onCtaClick('hero_primary', currentPage.hero.ctaLabel, currentPage.hero.ctaHref)">
+              {{ currentPage.hero.ctaLabel }}
+            </a>
+            <a
+              *ngIf="currentPage.hero.secondaryCtaLabel"
+              class="btn btn-secondary"
+              [routerLink]="currentPage.hero.secondaryCtaHref"
+              [queryParams]="getQueryParamsForHref(currentPage.hero.secondaryCtaHref)"
+              (click)="
+                onCtaClick('hero_secondary', currentPage.hero.secondaryCtaLabel, currentPage.hero.secondaryCtaHref)
+              ">
+              {{ currentPage.hero.secondaryCtaLabel }}
+            </a>
+          </div>
+        </div>
+        <div class="hero-panel">
+          <div class="panel-card">
+            <p class="panel-title">At a glance</p>
+            <div class="panel-highlights" *ngIf="currentPage.highlights?.length; else heroSummary">
+              <div class="highlight" *ngFor="let highlight of currentPage.highlights">
+                <div class="highlight-value">{{ highlight.value }}</div>
+                <div class="highlight-label">{{ highlight.label }}</div>
+              </div>
+            </div>
+            <ng-template #heroSummary>
+              <p class="panel-summary">{{ currentPage.description }}</p>
+            </ng-template>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page-section" *ngFor="let section of currentPage.sections">
+      <div class="content-container">
+        <div class="section-header">
+          <h2>{{ section.title }}</h2>
+          <p *ngIf="section.intro">{{ section.intro }}</p>
+        </div>
+
+        <div [ngSwitch]="section.type">
+          <ng-container *ngSwitchCase="'steps'">
+            <div class="steps-grid" *ngIf="isStepsSection(section)">
+              <div class="step-card" *ngFor="let item of section.items; let index = index">
+                <div class="step-number">{{ index + 1 }}</div>
+                <h3>{{ item.title }}</h3>
+                <p>{{ item.description }}</p>
+              </div>
+            </div>
+          </ng-container>
+
+          <ng-container *ngSwitchCase="'cards'">
+            <div class="cards-grid" *ngIf="isCardsSection(section)">
+              <div class="card" *ngFor="let item of section.items">
+                <h3>{{ item.title }}</h3>
+                <p>{{ item.description }}</p>
+              </div>
+            </div>
+          </ng-container>
+
+          <ng-container *ngSwitchCase="'bullets'">
+            <div class="bullet-grid" *ngIf="isBulletsSection(section)">
+              <ul>
+                <li *ngFor="let item of section.items">{{ item }}</li>
+              </ul>
+            </div>
+          </ng-container>
+
+          <ng-container *ngSwitchCase="'showcase'">
+            <div class="showcase-grid" *ngIf="isShowcaseSection(section)">
+              <div class="showcase-item" *ngFor="let item of section.items">
+                <div class="showcase-visual">
+                  <div class="before">Before</div>
+                  <div class="after">After</div>
+                </div>
+                <h3>{{ item.title }}</h3>
+                <p>{{ item.description }}</p>
+              </div>
+            </div>
+          </ng-container>
+
+          <ng-container *ngSwitchCase="'testimonials'">
+            <div class="testimonials-grid" *ngIf="isTestimonialsSection(section)">
+              <div class="testimonial-card" *ngFor="let item of section.items">
+                <p class="quote">"{{ item.quote }}"</p>
+                <div class="author">
+                  <span class="name">{{ item.name }}</span>
+                  <span class="role">{{ item.role }}</span>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+
+          <ng-container *ngSwitchCase="'comparison'">
+            <div class="comparison-table" *ngIf="isComparisonSection(section)">
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th></th>
+                      <th *ngFor="let column of section.columns">{{ column }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let row of section.rows">
+                      <td class="row-label">{{ row.label }}</td>
+                      <td *ngFor="let value of row.values">{{ value }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="comparison-note" *ngIf="section.note">{{ section.note }}</p>
+            </div>
+          </ng-container>
+
+          <ng-container *ngSwitchCase="'faq'">
+            <div class="faq-grid" *ngIf="isFaqSection(section)">
+              <details class="faq-item" *ngFor="let item of section.items">
+                <summary>{{ item.question }}</summary>
+                <p>{{ item.answer }}</p>
+              </details>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </section>
+
+    <section class="page-section" *ngIf="currentPage.relatedLinks?.length">
+      <div class="content-container">
+        <div class="section-header">
+          <h2>Related pages</h2>
+          <p>Explore more ways to get the right headshot for your goals.</p>
+        </div>
+        <div class="related-grid">
+          <a
+            class="related-card"
+            *ngFor="let link of currentPage.relatedLinks"
+            [routerLink]="link.href"
+            [queryParams]="getQueryParamsForHref(link.href)">
+            <span>{{ link.label }}</span>
+            <span class="arrow">→</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-section">
+      <div class="content-container cta-card">
+        <div>
+          <h2>{{ currentPage.cta.title }}</h2>
+          <p>{{ currentPage.cta.description }}</p>
+        </div>
+        <a
+          class="btn btn-primary"
+          [routerLink]="currentPage.cta.href"
+          [queryParams]="getQueryParamsForHref(currentPage.cta.href)"
+          (click)="onCtaClick('footer_primary', currentPage.cta.label, currentPage.cta.href)">
+          {{ currentPage.cta.label }}
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="seo-footer">
+    <div class="content-container footer-content">
+      <div class="footer-brand">
+        <img src="/assets/Logo.PNG" alt="AI Profile Photo Maker" />
+        <div>
+          <strong>AI Profile Photo Maker</strong>
+          <p>Studio-quality headshots in minutes.</p>
+        </div>
+      </div>
+      <div class="footer-links">
+        <a routerLink="/pricing" [queryParams]="getQueryParamsForHref('/pricing')">Pricing</a>
+        <a routerLink="/legal/privacy">Privacy</a>
+        <a routerLink="/legal/terms">Terms</a>
+        <a routerLink="/legal/security">Security</a>
+      </div>
+    </div>
+  </footer>
+</div>
