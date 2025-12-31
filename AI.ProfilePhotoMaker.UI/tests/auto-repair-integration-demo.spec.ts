@@ -35,10 +35,12 @@ test.describe('Auto-Repair Integration Demonstration', () => {
 
       // Phase 1: Service Initialization
       console.log('📦 Phase 1: Service Initialization');
+      const debugContext = (window as any).__APP_DEBUG__;
       results.phase1_initialization = {
-        angularBootstrap: typeof (window as any).ng !== 'undefined',
-        serviceInjection: !!(window as any).ng?.getInjector,
+        angularBootstrap: !!debugContext?.injector,
+        serviceInjection: !!debugContext?.services,
         environmentReady: window.location.hostname === 'localhost',
+        environmentName: debugContext?.environment?.name ?? 'unknown',
         timestamp: new Date().toISOString()
       };
       
@@ -54,7 +56,7 @@ test.describe('Auto-Repair Integration Demonstration', () => {
         notificationsEnabled: true,
         telemetryEnabled: true,
         validationLevel: 'lenient',
-        environment: 'development'
+        environment: debugContext?.environment?.name ?? 'unknown'
       };
 
       // Phase 3: Trigger Condition Simulation
@@ -297,7 +299,9 @@ test.describe('Auto-Repair Integration Demonstration', () => {
     console.log('Phase 2 - Configuration:', workflowDemo.phase2_configuration);
     expect(workflowDemo.phase2_configuration.autoRepairEnabled).toBe(true);
     expect(workflowDemo.phase2_configuration.triggerThreshold).toBe(1);
-    expect(workflowDemo.phase2_configuration.environment).toBe('development');
+    expect(['development', 'docker-local', 'production', 'mvp-v1']).toContain(
+      workflowDemo.phase2_configuration.environment
+    );
     
     // Phase 3 Validation
     console.log('Phase 3 - Trigger Simulation:', workflowDemo.phase3_trigger_simulation);

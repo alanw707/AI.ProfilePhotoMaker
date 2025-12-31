@@ -4,6 +4,7 @@ import { LoginComponent } from './auth/login/login.component';
 import { RegisterComponent } from './auth/register/register.component';
 import { guestGuard } from './guards/guest.guard';
 import { AppGuard } from './guards/app.guard';
+import { seoPages } from './pages/marketing/seo-pages.data';
 
 export const routes: Routes = [
   // Home/Landing Page - Main entry point
@@ -146,7 +147,8 @@ export const routes: Routes = [
       },
       {
         path: 'support',
-        loadComponent: () => import('./pages/support/support.component').then(m => m.SupportComponent),
+        loadComponent: () =>
+          import('./pages/support/support.component').then(m => m.SupportComponent),
         title: 'Support - AI Profile Photo Maker',
         data: {
           breadcrumb: 'Support',
@@ -189,6 +191,92 @@ export const routes: Routes = [
   },
 
   // Public Marketing Pages
+  {
+    path: 'how-it-works',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['how-it-works'].title,
+    data: {
+      seoPage: seoPages['how-it-works'],
+    },
+  },
+  {
+    path: 'examples',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['examples'].title,
+    data: {
+      seoPage: seoPages['examples'],
+    },
+  },
+  {
+    path: 'free-headshot-enhancer',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['free-headshot-enhancer'].title,
+    data: {
+      seoPage: seoPages['free-headshot-enhancer'],
+    },
+  },
+  {
+    path: 'ai-headshot-generator',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['ai-headshot-generator'].title,
+    data: {
+      seoPage: seoPages['ai-headshot-generator'],
+    },
+  },
+  {
+    path: 'linkedin-headshots',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['linkedin-headshots'].title,
+    data: {
+      seoPage: seoPages['linkedin-headshots'],
+    },
+  },
+  {
+    path: 'professional-headshots',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['professional-headshots'].title,
+    data: {
+      seoPage: seoPages['professional-headshots'],
+    },
+  },
+  {
+    path: 'headshots-for-job-search',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['headshots-for-job-search'].title,
+    data: {
+      seoPage: seoPages['headshots-for-job-search'],
+    },
+  },
+  {
+    path: 'compare',
+    children: [
+      {
+        path: 'aragon-ai',
+        loadComponent: () =>
+          import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+        title: seoPages['compare-aragon-ai'].title,
+        data: {
+          seoPage: seoPages['compare-aragon-ai'],
+        },
+      },
+      {
+        path: 'headshotpro',
+        loadComponent: () =>
+          import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+        title: seoPages['compare-headshotpro'].title,
+        data: {
+          seoPage: seoPages['compare-headshotpro'],
+        },
+      },
+    ],
+  },
   {
     path: 'pricing',
     loadComponent: () => import('./pages/premium/premium.component').then(m => m.PremiumComponent),
@@ -247,7 +335,9 @@ export const routes: Routes = [
       {
         path: 'subprocessors',
         loadComponent: () =>
-          import('./pages/subprocessors/subprocessors.component').then(m => m.SubprocessorsComponent),
+          import('./pages/subprocessors/subprocessors.component').then(
+            m => m.SubprocessorsComponent
+          ),
         title: 'Subprocessors - AI Profile Photo Maker',
       },
       {
@@ -311,27 +401,11 @@ export const routes: Routes = [
   // SEO-friendly feature routes
   {
     path: 'features',
-    loadComponent: () => import('./pages/landing/landing.component').then(m => m.LandingComponent),
-    title: 'Features - AI Profile Photo Maker',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['features'].title,
     data: {
-      scrollTo: 'features',
-      meta: {
-        description:
-          'Discover powerful AI features that transform your photos into professional headshots instantly.',
-        keywords: 'AI photo features, professional headshot generator, photo enhancement AI',
-      },
-    },
-  },
-  {
-    path: 'examples',
-    loadComponent: () => import('./pages/landing/landing.component').then(m => m.LandingComponent),
-    title: 'Examples - AI Profile Photo Maker',
-    data: {
-      scrollTo: 'examples',
-      meta: {
-        description: 'See amazing before and after examples of AI-transformed profile photos.',
-        keywords: 'AI photo examples, before after photos, professional headshot gallery',
-      },
+      seoPage: seoPages['features'],
     },
   },
 
@@ -342,14 +416,10 @@ export const routes: Routes = [
       {
         path: '',
         loadComponent: () =>
-          import('./pages/landing/landing.component').then(m => m.LandingComponent),
-        title: 'Help & FAQ - AI Profile Photo Maker',
+          import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+        title: seoPages['help'].title,
         data: {
-          scrollTo: 'faq',
-          meta: {
-            description: 'Get answers to frequently asked questions about AI Profile Photo Maker.',
-            keywords: 'AI photo help, FAQ, support, how to use',
-          },
+          seoPage: seoPages['help'],
         },
       },
       {

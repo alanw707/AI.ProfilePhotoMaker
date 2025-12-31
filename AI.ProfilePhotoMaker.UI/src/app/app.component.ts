@@ -38,13 +38,11 @@ export class AppComponent implements OnInit {
     this._handleOAuthCallback();
 
     // Probe session only when navigating to protected routes
-    this._router.events
-      .pipe(filter(e => e instanceof NavigationEnd))
-      .subscribe(e => {
-        const navigation = e as NavigationEnd;
-        this._authService.probeSessionForUrl(navigation.urlAfterRedirects);
-        this._updateCanonicalUrl(navigation.urlAfterRedirects);
-      });
+    this._router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(e => {
+      const navigation = e as NavigationEnd;
+      this._authService.probeSessionForUrl(navigation.urlAfterRedirects);
+      this._updateCanonicalUrl(navigation.urlAfterRedirects);
+    });
   }
 
   private _handleOAuthCallback(): void {
@@ -52,7 +50,10 @@ export class AppComponent implements OnInit {
     const token = urlParams.get('token');
     const host = window.location.hostname || '';
     const isDevLikeOrigin =
-      host.includes('localhost') || host.includes('127.0.0.1') || host.includes('ngrok') || environment.name === 'docker-local';
+      host.includes('localhost') ||
+      host.includes('127.0.0.1') ||
+      host.includes('ngrok') ||
+      environment.name === 'docker-local';
     const shouldHandleToken = !!token && isDevLikeOrigin;
 
     if (shouldHandleToken) {
@@ -79,7 +80,8 @@ export class AppComponent implements OnInit {
 
   private _updateCanonicalUrl(url: string): void {
     const origin = this._document.location?.origin ?? window.location.origin;
-    const canonicalUrl = new URL(url, origin);
+    const canonicalBase = environment.production ? 'https://app.aiprofilephotomaker.com' : origin;
+    const canonicalUrl = new URL(url, canonicalBase);
     canonicalUrl.search = '';
     canonicalUrl.hash = '';
 

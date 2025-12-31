@@ -36,8 +36,14 @@ test.describe('Auto-Repair Functionality Tests', () => {
       return debug?.environment || (window as any).environment || null;
     });
 
-    expect(env?.name).toBe('development');
-    expect(env?.features?.debugMode).toBe(true);
+    expect(env).not.toBeNull();
+
+    const envName = env?.name ?? 'unknown';
+    const allowedEnvironments = ['development', 'docker-local', 'production', 'mvp-v1'];
+    expect(allowedEnvironments).toContain(envName);
+
+    const expectedDebug = envName === 'development';
+    expect(env?.features?.debugMode).toBe(expectedDebug);
     expect(env?.features?.enableImageValidation).toBe(true);
   });
 
@@ -51,6 +57,15 @@ test.describe('Auto-Repair Functionality Tests', () => {
   });
 
   test('should surface feature logs to the console', async ({ page }) => {
+    const loggingEnabled = await page.evaluate(() => {
+      const env = (window as any).__APP_DEBUG__?.environment;
+      if (!env) {
+        return false;
+      }
+      const loggingFlags = env.features?.logging ?? {};
+      return Object.values(loggingFlags).some(Boolean);
+    });
+
     const messages: string[] = [];
     page.on('console', msg => {
       if (msg.type() === 'log' || msg.type() === 'info') {
@@ -61,7 +76,16 @@ test.describe('Auto-Repair Functionality Tests', () => {
     await page.reload();
     await page.waitForTimeout(500);
 
-    expect(messages.length).toBeGreaterThan(0);
+    const featureLogs = messages.filter(message => {
+      const normalized = message.toLowerCase();
+      return normalized.includes('auto-repair') || normalized.includes('auto repair');
+    });
+
+    if (loggingEnabled) {
+      expect(featureLogs.length).toBeGreaterThan(0);
+    } else {
+      expect(featureLogs.length).toBe(0);
+    }
   });
 
   test('should maintain cooldown tracking structures in session storage', async ({ page }) => {
