@@ -1,7 +1,7 @@
 # Tech-Spec: SEO Marketing Pages UI Unification & Navigation
 
 **Created:** 2025-12-30
-**Status:** In Progress
+**Status:** Complete
 
 ## Overview
 
@@ -146,6 +146,10 @@ Out of scope:
 - Added header accessibility polish (outside click/focus/escape close; focus-visible states; aria attributes).
 - Docker-first local validation rule captured in `AGENTS.md`.
 - Docker rebuild + local Playwright run completed; 11 passed, 10 skipped, 3 failed in `tests/e2e` (footer section lookup + 2 auth-dependent tests).
+
+## Progress Update (2026-01-04)
+
+- Marked tech spec complete after PR merge and QA confirmation.
 
 ## Dev Agent Record
 
