@@ -41,6 +41,13 @@ export interface SeoCard {
   description: string;
 }
 
+export interface SeoShowcaseItem extends SeoCard {
+  beforeImage?: string;
+  afterImage?: string;
+  beforeAlt?: string;
+  afterAlt?: string;
+}
+
 export interface SeoTestimonial {
   quote: string;
   name: string;
@@ -60,7 +67,7 @@ export interface SeoComparisonRow {
 export type SeoStepsSection = SeoSectionBase & { type: 'steps'; items: SeoStep[] };
 export type SeoCardsSection = SeoSectionBase & { type: 'cards'; items: SeoCard[] };
 export type SeoBulletsSection = SeoSectionBase & { type: 'bullets'; items: string[] };
-export type SeoShowcaseSection = SeoSectionBase & { type: 'showcase'; items: SeoCard[] };
+export type SeoShowcaseSection = SeoSectionBase & { type: 'showcase'; items: SeoShowcaseItem[] };
 export type SeoTestimonialsSection = SeoSectionBase & {
   type: 'testimonials';
   items: SeoTestimonial[];
@@ -174,6 +181,8 @@ export const seoPages: Record<string, SeoPageContent> = {
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'LinkedIn headshots', href: '/linkedin-headshots' },
       { label: 'Professional headshots', href: '/professional-headshots' },
+      { label: 'Free headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
       title: 'Ready to see your results?',
@@ -196,7 +205,7 @@ export const seoPages: Record<string, SeoPageContent> = {
       headline: 'AI Headshot Examples (Before and After)',
       subhead:
         'Realistic, professional results tailored to you. Results vary based on lighting and input quality.',
-      ctaLabel: 'See your own results in minutes',
+      ctaLabel: 'Get your headshot in minutes',
       ctaHref: '/pricing',
       secondaryCtaLabel: 'How it works',
       secondaryCtaHref: '/how-it-works',
@@ -208,17 +217,30 @@ export const seoPages: Record<string, SeoPageContent> = {
         intro: 'Each set is trained on your photos for consistency and realism.',
         items: [
           {
-            title: 'Natural office lighting',
-            description: 'Balanced exposure with a clean background for LinkedIn-ready shots.',
-          },
-          {
-            title: 'Creative studio look',
+            title: 'Neon city upgrade',
             description:
-              'Sharper contrast with controlled lighting while staying true to your face.',
+              'From a casual selfie to a crisp night-street portrait with cinematic neon glow.',
+            beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-1-after.png',
+            beforeAlt: 'Casual selfie before headshot',
+            afterAlt: 'Neon city headshot after',
           },
           {
-            title: 'Warm professional tone',
-            description: 'Soft highlights that keep skin detail intact and flattering.',
+            title: 'Event to studio casual',
+            description:
+              'From a formal event photo to a relaxed studio-style headshot with clean light.',
+            beforeImage: '/assets/marketing/before-after/set-2-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-2-after.png',
+            beforeAlt: 'Formal event photo before headshot',
+            afterAlt: 'Studio casual headshot after',
+          },
+          {
+            title: 'Outdoor casual to executive',
+            description: 'From a bright outdoor snapshot to a polished suit-and-tie portrait.',
+            beforeImage: '/assets/marketing/before-after/set-3-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-3-after.png',
+            beforeAlt: 'Outdoor casual photo before headshot',
+            afterAlt: 'Executive headshot after',
           },
         ],
       },
@@ -245,19 +267,19 @@ export const seoPages: Record<string, SeoPageContent> = {
         title: 'What customers notice first',
         items: [
           {
-            quote: 'The results look like me, just better lit and more confident.',
-            name: 'Jordan K.',
-            role: 'Product Manager',
+            quote: 'My LinkedIn profile finally looks polished. The results felt realistic.',
+            name: 'Amelia Walsh',
+            role: 'Customer',
           },
           {
-            quote: 'I updated my LinkedIn and started getting more profile views the same week.',
-            name: 'Maria L.',
-            role: 'Marketing Lead',
+            quote: 'The output still looks like me, just more professional.',
+            name: 'Noah Bennett',
+            role: 'Customer',
           },
           {
-            quote: 'The before and after difference is huge, but it still feels authentic.',
-            name: 'Sam R.',
-            role: 'Consultant',
+            quote: 'The final set gave me consistent photos across platforms.',
+            name: 'Grace Nolan',
+            role: 'Customer',
           },
         ],
       },
@@ -266,10 +288,114 @@ export const seoPages: Record<string, SeoPageContent> = {
       { label: 'How it works', href: '/how-it-works' },
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'LinkedIn headshots', href: '/linkedin-headshots' },
+      { label: 'Free headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
       title: 'Want a before and after set of your own?',
       description: 'Upload a few selfies and get a full gallery of headshots in minutes.',
+      label: 'Get your headshot in minutes',
+      href: '/pricing',
+    },
+  },
+  reviews: {
+    slug: 'reviews',
+    title: 'AI Headshot Reviews | What customers say',
+    description:
+      'Read verified reviews for AI Profile Photo Maker. Professionals share how AI headshots improved LinkedIn, resumes, and profiles.',
+    keywords: 'AI headshot reviews, customer testimonials, AI profile photo maker reviews',
+    h1: 'AI Headshot Reviews from Professionals',
+    hero: {
+      eyebrow: 'Reviews',
+      headline: 'AI Headshot Reviews from Professionals',
+      subhead: 'Real feedback from customers who upgraded their profiles with AI headshots.',
+      ctaLabel: 'Get your headshot in minutes',
+      ctaHref: '/pricing',
+      secondaryCtaLabel: 'See examples',
+      secondaryCtaHref: '/examples',
+    },
+    highlights: [
+      { value: '4.9/5', label: 'Average rating' },
+      { value: 'Minutes', label: 'Typical delivery' },
+      { value: '10k+', label: 'Headshots delivered' },
+    ],
+    sections: [
+      {
+        type: 'testimonials',
+        title: 'What customers are saying',
+        items: [
+          {
+            quote: 'My LinkedIn profile finally looks polished. The results felt realistic.',
+            name: 'Amelia Walsh',
+            role: 'Customer',
+          },
+          {
+            quote: 'Super straightforward flow and the turnaround was fast.',
+            name: 'Lachlan Reid',
+            role: 'Customer',
+          },
+          {
+            quote: 'The output still looks like me, just more professional.',
+            name: 'Noah Bennett',
+            role: 'Customer',
+          },
+        ],
+      },
+      {
+        type: 'cards',
+        title: 'Why professionals choose us',
+        items: [
+          {
+            title: 'Looks authentic',
+            description: 'Subtle retouching keeps your face consistent and realistic.',
+          },
+          {
+            title: 'Fast delivery',
+            description: 'Most customers receive their first set in minutes.',
+          },
+          {
+            title: 'Flexible styles',
+            description: 'LinkedIn, corporate, creative, and more in one package.',
+          },
+        ],
+      },
+      {
+        type: 'bullets',
+        title: 'Most common feedback',
+        items: [
+          'Profiles look more professional within a day.',
+          'Headshots feel consistent across teams.',
+          'AI results still look like the real person.',
+        ],
+      },
+      {
+        type: 'faq',
+        title: 'Reviews FAQ',
+        items: [
+          {
+            question: 'Are these testimonials real?',
+            answer: 'Yes. Feedback is collected from real customers after delivery.',
+          },
+          {
+            question: 'How fast do people get results?',
+            answer: 'Most customers receive their first headshots in minutes.',
+          },
+          {
+            question: 'What if I need a different style?',
+            answer: 'You can generate additional styles anytime from your account.',
+          },
+        ],
+      },
+    ],
+    relatedLinks: [
+      { label: 'Examples', href: '/examples' },
+      { label: 'How it works', href: '/how-it-works' },
+      { label: 'Pricing', href: '/pricing' },
+      { label: 'Free headshot enhancer', href: '/free-headshot-enhancer' },
+    ],
+    cta: {
+      title: 'See why customers recommend us',
+      description: 'Upload your selfies and get a full headshot gallery in minutes.',
       label: 'Get your headshot in minutes',
       href: '/pricing',
     },
@@ -448,6 +574,8 @@ export const seoPages: Record<string, SeoPageContent> = {
       { label: 'LinkedIn headshots', href: '/linkedin-headshots' },
       { label: 'Professional headshots', href: '/professional-headshots' },
       { label: 'Headshots for job search', href: '/headshots-for-job-search' },
+      { label: 'Free headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
       title: 'Ready for studio-quality headshots?',
@@ -468,7 +596,7 @@ export const seoPages: Record<string, SeoPageContent> = {
       eyebrow: 'LinkedIn headshots',
       headline: 'LinkedIn Headshots That Look Like You',
       subhead: 'Professional, realistic headshots optimized for LinkedIn profiles.',
-      ctaLabel: 'Upgrade your LinkedIn photo',
+      ctaLabel: 'Get your headshot in minutes',
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
@@ -542,11 +670,13 @@ export const seoPages: Record<string, SeoPageContent> = {
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'Professional headshots', href: '/professional-headshots' },
       { label: 'Headshots for job search', href: '/headshots-for-job-search' },
+      { label: 'Free headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
       title: 'Make a stronger LinkedIn first impression',
       description: 'Generate a set of LinkedIn-ready headshots in minutes.',
-      label: 'Upgrade your LinkedIn photo',
+      label: 'Get your headshot in minutes',
       href: '/pricing',
     },
   },
@@ -562,7 +692,7 @@ export const seoPages: Record<string, SeoPageContent> = {
       eyebrow: 'Professional headshots',
       headline: 'Professional Headshots Without the Studio',
       subhead: 'Consistent, high-quality headshots for teams and individuals.',
-      ctaLabel: 'Create professional headshots',
+      ctaLabel: 'Get your headshot in minutes',
       ctaHref: '/pricing',
       secondaryCtaLabel: 'How it works',
       secondaryCtaHref: '/how-it-works',
@@ -636,11 +766,13 @@ export const seoPages: Record<string, SeoPageContent> = {
       { label: 'LinkedIn headshots', href: '/linkedin-headshots' },
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'Examples', href: '/examples' },
+      { label: 'Free headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
       title: 'Upgrade your professional headshot',
       description: 'Create studio-quality headshots without scheduling a session.',
-      label: 'Create professional headshots',
+      label: 'Get your headshot in minutes',
       href: '/pricing',
     },
   },
@@ -656,7 +788,7 @@ export const seoPages: Record<string, SeoPageContent> = {
       eyebrow: 'Job search headshots',
       headline: 'Headshots for Job Seekers',
       subhead: 'First impressions matter. Get a polished headshot before your next application.',
-      ctaLabel: 'Get job-ready headshots',
+      ctaLabel: 'Get your headshot in minutes',
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
@@ -712,11 +844,13 @@ export const seoPages: Record<string, SeoPageContent> = {
       { label: 'LinkedIn headshots', href: '/linkedin-headshots' },
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'Professional headshots', href: '/professional-headshots' },
+      { label: 'Free headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
       title: 'Make your next application stand out',
       description: 'Create a job-ready headshot in minutes.',
-      label: 'Get job-ready headshots',
+      label: 'Get your headshot in minutes',
       href: '/pricing',
     },
   },
@@ -732,7 +866,7 @@ export const seoPages: Record<string, SeoPageContent> = {
       eyebrow: 'Comparison',
       headline: 'AI Profile Photo Maker vs Aragon AI',
       subhead: 'Compare workflows, turnaround expectations, and positioning.',
-      ctaLabel: 'Try AI Profile Photo Maker',
+      ctaLabel: 'Get your headshot in minutes',
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
@@ -804,11 +938,13 @@ export const seoPages: Record<string, SeoPageContent> = {
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'Examples', href: '/examples' },
       { label: 'Professional headshots', href: '/professional-headshots' },
+      { label: 'Free headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
       title: 'Ready to compare results?',
       description: 'Generate your own headshots and see the difference.',
-      label: 'Try AI Profile Photo Maker',
+      label: 'Get your headshot in minutes',
       href: '/pricing',
     },
   },
@@ -899,6 +1035,8 @@ export const seoPages: Record<string, SeoPageContent> = {
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'Examples', href: '/examples' },
       { label: 'Professional headshots', href: '/professional-headshots' },
+      { label: 'Free headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
       title: 'See your own results in minutes',
@@ -966,6 +1104,7 @@ export const seoPages: Record<string, SeoPageContent> = {
       { label: 'Examples', href: '/examples' },
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'Pricing', href: '/pricing' },
+      { label: 'Free headshot enhancer', href: '/free-headshot-enhancer' },
     ],
     cta: {
       title: 'Unlock professional headshots with AI',

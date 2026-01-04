@@ -148,6 +148,10 @@ export class AuthService {
     }
   }
 
+  public hasVerifiedSession(): boolean {
+    return this._sessionProbed;
+  }
+
   private _isProtectedPath(path: string): boolean {
     return path.startsWith('/app') || path.startsWith('/account') || path.startsWith('/admin');
   }
@@ -731,7 +735,11 @@ export class AuthService {
     return user !== null && !!(user.email || user.firstName || user.lastName);
   }
 
-  public updateCachedUserProfile(update: { firstName?: string; lastName?: string; email?: string }): void {
+  public updateCachedUserProfile(update: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  }): void {
     try {
       const current = this.getCurrentUser() || this._currentUserSubject.value;
       const base: AuthResponseDto = {
@@ -885,13 +893,19 @@ export class AuthService {
   }
 
   devConfirmEmail(): Observable<AccountStatusResponse> {
-    return this._http.post<AccountStatusResponse>(this._config.buildApiEndpoint('auth/dev/confirm-email'), {});
+    return this._http.post<AccountStatusResponse>(
+      this._config.buildApiEndpoint('auth/dev/confirm-email'),
+      {}
+    );
   }
 
   confirmEmail(userId: string, token: string): Observable<AccountStatusResponse> {
-    return this._http.post<AccountStatusResponse>(this._config.buildApiEndpoint('auth/confirm-email'), {
-      userId,
-      token,
-    });
+    return this._http.post<AccountStatusResponse>(
+      this._config.buildApiEndpoint('auth/confirm-email'),
+      {
+        userId,
+        token,
+      }
+    );
   }
 }

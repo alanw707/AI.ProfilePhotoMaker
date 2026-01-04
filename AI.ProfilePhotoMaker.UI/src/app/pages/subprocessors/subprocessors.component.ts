@@ -2,18 +2,19 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
+import { MarketingFooterComponent } from '../../shared/marketing-footer/marketing-footer.component';
 
 @Component({
   selector: 'app-subprocessors',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, MarketingFooterComponent],
   template: `
-    <div class="min-h-screen bg-gray-50 py-12">
-      <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
-        <h1 class="text-4xl font-bold text-gray-900 mb-8">Subprocessors</h1>
+    <div class="marketing-legal">
+      <div class="legal-container">
+        <h1 class="legal-title">Subprocessors</h1>
 
-        <div class="bg-white rounded-lg shadow-sm p-8 prose prose-gray max-w-none">
-          <p class="text-gray-600 mb-6">Last updated: December 20, 2025</p>
+        <div class="legal-card legal-prose">
+          <p class="legal-updated">Last updated: December 20, 2025</p>
 
           <p>
             This list covers third-party service providers that process data on our behalf. Some
@@ -65,8 +66,7 @@ import { Meta, Title } from '@angular/platform-browser';
 
           <p>
             Each provider may retain data as needed to provide their services or comply with legal
-            and security obligations. Their retention practices are governed by their own
-            policies.
+            and security obligations. Their retention practices are governed by their own policies.
           </p>
 
           <p>
@@ -74,13 +74,12 @@ import { Meta, Title } from '@angular/platform-browser';
           </p>
         </div>
 
-        <div class="mt-8 text-center">
-          <a routerLink="/legal/privacy" class="text-primary-600 hover:text-primary-700 font-medium"
-            >← Back to Privacy Policy</a
-          >
+        <div class="legal-footer-link">
+          <a routerLink="/legal/privacy" class="legal-link">← Back to Privacy Policy</a>
         </div>
       </div>
     </div>
+    <app-marketing-footer></app-marketing-footer>
   `,
   styles: [],
 })

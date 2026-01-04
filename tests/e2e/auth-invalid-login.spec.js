@@ -6,6 +6,7 @@
  */
 
 const { test, expect } = require('@playwright/test');
+const { buildAppUrl } = require('./setup/app-url');
 
 test.describe('Auth invalid login', () => {
   test.setTimeout(60000);
@@ -15,7 +16,7 @@ test.describe('Auth invalid login', () => {
     const email = `nonexistent+${timestamp}@example.com`;
     const password = 'Test1234!';
 
-    await page.goto('/auth/login');
+    await page.goto(buildAppUrl('/auth/login'));
     await expect(page.getByRole('heading', { name: /Sign In/i })).toBeVisible();
 
     await page.fill('#email', email);

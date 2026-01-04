@@ -9,6 +9,7 @@
  */
 
 const { test, expect } = require('@playwright/test');
+const { buildAppUrl } = require('./setup/app-url');
 
 const stubPackages = [
   {
@@ -33,7 +34,7 @@ test.describe('Pricing purchase scroll', () => {
   test('scrolls to billing form when selecting a package without submitting payment', async ({ page }) => {
     await stubPricingApis(page);
 
-    await page.goto('/pricing');
+    await page.goto(buildAppUrl('/pricing'));
     await expect(page.locator('.packages-grid')).toBeVisible();
 
     const purchaseButtons = page.locator('.package-card button.purchase-btn');

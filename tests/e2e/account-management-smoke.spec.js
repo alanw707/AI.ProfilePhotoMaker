@@ -12,6 +12,13 @@ const { test, expect } = require('@playwright/test');
 const path = require('path');
 
 const apiBaseUrl = process.env.TEST_API_URL || 'http://localhost:5032';
+const appBaseUrl = process.env.TEST_BASE_URL || 'http://localhost:4200';
+const appBaseUrlRoot = appBaseUrl.replace(/\/+$/, '');
+
+function buildAppUrl(pathname) {
+  const normalized = pathname.startsWith('/') ? pathname : `/${pathname}`;
+  return `${appBaseUrlRoot}${normalized}`;
+}
 
 async function confirmEmailForTest(page) {
   const response = await page.request.post(`${apiBaseUrl}/api/auth/dev/confirm-email`, {
@@ -32,7 +39,7 @@ test.describe('Account management smoke', () => {
     const testImagePath = path.join(__dirname, 'test-images', 'sample-selfie.jpg');
 
     // Register
-    await page.goto('/auth/register');
+    await page.goto(buildAppUrl('/auth/register'));
     await expect(page.getByRole('heading', { name: /Create Account/i })).toBeVisible();
     const acceptCookies = page.getByRole('button', { name: /Accept All/i });
     if (await acceptCookies.isVisible()) {
@@ -50,7 +57,7 @@ test.describe('Account management smoke', () => {
     await page.click('button[type="submit"]');
     await page.waitForURL('**/auth/verify-email', { timeout: 30000 });
     await confirmEmailForTest(page);
-    await page.goto('/app/dashboard');
+    await page.goto(buildAppUrl('/app/dashboard'));
     await page.waitForURL('**/app/**', { timeout: 30000 });
 
     // Upload 1 image so "Delete Input Photos" is actionable.
@@ -63,7 +70,7 @@ test.describe('Account management smoke', () => {
     // If local storage upload isn't wired in this environment, continue with the rest of Settings checks.
 
     // Go to Settings
-    await page.goto('/app/settings');
+    await page.goto(buildAppUrl('/app/settings'));
     await expect(page.getByRole('heading', { name: /Account Settings/i })).toBeVisible();
 
     // Edit Profile (simple authenticated flow)
@@ -88,7 +95,7 @@ test.describe('Account management smoke', () => {
     await page.waitForURL('**/app/**', { timeout: 30000 });
 
     // Continue with Settings checks
-    await page.goto('/app/settings');
+    await page.goto(buildAppUrl('/app/settings'));
     await expect(page.getByRole('heading', { name: /Account Settings/i })).toBeVisible();
 
     // Export Data (download)

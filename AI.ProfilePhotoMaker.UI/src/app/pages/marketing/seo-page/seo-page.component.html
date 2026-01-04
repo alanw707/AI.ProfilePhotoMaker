@@ -1,27 +1,5 @@
 <div class="seo-page" *ngIf="page as currentPage">
-  <header class="seo-header">
-    <div class="nav-content">
-      <a class="logo" routerLink="/" aria-label="AI Profile Photo Maker home">
-        <img src="/assets/Logo.PNG" alt="AI Profile Photo Maker" />
-        <span>AI Profile Photo Maker</span>
-      </a>
-      <nav class="nav-links" aria-label="Primary">
-        <a routerLink="/how-it-works">How it works</a>
-        <a routerLink="/examples">Examples</a>
-        <a routerLink="/ai-headshot-generator">AI headshot generator</a>
-        <a routerLink="/pricing" [queryParams]="getQueryParamsForHref('/pricing')">Pricing</a>
-      </nav>
-      <div class="nav-actions">
-        <a class="btn btn-secondary" routerLink="/auth/login">Login</a>
-        <a
-          class="btn btn-primary"
-          routerLink="/auth/register"
-          (click)="onCtaClick('nav_primary', 'Get your headshot in minutes', '/auth/register')">
-          Get your headshot in minutes
-        </a>
-      </div>
-    </div>
-  </header>
+  <app-marketing-header [queryParams]="utmParams"></app-marketing-header>
 
   <main>
     <section class="hero">
@@ -47,6 +25,14 @@
                 onCtaClick('hero_secondary', currentPage.hero.secondaryCtaLabel, currentPage.hero.secondaryCtaHref)
               ">
               {{ currentPage.hero.secondaryCtaLabel }}
+            </a>
+            <a
+              *ngIf="currentPage.slug !== 'free-headshot-enhancer'"
+              class="btn btn-secondary"
+              [routerLink]="'/free-headshot-enhancer'"
+              [queryParams]="getQueryParamsForHref('/free-headshot-enhancer')"
+              (click)="onCtaClick('hero_free_enhancer', 'Try free enhancer', '/free-headshot-enhancer')">
+              Try free enhancer
             </a>
           </div>
         </div>
@@ -106,8 +92,41 @@
             <div class="showcase-grid" *ngIf="isShowcaseSection(section)">
               <div class="showcase-item" *ngFor="let item of section.items">
                 <div class="showcase-visual">
-                  <div class="before">Before</div>
-                  <div class="after">After</div>
+                  <div class="visual-card before">
+                    <ng-container *ngIf="item.beforeImage; else beforePlaceholder">
+                      <img
+                        class="visual-photo"
+                        [src]="item.beforeImage"
+                        [alt]="item.beforeAlt || item.title + ' before headshot'"
+                        loading="lazy"
+                        decoding="async" />
+                    </ng-container>
+                    <ng-template #beforePlaceholder>
+                      <div class="portrait-frame">
+                        <div class="portrait-head"></div>
+                        <div class="portrait-shoulders"></div>
+                      </div>
+                    </ng-template>
+                    <span>Before</span>
+                  </div>
+                  <div class="visual-card after">
+                    <ng-container *ngIf="item.afterImage; else afterPlaceholder">
+                      <img
+                        class="visual-photo"
+                        [src]="item.afterImage"
+                        [alt]="item.afterAlt || item.title + ' after headshot'"
+                        loading="lazy"
+                        decoding="async" />
+                    </ng-container>
+                    <ng-template #afterPlaceholder>
+                      <div class="portrait-frame">
+                        <div class="portrait-glow"></div>
+                        <div class="portrait-head"></div>
+                        <div class="portrait-shoulders"></div>
+                      </div>
+                    </ng-template>
+                    <span>After</span>
+                  </div>
                 </div>
                 <h3>{{ item.title }}</h3>
                 <p>{{ item.description }}</p>
@@ -158,6 +177,15 @@
             </div>
           </ng-container>
         </div>
+        <div class="section-cta" *ngIf="currentPage.slug !== 'free-headshot-enhancer'">
+          <a
+            class="btn btn-secondary"
+            [routerLink]="'/free-headshot-enhancer'"
+            [queryParams]="getQueryParamsForHref('/free-headshot-enhancer')"
+            (click)="onCtaClick('section_free_enhancer', 'Try free enhancer', '/free-headshot-enhancer')">
+            Try free enhancer
+          </a>
+        </div>
       </div>
     </section>
 
@@ -197,21 +225,5 @@
     </section>
   </main>
 
-  <footer class="seo-footer">
-    <div class="content-container footer-content">
-      <div class="footer-brand">
-        <img src="/assets/Logo.PNG" alt="AI Profile Photo Maker" />
-        <div>
-          <strong>AI Profile Photo Maker</strong>
-          <p>Studio-quality headshots in minutes.</p>
-        </div>
-      </div>
-      <div class="footer-links">
-        <a routerLink="/pricing" [queryParams]="getQueryParamsForHref('/pricing')">Pricing</a>
-        <a routerLink="/legal/privacy">Privacy</a>
-        <a routerLink="/legal/terms">Terms</a>
-        <a routerLink="/legal/security">Security</a>
-      </div>
-    </div>
-  </footer>
+  <app-marketing-footer></app-marketing-footer>
 </div>

@@ -12,6 +12,10 @@
 /AI.ProfilePhotoMaker.API.Tests/obj/Release/net8.0
 /AI.ProfilePhotoMaker.API.Tests/obj/Debug/net8.0
 
+# Windows metadata files
+*.Zone.Identifier
+*:Zone.Identifier
+
 # Security & Environment files
 *.env
 .env*

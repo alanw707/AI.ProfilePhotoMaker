@@ -63,6 +63,7 @@
   --card-bg: #ffffff
   --input-bg: #ffffff
   --header-bg: rgba(233, 236, 239, 0.95)
+  --marketing-header-height: 80px
   --hover-bg: rgba(0, 0, 0, 0.03)
   
   // Component backgrounds - Sophisticated darker neutral palette
@@ -198,6 +199,107 @@ h1
 
 h2
   font-size: 2rem
+
+// Marketing legal pages (privacy, terms, policies)
+.marketing-legal
+  min-height: 100vh
+  background: var(--bg-primary)
+  color: var(--text-primary)
+  padding: 72px 0 96px
+
+.legal-container
+  @include shared.content-container
+  max-width: 900px
+
+.legal-title
+  font-size: 2.5rem
+  font-weight: 700
+  margin-bottom: 32px
+  color: var(--text-primary)
+
+.legal-card
+  @include shared.card-base
+  padding: 32px
+  background: var(--card-bg)
+  box-shadow: var(--shadow-md)
+
+.legal-prose
+  color: var(--text-secondary)
+  line-height: 1.7
+
+  p
+    margin-bottom: 16px
+
+  ul,
+  ol
+    margin: 0 0 20px 20px
+
+  li
+    margin-bottom: 10px
+
+  h2
+    font-size: 1.5rem
+    margin: 28px 0 12px
+    color: var(--text-primary)
+
+  h3
+    font-size: 1.2rem
+    margin: 24px 0 10px
+    color: var(--text-primary)
+
+  a
+    color: var(--accent-primary)
+    text-decoration: none
+
+    &:hover
+      color: var(--primary-dark)
+      text-decoration: underline
+
+  strong
+    color: var(--text-primary)
+
+  table
+    width: 100%
+    border-collapse: collapse
+    margin: 16px 0 24px
+
+  th,
+  td
+    border: 1px solid var(--border-color)
+    padding: 12px
+    text-align: left
+
+  th
+    color: var(--text-primary)
+    background: var(--hover-bg)
+
+.legal-updated
+  font-size: 0.95rem
+  color: var(--text-tertiary)
+  margin-bottom: 24px
+
+.legal-footer-link
+  margin-top: 32px
+  text-align: center
+
+.legal-link
+  color: var(--accent-primary)
+  font-weight: 600
+  text-decoration: none
+
+  &:hover
+    color: var(--primary-dark)
+    text-decoration: underline
+
+@media (max-width: 640px)
+  .marketing-legal
+    padding: 56px 0 72px
+
+  .legal-title
+    font-size: 2rem
+
+  .legal-card
+    padding: 24px
 
 h3
   font-size: 1.75rem
@@ -436,15 +538,15 @@ html[data-theme="dark"] .landing-page .bg-white.shadow-lg,
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important
 
 // DARK THEME - Button text overrides
-html[data-theme="dark"] button,
-html[data-theme="dark"] .landing-page button,
-[data-theme="dark"] button
+html[data-theme="dark"] button:not(.btn):not(.nav-link),
+html[data-theme="dark"] .landing-page button:not(.btn):not(.nav-link),
+[data-theme="dark"] button:not(.btn):not(.nav-link)
   color: inherit !important
 
 // DARK THEME - Navigation links with improved contrast
-html[data-theme="dark"] a,
-html[data-theme="dark"] .landing-page a,
-[data-theme="dark"] a
+html[data-theme="dark"] a:not(.btn):not(.nav-link),
+html[data-theme="dark"] .landing-page a:not(.btn):not(.nav-link),
+[data-theme="dark"] a:not(.btn):not(.nav-link)
   color: #e2e8f0 !important
   
   &:hover
@@ -461,12 +563,23 @@ html[data-theme="dark"] .landing-page svg,
 .bg-primary-600,
 html .btn-primary,
 html .bg-primary-600
-  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--primary-hover) 100%) !important
-  color: white !important
-  border: none !important
+  background: var(--primary) !important
+  color: #ffffff !important
+  border: 1px solid var(--primary) !important
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18) !important
   
   &:hover
-    background: linear-gradient(135deg, var(--primary-hover) 0%, var(--accent-primary) 100%) !important
+    background: var(--primary-dark) !important
+    border-color: var(--primary-dark) !important
+    color: #ffffff !important
+    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.22) !important
+
+html[data-theme="dark"] .btn-primary,
+[data-theme="dark"] .btn-primary
+  color: #ffffff !important
+
+  &:hover
+    color: #ffffff !important
 
 // LIGHT THEME - Ensure proper button visibility
 html:not([data-theme="dark"]) .btn-secondary,
@@ -492,11 +605,11 @@ html[data-theme="dark"] .landing-page .btn-secondary,
     background: rgba(51, 65, 85, 0.9) !important
     border-color: #4fd1c7 !important
 
-a
+a:not(.btn):not(.nav-link)
   color: var(--accent-secondary)
   text-decoration: none
   transition: color 0.3s ease
-
+  
   &:hover
     color: var(--accent-primary)
 
@@ -518,4 +631,3 @@ input, textarea, select
   
   &:hover svg
     transform: rotate(180deg)
-
