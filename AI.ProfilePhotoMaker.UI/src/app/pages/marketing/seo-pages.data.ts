@@ -875,36 +875,46 @@ export const seoPages: Record<string, SeoPageContent> = {
       {
         type: 'comparison',
         title: 'Quick comparison',
-        columns: ['AI Profile Photo Maker', 'Aragon AI (verify current details)'],
+        columns: ['AI Profile Photo Maker', 'Aragon AI'],
         rows: [
           {
             label: 'Workflow',
-            values: ['Upload selfies, pick styles, download fast', 'Check current onboarding flow'],
+            values: [
+              'Upload selfies, pick styles, download fast',
+              'Upload photos, select attire/backgrounds, download',
+            ],
           },
           {
             label: 'Turnaround expectations',
-            values: ['Minutes after upload for most users', 'Check current delivery estimates'],
+            values: ['Minutes after upload for most users', '45 mins (Basic), 30 mins (Standard), 15 mins (Executive)'],
           },
           {
-            label: 'Pricing model',
+            label: 'Pricing & packages',
             values: [
               'Credits and packages with clear options',
-              'Verify pricing tiers on provider site',
+              'Basic $35 (40 headshots), Standard $45 (60), Executive $75 (100)',
             ],
           },
           {
-            label: 'Style control',
-            values: ['Style presets with previews', 'Check available style options'],
-          },
-          {
-            label: 'Privacy controls',
+            label: 'Outfit variety (style-driven)',
             values: [
-              'User-managed deletions and retention policies',
-              'Review data retention policies',
+              'Preset styles define outfit/background combinations (no direct selection)',
+              '1 attire (Basic), 2 attires (Standard), all attires (Executive)',
             ],
+          },
+          {
+            label: 'Background variety (style-driven)',
+            values: [
+              'Preset styles define outfit/background combinations (no direct selection)',
+              '1 background (Basic), 2 backgrounds (Standard), all backgrounds (Executive)',
+            ],
+          },
+          {
+            label: 'Resolution',
+            values: ['High-resolution downloads', 'Standard resolution (Basic/Standard), enhanced (Executive)'],
           },
         ],
-        note: 'Pricing and features change. Verify on the Aragon AI site before publishing or purchasing.',
+        note: 'Pricing and features change; verify before publishing or purchasing.',
       },
       {
         type: 'cards',
@@ -969,39 +979,52 @@ export const seoPages: Record<string, SeoPageContent> = {
       {
         type: 'comparison',
         title: 'Quick comparison',
-        columns: ['AI Profile Photo Maker', 'HeadshotPro (verify current details)'],
+        columns: ['AI Profile Photo Maker', 'HeadshotPro'],
         rows: [
           {
             label: 'Setup steps',
             values: [
               'Upload selfies, select styles, download results',
-              'Check current onboarding steps',
+              'Upload photos, choose style options, download favorites',
             ],
           },
           {
-            label: 'Output style',
-            values: ['Realistic, LinkedIn-ready headshots', 'Review current style and positioning'],
-          },
-          {
-            label: 'Pricing model',
+            label: 'Pricing & packages',
             values: [
               'Credits and packages with clear options',
-              'Verify pricing tiers on provider site',
+              'Basic $29 (40 headshots), Professional $39 (80), Executive $59 (120)',
             ],
           },
           {
             label: 'Turnaround expectations',
-            values: ['Minutes after upload for most users', 'Check current delivery estimates'],
+            values: [
+              'Minutes after upload for most users',
+              '4 hours (Basic), 2 hours (Professional), 1 hour (Executive)',
+            ],
           },
           {
-            label: 'Team use',
+            label: 'Style variations (backdrops & outfits)',
             values: [
-              'Individuals and teams with consistent styling',
-              'Review team offering details',
+              'Preset styles set backdrops/outfits (no direct selection)',
+              '4 / 8 / 12 backdrop + outfit combos; Basic uses preselected combos, Pro/Exec add hundreds of styles',
+            ],
+          },
+          {
+            label: 'Resolution & edits',
+            values: [
+              'High-resolution downloads with consistent styling',
+              'Standard (Basic); Premium + 10 edit credits (Professional); 4K + 40 edit credits + print-ready (Executive)',
+            ],
+          },
+          {
+            label: 'Data retention',
+            values: [
+              'User-managed deletions and retention policies',
+              'Input photos deleted after 7 days; AI headshots deleted after 30 days; delete sooner in settings',
             ],
           },
         ],
-        note: 'Pricing and features change. Verify on the HeadshotPro site before publishing or purchasing.',
+        note: 'Pricing and features change; verify before publishing or purchasing.',
       },
       {
         type: 'cards',
