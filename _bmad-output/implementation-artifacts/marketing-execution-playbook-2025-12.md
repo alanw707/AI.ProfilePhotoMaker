@@ -1,11 +1,14 @@
-# Marketing Execution Playbook: Quick Wins + SEO Foundation
+# Marketing Execution Playbook: Advertising Channels
 
 **Date:** 2025-12-25
 **Owner:** Alan
 **Status:** Implementation Complete
 
 ## Purpose
-Single source of truth for immediate social traction (quick wins) while SEO foundation compounds in parallel.
+Single source of truth for acquisition channels (organic + paid) that drive signups and paid conversions.
+
+## Scope
+This playbook focuses on advertising channels only. Marketing pages and SEO are handled in a separate branch.
 
 ## Consolidated Sources
 This playbook consolidates and supersedes:
@@ -15,22 +18,20 @@ This playbook consolidates and supersedes:
 - `_bmad-output/implementation-artifacts/social-quick-win-content-kit.md`
 - `_bmad-output/implementation-artifacts/social-quick-win-day1-checklist.md`
 - `_bmad-output/implementation-artifacts/social-quick-win-first-5-posts.md`
-- `_bmad-output/planning-artifacts/launch-seo-strategy-brief-2025-12-25.md`
-- `_bmad-output/planning-artifacts/content-outlines-seo-pillars-2025-12-25.md`
-- `_bmad-output/planning-artifacts/seo-keyword-page-map-backlog-2025-12-25.md`
 
 ## Decision Lock (Week 1)
 - **Core promise:** Studio-quality headshots in minutes at a fraction of the cost.
 - **Primary CTA:** Get your headshot in minutes.
 - **Default landing page:** `https://app.aiprofilephotomaker.com/pricing`
 - **Campaign slug:** `social-quick-win-2025-12`
-- **Primary persona:** Job seekers and professionals updating LinkedIn.
-- **Secondary personas:** Freelancers, founders, remote workers.
+- **Primary persona:** Job seekers updating LinkedIn.
+- **Secondary personas:** Recruiters, hiring managers, freelancers, founders, remote workers.
 - **Geo focus (Week 1):** Australia.
   - Expand to NZ/US/UK/CA in Week 2 if CPA is acceptable.
 - **Paid budget (Week 1):** $10-$25/day for 7-14 days.
 - **Paid split (Week 1):** LinkedIn 60%, Instagram 40%.
   - Rebalance on Day 7 based on CTR and purchase rate.
+ - **Channel focus (Weeks 1-2):** LinkedIn primary, Instagram secondary, X/Facebook optional, Google Search phase 2.
 
 ## Tracking Standards (Must Follow)
 - **Base URL:** `https://app.aiprofilephotomaker.com/pricing`
@@ -43,7 +44,32 @@ This playbook consolidates and supersedes:
 - **Homepage test:** If CR is weak after Day 3, test homepage for 3 days.
   - Use `utm_content` suffix `-home`.
 
-## Quick Wins Sprint (Days 0-14)
+## Channel Playbooks
+
+### LinkedIn (Primary)
+- **Organic cadence:** 4-5 posts/week (promise, testimonial, before/after, founder angle, workflow).
+- **Paid objective:** Website conversions (or traffic if conversions not active).
+- **Targeting:** Job seekers, open-to-work, career development interests, plus role/industry segments.
+- **Creative:** Single image or carousel; keep copy short and outcome-focused.
+- **KPI guardrails:** CTR >= 1%, checkout-start >= 3%, purchase >= 1.5%.
+
+### Instagram / Meta (Secondary)
+- **Organic cadence:** 3-4 posts/week + stories; reuse LinkedIn creatives.
+- **Paid objective:** Conversions; start with broad targeting + interest in LinkedIn/job search.
+- **Creative:** Before/after, testimonial, quick 3-step workflow.
+- **KPI guardrails:** CTR >= 1%, checkout-start >= 2.5%, purchase >= 1.2%.
+
+### X and Facebook (Optional)
+- **Organic only at first** unless LinkedIn/IG saturate.
+- **Cross-post** best creatives; keep copy short.
+- **Paid:** Only test if CPM is low and CTR is competitive.
+
+### Google Search (Phase 2)
+- Launch after conversion tracking is stable and landing pages are live.
+- Focus on intent keywords like "AI headshot" and "LinkedIn headshot".
+- Keep budgets small until conversion rate is known.
+
+## Channel Execution Sprint (Days 0-14)
 
 ### Fast-start (next 60-90 minutes)
 - Pick 2 testimonials (or anonymize) and confirm permission.
@@ -52,6 +78,7 @@ This playbook consolidates and supersedes:
 - Draft and schedule Day 1 posts for peak times.
 
 ### Day 1-2 Draft Posts (copy/paste)
+If time-constrained, post only on LinkedIn + Instagram. X/Facebook are optional.
 Use `utm_medium=paid-social` for boosted versions. Replace testimonial names if permission is unclear.
 
 **Day 1 - LinkedIn (Promise card)**
@@ -160,6 +187,7 @@ https://app.aiprofilephotomaker.com/pricing?utm_source=facebook&utm_medium=socia
 - Lock creative template set (see kit below).
 - Create UTM template links for each platform.
 - Verify tracking status (GA4, Meta Pixel, LinkedIn Insight Tag).
+- Confirm ad accounts, payment methods, and pixel events (page_view, checkout_start, purchase).
 
 ### Days 1-3 (Baseline)
 - Publish daily posts across all platforms.
@@ -207,11 +235,11 @@ https://app.aiprofilephotomaker.com/pricing?utm_source=facebook&utm_medium=socia
 - "The output still looks like me, just more professional." - Noah Bennett
 - "The final set gave me consistent photos across platforms." - Grace Nolan
 
-## Paid Boost Plan
-- **Objective:** Conversions if tracking is active, otherwise Traffic.
+## Paid Plan
+- **Objective:** Conversions if tracking is active, otherwise traffic.
 - **Boost candidates:** Best testimonial, best before/after, best value prop.
 - **Targeting:**
-  - LinkedIn: job seekers, open to work, mid-career professionals.
+  - LinkedIn: job seekers, open-to-work, career development + role/industry segments.
   - Instagram: interests in LinkedIn, job search, career growth.
 
 ## Reporting Cadence
