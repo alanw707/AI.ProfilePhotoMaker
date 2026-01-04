@@ -111,11 +111,12 @@ Out of scope (unless explicitly requested):
 - `public/robots.txt` and `src/robots.txt` both exist; unify to avoid deployment ambiguity.
 - Use the playbook CTA: "Get your headshot in minutes."
 
-## Progress Update (2025-12-30)
+## Progress Update (2025-12-31)
 
-- Completed: discovery file alignment, AI indexing files, SEO page data/components, UTM-preserving CTA tracking, canonical alignment for production, and legal page review (no content changes required).
-- Verification: Playwright SEO smoke test added and passing; full UI Playwright suite passing.
-- Next: run `npm run lint` if you want a final quality gate, otherwise ready for final review/release.
+- Completed: static HTML generation for SEO routes (pre-build) to expose correct meta/canonical/JSON-LD for non-JS crawlers; build scripts updated to run the generator.
+- Verification: Playwright SEO smoke suite expanded to validate server-rendered HTML; local and production runs passing.
+- Deployment: PR #267 merged to main and production deploy succeeded.
+- Next: monitor indexing and re-run the production smoke test after cache/CDN churn if needed.
 
 #### Content Drafts (Appendix)
 

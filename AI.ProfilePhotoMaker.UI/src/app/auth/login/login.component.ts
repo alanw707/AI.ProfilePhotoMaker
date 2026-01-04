@@ -3,7 +3,6 @@ import {
   ChangeDetectorRef,
   Component,
   inject,
-  OnDestroy,
   OnInit,
 } from '@angular/core';
 import {
@@ -28,7 +27,7 @@ import { finalize } from 'rxjs';
   styleUrls: ['./login.component.sass'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class LoginComponent implements OnInit, OnDestroy {
+export class LoginComponent implements OnInit {
   loginForm: FormGroup;
   loading = false;
   error = '';
@@ -36,7 +35,6 @@ export class LoginComponent implements OnInit, OnDestroy {
   readonly ageConfirmationMessage = 'Age confirmation is required to sign in.';
   readonly ageConfirmErrorId = 'age-confirmation-error';
   submitAttempted = false;
-  private _authSub?: any;
 
   // Use inject function to reduce constructor parameters
   private readonly _formBuilder = inject(FormBuilder);
@@ -66,17 +64,6 @@ export class LoginComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // 2) Production cookie-session case: proactively probe the session and
-    //    auto-redirect once the guard updates auth state from a valid cookie.
-    //    Without this, users with a valid cookie can get stuck on the login page
-    //    because the initial auth state comes from localStorage only.
-    this._authService.probeSession();
-    this._authSub = this._authService.isAuthenticated$.subscribe(flag => {
-      if (flag) {
-        this._router.navigate([this.returnUrl]);
-      }
-    });
-
     // Handle OAuth callbacks
     this._route.queryParams.subscribe(params => {
       if (this._handleDirectTokenParams(params)) {
@@ -94,13 +81,6 @@ export class LoginComponent implements OnInit, OnDestroy {
         this._cdr.markForCheck();
       }
     });
-  }
-
-  // Ensure we don't leak the subscription
-  ngOnDestroy(): void {
-    if (this._authSub) {
-      this._authSub.unsubscribe?.();
-    }
   }
 
   private _handleDirectTokenParams(params: Record<string, string>): boolean {
@@ -189,10 +169,7 @@ export class LoginComponent implements OnInit, OnDestroy {
 
     // ASP.NET model state validation: { errors: { Field: [msg] } }
     if (error?.error?.errors) {
-      const allErrors = Object.values(error.error.errors)
-        .flat()
-        .filter(Boolean)
-        .join(' ');
+      const allErrors = Object.values(error.error.errors).flat().filter(Boolean).join(' ');
       if (allErrors) {
         return allErrors;
       }
@@ -248,27 +225,27 @@ export class LoginComponent implements OnInit, OnDestroy {
         })
       )
       .subscribe({
-      next: _response => {
-        this._router
-          .navigate([this.returnUrl])
-          .then(success => {
-            if (success === false) {
+        next: _response => {
+          this._router
+            .navigate([this.returnUrl])
+            .then(success => {
+              if (success === false) {
+                this.error = 'Login succeeded, but navigation failed. Please try again.';
+                this._cdr.markForCheck();
+              }
+            })
+            .catch(error => {
+              console.error('Login navigation error:', error);
               this.error = 'Login succeeded, but navigation failed. Please try again.';
               this._cdr.markForCheck();
-            }
-          })
-          .catch(error => {
-            console.error('Login navigation error:', error);
-            this.error = 'Login succeeded, but navigation failed. Please try again.';
-            this._cdr.markForCheck();
-          });
-      },
-      error: error => {
-        console.error('Login error:', error);
-        this.error = this._extractErrorMessage(error);
-        this._cdr.markForCheck();
-      },
-    });
+            });
+        },
+        error: error => {
+          console.error('Login error:', error);
+          this.error = this._extractErrorMessage(error);
+          this._cdr.markForCheck();
+        },
+      });
   }
 
   toggleTheme(): void {

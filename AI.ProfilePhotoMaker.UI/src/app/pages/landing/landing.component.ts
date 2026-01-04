@@ -1,4 +1,11 @@
-import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
@@ -12,6 +19,8 @@ import { ConfigService } from '../../services/config.service';
 import { StylePreviewService } from '../../services/style-preview.service';
 import { AuthService } from '../../services/auth.service';
 import { CookieConsentService } from '../../services/cookie-consent.service';
+import { MarketingHeaderComponent } from '../../shared/marketing-header/marketing-header.component';
+import { MarketingFooterComponent } from '../../shared/marketing-footer/marketing-footer.component';
 
 interface Plan {
   name: string;
@@ -47,7 +56,7 @@ interface StyledPhoto {
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, MarketingHeaderComponent, MarketingFooterComponent],
   templateUrl: './landing.component.html',
   styleUrls: ['./landing.component.sass'],
   animations: [
@@ -66,8 +75,6 @@ interface StyledPhoto {
   ],
 })
 export class LandingComponent implements OnInit, OnDestroy {
-  isScrolled = false;
-  mobileMenuOpen = false;
   isAuthenticated = false;
   currentBeforeAfterIndex = 0;
   currentTestimonialIndex = 0;
@@ -191,7 +198,8 @@ export class LandingComponent implements OnInit, OnDestroy {
     private _styleService: StyleService,
     private _config: ConfigService,
     private _stylePreviewService: StylePreviewService,
-    private _cookieConsentService: CookieConsentService
+    private _cookieConsentService: CookieConsentService,
+    private _cdr: ChangeDetectorRef
   ) {
     this.currentTheme$ = this.themeService.theme$;
     this.setFallbackCreditCosts();
@@ -332,7 +340,8 @@ export class LandingComponent implements OnInit, OnDestroy {
   }
 
   private getTrainingFeature(totalCredits: number): string {
-    const trainingCost = this.modelTrainingCost || this._creditService.getCreditCostSync('model_training');
+    const trainingCost =
+      this.modelTrainingCost || this._creditService.getCreditCostSync('model_training');
     if (totalCredits >= trainingCost) {
       return 'Model training included';
     }
@@ -514,20 +523,6 @@ export class LandingComponent implements OnInit, OnDestroy {
     document.head.appendChild(faqScript);
   }
 
-  @HostListener('window:scroll', [])
-  onWindowScroll(): void {
-    this.isScrolled = window.scrollY > 20;
-  }
-
-  toggleMobileMenu(): void {
-    this.mobileMenuOpen = !this.mobileMenuOpen;
-  }
-
-  logout(): void {
-    this.mobileMenuOpen = false;
-    this._authService.logout('home');
-  }
-
   toggleFAQ(index: number): void {
     this.faqs[index].open = !this.faqs[index].open;
   }
@@ -542,7 +537,9 @@ export class LandingComponent implements OnInit, OnDestroy {
     canonical.setAttribute('href', url);
   }
 
-  private isLandingSection(sectionId: string): sectionId is 'features' | 'examples' | 'pricing' | 'testimonials' | 'faq' {
+  private isLandingSection(
+    sectionId: string
+  ): sectionId is 'features' | 'examples' | 'pricing' | 'testimonials' | 'faq' {
     return ['features', 'examples', 'pricing', 'testimonials', 'faq'].includes(sectionId);
   }
 
@@ -554,13 +551,11 @@ export class LandingComponent implements OnInit, OnDestroy {
       } else {
         void this.navigation.navigateTo('/', { fragment: sectionId });
       }
-      this.mobileMenuOpen = false;
       return;
     }
 
     void this.router.navigate([], { fragment: sectionId, relativeTo: this._route });
     this.navigation.scrollToSection(sectionId);
-    this.mobileMenuOpen = false;
   }
 
   getStarted(): void {
@@ -574,6 +569,10 @@ export class LandingComponent implements OnInit, OnDestroy {
   loadAvailableStyles(): void {
     this.isLoadingStyles = true;
     this.stylesLoadError = false;
+    const finishLoading = () => {
+      this.isLoadingStyles = false;
+      this._cdr.detectChanges();
+    };
 
     this._styleService.getActiveStyles().subscribe({
       next: response => {
@@ -587,14 +586,14 @@ export class LandingComponent implements OnInit, OnDestroy {
           this.createFallbackStyledPhotos();
           this.stylesLoadError = true;
         }
-        this.isLoadingStyles = false;
+        finishLoading();
       },
       error: error => {
         console.error('Error loading styles from database:', error);
         console.log('Falling back to predefined styles');
         this.createFallbackStyledPhotos();
         this.stylesLoadError = true;
-        this.isLoadingStyles = false;
+        finishLoading();
       },
     });
   }
@@ -951,6 +950,13 @@ export class LandingComponent implements OnInit, OnDestroy {
   handleRouteData(): void {
     // Handle route data for scrolling and special views
     this._route.data.subscribe(data => {
+      if (typeof window !== 'undefined') {
+        const hasFragment = !!this._route.snapshot.fragment;
+        const hasScrollTarget = !!data['scrollTo'];
+        if (!hasFragment && !hasScrollTarget) {
+          window.scrollTo({ top: 0, behavior: 'auto' });
+        }
+      }
       if (data['scrollTo']) {
         setTimeout(() => {
           this.scrollToSection(data['scrollTo']);
@@ -971,22 +977,6 @@ export class LandingComponent implements OnInit, OnDestroy {
         }
       }
     });
-  }
-
-  navigateToLogin(): void {
-    if (this.isAuthenticated) {
-      void this.navigation.goToDashboard();
-      return;
-    }
-    void this.navigation.goToLogin();
-  }
-
-  navigateToDashboard(): void {
-    this.navigation.goToDashboard();
-  }
-
-  navigateToPricing(): void {
-    this.navigation.goToPricing();
   }
 
   onImageError(event: Event): void {

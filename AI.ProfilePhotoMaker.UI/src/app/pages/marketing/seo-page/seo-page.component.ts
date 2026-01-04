@@ -4,6 +4,8 @@ import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, ParamMap, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AnalyticsService } from '../../../services/analytics.service';
+import { MarketingFooterComponent } from '../../../shared/marketing-footer/marketing-footer.component';
+import { MarketingHeaderComponent } from '../../../shared/marketing-header/marketing-header.component';
 import {
   SeoBulletsSection,
   SeoCardsSection,
@@ -20,7 +22,7 @@ import {
 @Component({
   selector: 'app-seo-page',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, MarketingHeaderComponent, MarketingFooterComponent],
   templateUrl: './seo-page.component.html',
   styleUrls: ['./seo-page.component.sass'],
 })

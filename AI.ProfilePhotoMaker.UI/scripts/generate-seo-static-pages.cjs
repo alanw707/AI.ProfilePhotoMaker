@@ -13,12 +13,24 @@ const dataPath = path.join(
 );
 const templatePath = path.join(projectRoot, 'src', 'index.html');
 const publicRoot = path.join(projectRoot, 'public');
+const distRoot = path.join(projectRoot, 'dist', 'ai.profile-photo-maker.ui');
+const distBrowserRoot = path.join(distRoot, 'browser');
+const distIndexPath = path.join(distRoot, 'index.html');
+const distBrowserIndexPath = path.join(distBrowserRoot, 'index.html');
 
 const CANONICAL_BASE = 'https://app.aiprofilephotomaker.com';
 const OG_IMAGE = 'https://app.aiprofilephotomaker.com/assets/og-image.svg';
 const TWITTER_IMAGE = 'https://app.aiprofilephotomaker.com/assets/twitter-card.svg';
 
-const template = fs.readFileSync(templatePath, 'utf8');
+const distIndexCandidate = fs.existsSync(distBrowserIndexPath)
+  ? distBrowserIndexPath
+  : distIndexPath;
+const useDistTemplate = fs.existsSync(distIndexCandidate);
+const templateSource = useDistTemplate ? distIndexCandidate : templatePath;
+const template = fs.readFileSync(templateSource, 'utf8');
+const outputRoot = useDistTemplate
+  ? path.dirname(distIndexCandidate)
+  : publicRoot;
 const seoPages = loadSeoPages(dataPath);
 
 Object.values(seoPages).forEach(page => {
@@ -46,23 +58,27 @@ Object.values(seoPages).forEach(page => {
   html = replaceMeta(html, 'property', 'og:image', OG_IMAGE);
   html = replaceMeta(html, 'property', 'og:site_name', 'AI Profile Photo Maker');
 
-  html = replaceMeta(html, 'property', 'twitter:card', 'summary_large_image');
-  html = replaceMeta(html, 'property', 'twitter:title', page.title);
-  html = replaceMeta(html, 'property', 'twitter:description', page.description);
-  html = replaceMeta(html, 'property', 'twitter:image', TWITTER_IMAGE);
-  html = replaceMeta(html, 'property', 'twitter:url', canonicalUrl);
+  html = replaceMeta(html, 'name', 'twitter:card', 'summary_large_image');
+  html = replaceMeta(html, 'name', 'twitter:title', page.title);
+  html = replaceMeta(html, 'name', 'twitter:description', page.description);
+  html = replaceMeta(html, 'name', 'twitter:image', TWITTER_IMAGE);
+  html = replaceMeta(html, 'name', 'twitter:url', canonicalUrl);
   html = replaceMeta(html, 'name', 'twitter:creator', '@aiprofilephoto');
 
   html = replaceCanonical(html, canonicalUrl);
   html = injectStructuredData(html, structuredData, faqStructuredData);
   html = injectStaticBody(html, page.h1, page.description);
+  // Ensure CSS/JS/assets resolve from the site root on /slug refreshes.
+  html = normalizeAssetUrls(html);
 
-  const outputDir = path.join(publicRoot, slug);
+  const outputDir = path.join(outputRoot, slug);
   fs.mkdirSync(outputDir, { recursive: true });
   fs.writeFileSync(path.join(outputDir, 'index.html'), html, 'utf8');
 });
 
-console.log(`Generated ${Object.keys(seoPages).length} SEO static pages.`);
+console.log(
+  `Generated ${Object.keys(seoPages).length} SEO static pages in ${outputRoot}.`
+);
 
 function loadSeoPages(filePath) {
   const source = fs.readFileSync(filePath, 'utf8');
@@ -182,6 +198,13 @@ function injectStaticBody(html, h1, description) {
   const safeDescription = escapeHtml(description);
   const body = `<app-root><main class="seo-static"><h1>${safeH1}</h1><p>${safeDescription}</p></main></app-root>`;
   return html.replace('<app-root></app-root>', body);
+}
+
+function normalizeAssetUrls(html) {
+  return html.replace(
+    /(href|src)="(?!https?:|\/|data:|mailto:|tel:|#)([^"]+)"/g,
+    '$1="/$2"'
+  );
 }
 
 function escapeHtml(value) {

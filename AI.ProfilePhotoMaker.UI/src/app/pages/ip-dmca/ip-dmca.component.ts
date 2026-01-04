@@ -2,26 +2,27 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
+import { MarketingFooterComponent } from '../../shared/marketing-footer/marketing-footer.component';
 
 @Component({
   selector: 'app-ip-dmca',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, MarketingFooterComponent],
   template: `
-    <div class="min-h-screen bg-gray-50 py-12">
-      <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
-        <h1 class="text-4xl font-bold text-gray-900 mb-8">IP / DMCA Policy</h1>
+    <div class="marketing-legal">
+      <div class="legal-container">
+        <h1 class="legal-title">IP / DMCA Policy</h1>
 
-        <div class="bg-white rounded-lg shadow-sm p-8 prose prose-gray max-w-none">
-          <p class="text-gray-600 mb-6">Last updated: December 19, 2025</p>
+        <div class="legal-card legal-prose">
+          <p class="legal-updated">Last updated: December 19, 2025</p>
 
-          <h2 class="text-2xl font-semibold mt-8 mb-4">1. Copyright and IP</h2>
+          <h2>1. Copyright and IP</h2>
           <p>
             You may only upload content that you own or have permission to use. We respect the
             intellectual property rights of others and expect users to do the same.
           </p>
 
-          <h2 class="text-2xl font-semibold mt-8 mb-4">2. Takedown Requests</h2>
+          <h2>2. Takedown Requests</h2>
           <p>
             If you believe content on our service infringes your rights, please contact us with the
             following:
@@ -34,25 +35,22 @@ import { Meta, Title } from '@angular/platform-browser';
             <li>A statement under penalty of perjury that the information is accurate.</li>
           </ul>
 
-          <h2 class="text-2xl font-semibold mt-8 mb-4">3. Counter-Notice</h2>
+          <h2>3. Counter-Notice</h2>
           <p>
             If you believe a takedown was submitted in error, you may send a counter-notice with
             sufficient details and a statement consenting to jurisdiction where applicable.
           </p>
 
-          <h2 class="text-2xl font-semibold mt-8 mb-4">4. Contact</h2>
-          <p>
-            Send IP/DMCA requests to support&#64;aiprofilephotomaker.com.
-          </p>
+          <h2>4. Contact</h2>
+          <p>Send IP/DMCA requests to support&#64;aiprofilephotomaker.com.</p>
         </div>
 
-        <div class="mt-8 text-center">
-          <a routerLink="/" class="text-primary-600 hover:text-primary-700 font-medium"
-            >← Back to Home</a
-          >
+        <div class="legal-footer-link">
+          <a routerLink="/" class="legal-link">← Back to Home</a>
         </div>
       </div>
     </div>
+    <app-marketing-footer></app-marketing-footer>
   `,
   styles: [],
 })

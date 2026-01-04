@@ -1,0 +1,118 @@
+<div class="marketing-header">
+  <div class="menu-overlay" [class.active]="isMobileMenuOpen" (click)="closeMobileMenu()"></div>
+
+  <div class="header-inner">
+    <a class="brand" routerLink="/" (click)="closeAllMenus()" aria-label="AI Profile Photo Maker home">
+      <img src="/assets/Logo.PNG" alt="AI Profile Photo Maker" />
+      <span>AI Profile Photo Maker</span>
+    </a>
+
+    <button
+      class="menu-toggle"
+      type="button"
+      (click)="toggleMobileMenu()"
+      [attr.aria-expanded]="isMobileMenuOpen"
+      aria-controls="marketing-nav"
+      aria-label="Toggle navigation">
+      <span class="toggle-line"></span>
+      <span class="toggle-line"></span>
+      <span class="toggle-line"></span>
+    </button>
+
+    <nav id="marketing-nav" class="nav" [class.open]="isMobileMenuOpen" aria-label="Marketing navigation">
+      <div
+        class="nav-group"
+        [class.open]="isMenuOpen('features')"
+        (mouseenter)="openMenu('features')"
+        (mouseleave)="closeMenu('features')">
+        <button
+          class="nav-link nav-link-button"
+          type="button"
+          (click)="toggleMenu('features')"
+          [attr.aria-expanded]="isMenuOpen('features')"
+          aria-haspopup="true"
+          aria-controls="features-menu">
+          Features
+          <span class="chevron" aria-hidden="true"></span>
+        </button>
+        <div
+          id="features-menu"
+          class="dropdown"
+          [class.open]="isMenuOpen('features')"
+          [attr.aria-hidden]="!isMenuOpen('features')">
+          <a routerLink="/features" (click)="closeAllMenus()">Overview</a>
+          <a routerLink="/how-it-works" (click)="closeAllMenus()">How it works</a>
+          <a routerLink="/examples" (click)="closeAllMenus()">Examples</a>
+          <a routerLink="/ai-headshot-generator" (click)="closeAllMenus()">AI headshot generator</a>
+          <a routerLink="/help" (click)="closeAllMenus()">Help & FAQ</a>
+        </div>
+      </div>
+
+      <div
+        class="nav-group"
+        [class.open]="isMenuOpen('use-cases')"
+        (mouseenter)="openMenu('use-cases')"
+        (mouseleave)="closeMenu('use-cases')">
+        <button
+          class="nav-link nav-link-button"
+          type="button"
+          (click)="toggleMenu('use-cases')"
+          [attr.aria-expanded]="isMenuOpen('use-cases')"
+          aria-haspopup="true"
+          aria-controls="use-cases-menu">
+          Use Cases
+          <span class="chevron" aria-hidden="true"></span>
+        </button>
+        <div
+          id="use-cases-menu"
+          class="dropdown"
+          [class.open]="isMenuOpen('use-cases')"
+          [attr.aria-hidden]="!isMenuOpen('use-cases')">
+          <a routerLink="/linkedin-headshots" (click)="closeAllMenus()">LinkedIn headshots</a>
+          <a routerLink="/professional-headshots" (click)="closeAllMenus()">Professional headshots</a>
+          <a routerLink="/headshots-for-job-search" (click)="closeAllMenus()">Headshots for job search</a>
+          <a routerLink="/free-headshot-enhancer" (click)="closeAllMenus()">Free headshot enhancer</a>
+        </div>
+      </div>
+
+      <div
+        class="nav-group"
+        [class.open]="isMenuOpen('compare')"
+        (mouseenter)="openMenu('compare')"
+        (mouseleave)="closeMenu('compare')">
+        <button
+          class="nav-link nav-link-button"
+          type="button"
+          (click)="toggleMenu('compare')"
+          [attr.aria-expanded]="isMenuOpen('compare')"
+          aria-haspopup="true"
+          aria-controls="compare-menu">
+          Compare
+          <span class="chevron" aria-hidden="true"></span>
+        </button>
+        <div
+          id="compare-menu"
+          class="dropdown"
+          [class.open]="isMenuOpen('compare')"
+          [attr.aria-hidden]="!isMenuOpen('compare')">
+          <a routerLink="/compare/aragon-ai" (click)="closeAllMenus()">Aragon AI</a>
+          <a routerLink="/compare/headshotpro" (click)="closeAllMenus()">HeadshotPro</a>
+        </div>
+      </div>
+
+      <button class="nav-link nav-link-button" type="button" (click)="navigateToPricing()">Pricing</button>
+      <button class="nav-link nav-link-button" type="button" (click)="navigateToReviews()">Reviews</button>
+
+      <ng-container *ngIf="!isAuthenticated; else authenticatedActions">
+        <a class="nav-link ghost" routerLink="/auth/login" (click)="closeAllMenus()">Login</a>
+        <a class="nav-link cta" routerLink="/auth/register" (click)="closeAllMenus()">Get Started</a>
+      </ng-container>
+      <ng-template #authenticatedActions>
+        <button class="nav-link nav-link-button cta" type="button" (click)="navigateToDashboard()">
+          Go to Dashboard
+        </button>
+        <button class="nav-link nav-link-button logout" type="button" (click)="logout()">Logout</button>
+      </ng-template>
+    </nav>
+  </div>
+</div>

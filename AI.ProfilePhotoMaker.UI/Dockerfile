@@ -35,7 +35,7 @@ RUN echo 'server { \
     \
     # Angular SPA fallback \
     location / { \
-        try_files $uri $uri/ /index.html; \
+        try_files $uri $uri/index.html /index.html; \
         add_header X-Frame-Options "SAMEORIGIN" always; \
         add_header X-Content-Type-Options "nosniff" always; \
     } \

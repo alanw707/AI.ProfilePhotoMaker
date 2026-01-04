@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  inject,
+  OnInit,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -22,7 +28,8 @@ export class VerifyEmailComponent implements OnInit {
   error = '';
   readonly showDevBypass =
     !environment.production &&
-    (window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1'));
+    (window.location.hostname.includes('localhost') ||
+      window.location.hostname.includes('127.0.0.1'));
 
   private readonly _authService = inject(AuthService);
   private readonly _route = inject(ActivatedRoute);
@@ -41,6 +48,15 @@ export class VerifyEmailComponent implements OnInit {
     this.isLoading = true;
     this.error = '';
     this._cdr.markForCheck();
+
+    if (!this._authService.isAuthenticated()) {
+      this.isLoading = false;
+      if (!this.message) {
+        this.message = 'Please sign in to continue.';
+      }
+      this._cdr.markForCheck();
+      return;
+    }
 
     this._authService
       .getAccountStatus()
@@ -99,7 +115,8 @@ export class VerifyEmailComponent implements OnInit {
           if (response?.success) {
             this.message = 'Verification email sent. Please check your inbox (and spam).';
           } else {
-            this.error = response?.error?.message || 'Failed to send verification email. Please try again.';
+            this.error =
+              response?.error?.message || 'Failed to send verification email. Please try again.';
           }
         },
         error: err => {

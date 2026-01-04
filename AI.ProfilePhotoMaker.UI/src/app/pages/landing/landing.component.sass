@@ -260,6 +260,10 @@ html
   background: var(--bg-primary)
   color: var(--text-primary)
   transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  pointer-events: none
+
+  > *
+    pointer-events: auto
   
   // Professional light theme container
   :root:not([data-theme="dark"]) &
@@ -458,12 +462,12 @@ header
 // Enhanced Badge Animation
 .hero-badge-container
   position: absolute
-  top: calc(4rem + 3rem) // Header height (py-4/py-6) + extra safe spacing
+  top: 0
   left: 0
   right: 0
   width: 100%
   animation: fade-in-up 1s ease-out
-  z-index: 40 // Below header (z-50) but above content
+  z-index: 40 // Below header (z-60) but above content
 
   .hero-badge
     position: relative
@@ -486,7 +490,8 @@ header
       opacity: 0
       animation: badge-glow 3s ease-in-out infinite
       z-index: -1
-      
+      pointer-events: none
+
     .badge-icon
       font-size: 1.2rem
       margin-right: 8px
@@ -509,6 +514,7 @@ header
       height: 100%
       background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)
       animation: shimmer 2.5s ease-in-out infinite
+      pointer-events: none
 
 // Enhanced Headline Animation
 .hero-headline
@@ -1281,6 +1287,7 @@ header
 .hero-section
   background: var(--hero-bg)
   position: relative
+  pointer-events: none !important
   
   // Dark theme sophisticated gradient
   [data-theme="dark"] &
@@ -1300,6 +1307,13 @@ header
   
   .bg-secondary-200  
     background: rgba(var(--primary-rgb), 0.15)
+
+  .container
+    pointer-events: none !important
+
+    a,
+    button
+      pointer-events: auto !important
 
 // =============================================================================
 // CARD THEMING & ENHANCEMENTS
@@ -1630,19 +1644,6 @@ header
   // Dark theme testimonials section  
   [data-theme="dark"] &
     background: var(--bg-gradient)
-
-// Footer with professional dark gray background
-.landing-footer
-  background: var(--footer-bg)
-  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)
-  
-  // Light theme professional dark gray instead of harsh black
-  :root:not([data-theme="dark"]) &
-    background: var(--footer-bg)
-  
-  // Dark theme footer (can be same or darker)
-  [data-theme="dark"] &
-    background: #1a1d23
 
 // =============================================================================
 // MOBILE MENU THEMING - Glass morphism instead of harsh white

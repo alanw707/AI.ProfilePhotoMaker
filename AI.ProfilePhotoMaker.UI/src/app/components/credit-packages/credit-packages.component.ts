@@ -15,6 +15,7 @@ import {
   PaymentConfig,
   UserCreditStatus,
 } from '../../services/credit.service';
+import { AuthService } from '../../services/auth.service';
 import { NotificationService } from '../../services/notification.service';
 import { ThemeService } from '../../services/theme.service';
 import { Subscription } from 'rxjs';
@@ -55,6 +56,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
   packages: CreditPackage[] = [];
   userCreditStatus: UserCreditStatus | null = null;
   paymentConfig: PaymentConfig | null = null;
+  isAuthenticated = false;
 
   isLoadingPackages = true;
   isLoadingStatus = false;
@@ -81,14 +83,17 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
   private _stripePublishableKey: string | null = null;
   private readonly _emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   private readonly _countryCodePattern = /^[A-Za-z]{2}$/;
+  private _hasLoadedStatus = false;
 
   private _themeSubscription: Subscription | null = null;
+  private _authSubscription: Subscription | null = null;
   private _stripe: Stripe | null = null;
   private _stripeElements: StripeElements | null = null;
   private _stripeCardElement: StripeCardElement | null = null;
 
   constructor(
     private _creditService: CreditService,
+    private _authService: AuthService,
     private _notificationService: NotificationService,
     private _themeService: ThemeService,
     private _cdr: ChangeDetectorRef
@@ -102,14 +107,29 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
       });
     });
 
+    this._authSubscription = this._authService.isAuthenticated$.subscribe(isAuth => {
+      this.isAuthenticated = isAuth;
+      if (isAuth && !this._hasLoadedStatus && this._shouldLoadStatusOnInit()) {
+        this._hasLoadedStatus = true;
+        this.loadCreditStatus();
+      }
+      if (!isAuth) {
+        this.userCreditStatus = null;
+        this.isLoadingStatus = false;
+      }
+      this._cdr.markForCheck();
+    });
+
     this.loadPackages();
-    this.loadCreditStatus();
     this.loadPaymentConfig();
   }
 
   ngOnDestroy(): void {
     if (this._themeSubscription) {
       this._themeSubscription.unsubscribe();
+    }
+    if (this._authSubscription) {
+      this._authSubscription.unsubscribe();
     }
 
     this._clearPendingPaymentWatch();
@@ -198,6 +218,10 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
   }
 
   loadCreditStatus(): void {
+    if (!this.isAuthenticated) {
+      this.isLoadingStatus = false;
+      return;
+    }
     this.isLoadingStatus = true;
     this._creditService.getCreditStatus().subscribe({
       next: response => {
@@ -712,6 +736,11 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
       return 'Best value for content creators and businesses';
     }
     return '';
+  }
+
+  private _shouldLoadStatusOnInit(): boolean {
+    const path = window.location.pathname || '';
+    return path.startsWith('/app') || path.startsWith('/account') || path.startsWith('/admin');
   }
 
   getCreditsPerDollar(pkg: CreditPackage): number {

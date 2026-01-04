@@ -10,6 +10,7 @@
 
 ## Build, Test, and Development Commands
 - Full stack: `./dev-start.sh` (SQL Server, API on 5032, UI on 4200), `./dev-stop.sh`, and `./dev-test.sh` for smoke checks. Use `./dev-rebuild.sh [--api-only|--ui-only]` to rebuild and restart dev services without touching containers.
+- Docker-first local validation: use `./dev-start.sh --docker` to rebuild/recreate the API + UI containers (plus dependencies) and test against `http://localhost:4200`/`http://localhost:5032`. Avoid `dev-rebuild.sh`/`ui-start.sh` when the intention is to validate the Dockerized stack.
 - API: `dotnet build AI.ProfilePhotoMaker.sln`, then `dotnet run --project AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj` (or `cd AI.ProfilePhotoMaker.API && dotnet run`). Execute `dotnet test AI.ProfilePhotoMaker.API.Tests` for automated coverage. API release validation lives in `AI.ProfilePhotoMaker.API/tests/playwright` (`npm install` then `npx playwright test`).
 - UI: From `AI.ProfilePhotoMaker.UI/`, run `npm run dev:local` for UI-only dev, or `npm run dev:fullstack:local` to proxy to the API. Build with `npm run build` or `npm run build:dev`. Karma/Jasmine unit tests via `npm test`, broader integration suites with `npm run test:integration`, and Playwright coverage through `npm run playwright:install && npm run test:e2e` (variants exist for chrome/mobile/debug).
 - Ops scripts: `scripts/api-start.sh`, `scripts/ui-start.sh`, deployment validation helpers (`scripts/validate-*.sh`), and container tooling support day-to-day workflows.

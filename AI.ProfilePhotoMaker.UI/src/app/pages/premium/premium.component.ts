@@ -1,30 +1,31 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
 import { AuthService } from '../../services/auth.service';
 
-import { HeaderNavigationComponent } from '../../shared/header-navigation/header-navigation.component';
+import { MarketingHeaderComponent } from '../../shared/marketing-header/marketing-header.component';
 import { CreditPackagesComponent } from '../../components/credit-packages/credit-packages.component';
 import { CreditService, UserCreditStatus } from '../../services/credit.service';
 import { NotificationService } from '../../services/notification.service';
 import { LoggingService } from '../../services/logging.service';
+import { NavigationService } from '../../services/navigation.service';
 
 @Component({
   selector: 'app-premium',
   standalone: true,
-  imports: [CommonModule, RouterModule, HeaderNavigationComponent, CreditPackagesComponent],
+  imports: [CommonModule, RouterModule, MarketingHeaderComponent, CreditPackagesComponent],
   template: `
     <div class="premium-page-container">
       <!-- Shared Header Navigation -->
-      <app-header-navigation></app-header-navigation>
+      <app-marketing-header></app-marketing-header>
 
       <!-- Main Premium Content -->
       <main class="premium-main">
         <div class="premium-content">
           <!-- Hero Section -->
           <section class="hero-section">
-            <div class="hero-content">
+            <div class="hero-content content-container">
               <h1>AI Headshot Pricing Plans</h1>
               <p class="hero-subtitle">
                 Create stunning, personalized profile photos with our advanced AI technology. Train
@@ -69,53 +70,59 @@ import { LoggingService } from '../../services/logging.service';
 
           <!-- Credit Packages Section -->
           <section id="packages-section" class="packages-section">
-            <p class="text-center text-sm text-gray-600 mb-6">
-              14-day satisfaction guarantee —
-              <a routerLink="/legal/refund-policy" class="text-primary-600 hover:underline"
-                >see Refund Policy</a
-              >
-            </p>
-            <app-credit-packages (packagePurchased)="onCreditPackagePurchased($event)">
-            </app-credit-packages>
+            <div class="content-container">
+              <p class="text-center text-sm text-gray-600 mb-6">
+                14-day satisfaction guarantee —
+                <a routerLink="/legal/refund-policy" class="text-primary-600 hover:underline"
+                  >see Refund Policy</a
+                >
+              </p>
+              <app-credit-packages (packagePurchased)="onCreditPackagePurchased($event)">
+              </app-credit-packages>
+            </div>
           </section>
 
           <!-- Divider -->
-          <div class="section-divider"></div>
+          <div class="content-container">
+            <div class="section-divider"></div>
+          </div>
 
           <!-- How It Works Section -->
           <section class="how-it-works-section">
-            <div class="section-header">
-              <h2>How It Works</h2>
-              <p>Get professional AI photos in just 4 simple steps</p>
-            </div>
+            <div class="content-container">
+              <div class="section-header">
+                <h2>How It Works</h2>
+                <p>Get professional AI photos in just 4 simple steps</p>
+              </div>
 
-            <div class="steps-grid">
-              <div class="step-item">
-                <div class="step-number">1</div>
-                <div class="step-content">
-                  <h3>Upload Photos</h3>
-                  <p>Upload 10-20 high-quality selfies for the best AI training results</p>
+              <div class="steps-grid">
+                <div class="step-item">
+                  <div class="step-number">1</div>
+                  <div class="step-content">
+                    <h3>Upload Photos</h3>
+                    <p>Upload 10-20 high-quality selfies for the best AI training results</p>
+                  </div>
                 </div>
-              </div>
-              <div class="step-item">
-                <div class="step-number">2</div>
-                <div class="step-content">
-                  <h3>Select Styles</h3>
-                  <p>Choose from professional, creative, casual, and formal photo styles</p>
+                <div class="step-item">
+                  <div class="step-number">2</div>
+                  <div class="step-content">
+                    <h3>Select Styles</h3>
+                    <p>Choose from professional, creative, casual, and formal photo styles</p>
+                  </div>
                 </div>
-              </div>
-              <div class="step-item">
-                <div class="step-number">3</div>
-                <div class="step-content">
-                  <h3>AI Training</h3>
-                  <p>Our AI trains a custom model with your photos (15-25 minutes)</p>
+                <div class="step-item">
+                  <div class="step-number">3</div>
+                  <div class="step-content">
+                    <h3>AI Training</h3>
+                    <p>Our AI trains a custom model with your photos (15-25 minutes)</p>
+                  </div>
                 </div>
-              </div>
-              <div class="step-item">
-                <div class="step-number">4</div>
-                <div class="step-content">
-                  <h3>Download Photos</h3>
-                  <p>Get your professional AI-generated photos ready for use</p>
+                <div class="step-item">
+                  <div class="step-number">4</div>
+                  <div class="step-content">
+                    <h3>Download Photos</h3>
+                    <p>Get your professional AI-generated photos ready for use</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -129,25 +136,48 @@ import { LoggingService } from '../../services/logging.service';
               (userCreditStatus.purchasedCredits > 0 || userCreditStatus.weeklyCredits > 0)
             "
           >
-            <div class="existing-package-card">
-              <div class="package-status">
-                <h3>🎯 You Have Credits Available!</h3>
-                <div class="status-details">
-                  <span class="package-name">Credit Balance</span>
-                  <span class="credits-remaining"
-                    >{{ userCreditStatus.totalCredits }} total credits available</span
-                  >
+            <div class="content-container">
+              <div class="existing-package-card">
+                <div class="package-status">
+                  <h3>🎯 You Have Credits Available!</h3>
+                  <div class="status-details">
+                    <span class="package-name">Credit Balance</span>
+                    <span class="credits-remaining"
+                      >{{ userCreditStatus.totalCredits }} total credits available</span
+                    >
+                  </div>
                 </div>
+                <button class="btn btn-primary" routerLink="/app/dashboard">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <rect x="3" y="3" width="7" height="9" stroke="currentColor" stroke-width="2" />
+                    <rect
+                      x="13"
+                      y="3"
+                      width="8"
+                      height="5"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <rect
+                      x="13"
+                      y="12"
+                      width="8"
+                      height="9"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                    <rect
+                      x="3"
+                      y="16"
+                      width="7"
+                      height="5"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                  </svg>
+                  Go to Studio
+                </button>
               </div>
-              <button class="btn btn-primary" routerLink="/app/dashboard">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <rect x="3" y="3" width="7" height="9" stroke="currentColor" stroke-width="2" />
-                  <rect x="13" y="3" width="8" height="5" stroke="currentColor" stroke-width="2" />
-                  <rect x="13" y="12" width="8" height="9" stroke="currentColor" stroke-width="2" />
-                  <rect x="3" y="16" width="7" height="5" stroke="currentColor" stroke-width="2" />
-                </svg>
-                Go to Studio
-              </button>
             </div>
           </section>
         </div>
@@ -183,15 +213,22 @@ export class PremiumComponent implements OnInit, OnDestroy {
     private notificationService: NotificationService,
     private logging: LoggingService,
     private meta: Meta,
-    private title: Title
+    private title: Title,
+    private route: ActivatedRoute,
+    private navigationService: NavigationService
   ) {}
 
   ngOnInit() {
     this.logging.debug('Premium page initialized');
+    this.route.fragment.subscribe(fragment => {
+      if (fragment) {
+        setTimeout(() => this.navigationService.scrollToSection(fragment, 120), 200);
+      }
+    });
     this.setupSEO();
 
-    // Only load credit status if authenticated
-    if (this.authService.isAuthenticated()) {
+    // Only load credit status after a verified session to avoid anonymous 401s
+    if (this.authService.isAuthenticated() && this.authService.hasVerifiedSession()) {
       this.loadCreditStatus();
     }
   }
@@ -275,8 +312,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
     });
     this.meta.updateTag({
       name: 'twitter:description',
-      content:
-        'Compare AI headshot pricing plans with custom model training and premium styles.',
+      content: 'Compare AI headshot pricing plans with custom model training and premium styles.',
     });
     this.meta.updateTag({
       name: 'twitter:image',

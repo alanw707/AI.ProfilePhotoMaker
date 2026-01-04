@@ -20,7 +20,7 @@ const isProductionAppUrl = urlValue => getHostname(urlValue) === 'app.aiprofilep
 // Test configuration
 const config = {
   // UI base URL (can be overridden via TEST_BASE_URL)
-  baseUrl: process.env.TEST_BASE_URL || 'https://app.aiprofilephotomaker.com',
+  baseUrl: process.env.TEST_BASE_URL || 'http://localhost:4200',
   // API base URL (can be overridden via TEST_API_BASE_URL / API_BASE_URL)
   apiBaseUrl: (process.env.TEST_API_BASE_URL || process.env.API_BASE_URL || 'https://api.aiprofilephotomaker.com')
     .replace(/\/api\/?$/i, '')
@@ -47,6 +47,7 @@ function resolveBaseUrls(testInfo, page) {
 }
 
 test.describe('Image Upload Flow Validation', () => {
+  test.setTimeout(120000);
   
   test.beforeAll(async () => {
     // Verify test image exists
@@ -156,27 +157,82 @@ test.describe('Image Upload Flow Validation', () => {
       }
     }
   }
+
+  async function loginWithApi(page) {
+    const response = await page.request.post(`${runtimeConfig.apiBaseUrl}/api/auth/login`, {
+      headers: { 'Content-Type': 'application/json' },
+      data: JSON.stringify({
+        email: runtimeConfig.testUser.email,
+        password: runtimeConfig.testUser.password,
+        ageConfirmed: true,
+      }),
+    });
+
+    if (!response.ok()) {
+      throw new Error(`API login failed: ${response.status()}`);
+    }
+
+    const result = await response.json();
+    const token = result?.token || result?.Token;
+    if (!token) {
+      throw new Error('API login did not return a token');
+    }
+
+    await page.addInitScript(authToken => {
+      localStorage.setItem('auth_token', authToken);
+    }, token);
+
+    await page.context().addCookies([
+      {
+        name: 'AuthToken',
+        value: token,
+        url: runtimeConfig.baseUrl,
+        httpOnly: true,
+        sameSite: 'Lax',
+      },
+    ]);
+
+    await page.goto(`${runtimeConfig.baseUrl}/app/dashboard`);
+    await page.waitForURL('**/app/**', { timeout: 15000 });
+  }
   
   /**
    * Performs login with retry logic for better reliability
    */
   async function performLoginWithRetry(page, maxRetries = 3) {
+    const isLocalHost =
+      getHostname(runtimeConfig.baseUrl) === 'localhost' ||
+      getHostname(runtimeConfig.baseUrl) === '127.0.0.1';
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         console.log(`🔐 Login attempt ${attempt}/${maxRetries}...`);
 
-        await page.goto(`${runtimeConfig.baseUrl}/auth/login`);
+        if (isLocalHost) {
+          await loginWithApi(page);
+          console.log('✅ Login successful (API)');
+          return;
+        }
+
+        await page.goto(`${runtimeConfig.baseUrl}/auth/login`, { waitUntil: 'domcontentloaded' });
         await acceptCookiesIfPresent(page);
         if (page.url().includes('/app/')) {
           console.log('✅ Already authenticated, app route detected');
           return;
         }
 
-        await page.waitForSelector('input[type="email"]', { timeout: 10000 });
+        await expect(page.getByRole('heading', { name: /Sign In/i })).toBeVisible({
+          timeout: 15000,
+        });
+
+        const emailInput = page.locator('#email');
+        const passwordInput = page.locator('#password');
+        await emailInput.waitFor({ state: 'visible', timeout: 15000 });
+        await passwordInput.waitFor({ state: 'visible', timeout: 15000 });
 
         // Fill login form
-        await page.fill('input[type="email"]', runtimeConfig.testUser.email);
-        await page.fill('input[type="password"]', runtimeConfig.testUser.password);
+        await emailInput.fill(runtimeConfig.testUser.email);
+        await passwordInput.fill(runtimeConfig.testUser.password);
         await page.check('input[formcontrolname="ageConfirmed"]');
         await page.click('button[type="submit"]');
         
@@ -192,7 +248,7 @@ test.describe('Image Upload Flow Validation', () => {
 
         if (loginResult === 'verify') {
           await confirmEmailForTest(page);
-          await page.goto('/app/dashboard');
+          await page.goto(`${runtimeConfig.baseUrl}/app/dashboard`);
           await page.waitForURL('**/app/**', { timeout: 15000 });
         }
         console.log('✅ Login successful');

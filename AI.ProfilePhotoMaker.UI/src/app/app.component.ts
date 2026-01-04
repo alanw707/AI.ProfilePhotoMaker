@@ -42,6 +42,7 @@ export class AppComponent implements OnInit {
       const navigation = e as NavigationEnd;
       this._authService.probeSessionForUrl(navigation.urlAfterRedirects);
       this._updateCanonicalUrl(navigation.urlAfterRedirects);
+      this._resetScrollPosition(navigation.urlAfterRedirects);
     });
   }
 
@@ -93,5 +94,13 @@ export class AppComponent implements OnInit {
     }
 
     canonicalLink.setAttribute('href', canonicalUrl.toString());
+  }
+
+  private _resetScrollPosition(url: string): void {
+    const hasFragment = !!this._router.parseUrl(url).fragment;
+    if (hasFragment) {
+      return;
+    }
+    window.scrollTo({ top: 0, behavior: 'auto' });
   }
 }

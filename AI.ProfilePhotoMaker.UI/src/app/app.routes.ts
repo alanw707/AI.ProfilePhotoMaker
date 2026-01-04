@@ -210,6 +210,15 @@ export const routes: Routes = [
     },
   },
   {
+    path: 'reviews',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['reviews'].title,
+    data: {
+      seoPage: seoPages['reviews'],
+    },
+  },
+  {
     path: 'free-headshot-enhancer',
     loadComponent: () =>
       import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),

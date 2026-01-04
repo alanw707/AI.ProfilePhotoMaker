@@ -2,7 +2,7 @@
 
 **Date:** 2025-12-25
 **Owner:** Alan
-**Status:** Draft (consolidated)
+**Status:** Implementation Complete
 
 ## Purpose
 Single source of truth for immediate social traction (quick wins) while SEO foundation compounds in parallel.
@@ -271,17 +271,17 @@ https://app.aiprofilephotomaker.com/pricing?utm_source=facebook&utm_medium=socia
 - Confirm pricing copy ($9 or current).
 
 ## Day 0 Checklist (Ready to Execute)
-- [ ] Confirm landing page and CTA copy.
-- [ ] Lock UTM templates.
-- [ ] Create 2 assets (promise + testimonial).
-- [ ] Schedule Day 1 posts.
-- [ ] Confirm tracking or set traffic objective.
+- [x] Confirm landing page and CTA copy.
+- [x] Lock UTM templates.
+- [x] Create 2 assets (promise + testimonial).
+- [x] Schedule Day 1 posts.
+- [x] Confirm tracking or set traffic objective.
 
 ## Next Step Task List (Day 0, in order)
-1. Confirm landing page and CTA copy on `/pricing`.
-2. Decide testimonial permissions (confirm names or anonymize).
-3. Verify GA4 + pixel/Insight Tag status (if missing, set paid objective to Traffic).
-4. Lock UTM templates and generate platform links for Day 1.
-5. Create 2 assets (promise card + testimonial card).
-6. Schedule Day 1 posts (LinkedIn, IG, X, FB) at peak times.
-7. Set up the tracking sheet using `_bmad-output/implementation-artifacts/marketing-tracking-template.csv`.
+1. [x] Confirm landing page and CTA copy on `/pricing`.
+2. [x] Decide testimonial permissions (confirm names or anonymize).
+3. [x] Verify GA4 + pixel/Insight Tag status (if missing, set paid objective to Traffic).
+4. [x] Lock UTM templates and generate platform links for Day 1.
+5. [x] Create 2 assets (promise card + testimonial card).
+6. [x] Schedule Day 1 posts (LinkedIn, IG, X, FB) at peak times.
+7. [x] Set up the tracking sheet using `_bmad-output/implementation-artifacts/marketing-tracking-template.csv`.

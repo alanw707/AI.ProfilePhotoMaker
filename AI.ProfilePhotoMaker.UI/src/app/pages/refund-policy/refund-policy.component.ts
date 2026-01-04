@@ -2,58 +2,56 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
+import { MarketingFooterComponent } from '../../shared/marketing-footer/marketing-footer.component';
 
 @Component({
   selector: 'app-refund-policy',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, MarketingFooterComponent],
   template: `
-    <div class="min-h-screen bg-gray-50 py-12">
-      <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
-        <h1 class="text-4xl font-bold text-gray-900 mb-8">Refund Policy</h1>
+    <div class="marketing-legal">
+      <div class="legal-container">
+        <h1 class="legal-title">Refund Policy</h1>
 
-        <div class="bg-white rounded-lg shadow-sm p-8 prose prose-gray max-w-none">
-          <p class="text-gray-600 mb-6">Last updated: December 20, 2025</p>
+        <div class="legal-card legal-prose">
+          <p class="legal-updated">Last updated: December 20, 2025</p>
 
-          <h2 class="text-2xl font-semibold mt-8 mb-4">1. Scope</h2>
+          <h2>1. Scope</h2>
           <p>
             This Refund Policy explains when refunds are available for AI Profile Photo Maker
             purchases. It applies to paid credit packages unless required by law to provide
             additional rights.
           </p>
 
-          <h2 class="text-2xl font-semibold mt-8 mb-4">2. 14-Day Satisfaction Guarantee</h2>
+          <h2>2. 14-Day Satisfaction Guarantee</h2>
           <p>
             We offer a 14-day satisfaction guarantee from the date of purchase. If you are not
             satisfied, contact us within 14 days and we will review your request.
           </p>
 
-          <h2 class="text-2xl font-semibold mt-8 mb-4">3. Eligibility</h2>
+          <h2>3. Eligibility</h2>
           <ul>
             <li>Requests must be submitted within 14 days of purchase.</li>
             <li>Refunds may be adjusted if credits have been heavily used.</li>
             <li>We may decline refunds for misuse, abuse, or policy violations.</li>
           </ul>
 
-          <h2 class="text-2xl font-semibold mt-8 mb-4">4. How to Request a Refund</h2>
+          <h2>4. How to Request a Refund</h2>
           <p>
             Email support&#64;aiprofilephotomaker.com with your account email, purchase details, and
             reason for the request. We will respond with next steps.
           </p>
 
-          <h2 class="text-2xl font-semibold mt-8 mb-4">5. Contact Us</h2>
-          <p>
-            Questions about refunds? Contact support&#64;aiprofilephotomaker.com.
-          </p>
+          <h2>5. Contact Us</h2>
+          <p>Questions about refunds? Contact support&#64;aiprofilephotomaker.com.</p>
         </div>
 
-        <div class="mt-8 text-center">
-          <a routerLink="/" class="text-primary-600 hover:text-primary-700 font-medium"
-            >&larr; Back to Home</a
-          >
+        <div class="legal-footer-link">
+          <a routerLink="/" class="legal-link">&larr; Back to Home</a>
         </div>
       </div>
     </div>
+    <app-marketing-footer></app-marketing-footer>
   `,
   styles: [],
 })

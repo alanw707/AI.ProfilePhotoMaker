@@ -9,6 +9,7 @@
  */
 
 const { test, expect } = require('@playwright/test');
+const { buildAppUrl } = require('./setup/app-url');
 
 const apiBaseUrl = process.env.TEST_API_URL || 'http://localhost:5032';
 
@@ -27,7 +28,7 @@ test.describe('Support form responsive', () => {
     const email = `support.responsive+${timestamp}@example.com`;
     const password = 'Test1234!';
 
-    await page.goto('/auth/register');
+    await page.goto(buildAppUrl('/auth/register'));
     await expect(page.getByRole('heading', { name: /Create Account/i })).toBeVisible();
     const acceptCookies = page.getByRole('button', { name: /Accept All/i });
     if (await acceptCookies.isVisible()) {
@@ -46,10 +47,10 @@ test.describe('Support form responsive', () => {
     await page.click('button[type="submit"]');
     await page.waitForURL('**/auth/verify-email', { timeout: 30000 });
     await confirmEmailForTest(page);
-    await page.goto('/app/dashboard');
+    await page.goto(buildAppUrl('/app/dashboard'));
     await page.waitForURL('**/app/**', { timeout: 30000 });
 
-    await page.goto('/app/support');
+    await page.goto(buildAppUrl('/app/support'));
     await expect(page.locator('.page-header h1')).toHaveText(/Support/i);
     await expect(page.locator('.support-card')).toBeVisible();
 
