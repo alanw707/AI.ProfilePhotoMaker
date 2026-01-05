@@ -15,59 +15,10 @@
 #   - {file-path}: File created/found (e.g., "docs/product-brief.md")
 #   - skipped: Optional/conditional workflow that was skipped
 
-generated: "2025-12-19T20:48:14-08:00"
-project: "AI.ProfilePhotoMaker"
-user_description: "check product readiness for going live"
-project_type: "brownfield"
-selected_track: "method"
-field_type: "brownfield"
-brainstorm_requested: "no"
-research_requested: "yes"
-product_brief_requested: "no"
-workflow_path: ".bmad/bmm/workflows/workflow-status/paths/method-brownfield.yaml"
-workflow_status: |-
-  generated: 2025-12-19T20:48:14-08:00
-  phases:
-    - prerequisite: true
-      name: Documentation
-      conditional: if_undocumented
-      workflows:
-        - id: document-project
-          status: docs/index.md
-    - phase: 0
-      name: Discovery (Optional)
-      optional: true
-      workflows:
-        - id: brainstorm-project
-          status: skipped
-        - id: research
-          status: required
-        - id: product-brief
-          status: skipped
-    - phase: 1
-      name: Planning
-      workflows:
-        - id: prd
-          status: docs/product/PRD.md
-        - id: validate-prd
-          status: optional
-        - id: create-ux-design
-          status: conditional
-    - phase: 2
-      name: Solutioning
-      workflows:
-        - id: create-architecture
-          status: docs/architecture/ARCHITECTURE_OVERVIEW.md
-        - id: create-epics-and-stories
-          status: bdocs/epics.md
-        - id: test-design
-          status: recommended
-        - id: validate-architecture
-          status: optional
-        - id: implementation-readiness
-          status: bdocs/implementation-readiness-report-2025-12-04T19:51:51-08:00.md
-    - phase: 3
-      name: Implementation
-      workflows:
-        - id: sprint-planning
-          status: required
+generated: "{{generated}}"
+project: "{{project_name}}"
+project_type: "{{project_type}}"
+selected_track: "{{selected_track}}"
+field_type: "{{field_type}}"
+workflow_path: "{{workflow_path_file}}"
+workflow_status: "{{workflow_items}}"
