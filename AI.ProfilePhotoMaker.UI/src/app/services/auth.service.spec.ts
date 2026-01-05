@@ -360,6 +360,55 @@ describe('AuthService', () => {
     });
   });
 
+  describe('Session Validation', () => {
+    it('should return true without validation when already authenticated', done => {
+      (service as any)['_isAuthenticatedSubject'].next(true);
+      (service as any)['_currentUserSubject'].next({
+        token: '',
+        email: 'test@example.com',
+        firstName: 'Test',
+        lastName: 'User',
+      });
+
+      service.ensureSession().subscribe(result => {
+        expect(result).toBeTrue();
+        done();
+      });
+
+      httpMock.expectNone('/api/auth/validate-session');
+    });
+
+    it('should validate session and update auth state', done => {
+      (service as any)['_currentUserSubject'].next({
+        token: '',
+        email: '',
+        firstName: 'Test',
+        lastName: '',
+      });
+
+      service.ensureSession().subscribe(result => {
+        expect(result).toBeTrue();
+        expect(service.isAuthenticated()).toBeTrue();
+        done();
+      });
+
+      const req = httpMock.expectOne('/api/auth/validate-session');
+      expect(req.request.method).toBe('GET');
+      req.flush('', { status: 204, statusText: 'No Content' });
+    });
+
+    it('should return false when session validation fails', done => {
+      service.ensureSession().subscribe(result => {
+        expect(result).toBeFalse();
+        expect(service.isAuthenticated()).toBeFalse();
+        done();
+      });
+
+      const req = httpMock.expectOne('/api/auth/validate-session');
+      req.flush({ error: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    });
+  });
+
   describe('Error Handling', () => {
     it('should handle network errors during login', done => {
       const loginData: LoginDto = {
