@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { BehaviorSubject, of } from 'rxjs';
 import { LoginComponent } from './login.component';
@@ -11,20 +11,24 @@ describe('LoginComponent', () => {
   let component: LoginComponent;
   let fixture: ComponentFixture<LoginComponent>;
   let authService: jasmine.SpyObj<AuthService>;
+  let router: Router;
+  let isAuthenticatedSubject: BehaviorSubject<boolean>;
 
   beforeEach(async () => {
+    isAuthenticatedSubject = new BehaviorSubject(false);
     authService = jasmine.createSpyObj<AuthService>('AuthService', [
       'isAuthenticated',
-      'probeSession',
+      'ensureSession',
       'login',
       'handleOAuthCallback',
     ]);
 
     authService.isAuthenticated.and.returnValue(false);
+    authService.ensureSession.and.returnValue(of(false));
     authService.login.and.returnValue(
       of({ token: '', email: '', firstName: '', lastName: '' } as any)
     );
-    (authService as any).isAuthenticated$ = new BehaviorSubject(false).asObservable();
+    (authService as any).isAuthenticated$ = isAuthenticatedSubject.asObservable();
 
     const themeService = jasmine.createSpyObj<ThemeService>('ThemeService', ['toggleTheme', 'isDark']);
     themeService.isDark.and.returnValue(false);
@@ -49,6 +53,7 @@ describe('LoginComponent', () => {
 
     fixture = TestBed.createComponent(LoginComponent);
     component = fixture.componentInstance;
+    router = TestBed.inject(Router);
     fixture.detectChanges();
   });
 
@@ -103,5 +108,13 @@ describe('LoginComponent', () => {
         ageConfirmed: true,
       })
     );
+  });
+
+  it('redirects when authentication becomes true', () => {
+    const navigateSpy = spyOn(router, 'navigate').and.returnValue(Promise.resolve(true));
+
+    isAuthenticatedSubject.next(true);
+
+    expect(navigateSpy).toHaveBeenCalledWith([component.returnUrl]);
   });
 });

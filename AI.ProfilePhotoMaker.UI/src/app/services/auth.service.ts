@@ -101,7 +101,7 @@ export class AuthService {
   /**
    * Initialize secure authentication with improved session management
    */
-  private _sessionProbed = false;
+  private _sessionProbeResult: 'unknown' | 'valid' | 'invalid' = 'unknown';
 
   private initializeSecureAuth(): void {
     // Only probe on protected areas; skip on the public home page
@@ -111,35 +111,61 @@ export class AuthService {
     }
   }
 
+  public ensureSession(): Observable<boolean> {
+    if (this._sessionProbeResult !== 'unknown') {
+      if (this._sessionProbeResult === 'valid') {
+        const current = this._currentUserSubject.value;
+        const needsHydration = !current || (!current.firstName && !current.lastName);
+        if (needsHydration) {
+          this.hydrateUserFromProfile();
+        }
+      }
+      return of(this._sessionProbeResult === 'valid');
+    }
+    if (this._isAuthenticatedSubject.value) {
+      this._sessionProbeResult = 'valid';
+      const current = this._currentUserSubject.value;
+      const needsHydration = !current || (!current.firstName && !current.lastName);
+      if (needsHydration) {
+        this.hydrateUserFromProfile();
+      }
+      return of(true);
+    }
+
+    return this.validateSession().pipe(
+      map(() => {
+        this._sessionProbeResult = 'valid';
+        this._isAuthenticatedSubject.next(true);
+        const current = this._currentUserSubject.value;
+        const needsHydration = !current || (!current.firstName && !current.lastName);
+        if (needsHydration) {
+          this.hydrateUserFromProfile();
+        }
+        return true;
+      }),
+      catchError(error => {
+        if (error?.status === 401 || error?.status === 403) {
+          this._sessionProbeResult = 'invalid';
+        } else {
+          this._sessionProbeResult = 'unknown';
+        }
+        this._isAuthenticatedSubject.next(false);
+        return of(false);
+      })
+    );
+  }
+
   // Idempotent probe; safe to call multiple times
   public probeSession(): void {
-    if (this._sessionProbed) {
+    if (this.hasVerifiedSession()) {
       return;
     }
-    this._sessionProbed = true;
 
-    this.validateSession()
-      .pipe(
-        map(() => true),
-        catchError(() => of(false))
-      )
-      .subscribe({
-        next: (isAuth: boolean) => {
-          this._isAuthenticatedSubject.next(isAuth);
-          if (isAuth) {
-            // If we don't have a hydrated user yet, fetch profile details
-            const current = this._currentUserSubject.value;
-            const needsHydration = !current || (!current.firstName && !current.lastName);
-            if (needsHydration) {
-              this.hydrateUserFromProfile();
-            }
-          }
-        },
-      });
+    this.ensureSession().subscribe();
   }
 
   public probeSessionForUrl(url: string): void {
-    if (this._sessionProbed) {
+    if (this.hasVerifiedSession()) {
       return;
     }
     const path = url.split('?')[0];
@@ -149,7 +175,7 @@ export class AuthService {
   }
 
   public hasVerifiedSession(): boolean {
-    return this._sessionProbed;
+    return this._sessionProbeResult !== 'unknown';
   }
 
   private _isProtectedPath(path: string): boolean {
@@ -572,6 +598,7 @@ export class AuthService {
    * Clear all authentication-related data
    */
   private clearAllAuthData(): void {
+    this._sessionProbeResult = 'unknown';
     const authKeys = [
       this.TOKEN_KEY,
       'authToken',

@@ -17,7 +17,7 @@ import { CommonModule } from '@angular/common';
 import { AuthService, LoginDto } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
 import { ConfigService } from '../../services/config.service';
-import { finalize } from 'rxjs';
+import { finalize, filter, take } from 'rxjs';
 
 @Component({
   selector: 'app-login',
@@ -35,6 +35,8 @@ export class LoginComponent implements OnInit {
   readonly ageConfirmationMessage = 'Age confirmation is required to sign in.';
   readonly ageConfirmErrorId = 'age-confirmation-error';
   submitAttempted = false;
+  private _redirectInProgress = false;
+  private _ensureSessionStarted = false;
 
   // Use inject function to reduce constructor parameters
   private readonly _formBuilder = inject(FormBuilder);
@@ -52,20 +54,27 @@ export class LoginComponent implements OnInit {
       ageConfirmed: [false, [Validators.requiredTrue]],
     });
 
-    // Get return URL from route parameters or default to profile
-    this.returnUrl = this._route.snapshot.queryParams['returnUrl'] || '/app/dashboard';
+    this._setReturnUrlFromParams(this._route.snapshot.queryParams);
   }
 
   ngOnInit(): void {
+    this._authService.isAuthenticated$
+      .pipe(
+        filter(isAuth => isAuth),
+        take(1)
+      )
+      .subscribe(() => this._redirectToReturnUrl());
+
     // 1) If we already have client state, go straight to returnUrl
     const isAuthenticated = this._authService.isAuthenticated();
     if (isAuthenticated) {
-      this._router.navigate([this.returnUrl]);
+      this._redirectToReturnUrl();
       return;
     }
 
     // Handle OAuth callbacks
     this._route.queryParams.subscribe(params => {
+      this._setReturnUrlFromParams(params);
       if (this._handleDirectTokenParams(params)) {
         return;
       }
@@ -79,15 +88,30 @@ export class LoginComponent implements OnInit {
       if (params['error']) {
         this.error = 'OAuth login failed: ' + params['error'];
         this._cdr.markForCheck();
+        return;
+      }
+
+      if (!this._ensureSessionStarted) {
+        const hasCachedUser =
+          !!localStorage.getItem('currentUser') || !!localStorage.getItem('current_user');
+        if (!hasCachedUser) {
+          return;
+        }
+        this._ensureSessionStarted = true;
+        this._authService.ensureSession().pipe(take(1)).subscribe();
       }
     });
+  }
+
+  private _setReturnUrlFromParams(params: Record<string, string>): void {
+    this.returnUrl = params['returnUrl'] || '/app/dashboard';
   }
 
   private _handleDirectTokenParams(params: Record<string, string>): boolean {
     if (params['token']) {
       try {
         this._authService.handleOAuthCallback(params['token'], params['expiration']);
-        this._router.navigate(['/app/dashboard']);
+        this._redirectToReturnUrl();
       } catch (error) {
         console.error('Error handling OAuth callback:', error);
         this.error = 'Failed to process OAuth token';
@@ -107,7 +131,7 @@ export class LoginComponent implements OnInit {
 
         if (token) {
           this._authService.handleOAuthCallback(token, expiration || undefined);
-          this._router.navigate(['/app/dashboard']);
+          this._redirectToReturnUrl();
         }
       } catch (error) {
         console.error('Error parsing returnUrl:', error);
@@ -129,7 +153,7 @@ export class LoginComponent implements OnInit {
 
         if (token) {
           this._authService.handleOAuthCallback(token, expiration || undefined);
-          this._router.navigate(['/app/dashboard']);
+          this._redirectToReturnUrl();
         }
       } catch (error) {
         console.error('Error parsing URL fragment:', error);
@@ -226,19 +250,7 @@ export class LoginComponent implements OnInit {
       )
       .subscribe({
         next: _response => {
-          this._router
-            .navigate([this.returnUrl])
-            .then(success => {
-              if (success === false) {
-                this.error = 'Login succeeded, but navigation failed. Please try again.';
-                this._cdr.markForCheck();
-              }
-            })
-            .catch(error => {
-              console.error('Login navigation error:', error);
-              this.error = 'Login succeeded, but navigation failed. Please try again.';
-              this._cdr.markForCheck();
-            });
+          this._redirectToReturnUrl();
         },
         error: error => {
           console.error('Login error:', error);
@@ -269,5 +281,28 @@ export class LoginComponent implements OnInit {
     // Use standard OAuth flow - redirect to the external login endpoint
     const oauthUrl = `${oauthBaseUrl}/api/auth/external-login/google?returnUrl=${encodeURIComponent(this.returnUrl)}&ageConfirmed=true`;
     window.location.href = oauthUrl;
+  }
+
+  private _redirectToReturnUrl(): void {
+    if (this._redirectInProgress) {
+      return;
+    }
+    this._redirectInProgress = true;
+
+    this._router
+      .navigate([this.returnUrl])
+      .then(success => {
+        if (success === false) {
+          this._redirectInProgress = false;
+          this.error = 'Login succeeded, but navigation failed. Please try again.';
+          this._cdr.markForCheck();
+        }
+      })
+      .catch(error => {
+        console.error('Login navigation error:', error);
+        this._redirectInProgress = false;
+        this.error = 'Login succeeded, but navigation failed. Please try again.';
+        this._cdr.markForCheck();
+      });
   }
 }
