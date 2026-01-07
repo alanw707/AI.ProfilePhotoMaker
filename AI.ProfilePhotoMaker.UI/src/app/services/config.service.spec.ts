@@ -22,7 +22,7 @@ describe('ConfigService - API URL building in test env', () => {
     it('should build correct relative endpoint URLs', () => {
       expect(service.authLoginUrl).toBe('/api/auth/login');
       expect(service.profileUrl).toBe('/api/profile');
-      expect(service.replicateCreditsUrl).toBe('/api/credit/status');
+      expect(service.buildApiEndpoint('credit/status')).toBe('/api/credit/status');
       expect(service.profileTrainingStatusUrl).toBe('/api/model-creation/user/current');
       expect(service.imageListUrl).toBe('/api/image/images');
     });
