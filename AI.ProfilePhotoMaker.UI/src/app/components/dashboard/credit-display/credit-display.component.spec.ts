@@ -32,7 +32,7 @@ describe('CreditDisplayComponent', () => {
     it('should fallback to creditsInfo when userCreditStatus is null', () => {
       component.userCreditStatus = null;
       component.creditsInfo = {
-        availableCredits: 3,
+        credits: 3,
       };
 
       expect(component.getTotalAvailableCredits()).toBe(3);
