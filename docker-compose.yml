@@ -89,6 +89,7 @@ services:
       AzureStorage__ContainerName: ${AZURE_STORAGE_CONTAINER_NAME}
       ConnectionStrings__AzureStorage: ${AZURE_STORAGE_CONNECTION_STRING_DOCKER:-DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=7EcjH8qw7X6gFutn5Omgg3e/EB/sTN07c5WLe1Rrl9g=;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;}
       ConnectionStrings__DefaultConnection: Server=sql-server,1433;Database=AIProfileMaker;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;MultipleActiveResultSets=true;
+      Database__AutoMigrateOnStartup: ${Database__AutoMigrateOnStartup:-false}
       APP_BASE_URL: ${APP_BASE_URL}
       EXTERNAL_API_BASE_URL: ${EXTERNAL_API_BASE_URL}
       ExternalApiBaseUrl: ${EXTERNAL_API_BASE_URL}
