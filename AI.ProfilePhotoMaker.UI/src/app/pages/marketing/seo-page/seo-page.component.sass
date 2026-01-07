@@ -306,6 +306,10 @@
   @include shared.card-base
   padding: 24px
 
+  .table-wrapper
+    overflow-x: auto
+    -webkit-overflow-scrolling: touch
+
   table
     width: 100%
     border-collapse: collapse
@@ -403,3 +407,40 @@
 
   .showcase-visual
     grid-template-columns: 1fr
+
+  .comparison-table
+    padding: 18px
+
+    table,
+    thead,
+    tbody,
+    tr,
+    th,
+    td
+      display: block
+      width: 100%
+
+    thead
+      display: none
+
+    tr
+      border: 1px solid var(--border-color)
+      border-radius: 14px
+      padding: 10px 12px 4px
+      margin-bottom: 12px
+
+    td
+      border-bottom: 1px solid var(--border-color)
+      padding: 10px 0
+      display: flex
+      justify-content: space-between
+      gap: 12px
+
+      &::before
+        content: attr(data-label)
+        font-weight: 600
+        color: var(--text-tertiary)
+        flex: 0 0 42%
+
+    td:last-child
+      border-bottom: none
