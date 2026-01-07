@@ -158,8 +158,12 @@
                   </thead>
                   <tbody>
                     <tr *ngFor="let row of section.rows">
-                      <td class="row-label">{{ row.label }}</td>
-                      <td *ngFor="let value of row.values">{{ value }}</td>
+                      <td class="row-label" data-label="Feature">{{ row.label }}</td>
+                      <td
+                        *ngFor="let value of row.values; let columnIndex = index"
+                        [attr.data-label]="section.columns[columnIndex]">
+                        {{ value }}
+                      </td>
                     </tr>
                   </tbody>
                 </table>
