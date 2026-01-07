@@ -25,9 +25,7 @@ public class CreatePaymentIntentRequestDto
 
 public class UserCreditStatusDto
 {
-    public int TotalCredits { get; set; }
-    public int WeeklyCredits { get; set; }
-    public int PurchasedCredits { get; set; }
+    public int Credits { get; set; }
     public DateTime LastCreditReset { get; set; }
     public DateTime NextResetDate { get; set; }
 }

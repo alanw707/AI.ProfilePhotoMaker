@@ -10,10 +10,7 @@
     </div>
   </div>
 
-  <div
-    id="credit-purchase-form"
-    class="payment-container"
-    *ngIf="isStripePaymentActive && selectedPackage">
+  <div id="credit-purchase-form" class="payment-container" *ngIf="isStripePaymentActive && selectedPackage">
     <h3>Complete Payment for {{ selectedPackage.name }}</h3>
 
     <div class="stripe-summary">
@@ -317,17 +314,17 @@
       <div class="cost-item">
         <span class="operation">Photo Enhancement</span>
         <span class="cost">1 credit</span>
-        <small class="note">(Can use weekly credits)</small>
+        <small class="note">(Uses your credits balance)</small>
       </div>
       <div class="cost-item">
         <span class="operation">Model Training</span>
         <span class="cost">15 credits</span>
-        <small class="note">(Requires purchased credits)</small>
+        <small class="note">(Uses your credits balance)</small>
       </div>
       <div class="cost-item">
         <span class="operation">Styled Generation</span>
         <span class="cost">5 credits</span>
-        <small class="note">(Requires purchased credits)</small>
+        <small class="note">(Uses your credits balance)</small>
       </div>
     </div>
   </div>

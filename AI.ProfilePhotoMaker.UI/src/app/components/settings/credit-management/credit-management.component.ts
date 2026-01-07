@@ -15,32 +15,7 @@ export class CreditManagementComponent {
   @Input() userCreditStatus: unknown = null;
 
   getTotalAvailableCredits(): number {
-    const weeklyCredits = this.getWeeklyCredits();
-    const purchasedCredits = this.getPurchasedCredits();
-    return weeklyCredits + purchasedCredits;
-  }
-
-  getPurchasedCredits(): number {
-    return (this.userCreditStatus as any)?.purchasedCredits || 0;
-  }
-
-  getWeeklyCredits(): number {
-    return (
-      (this.userCreditStatus as any)?.weeklyCredits ||
-      (this.creditsInfo as any)?.availableCredits ||
-      0
-    );
-  }
-
-  getMaxWeeklyCredits(): number {
-    return 5; // Fixed weekly credit limit
-  }
-
-  getCreditUsagePercentage(): number {
-    const weekly = this.getWeeklyCredits();
-    const max = this.getMaxWeeklyCredits();
-    const used = max - weekly;
-    return max > 0 ? (used / max) * 100 : 0;
+    return (this.userCreditStatus as any)?.credits || (this.creditsInfo as any)?.credits || 0;
   }
 
   getNextCreditReset(): string {

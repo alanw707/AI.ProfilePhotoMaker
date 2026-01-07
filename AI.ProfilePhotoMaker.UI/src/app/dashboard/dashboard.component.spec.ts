@@ -41,7 +41,7 @@ xdescribe('DashboardComponent', () => {
         state$: of({
           userProfile: null,
           creditsInfo: { availableCredits: 3 },
-          userCreditStatus: { weeklyCredits: 3, purchasedCredits: 0 },
+          userCreditStatus: { credits: 3 },
           uploadedImages: 0,
           uploadedImageThumbnails: [],
           generatedPhotosCount: 0,
@@ -60,7 +60,10 @@ xdescribe('DashboardComponent', () => {
       'uploadImages',
       'deleteImage',
     ]);
-    mockCreditService = jasmine.createSpyObj('CreditService', ['getCredits']);
+    mockCreditService = jasmine.createSpyObj('CreditService', [
+      'getCreditStatus',
+      'getTotalAvailableCredits',
+    ]);
     mockStyleService = jasmine.createSpyObj('StyleService', ['getActiveStyles']);
     mockConfigService = jasmine.createSpyObj('ConfigService', ['getApiUrl']);
     mockWorkflowService = jasmine.createSpyObj('WorkflowOrchestrationService', [
@@ -76,7 +79,7 @@ xdescribe('DashboardComponent', () => {
     mockDashboardStateService.getState.and.returnValue({
       userProfile: null,
       creditsInfo: { availableCredits: 3 },
-      userCreditStatus: { weeklyCredits: 3, purchasedCredits: 0 },
+      userCreditStatus: { credits: 3 },
       uploadedImages: 0,
       uploadedImageThumbnails: [],
       generatedPhotosCount: 0,
@@ -95,6 +98,10 @@ xdescribe('DashboardComponent', () => {
       }) as any
     );
     mockConfigService.getApiUrl.and.returnValue('http://localhost:5000');
+    mockCreditService.getTotalAvailableCredits.and.callFake(
+      (userCreditStatus: any, creditsInfo: any) =>
+        userCreditStatus?.credits ?? creditsInfo?.availableCredits ?? 0
+    );
     Object.defineProperty(mockWorkflowService, 'progress$', {
       get: () =>
         of({
@@ -225,7 +232,7 @@ xdescribe('DashboardComponent', () => {
     });
 
     it('should get user credit status from state', () => {
-      const mockUserCreditStatus = { weeklyCredits: 3, purchasedCredits: 5 };
+      const mockUserCreditStatus = { credits: 8 };
       mockDashboardStateService.getState.and.returnValue({
         userProfile: null,
         uploadedImages: 0,
@@ -269,7 +276,7 @@ xdescribe('DashboardComponent', () => {
         uploadedImages: 0,
         modelStatus: 'pending',
         creditsInfo: { availableCredits: 3 },
-        userCreditStatus: { weeklyCredits: 3, purchasedCredits: 5 },
+        userCreditStatus: { credits: 8 },
         uploadedImageThumbnails: [],
         generatedPhotosCount: 0,
         isPremiumWorkflow: false,
@@ -277,38 +284,6 @@ xdescribe('DashboardComponent', () => {
       } as any);
 
       expect(component.getTotalAvailableCredits()).toBe(8);
-    });
-
-    it('should get purchased credits correctly', () => {
-      mockDashboardStateService.getState.and.returnValue({
-        userProfile: null,
-        uploadedImages: 0,
-        modelStatus: 'pending',
-        creditsInfo: null,
-        userCreditStatus: { weeklyCredits: 3, purchasedCredits: 10 },
-        uploadedImageThumbnails: [],
-        generatedPhotosCount: 0,
-        isPremiumWorkflow: false,
-        isLoading: false,
-      } as any);
-
-      expect(component.getPurchasedCredits()).toBe(10);
-    });
-
-    it('should get weekly credits correctly', () => {
-      mockDashboardStateService.getState.and.returnValue({
-        userProfile: null,
-        uploadedImages: 0,
-        modelStatus: 'pending',
-        creditsInfo: { availableCredits: 3 },
-        userCreditStatus: { weeklyCredits: 5, purchasedCredits: 0 },
-        uploadedImageThumbnails: [],
-        generatedPhotosCount: 0,
-        isPremiumWorkflow: false,
-        isLoading: false,
-      } as any);
-
-      expect(component.getWeeklyCredits()).toBe(5);
     });
 
     it('should fallback to creditsInfo when userCreditStatus is null', () => {
@@ -324,7 +299,7 @@ xdescribe('DashboardComponent', () => {
         isLoading: false,
       } as any);
 
-      expect(component.getWeeklyCredits()).toBe(3);
+      expect(component.getTotalAvailableCredits()).toBe(3);
     });
 
     it('should delegate credit calculations to workflow service', () => {

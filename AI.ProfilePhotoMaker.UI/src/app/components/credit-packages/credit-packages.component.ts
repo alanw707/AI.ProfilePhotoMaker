@@ -679,9 +679,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
               this.loadCreditStatus();
               if (response.data.updatedCredits) {
                 this.packagePurchased.emit({
-                  totalCredits: response.data.updatedCredits.totalCredits,
-                  weeklyCredits: response.data.updatedCredits.weeklyCredits,
-                  purchasedCredits: response.data.updatedCredits.purchasedCredits,
+                  credits: response.data.updatedCredits.credits,
                   lastCreditReset: new Date().toISOString(),
                   nextResetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
                 });

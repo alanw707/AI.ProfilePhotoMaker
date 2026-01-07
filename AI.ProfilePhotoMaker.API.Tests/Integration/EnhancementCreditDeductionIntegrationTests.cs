@@ -20,9 +20,9 @@ public class EnhancementCreditDeductionIntegrationTests : IClassFixture<CustomWe
     }
 
     [Fact]
-    public async Task OpenAiEnhancement_Succeeds_Deducts_Two_Weekly_Credits()
+    public async Task OpenAiEnhancement_Succeeds_Deducts_One_Credit()
     {
-        await SeedUserAsync(weeklyCredits: 5, purchasedCredits: 0);
+        await SeedUserAsync(credits: 5);
         var client = _factory.CreateAuthenticatedClient();
 
         var response = await client.PostAsJsonAsync("/api/enhancement/enhance", new
@@ -39,14 +39,13 @@ public class EnhancementCreditDeductionIntegrationTests : IClassFixture<CustomWe
         }
 
         var profile = await GetProfileAsync();
-        Assert.Equal(3, profile.Credits);
-        Assert.Equal(0, profile.PurchasedCredits);
+        Assert.Equal(4, profile.Credits);
     }
 
     [Fact]
-    public async Task OpenAiEnhancement_Failure_Refunds_Weekly_Credits()
+    public async Task OpenAiEnhancement_Failure_Refunds_Credits()
     {
-        await SeedUserAsync(weeklyCredits: 5, purchasedCredits: 0);
+        await SeedUserAsync(credits: 5);
         var client = _factory.CreateAuthenticatedClient();
 
         var response = await client.PostAsJsonAsync("/api/enhancement/enhance", new
@@ -60,13 +59,12 @@ public class EnhancementCreditDeductionIntegrationTests : IClassFixture<CustomWe
 
         var profile = await GetProfileAsync();
         Assert.Equal(5, profile.Credits);
-        Assert.Equal(0, profile.PurchasedCredits);
     }
 
     [Fact]
-    public async Task ReplicateEnhancement_Succeeds_Deducts_One_Weekly_Credit()
+    public async Task ReplicateEnhancement_Succeeds_Deducts_One_Credit()
     {
-        await SeedUserAsync(weeklyCredits: 5, purchasedCredits: 0);
+        await SeedUserAsync(credits: 5);
         var client = _factory.CreateAuthenticatedClient();
 
         var response = await client.PostAsJsonAsync("/api/replicate/enhance", new
@@ -84,10 +82,9 @@ public class EnhancementCreditDeductionIntegrationTests : IClassFixture<CustomWe
 
         var profile = await GetProfileAsync();
         Assert.Equal(4, profile.Credits);
-        Assert.Equal(0, profile.PurchasedCredits);
     }
 
-    private async Task SeedUserAsync(int weeklyCredits, int purchasedCredits)
+    private async Task SeedUserAsync(int credits)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -119,8 +116,7 @@ public class EnhancementCreditDeductionIntegrationTests : IClassFixture<CustomWe
                 UserId = UserId,
                 User = user,
                 SubscriptionTier = SubscriptionTier.Basic,
-                Credits = weeklyCredits,
-                PurchasedCredits = purchasedCredits,
+                Credits = credits,
                 LastCreditReset = DateTime.UtcNow,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -131,8 +127,7 @@ public class EnhancementCreditDeductionIntegrationTests : IClassFixture<CustomWe
         {
             profile.User = user;
             profile.SubscriptionTier = SubscriptionTier.Basic;
-            profile.Credits = weeklyCredits;
-            profile.PurchasedCredits = purchasedCredits;
+            profile.Credits = credits;
             profile.LastCreditReset = DateTime.UtcNow;
             profile.UpdatedAt = DateTime.UtcNow;
         }

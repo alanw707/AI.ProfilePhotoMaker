@@ -482,8 +482,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
                 UserId = userId,
                 FirstName = "Test",
                 LastName = "User",
-                Credits = 3,
-                PurchasedCredits = 2
+                Credits = 3
             };
 
             _context.UserProfiles.Add(profile);
@@ -502,7 +501,6 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
 
             var refreshed = await _context.UserProfiles.FirstAsync(u => u.UserId == userId);
             refreshed.Credits.Should().Be(3);
-            refreshed.PurchasedCredits.Should().Be(2);
         }
 
         public void Dispose()

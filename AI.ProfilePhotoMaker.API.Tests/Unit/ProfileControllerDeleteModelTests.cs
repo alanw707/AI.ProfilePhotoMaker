@@ -2,6 +2,7 @@ using System.Security.Claims;
 using AI.ProfilePhotoMaker.API.Controllers;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
+using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using FluentAssertions;
@@ -38,6 +39,7 @@ public class ProfileControllerDeleteModelTests
         var config = new ConfigurationBuilder().Build();
         var storageService = new Mock<IStorageService>();
         var pathResolver = new StoragePathResolver(env.Object, config, Mock.Of<ILogger<StoragePathResolver>>());
+        var basicTierService = new Mock<IBasicTierService>();
 
         // Replicate client mock: pretend models do not exist on remote to skip delete calls
         var replicate = new Mock<IReplicateApiClient>();
@@ -50,6 +52,7 @@ public class ProfileControllerDeleteModelTests
             logger,
             config,
             replicate.Object,
+            basicTierService.Object,
             storageService.Object,
             pathResolver);
 
@@ -154,6 +157,7 @@ public class ProfileControllerDeleteModelTests
         var config = new ConfigurationBuilder().Build();
         var storageService = new Mock<IStorageService>();
         var pathResolver = new StoragePathResolver(env.Object, config, Mock.Of<ILogger<StoragePathResolver>>());
+        var basicTierService = new Mock<IBasicTierService>();
 
         // Replicate client mock: pretend models do not exist on remote to skip delete calls
         var replicate = new Mock<IReplicateApiClient>();
@@ -166,6 +170,7 @@ public class ProfileControllerDeleteModelTests
             logger,
             config,
             replicate.Object,
+            basicTierService.Object,
             storageService.Object,
             pathResolver);
 

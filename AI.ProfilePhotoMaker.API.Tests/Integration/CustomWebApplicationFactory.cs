@@ -12,6 +12,7 @@ using AI.ProfilePhotoMaker.API.Services.Authentication;
 using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
 using AI.ProfilePhotoMaker.API.Services.Database;
 using AI.ProfilePhotoMaker.API.Services;
+using AI.ProfilePhotoMaker.API.Services.Payments;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Notifications;
 using AI.ProfilePhotoMaker.API.Services.Security;
@@ -157,6 +158,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         services.AddScoped<AI.ProfilePhotoMaker.API.Services.IUserContextService, AI.ProfilePhotoMaker.API.Services.UserContextService>();
         services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository, AI.ProfilePhotoMaker.API.Data.UserProfileRepository>();
         services.AddScoped<AI.ProfilePhotoMaker.API.Services.IPendingGenerationService, AI.ProfilePhotoMaker.API.Services.PendingGenerationService>();
+        services.AddScoped<ICreditPackageService, FakeCreditPackageService>();
+        services.AddScoped<IStripePaymentService, FakeStripePaymentService>();
         services.AddScoped<OpenAIImageGenerationService>(sp =>
             new OpenAIImageGenerationService(
                 new HttpClient(sp.GetRequiredService<FakeOpenAiHttpMessageHandler>(), disposeHandler: false),
@@ -178,6 +181,20 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         services.AddScoped<IStorageService, FakeStorageService>();
         services.AddScoped<StoragePathResolver>();
         services.AddSingleton<AI.ProfilePhotoMaker.API.Services.Database.IDatabaseProviderService, FakeDatabaseProviderService>();
+
+        services.AddOptions<StripeOptions>()
+            .Configure(options =>
+            {
+                options.PublishableKey = "pk_test";
+                options.SecretKey = "sk_test";
+                options.WebhookSecret = "whsec_test";
+            });
+        services.AddOptions<PaymentSimulationOptions>()
+            .Configure(options =>
+            {
+                options.Enabled = true;
+                options.SkipStripeIntegration = true;
+            });
 
         // Seed initial data after services are built
         var sp = services.BuildServiceProvider();
@@ -212,7 +229,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     /// Ensures the test user profile exists with sufficient credits
     /// Call this from tests that need fresh user setup
     /// </summary>
-    public async Task EnsureTestUserWithCreditsAsync(string userId = "test-user-1", int purchasedCredits = 100)
+    public async Task EnsureTestUserWithCreditsAsync(string userId = "test-user-1", int credits = 100)
     {
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -229,8 +246,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         db.UserProfiles.Add(new UserProfile
         {
             UserId = userId,
-            Credits = 0,
-            PurchasedCredits = purchasedCredits,
+            Credits = credits,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             LastCreditReset = DateTime.UtcNow.AddDays(-8), // Ensure no weekly reset interferes
@@ -241,9 +257,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
         // Verify the data was saved correctly
         var savedProfile = await db.UserProfiles.FirstOrDefaultAsync(u => u.UserId == userId);
-        if (savedProfile?.PurchasedCredits != purchasedCredits)
+        if (savedProfile?.Credits != credits)
         {
-            throw new InvalidOperationException($"Failed to set up test user credits. Expected: {purchasedCredits}, Actual: {savedProfile?.PurchasedCredits}");
+            throw new InvalidOperationException($"Failed to set up test user credits. Expected: {credits}, Actual: {savedProfile?.Credits}");
         }
     }
 

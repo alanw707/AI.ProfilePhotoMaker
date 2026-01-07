@@ -1,7 +1,7 @@
 {
   "name": "AI Profile Photo Maker",
   "short_name": "AI Photo Maker",
-  "description": "Create LinkedIn-ready profile photos with AI in minutes. Start with free weekly enhancement credits.",
+  "description": "Create LinkedIn-ready profile photos with AI in minutes. One credit balance powers enhancement, training, and generation, with weekly top-ups to 5 when below.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

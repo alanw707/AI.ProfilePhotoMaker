@@ -77,7 +77,6 @@ public class UserProfileStatsDto
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public int Credits { get; set; }
-    public int PurchasedCredits { get; set; }
 
     // Efficient statistics
     public int TotalProcessedImages { get; set; }

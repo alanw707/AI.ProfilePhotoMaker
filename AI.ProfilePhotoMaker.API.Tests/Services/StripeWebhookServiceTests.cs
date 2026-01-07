@@ -59,7 +59,7 @@ public class StripeWebhookServiceTests
             .AsNoTracking()
             .FirstAsync(p => p.UserId == userId);
 
-        Assert.Equal(package.TotalCredits, profile.PurchasedCredits);
+        Assert.Equal(5 + package.TotalCredits, profile.Credits);
     }
 
     [Fact]
@@ -319,7 +319,7 @@ public class StripeWebhookServiceTests
             .AsNoTracking()
             .FirstAsync(p => p.UserId == userId);
 
-        Assert.Equal(package.TotalCredits, profile.PurchasedCredits);
+        Assert.Equal(5 + package.TotalCredits, profile.Credits);
     }
 
 
@@ -357,7 +357,7 @@ public class StripeWebhookServiceTests
             .AsNoTracking()
             .FirstAsync(p => p.UserId == userId);
 
-        Assert.Equal(0, profile.PurchasedCredits);
+        Assert.Equal(5, profile.Credits);
     }
 
     [Fact]
@@ -381,7 +381,7 @@ public class StripeWebhookServiceTests
             .AsNoTracking()
             .FirstAsync(p => p.UserId == userId);
 
-        Assert.Equal(package.TotalCredits, profileAfterFirst.PurchasedCredits);
+        Assert.Equal(5 + package.TotalCredits, profileAfterFirst.Credits);
 
         await service.HandleEventAsync(stripeEvent);
 
@@ -389,7 +389,7 @@ public class StripeWebhookServiceTests
             .AsNoTracking()
             .FirstAsync(p => p.UserId == userId);
 
-        Assert.Equal(package.TotalCredits, profileAfterSecond.PurchasedCredits);
+        Assert.Equal(5 + package.TotalCredits, profileAfterSecond.Credits);
 
         var purchases = await context.CreditPurchases
             .AsNoTracking()
@@ -423,7 +423,7 @@ public class StripeWebhookServiceTests
             .AsNoTracking()
             .FirstAsync(p => p.UserId == userId);
 
-        Assert.Equal(0, profile.PurchasedCredits);
+        Assert.Equal(5, profile.Credits);
         Assert.False(await context.CreditPurchases.AnyAsync());
     }
 
@@ -454,7 +454,7 @@ public class StripeWebhookServiceTests
             .AsNoTracking()
             .FirstAsync(p => p.UserId == userId);
 
-        Assert.Equal(package.TotalCredits, profile.PurchasedCredits);
+        Assert.Equal(5 + package.TotalCredits, profile.Credits);
         Assert.False(await context.UserProfiles.AnyAsync(p => p.UserId == mismatchedUserId));
     }
 
@@ -552,7 +552,6 @@ public class StripeWebhookServiceTests
             User = user,
             SubscriptionTier = SubscriptionTier.Basic,
             Credits = 5,
-            PurchasedCredits = 0,
             LastCreditReset = DateTime.UtcNow
         };
 

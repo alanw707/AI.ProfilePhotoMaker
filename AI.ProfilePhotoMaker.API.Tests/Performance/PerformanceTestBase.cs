@@ -137,7 +137,6 @@ public abstract class PerformanceTestBase : IDisposable
                 Gender = _fixture.Create<string>(),
                 Ethnicity = _fixture.Create<string>(),
                 Credits = _fixture.Create<int>(),
-                PurchasedCredits = _fixture.Create<int>(),
                 CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 365)),
                 UpdatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 30))
             };

@@ -3,6 +3,7 @@ using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.Payments;
 using AI.ProfilePhotoMaker.API.Configuration;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +19,7 @@ public class CreditController : BaseController
     private readonly IStripePaymentService _stripePaymentService;
     private readonly StripeOptions _stripeOptions;
     private readonly PaymentSimulationOptions _paymentSimulationOptions;
+    private readonly IWebHostEnvironment _environment;
 
     public CreditController(
         ICreditPackageService creditPackageService,
@@ -25,6 +27,7 @@ public class CreditController : BaseController
         IStripePaymentService stripePaymentService,
         IOptions<StripeOptions> stripeOptions,
         IOptions<PaymentSimulationOptions> paymentSimulationOptions,
+        IWebHostEnvironment environment,
         ILogger<CreditController> logger)
         : base(logger)
     {
@@ -33,10 +36,11 @@ public class CreditController : BaseController
         _stripePaymentService = stripePaymentService;
         _stripeOptions = stripeOptions.Value;
         _paymentSimulationOptions = paymentSimulationOptions.Value;
+        _environment = environment;
     }
 
     /// <summary>
-    /// Gets current user's credit status including weekly and purchased credits
+    /// Gets current user's credit status
     /// </summary>
     [HttpGet("status")]
     public async Task<IActionResult> GetCreditStatus()
@@ -45,7 +49,7 @@ public class CreditController : BaseController
         if (authCheck != null) return authCheck;
         var userId = GetCurrentUserId()!;
 
-        var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
+        var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
         var profile = await _basicTierService.GetUserProfileWithCreditsAsync(userId);
 
         if (profile == null)
@@ -53,9 +57,7 @@ public class CreditController : BaseController
 
         var status = new UserCreditStatusDto
         {
-            TotalCredits = weeklyCredits + purchasedCredits,
-            WeeklyCredits = weeklyCredits,
-            PurchasedCredits = purchasedCredits,
+            Credits = availableCredits,
             LastCreditReset = profile.LastCreditReset,
             NextResetDate = profile.LastCreditReset.AddDays(7)
         };
@@ -120,7 +122,9 @@ public class CreditController : BaseController
         var purchase = purchaseResult.Purchase!;
 
         // Get updated credit status
-        var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
+        var updatedCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
+        var profile = await _basicTierService.GetUserProfileWithCreditsAsync(userId);
+        var lastCreditReset = profile?.LastCreditReset ?? DateTime.UtcNow;
 
         return SuccessResponse(new
         {
@@ -133,9 +137,9 @@ public class CreditController : BaseController
             },
             updatedCredits = new
             {
-                totalCredits = weeklyCredits + purchasedCredits,
-                weeklyCredits = weeklyCredits,
-                purchasedCredits = purchasedCredits
+                credits = updatedCredits,
+                lastCreditReset,
+                nextResetDate = lastCreditReset.AddDays(7)
             }
         });
     }
@@ -224,19 +228,16 @@ public class CreditController : BaseController
             PhotoEnhancement = new
             {
                 Cost = CreditCostConfig.PhotoEnhancement,
-                CanUseWeeklyCredits = CreditCostConfig.CanUseWeeklyCredits("photo_enhancement"),
                 Description = "Enhance photos using AI professional editing"
             },
             ModelTraining = new
             {
                 Cost = CreditCostConfig.ModelTraining,
-                CanUseWeeklyCredits = CreditCostConfig.CanUseWeeklyCredits("model_training"),
                 Description = "Train custom AI model with your photos"
             },
             StyledGeneration = new
             {
                 Cost = CreditCostConfig.StyledGeneration,
-                CanUseWeeklyCredits = CreditCostConfig.CanUseWeeklyCredits("styled_generation"),
                 Description = "Generate styled photos using trained model"
             }
         };
@@ -251,8 +252,11 @@ public class CreditController : BaseController
     [AllowAnonymous]
     public IActionResult GetPaymentConfig()
     {
-        var stripeHasApiKeys = _stripeOptions.HasApiKeys();
-        var webhookConfigured = _stripeOptions.HasWebhookSecret();
+        var liveKeysBlocked = _environment.IsDevelopment()
+                              && !_stripeOptions.AllowLiveKeysInDevelopment
+                              && _stripeOptions.UsesLiveMode();
+        var stripeHasApiKeys = _stripeOptions.HasApiKeys() && !liveKeysBlocked;
+        var webhookConfigured = _stripeOptions.HasWebhookSecret() && !liveKeysBlocked;
         var stripeReady = stripeHasApiKeys && webhookConfigured;
         var simulationForced = _paymentSimulationOptions.Enabled && _paymentSimulationOptions.SkipStripeIntegration;
         var simulationRequired = !stripeReady;
@@ -261,7 +265,11 @@ public class CreditController : BaseController
         string? simulationReason = null;
         if (simulationRequired)
         {
-            simulationReason = !stripeHasApiKeys ? "StripeNotConfigured" : "WebhookNotConfigured";
+            simulationReason = liveKeysBlocked
+                ? "StripeLiveKeysInDevelopment"
+                : !stripeHasApiKeys
+                    ? "StripeNotConfigured"
+                    : "WebhookNotConfigured";
         }
         else if (simulationForced)
         {

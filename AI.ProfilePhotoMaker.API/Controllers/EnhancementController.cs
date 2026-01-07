@@ -202,9 +202,10 @@ public class EnhancementController : ControllerBase
             dto.ImageUrl = await NormalizeImageUrlForServerAccessAsync(dto.ImageUrl);
             _logger.LogInformation("Enhancement source image URL normalized to: {ImageUrl}", S(dto.ImageUrl));
 
-            // Check credit availability (OpenAI costs 2 credits)
+            // Check credit availability (enhancement costs 1 credit)
+            var requiredCredits = CreditCostConfig.GetCreditCost("photo_enhancement");
             var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
-            if (availableCredits < 2)
+            if (availableCredits < requiredCredits)
             {
                 _logger.LogWarning("User {UserId} has insufficient credits for OpenAI enhancement. Available: {Credits}", Sid(userId), availableCredits);
                 return BadRequest(new
@@ -213,18 +214,37 @@ public class EnhancementController : ControllerBase
                     error = new
                     {
                         code = "InsufficientCredits",
-                        message = "Insufficient credits for OpenAI enhancement. 2 credits required."
+                        message = $"Insufficient credits for OpenAI enhancement. {requiredCredits} credit required."
                     }
                 });
             }
 
             // Consume credits BEFORE API call to prevent race conditions
-            // Use photo_enhancement action so weekly credits are eligible
+            // Use photo_enhancement action to track enhancement usage
             var correlationId = $"photo_enhancement:{Guid.NewGuid()}";
-            creditConsumptionResult = await _basicTierService.ConsumeCreditsAsync(userId, 2, "photo_enhancement", correlationId);
+            creditConsumptionResult = await _basicTierService.ConsumeCreditsAsync(
+                userId,
+                requiredCredits,
+                "photo_enhancement",
+                correlationId,
+                HttpContext?.RequestAborted ?? CancellationToken.None);
 
             if (creditConsumptionResult == null || !creditConsumptionResult.Success)
             {
+                if (creditConsumptionResult?.Error == "insufficient_credits")
+                {
+                    _logger.LogWarning("Insufficient credits detected during OpenAI enhancement for user {UserId}", Sid(userId));
+                    return BadRequest(new
+                    {
+                        success = false,
+                        error = new
+                        {
+                            code = "InsufficientCredits",
+                            message = $"Insufficient credits for OpenAI enhancement. {requiredCredits} credit required."
+                        }
+                    });
+                }
+
                 _logger.LogError("Failed to consume credits for user {UserId} for OpenAI enhancement", Sid(userId));
                 return StatusCode(500, new
                 {

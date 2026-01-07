@@ -46,14 +46,12 @@ describe('SettingsComponent', () => {
 
   const mockCreditsInfo = {
     availableCredits: 3,
-    totalCredits: 3,
   };
 
   const mockUserCreditStatus = {
-    weeklyCredits: 3,
-    purchasedCredits: 10,
-    totalCredits: 13,
-    lastReset: new Date(),
+    credits: 13,
+    lastCreditReset: new Date().toISOString(),
+    nextResetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
   };
 
   // Stub for header to avoid pulling full component dependencies
@@ -102,8 +100,8 @@ describe('SettingsComponent', () => {
           generatedPhotosCount: 0,
           imagesValidated: false,
           lastValidationTime: null,
-          userCreditStatus: { weeklyCredits: 3, purchasedCredits: 10, totalCredits: 13 },
-          creditsInfo: { availableCredits: 3, totalCredits: 13 },
+          userCreditStatus: { credits: 13 },
+          creditsInfo: { availableCredits: 3 },
           totalCredits: 13,
           isPremiumWorkflow: false,
           isLoading: false,
@@ -233,12 +231,8 @@ describe('SettingsComponent', () => {
       component.userEmail = 'test@example.com';
       component.userProfile = mockUserProfile;
       component.dataStats = { ...mockDataStats } as any;
-      component.creditsInfo = { availableCredits: 3, totalCredits: 13 } as any;
-      component.userCreditStatus = {
-        weeklyCredits: 3,
-        purchasedCredits: 10,
-        totalCredits: 13,
-      } as any;
+      component.creditsInfo = { availableCredits: 13 } as any;
+      component.userCreditStatus = { credits: 13 } as any;
       fixture.detectChanges();
     });
 
@@ -446,9 +440,8 @@ describe('SettingsComponent', () => {
 
     it('should get total available credits', () => {
       // Credits come from dashboard state service; use mocked values
-      const total =
-        (mockUserCreditStatus.weeklyCredits || 0) + (mockUserCreditStatus.purchasedCredits || 0);
-      expect(total).toBe(13); // 3 weekly + 10 purchased
+      const total = mockUserCreditStatus.credits || 0;
+      expect(total).toBe(13);
     });
   });
 });

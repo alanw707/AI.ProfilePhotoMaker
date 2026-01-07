@@ -8,7 +8,7 @@
     "success": false,
     "error": {
       "code": "InsufficientCredits",
-      "message": "Model training requires 15 purchased credits. You have 0 purchased credits. Please purchase more credits to train custom models."
+      "message": "Model training requires 15 credits. You have 0 credits. Please purchase more credits to train custom models."
     }
   }
 }

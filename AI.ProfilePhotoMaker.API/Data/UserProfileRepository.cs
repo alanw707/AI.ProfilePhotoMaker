@@ -78,7 +78,6 @@ public class UserProfileRepository : IUserProfileRepository
             CreatedAt = profile.CreatedAt,
             UpdatedAt = profile.UpdatedAt,
             Credits = profile.Credits,
-            PurchasedCredits = profile.PurchasedCredits,
             TotalProcessedImages = imageStats?.TotalCount ?? 0,
             OriginalUploads = imageStats?.OriginalUploads ?? 0,
             GeneratedImages = imageStats?.GeneratedImages ?? 0,

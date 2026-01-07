@@ -1,7 +1,7 @@
 # Tech-Spec: Unified Credits System
 
 **Created:** 2026-01-04
-**Status:** In Progress
+**Status:** Completed
 
 ## Overview
 
@@ -77,11 +77,11 @@ Unify credits into a single balance called Credits. All operations (enhancement,
 - [x] Tests: update unit/integration/e2e tests to use unified credits and adjust assertions for new API responses.
 
 #### Review Follow-ups (AI)
-- [ ] [AI-Review][High] Enforce credit checks + deductions in profile generation to prevent zero-cost image generation. [AI.ProfilePhotoMaker.API/Controllers/ProfileController.cs:208]
-- [ ] [AI-Review][High] Align enhancement credit cost with unified pricing (1 credit) and update messaging. [AI.ProfilePhotoMaker.API/Controllers/EnhancementController.cs:205]
-- [ ] [AI-Review][Medium] Make credit consumption atomic to avoid overspend during concurrent requests. [AI.ProfilePhotoMaker.API/Services/BasicTierService.cs:115]
-- [ ] [AI-Review][Medium] Remove remaining "free enhancements/free credits" marketing copy to match unified credits messaging (landing + SEO + static free-headshot page). [AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.ts:401]
-- [ ] [AI-Review][Low] Update docs credit cost examples to match current pricing (1/15/5). [docs/operations/CREDIT_SYSTEM.md:19]
+- [x] [AI-Review][High] Enforce credit checks + deductions in profile generation to prevent zero-cost image generation. [AI.ProfilePhotoMaker.API/Controllers/ProfileController.cs:208]
+- [x] [AI-Review][High] Align enhancement credit cost with unified pricing (1 credit) and update messaging. [AI.ProfilePhotoMaker.API/Controllers/EnhancementController.cs:205]
+- [x] [AI-Review][Medium] Make credit consumption atomic to avoid overspend during concurrent requests. [AI.ProfilePhotoMaker.API/Services/BasicTierService.cs:115]
+- [x] [AI-Review][Medium] Remove remaining "free enhancements/free credits" marketing copy to match unified credits messaging (landing + SEO + static free-headshot page). [AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.ts:401]
+- [x] [AI-Review][Low] Update docs credit cost examples to match current pricing (1/15/5). [docs/operations/CREDIT_SYSTEM.md:19]
 
 ### Acceptance Criteria
 - [x] `GET /api/credit/status` returns a single credits balance and reset dates; no weekly/purchased fields.
@@ -109,4 +109,4 @@ Unify credits into a single balance called Credits. All operations (enhancement,
 ## Review Notes
 - Adversarial review completed.
 - Findings: 10 total, 10 fixed, 0 skipped.
-- Resolution approach: auto-fix.
+- Resolution approach: walk-through.

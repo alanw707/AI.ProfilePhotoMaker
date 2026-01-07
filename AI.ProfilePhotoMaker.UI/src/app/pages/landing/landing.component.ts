@@ -180,7 +180,7 @@ export class LandingComponent implements OnInit, OnDestroy {
   private modelTrainingCost = 0;
 
   stats = [
-    { value: '5', label: 'Free weekly credits' },
+    { value: '5', label: 'Weekly top-up target' },
     { value: 'Minutes', label: 'Typical results' },
     { value: '20+', label: 'Styles' },
     { value: 'Privacy-first', label: 'Handling' },
@@ -398,7 +398,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     this._meta.updateTag({
       name: 'description',
       content:
-        'Create LinkedIn-ready profile photos with AI in minutes. Start with free weekly enhancement credits (no credit card required), then upgrade for full headshot generation.',
+        'Create LinkedIn-ready profile photos with AI in minutes. A single credit balance powers enhancement, training, and generation, with weekly top-ups to 5 when below.',
     });
     this._meta.updateTag({
       name: 'keywords',
@@ -417,7 +417,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     this._meta.updateTag({
       property: 'og:description',
       content:
-        'Transform your casual photos into professional profile photos with AI. Start free with weekly enhancement credits, then upgrade for full headshot generation.',
+        'Transform your casual photos into professional profile photos with AI. Use one credit balance for enhancement, training, and generation, with weekly top-ups to 5 when below.',
     });
     this._meta.updateTag({ property: 'og:type', content: 'website' });
     this._meta.updateTag({ property: 'og:url', content: 'https://app.aiprofilephotomaker.com/' });
@@ -438,7 +438,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     this._meta.updateTag({
       name: 'twitter:description',
       content:
-        'Create LinkedIn-ready profile photos in minutes. Start with free weekly enhancement credits, then upgrade for full headshot generation.',
+        'Create LinkedIn-ready profile photos in minutes. One credit balance covers enhancement, training, and generation, with weekly top-ups to 5 when below.',
     });
     this._meta.updateTag({
       name: 'twitter:image',
@@ -870,7 +870,7 @@ export class LandingComponent implements OnInit, OnDestroy {
         name: 'Grace Nolan',
         role: 'Small Business Owner (Devonport)',
         content:
-          'I used the free enhancements first, then upgraded for headshots. The final set gave me consistent photos across platforms.',
+          'I started with enhancements, then upgraded for headshots. The final set gave me consistent photos across platforms.',
         style: 'glamour',
       },
       {

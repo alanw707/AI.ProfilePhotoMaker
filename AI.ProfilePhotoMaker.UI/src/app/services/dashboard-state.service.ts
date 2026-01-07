@@ -161,7 +161,7 @@ export class DashboardStateService implements IDashboardStateService {
     });
   }
 
-  // Load internal credits only (no Replicate credits, no image validation)
+  // Load credits only (no image validation)
   loadCreditsOnly() {
     const CACHE_KEY = 'credits_data';
 
@@ -188,7 +188,7 @@ export class DashboardStateService implements IDashboardStateService {
 
     this.setState({ isLoading: true });
 
-    // Load ONLY internal credit status - no Replicate credits
+    // Load ONLY credit status
     this._creditService
       .getCreditStatus()
       .pipe(
@@ -201,10 +201,7 @@ export class DashboardStateService implements IDashboardStateService {
           const userCreditStatus = creditStatus?.success ? creditStatus.data : null;
 
           // Calculate total credits from internal sources only
-          const totalCredits = this._creditService.getTotalAvailableCredits(
-            userCreditStatus,
-            null // No Replicate credits
-          );
+          const totalCredits = this._creditService.getTotalAvailableCredits(userCreditStatus, null);
 
           // Set internal credits state only
           const newState = {

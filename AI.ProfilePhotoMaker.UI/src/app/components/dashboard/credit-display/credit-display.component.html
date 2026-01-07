@@ -33,18 +33,10 @@
   <!-- Credit Breakdown Section -->
   <div class="credit-breakdown-section" *ngIf="showBreakdown && !isLoading">
     <div class="credit-info-box">
-      <h5>Credit Breakdown</h5>
+      <h5>Credit Summary</h5>
       <div class="cost-breakdown">
-        <div class="cost-item">
-          <span class="credit-label">Weekly Credits:</span>
-          <span class="credit-cost">{{ getWeeklyCredits() }}</span>
-        </div>
-        <div class="cost-item">
-          <span class="credit-label">Purchased Credits:</span>
-          <span class="credit-cost">{{ getPurchasedCredits() }}</span>
-        </div>
         <div class="cost-item total-credits">
-          <span class="credit-label">Total Available:</span>
+          <span class="credit-label">Credits Available:</span>
           <span class="credit-cost">{{ getTotalAvailableCredits() }}</span>
         </div>
       </div>
@@ -116,10 +108,10 @@
   <!-- Basic Credits Display (for non-premium users) -->
   <div class="basic-credits-display" *ngIf="!isLoading && creditsInfo && !userCreditStatus">
     <div class="credits-info-card">
-      <div class="credits-icon">⚡</div>
+      <div class="credits-icon">💎</div>
       <div class="credits-text">
-        <span class="credits-count">{{ creditsInfo.availableCredits }} Weekly Credits</span>
-        <span class="credits-note">Use for basic photo enhancement</span>
+        <span class="credits-count">{{ creditsInfo.credits }} Credits</span>
+        <span class="credits-note">Use credits for training, generation, and enhancement</span>
       </div>
     </div>
   </div>

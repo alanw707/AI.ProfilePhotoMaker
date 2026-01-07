@@ -2,32 +2,28 @@
 
 ## Overview
 
-The AI Profile Photo Maker implements a flexible credit-based system that supports both free tier users with weekly allowances and premium users who can purchase credit packages. The system integrates with Stripe for payment processing while maintaining a simulation mode for development.
+The AI Profile Photo Maker uses a unified credit balance for enhancements, training, and generation. Weekly top-ups restore a user's balance to 5 when it drops below 5. The system integrates with Stripe for payment processing while maintaining a simulation mode for development.
 
 ## Credit System Architecture
 
-### Credit Types
+### Credit Balance
 
-1. **Free Credits**
-   - 5 credits per week for basic users
-   - Auto-refreshes every Monday at midnight UTC
-   - Non-accumulative (use it or lose it)
-   - Tracked via `WeeklyFreeCreditsUsed` field
+1. **Unified Credits**
+   - Single balance for all operations
+   - Credits never expire and roll over
 
-2. **Purchased Credits**
-   - Permanent credits that don't expire
-   - Available through credit packages
-   - Accumulative across purchases
-   - Tracked via `PurchasedCredits` field
+2. **Weekly Top-Up**
+   - If credits are below 5 at reset, balance is topped up to 5
+   - Reset runs weekly (midnight UTC)
 
 ### Credit Costs
 
 ```csharp
 public static class CreditCosts
 {
-    public const int PhotoGeneration = 10;  // Per style (2 images)
+    public const int PhotoGeneration = 5;   // Per image
     public const int PhotoEnhancement = 1;  // Per image
-    public const int ModelTraining = 0;     // Free
+    public const int ModelTraining = 15;    // Per training job
 }
 ```
 
@@ -35,12 +31,10 @@ public static class CreditCosts
 
 #### UserProfile Credits
 ```sql
-CREATE TABLE AspNetUsers (
+CREATE TABLE UserProfiles (
     -- Other fields...
-    PurchasedCredits INTEGER DEFAULT 0,
-    WeeklyFreeCreditsUsed INTEGER DEFAULT 0,
-    LastFreeCreditsReset DATETIME,
-    -- Computed: TotalCredits = PurchasedCredits + (5 - WeeklyFreeCreditsUsed)
+    Credits INTEGER DEFAULT 5,
+    LastCreditReset DATETIME
 );
 ```
 
@@ -65,24 +59,14 @@ public class CreditService
 {
     public int GetAvailableCredits(UserProfile user)
     {
-        var freeCreditsRemaining = Math.Max(0, 5 - user.WeeklyFreeCreditsUsed);
-        return user.PurchasedCredits + freeCreditsRemaining;
+        return user.Credits;
     }
     
     public async Task<bool> DeductCredits(string userId, int amount)
     {
         var user = await GetUser(userId);
-        var totalCredits = GetAvailableCredits(user);
-        
-        if (totalCredits < amount) return false;
-        
-        // Deduct from free credits first
-        var freeCreditsToUse = Math.Min(amount, 5 - user.WeeklyFreeCreditsUsed);
-        user.WeeklyFreeCreditsUsed += freeCreditsToUse;
-        
-        // Then deduct from purchased credits
-        var remainingToDeduct = amount - freeCreditsToUse;
-        user.PurchasedCredits -= remainingToDeduct;
+        if (user.Credits < amount) return false;
+        user.Credits -= amount;
         
         await SaveChanges();
         return true;
@@ -111,10 +95,10 @@ public class BasicTierBackgroundService : BackgroundService
     private async Task ResetWeeklyCredits()
     {
         await _dbContext.Database.ExecuteSqlRawAsync(@"
-            UPDATE AspNetUsers 
-            SET WeeklyFreeCreditsUsed = 0, 
-                LastFreeCreditsReset = @p0
-            WHERE WeeklyFreeCreditsUsed > 0",
+            UPDATE UserProfiles
+            SET Credits = CASE WHEN Credits < 5 THEN 5 ELSE Credits END,
+                LastCreditReset = @p0
+            WHERE SubscriptionTier = 0",
             DateTime.UtcNow);
     }
 }
@@ -169,12 +153,11 @@ sequenceDiagram
   template: `
     <div class="credit-display">
       <div class="credit-circle">
-        <span class="credit-number">{{totalCredits}}</span>
+        <span class="credit-number">{{credits}}</span>
         <span class="credit-label">Credits</span>
       </div>
       <div class="credit-breakdown">
-        <p>Free: {{freeCredits}}/5 this week</p>
-        <p>Purchased: {{purchasedCredits}}</p>
+        <p>Weekly top-ups restore balance to 5 when below</p>
       </div>
       <button mat-button (click)="openPurchaseDialog()">
         Buy Credits
@@ -325,7 +308,7 @@ public async Task<IActionResult> HandleStripeWebhook()
    Replace the placeholders with values from the API response. A real confirmation through the UI also emits the webhook automatically.
 
 6. **Verify credits**  
-   Refresh the Premium page or call `GET /api/credit/status` to confirm that purchased credits were applied.
+   Refresh the Premium page or call `GET /api/credit/status` to confirm that credits were applied.
 
 > Tip: You can fetch the authenticated user id with `GET /api/auth/profile`; the `id` field matches the metadata required by the webhook.
 
@@ -452,9 +435,9 @@ if (environment.features.paymentSimulation) {
    - Try to generate with 0 credits
    - Verify error handling
 
-2. **Weekly Reset**
+2. **Weekly Top-Up**
    - Advance time to Monday
-   - Verify free credits reset
+   - Verify credits top up to 5 when below
 
 3. **Purchase Flow**
    - Complete purchase

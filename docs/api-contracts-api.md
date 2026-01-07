@@ -208,6 +208,13 @@ Notes:
 | DELETE | `/api/Profile/account` | DeleteUserAccount | required |
 | GET | `/api/Profile/data/export` | ExportUserData | required |
 
+### GenerateImages Response (ProfileController)
+Success response includes:
+- `ImageUrl`
+- `Message`
+- `CreditsRemaining`
+- `CreditsCost`
+
 ## ProfileManagementController
 - Base Route: `api/profile-management`
 - Auth: required

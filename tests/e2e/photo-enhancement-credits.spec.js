@@ -56,7 +56,7 @@ test.describe('Photo Enhancement Credits', () => {
     await expect(refreshedCredits).toBe(startingCredits - 2);
 
     const apiCredits = await fetchCreditsFromApi(page);
-    expect(apiCredits.totalCredits).toBe(refreshedCredits);
+    expect(apiCredits.credits).toBe(refreshedCredits);
   });
 });
 

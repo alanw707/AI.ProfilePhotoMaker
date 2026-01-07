@@ -83,7 +83,7 @@ test.describe('Credit purchase idempotency (UI-assisted)', () => {
     });
     expect(statusBeforeResp.ok).toBeTruthy();
     const statusBefore = statusBeforeResp.json?.data ?? statusBeforeResp.json;
-    const purchasedBefore = statusBefore.purchasedCredits ?? 0;
+    const creditsBefore = statusBefore.credits ?? 0;
 
     // Perform purchase twice with same transaction id
     const paymentTransactionId = `sim_ui_idem_${Date.now()}`;
@@ -109,10 +109,9 @@ test.describe('Credit purchase idempotency (UI-assisted)', () => {
     });
     expect(statusAfterResp.ok).toBeTruthy();
     const statusAfter = statusAfterResp.json?.data ?? statusAfterResp.json;
-    const purchasedAfter = statusAfter.purchasedCredits ?? 0;
-    const totalAfter = statusAfter.totalCredits ?? purchasedAfter;
+    const creditsAfter = statusAfter.credits ?? 0;
 
-    expect(purchasedAfter).toBe(purchasedBefore + packageCredits);
+    expect(creditsAfter).toBe(creditsBefore + packageCredits);
 
     // Login through UI and verify displayed credits align with API
     await page.goto('/auth/login');
@@ -127,6 +126,6 @@ test.describe('Credit purchase idempotency (UI-assisted)', () => {
     const locator = page.locator(selectors.creditsValue).first();
     await locator.waitFor({ timeout: 20000 });
     const displayedCredits = extractCredits(await locator.textContent());
-    expect(displayedCredits).toBe(totalAfter);
+    expect(displayedCredits).toBe(creditsAfter);
   });
 });

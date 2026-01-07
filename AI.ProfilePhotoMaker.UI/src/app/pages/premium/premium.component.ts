@@ -131,10 +131,7 @@ import { NavigationService } from '../../services/navigation.service';
           <!-- Already Have Credits Section -->
           <section
             class="existing-package-section"
-            *ngIf="
-              userCreditStatus &&
-              (userCreditStatus.purchasedCredits > 0 || userCreditStatus.weeklyCredits > 0)
-            "
+            *ngIf="userCreditStatus && userCreditStatus.credits > 0"
           >
             <div class="content-container">
               <div class="existing-package-card">
@@ -143,7 +140,7 @@ import { NavigationService } from '../../services/navigation.service';
                   <div class="status-details">
                     <span class="package-name">Credit Balance</span>
                     <span class="credits-remaining"
-                      >{{ userCreditStatus.totalCredits }} total credits available</span
+                      >{{ userCreditStatus.credits }} credits available</span
                     >
                   </div>
                 </div>

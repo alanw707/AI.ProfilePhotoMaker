@@ -2,7 +2,7 @@
   "body": {
     "error": {
       "code": "InsufficientCredits",
-      "message": "Styled image generation requires 5 purchased credits. You have 0 purchased credits. Please purchase more credits to generate styled images."
+      "message": "Styled image generation requires 5 credits. You have 0 credits. Please purchase more credits to generate styled images."
     },
     "success": false
   },

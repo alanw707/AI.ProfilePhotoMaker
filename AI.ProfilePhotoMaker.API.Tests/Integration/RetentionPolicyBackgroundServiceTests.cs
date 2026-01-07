@@ -363,7 +363,6 @@ public class RetentionPolicyBackgroundServiceTests
             User = user,
             SubscriptionTier = SubscriptionTier.Basic,
             Credits = 0,
-            PurchasedCredits = 0,
             LastCreditReset = DateTime.UtcNow.AddDays(-1),
             CreatedAt = DateTime.UtcNow.AddMinutes(-10),
             UpdatedAt = DateTime.UtcNow.AddMinutes(-10)

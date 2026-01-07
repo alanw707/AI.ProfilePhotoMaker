@@ -17,8 +17,7 @@ public class UserProfile
 
     // Basic tier and subscription management
     public SubscriptionTier SubscriptionTier { get; set; } = SubscriptionTier.Basic;
-    public int Credits { get; set; } = 5; // Weekly credits (max 5, resets weekly)
-    public int PurchasedCredits { get; set; } = 0; // Purchased credits (no expiration, accumulates)
+    public int Credits { get; set; } = 5; // Unified credits balance (tops up to 5 weekly if below)
     public DateTime LastCreditReset { get; set; } = DateTime.UtcNow;
 
     public List<ProcessedImage> ProcessedImages { get; set; } = new List<ProcessedImage>();

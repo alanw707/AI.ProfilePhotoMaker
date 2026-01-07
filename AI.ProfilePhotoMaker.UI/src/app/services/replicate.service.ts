@@ -75,16 +75,6 @@ export interface FinalizeTrainingData {
   completedAt?: string;
 }
 
-export interface CreditsInfo {
-  availableCredits: number;
-  purchasedCredits?: number;
-  weeklyCredits?: number;
-  totalCredits?: number;
-  subscriptionTier: string;
-  lastCreditReset: Date;
-  nextResetDate: Date;
-}
-
 @Injectable({
   providedIn: 'root',
 })
@@ -215,13 +205,6 @@ export class ReplicateService {
       };
       error: any;
     }>(this.config.generateBasicUrl, request);
-  }
-
-  // Credits Management
-  getCredits(): Observable<{ success: boolean; data: CreditsInfo; error: any }> {
-    return this.http.get<{ success: boolean; data: CreditsInfo; error: any }>(
-      this.config.replicateCreditsUrl
-    );
   }
 
   // Model Availability Check

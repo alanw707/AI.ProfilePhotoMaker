@@ -112,9 +112,6 @@ Authorization: Bearer <token>
   "firstName": "John",
   "lastName": "Doe",
   "profileImageUrl": "/uploads/profile.jpg",
-  "purchasedCredits": 100,
-  "weeklyFreeCreditsUsed": 2,
-  "totalCredits": 101,
   "hasTrainedModel": true,
   "modelStatus": "completed"
 }
@@ -382,19 +379,18 @@ Authorization: Bearer <token>
 
 ### Credit Management
 
-#### Get Credit Balance
+#### Get Credit Status
 ```http
-GET /credit/balance
+GET /credit/status
 Authorization: Bearer <token>
 ```
 
 **Response:**
 ```json
 {
-  "purchasedCredits": 100,
-  "freeCreditsRemaining": 1,
-  "totalCredits": 101,
-  "weeklyResetDate": "2025-01-20T00:00:00Z"
+  "credits": 101,
+  "lastCreditReset": "2025-01-13T00:00:00Z",
+  "nextResetDate": "2025-01-20T00:00:00Z"
 }
 ```
 
@@ -495,7 +491,6 @@ GET /config/app-settings
 ```json
 {
   "maxSelfies": 20,
-  "weeklyFreeCredits": 3,
   "creditCosts": {
     "generation": 10,
     "enhancement": 1

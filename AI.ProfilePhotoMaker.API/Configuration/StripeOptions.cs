@@ -7,6 +7,7 @@ public class StripeOptions
     public string PublishableKey { get; set; } = string.Empty;
     public string SecretKey { get; set; } = string.Empty;
     public string WebhookSecret { get; set; } = string.Empty;
+    public bool AllowLiveKeysInDevelopment { get; set; } = false;
 
     public bool HasApiKeys()
     {
@@ -17,6 +18,12 @@ public class StripeOptions
     public bool HasWebhookSecret()
     {
         return !string.IsNullOrWhiteSpace(WebhookSecret);
+    }
+
+    public bool UsesLiveMode()
+    {
+        return SecretKey.StartsWith("sk_live_", StringComparison.OrdinalIgnoreCase)
+               || PublishableKey.StartsWith("pk_live_", StringComparison.OrdinalIgnoreCase);
     }
 
     public bool IsConfigured()

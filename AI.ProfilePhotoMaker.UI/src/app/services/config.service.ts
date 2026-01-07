@@ -65,10 +65,6 @@ export class ConfigService {
     return this.buildEndpointUrl('/replicate/generate/basic');
   }
 
-  get replicateCreditsUrl(): string {
-    return this.buildEndpointUrl('/credit/status');
-  }
-
   get imageStylesUrl(): string {
     return this.buildEndpointUrl('/image/styles');
   }
@@ -282,14 +278,6 @@ export class ConfigService {
    */
   get isImageValidationEnabled(): boolean {
     return environment.features?.enableImageValidation ?? true;
-  }
-
-  /**
-   * Check if Replicate credits API calls should be made
-   * @returns true if Replicate API should be called, false to skip
-   */
-  get isReplicateCreditsEnabled(): boolean {
-    return environment.features?.enableReplicateCredits ?? true;
   }
 
   // Auto-repair feature flag getters removed; UI no longer triggers repair.

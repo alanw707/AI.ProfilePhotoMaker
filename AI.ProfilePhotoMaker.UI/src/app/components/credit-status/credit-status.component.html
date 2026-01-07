@@ -9,22 +9,18 @@
     <!-- Compact View (Default) -->
     <div class="compact-view" *ngIf="!showDetailed">
       <div class="total-credits">
-        <span class="credit-count">{{ creditStatus.totalCredits }}</span>
+        <span class="credit-count">{{ creditStatus.credits }}</span>
         <span class="credit-label">Credits</span>
       </div>
-      
-      <button class="refresh-btn" (click)="refresh()" title="Refresh credits">
-        ↻
-      </button>
+
+      <button class="refresh-btn" (click)="refresh()" title="Refresh credits">↻</button>
     </div>
 
     <!-- Detailed View -->
     <div class="detailed-view" *ngIf="showDetailed">
       <div class="header">
         <h3>Your Credits</h3>
-        <button class="refresh-btn" (click)="refresh()" title="Refresh credits">
-          ↻
-        </button>
+        <button class="refresh-btn" (click)="refresh()" title="Refresh credits">↻</button>
       </div>
 
       <div class="credit-breakdown">
@@ -32,34 +28,21 @@
         <div class="credit-card total">
           <div class="credit-icon">💳</div>
           <div class="credit-info">
-            <span class="count">{{ creditStatus.totalCredits }}</span>
+            <span class="count">{{ creditStatus.credits }}</span>
             <span class="label">Total Credits</span>
           </div>
         </div>
 
-        <!-- Weekly Credits -->
+        <!-- Weekly Top-Up -->
         <div class="credit-card weekly">
           <div class="credit-icon">🔄</div>
           <div class="credit-info">
-            <span class="count">{{ creditStatus.weeklyCredits }}</span>
-            <span class="label">Weekly Credits</span>
+            <span class="count">{{ getDaysUntilReset() }}</span>
+            <span class="label">Days Until Top-Up</span>
           </div>
           <div class="credit-note">
-            <small>Resets in {{ getDaysUntilReset() }} day(s)</small>
-            <small>Basic features only</small>
-          </div>
-        </div>
-
-        <!-- Purchased Credits -->
-        <div class="credit-card purchased">
-          <div class="credit-icon">💎</div>
-          <div class="credit-info">
-            <span class="count">{{ creditStatus.purchasedCredits }}</span>
-            <span class="label">Purchased Credits</span>
-          </div>
-          <div class="credit-note">
-            <small>Never expire</small>
-            <small>All features</small>
+            <small>Top-ups restore balance to 5 when below</small>
+            <small>Credits never expire</small>
           </div>
         </div>
       </div>
@@ -103,7 +86,7 @@
   </div>
 
   <!-- No Credits State -->
-  <div class="no-credits" *ngIf="!isLoading && creditStatus && creditStatus.totalCredits === 0">
+  <div class="no-credits" *ngIf="!isLoading && creditStatus && creditStatus.credits === 0">
     <div class="empty-state">
       <div class="empty-icon">💰</div>
       <h3>No Credits Available</h3>

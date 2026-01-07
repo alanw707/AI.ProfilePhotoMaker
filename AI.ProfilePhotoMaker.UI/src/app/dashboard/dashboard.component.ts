@@ -130,8 +130,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     expectedGenerationTime: 0,
     lastGenerationCount: 0,
     showLastGenerationMessage: false,
-      activePredictionIds: [],
-    });
+    activePredictionIds: [],
+  });
 
   // State-based getters for template - removed, using stateService.getState() directly
   private _activeJobPolling?: Subscription;
@@ -139,25 +139,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   getTotalAvailableCredits(): number {
     const state = this.stateService.getState();
     return this.creditService.getTotalAvailableCredits(state.userCreditStatus, state.creditsInfo);
-  }
-
-  getPurchasedCredits(): number {
-    const userCreditStatus = this.stateService.getState().userCreditStatus;
-    return this.creditService.getPurchasedCredits(userCreditStatus);
-  }
-
-  getWeeklyCredits(): number {
-    const state = this.stateService.getState();
-    return this.creditService.getWeeklyCredits(state.userCreditStatus, state.creditsInfo);
-  }
-
-  getHeadshotEligibleCredits(): number {
-    const state = this.stateService.getState();
-    return (
-      state.userCreditStatus?.purchasedCredits ??
-      (state.creditsInfo as { purchasedCredits?: number })?.purchasedCredits ??
-      0
-    );
   }
 
   onCreditAction(event: { action: string; context?: string }): void {
@@ -212,33 +193,35 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     // Subscribe to state changes to update UI
-    this._subscriptions.add(this.state$.subscribe(state => {
-      // Debug logging for troubleshooting (development only)
-      this._logger.conditionalLog(
-        environment.features.logging?.enableDashboardDebug ?? false,
-        LogLevel.DEBUG,
-        'Dashboard state updated',
-        {
-          userProfile: !!state.userProfile,
-          creditsInfo: !!state.creditsInfo,
-          userCreditStatus: !!state.userCreditStatus,
-          uploadedImages: state.uploadedImages,
-          generatedPhotosCount: state.generatedPhotosCount,
-          modelStatus: state.modelStatus,
-          isPremiumWorkflow: state.isPremiumWorkflow,
-          isLoading: state.isLoading,
-        }
-      );
+    this._subscriptions.add(
+      this.state$.subscribe(state => {
+        // Debug logging for troubleshooting (development only)
+        this._logger.conditionalLog(
+          environment.features.logging?.enableDashboardDebug ?? false,
+          LogLevel.DEBUG,
+          'Dashboard state updated',
+          {
+            userProfile: !!state.userProfile,
+            creditsInfo: !!state.creditsInfo,
+            userCreditStatus: !!state.userCreditStatus,
+            uploadedImages: state.uploadedImages,
+            generatedPhotosCount: state.generatedPhotosCount,
+            modelStatus: state.modelStatus,
+            isPremiumWorkflow: state.isPremiumWorkflow,
+            isLoading: state.isLoading,
+          }
+        );
 
-      // Force change detection when state updates
-      this.selectedStyles = this.getSelectedStylesCount();
+        // Force change detection when state updates
+        this.selectedStyles = this.getSelectedStylesCount();
 
-      // Update current step based on progress
-      this._updateCurrentStep();
+        // Update current step based on progress
+        this._updateCurrentStep();
 
-      // Force change detection for async updates
-      this._cdr.detectChanges();
-    }));
+        // Force change detection for async updates
+        this._cdr.detectChanges();
+      })
+    );
 
     this.stateService.loadInitialDashboardData();
     this._loadAvailableStyles();
@@ -409,10 +392,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this._workflowService = this._injector.get(workflowOrchestrationServiceClass);
 
     // Subscribe to progress updates and forward them to our proxy observable
-    this._subscriptions.add(this._workflowService.progress$.subscribe(progress => {
-      this._workflowProgressSubject.next(progress);
-      this._hydrateActiveJobFromWorkflowProgress(progress);
-    }));
+    this._subscriptions.add(
+      this._workflowService.progress$.subscribe(progress => {
+        this._workflowProgressSubject.next(progress);
+        this._hydrateActiveJobFromWorkflowProgress(progress);
+      })
+    );
   }
 
   async startTrainingWithStyles(): Promise<void> {
@@ -441,12 +426,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // Workflow methods
   isPremiumWorkflow(): boolean {
     const state = this.stateService.getState();
-    // User has premium workflow if they have purchased credits, weekly credits, or are marked as premium
-    return (
-      state.isPremiumWorkflow ||
-      (state.userCreditStatus?.purchasedCredits || 0) > 0 ||
-      (state.userCreditStatus?.weeklyCredits || 0) > 0
-    );
+    return state.isPremiumWorkflow || this.getTotalAvailableCredits() > 0;
   }
 
   getStepStatus(step: number): string {
@@ -576,13 +556,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const state = this.stateService.getState();
     const { userCreditStatus, creditsInfo } = state;
 
-    // Paywall: generation/training require purchased credits
-    const purchasedCredits =
-      userCreditStatus?.purchasedCredits ||
-      (creditsInfo as any)?.purchasedCredits ||
-      0;
+    const availableCredits = userCreditStatus?.credits || (creditsInfo as any)?.credits || 0;
 
-    return purchasedCredits;
+    return availableCredits;
   }
 
   calculateTotalCredits(): number {
@@ -618,7 +594,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
           await this._loadWorkflowService();
         }
         if (this._workflowService) {
-          await this._workflowService.queueBackgroundGeneration(selectedStyles, this.imagesPerStyle);
+          await this._workflowService.queueBackgroundGeneration(
+            selectedStyles,
+            this.imagesPerStyle
+          );
         }
       } catch (error) {
         console.error('Failed to queue background generation', error);
@@ -676,7 +655,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private _ensureActiveJobPolling(): void {
-    const hasActiveJob = this.activeJob?.kind === 'training' || this.activeJob?.kind === 'generation';
+    const hasActiveJob =
+      this.activeJob?.kind === 'training' || this.activeJob?.kind === 'generation';
     if (hasActiveJob) {
       this._startActiveJobPolling();
       return;
@@ -703,7 +683,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
         : 'Your photos are being generated in the background.';
 
     const percent = Math.max(0, Math.min(100, Math.round(progress.progressPercentage || 0)));
-    const etaText = progress.estimatedCompletion ? `Est. ${progress.estimatedCompletion}` : undefined;
+    const etaText = progress.estimatedCompletion
+      ? `Est. ${progress.estimatedCompletion}`
+      : undefined;
 
     this.activeJob = {
       kind,
@@ -755,9 +737,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private async _refreshActiveJobFromServer(): Promise<void> {
     const unified = await firstValueFrom(
-      this._fileUploadService.getUnifiedModelStatus().pipe(
-        catchError(() => of(null))
-      )
+      this._fileUploadService.getUnifiedModelStatus().pipe(catchError(() => of(null)))
     );
 
     if (!unified) {
@@ -772,7 +752,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       ...this._workflowProgressSubject.value,
       isTraining: mapped?.kind === 'training',
       isGenerating: mapped?.kind === 'generation',
-      progressPercentage: mapped?.kind === 'training' || mapped?.kind === 'generation' ? mapped.progressPercent : 0,
+      progressPercentage:
+        mapped?.kind === 'training' || mapped?.kind === 'generation' ? mapped.progressPercent : 0,
       progressMessage: mapped?.message || '',
       estimatedCompletion: mapped?.etaText || '',
       trainingId: mapped?.trainingRequestId || '',
@@ -782,12 +763,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this._ensureActiveJobPolling();
   }
 
-  private _mapUnifiedStatusToActiveJob(unified: UnifiedModelStatusResponse): ActiveJobViewModel | null {
+  private _mapUnifiedStatusToActiveJob(
+    unified: UnifiedModelStatusResponse
+  ): ActiveJobViewModel | null {
     const creditImpact = unified.creditImpact ?? null;
     const current = unified.currentRequest ?? null;
     const generation = unified.generationStatus ?? null;
 
-    const formatMinutesRemaining = (typicalMinutes: number, startIso?: string | null): string | undefined => {
+    const formatMinutesRemaining = (
+      typicalMinutes: number,
+      startIso?: string | null
+    ): string | undefined => {
       if (!startIso) {
         return undefined;
       }
@@ -818,13 +804,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
         ? 'Your trained model can’t be found anymore. It may have been deleted or expired.'
         : isReplicateInterrupted
           ? 'Replicate interrupted the training job (code: PA). This is on Replicate’s side; please retry. Your credits should be refunded.'
-        : rawErrorDetails.length > 240
-          ? `${rawErrorDetails.slice(0, 240)}…`
-          : rawErrorDetails;
+          : rawErrorDetails.length > 240
+            ? `${rawErrorDetails.slice(0, 240)}…`
+            : rawErrorDetails;
 
       return {
         kind: 'error',
-        title: isModelMissing ? 'Model unavailable' : isReplicateInterrupted ? 'Training interrupted' : 'Training failed',
+        title: isModelMissing
+          ? 'Model unavailable'
+          : isReplicateInterrupted
+            ? 'Training interrupted'
+            : 'Training failed',
         message: isModelMissing
           ? 'Your trained model is no longer available. You can retrain and generate photos again.'
           : 'Your model training did not complete.',
@@ -863,7 +853,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
       };
     }
 
-    if (unified.statusCode === 'Generating' || generation?.status === 'queued' || generation?.status === 'processing') {
+    if (
+      unified.statusCode === 'Generating' ||
+      generation?.status === 'queued' ||
+      generation?.status === 'processing'
+    ) {
       const startedAt = generation?.startedAt || null;
       const etaText = formatMinutesRemaining(8, startedAt);
 

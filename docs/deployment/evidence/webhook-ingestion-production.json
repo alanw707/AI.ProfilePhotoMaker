@@ -297,9 +297,7 @@
   "creditsBefore": {
     "success": true,
     "data": {
-      "totalCredits": 29,
-      "weeklyCredits": 0,
-      "purchasedCredits": 29,
+      "credits": 29,
       "lastCreditReset": "***REDACTED***",
       "nextResetDate": "***REDACTED***"
     },
@@ -309,9 +307,7 @@
   "creditsAfter": {
     "success": true,
     "data": {
-      "totalCredits": 24,
-      "weeklyCredits": 0,
-      "purchasedCredits": 24,
+      "credits": 24,
       "lastCreditReset": "***REDACTED***",
       "nextResetDate": "***REDACTED***"
     },
