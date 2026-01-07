@@ -6,9 +6,11 @@ using AI.ProfilePhotoMaker.API.Configuration;
 using AI.ProfilePhotoMaker.API.Controllers;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.Payments;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -20,6 +22,7 @@ public class CreditControllerPaymentConfigTests
     private readonly Mock<ICreditPackageService> _creditPackageService = new();
     private readonly Mock<IBasicTierService> _basicTierService = new();
     private readonly Mock<IStripePaymentService> _stripePaymentService = new();
+    private readonly Mock<IWebHostEnvironment> _environment = new();
     private readonly Mock<ILogger<CreditController>> _logger = new();
 
     [Theory]
@@ -51,6 +54,35 @@ public class CreditControllerPaymentConfigTests
         Assert.Equal(stripeReady && !simulationForced, stripe["enabled"]);
         Assert.Equal(stripeReady ? stripeOptions.PublishableKey : null, stripe["publishableKey"]);
         Assert.Equal(stripeOptions.HasWebhookSecret(), stripe["webhookConfigured"]);
+    }
+
+    [Fact]
+    public void GetPaymentConfig_BlocksLiveKeysInDevelopmentByDefault()
+    {
+        var controller = CreateController(
+            new StripeOptions
+            {
+                PublishableKey = "pk_live_test",
+                SecretKey = "sk_live_test",
+                WebhookSecret = "whsec_live_test"
+            },
+            new PaymentSimulationOptions { Enabled = false, SkipStripeIntegration = false },
+            Environments.Development);
+
+        var actionResult = controller.GetPaymentConfig();
+
+        var okResult = Assert.IsType<OkObjectResult>(actionResult);
+        var envelope = okResult.Value!.ToDictionary();
+        var data = ((object?)envelope["data"]!).ToDictionary();
+        var simulation = ((object?)data["paymentSimulation"]!).ToDictionary();
+        var stripe = ((object?)data["stripe"]!).ToDictionary();
+
+        Assert.True((bool)simulation["enabled"]!);
+        Assert.True((bool)simulation["skipStripeIntegration"]!);
+        Assert.Equal("StripeLiveKeysInDevelopment", simulation["reason"]);
+        Assert.False((bool)stripe["enabled"]!);
+        Assert.Null(stripe["publishableKey"]);
+        Assert.False((bool)stripe["webhookConfigured"]!);
     }
 
     public static IEnumerable<object?[]> GetPaymentConfigScenarios()
@@ -88,14 +120,20 @@ public class CreditControllerPaymentConfigTests
         };
     }
 
-    private CreditController CreateController(StripeOptions stripeOptions, PaymentSimulationOptions simulationOptions)
+    private CreditController CreateController(
+        StripeOptions stripeOptions,
+        PaymentSimulationOptions simulationOptions,
+        string environmentName = "Production")
     {
+        _environment.SetupGet(env => env.EnvironmentName).Returns(environmentName);
+
         var controller = new CreditController(
             _creditPackageService.Object,
             _basicTierService.Object,
             _stripePaymentService.Object,
             Options.Create(stripeOptions),
             Options.Create(simulationOptions),
+            _environment.Object,
             _logger.Object)
         {
             ControllerContext = ControllerContextFactory.CreateWithUser("test-user")
