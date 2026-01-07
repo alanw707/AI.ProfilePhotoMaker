@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using AI.ProfilePhotoMaker.API.Controllers;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
+using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.EntityFrameworkCore;
@@ -33,6 +34,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
         private readonly Mock<ILogger<ProfileController>> _mockLogger;
         private readonly Mock<IConfiguration> _mockConfiguration;
         private readonly Mock<IReplicateApiClient> _mockReplicateApiClient;
+        private readonly Mock<IBasicTierService> _mockBasicTierService;
         private readonly Mock<IStorageService> _mockStorageService;
         private readonly ProfileController _controller;
 
@@ -56,6 +58,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
             _mockLogger = new Mock<ILogger<ProfileController>>();
             _mockConfiguration = new Mock<IConfiguration>();
             _mockReplicateApiClient = new Mock<IReplicateApiClient>();
+            _mockBasicTierService = new Mock<IBasicTierService>();
             _mockStorageService = new Mock<IStorageService>();
 
             var pathResolver = new StoragePathResolver(
@@ -70,6 +73,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
                 _mockLogger.Object,
                 _mockConfiguration.Object,
                 _mockReplicateApiClient.Object,
+                _mockBasicTierService.Object,
                 _mockStorageService.Object,
                 pathResolver
             );

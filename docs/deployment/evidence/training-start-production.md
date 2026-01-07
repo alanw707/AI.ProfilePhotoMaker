@@ -10,14 +10,14 @@
 ## Inputs
 - Request payloads: JSON (userId, imageZipUrl)
 - Test user/account: production test account (non-PII)
-- Preconditions: authenticated session token; training ZIP available; purchased credits >= 15
+- Preconditions: authenticated session token; training ZIP available; credits >= 15
 
 ## Commands Executed
 - See `docs/deployment/evidence/training-start-production.log`
 
 ## Output Summary
-- Expected result: training starts and consumes 15 purchased credits.
-- Actual result: training started (prediction status=starting) and purchased credits reduced (50 -> 35).
+- Expected result: training starts and consumes 15 credits.
+- Actual result: training started (prediction status=starting) and credits reduced (50 -> 35).
 - Pass/Fail: Pass (production)
 
 ## Evidence Files

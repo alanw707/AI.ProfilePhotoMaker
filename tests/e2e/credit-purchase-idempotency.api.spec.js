@@ -69,7 +69,7 @@ test.describe('Credit purchase idempotency (API)', () => {
     const statusBeforeResp = await getStatus();
     expect(statusBeforeResp.ok).toBeTruthy();
     const statusBefore = statusBeforeResp.json?.data ?? statusBeforeResp.json;
-    const purchasedBefore = statusBefore.purchasedCredits ?? 0;
+    const creditsBefore = statusBefore.credits ?? 0;
 
     // 4) Execute purchase twice with the same transaction id
     const paymentTransactionId = `sim_idem_${Date.now()}`;
@@ -95,8 +95,8 @@ test.describe('Credit purchase idempotency (API)', () => {
     const statusAfterResp = await getStatus();
     expect(statusAfterResp.ok).toBeTruthy();
     const statusAfter = statusAfterResp.json?.data ?? statusAfterResp.json;
-    const purchasedAfter = statusAfter.purchasedCredits ?? 0;
-    expect(purchasedAfter).toBe(purchasedBefore + packageCredits);
+    const creditsAfter = statusAfter.credits ?? 0;
+    expect(creditsAfter).toBe(creditsBefore + packageCredits);
 
     // 6) Validate history has single entry (API does not expose transaction ids)
     const historyResp = await fetchJson(request, `${config.apiUrl}/api/credit/history`, {

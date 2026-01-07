@@ -15,9 +15,7 @@ export interface CreditPackage {
 }
 
 export interface UserCreditStatus {
-  totalCredits: number;
-  weeklyCredits: number;
-  purchasedCredits: number;
+  credits: number;
   lastCreditReset: string;
   nextResetDate: string;
 }
@@ -38,7 +36,6 @@ export interface CreditPurchase {
 
 export interface CreditCost {
   cost: number;
-  canUseWeeklyCredits: boolean;
   description: string;
 }
 
@@ -116,9 +113,7 @@ export class CreditService {
   /**
    * Create a payment intent for Stripe
    */
-  createPaymentIntent(request: {
-    packageId: number;
-  }): Observable<{
+  createPaymentIntent(request: { packageId: number }): Observable<{
     success: boolean;
     data: CreatePaymentIntentResponse;
     error?: { code: string; message: string };
@@ -212,56 +207,6 @@ export class CreditService {
   }
 
   /**
-   * Check if an operation can use weekly credits (async version)
-   */
-  async canUseWeeklyCredits(operation: string): Promise<boolean> {
-    if (!this._creditCosts) {
-      try {
-        const response = await firstValueFrom(this.getCreditCosts());
-        if (response?.success) {
-          this._creditCosts = response.data;
-        }
-      } catch (error) {
-        console.error('Failed to fetch credit costs:', error);
-        return this.getFallbackWeeklyCreditsUsage(operation);
-      }
-    }
-
-    switch (operation.toLowerCase()) {
-      case 'photo_enhancement':
-        return this._creditCosts?.photoEnhancement.canUseWeeklyCredits || true;
-      case 'model_training':
-        return this._creditCosts?.modelTraining.canUseWeeklyCredits || false;
-      case 'styled_generation':
-      case 'image_generation':
-        return this._creditCosts?.styledGeneration.canUseWeeklyCredits || false;
-      default:
-        return false;
-    }
-  }
-
-  /**
-   * Check if an operation can use weekly credits (sync version with cached data)
-   */
-  canUseWeeklyCreditSync(operation: string): boolean {
-    if (!this._creditCosts) {
-      return this.getFallbackWeeklyCreditsUsage(operation);
-    }
-
-    switch (operation.toLowerCase()) {
-      case 'photo_enhancement':
-        return this._creditCosts.photoEnhancement.canUseWeeklyCredits;
-      case 'model_training':
-        return this._creditCosts.modelTraining.canUseWeeklyCredits;
-      case 'styled_generation':
-      case 'image_generation':
-        return this._creditCosts.styledGeneration.canUseWeeklyCredits;
-      default:
-        return false;
-    }
-  }
-
-  /**
    * Load and cache credit costs
    */
   async loadCreditCosts(): Promise<void> {
@@ -293,50 +238,19 @@ export class CreditService {
   }
 
   /**
-   * Fallback weekly credits usage (in case API fails)
-   */
-  private getFallbackWeeklyCreditsUsage(operation: string): boolean {
-    switch (operation.toLowerCase()) {
-      case 'photo_enhancement':
-        return true;
-      case 'model_training':
-      case 'styled_generation':
-      case 'image_generation':
-        return false;
-      default:
-        return false;
-    }
-  }
-
-  /**
-   * Calculate total available credits (weekly + purchased)
+   * Calculate total available credits
    */
   getTotalAvailableCredits(
     userCreditStatus: UserCreditStatus | null,
     creditsInfo: unknown
   ): number {
-    const weeklyCredits = this.getWeeklyCredits(userCreditStatus, creditsInfo);
-    const purchasedCredits = this.getPurchasedCredits(userCreditStatus);
+    if (userCreditStatus?.credits !== undefined) {
+      return userCreditStatus.credits;
+    }
 
-    // Always calculate total from individual components to ensure accuracy
-    return weeklyCredits + purchasedCredits;
-  }
-
-  /**
-   * Get purchased credits from user credit status
-   */
-  getPurchasedCredits(userCreditStatus: UserCreditStatus | null): number {
-    return userCreditStatus?.purchasedCredits || 0;
-  }
-
-  /**
-   * Get weekly credits from user credit status with fallback to creditsInfo
-   */
-  getWeeklyCredits(userCreditStatus: UserCreditStatus | null, creditsInfo: unknown): number {
-    // Use weeklyCredits from userCreditStatus first, fallback to creditsInfo.availableCredits
     return (
-      userCreditStatus?.weeklyCredits ||
-      (creditsInfo as { availableCredits?: number })?.availableCredits ||
+      (creditsInfo as { credits?: number; totalCredits?: number })?.credits ??
+      (creditsInfo as { credits?: number; totalCredits?: number })?.totalCredits ??
       0
     );
   }

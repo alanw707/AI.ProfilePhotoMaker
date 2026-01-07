@@ -123,7 +123,7 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
   }
 
   getHeaderCreditLabel(): string {
-    return this.isHeadshotContext ? 'Headshot Credits' : 'Total Credits';
+    return 'Credits';
   }
 
   getHeaderCreditCount(): number {
@@ -131,8 +131,6 @@ export class HeaderNavigationComponent implements OnInit, OnDestroy {
       return 0;
     }
 
-    return this.isHeadshotContext
-      ? this.userCreditStatus.purchasedCredits || 0
-      : this.userCreditStatus.totalCredits || 0;
+    return this.userCreditStatus.credits || 0;
   }
 }

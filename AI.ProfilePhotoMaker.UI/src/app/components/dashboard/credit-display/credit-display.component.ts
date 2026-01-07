@@ -3,16 +3,14 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 
 export interface CreditInfo {
-  availableCredits: number;
-  purchasedCredits?: number;
-  totalCredits?: number;
+  credits: number;
   [key: string]: unknown;
 }
 
 export interface UserCreditStatus {
-  weeklyCredits: number;
-  purchasedCredits: number;
-  totalCredits?: number;
+  credits: number;
+  lastCreditReset?: string;
+  nextResetDate?: string;
   [key: string]: unknown;
 }
 
@@ -29,7 +27,7 @@ export type CreditDisplayContext = 'default' | 'headshots';
   imports: [CommonModule, RouterModule],
   templateUrl: './credit-display.component.html',
   styleUrls: ['./credit-display.component.sass'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CreditDisplayComponent {
   @Input() creditsInfo: CreditInfo | null = null;
@@ -50,103 +48,54 @@ export class CreditDisplayComponent {
   @Output() creditActionRequested = new EventEmitter<CreditActionEvent>();
 
   /**
-   * Gets the total available credits from weekly + purchased credits
+   * Gets the total available credits
    */
   getTotalAvailableCredits(): number {
-    const weeklyCredits = this.getWeeklyCredits();
-    const purchasedCredits = this.getPurchasedCredits();
-    
-    // Always calculate total from individual components to ensure accuracy
-    return weeklyCredits + purchasedCredits;
-  }
+    if (this.userCreditStatus?.credits !== undefined) {
+      return this.userCreditStatus.credits;
+    }
 
-  /**
-   * Gets the number of purchased credits
-   */
-  getPurchasedCredits(): number {
-    return (
-      this.userCreditStatus?.purchasedCredits ??
-      this.creditsInfo?.purchasedCredits ??
-      0
-    );
-  }
-
-  /**
-   * Gets the number of weekly credits
-   */
-  getWeeklyCredits(): number {
-    // Use weeklyCredits from userCreditStatus first, fallback to creditsInfo.availableCredits
-    return this.userCreditStatus?.weeklyCredits || this.creditsInfo?.availableCredits || 0;
+    return this.creditsInfo?.credits || 0;
   }
 
   /**
    * Gets the display text for credit counts
    */
   getCreditDisplayText(): string {
-    if (this.isHeadshotContext()) {
-      const eligibleCredits = this.getHeadshotEligibleCredits();
-      return `Eligible Headshot Credits: ${eligibleCredits}`;
-    }
-
     const totalCredits = this.getTotalAvailableCredits();
-    const weeklyCredits = this.getWeeklyCredits();
-    const purchasedCredits = this.getPurchasedCredits();
 
     if (totalCredits === 0) {
       return '0 Credits';
     }
 
-    if (purchasedCredits > 0 && weeklyCredits > 0) {
-      return `${totalCredits} Credits (${weeklyCredits} Weekly + ${purchasedCredits} Purchased)`;
-    } else if (purchasedCredits > 0) {
-      return `${totalCredits} Purchased Credits`;
-    } else if (weeklyCredits > 0) {
-      return `${totalCredits} Weekly Credits`;
-    } else {
+    if (this.isHeadshotContext()) {
       return `${totalCredits} Credits`;
     }
+
+    return `${totalCredits} Credits`;
   }
 
   /**
    * Gets the subtitle text for credit display
    */
   getCreditSubtitleText(): string {
+    const totalCredits = this.getTotalAvailableCredits();
     if (this.isHeadshotContext()) {
-      return "Weekly credits can't be used for headshots.";
+      return totalCredits > 0
+        ? 'Credits available for training and generation'
+        : 'Purchase credits to get started';
     }
-
-    const purchasedCredits = this.getPurchasedCredits();
-    const weeklyCredits = this.getWeeklyCredits();
-
-    if (purchasedCredits > 0 && weeklyCredits > 0) {
-      return 'For model training and generation';
-    } else if (purchasedCredits > 0) {
-      return 'For premium features';
-    } else if (weeklyCredits > 0) {
-      return 'For basic photo enhancement';
-    } else {
-      return 'Purchase credits to get started';
-    }
+    return totalCredits > 0
+      ? 'Use credits for training, generation, and enhancement'
+      : 'Purchase credits to get started';
   }
 
   /**
    * Determines if we should show a purchase prompt
    */
   shouldShowPurchasePrompt(): boolean {
-    if (this.isHeadshotContext()) {
-      const eligibleCredits = this.getHeadshotEligibleCredits();
-      return (
-        eligibleCredits === 0 ||
-        (this.requiredCredits > 0 && eligibleCredits < this.requiredCredits)
-      );
-    }
-
     const totalCredits = this.getTotalAvailableCredits();
-    const purchasedCredits = this.getPurchasedCredits();
-    
-    // Show prompt if no purchased credits and either no total credits or insufficient for required amount
-    return (purchasedCredits === 0 && 
-            (totalCredits === 0 || (this.requiredCredits > 0 && totalCredits < this.requiredCredits)));
+    return totalCredits === 0 || (this.requiredCredits > 0 && totalCredits < this.requiredCredits);
   }
 
   /**
@@ -167,29 +116,10 @@ export class CreditDisplayComponent {
    * Gets the appropriate icon for the credit display
    */
   getCreditIcon(): string {
-    if (this.isHeadshotContext()) {
-      return this.getHeadshotEligibleCredits() > 0 ? '💰' : '💎';
-    }
-
-    const purchasedCredits = this.getPurchasedCredits();
-    const weeklyCredits = this.getWeeklyCredits();
-    
-    if (purchasedCredits > 0 && weeklyCredits > 0) {
-      return '💎';
-    } else if (purchasedCredits > 0) {
-      return '💰';
-    } else if (weeklyCredits > 0) {
-      return '⚡';
-    } else {
-      return '💎';
-    }
+    return this.getTotalAvailableCredits() > 0 ? '💎' : '⚠️';
   }
 
   private isHeadshotContext(): boolean {
     return this.displayContext === 'headshots';
-  }
-
-  private getHeadshotEligibleCredits(): number {
-    return this.getPurchasedCredits();
   }
 }

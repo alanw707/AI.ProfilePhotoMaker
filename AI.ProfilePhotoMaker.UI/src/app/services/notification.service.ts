@@ -132,7 +132,7 @@ export class NotificationService {
   creditsExhausted(): string {
     return this.warning(
       'No Credits Remaining',
-      'You have no credits remaining. Credits reset weekly, or upgrade for unlimited generations.'
+      'You have no credits remaining. Credits top up weekly when your balance is below 5.'
     );
   }
 

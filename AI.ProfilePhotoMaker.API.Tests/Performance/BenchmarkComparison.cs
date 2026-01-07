@@ -100,7 +100,6 @@ public class RepositoryMethodBenchmarks : IDisposable
                 Gender = "Test",
                 Ethnicity = "Test",
                 Credits = 100,
-                PurchasedCredits = 50,
                 CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 365)),
                 UpdatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 30))
             };

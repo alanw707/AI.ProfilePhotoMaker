@@ -17,15 +17,5 @@ public static class CreditCostConfig
         };
     }
 
-    public static bool CanUseWeeklyCredits(string operation)
-    {
-        return operation.ToLowerInvariant() switch
-        {
-            "photo_enhancement" => true,
-            "model_training" => false,
-            "styled_generation" => false,
-            "image_generation" => false,
-            _ => false
-        };
-    }
+    public static bool CanUseWeeklyCredits(string operation) => true;
 }

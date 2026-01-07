@@ -1,16 +1,14 @@
 import { Injectable } from '@angular/core';
-import { forkJoin, of, firstValueFrom } from 'rxjs';
+import { of, firstValueFrom } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { StateBaseService } from './state-base.service';
 import { CreditService, UserCreditStatus } from './credit.service';
-import { CreditsInfo, ReplicateService } from './replicate.service';
-import { ConfigService } from './config.service';
 import { CacheManagerService } from './cache-manager.service';
 import { NotificationService } from './notification.service';
 
 export interface SubscriptionState {
   userCreditStatus: UserCreditStatus | null;
-  creditsInfo: CreditsInfo | null;
+  creditsInfo: UserCreditStatus | null;
   totalCredits: number;
   isPremiumWorkflow: boolean;
   isLoading: boolean;
@@ -30,9 +28,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
   constructor(
     _cacheManager: CacheManagerService,
     _notificationService: NotificationService,
-    private _creditService: CreditService,
-    private _replicateService: ReplicateService,
-    private _configService: ConfigService
+    private _creditService: CreditService
   ) {
     super(
       {
@@ -48,7 +44,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
   }
 
   /**
-   * Load full subscription data including internal and external credits
+   * Load full subscription data including credit status
    */
   async loadFullSubscriptionData(): Promise<void> {
     const startTime = performance.now();
@@ -69,33 +65,16 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
     this.setLoading(true);
 
     try {
-      const apiCalls: Record<string, any> = {
-        creditStatus: this._creditService.getCreditStatus().pipe(
+      const creditStatus = await firstValueFrom(
+        this._creditService.getCreditStatus().pipe(
           catchError(error => {
             return of({ success: false, data: null, error });
           })
-        ),
-      };
+        )
+      );
 
-      // Only call Replicate credits API if enabled in environment
-      if (this._configService.isReplicateCreditsEnabled) {
-        apiCalls['credits'] = this._replicateService.getCredits().pipe(
-          catchError(error => {
-            return of({ success: false, data: null, error });
-          })
-        );
-      } else {
-        apiCalls['credits'] = of({ success: false, data: null, error: 'disabled' });
-      }
-
-      const result = await firstValueFrom(forkJoin(apiCalls));
-      if (!result) {
-        throw new Error('Failed to load subscription data');
-      }
-      const { creditStatus, credits } = result;
-
-      const userCreditStatus = (creditStatus as any)?.success ? (creditStatus as any).data : null;
-      const creditsInfo = (credits as any)?.success ? (credits as any).data : null;
+      const userCreditStatus = creditStatus?.success ? creditStatus.data : null;
+      const creditsInfo = userCreditStatus as UserCreditStatus | null;
 
       // Calculate total credits
       const totalCredits = this._creditService.getTotalAvailableCredits(
@@ -104,7 +83,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
       );
 
       // Determine premium workflow status
-      const isPremiumWorkflow = (userCreditStatus?.purchasedCredits || 0) > 0;
+      const isPremiumWorkflow = totalCredits > 0;
 
       const newState: SubscriptionState = {
         userCreditStatus,
@@ -119,16 +98,6 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
       // Cache the subscription data
       this.setCachedData(this.cacheKey, newState);
 
-      // Show info if credits API failed but internal credits loaded
-      if (
-        !(credits as any)?.success &&
-        this._configService.isReplicateCreditsEnabled &&
-        (creditStatus as any)?.success
-      ) {
-        // Could add notification about external credits not available
-        console.info('External credits API not available, using internal credits only');
-      }
-
       this.logPerformance('Subscription data loaded', startTime);
     } catch (error) {
       this.handleApiError(error, 'Load Subscription Data');
@@ -137,7 +106,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
   }
 
   /**
-   * Load only internal credits (faster for settings/basic views)
+   * Load only credits (faster for settings/basic views)
    */
   async loadCreditsOnly(): Promise<void> {
     const startTime = performance.now();
@@ -152,7 +121,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
       this.setState({
         userCreditStatus: cachedData.userCreditStatus,
         totalCredits: cachedData.totalCredits,
-        isPremiumWorkflow: (cachedData.userCreditStatus?.purchasedCredits || 0) > 0,
+        isPremiumWorkflow: cachedData.totalCredits > 0,
         isLoading: false,
       });
       return;
@@ -177,12 +146,9 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
       const userCreditStatus = creditStatus?.success ? creditStatus.data : null;
 
       // Calculate total credits from internal sources only
-      const totalCredits = this._creditService.getTotalAvailableCredits(
-        userCreditStatus,
-        null // No Replicate credits
-      );
+      const totalCredits = this._creditService.getTotalAvailableCredits(userCreditStatus, null);
 
-      const isPremiumWorkflow = (userCreditStatus?.purchasedCredits || 0) > 0;
+      const isPremiumWorkflow = totalCredits > 0;
 
       // Set internal credits state only
       const newState = {
@@ -220,7 +186,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
   }
 
   /**
-   * Refresh only internal credits (weekly + purchased) without calling external providers
+   * Refresh only internal credits without calling external providers
    */
   async refreshInternalCredits(): Promise<void> {
     this.forceRefreshCache(this.creditsCacheKey);
@@ -254,9 +220,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
    * Get detailed credit breakdown
    */
   getCreditBreakdown(): {
-    purchasedCredits: number;
-    freeCredits: number;
-    replicateCredits: number;
+    credits: number;
     totalCredits: number;
   } {
     const state = this.getState();
@@ -264,9 +228,7 @@ export class SubscriptionStateService extends StateBaseService<SubscriptionState
     const creditsInfo = state.creditsInfo;
 
     return {
-      purchasedCredits: userCreditStatus?.purchasedCredits || 0,
-      freeCredits: userCreditStatus?.weeklyCredits || 0, // weeklyCredits represents free credits
-      replicateCredits: creditsInfo?.availableCredits || 0,
+      credits: userCreditStatus?.credits || creditsInfo?.credits || 0,
       totalCredits: state.totalCredits,
     };
   }

@@ -274,10 +274,10 @@ export class WorkflowOrchestrationService {
     const generationCredits = this._calculateGenerationCredits(selectedStyles, imagesPerStyle);
     const totalCredits = trainingCredits + generationCredits;
 
-    // Paywall enforcement: training + styled generation must use purchased credits
-    const availablePurchasedCredits = this._getPurchasedCredits();
-    const hasEnoughCredits = availablePurchasedCredits >= totalCredits;
-    const remainingCredits = availablePurchasedCredits - totalCredits;
+    // Paywall enforcement: training + styled generation use total credits
+    const availableCredits = this._getAvailableCredits();
+    const hasEnoughCredits = availableCredits >= totalCredits;
+    const remainingCredits = availableCredits - totalCredits;
 
     return {
       trainingCredits,
@@ -309,31 +309,26 @@ export class WorkflowOrchestrationService {
     const userCreditStatus = state.userCreditStatus;
     const creditsInfo = state.creditsInfo;
 
-    const purchasedCredits =
-      userCreditStatus?.purchasedCredits ||
-      creditsInfo?.purchasedCredits ||
-      0;
-
-    return purchasedCredits;
+    return userCreditStatus?.credits || creditsInfo?.credits || 0;
   }
 
-  private _getPurchasedCredits(): number {
+  private _getAvailableCredits(): number {
     // Primary: subscription state (used across the UI)
     const subscriptionState = this._deps.subscriptionState.getState();
-    if (subscriptionState.userCreditStatus?.purchasedCredits !== undefined) {
-      return subscriptionState.userCreditStatus.purchasedCredits;
+    if (subscriptionState.userCreditStatus?.credits !== undefined) {
+      return subscriptionState.userCreditStatus.credits;
     }
-    if (subscriptionState.creditsInfo?.purchasedCredits !== undefined) {
-      return subscriptionState.creditsInfo.purchasedCredits;
+    if (subscriptionState.creditsInfo?.credits !== undefined) {
+      return subscriptionState.creditsInfo.credits;
     }
 
     // Secondary: dashboard state
     const state = this._deps.stateService.getState();
-    if (state.userCreditStatus?.purchasedCredits !== undefined) {
-      return state.userCreditStatus.purchasedCredits;
+    if (state.userCreditStatus?.credits !== undefined) {
+      return state.userCreditStatus.credits;
     }
-    if (state.creditsInfo?.purchasedCredits !== undefined) {
-      return state.creditsInfo.purchasedCredits;
+    if (state.creditsInfo?.credits !== undefined) {
+      return state.creditsInfo.credits;
     }
 
     // Last resort: totalCredits (prefer over zero to avoid blocking legitimate users)
@@ -367,7 +362,7 @@ export class WorkflowOrchestrationService {
     );
 
     if (!creditCalc.hasEnoughCredits) {
-      const availableCredits = this._getPurchasedCredits();
+      const availableCredits = this._getAvailableCredits();
 
       if (availableCredits === 0) {
         this._deps.notificationService.error(
@@ -1765,7 +1760,7 @@ export class WorkflowOrchestrationService {
       case 'billing':
         this._logger.error('Billing diagnostics', {
           ...diagnostics,
-          userCredits: this._getPurchasedCredits(),
+          userCredits: this._getAvailableCredits(),
           suggestedAction: 'Check user credit balance and subscription status',
         });
         break;
@@ -1790,7 +1785,10 @@ export class WorkflowOrchestrationService {
     this.resetProgress();
   }
 
-  async queueBackgroundGeneration(selectedStyles: StyleOption[], imagesPerStyle: number): Promise<void> {
+  async queueBackgroundGeneration(
+    selectedStyles: StyleOption[],
+    imagesPerStyle: number
+  ): Promise<void> {
     const trainingId = this.getProgress().trainingId;
     if (!trainingId || selectedStyles.length === 0) {
       return;

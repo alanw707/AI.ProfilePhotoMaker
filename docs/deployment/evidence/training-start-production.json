@@ -37,9 +37,7 @@
   "creditStatusBefore": {
     "success": true,
     "data": {
-      "totalCredits": 51,
-      "weeklyCredits": 1,
-      "purchasedCredits": 50,
+      "credits": 51,
       "lastCreditReset": "2025-12-22T16:23:13.7007928",
       "nextResetDate": "2025-12-29T16:23:13.7007928"
     },
@@ -49,9 +47,7 @@
   "creditStatusAfter": {
     "success": true,
     "data": {
-      "totalCredits": 36,
-      "weeklyCredits": 1,
-      "purchasedCredits": 35,
+      "credits": 36,
       "lastCreditReset": "2025-12-22T16:23:13.7007928",
       "nextResetDate": "2025-12-29T16:23:13.7007928"
     },

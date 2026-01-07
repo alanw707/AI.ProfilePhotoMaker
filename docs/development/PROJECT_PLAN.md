@@ -34,7 +34,7 @@ This project plan outlines the major milestones, features, and tasks required to
 - [x] Style selection API and persistence
 - [x] Subscription data model
 - [x] File management and cleanup
-- [x] Basic tier system with weekly credits
+- [x] Basic tier system with weekly top-up credits
 - [x] Credit management and usage tracking
 - [~] Payment integration (Stripe) - 90% complete (payment intents + webhook processing implemented; local end-to-end flow validated; production smoke tests pending)
 

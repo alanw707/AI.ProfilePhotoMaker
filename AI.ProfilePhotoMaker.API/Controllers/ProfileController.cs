@@ -3,6 +3,7 @@ using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Constants;
+using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.AspNetCore.Authorization;
@@ -23,6 +24,7 @@ public class ProfileController : ControllerBase
     private readonly ILogger<ProfileController> _logger;
     private readonly IConfiguration _configuration;
     private readonly IReplicateApiClient _replicateApiClient;
+    private readonly IBasicTierService _basicTierService;
     private readonly IStorageService _storageService;
     private readonly StoragePathResolver _pathResolver;
 
@@ -36,6 +38,7 @@ public class ProfileController : ControllerBase
         ILogger<ProfileController> logger,
         IConfiguration configuration,
         IReplicateApiClient replicateApiClient,
+        IBasicTierService basicTierService,
         IStorageService storageService,
         StoragePathResolver pathResolver)
     {
@@ -45,6 +48,7 @@ public class ProfileController : ControllerBase
         _logger = logger;
         _configuration = configuration;
         _replicateApiClient = replicateApiClient;
+        _basicTierService = basicTierService;
         _storageService = storageService;
         _pathResolver = pathResolver;
     }
@@ -208,6 +212,7 @@ public class ProfileController : ControllerBase
     [HttpPost("generate")]
     public async Task<IActionResult> GenerateImages([FromBody] GenerateImagesRequestDto dto)
     {
+        CreditConsumptionResult? creditConsumptionResult = null;
         var userId = GetCurrentUserId();
         if (userId == null)
             return Unauthorized();
@@ -224,6 +229,61 @@ public class ProfileController : ControllerBase
 
         try
         {
+            if (dto.NumOutputs < 1 || dto.NumOutputs > 4)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    error = new
+                    {
+                        code = "InvalidNumOutputs",
+                        message = "NumOutputs must be between 1 and 4."
+                    }
+                });
+            }
+
+            var requiredCredits = dto.NumOutputs * CreditCostConfig.GetCreditCost("image_generation");
+            var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
+            if (availableCredits < requiredCredits)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    error = new
+                    {
+                        code = "InsufficientCredits",
+                        message = $"Image generation requires {requiredCredits} credits. You have {availableCredits} credits."
+                    }
+                });
+            }
+
+            var correlationId = $"image_generation:{Guid.NewGuid()}";
+            creditConsumptionResult = await _basicTierService.ConsumeCreditsAsync(
+                userId,
+                requiredCredits,
+                "image_generation",
+                correlationId,
+                HttpContext?.RequestAborted ?? CancellationToken.None);
+            if (creditConsumptionResult == null || !creditConsumptionResult.Success)
+            {
+                if (creditConsumptionResult?.Error == "insufficient_credits")
+                {
+                    _logger.LogWarning("Insufficient credits detected during image generation for user {UserId}", Sid(userId));
+                    return BadRequest(new
+                    {
+                        success = false,
+                        error = new
+                        {
+                            code = "InsufficientCredits",
+                            message = $"Image generation requires {requiredCredits} credits. You have {availableCredits} credits."
+                        }
+                    });
+                }
+
+                _logger.LogError("Failed to consume credits for user {UserId} before image generation", Sid(userId));
+                return StatusCode(500, "Failed to process credit deduction. Please try again.");
+            }
+
             dto.UserId = userId;
             dto.TrainedModelVersion = trainedModel.TrainedModelVersion;
             dto.UserInfo = new UserInfo
@@ -233,11 +293,24 @@ public class ProfileController : ControllerBase
             };
 
             var processedImageUrl = await _replicateApiClient.GenerateImagesAsync(dto);
+            var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
 
-            return Ok(new { ImageUrl = processedImageUrl, Message = "Image generation started" });
+            var response = new GenerateProfileImagesResponseDto
+            {
+                ImageUrl = processedImageUrl,
+                Message = "Image generation started",
+                CreditsRemaining = remainingCredits,
+                CreditsCost = requiredCredits
+            };
+
+            return Ok(response);
         }
         catch (Exception ex)
         {
+            if (creditConsumptionResult?.Success == true)
+            {
+                await _basicTierService.RefundCreditsAsync(userId, creditConsumptionResult);
+            }
             _logger.LogError(ex, "Error generating images for user {UserId}", Sid(userId));
             return StatusCode(500, "Error generating images");
         }
@@ -761,7 +834,6 @@ public class ProfileController : ControllerBase
                     profile.Ethnicity,
                     profile.SubscriptionTier,
                     profile.Credits,
-                    profile.PurchasedCredits,
                     profile.CreatedAt,
                     profile.UpdatedAt,
                     HasTrainedModel = latestModel != null,

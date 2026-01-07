@@ -181,7 +181,7 @@ export const seoPages: Record<string, SeoPageContent> = {
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'LinkedIn headshots', href: '/linkedin-headshots' },
       { label: 'Professional headshots', href: '/professional-headshots' },
-      { label: 'Free headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Headshot enhancer', href: '/free-headshot-enhancer' },
       { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
@@ -288,7 +288,7 @@ export const seoPages: Record<string, SeoPageContent> = {
       { label: 'How it works', href: '/how-it-works' },
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'LinkedIn headshots', href: '/linkedin-headshots' },
-      { label: 'Free headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Headshot enhancer', href: '/free-headshot-enhancer' },
       { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
@@ -391,7 +391,7 @@ export const seoPages: Record<string, SeoPageContent> = {
       { label: 'Examples', href: '/examples' },
       { label: 'How it works', href: '/how-it-works' },
       { label: 'Pricing', href: '/pricing' },
-      { label: 'Free headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Headshot enhancer', href: '/free-headshot-enhancer' },
     ],
     cta: {
       title: 'See why customers recommend us',
@@ -402,23 +402,24 @@ export const seoPages: Record<string, SeoPageContent> = {
   },
   'free-headshot-enhancer': {
     slug: 'free-headshot-enhancer',
-    title: 'Free Headshot Enhancer | Improve your profile photo fast',
+    title: 'Headshot Enhancer | Improve your profile photo fast',
     description:
-      'Improve your existing profile photo with free weekly enhancement credits. Fix lighting, background, and color fast.',
+      'Improve your existing profile photo with your credit balance. Weekly top-ups restore credits to 5 when below. Fix lighting, background, and color fast.',
     keywords:
-      'free headshot enhancer, profile photo enhancer, AI photo enhancement, free headshot credits',
-    h1: 'Free Headshot Enhancer',
+      'headshot enhancer, profile photo enhancer, AI photo enhancement, headshot retouching',
+    h1: 'Headshot Enhancer',
     hero: {
-      eyebrow: 'Free enhancer',
-      headline: 'Free Headshot Enhancer',
-      subhead: 'Improve your existing profile photo fast with free weekly enhancement credits.',
-      ctaLabel: 'Try the free enhancer',
+      eyebrow: 'Headshot enhancer',
+      headline: 'Headshot Enhancer',
+      subhead:
+        'Improve your existing profile photo fast with your credit balance. Weekly top-ups restore credits to 5 when below.',
+      ctaLabel: 'Try the enhancer',
       ctaHref: '/auth/register',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
     },
     highlights: [
-      { value: 'Free', label: 'Weekly credits' },
+      { value: 'Weekly', label: 'Top-up to 5' },
       { value: 'Minutes', label: 'Typical turnaround' },
       { value: 'No card', label: 'Required to start' },
     ],
@@ -453,11 +454,11 @@ export const seoPages: Record<string, SeoPageContent> = {
       },
       {
         type: 'steps',
-        title: 'How free credits work',
+        title: 'How credits work',
         items: [
           {
-            title: 'Create a free account',
-            description: 'Sign up once and receive recurring enhancement credits.',
+            title: 'Create an account',
+            description: 'Sign up once and get a credit balance with weekly top-ups when below 5.',
           },
           {
             title: 'Upload your photo',
@@ -476,9 +477,9 @@ export const seoPages: Record<string, SeoPageContent> = {
       { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
-      title: 'Start with free enhancement credits',
-      description: 'Create a free account and improve your profile photo today.',
-      label: 'Try the free enhancer',
+      title: 'Start with enhancement credits',
+      description: 'Create an account and improve your profile photo today.',
+      label: 'Try the enhancer',
       href: '/auth/register',
     },
   },
@@ -574,7 +575,7 @@ export const seoPages: Record<string, SeoPageContent> = {
       { label: 'LinkedIn headshots', href: '/linkedin-headshots' },
       { label: 'Professional headshots', href: '/professional-headshots' },
       { label: 'Headshots for job search', href: '/headshots-for-job-search' },
-      { label: 'Free headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Headshot enhancer', href: '/free-headshot-enhancer' },
       { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
@@ -670,7 +671,7 @@ export const seoPages: Record<string, SeoPageContent> = {
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'Professional headshots', href: '/professional-headshots' },
       { label: 'Headshots for job search', href: '/headshots-for-job-search' },
-      { label: 'Free headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Headshot enhancer', href: '/free-headshot-enhancer' },
       { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
@@ -766,7 +767,7 @@ export const seoPages: Record<string, SeoPageContent> = {
       { label: 'LinkedIn headshots', href: '/linkedin-headshots' },
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'Examples', href: '/examples' },
-      { label: 'Free headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Headshot enhancer', href: '/free-headshot-enhancer' },
       { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
@@ -844,7 +845,7 @@ export const seoPages: Record<string, SeoPageContent> = {
       { label: 'LinkedIn headshots', href: '/linkedin-headshots' },
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'Professional headshots', href: '/professional-headshots' },
-      { label: 'Free headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Headshot enhancer', href: '/free-headshot-enhancer' },
       { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
@@ -886,7 +887,10 @@ export const seoPages: Record<string, SeoPageContent> = {
           },
           {
             label: 'Turnaround expectations',
-            values: ['Minutes after upload for most users', '45 mins (Basic), 30 mins (Standard), 15 mins (Executive)'],
+            values: [
+              'Minutes after upload for most users',
+              '45 mins (Basic), 30 mins (Standard), 15 mins (Executive)',
+            ],
           },
           {
             label: 'Pricing & packages',
@@ -911,7 +915,10 @@ export const seoPages: Record<string, SeoPageContent> = {
           },
           {
             label: 'Resolution',
-            values: ['High-resolution downloads', 'Standard resolution (Basic/Standard), enhanced (Executive)'],
+            values: [
+              'High-resolution downloads',
+              'Standard resolution (Basic/Standard), enhanced (Executive)',
+            ],
           },
         ],
         note: 'Pricing and features change; verify before publishing or purchasing.',
@@ -948,7 +955,7 @@ export const seoPages: Record<string, SeoPageContent> = {
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'Examples', href: '/examples' },
       { label: 'Professional headshots', href: '/professional-headshots' },
-      { label: 'Free headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Headshot enhancer', href: '/free-headshot-enhancer' },
       { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
@@ -1058,7 +1065,7 @@ export const seoPages: Record<string, SeoPageContent> = {
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'Examples', href: '/examples' },
       { label: 'Professional headshots', href: '/professional-headshots' },
-      { label: 'Free headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Headshot enhancer', href: '/free-headshot-enhancer' },
       { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
@@ -1127,7 +1134,7 @@ export const seoPages: Record<string, SeoPageContent> = {
       { label: 'Examples', href: '/examples' },
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'Pricing', href: '/pricing' },
-      { label: 'Free headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Headshot enhancer', href: '/free-headshot-enhancer' },
     ],
     cta: {
       title: 'Unlock professional headshots with AI',

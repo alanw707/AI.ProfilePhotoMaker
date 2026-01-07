@@ -47,7 +47,7 @@ public class CreditPackageServiceTests
         Assert.Empty(await context.CreditPurchases.ToListAsync());
 
         var profile = await context.UserProfiles.FirstAsync(p => p.UserId == userId);
-        Assert.Equal(0, profile.PurchasedCredits);
+        Assert.Equal(5, profile.Credits);
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public class CreditPackageServiceTests
         Assert.Equal("2", result.Purchase.PaymentTransactionId);
 
         var profile = await context.UserProfiles.FirstAsync(p => p.UserId == userId);
-        Assert.Equal(totalCredits, profile.PurchasedCredits);
+        Assert.Equal(5 + totalCredits, profile.Credits);
 
         // Ensure calling again is idempotent and does not double-award credits
         var secondResult = await service.PurchaseCreditPackageAsync(userId, packageId, "2");
@@ -97,7 +97,7 @@ public class CreditPackageServiceTests
         Assert.Equal(result.Purchase!.Id, secondResult.Purchase!.Id);
 
         profile = await context.UserProfiles.FirstAsync(p => p.UserId == userId);
-        Assert.Equal(totalCredits, profile.PurchasedCredits);
+        Assert.Equal(5 + totalCredits, profile.Credits);
     }
 
     [Fact]
@@ -130,7 +130,7 @@ public class CreditPackageServiceTests
         Assert.Empty(await context.CreditPurchases.ToListAsync());
 
         var profile = await context.UserProfiles.FirstAsync(p => p.UserId == userId);
-        Assert.Equal(0, profile.PurchasedCredits);
+        Assert.Equal(5, profile.Credits);
     }
 
     [Fact]
@@ -157,7 +157,7 @@ public class CreditPackageServiceTests
         Assert.Equal("sim_flow", result.Purchase!.PaymentTransactionId);
 
         var profile = await context.UserProfiles.FirstAsync(p => p.UserId == userId);
-        Assert.Equal(creditPackage.TotalCredits, profile.PurchasedCredits);
+        Assert.Equal(5 + creditPackage.TotalCredits, profile.Credits);
     }
 
     private static CreditPackageService CreateService(
@@ -215,7 +215,6 @@ public class CreditPackageServiceTests
             User = user,
             SubscriptionTier = SubscriptionTier.Basic,
             Credits = 5,
-            PurchasedCredits = 0,
             LastCreditReset = DateTime.UtcNow
         });
 

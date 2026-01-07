@@ -230,7 +230,7 @@ public class CreditPackageService : ICreditPackageService
         if (!creditsAdded)
         {
             _logger.LogError(
-                "Failed to add purchased credits to user {UserId} for purchase {PurchaseId}",
+                "Failed to add credits to user {UserId} for purchase {PurchaseId}",
                 LoggingSanitizer.SanitizeId(userId),
                 purchase.Id);
         }

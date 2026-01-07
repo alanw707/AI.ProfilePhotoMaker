@@ -193,17 +193,17 @@ test.describe('UI navigation smoke - public', () => {
     await waitForSectionInView(page, 'examples');
   });
 
-  test('free enhancement CTAs route guests to login', async ({ page }) => {
+  test('enhancement CTAs route guests to login', async ({ page }) => {
     await page.context().clearCookies();
     await page.goto(buildAppUrl('/'));
     await page.evaluate(() => localStorage.clear());
-    const ctaButtons = page.getByRole('button', { name: /free enhancements/i });
+    const ctaButtons = page.getByRole('button', { name: /^Start with enhancements$/i });
     const count = await ctaButtons.count();
     expect(count).toBeGreaterThan(0);
 
     for (let i = 0; i < count; i += 1) {
       await page.goto(buildAppUrl('/'));
-      const button = page.getByRole('button', { name: /free enhancements/i }).nth(i);
+      const button = page.getByRole('button', { name: /^Start with enhancements$/i }).nth(i);
       await button.scrollIntoViewIfNeeded();
       await Promise.all([
         page.waitForURL(/\/auth\/login/, { timeout: 15000 }),
@@ -310,17 +310,17 @@ test.describe('UI navigation smoke - authenticated', () => {
     await expect(page.locator('.dashboard-container')).toBeVisible({ timeout: 15000 });
   });
 
-  test('free enhancement CTAs route authenticated users to enhance', async ({ page }) => {
+  test('enhancement CTAs route authenticated users to enhance', async ({ page }) => {
     await login(page);
     await page.goto(buildAppUrl('/'));
 
-    const ctaButtons = page.getByRole('button', { name: /free enhancements/i });
+    const ctaButtons = page.getByRole('button', { name: /^Start with enhancements$/i });
     const count = await ctaButtons.count();
     expect(count).toBeGreaterThan(0);
 
     for (let i = 0; i < count; i += 1) {
       await page.goto(buildAppUrl('/'));
-      const button = page.getByRole('button', { name: /free enhancements/i }).nth(i);
+      const button = page.getByRole('button', { name: /^Start with enhancements$/i }).nth(i);
       await button.scrollIntoViewIfNeeded();
       await Promise.all([
         page.waitForURL('**/app/enhance', { timeout: 15000 }),

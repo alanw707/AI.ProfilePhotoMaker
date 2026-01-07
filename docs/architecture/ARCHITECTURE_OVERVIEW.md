@@ -111,9 +111,8 @@ erDiagram
         string Email
         string FirstName
         string LastName
-        int PurchasedCredits
-        int WeeklyFreeCreditsUsed
-        datetime LastFreeCreditsReset
+        int Credits
+        datetime LastCreditReset
     }
     
     ProcessedImages {

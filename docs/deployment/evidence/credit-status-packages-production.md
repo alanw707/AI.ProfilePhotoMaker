@@ -18,8 +18,8 @@
 - curl -s -H "Authorization: Bearer ***REDACTED***" https://api.aiprofilephotomaker.com/api/credit/status (after)
 
 ## Output Summary
-- Expected result: status and packages return typed data; purchases increase purchased credits.
-- Actual result: purchasedCredits increased (50 -> 35 after training spend); packages returned.
+- Expected result: status and packages return typed data; purchases increase credits.
+- Actual result: credits updated (50 -> 35 after training spend); packages returned.
 - Pass/Fail: Pass (production)
 
 ## Evidence Files

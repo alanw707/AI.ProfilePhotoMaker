@@ -18,17 +18,9 @@
       <div class="credit-stat">
         <div class="stat-icon">💎</div>
         <div class="stat-info">
-          <div class="stat-value">{{ getPurchasedCredits() }}</div>
-          <div class="stat-label">Purchased Credits</div>
-          <div class="stat-description">Never expire, all features</div>
-        </div>
-      </div>
-      <div class="credit-stat">
-        <div class="stat-icon">⚡</div>
-        <div class="stat-info">
-          <div class="stat-value">{{ getWeeklyCredits() }}</div>
-          <div class="stat-label">Weekly Credits</div>
-          <div class="stat-description">Free credits, basic features only</div>
+          <div class="stat-value">{{ getNextCreditReset() }}</div>
+          <div class="stat-label">Next Weekly Top-Up</div>
+          <div class="stat-description">Tops up to 5 when below</div>
         </div>
       </div>
     </div>
@@ -37,18 +29,10 @@
   <!-- Weekly Credit Status -->
   <div class="weekly-credit-status">
     <div class="weekly-header">
-      <h4>Weekly Credit Allowance</h4>
-      <span class="reset-info">Resets {{ getNextCreditReset() }}</span>
+      <h4>Weekly Top-Up</h4>
+      <span class="reset-info">Next top-up {{ getNextCreditReset() }}</span>
     </div>
-    <div class="weekly-progress">
-      <div class="progress-info">
-        <span>{{ getWeeklyCredits() }} of {{ getMaxWeeklyCredits() }} credits remaining</span>
-        <span class="progress-percentage">{{ getCreditUsagePercentage() }}% used</span>
-      </div>
-      <div class="progress-bar">
-        <div class="progress-fill" [style.width.%]="getCreditUsagePercentage()"></div>
-      </div>
-    </div>
+    <p>Credits top up to 5 if your balance is below 5. Credits never expire.</p>
   </div>
 
   <!-- Credit Usage Rules -->
@@ -58,20 +42,23 @@
       <div class="info-item">
         <div class="info-icon">💡</div>
         <p>
-          <strong>Free credits</strong>
-          refresh every week and can only be used for photo enhancement
+          <strong>Unified balance</strong>
+          covers enhancement, training, and generation.
         </p>
       </div>
       <div class="info-item">
         <div class="info-icon">💡</div>
         <p>
-          <strong>Purchased credits</strong>
-          never expire and unlock all premium features
+          <strong>Weekly top-ups</strong>
+          restore your balance to 5 when it is below 5.
         </p>
       </div>
       <div class="info-item">
         <div class="info-icon">💡</div>
-        <p>When using features, free credits are consumed first, then purchased credits</p>
+        <p>
+          <strong>Credits roll over</strong>
+          with no expiration.
+        </p>
       </div>
     </div>
   </div>
@@ -89,7 +76,7 @@
         <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
         <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke="currentColor" stroke-width="2" />
       </svg>
-      Use Free Credits
+      Enhance Photos
     </button>
   </div>
 </div>

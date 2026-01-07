@@ -9,7 +9,7 @@ Last updated: 2025-12-19
 
 ### 2) Goals
 - Enable users to generate professional profile photos from their selfies using AI styles.
-- Provide a basic tier with weekly free credits, and paid credits via credit packages (Stripe PaymentIntents + webhooks in production, with simulation mode for development).
+- Provide a basic tier with a weekly top-up to 5 when below, and credit packages (Stripe PaymentIntents + webhooks in production, with simulation mode for development).
 - Ensure reliability via hybrid DB/filesystem syncing and webhook-driven flows.
 - Enforce privacy via retention: input photos deleted after 30 days, generated photos after 30 days (target behavior; automated cleanup is being phased in via background jobs).
 
@@ -26,8 +26,8 @@ Last updated: 2025-12-19
 ### 5) User Stories (Core)
 - As a user, I can register/login (email/password or Google) to manage my photos and credits.
 - As a user, I can upload up to 20 selfies at a time for training zip creation.
-- As a user, I can select styles, train a custom model (with purchased credits), and generate styled photos (with purchased credits).
-- As a basic user, I can enhance photos using weekly credits without training a model.
+- As a user, I can select styles, train a custom model, and generate styled photos using credits.
+- As a basic user, I can enhance photos using credits with weekly top-ups.
 - As a user, I can view, download, and delete my images.
 - As a user, I can purchase credit packages and see my credit status/history.
 - As a user, I can export my data and delete photos/model/account.
@@ -36,7 +36,7 @@ Last updated: 2025-12-19
 
 Auth & Profile
 - Email/password registration and login (JWT), Google OAuth login and callback with session for state.
-- Profile auto-creation on first OAuth login with default weekly credits.
+- Profile auto-creation on first OAuth login with default credits (5) and last reset timestamp.
 - Endpoints: `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/google-oauth-url`, `GET /api/auth/external-login/{provider}`, `GET /api/auth/external-login-callback`.
 - Profile CRUD and stats: `GET/POST/PUT/DELETE /api/profile`, data export, data deletion, account deletion.
 
@@ -51,22 +51,22 @@ Styles & Selection
 - Endpoints: `GET /api/style`, `GET /api/style/{id}`, `GET /api/style/name/{name}/template`, `POST /api/style/select`, `GET /api/style/user-selected`.
 
 Custom Model Training (Replicate)
-- Training requires purchased credits (15 credits). Prevent retrain when a READY model already exists.
+- Training requires 15 credits. Prevent retrain when a READY model already exists.
 - Training completion is detected via background polling; status endpoints reflect progress and final readiness.
 - Endpoints: `POST /api/replicate/train`, `GET /api/replicate/train/status/{trainingId}`.
 
 Styled Image Generation (Replicate)
-- Requires purchased credits (5 credits per image output). Generates 1–4 images per request; batch generation supported across multiple styles.
+- Requires 5 credits per image output. Generates 1–4 images per request; batch generation supported across multiple styles.
 - Endpoints: `POST /api/replicate/generate`, `POST /api/replicate/generate/batch`, `GET /api/replicate/generate/status/{predictionId}`.
 
 Photo Enhancement (Replicate + OpenAI)
-- Basic tier feature using weekly credits. Standard enhancements use Replicate Kontext Pro (1 credit).
+- Basic tier feature using credits. Standard enhancements use Replicate Kontext Pro (1 credit).
 - Stylized enhancements (OpenAI gpt-image-1) use 2 credits and return direct image output instead of a Replicate prediction wrapper.
 - Endpoints: `POST /api/replicate/enhance` (Replicate), `POST /api/enhancement/enhance` (OpenAI).
 
 Credits & Payments
-- Weekly free credits for Basic tier: 5, reset every 7 days.
-- Purchased credits added via credit packages; status, packages (public), purchase, history provided; PaymentIntents created via Stripe in all environments, with a configuration switch for simulation in development/test.
+- Unified credit balance with weekly top-ups to 5 when below.
+- Credits added via credit packages; status, packages (public), purchase, history provided; PaymentIntents created via Stripe in all environments, with a configuration switch for simulation in development/test.
 - Endpoints: `GET /api/credit/status`, `GET /api/credit/packages` (public), `POST /api/credit/purchase`, `GET /api/credit/history`, `POST /api/credit/create-payment-intent` (Stripe PaymentIntent), `GET /api/credit/costs`, `GET /api/credit/payment-config`.
 
 Retention & Privacy
@@ -80,15 +80,15 @@ Webhooks & File Downloading
 - Upload limits: max 20 images per request; file size ≤ 10MB; allowed types: .jpg/.jpeg/.png/.webp with signature validation.
 - Training ZIP: requires ≥ 10 original uploads.
 - Credits:
-  - Weekly (Basic): 5; resets every 7 days.
-  - Costs: enhancement = 1 (Replicate) or 2 (OpenAI styles, allows weekly), model_training = 15 (purchased only), styled_generation = 5 per image (purchased only).
+  - Unified balance; weekly top-up restores to 5 when below.
+  - Costs: enhancement = 1 (Replicate) or 2 (OpenAI styles), model_training = 15, styled_generation = 5 per image.
   - Consumption occurs before external API calls; failures refund credits.
 - Generation: 1–4 outputs per style per request; batch generation allowed; model availability checked.
 - Retention: originals 30 days; generated 30 days; scheduled at record creation and enforced by background job.
 
 ### 8) Data Model (high‑level)
 - ApplicationUser (Identity)
-- UserProfile: UserId, Credits, PurchasedCredits, LastCreditReset, SubscriptionTier, ProcessedImages, UsageLogs.
+- UserProfile: UserId, Credits, LastCreditReset, SubscriptionTier, ProcessedImages, UsageLogs.
 - ProcessedImage: IsOriginalUpload, IsGenerated, OriginalImageUrl, ProcessedImageUrl, Style, CreatedAt, ScheduledDeletionDate.
 - Style + UserStyleSelection: Active styles and user selections.
 - ModelCreationRequest: UserId, ReplicateModelId, TrainedModelVersion, Status, CompletedAt, TrainingImageZipUrl.
@@ -110,7 +110,7 @@ Webhooks & File Downloading
 - Data retention strictly enforced (30/30 days); user-initiated deletion/export flows available.
 
 ### 11) Performance & Reliability
-- Background jobs: weekly credit reset (service code), retention cleanup, model expiration checks.
+- Background jobs: weekly credit top-up (service code), retention cleanup, model expiration checks.
 - Gallery self-healing and filesystem/DB reconciliation utilities in development endpoints.
 - Response compression enabled; static file caching for images and previews.
 
@@ -124,9 +124,9 @@ Webhooks & File Downloading
 ### 13) Acceptance Criteria (MVP)
 - Upload rejects >20 images or invalid types/sizes; success returns absolute URLs.
 - Training ZIP created when ≥10 images exist; returns public URL.
-- Training endpoint blocks when READY model exists; requires 15 purchased credits; consumes after starting.
-- Generation requires purchased credits (5 per output); generation fails gracefully when model unavailable.
-- Enhancement consumes 1 weekly credit (Replicate) or 2 credits (OpenAI styles); returns prediction or direct output plus remaining credits.
+- Training endpoint blocks when READY model exists; requires 15 credits; consumes after starting.
+- Generation requires 5 credits per output; generation fails gracefully when model unavailable.
+- Enhancement consumes 1 credit (Replicate) or 2 credits (OpenAI styles); returns prediction or direct output plus remaining credits.
 - Retention background job sets and deletes data per policy; manual endpoints work.
 - Credit status/packaging endpoints return typed data; purchase adds credits to account.
 - Webhook ingestion persists generated images and sets retention; downloads images locally.

@@ -294,7 +294,6 @@ Deep scan based on EF Core DbContext and model class properties.
   - LastModelSyncCheck: DateTime?
   - SubscriptionTier: SubscriptionTier
   - Credits: int
-  - PurchasedCredits: int
   - LastCreditReset: DateTime
   - ProcessedImages: List<ProcessedImage>
   - UsageLogs: List<UsageLog>
@@ -308,4 +307,3 @@ Deep scan based on EF Core DbContext and model class properties.
   - UserProfileId: int
   - StyleId: int
   - SelectedAt: DateTime
-

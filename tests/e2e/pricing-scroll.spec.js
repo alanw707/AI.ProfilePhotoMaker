@@ -104,7 +104,11 @@ async function stubPricingApis(page) {
       contentType: 'application/json',
       body: JSON.stringify({
         success: true,
-        data: { totalCredits: 0, weeklyCredits: 0, purchasedCredits: 0 },
+        data: {
+          credits: 0,
+          lastCreditReset: new Date().toISOString(),
+          nextResetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        },
       }),
     });
   });

@@ -25,18 +25,25 @@ class MockProfileService {
 class MockReplicateService {
   getCredits = jasmine
     .createSpy('getCredits')
-    .and.returnValue(of({ success: true, data: { totalCredits: 100 } }));
+    .and.returnValue(of({ success: true, data: { availableCredits: 100 } }));
 }
 
 class MockCreditService {
-  getCreditStatus = jasmine
-    .createSpy('getCreditStatus')
-    .and.returnValue(of({ success: true, data: { purchasedCredits: 50, weeklyCredits: 3 } }));
+  getCreditStatus = jasmine.createSpy('getCreditStatus').and.returnValue(
+    of({
+      success: true,
+      data: {
+        credits: 53,
+        lastCreditReset: new Date().toISOString(),
+        nextResetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+    })
+  );
   getTotalAvailableCredits = jasmine
     .createSpy('getTotalAvailableCredits')
     .and.callFake(
-      (userCreditStatus: any, _creditsInfo: any) =>
-        (userCreditStatus?.weeklyCredits || 0) + (userCreditStatus?.purchasedCredits || 0)
+      (userCreditStatus: any, creditsInfo: any) =>
+        userCreditStatus?.credits ?? creditsInfo?.availableCredits ?? 0
     );
 }
 
@@ -174,12 +181,11 @@ xdescribe('DashboardStateService', () => {
     spyOn(subscriptionState, 'loadFullSubscriptionData').and.returnValue(Promise.resolve());
     spyOn(subscriptionState, 'getState').and.returnValue({
       userCreditStatus: {
-        weeklyCredits: 3,
-        purchasedCredits: 50,
-        totalCredits: 53,
-        lastReset: new Date(),
+        credits: 53,
+        lastCreditReset: new Date().toISOString(),
+        nextResetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       },
-      creditsInfo: { totalCredits: 0 },
+      creditsInfo: { availableCredits: 0 },
       totalCredits: 53,
       isPremiumWorkflow: true,
       isLoading: false,
@@ -315,12 +321,12 @@ xdescribe('DashboardStateService', () => {
       service.loadInitialDashboardData();
     });
 
-    it('should set premium workflow flag based on purchased credits', done => {
+    it('should set premium workflow flag based on available credits', done => {
       let completed = false;
       service.state$.subscribe(state => {
         if (!completed && state.userCreditStatus) {
           completed = true;
-          expect(state.isPremiumWorkflow).toBeTrue(); // purchasedCredits: 50 > 0
+          expect(state.isPremiumWorkflow).toBeTrue(); // totalCredits: 53 > 0
           done();
         }
       });

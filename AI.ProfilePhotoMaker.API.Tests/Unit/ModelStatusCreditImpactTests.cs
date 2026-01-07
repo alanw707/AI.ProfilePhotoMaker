@@ -32,7 +32,6 @@ public class ModelStatusCreditImpactTests
         {
             UserId = userId,
             Credits = 0,
-            PurchasedCredits = 0,
             SubscriptionTier = SubscriptionTier.Basic,
             LastCreditReset = DateTime.UtcNow,
             ProcessedImages = new List<ProcessedImage>()
@@ -123,4 +122,3 @@ public class ModelStatusCreditImpactTests
         Assert.Equal(0, payload.CreditImpact.NetCredits);
     }
 }
-

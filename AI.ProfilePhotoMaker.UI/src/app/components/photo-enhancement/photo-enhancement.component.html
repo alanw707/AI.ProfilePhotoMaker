@@ -45,9 +45,7 @@
           <div class="verification-icon">📧</div>
           <div class="verification-content">
             <h3>Verify your email to unlock Photo Transform</h3>
-            <p>
-              Please confirm your email address to protect your account. Check your inbox (and spam).
-            </p>
+            <p>Please confirm your email address to protect your account. Check your inbox (and spam).</p>
             <button
               class="btn btn-secondary"
               type="button"
@@ -132,14 +130,14 @@
               </div>
             </label>
 
-            <!-- OpenAI Enhancement Options (2 credits) -->
+            <!-- OpenAI Enhancement Options (1 credit) -->
             <label class="option-card" [class.selected]="enhancementType === 'chibi'">
               <input type="radio" name="enhancement" value="chibi" [(ngModel)]="enhancementType" />
               <div class="option-content">
                 <div class="option-icon">🌸</div>
                 <div class="option-text">
                   <h4>Chibi Style</h4>
-                  <p>Super cute anime style with oversized head and tiny body (2 credits)</p>
+                  <p>Super cute anime style with oversized head and tiny body (1 credit)</p>
                 </div>
               </div>
             </label>
@@ -150,17 +148,16 @@
                 <div class="option-icon">🎬</div>
                 <div class="option-text">
                   <h4>Pixar 3D</h4>
-                  <p>Professional 3D animation style with cinematic quality (2 credits)</p>
+                  <p>Professional 3D animation style with cinematic quality (1 credit)</p>
                 </div>
               </div>
             </label>
-	          </div>
+          </div>
 
           <app-turnstile
             *ngIf="turnstileSiteKey && isEmailConfirmed"
             [siteKey]="turnstileSiteKey"
-            (tokenChange)="onTurnstileTokenChange($event)"
-          ></app-turnstile>
+            (tokenChange)="onTurnstileTokenChange($event)"></app-turnstile>
 
           <p *ngIf="turnstileSiteKey && isEmailConfirmed && !turnstileToken" class="turnstile-hint">
             Complete the bot check above to enable Transform.
@@ -173,9 +170,10 @@
                 [ngModel]="biometricConsentAccepted"
                 (ngModelChange)="onBiometricConsentChange($event)" />
               <span>
-                I consent to the collection and use of my biometric data (face geometry) to process
-                this photo. I have read the
-                <a routerLink="/legal/biometric-consent">Biometric Consent & Retention Notice</a>.
+                I consent to the collection and use of my biometric data (face geometry) to process this photo. I have
+                read the
+                <a routerLink="/legal/biometric-consent">Biometric Consent & Retention Notice</a>
+                .
               </span>
             </label>
             <p class="consent-hint" *ngIf="!biometricConsentAccepted">
@@ -183,21 +181,21 @@
             </p>
           </div>
 
-	          <button
-              class="btn btn-primary enhance-btn"
-              type="button"
-              (click)="startEnhancement()"
-              [disabled]="!isEmailConfirmed || !canStartEnhancement()">
-	            <span *ngIf="!isEmailConfirmed">Verify Email to Continue</span>
-	            <span *ngIf="isEmailConfirmed && hasEnoughCredits()">
-	              Transform Photo ({{ getRequiredCredits() }} credit{{ getRequiredCredits() > 1 ? 's' : '' }})
-	            </span>
-	            <span *ngIf="isEmailConfirmed && !hasEnoughCredits()">
-                Not Enough Credits ({{ getRequiredCredits() }} required)
-              </span>
-	          </button>
-	        </div>
-	      </section>
+          <button
+            class="btn btn-primary enhance-btn"
+            type="button"
+            (click)="startEnhancement()"
+            [disabled]="!isEmailConfirmed || !canStartEnhancement()">
+            <span *ngIf="!isEmailConfirmed">Verify Email to Continue</span>
+            <span *ngIf="isEmailConfirmed && hasEnoughCredits()">
+              Transform Photo ({{ getRequiredCredits() }} credit{{ getRequiredCredits() > 1 ? 's' : '' }})
+            </span>
+            <span *ngIf="isEmailConfirmed && !hasEnoughCredits()">
+              Not Enough Credits ({{ getRequiredCredits() }} required)
+            </span>
+          </button>
+        </div>
+      </section>
 
       <!-- Processing Section -->
       <section class="processing-section" *ngIf="isProcessing">

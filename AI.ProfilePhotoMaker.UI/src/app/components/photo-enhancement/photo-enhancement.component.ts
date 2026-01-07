@@ -89,8 +89,7 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
 
   // Get required credits based on enhancement type
   getRequiredCredits(): number {
-    const openAIStyles = ['chibi', 'pixar_3d', 'studio_ghibli'];
-    return openAIStyles.includes(this.enhancementType) ? 2 : 1;
+    return this._creditService.getCreditCostSync('photo_enhancement');
   }
 
   // Check if user has enough credits for selected enhancement
@@ -639,7 +638,8 @@ export class PhotoEnhancementComponent implements OnInit, OnDestroy {
       .subscribe({
         next: response => {
           if (response?.success) {
-            this.verificationMessage = 'Verification email sent. Please check your inbox (and spam).';
+            this.verificationMessage =
+              'Verification email sent. Please check your inbox (and spam).';
           } else {
             this.verificationMessage =
               response?.error?.message || 'Failed to send verification email. Please try again.';

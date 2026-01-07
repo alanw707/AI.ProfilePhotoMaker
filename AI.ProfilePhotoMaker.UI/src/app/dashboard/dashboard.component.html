@@ -25,8 +25,8 @@
             [isModelStatus]="true"></app-stats-card>
           <app-stats-card
             icon="💰"
-            [value]="getHeadshotEligibleCredits()"
-            label="Headshot Credits"
+            [value]="getTotalAvailableCredits()"
+            label="Credits"
             [showCard]="true"
             [isClickable]="true"
             clickAction="settings"
@@ -74,9 +74,7 @@
             </div>
 
             <div class="error-actions">
-              <button class="btn btn-primary btn-sm" type="button" (click)="purchaseCredits()">
-                Purchase Credits
-              </button>
+              <button class="btn btn-primary btn-sm" type="button" (click)="purchaseCredits()">Purchase Credits</button>
             </div>
           </div>
         </div>

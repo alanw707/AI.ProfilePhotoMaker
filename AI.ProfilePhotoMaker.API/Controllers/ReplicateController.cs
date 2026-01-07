@@ -63,7 +63,7 @@ public class ReplicateController : ControllerBase
     }
 
     /// <summary>
-    /// Initiates model training for a user (requires purchased credits)
+    /// Initiates model training for a user (requires credits)
     /// </summary>
     [HttpPost("train")]
     public async Task<IActionResult> TrainModel([FromBody] TrainModelRequestDto dto)
@@ -101,11 +101,11 @@ public class ReplicateController : ControllerBase
         // Get user profile for credit checking
         var userProfile = await _dbContext.UserProfiles.FirstOrDefaultAsync(u => u.UserId == userId);
 
-        // Check if user has sufficient purchased credits for training (15 credits required)
-        var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
+        // Check if user has sufficient credits for training (15 credits required)
+        var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
         var requiredCredits = CreditCostConfig.GetCreditCost("model_training");
 
-        if (purchasedCredits < requiredCredits)
+        if (availableCredits < requiredCredits)
         {
             return BadRequest(new
             {
@@ -113,7 +113,7 @@ public class ReplicateController : ControllerBase
                 error = new
                 {
                     code = "InsufficientCredits",
-                    message = $"Model training requires {requiredCredits} purchased credits. You have {purchasedCredits} purchased credits. Please purchase more credits to train custom models."
+                    message = $"Model training requires {requiredCredits} credits. You have {availableCredits} credits. Please purchase more credits to train custom models."
                 }
             });
         }
@@ -123,7 +123,11 @@ public class ReplicateController : ControllerBase
         var trainingJobId = Guid.NewGuid().ToString();
 
         // Consume credits BEFORE calling Replicate; refund on failure
-        var trainingCredits = await _basicTierService.ConsumeCreditsAsync(userId, "model_training", trainingJobId);
+        var trainingCredits = await _basicTierService.ConsumeCreditsAsync(
+            userId,
+            "model_training",
+            trainingJobId,
+            HttpContext?.RequestAborted ?? CancellationToken.None);
         if (!trainingCredits.Success)
         {
             _logger.LogError("Failed to consume training credits for user {UserId} before starting Replicate training", Sid(userId));
@@ -405,7 +409,7 @@ public class ReplicateController : ControllerBase
     }
 
     /// <summary>
-    /// Generates images using a trained model and style (requires purchased credits)
+    /// Generates images using a trained model and style (requires credits)
     /// </summary>
     [HttpPost("generate")]
     public async Task<IActionResult> GenerateImages([FromBody] GenerateImagesRequestDto dto)
@@ -420,12 +424,12 @@ public class ReplicateController : ControllerBase
         if (string.IsNullOrEmpty(userId))
             return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
 
-        // Check if user has sufficient purchased credits for styled generation (5 credits per image)
-        var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
+        // Check if user has sufficient credits for styled generation (5 credits per image)
+        var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
         var requiredCredits = dto.NumOutputs * CreditCostConfig.GetCreditCost("styled_generation");
         var correlationId = $"styled_generation:{Guid.NewGuid()}";
 
-        if (purchasedCredits < requiredCredits)
+        if (availableCredits < requiredCredits)
         {
             return BadRequest(new
             {
@@ -433,7 +437,7 @@ public class ReplicateController : ControllerBase
                 error = new
                 {
                     code = "InsufficientCredits",
-                    message = $"Styled image generation requires {requiredCredits} purchased credits. You have {purchasedCredits} purchased credits. Please purchase more credits to generate styled images."
+                    message = $"Styled image generation requires {requiredCredits} credits. You have {availableCredits} credits. Please purchase more credits to generate styled images."
                 }
             });
         }
@@ -540,9 +544,28 @@ public class ReplicateController : ControllerBase
             }
 
             // Consume credits BEFORE calling Replicate; refund on failure
-            creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, requiredCredits, "styled_generation", correlationId);
+            creditConsumed = await _basicTierService.ConsumeCreditsAsync(
+                userId,
+                requiredCredits,
+                "styled_generation",
+                correlationId,
+                HttpContext?.RequestAborted ?? CancellationToken.None);
             if (!creditConsumed.Success)
             {
+                if (creditConsumed.Error == "insufficient_credits")
+                {
+                    _logger.LogWarning("Insufficient credits detected during styled generation for user {UserId}", Sid(userId));
+                    return BadRequest(new
+                    {
+                        success = false,
+                        error = new
+                        {
+                            code = "InsufficientCredits",
+                            message = $"Styled image generation requires {requiredCredits} credits. You have {availableCredits} credits. Please purchase more credits to generate styled images."
+                        }
+                    });
+                }
+
                 _logger.LogError("Failed to consume styled generation credits for user {UserId} before Replicate call", Sid(userId));
                 return StatusCode(500, new
                 {
@@ -612,7 +635,7 @@ public class ReplicateController : ControllerBase
     }
 
     /// <summary>
-    /// Generates images for multiple styles using a trained model in a single consolidated request (requires purchased credits)
+    /// Generates images for multiple styles using a trained model in a single consolidated request (requires credits)
     /// </summary>
     [HttpPost("generate/batch")]
     public async Task<IActionResult> GenerateBatchImages([FromBody] GenerateBatchImagesRequestDto dto)
@@ -636,10 +659,10 @@ public class ReplicateController : ControllerBase
         var requiredCredits = totalImages * costPerImage;
         var correlationId = $"styled_generation:{Guid.NewGuid()}";
 
-        // Check if user has sufficient purchased credits for styled generation
-        var (weeklyCredits, purchasedCredits) = await _basicTierService.GetCreditBreakdownAsync(userId);
+        // Check if user has sufficient credits for styled generation
+        var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
 
-        if (purchasedCredits < requiredCredits)
+        if (availableCredits < requiredCredits)
         {
             return BadRequest(new
             {
@@ -647,7 +670,7 @@ public class ReplicateController : ControllerBase
                 error = new
                 {
                     code = "InsufficientCredits",
-                    message = $"Batch styled image generation requires {requiredCredits} purchased credits. You have {purchasedCredits} purchased credits. Please purchase more credits to generate styled images."
+                    message = $"Batch styled image generation requires {requiredCredits} credits. You have {availableCredits} credits. Please purchase more credits to generate styled images."
                 }
             });
         }
@@ -730,9 +753,28 @@ public class ReplicateController : ControllerBase
             var results = new List<StyleGenerationResult>();
 
             // Consume credits BEFORE calling Replicate; refund on failure
-            creditConsumed = await _basicTierService.ConsumeCreditsAsync(userId, requiredCredits, "styled_generation", correlationId);
+            creditConsumed = await _basicTierService.ConsumeCreditsAsync(
+                userId,
+                requiredCredits,
+                "styled_generation",
+                correlationId,
+                HttpContext?.RequestAborted ?? CancellationToken.None);
             if (!creditConsumed.Success)
             {
+                if (creditConsumed.Error == "insufficient_credits")
+                {
+                    _logger.LogWarning("Insufficient credits detected during batch styled generation for user {UserId}", Sid(userId));
+                    return BadRequest(new
+                    {
+                        success = false,
+                        error = new
+                        {
+                            code = "InsufficientCredits",
+                            message = $"Batch styled image generation requires {requiredCredits} credits. You have {availableCredits} credits. Please purchase more credits to generate styled images."
+                        }
+                    });
+                }
+
                 _logger.LogError("Failed to consume batch styled generation credits for user {UserId} before Replicate calls", Sid(userId));
                 return StatusCode(500, new
                 {
@@ -794,22 +836,18 @@ public class ReplicateController : ControllerBase
             var failedImages = failedGenerations.Count * dto.NumOutputsPerStyle;
             var refundTotal = failedImages * costPerImage;
 
-            int refundWeekly = 0;
-            int refundPurchased = 0;
+            var refundCredits = 0;
             if (creditConsumed?.Success == true && refundTotal > 0)
             {
-                refundWeekly = Math.Min(creditConsumed.WeeklyCreditsConsumed, refundTotal);
-                refundPurchased = Math.Min(creditConsumed.PurchasedCreditsConsumed, refundTotal - refundWeekly);
-
+                refundCredits = Math.Min(creditConsumed.CreditsConsumed, refundTotal);
                 var refundResult = CreditConsumptionResult.Succeeded(
                     "styled_generation",
-                    refundWeekly,
-                    refundPurchased,
+                    refundCredits,
                     creditConsumed?.CorrelationId ?? correlationId);
                 await _basicTierService.RefundCreditsAsync(userId, refundResult);
             }
 
-            var creditsCharged = requiredCredits - (refundWeekly + refundPurchased);
+            var creditsCharged = requiredCredits - refundCredits;
 
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
 
@@ -987,36 +1025,6 @@ public class ReplicateController : ControllerBase
     }
 
     /// <summary>
-    /// Gets current user's credit information
-    /// </summary>
-    [HttpGet("credits")]
-    public async Task<IActionResult> GetCredits()
-    {
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userId))
-            return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
-
-        var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
-        var profile = await _basicTierService.GetUserProfileWithCreditsAsync(userId);
-
-        if (profile == null)
-            return NotFound(new { success = false, error = new { code = "ProfileNotFound", message = "User profile not found." } });
-
-        return Ok(new
-        {
-            success = true,
-            data = new
-            {
-                availableCredits = availableCredits,
-                subscriptionTier = profile.SubscriptionTier.ToString(),
-                lastCreditReset = profile.LastCreditReset,
-                nextResetDate = profile.LastCreditReset.AddDays(7)
-            },
-            error = (object?)null
-        });
-    }
-
-    /// <summary>
     /// Enhances a user's uploaded photo using Flux Kontext Pro (basic tier feature)
     /// Provides professional photo enhancement using text-based image editing
     /// </summary>
@@ -1078,7 +1086,7 @@ public class ReplicateController : ControllerBase
                 error = new
                 {
                     code = "InsufficientCredits",
-                    message = "No credits remaining. Credits reset weekly.",
+                    message = "No credits remaining. Credits top up weekly when your balance is below 5.",
                     nextResetDate = nextReset
                 }
             });
@@ -1115,7 +1123,8 @@ public class ReplicateController : ControllerBase
                 userId,
                 CreditCostConfig.PhotoEnhancement,
                 "photo_enhancement",
-                correlationId);
+                correlationId,
+                HttpContext?.RequestAborted ?? CancellationToken.None);
             if (creditConsumed is null || !creditConsumed.Success)
             {
                 _logger.LogError("Failed to consume credits for photo enhancement for user {UserId}", Sid(userId));

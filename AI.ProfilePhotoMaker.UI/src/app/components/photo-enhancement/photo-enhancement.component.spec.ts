@@ -133,9 +133,7 @@ xdescribe('PhotoEnhancementComponent', () => {
 
     it('should track credits info', () => {
       const mockCredits: UserCreditStatus = {
-        totalCredits: 13,
-        weeklyCredits: 10,
-        purchasedCredits: 3,
+        credits: 13,
         lastCreditReset: '2024-01-01T00:00:00Z',
         nextResetDate: '2024-01-08T00:00:00Z',
       };

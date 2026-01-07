@@ -1,9 +1,7 @@
 {
   "success": true,
   "data": {
-    "totalCredits": 24,
-    "weeklyCredits": 0,
-    "purchasedCredits": 24,
+    "credits": 24,
     "lastCreditReset": "***REDACTED***",
     "nextResetDate": "***REDACTED***"
   },

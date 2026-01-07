@@ -100,9 +100,8 @@ public class TrainingPollingService : ITrainingPollingService
             {
                 var refundResult = CreditConsumptionResult.Succeeded(
                     "model_training",
-                    weeklyCredits: 0,
-                    purchasedCredits: CreditCostConfig.ModelTraining,
-                    correlationId: modelRequest.Id);
+                    CreditCostConfig.ModelTraining,
+                    modelRequest.Id);
 
                 await scopedBasicTierService.RefundCreditsAsync(modelRequest.UserId, refundResult);
                 _logger.LogInformation("Refunded training credits for user {UserId} after training {TrainingId} auth failure", Sid(modelRequest.UserId), S(trainingId));
@@ -304,9 +303,8 @@ public class TrainingPollingService : ITrainingPollingService
                 {
                     var refundResult = CreditConsumptionResult.Succeeded(
                         "model_training",
-                        weeklyCredits: 0,
-                        purchasedCredits: CreditCostConfig.ModelTraining,
-                        correlationId: modelRequest.Id);
+                        CreditCostConfig.ModelTraining,
+                        modelRequest.Id);
 
                     await scopedBasicTierService.RefundCreditsAsync(modelRequest.UserId, refundResult);
                     _logger.LogInformation("Refunded training credits for user {UserId} after training {TrainingId} failed", Sid(modelRequest.UserId), S(trainingId));

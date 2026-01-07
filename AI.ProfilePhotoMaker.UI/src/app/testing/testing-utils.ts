@@ -209,14 +209,14 @@ export class MockReplicateService {
 export class MockCreditService {
   getCredits(): Observable<{
     success: boolean;
-    data: { weeklyCredits: number; purchasedCredits: number; totalCredits: number };
+    data: { credits: number; lastCreditReset: string; nextResetDate: string };
   }> {
     return of({
       success: true,
       data: {
-        weeklyCredits: 5,
-        purchasedCredits: 25,
-        totalCredits: 30,
+        credits: 30,
+        lastCreditReset: new Date().toISOString(),
+        nextResetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       },
     });
   }
@@ -239,13 +239,13 @@ export class MockCreditService {
 
   purchaseCredits(_packageId: string): Observable<{
     success: boolean;
-    data: { creditsAdded: number; totalCredits: number };
+    data: { creditsAdded: number; credits: number };
   }> {
     return of({
       success: true,
       data: {
         creditsAdded: 50,
-        totalCredits: 80,
+        credits: 80,
       },
     });
   }

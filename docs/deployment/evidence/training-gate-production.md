@@ -16,8 +16,8 @@
 - See `docs/deployment/evidence/training-gate-production.log`
 
 ## Output Summary
-- Expected result: training requires 15 purchased credits; block when insufficient.
-- Actual result: `InsufficientCredits` with purchased credits = 0.
+- Expected result: training requires 15 credits; block when insufficient.
+- Actual result: `InsufficientCredits` with credits = 0.
 - Pass/Fail: Partial (credit gate validated; READY-model block not validated).
 
 ## Evidence Files

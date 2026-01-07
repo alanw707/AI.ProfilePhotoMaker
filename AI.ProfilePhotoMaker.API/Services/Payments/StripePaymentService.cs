@@ -3,6 +3,7 @@ using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services.Payments.Models;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Stripe;
@@ -15,6 +16,7 @@ public class StripePaymentService : IStripePaymentService
     private readonly ILogger<StripePaymentService> _logger;
     private readonly StripeOptions _options;
     private readonly StripeClient _stripeClient;
+    private readonly IWebHostEnvironment _environment;
     private static string S(string? value) => LoggingSanitizer.Sanitize(value);
     private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
@@ -22,16 +24,25 @@ public class StripePaymentService : IStripePaymentService
         ApplicationDbContext dbContext,
         ILogger<StripePaymentService> logger,
         IOptions<StripeOptions> options,
-        StripeClient stripeClient)
+        StripeClient stripeClient,
+        IWebHostEnvironment environment)
     {
         _dbContext = dbContext;
         _logger = logger;
         _options = options.Value;
         _stripeClient = stripeClient;
+        _environment = environment;
     }
 
     public async Task<PaymentIntentResponse> CreatePaymentIntentAsync(string userId, int packageId, CancellationToken cancellationToken = default)
     {
+        if (_environment.IsDevelopment() && !_options.AllowLiveKeysInDevelopment && _options.UsesLiveMode())
+        {
+            _logger.LogWarning("Stripe live keys detected in development. Refusing to create payment intent.");
+            throw new InvalidOperationException(
+                "Stripe live keys are not allowed in Development. Use test keys or set Stripe:AllowLiveKeysInDevelopment=true.");
+        }
+
         if (!_options.HasApiKeys())
         {
             _logger.LogError("Stripe configuration is incomplete. Cannot create payment intent.");

@@ -2,7 +2,8 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, catchError, combineLatest, map, Observable, of, tap } from 'rxjs';
 import { ProfileService, UserProfile } from './profile.service';
 import { FileUploadService, ProcessedImage } from './file-upload.service';
-import { CreditsInfo, ReplicateService } from './replicate.service';
+import { CreditService, UserCreditStatus } from './credit.service';
+import { ReplicateService } from './replicate.service';
 import { Style, StyleService } from './style.service';
 
 export interface DashboardState {
@@ -11,7 +12,7 @@ export interface DashboardState {
   availableStyles: Style[];
   selectedStyles: Style[];
   generatedPhotos: ProcessedImage[];
-  creditsInfo: CreditsInfo | null;
+  creditsInfo: UserCreditStatus | null;
   trainingStatus: any;
   currentStep: number;
   loading: {
@@ -33,7 +34,7 @@ export interface DashboardState {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class DashboardService {
   private stateSubject = new BehaviorSubject<DashboardState>(this.getInitialState());
@@ -43,6 +44,7 @@ export class DashboardService {
     private profileService: ProfileService,
     private fileUploadService: FileUploadService,
     private replicateService: ReplicateService,
+    private creditService: CreditService,
     private styleService: StyleService
   ) {}
 
@@ -62,7 +64,7 @@ export class DashboardService {
         styles: false,
         credits: false,
         upload: false,
-        generation: false
+        generation: false,
       },
       errors: {
         profile: null,
@@ -70,8 +72,8 @@ export class DashboardService {
         styles: null,
         credits: null,
         upload: null,
-        generation: null
-      }
+        generation: null,
+      },
     };
   }
 
@@ -83,11 +85,13 @@ export class DashboardService {
       this.loadUserProfile(),
       this.loadUserImages(),
       this.loadAvailableStyles(),
-      this.loadCreditsInfo()
+      this.loadCreditsInfo(),
     ]).pipe(
       map(() => this.stateSubject.value),
       tap(() => this.updateCurrentStep()),
-      tap(() => this.updateLoadingState({ profile: false, images: false, styles: false, credits: false }))
+      tap(() =>
+        this.updateLoadingState({ profile: false, images: false, styles: false, credits: false })
+      )
     );
   }
 
@@ -105,7 +109,7 @@ export class DashboardService {
         }
         this.updateLoadingState({ profile: false });
       }),
-      map(response => response.success ? response.data : null),
+      map(response => (response.success ? response.data : null)),
       catchError(error => {
         this.updateError('profile', error.message || 'Failed to load user profile');
         this.updateLoadingState({ profile: false });
@@ -127,7 +131,7 @@ export class DashboardService {
         }
         this.updateLoadingState({ profile: false });
       }),
-      map(response => response.success ? response.data : null),
+      map(response => (response.success ? response.data : null)),
       catchError(error => {
         this.updateError('profile', error.message || 'Failed to update profile');
         this.updateLoadingState({ profile: false });
@@ -150,7 +154,7 @@ export class DashboardService {
         }
         this.updateLoadingState({ images: false });
       }),
-      map(response => response.success ? response.data : []),
+      map(response => (response.success ? response.data : [])),
       catchError(error => {
         this.updateError('images', error.message || 'Failed to load images');
         this.updateLoadingState({ images: false });
@@ -159,7 +163,9 @@ export class DashboardService {
     );
   }
 
-  uploadImages(files: File[]): Observable<{ progress: number; completed: boolean; success: boolean }> {
+  uploadImages(
+    files: File[]
+  ): Observable<{ progress: number; completed: boolean; success: boolean }> {
     this.updateLoadingState({ upload: true });
     this.clearError('upload');
 
@@ -203,7 +209,7 @@ export class DashboardService {
         }
         this.updateLoadingState({ styles: false });
       }),
-      map(response => response.success ? response.data : []),
+      map(response => (response.success ? response.data : [])),
       catchError(error => {
         this.updateError('styles', error.message || 'Failed to load styles');
         this.updateLoadingState({ styles: false });
@@ -218,7 +224,9 @@ export class DashboardService {
     return this.styleService.selectStyles({ styleIds }).pipe(
       tap(response => {
         if (response.success) {
-          const selectedStyles = this.stateSubject.value.availableStyles.filter(s => styleIds.includes(s.id));
+          const selectedStyles = this.stateSubject.value.availableStyles.filter(s =>
+            styleIds.includes(s.id)
+          );
           this.updateState({ selectedStyles });
           this.updateCurrentStep();
         } else {
@@ -234,11 +242,11 @@ export class DashboardService {
   }
 
   // Credits Management
-  loadCreditsInfo(): Observable<CreditsInfo | null> {
+  loadCreditsInfo(): Observable<UserCreditStatus | null> {
     this.updateLoadingState({ credits: true });
     this.clearError('credits');
 
-    return this.replicateService.getCredits().pipe(
+    return this.creditService.getCreditStatus().pipe(
       tap(response => {
         if (response.success) {
           this.updateState({ creditsInfo: response.data });
@@ -247,7 +255,7 @@ export class DashboardService {
         }
         this.updateLoadingState({ credits: false });
       }),
-      map(response => response.success ? response.data : null),
+      map(response => (response.success ? response.data : null)),
       catchError(error => {
         this.updateError('credits', error.message || 'Failed to load credits info');
         this.updateLoadingState({ credits: false });
@@ -257,7 +265,10 @@ export class DashboardService {
   }
 
   // Free Generation
-  generateBasicImage(gender: string, userInfo?: any): Observable<{ success: boolean; creditsRemaining?: number }> {
+  generateBasicImage(
+    gender: string,
+    userInfo?: any
+  ): Observable<{ success: boolean; creditsRemaining?: number }> {
     this.updateLoadingState({ generation: true });
     this.clearError('generation');
 
@@ -275,7 +286,7 @@ export class DashboardService {
       }),
       map(response => ({
         success: response.success,
-        creditsRemaining: response.data?.creditsRemaining
+        creditsRemaining: response.data?.creditsRemaining,
       })),
       catchError(error => {
         this.updateError('generation', error.error?.message || 'Failed to generate image');
@@ -292,10 +303,10 @@ export class DashboardService {
 
     if (state.uploadedImages.length > 0) {
       currentStep = 2;
-      
+
       if (state.trainingStatus === 'trained') {
         currentStep = 3;
-        
+
         if (state.selectedStyles.length > 0) {
           currentStep = 4;
         }
@@ -313,22 +324,22 @@ export class DashboardService {
 
   private updateLoadingState(loadingUpdates: Partial<DashboardState['loading']>): void {
     const currentState = this.stateSubject.value;
-    this.updateState({ 
-      loading: { ...currentState.loading, ...loadingUpdates } 
+    this.updateState({
+      loading: { ...currentState.loading, ...loadingUpdates },
     });
   }
 
   private updateError(errorKey: keyof DashboardState['errors'], message: string): void {
     const currentState = this.stateSubject.value;
-    this.updateState({ 
-      errors: { ...currentState.errors, [errorKey]: message } 
+    this.updateState({
+      errors: { ...currentState.errors, [errorKey]: message },
     });
   }
 
   private clearError(errorKey: keyof DashboardState['errors']): void {
     const currentState = this.stateSubject.value;
-    this.updateState({ 
-      errors: { ...currentState.errors, [errorKey]: null } 
+    this.updateState({
+      errors: { ...currentState.errors, [errorKey]: null },
     });
   }
 
@@ -345,7 +356,7 @@ export class DashboardService {
     return this.state$.pipe(map(state => state.availableStyles));
   }
 
-  get creditsInfo$(): Observable<CreditsInfo | null> {
+  get creditsInfo$(): Observable<UserCreditStatus | null> {
     return this.state$.pipe(map(state => state.creditsInfo));
   }
 

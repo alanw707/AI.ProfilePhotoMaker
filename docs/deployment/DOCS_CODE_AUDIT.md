@@ -52,8 +52,8 @@ Resolved: moved into a "Historical/Archived" section of the index (no file moves
 | --- | --- | --- | --- |
 | AC-1 | Upload rejects >20 images or invalid types/sizes; success returns absolute URLs. | `ImageController.cs` (`UploadImages`, `IsValidImageFile`) | 20 file cap, 10MB limit, extension + magic bytes; returns storage URL via `GetImageUrl`. |
 | AC-2 | Training ZIP created when >=10 images exist; returns public URL. | `ImageController.cs` (`CreateTrainingZipAsync`, `CreateTrainingZip`) | 10-image minimum enforced for ZIP creation. |
-| AC-3 | Training blocks when READY model exists; requires 15 purchased credits; consumes after starting. | `ReplicateController.cs` (`TrainModel`) | Checks READY model; uses `CreditCostConfig.ModelTraining` (15). |
-| AC-4 | Generation requires purchased credits (5 per output); fails gracefully when model unavailable. | `ReplicateController.cs` (`Generate`, `GenerateBatch`) | Uses `CreditCostConfig.StyledGeneration` (5) and availability checks. |
+| AC-3 | Training blocks when READY model exists; requires 15 credits; consumes after starting. | `ReplicateController.cs` (`TrainModel`) | Checks READY model; uses `CreditCostConfig.ModelTraining` (15). |
+| AC-4 | Generation requires 5 credits per output; fails gracefully when model unavailable. | `ReplicateController.cs` (`Generate`, `GenerateBatch`) | Uses `CreditCostConfig.StyledGeneration` (5) and availability checks. |
 | AC-5 | Enhancement consumes 1 weekly credit (Replicate) or 2 credits (OpenAI styles); returns output and remaining credits. | `ReplicateController.cs` (`EnhancePhoto`), `EnhancementController.cs` | Dual-provider behavior documented in PRD. |
 | AC-6 | Retention background job sets and deletes data per policy; manual endpoints work. | `RetentionPolicyBackgroundService.cs`, `RetentionPolicyController.cs` | 30/30 day policy exposed in controller. |
 | AC-7 | Credit status/package endpoints return typed data; purchase adds credits to account. | `CreditController.cs`, `CreditCostConfig.cs` | Status + packages + purchase endpoints in controller. |

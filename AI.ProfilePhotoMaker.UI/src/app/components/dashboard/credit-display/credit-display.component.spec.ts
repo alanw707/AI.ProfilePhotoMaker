@@ -21,31 +21,12 @@ describe('CreditDisplayComponent', () => {
   });
 
   describe('Credit Calculation Methods', () => {
-    it('should calculate total available credits correctly', () => {
+    it('should calculate total available credits from user status', () => {
       component.userCreditStatus = {
-        weeklyCredits: 5,
-        purchasedCredits: 10,
+        credits: 15,
       };
 
       expect(component.getTotalAvailableCredits()).toBe(15);
-    });
-
-    it('should get purchased credits correctly', () => {
-      component.userCreditStatus = {
-        weeklyCredits: 5,
-        purchasedCredits: 10,
-      };
-
-      expect(component.getPurchasedCredits()).toBe(10);
-    });
-
-    it('should get weekly credits correctly', () => {
-      component.userCreditStatus = {
-        weeklyCredits: 5,
-        purchasedCredits: 10,
-      };
-
-      expect(component.getWeeklyCredits()).toBe(5);
     });
 
     it('should fallback to creditsInfo when userCreditStatus is null', () => {
@@ -54,164 +35,98 @@ describe('CreditDisplayComponent', () => {
         availableCredits: 3,
       };
 
-      expect(component.getWeeklyCredits()).toBe(3);
       expect(component.getTotalAvailableCredits()).toBe(3);
-    });
-
-    it('should fallback to creditsInfo for purchased credits when userCreditStatus is null', () => {
-      component.userCreditStatus = null;
-      component.creditsInfo = {
-        availableCredits: 3,
-        purchasedCredits: 7,
-      };
-
-      expect(component.getPurchasedCredits()).toBe(7);
     });
 
     it('should return 0 when no credit information is available', () => {
       component.userCreditStatus = null;
       component.creditsInfo = null;
 
-      expect(component.getWeeklyCredits()).toBe(0);
-      expect(component.getPurchasedCredits()).toBe(0);
       expect(component.getTotalAvailableCredits()).toBe(0);
     });
   });
 
   describe('Display Text Methods', () => {
-    it('should generate correct display text for mixed credits', () => {
+    it('should generate correct display text for available credits', () => {
       component.userCreditStatus = {
-        weeklyCredits: 3,
-        purchasedCredits: 10,
+        credits: 13,
       };
 
-      expect(component.getCreditDisplayText()).toBe('13 Credits (3 Weekly + 10 Purchased)');
-    });
-
-    it('should generate correct display text for purchased credits only', () => {
-      component.userCreditStatus = {
-        weeklyCredits: 0,
-        purchasedCredits: 10,
-      };
-
-      expect(component.getCreditDisplayText()).toBe('10 Purchased Credits');
-    });
-
-    it('should generate correct display text for weekly credits only', () => {
-      component.userCreditStatus = {
-        weeklyCredits: 3,
-        purchasedCredits: 0,
-      };
-
-      expect(component.getCreditDisplayText()).toBe('3 Weekly Credits');
+      expect(component.getCreditDisplayText()).toBe('13 Credits');
     });
 
     it('should generate correct display text for no credits', () => {
       component.userCreditStatus = {
-        weeklyCredits: 0,
-        purchasedCredits: 0,
+        credits: 0,
       };
 
       expect(component.getCreditDisplayText()).toBe('0 Credits');
     });
+
+    it('should generate correct display text in headshot context', () => {
+      component.displayContext = 'headshots';
+      component.userCreditStatus = {
+        credits: 8,
+      };
+
+      expect(component.getCreditDisplayText()).toBe('8 Credits');
+    });
   });
 
   describe('Subtitle Text Methods', () => {
-    it('should show correct subtitle for mixed credits', () => {
+    it('should show correct subtitle for available credits', () => {
       component.userCreditStatus = {
-        weeklyCredits: 3,
-        purchasedCredits: 10,
+        credits: 13,
       };
 
-      expect(component.getCreditSubtitleText()).toBe('For model training and generation');
-    });
-
-    it('should show correct subtitle for purchased credits only', () => {
-      component.userCreditStatus = {
-        weeklyCredits: 0,
-        purchasedCredits: 10,
-      };
-
-      expect(component.getCreditSubtitleText()).toBe('For premium features');
-    });
-
-    it('should show correct subtitle for weekly credits only', () => {
-      component.userCreditStatus = {
-        weeklyCredits: 3,
-        purchasedCredits: 0,
-      };
-
-      expect(component.getCreditSubtitleText()).toBe('For basic photo enhancement');
+      expect(component.getCreditSubtitleText()).toBe(
+        'Use credits for training, generation, and enhancement'
+      );
     });
 
     it('should show correct subtitle for no credits', () => {
       component.userCreditStatus = {
-        weeklyCredits: 0,
-        purchasedCredits: 0,
+        credits: 0,
       };
 
       expect(component.getCreditSubtitleText()).toBe('Purchase credits to get started');
     });
-  });
 
-  describe('Headshot Context', () => {
-    it('should display purchased credits only for headshots', () => {
+    it('should show correct subtitle in headshot context', () => {
       component.displayContext = 'headshots';
       component.userCreditStatus = {
-        weeklyCredits: 5,
-        purchasedCredits: 8,
+        credits: 5,
       };
 
-      expect(component.getCreditDisplayText()).toBe('Eligible Headshot Credits: 8');
-      expect(component.getCreditSubtitleText()).toBe("Weekly credits can't be used for headshots.");
-    });
-
-    it('should show purchase prompt when only weekly credits exist', () => {
-      component.displayContext = 'headshots';
-      component.userCreditStatus = {
-        weeklyCredits: 5,
-        purchasedCredits: 0,
-      };
-
-      expect(component.shouldShowPurchasePrompt()).toBe(true);
-    });
-
-    it('should use purchased credit icon in headshot context', () => {
-      component.displayContext = 'headshots';
-      component.userCreditStatus = {
-        weeklyCredits: 5,
-        purchasedCredits: 1,
-      };
-
-      expect(component.getCreditIcon()).toBe('💰');
+      expect(component.getCreditSubtitleText()).toBe(
+        'Credits available for training and generation'
+      );
     });
   });
 
   describe('Purchase Prompt Logic', () => {
-    it('should show purchase prompt when no purchased credits and no total credits', () => {
+    it('should show purchase prompt when no credits are available', () => {
       component.userCreditStatus = {
-        weeklyCredits: 0,
-        purchasedCredits: 0,
+        credits: 0,
       };
 
       expect(component.shouldShowPurchasePrompt()).toBe(true);
     });
 
-    it('should show purchase prompt when no purchased credits and insufficient total credits', () => {
+    it('should show purchase prompt when required credits exceed balance', () => {
       component.userCreditStatus = {
-        weeklyCredits: 2,
-        purchasedCredits: 0,
+        credits: 2,
       };
       component.requiredCredits = 5;
 
       expect(component.shouldShowPurchasePrompt()).toBe(true);
     });
 
-    it('should not show purchase prompt when user has purchased credits', () => {
+    it('should not show purchase prompt when credits are sufficient', () => {
       component.userCreditStatus = {
-        weeklyCredits: 2,
-        purchasedCredits: 10,
+        credits: 10,
       };
+      component.requiredCredits = 5;
 
       expect(component.shouldShowPurchasePrompt()).toBe(false);
     });
@@ -220,8 +135,7 @@ describe('CreditDisplayComponent', () => {
   describe('Insufficient Credits Warning', () => {
     it('should show warning when required credits exceed available credits', () => {
       component.userCreditStatus = {
-        weeklyCredits: 2,
-        purchasedCredits: 3,
+        credits: 5,
       };
       component.requiredCredits = 10;
       component.hasEnoughCredits = false;
@@ -231,8 +145,7 @@ describe('CreditDisplayComponent', () => {
 
     it('should not show warning when user has enough credits', () => {
       component.userCreditStatus = {
-        weeklyCredits: 2,
-        purchasedCredits: 10,
+        credits: 10,
       };
       component.requiredCredits = 5;
       component.hasEnoughCredits = true;
@@ -242,40 +155,20 @@ describe('CreditDisplayComponent', () => {
   });
 
   describe('Icon Selection', () => {
-    it('should return diamond icon for mixed credits', () => {
+    it('should return diamond icon for available credits', () => {
       component.userCreditStatus = {
-        weeklyCredits: 3,
-        purchasedCredits: 10,
+        credits: 3,
       };
 
       expect(component.getCreditIcon()).toBe('💎');
     });
 
-    it('should return money icon for purchased credits only', () => {
+    it('should return warning icon for no credits', () => {
       component.userCreditStatus = {
-        weeklyCredits: 0,
-        purchasedCredits: 10,
+        credits: 0,
       };
 
-      expect(component.getCreditIcon()).toBe('💰');
-    });
-
-    it('should return lightning icon for weekly credits only', () => {
-      component.userCreditStatus = {
-        weeklyCredits: 3,
-        purchasedCredits: 0,
-      };
-
-      expect(component.getCreditIcon()).toBe('⚡');
-    });
-
-    it('should return diamond icon for no credits', () => {
-      component.userCreditStatus = {
-        weeklyCredits: 0,
-        purchasedCredits: 0,
-      };
-
-      expect(component.getCreditIcon()).toBe('💎');
+      expect(component.getCreditIcon()).toBe('⚠️');
     });
   });
 
@@ -335,8 +228,6 @@ describe('CreditDisplayComponent', () => {
     it('should handle undefined userCreditStatus properties', () => {
       component.userCreditStatus = {} as UserCreditStatus;
 
-      expect(component.getWeeklyCredits()).toBe(0);
-      expect(component.getPurchasedCredits()).toBe(0);
       expect(component.getTotalAvailableCredits()).toBe(0);
     });
 
@@ -344,35 +235,11 @@ describe('CreditDisplayComponent', () => {
       component.creditsInfo = {} as CreditInfo;
       component.userCreditStatus = null;
 
-      expect(component.getWeeklyCredits()).toBe(0);
       expect(component.getTotalAvailableCredits()).toBe(0);
     });
   });
 
   describe('Edge Cases', () => {
-    it('should handle negative credit values gracefully', () => {
-      component.userCreditStatus = {
-        weeklyCredits: -5,
-        purchasedCredits: 10,
-      };
-
-      expect(component.getTotalAvailableCredits()).toBe(5);
-      // Current component treats negative weekly as not contributing to the label
-      expect(component.getCreditDisplayText()).toBe('5 Purchased Credits');
-    });
-
-    it('should handle very large credit values', () => {
-      component.userCreditStatus = {
-        weeklyCredits: 1000000,
-        purchasedCredits: 2000000,
-      };
-
-      expect(component.getTotalAvailableCredits()).toBe(3000000);
-      expect(component.getCreditDisplayText()).toBe(
-        '3000000 Credits (1000000 Weekly + 2000000 Purchased)'
-      );
-    });
-
     it('should handle required credits when no data is available', () => {
       component.userCreditStatus = null;
       component.creditsInfo = null;
