@@ -14,7 +14,7 @@ const baseProjects = [
     name: 'production-validation',
     use: {
       ...devices['Desktop Chrome'],
-      baseURL: 'https://app.aiprofilephotomaker.com',
+      baseURL: 'https://aiprofilephotomaker.com',
     },
     testMatch: '**/image-upload-validation.spec.js',
     timeout: 90000, // Longer timeout for production tests
@@ -24,7 +24,7 @@ const baseProjects = [
     name: 'staging-validation',
     use: {
       ...devices['Desktop Chrome'],
-      baseURL: process.env.STAGING_URL || 'https://staging-app.aiprofilephotomaker.com',
+      baseURL: process.env.STAGING_URL || 'https://staging-aiprofilephotomaker.com',
     },
     testMatch: '**/image-upload-validation.spec.js',
     timeout: 60000,
@@ -34,7 +34,7 @@ const baseProjects = [
     name: 'cross-browser-validation',
     use: {
       ...devices['Desktop Firefox'],
-      baseURL: process.env.TEST_BASE_URL || 'https://app.aiprofilephotomaker.com',
+      baseURL: process.env.TEST_BASE_URL || 'https://aiprofilephotomaker.com',
     },
     testMatch: '**/image-upload-validation.spec.js',
     ...(isProductionAppBaseUrl(process.env.TEST_BASE_URL) ? { dependencies: ['production-validation'] } : {}), // Run after main validation (prod only)
@@ -44,7 +44,7 @@ const baseProjects = [
     name: 'mobile-validation',
     use: {
       ...devices['iPhone 13'],
-      baseURL: process.env.TEST_BASE_URL || 'https://app.aiprofilephotomaker.com',
+      baseURL: process.env.TEST_BASE_URL || 'https://aiprofilephotomaker.com',
     },
     testMatch: '**/image-upload-validation.spec.js',
     ...(isProductionAppBaseUrl(process.env.TEST_BASE_URL) ? { dependencies: ['production-validation'] } : {}), // Run after main validation (prod only)
@@ -124,7 +124,7 @@ module.exports = defineConfig({
   // Global test configuration
   use: {
     // Base URL for tests
-    baseURL: process.env.TEST_BASE_URL || 'https://app.aiprofilephotomaker.com',
+    baseURL: process.env.TEST_BASE_URL || 'https://aiprofilephotomaker.com',
     
     // Browser configuration
     headless: process.env.CI ? true : false,

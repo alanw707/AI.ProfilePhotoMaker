@@ -4,9 +4,9 @@ Last updated: 2025-12-24
 Status: Evidence captured (production); legal review pending.
 
 ## Evidence (production)
-- URL: https://app.aiprofilephotomaker.com/auth/register
+- URL: https://aiprofilephotomaker.com/auth/register
 - Screenshot: docs/deployment/evidence/compliance/age-gate-register-production.png
-- URL: https://app.aiprofilephotomaker.com/auth/login
+- URL: https://aiprofilephotomaker.com/auth/login
 - Screenshot: docs/deployment/evidence/compliance/age-gate-login-production.png
 - Captured: 2025-12-23T20:53:46Z
 

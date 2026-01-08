@@ -207,7 +207,7 @@ az deployment group validate \
 curl https://api.aiprofilephotomaker.com/health
 
 # Test OAuth flow
-curl https://app.aiprofilephotomaker.com/auth/google
+curl https://aiprofilephotomaker.com/auth/google
 
 # Validate container logs
 az containerapp logs show \
@@ -267,7 +267,7 @@ sqlcmd -S your-server.database.windows.net -U sqladmin -P 'YourPassword'
 **Symptom**: Google authentication redirects fail
 **Solution**: Verify redirect URIs match deployed domains
 - Development: `http://localhost:4200/auth/callback`
-- Production: `https://app.aiprofilephotomaker.com/auth/callback`
+- Production: `https://aiprofilephotomaker.com/auth/callback`
 
 ### Emergency Recovery
 

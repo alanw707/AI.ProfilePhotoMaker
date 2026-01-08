@@ -4,7 +4,7 @@ Last updated: 2025-12-19
 Status: Signed off (legal).
 
 ## Evidence (production)
-- URL: https://app.aiprofilephotomaker.com/legal/cookies
+- URL: https://aiprofilephotomaker.com/legal/cookies
 - Screenshot: docs/deployment/evidence/legal/cookie-policy-production.png
 - Captured: 2025-12-23T20:35:36Z
 

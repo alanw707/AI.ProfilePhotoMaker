@@ -609,7 +609,7 @@ builder.Services.AddCors(options =>
     {
         var allowedOrigins = new List<string>
         {
-            "https://app.aiprofilephotomaker.com",
+            "https://aiprofilephotomaker.com",
             "https://aiprofilephotomaker.com",
             "https://test.profilephotomaker.com"
         };

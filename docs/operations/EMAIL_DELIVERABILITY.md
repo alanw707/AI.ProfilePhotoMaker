@@ -61,7 +61,7 @@ _dmarc.aiprofilephotomaker.com TXT "v=DMARC1; p=quarantine; adkim=r; aspf=r; rua
 - Set `Email__UseApi=true` and provide `Email__PostmarkServerToken` in production.
 - Set `Email__FromEmail=no-reply@aiprofilephotomaker.com`.
 - Optionally set `Email__PostmarkMessageStream` (defaults to `outbound`).
-- Keep `Email__FrontendBaseUrl` set to `https://app.aiprofilephotomaker.com`.
+- Keep `Email__FrontendBaseUrl` set to `https://aiprofilephotomaker.com`.
 
 ## Verification Checklist
 

@@ -8,7 +8,7 @@
 
 **Symptoms**:
 - Images upload successfully but display as broken images
-- Console shows 404 errors for URLs like: `https://app.aiprofilephotomaker.com/profile-images/prod/uploads/{uuid}`
+- Console shows 404 errors for URLs like: `https://aiprofilephotomaker.com/profile-images/prod/uploads/{uuid}`
 - Works perfectly in development environment
 
 **Root Cause**: Production is using `LocalStorageService` instead of `AzureBlobStorageService` due to missing Azure Storage environment variables.
@@ -137,7 +137,7 @@ The provided test in `tests/e2e/image-upload-validation.spec.js` validates:
 
 **Before Fix (LocalStorageService)**:
 ```
-🔍 Detected image URL: https://app.aiprofilephotomaker.com/profile-images/prod/uploads/abc123.jpg
+🔍 Detected image URL: https://aiprofilephotomaker.com/profile-images/prod/uploads/abc123.jpg
 📊 URL Analysis: { storageType: 'local', containerized: false }
 🌐 Image accessibility: ❌ Not accessible (Status: 404)
 ```

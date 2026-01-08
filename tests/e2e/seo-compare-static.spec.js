@@ -36,7 +36,7 @@ test.describe('SEO static compare pages', () => {
       await expect(page.locator('h1')).toHaveText(pageInfo.title);
       await expect(page.locator('link[rel=\"canonical\"]')).toHaveAttribute(
         'href',
-        `https://app.aiprofilephotomaker.com/compare/${pageInfo.slug}`
+        `https://aiprofilephotomaker.com/compare/${pageInfo.slug}`
       );
     });
   }

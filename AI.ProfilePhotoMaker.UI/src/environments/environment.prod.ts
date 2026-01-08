@@ -27,7 +27,7 @@ export const environment = {
   },
   azure: {
     enabled: true,
-    frontendUrl: 'https://app.aiprofilephotomaker.com',
+    frontendUrl: 'https://aiprofilephotomaker.com',
     backendUrl: 'https://api.aiprofilephotomaker.com',
     storageUrl: 'https://aipmstv16j74jubocuukg.blob.core.windows.net',
   },

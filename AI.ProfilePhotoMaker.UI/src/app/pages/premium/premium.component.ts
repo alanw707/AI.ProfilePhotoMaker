@@ -259,7 +259,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.seoTagSelectors.forEach(selector => this.meta.removeTag(selector));
-    this.setCanonicalUrl('https://app.aiprofilephotomaker.com/');
+    this.setCanonicalUrl('https://aiprofilephotomaker.com/');
 
     const existingScript = document.getElementById('pricing-structured-data');
     if (existingScript) {
@@ -268,7 +268,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
   }
 
   private setupSEO(): void {
-    const canonicalUrl = 'https://app.aiprofilephotomaker.com/pricing';
+    const canonicalUrl = 'https://aiprofilephotomaker.com/pricing';
 
     this.setCanonicalUrl(canonicalUrl);
     this.title.setTitle('AI Headshot Pricing - AI Profile Photo Maker');
@@ -298,7 +298,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
     this.meta.updateTag({ property: 'og:url', content: canonicalUrl });
     this.meta.updateTag({
       property: 'og:image',
-      content: 'https://app.aiprofilephotomaker.com/assets/og-image.svg',
+      content: 'https://aiprofilephotomaker.com/assets/og-image.svg',
     });
     this.meta.updateTag({ property: 'og:site_name', content: 'AI Profile Photo Maker' });
 
@@ -313,7 +313,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
     });
     this.meta.updateTag({
       name: 'twitter:image',
-      content: 'https://app.aiprofilephotomaker.com/assets/twitter-card.svg',
+      content: 'https://aiprofilephotomaker.com/assets/twitter-card.svg',
     });
     this.meta.updateTag({ name: 'twitter:url', content: canonicalUrl });
     this.meta.updateTag({ name: 'twitter:creator', content: '@aiprofilephoto' });
@@ -324,12 +324,12 @@ export class PremiumComponent implements OnInit, OnDestroy {
       name: 'AI Headshot Packages',
       description:
         'AI headshot pricing plans with custom model training and professional-quality downloads.',
-      image: 'https://app.aiprofilephotomaker.com/assets/og-image.svg',
+      image: 'https://aiprofilephotomaker.com/assets/og-image.svg',
       url: canonicalUrl,
       brand: {
         '@type': 'Organization',
         name: 'AI Profile Photo Maker',
-        url: 'https://app.aiprofilephotomaker.com/',
+        url: 'https://aiprofilephotomaker.com/',
       },
       offers: {
         '@type': 'AggregateOffer',

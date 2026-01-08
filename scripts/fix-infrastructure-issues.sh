@@ -19,7 +19,7 @@ NC='\033[0m' # No Color
 RESOURCE_GROUP="aiprofilemaker-v1"
 FRONTEND_APP="aipm-web-v1"
 BACKEND_APP="aipm-api-v1"
-FRONTEND_DOMAIN="app.aiprofilephotomaker.com"
+FRONTEND_DOMAIN="aiprofilephotomaker.com"
 API_DOMAIN="api.aiprofilephotomaker.com"
 
 echo ""

@@ -11,7 +11,7 @@ status: draft
 Lock the primary SEO domain and document immediate technical SEO fixes so indexing targets the correct URLs.
 
 ## Decision
-Use `https://app.aiprofilephotomaker.com` as the primary SEO domain.
+Use `https://aiprofilephotomaker.com` as the primary SEO domain.
 
 ## Rationale
 - The root domain permanently redirects to the app; search engines treat the app as the authoritative destination.
@@ -19,8 +19,8 @@ Use `https://app.aiprofilephotomaker.com` as the primary SEO domain.
 
 ## Required Changes (P0)
 1) Canonical URLs
-   - `/` -> `https://app.aiprofilephotomaker.com/`
-   - `/pricing` -> `https://app.aiprofilephotomaker.com/pricing`
+   - `/` -> `https://aiprofilephotomaker.com/`
+   - `/pricing` -> `https://aiprofilephotomaker.com/pricing`
 2) H1 structure
    - Remove H1 from the nav logo on `/pricing`; keep a single page H1 that includes a target keyword (e.g., "AI Headshot Pricing").
 3) Social meta on `/pricing`
@@ -36,7 +36,7 @@ Use `https://app.aiprofilephotomaker.com` as the primary SEO domain.
    - Ensure H1/H2 include "AI headshot generator" or "LinkedIn headshot" on primary pages.
 
 ## Verification
-- Search Console property for `app.aiprofilephotomaker.com`.
+- Search Console property for `aiprofilephotomaker.com`.
 - Confirm canonicals via page source.
 - Validate schema with Rich Results Test.
 - Re-crawl `/` and `/pricing` after deploy.

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-BASE_APP_URL="${BASE_APP_URL:-https://app.aiprofilephotomaker.com}"
+BASE_APP_URL="${BASE_APP_URL:-https://aiprofilephotomaker.com}"
 BASE_API_URL="${BASE_API_URL:-https://api.aiprofilephotomaker.com}"
 
 RED='\033[0;31m'
@@ -33,11 +33,11 @@ info "Smoke: app=${BASE_APP_URL} api=${BASE_API_URL}"
 
 info "Checking root redirects..."
 root_headers="$(curl -sS -I https://aiprofilephotomaker.com || true)"
-echo "$root_headers" | grep -qi '^location: https://app\.aiprofilephotomaker\.com/' || fail "Root domain does not redirect to app.aiprofilephotomaker.com"
+echo "$root_headers" | grep -qi '^location: https://app\.aiprofilephotomaker\.com/' || fail "Root domain does not redirect to aiprofilephotomaker.com"
 pass "Root redirects to app"
 
 www_headers="$(curl -sS -I https://www.aiprofilephotomaker.com || true)"
-echo "$www_headers" | grep -qi '^location: https://app\.aiprofilephotomaker\.com/' || fail "www does not redirect to app.aiprofilephotomaker.com"
+echo "$www_headers" | grep -qi '^location: https://app\.aiprofilephotomaker\.com/' || fail "www does not redirect to aiprofilephotomaker.com"
 pass "www redirects to app"
 
 info "Checking API health..."

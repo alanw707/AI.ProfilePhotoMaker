@@ -141,7 +141,7 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01'
         {
           // Production and app domains
           allowedOrigins: [
-            'https://app.aiprofilephotomaker.com'
+            'https://aiprofilephotomaker.com'
             'https://aiprofilephotomaker.com'
             // Container Apps default FQDNs (resolved at deploy time)
             'https://${frontendApp.properties.configuration.ingress.fqdn}'
@@ -492,7 +492,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             }
             {
               name: 'CORS_ALLOWED_ORIGINS'
-              value: 'https://app.aiprofilephotomaker.com,https://aiprofilephotomaker.com'
+              value: 'https://aiprofilephotomaker.com,https://aiprofilephotomaker.com'
             }
             // Application URLs for webhook resolution
             {
@@ -501,7 +501,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             }
             {
               name: 'AppBaseUrl'
-              value: 'https://app.aiprofilephotomaker.com'
+              value: 'https://aiprofilephotomaker.com'
             }
             // OAuth Configuration
             {
@@ -557,7 +557,7 @@ resource backendApp 'Microsoft.App/containerApps@2023-05-01' = {
             }
             {
               name: 'Email__FrontendBaseUrl'
-              value: 'https://app.aiprofilephotomaker.com'
+              value: 'https://aiprofilephotomaker.com'
             }
             {
               name: 'Email__UseApi'
@@ -681,7 +681,7 @@ resource frontendApp 'Microsoft.App/containerApps@2023-05-01' = {
         allowInsecure: false
         customDomains: [
           {
-            name: 'app.aiprofilephotomaker.com'
+            name: 'aiprofilephotomaker.com'
             certificateId: frontendCertificateId
             bindingType: 'SniEnabled'
           }

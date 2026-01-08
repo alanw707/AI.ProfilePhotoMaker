@@ -99,7 +99,7 @@ export class SeoPageComponent implements OnInit, OnDestroy {
     this._meta.updateTag({ property: 'og:url', content: canonicalUrl });
     this._meta.updateTag({
       property: 'og:image',
-      content: 'https://app.aiprofilephotomaker.com/assets/og-image.svg',
+      content: 'https://aiprofilephotomaker.com/assets/og-image.svg',
     });
     this._meta.updateTag({ property: 'og:site_name', content: 'AI Profile Photo Maker' });
 
@@ -108,7 +108,7 @@ export class SeoPageComponent implements OnInit, OnDestroy {
     this._meta.updateTag({ name: 'twitter:description', content: page.description });
     this._meta.updateTag({
       name: 'twitter:image',
-      content: 'https://app.aiprofilephotomaker.com/assets/twitter-card.svg',
+      content: 'https://aiprofilephotomaker.com/assets/twitter-card.svg',
     });
     this._meta.updateTag({ name: 'twitter:url', content: canonicalUrl });
     this._meta.updateTag({ name: 'twitter:creator', content: '@aiprofilephoto' });
@@ -124,12 +124,12 @@ export class SeoPageComponent implements OnInit, OnDestroy {
       isPartOf: {
         '@type': 'WebSite',
         name: 'AI Profile Photo Maker',
-        url: 'https://app.aiprofilephotomaker.com/',
+        url: 'https://aiprofilephotomaker.com/',
       },
       publisher: {
         '@type': 'Organization',
         name: 'AI Profile Photo Maker',
-        url: 'https://app.aiprofilephotomaker.com/',
+        url: 'https://aiprofilephotomaker.com/',
       },
     };
 
@@ -157,9 +157,9 @@ export class SeoPageComponent implements OnInit, OnDestroy {
 
   private buildCanonicalUrl(slug: string): string {
     if (!slug || slug === '/') {
-      return 'https://app.aiprofilephotomaker.com/';
+      return 'https://aiprofilephotomaker.com/';
     }
-    return `https://app.aiprofilephotomaker.com/${slug}`;
+    return `https://aiprofilephotomaker.com/${slug}`;
   }
 
   private setCanonicalUrl(url: string): void {

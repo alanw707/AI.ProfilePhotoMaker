@@ -74,7 +74,7 @@ function resolveApiBaseUrl(appBaseUrlValue) {
     return 'http://localhost:5032';
   }
 
-  if (hostname === 'app.aiprofilephotomaker.com' || hostname === 'aiprofilephotomaker.com') {
+  if (hostname === 'aiprofilephotomaker.com' || hostname === 'aiprofilephotomaker.com') {
     return 'https://api.aiprofilephotomaker.com';
   }
 
