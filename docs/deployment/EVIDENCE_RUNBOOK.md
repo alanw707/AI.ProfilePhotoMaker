@@ -54,8 +54,8 @@ Use this for quick validation before production capture.
 - Log file: `docs/deployment/evidence/enhancement-credits.log`
 - Evidence log: `docs/deployment/evidence/enhancement-credits.md`
 - Steps:
-  1. Run Replicate enhancement and confirm weekly credit decrement (1).
-  2. Run OpenAI enhancement and confirm credit decrement (2).
+  1. Run Replicate enhancement and confirm credit decrement (1).
+  2. Run OpenAI enhancement and confirm credit decrement (1).
   3. Capture response payload with remaining credits.
 
 ### AC-7 Credit status + purchase flow
