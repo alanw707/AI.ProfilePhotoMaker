@@ -67,7 +67,7 @@ var frontendAppName = '${appName}-web-${environment}'
 var applicationInsightsName = '${appName}-ai-${environment}'
 
 // Existing certificate IDs - using working certificates
-var frontendCertificateId = '/subscriptions/7e5147a4-3abb-4a43-aef7-5a2ae770c739/resourceGroups/aiprofilemaker-v1/providers/Microsoft.App/managedEnvironments/aipm-env-v1-6j74jubocuukg/managedCertificates/mc-aipm-env-v1-6j-app-aiprofilepho-5691'
+var frontendCertificateId = '/subscriptions/7e5147a4-3abb-4a43-aef7-5a2ae770c739/resourceGroups/aiprofilemaker-v1/providers/Microsoft.App/managedEnvironments/aipm-env-v1-6j74jubocuukg/managedCertificates/aiprofilephotomaker.com-aipm-env-260106133524'
 var backendCertificateId = '/subscriptions/7e5147a4-3abb-4a43-aef7-5a2ae770c739/resourceGroups/aiprofilemaker-v1/providers/Microsoft.App/managedEnvironments/aipm-env-v1-6j74jubocuukg/managedCertificates/mc-aipm-env-v1-6j-api-aiprofilepho-8094'
 
 // Container Registry
