@@ -18,9 +18,9 @@ const distBrowserRoot = path.join(distRoot, 'browser');
 const distIndexPath = path.join(distRoot, 'index.html');
 const distBrowserIndexPath = path.join(distBrowserRoot, 'index.html');
 
-const CANONICAL_BASE = 'https://app.aiprofilephotomaker.com';
-const OG_IMAGE = 'https://app.aiprofilephotomaker.com/assets/og-image.svg';
-const TWITTER_IMAGE = 'https://app.aiprofilephotomaker.com/assets/twitter-card.svg';
+const CANONICAL_BASE = 'https://aiprofilephotomaker.com';
+const OG_IMAGE = 'https://aiprofilephotomaker.com/assets/og-image.svg';
+const TWITTER_IMAGE = 'https://aiprofilephotomaker.com/assets/twitter-card.svg';
 
 const distIndexCandidate = fs.existsSync(distBrowserIndexPath)
   ? distBrowserIndexPath

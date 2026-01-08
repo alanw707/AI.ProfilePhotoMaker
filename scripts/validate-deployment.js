@@ -8,7 +8,7 @@
  * 
  * Usage:
  *   node scripts/validate-deployment.js
- *   node scripts/validate-deployment.js --domains app.aiprofilephotomaker.com,api.aiprofilephotomaker.com
+ *   node scripts/validate-deployment.js --domains aiprofilephotomaker.com,api.aiprofilephotomaker.com
  */
 
 const { chromium } = require('playwright');
@@ -17,7 +17,7 @@ const path = require('path');
 
 // Configuration
 const DEFAULT_DOMAINS = {
-  frontend: 'https://app.aiprofilephotomaker.com',
+  frontend: 'https://aiprofilephotomaker.com',
   backend: 'https://api.aiprofilephotomaker.com'
 };
 

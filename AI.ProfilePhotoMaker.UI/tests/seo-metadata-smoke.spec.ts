@@ -4,7 +4,7 @@ import * as path from 'path';
 import { seoPages } from '../src/app/pages/marketing/seo-pages.data';
 
 const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:4200';
-const CANONICAL_BASE = process.env.CANONICAL_BASE ?? 'https://app.aiprofilephotomaker.com';
+const CANONICAL_BASE = process.env.CANONICAL_BASE ?? 'https://aiprofilephotomaker.com';
 const STATIC_SOURCE =
   process.env.E2E_STATIC_SOURCE ??
   (BASE_URL.includes('localhost') || BASE_URL.includes('127.0.0.1') ? 'file' : 'http');
@@ -92,7 +92,7 @@ test.describe('SEO metadata smoke checks', () => {
     expect(response.ok()).toBe(true);
 
     const body = await response.text();
-    expect(body).toContain('Sitemap: https://app.aiprofilephotomaker.com/sitemap.xml');
+    expect(body).toContain('Sitemap: https://aiprofilephotomaker.com/sitemap.xml');
     expect(body).toContain('Disallow: /app/');
     expect(body).toContain('Disallow: /auth/');
     expect(body).toContain('Disallow: /admin/');

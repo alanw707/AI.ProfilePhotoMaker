@@ -22,7 +22,7 @@ NC='\033[0m' # No Color
 # Default configuration
 RESOURCE_GROUP="${RESOURCE_GROUP:-aiprofilemaker-v1}"
 APP_NAME="${APP_NAME:-aipm-api-v1}"
-FRONTEND_URL="${FRONTEND_URL:-https://app.aiprofilephotomaker.com}"
+FRONTEND_URL="${FRONTEND_URL:-https://aiprofilephotomaker.com}"
 BACKEND_URL="${BACKEND_URL:-https://api.aiprofilephotomaker.com}"
 
 # Validation results

@@ -12,13 +12,13 @@
 
 ## Commands Executed
 - curl -s -D docs/deployment/evidence/cors-config-production.txt -o /dev/null \
-  -H "Origin: https://app.aiprofilephotomaker.com" \
+  -H "Origin: https://aiprofilephotomaker.com" \
   -H "Access-Control-Request-Method: GET" \
   -X OPTIONS https://api.aiprofilephotomaker.com/api/credit/packages
 
 ## Output Summary
 - Expected result: Access-Control-Allow-Origin matches production UI domain.
-- Actual result: `access-control-allow-origin: https://app.aiprofilephotomaker.com`.
+- Actual result: `access-control-allow-origin: https://aiprofilephotomaker.com`.
 - Pass/Fail: Pass (production)
 
 ## Evidence Files

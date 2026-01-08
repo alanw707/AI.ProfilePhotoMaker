@@ -75,7 +75,7 @@ async function validateEnvironmentHealth(config) {
     process.env.TEST_BASE_URL ||
     config.use?.baseURL ||
     config.projects?.find(p => p?.use?.baseURL)?.use?.baseURL ||
-    'https://app.aiprofilephotomaker.com';
+    'https://aiprofilephotomaker.com';
   const apiBaseURL = resolveApiBaseUrl(baseURL);
   
   try {
@@ -137,7 +137,7 @@ function resolveApiBaseUrl(appBaseUrl) {
   }
 
   // Production convention.
-  if (hostname === 'app.aiprofilephotomaker.com' || hostname === 'aiprofilephotomaker.com') {
+  if (hostname === 'aiprofilephotomaker.com' || hostname === 'aiprofilephotomaker.com') {
     return 'https://api.aiprofilephotomaker.com';
   }
 
@@ -183,7 +183,7 @@ async function setupArtifactsDirectory() {
     testRunId: `run-${Date.now()}`,
     startTime: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'test',
-    baseURL: process.env.TEST_BASE_URL || 'https://app.aiprofilephotomaker.com',
+    baseURL: process.env.TEST_BASE_URL || 'https://aiprofilephotomaker.com',
     playwright: {
       version: require('@playwright/test/package.json').version
     }

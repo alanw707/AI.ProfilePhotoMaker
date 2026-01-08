@@ -119,7 +119,7 @@ Tests application health endpoints:
 
 ```bash
 # Backend: https://api.aiprofilephotomaker.com/api/health
-# Frontend: https://app.aiprofilephotomaker.com
+# Frontend: https://aiprofilephotomaker.com
 # Status: ✅ Health checks passed
 ```
 

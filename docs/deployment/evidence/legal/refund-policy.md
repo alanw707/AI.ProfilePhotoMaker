@@ -4,7 +4,7 @@ Last updated: 2025-12-20
 Status: Signed off (legal).
 
 ## Evidence (production)
-- URL: https://app.aiprofilephotomaker.com/legal/refund-policy
+- URL: https://aiprofilephotomaker.com/legal/refund-policy
 - Screenshot: docs/deployment/evidence/legal/refund-policy-production.png
 - Captured: 2025-12-23T20:35:36Z
 

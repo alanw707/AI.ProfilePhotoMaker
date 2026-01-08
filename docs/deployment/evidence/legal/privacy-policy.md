@@ -4,7 +4,7 @@ Last updated: 2025-12-23
 Status: Signed off (legal). Aligns to PRD v1.2 and current API retention behavior.
 
 ## Evidence (production)
-- URL: https://app.aiprofilephotomaker.com/legal/privacy
+- URL: https://aiprofilephotomaker.com/legal/privacy
 - Screenshot: docs/deployment/evidence/legal/privacy-policy-production.png
 - Captured: 2025-12-23T20:35:36Z
 

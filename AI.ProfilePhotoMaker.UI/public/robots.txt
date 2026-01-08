@@ -1,5 +1,5 @@
 # Robots.txt for AI Profile Photo Maker
-# https://app.aiprofilephotomaker.com/
+# https://aiprofilephotomaker.com/
 
 User-agent: *
 Allow: /
@@ -17,7 +17,7 @@ Disallow: /register/
 Disallow: /signup/
 
 # Sitemap location
-Sitemap: https://app.aiprofilephotomaker.com/sitemap.xml
+Sitemap: https://aiprofilephotomaker.com/sitemap.xml
 
 # Allow search engines to index images
 User-agent: Googlebot-Image

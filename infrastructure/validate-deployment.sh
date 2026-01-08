@@ -14,7 +14,7 @@ echo ""
 RESOURCE_GROUP="aiprofilemaker-v1"
 KEY_VAULT_NAME="aipm-kv-v1-6j74jubocuukg"
 BACKEND_URL="https://api.aiprofilephotomaker.com"
-FRONTEND_URL="https://app.aiprofilephotomaker.com"
+FRONTEND_URL="https://aiprofilephotomaker.com"
 EXPECTED_WEBHOOK_SECRET="whsec_wUh0bvV+/jGsxbEqPsRgHI1tdct1Y+KM"
 
 # Validation Results

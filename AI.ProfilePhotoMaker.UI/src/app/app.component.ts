@@ -81,7 +81,7 @@ export class AppComponent implements OnInit {
 
   private _updateCanonicalUrl(url: string): void {
     const origin = this._document.location?.origin ?? window.location.origin;
-    const canonicalBase = environment.production ? 'https://app.aiprofilephotomaker.com' : origin;
+    const canonicalBase = environment.production ? 'https://aiprofilephotomaker.com' : origin;
     const canonicalUrl = new URL(url, canonicalBase);
     canonicalUrl.search = '';
     canonicalUrl.hash = '';

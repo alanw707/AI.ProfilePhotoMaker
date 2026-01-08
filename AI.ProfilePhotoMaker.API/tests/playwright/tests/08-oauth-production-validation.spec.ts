@@ -13,7 +13,7 @@ import { test, expect, Page, BrowserContext } from '@playwright/test';
  * 5. Error detection and reporting
  */
 
-const PRODUCTION_FRONTEND = 'https://app.aiprofilephotomaker.com';
+const PRODUCTION_FRONTEND = 'https://aiprofilephotomaker.com';
 const PRODUCTION_API = 'https://api.aiprofilephotomaker.com';
 const OAUTH_ENDPOINT = `${PRODUCTION_API}/api/auth/external-login/google`;
 

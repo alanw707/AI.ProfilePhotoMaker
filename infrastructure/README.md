@@ -28,7 +28,7 @@ Primary infrastructure template used by production deployment pipeline.
 
 **⚠️ Custom Domain Requirements:**
 - DNS CNAME records must be configured **before** deployment:
-  - `app.aiprofilephotomaker.com` → {containerAppsEnvironment}.region.azurecontainerapps.io
+  - `aiprofilephotomaker.com` → {containerAppsEnvironment}.region.azurecontainerapps.io
   - `api.aiprofilephotomaker.com` → {containerAppsEnvironment}.region.azurecontainerapps.io
 - Template includes managed certificates and persistent custom domain configuration
 - Domain bindings persist across deployment revisions (no manual reconfiguration needed)
@@ -54,7 +54,7 @@ Playwright-based validation for custom domain deployment verification.
 ```
 
 **Validates:**
-- Frontend domain accessibility (https://app.aiprofilephotomaker.com)
+- Frontend domain accessibility (https://aiprofilephotomaker.com)
 - Backend health check (https://api.aiprofilephotomaker.com/api/health) 
 - CORS functionality between domains
 - SSL certificate validity

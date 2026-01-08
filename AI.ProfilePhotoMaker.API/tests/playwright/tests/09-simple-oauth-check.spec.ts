@@ -82,7 +82,7 @@ test.describe('Simple OAuth Health Check', () => {
     console.log('🔍 Testing frontend application accessibility...');
     
     try {
-      await page.goto('https://app.aiprofilephotomaker.com', {
+      await page.goto('https://aiprofilephotomaker.com', {
         waitUntil: 'domcontentloaded',
         timeout: 30000
       });

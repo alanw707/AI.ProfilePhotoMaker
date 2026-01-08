@@ -15,7 +15,7 @@ import { test, expect, Browser, Page } from '@playwright/test';
  * - Production domain validation
  */
 
-const PRODUCTION_FRONTEND = 'https://app.aiprofilephotomaker.com';
+const PRODUCTION_FRONTEND = 'https://aiprofilephotomaker.com';
 const PRODUCTION_API = 'https://api.aiprofilephotomaker.com';
 const OAUTH_ENDPOINT = `${PRODUCTION_API}/api/auth/external-login/google`;
 
@@ -107,7 +107,7 @@ test.describe('Final Production Validation Suite', () => {
       // Validate production configuration
       const config = await page.evaluate(() => {
         const hostname = window.location.hostname;
-        const isProduction = hostname === 'app.aiprofilephotomaker.com';
+        const isProduction = hostname === 'aiprofilephotomaker.com';
         return { hostname, isProduction };
       });
       

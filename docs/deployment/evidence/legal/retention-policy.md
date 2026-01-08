@@ -4,7 +4,7 @@ Last updated: 2025-12-23
 Status: Signed off (legal).
 
 ## Evidence (production)
-- URL: https://app.aiprofilephotomaker.com/legal/retention-policy
+- URL: https://aiprofilephotomaker.com/legal/retention-policy
 - Screenshot: docs/deployment/evidence/legal/retention-policy-production.png
 - Captured: 2025-12-23T20:35:36Z
 

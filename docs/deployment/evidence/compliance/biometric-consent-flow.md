@@ -4,7 +4,7 @@ Last updated: 2025-12-23
 Status: Evidence captured (production).
 
 ## Evidence (production)
-- Legal disclosure URL: https://app.aiprofilephotomaker.com/legal/biometric-consent
+- Legal disclosure URL: https://aiprofilephotomaker.com/legal/biometric-consent
 - Screenshot: docs/deployment/evidence/legal/biometric-consent-production.png
 - Dashboard upload consent: docs/deployment/evidence/compliance/biometric-consent-dashboard-production.png
 - Photo transform consent: docs/deployment/evidence/compliance/biometric-consent-enhance-production.png

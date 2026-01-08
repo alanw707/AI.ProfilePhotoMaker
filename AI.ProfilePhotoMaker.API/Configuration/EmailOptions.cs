@@ -39,7 +39,7 @@ public class EmailOptions
     public bool SandboxMode { get; set; } = true;
 
     /// <summary>
-    /// Frontend base URL for CTA links in emails (e.g., https://app.aiprofilephotomaker.com)
+    /// Frontend base URL for CTA links in emails (e.g., https://aiprofilephotomaker.com)
     /// </summary>
     public string? FrontendBaseUrl { get; set; }
 

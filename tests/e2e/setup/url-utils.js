@@ -6,7 +6,7 @@ function tryParseUrl(value) {
   try {
     return new URL(value);
   } catch {
-    // Allow passing hostnames without a scheme, e.g. "app.aiprofilephotomaker.com".
+    // Allow passing hostnames without a scheme, e.g. "aiprofilephotomaker.com".
     try {
       return new URL(`https://${value}`);
     } catch {
@@ -29,11 +29,11 @@ function getHostAndPort(value) {
 function isProductionAppBaseUrl(value) {
   // In our Playwright config, "unset" implies production defaults.
   if (!value) return true;
-  return getHostname(value) === 'app.aiprofilephotomaker.com';
+  return getHostname(value) === 'aiprofilephotomaker.com';
 }
 
 function isStagingAppBaseUrl(value) {
-  return getHostname(value) === 'staging-app.aiprofilephotomaker.com';
+  return getHostname(value) === 'staging-aiprofilephotomaker.com';
 }
 
 module.exports = {

@@ -38,4 +38,4 @@
 - Tokens/PII removed: not applicable (public content only)
 
 ## Notes
-- Pages captured from `https://app.aiprofilephotomaker.com`.
+- Pages captured from `https://aiprofilephotomaker.com`.

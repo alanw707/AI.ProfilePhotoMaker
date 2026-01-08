@@ -28,7 +28,7 @@ public class EmailNotificationServiceTests
             PostmarkMessageStream = "outbound",
             FromEmail = "no-reply@aiprofilephotomaker.com",
             FromName = "AI Profile Photo Maker",
-            FrontendBaseUrl = "https://app.aiprofilephotomaker.com",
+            FrontendBaseUrl = "https://aiprofilephotomaker.com",
             SandboxMode = false
         });
         var configuration = new ConfigurationBuilder()
@@ -66,7 +66,7 @@ public class EmailNotificationServiceTests
             PostmarkServerToken = "REPLACE_WITH_POSTMARK_SERVER_TOKEN",
             FromEmail = "no-reply@aiprofilephotomaker.com",
             FromName = "AI Profile Photo Maker",
-            FrontendBaseUrl = "https://app.aiprofilephotomaker.com",
+            FrontendBaseUrl = "https://aiprofilephotomaker.com",
             SandboxMode = false
         });
         var configuration = new ConfigurationBuilder().Build();
@@ -91,7 +91,7 @@ public class EmailNotificationServiceTests
             PostmarkMessageStream = "outbound",
             FromEmail = "no-reply@aiprofilephotomaker.com",
             FromName = "AI Profile Photo Maker",
-            FrontendBaseUrl = "https://app.aiprofilephotomaker.com",
+            FrontendBaseUrl = "https://aiprofilephotomaker.com",
             SandboxMode = false
         });
         var configuration = new ConfigurationBuilder().Build();
@@ -121,7 +121,7 @@ public class EmailNotificationServiceTests
             PostmarkMessageStream = "outbound",
             FromEmail = "no-reply@aiprofilephotomaker.com",
             FromName = "AI Profile Photo Maker",
-            FrontendBaseUrl = "https://app.aiprofilephotomaker.com",
+            FrontendBaseUrl = "https://aiprofilephotomaker.com",
             SandboxMode = false
         });
         var configuration = new ConfigurationBuilder().Build();

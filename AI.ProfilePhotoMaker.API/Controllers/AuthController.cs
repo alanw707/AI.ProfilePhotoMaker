@@ -1069,7 +1069,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return configured.TrimEnd('/');
             }
 
-            return _environment.IsDevelopment() ? "http://localhost:4200" : "https://app.aiprofilephotomaker.com";
+            return _environment.IsDevelopment() ? "http://localhost:4200" : "https://aiprofilephotomaker.com";
         }
 
         private string NormalizeReturnUrl(string? returnUrl)

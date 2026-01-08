@@ -4,7 +4,7 @@ Last updated: 2025-12-20
 Status: Evidence captured (production).
 
 ## Evidence (production)
-- URL: https://app.aiprofilephotomaker.com/legal/ai-transparency
+- URL: https://aiprofilephotomaker.com/legal/ai-transparency
 - Screenshot: docs/deployment/evidence/legal/ai-transparency-production.png
 - Captured: 2025-12-23T20:53:46Z
 

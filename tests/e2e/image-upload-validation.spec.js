@@ -15,7 +15,7 @@ const fs = require('fs');
 const path = require('path');
 const { getHostname } = require('./setup/url-utils');
 
-const isProductionAppUrl = urlValue => getHostname(urlValue) === 'app.aiprofilephotomaker.com';
+const isProductionAppUrl = urlValue => getHostname(urlValue) === 'aiprofilephotomaker.com';
 
 // Test configuration
 const config = {

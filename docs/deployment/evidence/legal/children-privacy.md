@@ -4,7 +4,7 @@ Last updated: 2025-12-19
 Status: Signed off (legal).
 
 ## Evidence (production)
-- URL: https://app.aiprofilephotomaker.com/legal/children-privacy
+- URL: https://aiprofilephotomaker.com/legal/children-privacy
 - Screenshot: docs/deployment/evidence/legal/children-privacy-production.png
 - Captured: 2025-12-23T20:35:36Z
 
