@@ -424,6 +424,15 @@ public class ReplicateController : ControllerBase
         if (string.IsNullOrEmpty(userId))
             return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
 
+        if (dto.NumOutputs < 1 || dto.NumOutputs > 4)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                error = new { code = "InvalidNumOutputs", message = "NumOutputs must be between 1 and 4." }
+            });
+        }
+
         // Check if user has sufficient credits for styled generation (5 credits per image)
         var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
         var requiredCredits = dto.NumOutputs * CreditCostConfig.GetCreditCost("styled_generation");
@@ -652,6 +661,15 @@ public class ReplicateController : ControllerBase
 
         if (dto.Styles == null || !dto.Styles.Any())
             return BadRequest(new { success = false, error = new { code = "NoStyles", message = "At least one style must be specified." } });
+
+        if (dto.NumOutputsPerStyle < 1 || dto.NumOutputsPerStyle > 4)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                error = new { code = "InvalidNumOutputsPerStyle", message = "NumOutputsPerStyle must be between 1 and 4." }
+            });
+        }
 
         // Calculate total credits required (5 credits per image)
         var costPerImage = CreditCostConfig.GetCreditCost("styled_generation");

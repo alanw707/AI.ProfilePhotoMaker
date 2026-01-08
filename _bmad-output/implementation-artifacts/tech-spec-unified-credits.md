@@ -1,7 +1,7 @@
 # Tech-Spec: Unified Credits System
 
 **Created:** 2026-01-04
-**Status:** Completed
+**Status:** done
 
 ## Overview
 
@@ -110,3 +110,7 @@ Unify credits into a single balance called Credits. All operations (enhancement,
 - Adversarial review completed.
 - Findings: 10 total, 10 fixed, 0 skipped.
 - Resolution approach: walk-through.
+- Follow-up review fixes applied:
+  - Guard styled generation inputs to prevent zero-credit usage (`AI.ProfilePhotoMaker.API/Controllers/ReplicateController.cs`).
+  - Align OpenAI enhancement credit expectations in e2e (`tests/e2e/photo-enhancement-credits.spec.js`).
+  - Update deployment docs to reflect unified enhancement credits (`docs/deployment/DOCS_CODE_AUDIT.md`, `docs/deployment/LAUNCH_READINESS_CHECKLIST.md`, `docs/deployment/EVIDENCE_RUNBOOK.md`).

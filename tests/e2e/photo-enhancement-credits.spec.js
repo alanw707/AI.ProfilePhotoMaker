@@ -31,7 +31,7 @@ test.describe('Photo Enhancement Credits', () => {
     }
   });
 
-  test('deducts two credits after a successful OpenAI enhancement', async ({ page }) => {
+test('deducts one credit after a successful OpenAI enhancement', async ({ page }) => {
     await page.context().clearCookies();
 
     await page.goto('/auth/login');
@@ -44,7 +44,7 @@ test.describe('Photo Enhancement Credits', () => {
 
     await page.goto('/app/enhance');
     const startingCredits = await waitForCreditsToLoad(page);
-    expect(startingCredits).toBeGreaterThanOrEqual(2);
+  expect(startingCredits).toBeGreaterThanOrEqual(1);
 
     await uploadImageForEnhancement(page);
     await page.click(selectors.enhanceButton);
@@ -53,7 +53,7 @@ test.describe('Photo Enhancement Credits', () => {
     await page.waitForSelector(selectors.resultsSection, { timeout: 240000 });
 
     const refreshedCredits = await waitForCreditsDecrease(page, startingCredits);
-    await expect(refreshedCredits).toBe(startingCredits - 2);
+  await expect(refreshedCredits).toBe(startingCredits - 1);
 
     const apiCredits = await fetchCreditsFromApi(page);
     expect(apiCredits.credits).toBe(refreshedCredits);

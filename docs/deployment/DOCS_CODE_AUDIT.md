@@ -30,8 +30,8 @@ Scope: PRD v1.2, launch readiness docs, documentation index, and API controllers
 - Resolved: index updated to Google-only support.
 
 ### Photo Enhancement Divergence
-- Code supports both Replicate (1 credit) and OpenAI (2 credits) enhancement paths.
-- Resolved: PRD and provider docs updated to reflect dual-provider behavior and credit costs. Decision: keep both providers.
+- Code supports both Replicate and OpenAI enhancement paths; both consume 1 credit from the unified balance.
+- Resolved: PRD and provider docs updated to reflect dual-provider behavior and unified credit costs. Decision: keep both providers.
 
 ### Archived / Historical Docs Present in Canonical Index
 Several documents are explicitly marked as archived or historical but still appear in the primary index:
@@ -54,7 +54,7 @@ Resolved: moved into a "Historical/Archived" section of the index (no file moves
 | AC-2 | Training ZIP created when >=10 images exist; returns public URL. | `ImageController.cs` (`CreateTrainingZipAsync`, `CreateTrainingZip`) | 10-image minimum enforced for ZIP creation. |
 | AC-3 | Training blocks when READY model exists; requires 15 credits; consumes after starting. | `ReplicateController.cs` (`TrainModel`) | Checks READY model; uses `CreditCostConfig.ModelTraining` (15). |
 | AC-4 | Generation requires 5 credits per output; fails gracefully when model unavailable. | `ReplicateController.cs` (`Generate`, `GenerateBatch`) | Uses `CreditCostConfig.StyledGeneration` (5) and availability checks. |
-| AC-5 | Enhancement consumes 1 weekly credit (Replicate) or 2 credits (OpenAI styles); returns output and remaining credits. | `ReplicateController.cs` (`EnhancePhoto`), `EnhancementController.cs` | Dual-provider behavior documented in PRD. |
+| AC-5 | Enhancement consumes 1 credit (Replicate or OpenAI styles); returns output and remaining credits. | `ReplicateController.cs` (`EnhancePhoto`), `EnhancementController.cs` | Dual-provider behavior documented in PRD. |
 | AC-6 | Retention background job sets and deletes data per policy; manual endpoints work. | `RetentionPolicyBackgroundService.cs`, `RetentionPolicyController.cs` | 30/30 day policy exposed in controller. |
 | AC-7 | Credit status/package endpoints return typed data; purchase adds credits to account. | `CreditController.cs`, `CreditCostConfig.cs` | Status + packages + purchase endpoints in controller. |
 | AC-8 | Webhook ingestion persists generated images and sets retention; downloads images locally. | `ReplicateWebhookController.cs` | Downloads images, stores URLs, sets retention date. |
