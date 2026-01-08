@@ -1049,7 +1049,7 @@ jobs:
 
           cat cors.json | jq '.' || true
 
-          REQUIRED_ORIGIN="https://app.aiprofilephotomaker.com"
+          REQUIRED_ORIGIN="https://aiprofilephotomaker.com"
           if ! grep -q "$REQUIRED_ORIGIN" cors.json; then
             echo "❌ [CORS] Required origin not found: $REQUIRED_ORIGIN"
             exit 1
