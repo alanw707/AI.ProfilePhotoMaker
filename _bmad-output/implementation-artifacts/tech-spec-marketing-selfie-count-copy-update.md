@@ -2,7 +2,7 @@
 title: 'Marketing selfie count copy update'
 slug: 'marketing-selfie-count-copy-update'
 created: '2026-01-09T21:26:37Z'
-status: 'ready-for-dev'
+status: 'Completed'
 stepsCompleted: [1, 2, 3, 4]
 tech_stack: ['Angular', 'TypeScript']
 files_to_modify: ['AI.ProfilePhotoMaker.UI/src/app/pages/marketing/seo-pages.data.ts']
@@ -58,20 +58,20 @@ Update all selfie-count copy in `seo-pages.data.ts` to communicate "Upload at le
 
 ### Tasks
 
-- [ ] Task 1: Update How-it-works highlight and step title copy
+- [x] Task 1: Update How-it-works highlight and step title copy
   - File: `AI.ProfilePhotoMaker.UI/src/app/pages/marketing/seo-pages.data.ts`
   - Action: Change the How-it-works highlight value and the step title from "8-12" to "at least 10" wording.
   - Notes: Keep labels intact; only update the value and title text.
-- [ ] Task 2: Update other marketing steps/FAQs that reference selfie counts
+- [x] Task 2: Update other marketing steps/FAQs that reference selfie counts
   - File: `AI.ProfilePhotoMaker.UI/src/app/pages/marketing/seo-pages.data.ts`
   - Action: Replace "8-12" in the relevant step description and FAQ answer with "at least 10" phrasing.
   - Notes: Ensure consistent tone and grammatical flow.
 
 ### Acceptance Criteria
 
-- [ ] AC 1: Given the How-it-works page is rendered, when the highlight tiles display, then the selfie count shows "at least 10" instead of "8-12".
-- [ ] AC 2: Given the How-it-works page is rendered, when the first step is shown, then the title reads "Upload at least 10 clear selfies".
-- [ ] AC 3: Given marketing pages using `seo-pages.data.ts` are rendered, when selfie-count descriptions or FAQs are displayed, then they use "at least 10" wording and no "8-12" remains.
+- [x] AC 1: Given the How-it-works page is rendered, when the highlight tiles display, then the selfie count shows "at least 10" instead of "8-12".
+- [x] AC 2: Given the How-it-works page is rendered, when the first step is shown, then the title reads "Upload at least 10 clear selfies".
+- [x] AC 3: Given marketing pages using `seo-pages.data.ts` are rendered, when selfie-count descriptions or FAQs are displayed, then they use "at least 10" wording and no "8-12" remains.
 
 ## Additional Context
 
@@ -87,3 +87,9 @@ Update all selfie-count copy in `seo-pages.data.ts` to communicate "Upload at le
 ### Notes
 
 - Keep copy consistent across all marketing mentions in `seo-pages.data.ts`.
+
+## Review Notes
+
+- Adversarial review completed
+- Findings: 10 total, 9 fixed, 1 skipped
+- Resolution approach: walk-through
