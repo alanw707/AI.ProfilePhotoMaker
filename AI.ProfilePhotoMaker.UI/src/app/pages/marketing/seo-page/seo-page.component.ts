@@ -130,6 +130,7 @@ export class SeoPageComponent implements OnInit, OnDestroy {
         '@type': 'Organization',
         name: 'AI Profile Photo Maker',
         url: 'https://aiprofilephotomaker.com/',
+        logo: 'https://aiprofilephotomaker.com/Logo.PNG',
       },
     };
 

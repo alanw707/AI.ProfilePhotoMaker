@@ -53,7 +53,7 @@ export class AppGuard implements CanActivate, CanActivateChild {
         }
 
         return this._handleAuthenticated(redirectUrl);
-      }),
+      })
     );
   }
 
@@ -68,10 +68,7 @@ export class AppGuard implements CanActivate, CanActivateChild {
     return of(false);
   }
 
-  private _handleAuthenticated(
-    redirectUrl: string,
-    skipValidation = false
-  ): Observable<boolean> {
+  private _handleAuthenticated(redirectUrl: string, skipValidation = false): Observable<boolean> {
     // Enforce email verification for all /app routes.
     return this._authService.getAccountStatus().pipe(
       take(1),
@@ -128,6 +125,7 @@ export class AppGuard implements CanActivate, CanActivateChild {
         sessionStorage.setItem('redirectUrl', redirectUrl);
 
         if (err?.status === 401 || err?.status === 403) {
+          this._authService.clearAuthCache();
           this._router.navigate(['/auth/login'], {
             queryParams: {
               message: 'Please sign in again to continue.',

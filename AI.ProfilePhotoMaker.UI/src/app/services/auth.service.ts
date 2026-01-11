@@ -203,18 +203,18 @@ export class AuthService {
   }
 
   private shouldSetCookieForDevFlow(): boolean {
+    // Docker-local is marked as production but still needs the dev cookie flow
+    if (environment.name === 'docker-local') {
+      return true;
+    }
+
     if (environment.production) {
       return false;
     }
 
     // Extra safeguard: only run this helper on local/ngrok/docker-like origins.
     const host = window.location.hostname || '';
-    return (
-      host.includes('localhost') ||
-      host.includes('127.0.0.1') ||
-      host.includes('ngrok') ||
-      environment.name === 'docker-local'
-    );
+    return host.includes('localhost') || host.includes('127.0.0.1') || host.includes('ngrok');
   }
 
   private async setCookieForDevFlow(token: string): Promise<void> {

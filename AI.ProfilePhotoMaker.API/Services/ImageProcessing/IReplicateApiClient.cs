@@ -68,6 +68,18 @@ public interface IReplicateApiClient
         int numOutputs = 2);
 
     /// <summary>
+    /// Generates images using the base generation model (no trained model required).
+    /// </summary>
+    /// <param name="style">The style to use for generation</param>
+    /// <param name="userInfo">Optional user info for style generation</param>
+    /// <param name="numOutputs">Number of images to generate (1-4)</param>
+    /// <returns>The prediction ID and status</returns>
+    Task<ReplicatePredictionResult> GenerateBaseStylePreviewAsync(
+        string style,
+        UserInfo? userInfo = null,
+        int numOutputs = 1);
+
+    /// <summary>
     /// Gets the status of an image generation prediction
     /// </summary>
     /// <param name="predictionId">The prediction ID</param>
