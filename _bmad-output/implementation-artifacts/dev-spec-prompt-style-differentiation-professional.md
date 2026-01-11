@@ -60,12 +60,12 @@ hoodie, streetwear, nightclub, beach, neon lighting, plain backdrop, blank wall,
 
 PromptTemplate:
 ```
-{subject}, LinkedIn-ready headshot of {gender} {ethnicity}, business-casual wardrobe (blazer or crisp button-down, no tie), muted professional backdrop with soft gradient (light blue, warm beige, or soft teal), direct eye contact, warm confident smile, relaxed shoulders, soft diffused daylight, natural skin texture, minimal retouching, head-and-shoulders framing, sharp focus
+{subject}, LinkedIn-ready headshot of {gender} {ethnicity}, business-casual wardrobe (blazer or crisp button-down, no tie), clean professional background with subtle variety such as a soft neutral gradient (warm gray, ivory, muted taupe, or soft slate), a clean off-white or warm gray studio backdrop, or a minimal modern office interior with gentle bokeh, professional and uncluttered, direct eye contact, warm confident smile, relaxed shoulders, soft diffused daylight, natural skin texture, minimal retouching, head-and-shoulders framing, sharp focus
 ```
 
 NegativePromptTemplate (style-specific segment):
 ```
-hoodie, t-shirt, tank top, athletic wear, coworking space, neon lighting, cyberpunk, synthwave, fashion editorial, nightclub, beach, plain white background, plain gray background, full body shot, watermark, text
+hoodie, t-shirt, tank top, athletic wear, coworking space, outdoor, park, city street, campus, library, bookshelves, lecture hall, cluttered background, busy background, neon lighting, cyberpunk, synthwave, fashion editorial, nightclub, beach, full body shot, watermark, text
 ```
 
 #### Startup
@@ -157,3 +157,27 @@ This is optional but keeps dev resets in sync with production.
 
 - Keep prompts grounded and avoid overly restrictive negatives that could reduce output quality.
 - Avoid apostrophes in SQL prompt strings to prevent escaping issues.
+
+---
+
+## Review Follow-ups
+
+_Code review performed: 2026-01-11_
+_Final review: 2026-01-11 - All items addressed or intentionally deferred_
+
+### High Priority
+
+1. [~] Generate missing style preview images for startup, tech-professional, entrepreneur - **DEFERRED** (not blocking)
+2. [x] Sync dev-spec LinkedIn prompt documentation to match actual migration implementation - colors differ (dev-spec: light blue/warm beige/soft teal vs migration: warm gray/ivory/muted taupe/soft slate)
+3. [x] Soften skin realism constraints - photos look too dry/old/wrinkled. Remove `poreless skin, exaggerated wrinkles, overly deep wrinkles` from negatives; Add `healthy natural skin, even skin tone` to positive prompts (Migration: `20260111095443_SoftenSkinRealismConstraints.cs`)
+4. [~] Fix black spots appearing on faces - **DEFERRED** - test after #3, may need additional negative terms
+
+### Medium Priority
+
+5. [~] Fix Style ID gap in seed data - IDs skip from 19 to 21, missing ID 20 - **SKIPPED** (no functional impact)
+6. [x] Add integration tests for migration prompt verification - validate `{subject}`, `{gender}`, `{ethnicity}` tokens preserved (Test: `StylePromptTokenValidationTests.cs`)
+7. [~] Sync DiagnosticController `stylesToAdd` prompts with ApplicationDbContext `SeedStyles` - **DEFERRED** (dev-only, low priority)
+
+### Low Priority
+
+8. [~] Standardize `{subject}` token usage across all styles - **SKIPPED** (production already has correct prompts)
