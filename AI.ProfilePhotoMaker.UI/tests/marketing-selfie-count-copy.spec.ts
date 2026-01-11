@@ -16,8 +16,10 @@ test.describe('Marketing selfie count copy', () => {
     await expect(
       page.getByText('Provide at least 10 clear images to train a personalized model.')
     ).toBeVisible();
+    const faqItem = page.locator('details', { hasText: 'How many photos should I upload?' });
+    await faqItem.locator('summary').click();
     await expect(
-      page.getByText('We recommend at least 10 clear selfies with varied angles and lighting.')
+      faqItem.getByText('We recommend at least 10 clear selfies with varied angles and lighting.')
     ).toBeVisible();
   });
 });

@@ -34,7 +34,7 @@ If a detail is owned by a sub-playbook, follow that source. This file defines ov
 ## Phase 1: Baseline Acquisition (Weeks 1-2)
 **Goal:** Establish baseline conversion and channel signal.
 - Execute the Advertising Channels playbook.
-- Post daily for 14 days (LinkedIn + IG minimum).
+- Post daily for 14 days (LinkedIn + IG + X + Threads minimum).
 - Boost one creative only after baseline CTR is known.
 - Decision Gate Day 3: test homepage vs pricing if CR weak.
 - Decision Gate Day 7: reallocate spend to top 2 creatives.
@@ -111,6 +111,8 @@ If a detail is owned by a sub-playbook, follow that source. This file defines ov
 ## Content Calendar (Weeks 1-2)
 - **LinkedIn (daily):** 1 post/day focused on transformation, job-seeking, or speed.
 - **Instagram (daily):** Carousel with before/after + caption with CTA.
+- **X (Mon-Fri):** 2 posts/day; short hooks + proof + CTA.
+- **Threads (Mon-Fri):** 1 post/day; short story + CTA.
 - **Website blog (weekly):** 1 post aligned to SEO pillars from tech spec.
 
 ## Phase 5: Scale (Weeks 6-12)
@@ -154,6 +156,12 @@ If a detail is owned by a sub-playbook, follow that source. This file defines ov
 - **Post structure:** Hook (1 line) -> proof or insight -> CTA -> 2-3 hashtags.
 - **Hashtags (seed set):** #jobsearch #linkedinprofile #careeradvice #headshot #personalbrand.
 - **Engagement:** Reply to all comments within 2 hours, tag relevant audiences when appropriate.
+
+### X + Threads System
+- **X cadence:** 2 posts/day (Mon-Fri). Morning post = short hook + proof mention + CTA. Afternoon post = quick result download, testimonial clip, or playbook insight with CTA.
+- **Threads cadence:** 1 post/day (Mon-Fri). Multi-card narrative (3-5 cards) that walks through the transformation, proof, or checklist ending with CTA + question to invite replies.
+- **Templates:** Hook (1-2 sentences) -> proof/fact (stat, testimonial, transformation) -> CTA (Get your headshot in minutes, upgrade my photo) -> hashtags (seed set + #X# or #Threads). Keep tone direct across channels.
+- **Variation:** Pair job-seeker hooks with speed/value messaging (LinkedIn-friendly). Use founder/freelancer angle for Threads cards 3-4 when referencing consistent brand imagery.
 
 ### LinkedIn Creative System
 - **Templates:** 3 headline styles (speed, quality, affordability).

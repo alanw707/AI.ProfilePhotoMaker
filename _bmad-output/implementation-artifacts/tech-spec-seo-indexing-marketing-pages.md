@@ -126,7 +126,7 @@ Use this copy as the baseline for the new pages. Keep sections concise and CTA c
 - H1: How AI Profile Photo Maker Works
 - Hero: Studio-quality headshots in minutes. Upload a photo, pick a style, get a professional result.
 - Steps:
-  1) Upload 8-12 clear selfies (front-facing + variety).
+  1) Upload at least 10 clear selfies (front-facing + variety).
   2) Choose a style (LinkedIn, creative, classic).
   3) Receive a full set of polished headshots in minutes.
 - Trust: Privacy-first processing, delete anytime, transparent retention.

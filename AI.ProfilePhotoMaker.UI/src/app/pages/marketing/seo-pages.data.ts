@@ -107,22 +107,21 @@ export const seoPages: Record<string, SeoPageContent> = {
     slug: 'how-it-works',
     title: 'How AI Profile Photo Maker Works | Studio-quality headshots in minutes',
     description:
-      'Studio-quality headshots in minutes. Upload clear selfies, pick a style, and get professional results fast.',
+      'Studio-quality headshots in minutes. Upload clear selfies and get professional results fast.',
     keywords:
       'how AI headshots work, headshot process, AI headshot workflow, professional headshots in minutes',
     h1: 'How AI Profile Photo Maker Works',
     hero: {
       eyebrow: 'How it works',
       headline: 'How AI Profile Photo Maker Works',
-      subhead:
-        'Studio-quality headshots in minutes. Upload clear selfies, pick a style, and get professional results fast.',
+      subhead: 'Upload clear selfies, pick a style, and get professional results fast.',
       ctaLabel: 'Get your headshot in minutes',
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
     },
     highlights: [
-      { value: 'At least 10', label: 'Recommended selfies' },
+      { value: 'At least 10', label: 'Minimum selfies' },
       { value: 'Minutes', label: 'Typical delivery' },
       { value: '20+', label: 'Styles available' },
     ],
@@ -186,8 +185,7 @@ export const seoPages: Record<string, SeoPageContent> = {
     ],
     cta: {
       title: 'Ready to see your results?',
-      description:
-        'Start with your first set of selfies and get a full headshot gallery in minutes.',
+      description: 'Start with clear selfies and get a full headshot gallery in minutes.',
       label: 'Get your headshot in minutes',
       href: '/pricing',
     },
@@ -293,7 +291,7 @@ export const seoPages: Record<string, SeoPageContent> = {
     ],
     cta: {
       title: 'Want a before and after set of your own?',
-      description: 'Upload a few selfies and get a full gallery of headshots in minutes.',
+      description: 'Upload clear selfies and get a full gallery of headshots in minutes.',
       label: 'Get your headshot in minutes',
       href: '/pricing',
     },
@@ -395,7 +393,7 @@ export const seoPages: Record<string, SeoPageContent> = {
     ],
     cta: {
       title: 'See why customers recommend us',
-      description: 'Upload your selfies and get a full headshot gallery in minutes.',
+      description: 'Upload clear selfies and get a full headshot gallery in minutes.',
       label: 'Get your headshot in minutes',
       href: '/pricing',
     },
@@ -529,8 +527,9 @@ export const seoPages: Record<string, SeoPageContent> = {
         title: 'How it works',
         items: [
           {
-            title: 'Upload a short selfie set',
-            description: 'Provide at least 10 clear images to train a personalized model.',
+            title: 'Upload at least 10 clear selfies',
+            description:
+              'Use at least 10 clear selfies with varied angles and lighting so the model learns your features accurately.',
           },
           {
             title: 'Select your style',
@@ -881,7 +880,7 @@ export const seoPages: Record<string, SeoPageContent> = {
           {
             label: 'Workflow',
             values: [
-              'Upload selfies, pick styles, download fast',
+              'Upload at least 10 photos, pick styles, download fast',
               'Upload photos, select attire/backgrounds, download',
             ],
           },
@@ -991,7 +990,7 @@ export const seoPages: Record<string, SeoPageContent> = {
           {
             label: 'Setup steps',
             values: [
-              'Upload selfies, select styles, download results',
+              'Upload at least 10 photos, select styles, download results',
               'Upload photos, choose style options, download favorites',
             ],
           },
