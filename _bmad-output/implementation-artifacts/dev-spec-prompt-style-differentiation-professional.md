@@ -2,7 +2,7 @@
 
 **Source Tech-Spec:** `_bmad-output/implementation-artifacts/tech-spec-prompt-style-differentiation-professional.md`
 **Created:** 2025-12-28
-**Status:** Ready for Implementation
+**Status:** Implementation Complete
 
 ## Goal
 
@@ -22,7 +22,7 @@ Differentiate professional styles (academic, linkedin, startup, tech-professiona
 
 ## Implementation Plan
 
-### 1) Define shared negative prompt fragments
+- [x] 1) Define shared negative prompt fragments
 
 In the new migration, keep the existing constants and add one more shared fragment for expression/accessory/pose realism.
 
@@ -36,11 +36,11 @@ Proposed `ExpressionAccessoryPoseNegativePrompt` value:
 forced grin, exaggerated smile, grimace, open mouth, tongue, extreme head tilt, multiple watches, watch on both wrists, excessive bracelets, oversized jewelry, sunglasses, hat, visible logos, full body action, dramatic gestures, arms flailing, unnatural hand positions
 ```
 
-### 2) Create a new migration
+- [x] 2) Create a new migration
 
-Add a migration (e.g., `UpdateProfessionalClusterPromptsV3`) that updates only text fields in `dbo.Styles` for the six styles. Follow the SQL pattern from `20251224150249_UpdateProfessionalClusterPromptsV2.cs` with `DECLARE @skin`, `DECLARE @quality`, and `DECLARE @realism` (for the new fragment).
+Add a migration (e.g., `UpdateProfessionalClusterPromptsV4`) that updates only text fields in `dbo.Styles` for the six styles. Follow the SQL pattern from `20251224150249_UpdateProfessionalClusterPromptsV2.cs` with `DECLARE @skin`, `DECLARE @quality`, and `DECLARE @realism` (for the new fragment).
 
-### 3) Prompt templates and negative prompts
+- [x] 3) Prompt templates and negative prompts
 
 Use the following prompt and negative prompt templates. Keep `{subject}`, `{gender}`, and `{ethnicity}` tokens.
 
@@ -116,7 +116,7 @@ NegativePromptTemplate (style-specific segment):
 hoodie, t-shirt, casual streetwear, coworking space, cafe, influencer glam, fashion editorial, nightclub, beach, neon lighting, playful pose, full body shot, watermark, text
 ```
 
-### 4) SQL update pattern
+- [x] 4) SQL update pattern
 
 For each style, set:
 
@@ -128,7 +128,7 @@ UpdatedAt = GETUTCDATE()
 
 Keep `WHERE IsActive = 1 AND Name = '<style-name>'`.
 
-### 5) Optional: Align seed defaults and dev-only lists
+- [x] 5) Optional: Align seed defaults and dev-only lists
 
 If desired, update the style entries for the six styles in:
 

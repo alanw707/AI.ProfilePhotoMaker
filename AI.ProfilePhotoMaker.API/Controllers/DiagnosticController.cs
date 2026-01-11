@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
+using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 
 namespace AI.ProfilePhotoMaker.API.Controllers
 {
@@ -18,17 +19,20 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private readonly ApplicationDbContext _context;
         private readonly ILogger<DiagnosticController> _logger;
         private readonly IWebHostEnvironment _environment;
+        private readonly IReplicateApiClient _replicateApiClient;
         private static string S(string? value) => LoggingSanitizer.Sanitize(value);
         private static string Sl(string? value) => LoggingSanitizer.Sanitize(value, 400);
 
         public DiagnosticController(
             ApplicationDbContext context,
             ILogger<DiagnosticController> logger,
-            IWebHostEnvironment environment)
+            IWebHostEnvironment environment,
+            IReplicateApiClient replicateApiClient)
         {
             _context = context;
             _logger = logger;
             _environment = environment;
+            _replicateApiClient = replicateApiClient;
 
             // Double-check: Even if compiled in, refuse to work in production
             if (_environment.IsProduction())
@@ -51,6 +55,14 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return NotFound("Diagnostic endpoints are not available in Production");
             }
             return null; // Continue with operation
+        }
+
+        public class StylePreviewGenerateRequest
+        {
+            public string Style { get; set; } = string.Empty;
+            public int NumOutputs { get; set; } = 1;
+            public string? Gender { get; set; }
+            public string? Ethnicity { get; set; }
         }
 
         [HttpPost("run-migrations")]
@@ -105,6 +117,104 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 return StatusCode(500, new { error = S(ex.Message), stackTrace = Sl(ex.StackTrace) });
             }
+        }
+
+        [HttpPost("style-previews/generate")]
+        public async Task<IActionResult> GenerateStylePreview([FromBody] StylePreviewGenerateRequest request)
+        {
+            var envCheck = ValidateEnvironment();
+            if (envCheck != null) return envCheck;
+
+            if (string.IsNullOrWhiteSpace(request.Style))
+                return BadRequest(new { success = false, error = "Style is required." });
+
+            if (request.NumOutputs < 1 || request.NumOutputs > 4)
+                return BadRequest(new { success = false, error = "NumOutputs must be between 1 and 4." });
+
+            var genders = new[] { "male", "female", "person" };
+            var ethnicities = new[] { "asian", "black", "white", "latino", "south asian", "middle eastern" };
+            var userInfo = new UserInfo
+            {
+                Gender = string.IsNullOrWhiteSpace(request.Gender)
+                    ? genders[Random.Shared.Next(genders.Length)]
+                    : request.Gender,
+                Ethnicity = string.IsNullOrWhiteSpace(request.Ethnicity)
+                    ? ethnicities[Random.Shared.Next(ethnicities.Length)]
+                    : request.Ethnicity
+            };
+
+            var result = await _replicateApiClient.GenerateBaseStylePreviewAsync(
+                request.Style.Trim(),
+                userInfo,
+                request.NumOutputs);
+
+            return Ok(new { success = true, data = new { prediction = result }, error = (object?)null });
+        }
+
+        [HttpGet("style-previews/status/{predictionId}")]
+        public async Task<IActionResult> GetStylePreviewStatus(string predictionId)
+        {
+            var envCheck = ValidateEnvironment();
+            if (envCheck != null) return envCheck;
+
+            if (string.IsNullOrWhiteSpace(predictionId))
+                return BadRequest(new { success = false, error = "PredictionId is required." });
+
+            var result = await _replicateApiClient.GetPredictionStatusAsync(predictionId);
+
+            if (result.Status == "succeeded" && result.Output != null)
+            {
+                string? imageUrl = null;
+                if (result.Output.Value.ValueKind == System.Text.Json.JsonValueKind.Array &&
+                    result.Output.Value.GetArrayLength() > 0)
+                {
+                    imageUrl = result.Output.Value[0].GetString();
+                }
+                else if (result.Output.Value.ValueKind == System.Text.Json.JsonValueKind.String)
+                {
+                    imageUrl = result.Output.Value.GetString();
+                }
+
+                if (!string.IsNullOrEmpty(imageUrl))
+                {
+                    try
+                    {
+                        using var httpClient = new System.Net.Http.HttpClient
+                        {
+                            Timeout = TimeSpan.FromSeconds(5)
+                        };
+
+                        var response = await httpClient.GetAsync(imageUrl, HttpCompletionOption.ResponseHeadersRead, HttpContext.RequestAborted);
+                        response.EnsureSuccessStatusCode();
+                        var contentType = response.Content.Headers.ContentType?.MediaType?.ToLowerInvariant() ?? "image/png";
+                        var imageBytes = await response.Content.ReadAsByteArrayAsync();
+                        var base64 = System.Convert.ToBase64String(imageBytes);
+                        var dataUrl = $"data:{contentType};base64,{base64}";
+                        return Ok(new
+                        {
+                            success = true,
+                            data = new
+                            {
+                                result.Id,
+                                result.Version,
+                                result.Status,
+                                result.Input,
+                                result.Output,
+                                result.Error,
+                                result.Webhook,
+                                result.Urls,
+                                result.CreatedAt,
+                                result.CompletedAt,
+                                dataUrl
+                            },
+                            error = (object?)null
+                        });
+                    }
+                    catch { /* ignore, fallback below */ }
+                }
+            }
+
+            return Ok(new { success = true, data = result, error = (object?)null });
         }
 
         [HttpPost("reset-database")]
@@ -927,12 +1037,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 var stylesToAdd = new[]
                 {
                     new { Name = "corporate", Description = "Professional corporate headshot with formal business attire", PromptTemplate = "Professional corporate headshot of a {gender} in formal business attire, clean neutral background, confident expression, studio lighting, sharp focus", NegativePromptTemplate = "casual clothing, informal attire, distracting background, poor lighting, blurry" },
-                    new { Name = "executive", Description = "Executive-level portrait for C-suite professionals", PromptTemplate = "{subject}, executive leadership portrait of {gender} {ethnicity}, formal suit with crisp shirt and tie, corporate boardroom or high-rise office background, composed authoritative expression, relaxed shoulders, subtle 3/4 angle, polished professional lighting, natural skin texture, minimal retouching, head-and-shoulders framing, high-resolution", NegativePromptTemplate = "blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, hoodie, t-shirt, casual streetwear, coworking space, cafe, influencer glam, fashion editorial, nightclub, beach, neon lighting, playful pose, full body shot, watermark, text, forced grin, exaggerated smile, grimace, open mouth, tongue, extreme head tilt, multiple watches, watch on both wrists, excessive bracelets, oversized jewelry, sunglasses, hat, visible logos, full body action, dramatic gestures, arms flailing, unnatural hand positions, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, poreless skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, exaggerated wrinkles, overly deep wrinkles" },
+                    new { Name = "executive", Description = "Executive-level portrait for C-suite professionals", PromptTemplate = "{subject}, executive leadership portrait of {gender} {ethnicity}, formal suit with crisp shirt and tie, corporate boardroom or high-rise office background, composed authoritative expression, relaxed shoulders, subtle 3/4 angle, polished professional lighting, natural skin texture, minimal retouching, head-and-shoulders framing, high-resolution", NegativePromptTemplate = "blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, hoodie, t-shirt, casual streetwear, coworking space, cafe, classroom, lecture hall, library, bookshelves, campus, influencer glam, fashion editorial, nightclub, beach, neon lighting, playful pose, full body shot, watermark, text, forced grin, exaggerated smile, grimace, open mouth, tongue, extreme head tilt, multiple watches, watch on both wrists, excessive bracelets, oversized jewelry, sunglasses, hat, visible logos, full body action, dramatic gestures, arms flailing, unnatural hand positions, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, poreless skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, exaggerated wrinkles, overly deep wrinkles" },
                     new { Name = "consultant", Description = "Professional consultant style for client-facing roles", PromptTemplate = "Professional consultant portrait of a {gender} in smart business-casual attire, approachable yet professional expression, modern office setting", NegativePromptTemplate = "overly casual clothing, unprofessional setting, intimidating expression" },
-                    new { Name = "linkedin", Description = "Optimized LinkedIn profile photo with warm professional appeal", PromptTemplate = "{subject}, LinkedIn-ready headshot of {gender} {ethnicity}, business-casual wardrobe (blazer or crisp button-down, no tie), muted professional backdrop with soft gradient (light blue, warm beige, or soft teal), direct eye contact, warm confident smile, relaxed shoulders, soft diffused daylight, natural skin texture, minimal retouching, head-and-shoulders framing, sharp focus", NegativePromptTemplate = "blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, hoodie, t-shirt, tank top, athletic wear, coworking space, neon lighting, cyberpunk, synthwave, fashion editorial, nightclub, beach, plain white background, plain gray background, full body shot, watermark, text, forced grin, exaggerated smile, grimace, open mouth, tongue, extreme head tilt, multiple watches, watch on both wrists, excessive bracelets, oversized jewelry, sunglasses, hat, visible logos, full body action, dramatic gestures, arms flailing, unnatural hand positions, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, poreless skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, exaggerated wrinkles, overly deep wrinkles" },
+                    new { Name = "linkedin", Description = "Optimized LinkedIn profile photo with warm professional appeal", PromptTemplate = "{subject}, LinkedIn-ready headshot of {gender} {ethnicity}, business-casual wardrobe (blazer or crisp button-down, no tie), clean professional background with subtle variety such as a soft neutral gradient (warm gray, ivory, muted taupe, or soft slate), a clean off-white or warm gray studio backdrop, or a minimal modern office interior with gentle bokeh, professional and uncluttered, direct eye contact, warm confident smile, relaxed shoulders, soft diffused daylight, natural skin texture, minimal retouching, head-and-shoulders framing, sharp focus", NegativePromptTemplate = "blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, hoodie, t-shirt, tank top, athletic wear, coworking space, outdoor, park, city street, campus, library, bookshelves, lecture hall, cluttered background, busy background, neon lighting, cyberpunk, synthwave, fashion editorial, nightclub, beach, full body shot, watermark, text, forced grin, exaggerated smile, grimace, open mouth, tongue, extreme head tilt, multiple watches, watch on both wrists, excessive bracelets, oversized jewelry, sunglasses, hat, visible logos, full body action, dramatic gestures, arms flailing, unnatural hand positions, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, poreless skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, exaggerated wrinkles, overly deep wrinkles" },
                     new { Name = "medical", Description = "Healthcare professional portrait with approachable demeanor", PromptTemplate = "Medical professional portrait of a {gender} in white coat or professional attire, warm caring expression, clinical background", NegativePromptTemplate = "unprofessional attire, harsh expression, inappropriate background, distracting elements" },
-                    new { Name = "academic", Description = "Academic professional for university and research settings", PromptTemplate = "{subject}, academic professional portrait of {gender} {ethnicity}, scholarly wardrobe (tweed blazer or cardigan with button-down), university library stacks or lecture hall background, subtle campus ambiance, thoughtful expression, relaxed shoulders, slight 3/4 angle, soft natural window light, natural skin texture, minimal retouching, head-and-shoulders framing, high-resolution", NegativePromptTemplate = "blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, hoodie, streetwear, nightclub, beach, neon lighting, plain backdrop, blank wall, studio backdrop, fashion editorial, glamour makeup, forced grin, exaggerated smile, grimace, open mouth, tongue, extreme head tilt, multiple watches, watch on both wrists, excessive bracelets, oversized jewelry, sunglasses, hat, visible logos, full body action, dramatic gestures, arms flailing, unnatural hand positions, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, poreless skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, exaggerated wrinkles, overly deep wrinkles" },
-                    new { Name = "entrepreneur", Description = "Modern entrepreneur portrait with innovative energy", PromptTemplate = "{subject}, entrepreneur personal-brand portrait of {gender} {ethnicity}, smart casual wardrobe (open-collar shirt or premium knit, no tie, no formal suit), boutique office, creative studio, or upscale cafe background, warm confident expression, relaxed shoulders, slight 3/4 angle, cinematic but natural lighting, natural skin texture, minimal retouching, medium close-up portrait, shallow depth of field", NegativePromptTemplate = "blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, formal suit and tie, corporate boardroom, conservative law firm vibe, stiff studio headshot, doctor coat, medical scrubs, influencer glam, nightclub, beach, workout clothes, neon cyberpunk, full body shot, watermark, text, forced grin, exaggerated smile, grimace, open mouth, tongue, extreme head tilt, multiple watches, watch on both wrists, excessive bracelets, oversized jewelry, sunglasses, hat, visible logos, full body action, dramatic gestures, arms flailing, unnatural hand positions, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, poreless skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, exaggerated wrinkles, overly deep wrinkles" },
+                    new { Name = "academic", Description = "Academic professional for university and research settings", PromptTemplate = "{subject}, academic professional portrait of {gender} {ethnicity}, scholarly wardrobe (tweed blazer or cardigan with button-down), university library stacks or lecture hall background, subtle campus ambiance, thoughtful expression, relaxed shoulders, slight 3/4 angle, soft natural window light, natural skin texture, minimal retouching, head-and-shoulders framing, high-resolution", NegativePromptTemplate = "blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, corporate boardroom, high-rise office, executive suite, hoodie, streetwear, nightclub, beach, neon lighting, plain backdrop, blank wall, studio backdrop, fashion editorial, glamour makeup, forced grin, exaggerated smile, grimace, open mouth, tongue, extreme head tilt, multiple watches, watch on both wrists, excessive bracelets, oversized jewelry, sunglasses, hat, visible logos, full body action, dramatic gestures, arms flailing, unnatural hand positions, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, poreless skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, exaggerated wrinkles, overly deep wrinkles" },
+                    new { Name = "entrepreneur", Description = "Modern entrepreneur portrait with innovative energy", PromptTemplate = "{subject}, entrepreneur personal-brand portrait of {gender} {ethnicity}, premium smart-casual wardrobe (tailored blazer without tie or premium knit), boutique office, studio, or upscale cafe background, warm confident expression, relaxed shoulders, slight 3/4 angle, cinematic but natural lighting, natural skin texture, minimal retouching, medium close-up portrait, shallow depth of field", NegativePromptTemplate = "blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, formal suit and tie, corporate boardroom, conservative law firm vibe, stiff studio headshot, doctor coat, medical scrubs, influencer glam, nightclub, beach, workout clothes, neon cyberpunk, full body shot, watermark, text, forced grin, exaggerated smile, grimace, open mouth, tongue, extreme head tilt, multiple watches, watch on both wrists, excessive bracelets, oversized jewelry, sunglasses, hat, visible logos, full body action, dramatic gestures, arms flailing, unnatural hand positions, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, poreless skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, exaggerated wrinkles, overly deep wrinkles" },
                     new { Name = "startup", Description = "Startup professional with approachable tech-savvy appeal", PromptTemplate = "{subject}, startup founder portrait of {gender} {ethnicity}, casual-professional wardrobe (hoodie, crewneck, or casual jacket), modern coworking or open office background, bright natural window light, approachable energetic expression, relaxed posture, slight 3/4 angle, natural skin texture, minimal retouching, medium close-up portrait, shallow depth of field", NegativePromptTemplate = "blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, formal suit, tie, tuxedo, corporate boardroom, traditional office, stiff studio pose, luxury executive vibe, courthouse, doctor coat, medical scrubs, neon cyberpunk, full body shot, watermark, text, forced grin, exaggerated smile, grimace, open mouth, tongue, extreme head tilt, multiple watches, watch on both wrists, excessive bracelets, oversized jewelry, sunglasses, hat, visible logos, full body action, dramatic gestures, arms flailing, unnatural hand positions, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, poreless skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, exaggerated wrinkles, overly deep wrinkles" },
                     new { Name = "tech-professional", Description = "Technology sector professional with modern appeal", PromptTemplate = "{subject}, modern tech professional headshot of {gender} {ethnicity}, smart-casual tech attire (open-collar shirt or fine knit sweater, no hoodie, no tie), contemporary tech office or product lab background with subtle monitors or whiteboards, calm focused expression, relaxed shoulders, gentle head tilt, clean cool-neutral palette, soft diffused lighting, natural skin texture, minimal retouching, head-and-shoulders framing, high-resolution", NegativePromptTemplate = "blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, suit and tie, tuxedo, hoodie, coworking space, startup founder vibe, boardroom, courthouse, doctor coat, medical scrubs, neon lighting, cyberpunk, synthwave, heavy color gels, nightclub, beach, influencer glam, full body shot, watermark, text, forced grin, exaggerated smile, grimace, open mouth, tongue, extreme head tilt, multiple watches, watch on both wrists, excessive bracelets, oversized jewelry, sunglasses, hat, visible logos, full body action, dramatic gestures, arms flailing, unnatural hand positions, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, poreless skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, exaggerated wrinkles, overly deep wrinkles" },
                     new { Name = "influencer", Description = "Social media influencer style with engaging personality", PromptTemplate = "Influencer portrait of a {gender} in trendy stylish attire, charismatic engaging expression, contemporary lifestyle background", NegativePromptTemplate = "formal business wear, rigid posture, corporate setting, boring expression" },
