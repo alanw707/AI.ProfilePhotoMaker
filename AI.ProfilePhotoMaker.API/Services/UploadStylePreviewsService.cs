@@ -1,4 +1,6 @@
 using AI.ProfilePhotoMaker.API.Services.Storage;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
 
 namespace AI.ProfilePhotoMaker.API.Services;
 
@@ -48,12 +50,14 @@ public class UploadStylePreviewsService
                 return 1;
             }
 
-            // Get all .jpg files
-            var imageFiles = Directory.GetFiles(stylePreviewsPath, "*.jpg", SearchOption.TopDirectoryOnly);
+            // Get all .jpg and .png files
+            var imageFiles = Directory.GetFiles(stylePreviewsPath, "*.jpg", SearchOption.TopDirectoryOnly)
+                .Concat(Directory.GetFiles(stylePreviewsPath, "*.png", SearchOption.TopDirectoryOnly))
+                .ToArray();
 
             if (!imageFiles.Any())
             {
-                Console.WriteLine("No .jpg files found in style-previews directory");
+                Console.WriteLine("No .jpg or .png files found in style-previews directory");
                 return 0;
             }
 
@@ -74,7 +78,8 @@ public class UploadStylePreviewsService
             foreach (var filePath in imageFiles)
             {
                 var fileName = Path.GetFileName(filePath);
-                var targetPath = $"style-previews/{fileName}";
+                var targetFileName = GetTargetFileName(fileName);
+                var targetPath = $"style-previews/{targetFileName}";
 
                 try
                 {
@@ -92,16 +97,16 @@ public class UploadStylePreviewsService
 
                     if (dryRun)
                     {
-                        Console.WriteLine($"🔍 DRY RUN: Would upload {fileName}");
+                        Console.WriteLine($"🔍 DRY RUN: Would upload {fileName} as {targetFileName}");
                         uploadedCount++;
                         continue;
                     }
 
                     // Upload the file
-                    Console.Write($"📤 Uploading {fileName}... ");
+                    Console.Write($"📤 Uploading {fileName} as {targetFileName}... ");
 
-                    await using var fileStream = File.OpenRead(filePath);
-                    var storagePath = await _storageService.SaveImageAsync(fileStream, fileName, "system");
+                    using var uploadStream = OpenUploadStream(filePath);
+                    var storagePath = await _storageService.SaveImageToPathAsync(uploadStream, targetPath);
 
                     // Verify the upload
                     var uploadExists = await _storageService.ExistsAsync(storagePath);
@@ -110,7 +115,7 @@ public class UploadStylePreviewsService
                         var fileInfo = await _storageService.GetFileInfoAsync(storagePath);
                         Console.WriteLine($"✅ SUCCESS ({fileInfo?.Size ?? 0:N0} bytes)");
 
-                        _logger.LogInformation("Successfully uploaded style preview: {FileName} -> {StoragePath}",
+                        _logger.LogInformation("Successfully uploaded style preview: {SourceFile} -> {StoragePath}",
                             fileName, storagePath);
                         uploadedCount++;
                     }
@@ -188,7 +193,7 @@ public class UploadStylePreviewsService
         Console.WriteLine("  upload-previews --dry-run --force   Simulate upload with force overwrite");
         Console.WriteLine();
         Console.WriteLine("DESCRIPTION:");
-        Console.WriteLine("  Uploads .jpg files from the local 'style-previews' directory to Azure Blob Storage");
+        Console.WriteLine("  Uploads .jpg/.png files from the local 'style-previews' directory to Azure Blob Storage");
         Console.WriteLine("  in the 'style-previews' container. Files are uploaded with public read access.");
         Console.WriteLine();
         Console.WriteLine("FLAGS:");
@@ -218,7 +223,8 @@ public class UploadStylePreviewsService
 
             if (Directory.Exists(stylePreviewsPath))
             {
-                var files = Directory.GetFiles(stylePreviewsPath, "*.jpg", SearchOption.TopDirectoryOnly);
+                var files = Directory.GetFiles(stylePreviewsPath, "*.jpg", SearchOption.TopDirectoryOnly)
+                    .Concat(Directory.GetFiles(stylePreviewsPath, "*.png", SearchOption.TopDirectoryOnly));
                 localFiles = files.Select(Path.GetFileName).Where(f => f != null).ToHashSet(StringComparer.OrdinalIgnoreCase)!;
             }
 
@@ -238,7 +244,8 @@ public class UploadStylePreviewsService
 
                 foreach (var fileName in localFiles.OrderBy(f => f))
                 {
-                    var targetPath = $"style-previews/{fileName}";
+                    var targetFileName = GetTargetFileName(fileName);
+                    var targetPath = $"style-previews/{targetFileName}";
 
                     try
                     {
@@ -250,18 +257,18 @@ public class UploadStylePreviewsService
                             var size = fileInfo?.Size ?? 0;
                             totalSize += size;
 
-                            Console.WriteLine($"✅ EXIST  {size,9:N0}   {fileName}");
+                            Console.WriteLine($"✅ EXIST  {size,9:N0}   {targetFileName}");
                             existingCount++;
                         }
                         else
                         {
-                            Console.WriteLine($"❌ MISS  {0,9:N0}   {fileName}");
+                            Console.WriteLine($"❌ MISS  {0,9:N0}   {targetFileName}");
                             missingCount++;
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"⚠️  ERROR {0,9:N0}   {fileName} ({ex.Message})");
+                        Console.WriteLine($"⚠️  ERROR {0,9:N0}   {targetFileName} ({ex.Message})");
                         missingCount++;
                     }
                 }
@@ -288,5 +295,31 @@ public class UploadStylePreviewsService
             _logger.LogError(ex, "Failed to list style previews");
             return 1;
         }
+    }
+
+    private static string GetTargetFileName(string fileName)
+    {
+        var extension = Path.GetExtension(fileName);
+        if (extension.Equals(".png", StringComparison.OrdinalIgnoreCase))
+        {
+            return Path.ChangeExtension(fileName, ".jpg");
+        }
+
+        return fileName;
+    }
+
+    private static Stream OpenUploadStream(string filePath)
+    {
+        var extension = Path.GetExtension(filePath);
+        if (!extension.Equals(".png", StringComparison.OrdinalIgnoreCase))
+        {
+            return File.OpenRead(filePath);
+        }
+
+        using var image = Image.Load(filePath);
+        var jpegStream = new MemoryStream();
+        image.SaveAsJpeg(jpegStream, new JpegEncoder { Quality = 90 });
+        jpegStream.Position = 0;
+        return jpegStream;
     }
 }

@@ -709,6 +709,128 @@ public class ReplicateApiClient : IReplicateApiClient
     }
 
     /// <summary>
+    /// Generates images using the base generation model (no trained model required).
+    /// </summary>
+    /// <param name="style">The style to use for generation</param>
+    /// <param name="userInfo">Optional user info for style generation</param>
+    /// <param name="numOutputs">Number of images to generate (1-4)</param>
+    /// <returns>The prediction ID and status</returns>
+    public async Task<ReplicatePredictionResult> GenerateBaseStylePreviewAsync(
+        string style,
+        UserInfo? userInfo = null,
+        int numOutputs = 1)
+    {
+        try
+        {
+            var stylePrompts = await GetStylePromptsFromDatabase(style);
+            string stylePrompt = CreateFluxStylePromptBasic(stylePrompts.PromptTemplate, userInfo);
+            string negativePrompt = CreateFluxNegativePrompt(stylePrompts.NegativePromptTemplate, userInfo);
+            var styleTuning = ResolveStyleTuning(_configuration, style);
+            stylePrompt = ApplyRealismModifier(stylePrompt);
+
+            var modelId = _configuration["Replicate:FluxGenerationModelId"];
+            if (string.IsNullOrWhiteSpace(modelId))
+            {
+                throw new InvalidOperationException("Replicate:FluxGenerationModelId is not configured.");
+            }
+
+            var input = new Dictionary<string, object?>
+            {
+                ["prompt"] = stylePrompt,
+                ["negative_prompt"] = negativePrompt,
+                ["width"] = 520,
+                ["height"] = 520,
+                ["num_outputs"] = Math.Max(1, Math.Min(4, numOutputs)),
+                ["guidance_scale"] = styleTuning.GuidanceScale,
+                ["num_inference_steps"] = styleTuning.NumInferenceSteps,
+                ["output_format"] = "png",
+                ["output_quality"] = 80
+            };
+
+            string endpoint;
+            object requestPayload;
+            if (modelId.Contains(":", StringComparison.Ordinal))
+            {
+                endpoint = "predictions";
+                requestPayload = new Dictionary<string, object?>
+                {
+                    ["version"] = modelId,
+                    ["input"] = input
+                };
+            }
+            else
+            {
+                var modelParts = modelId.Split('/', 2);
+                if (modelParts.Length != 2)
+                {
+                    throw new InvalidOperationException("Replicate:FluxGenerationModelId must be 'owner/model' or 'owner/model:version'.");
+                }
+
+                endpoint = $"models/{modelParts[0]}/{modelParts[1]}/predictions";
+                requestPayload = new Dictionary<string, object?>
+                {
+                    ["input"] = input
+                };
+            }
+
+            var content = new StringContent(
+                JsonSerializer.Serialize(requestPayload),
+                Encoding.UTF8,
+                "application/json");
+
+            var response = await _httpClient.PostAsync(endpoint, content);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Replicate base prediction failed: {Status} {Error}", response.StatusCode, errorContent);
+
+                if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    throw new ReplicateApiException(response.StatusCode, "ReplicateRateLimited",
+                        "Replicate API rate limit reached. Please try again later.", errorContent);
+                }
+
+                if (response.StatusCode == HttpStatusCode.PaymentRequired)
+                {
+                    throw new ReplicateApiException(response.StatusCode, "ReplicatePaymentRequired",
+                        "Replicate account requires payment.", errorContent);
+                }
+
+                if (response.StatusCode == HttpStatusCode.Forbidden)
+                {
+                    throw new ReplicateApiException(response.StatusCode, "ReplicatePermissionDenied",
+                        "Your token is not permitted for this prediction.", errorContent);
+                }
+
+                throw new ReplicateApiException(response.StatusCode, "ReplicateServiceError",
+                    $"Prediction creation failed with status {(int)response.StatusCode}.", errorContent);
+            }
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<ReplicatePredictionResult>(
+                responseJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (result == null)
+            {
+                throw new Exception("Failed to deserialize prediction response");
+            }
+
+            return result;
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("401") || ex.Message.Contains("Unauthorized"))
+        {
+            _logger.LogError(ex, "Replicate API authentication failed for base preview style {Style}", S(style));
+            throw new UnauthorizedAccessException("Replicate API authentication failed. Check your API token.", ex);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating base preview for style {Style}", S(style));
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Gets the status of an image generation prediction
     /// </summary>
     /// <param name="predictionId">The prediction ID</param>

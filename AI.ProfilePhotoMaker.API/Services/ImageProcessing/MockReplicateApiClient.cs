@@ -197,6 +197,48 @@ public class MockReplicateApiClient : IReplicateApiClient
         return result;
     }
 
+    public async Task<ReplicatePredictionResult> GenerateBaseStylePreviewAsync(string style, UserInfo? userInfo = null, int numOutputs = 1)
+    {
+        var stylePrompts = await GetStylePromptsFromDatabase(style);
+        var stylePrompt = CreateFluxStylePromptBasic(stylePrompts.PromptTemplate, userInfo);
+        var negativePrompt = CreateFluxNegativePrompt(stylePrompts.NegativePromptTemplate, userInfo);
+        var tuning = ReplicateApiClient.ResolveStyleTuning(_configuration, style);
+        stylePrompt = ReplicateApiClient.ApplyRealismModifier(stylePrompt);
+
+        var id = Guid.NewGuid().ToString();
+        var result = new ReplicatePredictionResult
+        {
+            Id = id,
+            Version = "mock/base-style",
+            Status = "starting",
+            CreatedAt = DateTime.UtcNow,
+            Input = new Dictionary<string, object>
+            {
+                { "style", style },
+                { "prompt", stylePrompt },
+                { "negative_prompt", negativePrompt },
+                { "guidance_scale", tuning.GuidanceScale },
+                { "num_inference_steps", tuning.NumInferenceSteps }
+            },
+            Urls = new ReplicateUrls { Get = $"/mock/predictions/{id}" }
+        };
+        Predictions[id] = result;
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(300);
+            var outputs = Enumerable.Range(1, Math.Max(1, Math.Min(4, numOutputs)))
+                .Select(i => $"https://example.com/mock/base/{style}/{id}/{i}.png").ToArray();
+            var pr = Predictions[id];
+            pr.Status = "succeeded";
+            pr.CompletedAt = DateTime.UtcNow;
+            pr.Output = JsonSerializer.SerializeToElement(outputs);
+            Predictions[id] = pr;
+        });
+
+        return result;
+    }
+
     public Task<ReplicatePredictionResult> GetPredictionStatusAsync(string predictionId)
     {
         if (Predictions.TryGetValue(predictionId, out var pr))
@@ -278,6 +320,22 @@ public class MockReplicateApiClient : IReplicateApiClient
             .Replace("{ethnicity}", ethnicity);
 
         // Clean up extra spaces
+        return result.Replace("  ", " ").Trim();
+    }
+
+    private static string CreateFluxStylePromptBasic(string promptTemplate, UserInfo? userInfo)
+    {
+        string gender = userInfo?.Gender?.ToLower() ?? "person";
+        string ethnicity = userInfo?.Ethnicity?.ToLower() ?? "";
+        string genderEthnicityCombo = !string.IsNullOrEmpty(ethnicity) ? $"{gender} {ethnicity}" : gender;
+        string subject = "professional person";
+
+        string result = promptTemplate
+            .Replace("{subject}", subject)
+            .Replace("{gender} {ethnicity}", genderEthnicityCombo)
+            .Replace("{gender}", gender)
+            .Replace("{ethnicity}", ethnicity);
+
         return result.Replace("  ", " ").Trim();
     }
 

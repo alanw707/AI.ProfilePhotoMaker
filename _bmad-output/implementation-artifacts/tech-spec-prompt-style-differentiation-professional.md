@@ -1,7 +1,7 @@
 # Tech-Spec: Professional Style Prompt Differentiation and Realism Guardrails
 
 **Created:** 2025-12-28
-**Status:** Ready for Development
+**Status:** Completed
 
 ## Overview
 
@@ -49,33 +49,33 @@ Out of scope:
 
 ### Tasks
 
-- [ ] Draft updated PromptTemplate text per style with distinct background and wardrobe cues:
+- [x] Draft updated PromptTemplate text per style with distinct background and wardrobe cues:
   - **Academic**: campus, library stacks, lecture hall, museum gallery; no blank background.
-  - **LinkedIn**: neutral professional background that can be solid or soft gradient; prefer muted colors (light blue, warm beige, soft teal), avoid plain white/gray when possible.
+- **LinkedIn**: clean professional background with subtle variety such as soft neutral gradients (warm gray/ivory/muted taupe/soft slate), clean off-white or warm gray, or a minimal modern office interior with gentle bokeh; keep it clean and professional.
   - **Startup**: young energetic vibe; modern co-working or open office; casual-professional wardrobe (hoodie/crewneck or casual jacket), bright natural light.
   - **Tech Professional**: modern tech office or product lab; subtle monitors/whiteboards/server racks; calm, focused; smart casual (no hoodie).
   - **Entrepreneur**: personal brand leader; boutique office, studio, or upscale cafe; premium smart casual; warm, confident.
   - **Executive**: formal corporate boardroom or high-rise office; classic formal suit; composed, authoritative.
-- [ ] Add subtle pose guidance:
+- [x] Add subtle pose guidance:
   - Professional styles (academic/linkedin/tech-professional/executive): relaxed shoulders, slight 3/4 angle or gentle head tilt, natural smile, no dramatic gestures.
   - Startup/entrepreneur: slightly wider variety but still natural (no exaggerated action).
-- [ ] Add or extend negative prompts to prevent unnatural looks/accessories:
+- [x] Add or extend negative prompts to prevent unnatural looks/accessories:
   - Maintain current skin realism list (waxy/plastic/airbrushed, etc.).
   - Add: forced grin, exaggerated smile, grimace, open mouth, tongue, extreme head tilt.
   - Add accessory sanity: multiple watches, watch on both wrists, excessive bracelets, oversized jewelry, sunglasses, hats, visible logos.
   - Add pose constraints: full-body action, dramatic gestures, arms flailing, unnatural hand positions.
-- [ ] Implement a new migration (SQL updates) for the six styles using shared negative prompt constants.
-- [ ] (Optional) Align seed defaults in `AI.ProfilePhotoMaker.API/Data/ApplicationDbContext.cs` and the dev-only `stylesToAdd` list in `AI.ProfilePhotoMaker.API/Controllers/DiagnosticController.cs` so dev resets match production prompts.
-- [ ] Validate in dev DB by querying updated style rows and generating a small set of sample outputs.
+- [x] Implement a new migration (SQL updates) for the six styles using shared negative prompt constants.
+- [x] (Optional) Align seed defaults in `AI.ProfilePhotoMaker.API/Data/ApplicationDbContext.cs` and the dev-only `stylesToAdd` list in `AI.ProfilePhotoMaker.API/Controllers/DiagnosticController.cs` so dev resets match production prompts.
+- [x] Validate in dev DB by querying updated style rows and generating a small set of sample outputs.
 
 ### Acceptance Criteria
 
-- [ ] Each of the six styles has a distinct background cue and wardrobe/pose guidance.
-- [ ] Academic never suggests blank/neutral background; LinkedIn allows solid/gradient colors and avoids white/gray bias.
-- [ ] Tech Professional no longer resembles Startup (no coworking or hoodie cues; calmer, more polished).
-- [ ] Entrepreneur and Executive are clearly distinct (entrepreneur: personal brand, boutique/cafe; executive: formal corporate boardroom/high-rise).
-- [ ] Negative prompts include accessory sanity and natural expression constraints while preserving prior skin realism tuning.
-- [ ] Migration updates only text fields and does not alter schema.
+- [x] Each of the six styles has a distinct background cue and wardrobe/pose guidance.
+- [x] Academic never suggests blank/neutral background; LinkedIn allows clean white/gray or neutral gradients without repeating the same few colors.
+- [x] Tech Professional no longer resembles Startup (no coworking or hoodie cues; calmer, more polished).
+- [x] Entrepreneur and Executive are clearly distinct (entrepreneur: personal brand, boutique/cafe; executive: formal corporate boardroom/high-rise).
+- [x] Negative prompts include accessory sanity and natural expression constraints while preserving prior skin realism tuning.
+- [x] Migration updates only text fields and does not alter schema.
 
 ## Additional Context
 
@@ -92,3 +92,9 @@ Out of scope:
 
 - Keep prompts grounded and professional; prefer subtle pose variation for conservative styles.
 - Avoid adding constraints that could reduce output quality or reintroduce waxy skin; only append to existing realism negatives.
+
+## Review Notes
+
+- Adversarial review completed
+- Findings: 10 total, 10 fixed, 0 skipped
+- Resolution approach: auto-fix

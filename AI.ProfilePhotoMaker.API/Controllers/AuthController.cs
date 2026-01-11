@@ -472,7 +472,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
 
             var backendBaseUrl = ResolveBackendBaseUrl(out var backendBaseUrlSource);
-            var redirectUri = $"{backendBaseUrl}/api/auth/external-login-callback";
+            var redirectUri = BuildGoogleRedirectUri(backendBaseUrl);
 
             // Generate state parameter for security
             var state = Guid.NewGuid().ToString();
@@ -592,7 +592,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
 
             var backendBaseUrl = ResolveBackendBaseUrl();
-            var redirectUri = $"{backendBaseUrl}/api/auth/external-login-callback";
+            var redirectUri = BuildGoogleRedirectUri(backendBaseUrl);
 
             // Construct Google OAuth URL manually
             var authUrl = $"https://accounts.google.com/o/oauth2/v2/auth?" +
@@ -718,15 +718,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 // Set secure, HttpOnly cookie for JWT so the browser can send it on subsequent API requests
                 var cookieName = _configuration["Authentication:TokenCookieName"] ?? "AuthToken";
-                var cookieOptions = new CookieOptions
-                {
-                    HttpOnly = true,
-                    Secure = !_environment.IsDevelopment(),
-                    SameSite = _environment.IsDevelopment() ? SameSiteMode.Lax : SameSiteMode.None,
-                    Domain = _environment.IsDevelopment() ? null : ".aiprofilephotomaker.com",
-                    Expires = DateTimeOffset.UtcNow.AddHours(12),
-                    Path = "/"
-                };
+                var cookieOptions = BuildAuthCookieOptions(DateTimeOffset.UtcNow.AddHours(12));
                 Response.Cookies.Append(cookieName, tokenInfo.Token, cookieOptions);
 
                 // In development, include token for frontend to set cookie on 4200 origin via proxy
@@ -748,7 +740,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         {
             var (clientId, clientSecret) = GetGoogleClientSettings();
             var backendBaseUrl = ResolveBackendBaseUrl();
-            var redirectUri = $"{backendBaseUrl}/api/auth/external-login-callback";
+            var redirectUri = BuildGoogleRedirectUri(backendBaseUrl);
 
             var tokenRequest = new List<KeyValuePair<string, string>>
             {
@@ -764,6 +756,15 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             if (!response.IsSuccessStatusCode)
             {
+                if (_environment.IsDevelopment())
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning(
+                        "Google token exchange failed: status={StatusCode} redirectUri={RedirectUri} body={Body}",
+                        (int)response.StatusCode,
+                        S(redirectUri),
+                        S(errorBody));
+                }
                 return null;
             }
 
@@ -815,6 +816,34 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         private string ResolveBackendBaseUrl() => ResolveBackendBaseUrl(out _);
+
+        private string BuildGoogleRedirectUri(string backendBaseUrl)
+        {
+            var redirectUri = $"{backendBaseUrl}/api/auth/external-login-callback";
+            return AppendNgrokSkipWarning(redirectUri);
+        }
+
+        private string AppendNgrokSkipWarning(string url)
+        {
+            if (!_environment.IsDevelopment())
+            {
+                return url;
+            }
+
+            if (!url.Contains("ngrok", StringComparison.OrdinalIgnoreCase))
+            {
+                return url;
+            }
+
+            var uri = new Uri(url);
+            var query = QueryHelpers.ParseQuery(uri.Query);
+            if (query.ContainsKey("ngrok-skip-browser-warning"))
+            {
+                return url;
+            }
+
+            return QueryHelpers.AddQueryString(url, "ngrok-skip-browser-warning", "true");
+        }
 
         private string ResolveBackendBaseUrl(out string source)
         {

@@ -36,6 +36,9 @@ show_help() {
     echo "  $0 --dry-run          # Test run without uploading"
     echo "  $0 --force            # Upload and overwrite existing files"
     echo "  $0 --list             # Check current file status"
+    echo ""
+    echo "Tip: After generating new previews via ../scripts/generate-style-previews.sh,"
+    echo "     rerun this script with --force to refresh the blobs."
 }
 
 # Function to run dotnet command with error handling

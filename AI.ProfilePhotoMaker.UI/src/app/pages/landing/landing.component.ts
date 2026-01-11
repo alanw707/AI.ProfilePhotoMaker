@@ -474,6 +474,7 @@ export class LandingComponent implements OnInit, OnDestroy {
         '@type': 'Organization',
         name: 'AI Profile Photo Maker',
         url: 'https://aiprofilephotomaker.com/',
+        logo: 'https://aiprofilephotomaker.com/Logo.PNG',
       },
       datePublished: '2024-01-01',
       featureList: [
