@@ -22,7 +22,7 @@ This playbook consolidates and supersedes:
 ## Decision Lock (Week 1)
 - **Core promise:** Studio-quality headshots in minutes at a fraction of the cost.
 - **Primary CTA:** Get your headshot in minutes.
-- **Default landing page:** `https://app.aiprofilephotomaker.com/pricing`
+- **Default landing page:** `https://aiprofilephotomaker.com/pricing`
 - **Campaign slug:** `social-quick-win-2025-12`
 - **Primary persona:** Job seekers updating LinkedIn.
 - **Secondary personas:** Recruiters, hiring managers, freelancers, founders, remote workers.
@@ -34,7 +34,7 @@ This playbook consolidates and supersedes:
  - **Channel focus (Weeks 1-2):** LinkedIn primary, Instagram secondary, X/Facebook optional, Google Search phase 2.
 
 ## Tracking Standards (Must Follow)
-- **Base URL:** `https://app.aiprofilephotomaker.com/pricing`
+- **Base URL:** `https://aiprofilephotomaker.com/pricing`
 - **UTM template:**
   - utm_source: linkedin | instagram | x | facebook
   - utm_medium: social (organic) | paid-social (boosted)
@@ -84,102 +84,102 @@ Use `utm_medium=paid-social` for boosted versions. Replace testimonial names if 
 **Day 1 - LinkedIn (Promise card)**
 Studio-quality headshots without the studio price. Get a LinkedIn-ready photo in minutes.
 
-https://app.aiprofilephotomaker.com/pricing?utm_source=linkedin&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=promise-01
+https://aiprofilephotomaker.com/pricing?utm_source=linkedin&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=promise-01
 
 **Day 1 - Instagram (Testimonial card)**
 "My LinkedIn profile finally looks polished. The results felt realistic." - Amelia W.
 
-https://app.aiprofilephotomaker.com/pricing?utm_source=instagram&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=testimonial-amelia
+https://aiprofilephotomaker.com/pricing?utm_source=instagram&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=testimonial-amelia
 
 **Day 1 - X (Short benefit)**
 Studio-quality headshots in minutes. Low cost. Built for LinkedIn.
 
-https://app.aiprofilephotomaker.com/pricing?utm_source=x&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=promise-x
+https://aiprofilephotomaker.com/pricing?utm_source=x&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=promise-x
 
 **Day 1 - Facebook (Offer card)**
 Headshots in minutes. No studio. No hassle.
 
-https://app.aiprofilephotomaker.com/pricing?utm_source=facebook&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=offer-01
+https://aiprofilephotomaker.com/pricing?utm_source=facebook&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=offer-01
 
 **Day 2 - LinkedIn (Testimonial card)**
 "The output still looks like me, just more professional." - Noah B.
 
-https://app.aiprofilephotomaker.com/pricing?utm_source=linkedin&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=testimonial-noah
+https://aiprofilephotomaker.com/pricing?utm_source=linkedin&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=testimonial-noah
 
 **Day 2 - Instagram (Before/After)**
 Same you, more professional. Upgrade your profile photo today.
 
-https://app.aiprofilephotomaker.com/pricing?utm_source=instagram&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=before-after-01
+https://aiprofilephotomaker.com/pricing?utm_source=instagram&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=before-after-01
 
 **Day 2 - X (Tip)**
 Quick upgrade: better lighting, clean background, confident look. Done in minutes.
 
-https://app.aiprofilephotomaker.com/pricing?utm_source=x&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=tip-01
+https://aiprofilephotomaker.com/pricing?utm_source=x&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=tip-01
 
 **Day 2 - Facebook (Value card)**
 Look professional on LinkedIn today. Upload a photo, get headshots in minutes.
 
-https://app.aiprofilephotomaker.com/pricing?utm_source=facebook&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=value-01
+https://aiprofilephotomaker.com/pricing?utm_source=facebook&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=value-01
 
 **Day 3 - LinkedIn (Before/After)**
 Same you, more professional. Upgrade your profile in minutes.
 
-https://app.aiprofilephotomaker.com/pricing?utm_source=linkedin&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=before-after-01
+https://aiprofilephotomaker.com/pricing?utm_source=linkedin&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=before-after-01
 
 **Day 3 - Instagram (Promise card)**
 Studio-quality headshots in minutes. No studio, no hassle.
 
-https://app.aiprofilephotomaker.com/pricing?utm_source=instagram&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=promise-02
+https://aiprofilephotomaker.com/pricing?utm_source=instagram&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=promise-02
 
 **Day 3 - X (Benefit)**
 Your first impression matters. Get a LinkedIn-ready headshot in minutes.
 
-https://app.aiprofilephotomaker.com/pricing?utm_source=x&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=benefit-01
+https://aiprofilephotomaker.com/pricing?utm_source=x&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=benefit-01
 
 **Day 3 - Facebook (Testimonial card)**
 "Super straightforward flow and the turnaround was fast." - Lachlan R.
 
-https://app.aiprofilephotomaker.com/pricing?utm_source=facebook&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=testimonial-lachlan
+https://aiprofilephotomaker.com/pricing?utm_source=facebook&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=testimonial-lachlan
 
 **Day 4 - LinkedIn (Founder angle)**
 Built this to help people look professional fast. No studio, no stress. If you are updating your LinkedIn or applying for roles, this is for you.
 
-https://app.aiprofilephotomaker.com/pricing?utm_source=linkedin&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=founder-01
+https://aiprofilephotomaker.com/pricing?utm_source=linkedin&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=founder-01
 
 **Day 4 - Instagram (Workflow card)**
 Upload > Pick a style > Done. Studio-quality in minutes.
 
-https://app.aiprofilephotomaker.com/pricing?utm_source=instagram&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=workflow-01
+https://aiprofilephotomaker.com/pricing?utm_source=instagram&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=workflow-01
 
 **Day 4 - X (Workflow)**
 Upload a photo. Pick a style. Get a pro headshot in minutes.
 
-https://app.aiprofilephotomaker.com/pricing?utm_source=x&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=workflow-01
+https://aiprofilephotomaker.com/pricing?utm_source=x&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=workflow-01
 
 **Day 4 - Facebook (Workflow card)**
 Upload a photo, pick a style, get a studio-quality headshot.
 
-https://app.aiprofilephotomaker.com/pricing?utm_source=facebook&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=workflow-01
+https://aiprofilephotomaker.com/pricing?utm_source=facebook&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=workflow-01
 
 **Day 5 - LinkedIn (Offer/value)**
 Studio-quality headshots from a quick upload. See pricing and styles.
 
-https://app.aiprofilephotomaker.com/pricing?utm_source=linkedin&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=offer-01
+https://aiprofilephotomaker.com/pricing?utm_source=linkedin&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=offer-01
 
 **Day 5 - Instagram (Before/After)**
 Upgrade your profile photo today. Same you, more professional.
 
-https://app.aiprofilephotomaker.com/pricing?utm_source=instagram&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=before-after-02
+https://aiprofilephotomaker.com/pricing?utm_source=instagram&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=before-after-02
 
 **Day 5 - X (Offer)**
 No studio. No hassle. Headshots in minutes.
 
-https://app.aiprofilephotomaker.com/pricing?utm_source=x&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=offer-02
+https://aiprofilephotomaker.com/pricing?utm_source=x&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=offer-02
 
 **Day 5 - Facebook (Value card)**
 Look professional on LinkedIn today. Get your headshot in minutes.
 
-https://app.aiprofilephotomaker.com/pricing?utm_source=facebook&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=value-02
+https://aiprofilephotomaker.com/pricing?utm_source=facebook&utm_medium=social&utm_campaign=social-quick-win-2025-12&utm_content=value-02
 
 ### Day 0 (Setup, 2-4 hours)
 - Confirm pricing and CTA language on `/pricing`.

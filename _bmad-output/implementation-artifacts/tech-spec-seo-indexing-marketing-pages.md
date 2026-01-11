@@ -7,7 +7,7 @@
 
 ### Problem Statement
 
-The app is an Angular SPA with limited SEO coverage: several public routes reuse the landing component and end up with the same canonical, H1, and JSON-LD, which dilutes indexability. Robots and sitemap files still point at the apex domain while the canonical domain is `app.aiprofilephotomaker.com`. We also need to ship the playbook's SEO pages (pillar + cluster) and draft on-page content so Google and AI answer engines can index and surface the site.
+The app is an Angular SPA with limited SEO coverage: several public routes reuse the landing component and end up with the same canonical, H1, and JSON-LD, which dilutes indexability. Robots and sitemap files still point at the apex domain while the canonical domain is `aiprofilephotomaker.com`. We also need to ship the playbook's SEO pages (pillar + cluster) and draft on-page content so Google and AI answer engines can index and surface the site.
 
 ### Solution
 
@@ -51,7 +51,7 @@ Out of scope (unless explicitly requested):
 
 ### Technical Decisions
 
-- Canonical domain is `https://app.aiprofilephotomaker.com` (apex redirects to app).
+- Canonical domain is `https://aiprofilephotomaker.com` (apex redirects to app).
 - Public SEO pages must have unique H1, title, description, canonical, and JSON-LD.
 - Replace landing-component reuse for `/features`, `/examples`, `/help` with dedicated SEO pages or route-aware SEO logic to avoid duplicate canonicals.
 - Add `llms.txt` and `ai.txt` at the app root to support AI indexing best practices.
@@ -63,7 +63,7 @@ Out of scope (unless explicitly requested):
 
 - [x] Normalize SEO discovery files to `app` domain.
   - [x] Remove or consolidate duplicate `robots.txt` (choose one source of truth).
-  - [x] Update `robots.txt` to allow public routes, disallow `/app`, `/auth`, `/admin`, and point to `https://app.aiprofilephotomaker.com/sitemap.xml`.
+  - [x] Update `robots.txt` to allow public routes, disallow `/app`, `/auth`, `/admin`, and point to `https://aiprofilephotomaker.com/sitemap.xml`.
   - [x] Update `public/sitemap.xml` URLs to `app` domain; remove auth routes; include new SEO pages.
   - [x] Update `.well-known/security.txt` canonical to `app` domain.
 - [x] Add AI indexing files in `AI.ProfilePhotoMaker.UI/public`:
@@ -85,10 +85,10 @@ Out of scope (unless explicitly requested):
 
 ### Acceptance Criteria
 
-- [x] Given any public SEO route, when loaded in production, then the page has a unique title, description, canonical URL on `https://app.aiprofilephotomaker.com`, and a single H1 that matches the page topic.
-- [x] Given `/robots.txt`, when fetched from `https://app.aiprofilephotomaker.com`, then it references the correct `sitemap.xml` and does not block the SEO pages.
-- [x] Given `/sitemap.xml`, when fetched from `https://app.aiprofilephotomaker.com`, then it lists all SEO pages and excludes `/auth` and `/app` routes.
-- [x] Given `llms.txt` and `ai.txt`, when fetched from `https://app.aiprofilephotomaker.com`, then they contain the product summary, allowed usage, and canonical URLs.
+- [x] Given any public SEO route, when loaded in production, then the page has a unique title, description, canonical URL on `https://aiprofilephotomaker.com`, and a single H1 that matches the page topic.
+- [x] Given `/robots.txt`, when fetched from `https://aiprofilephotomaker.com`, then it references the correct `sitemap.xml` and does not block the SEO pages.
+- [x] Given `/sitemap.xml`, when fetched from `https://aiprofilephotomaker.com`, then it lists all SEO pages and excludes `/auth` and `/app` routes.
+- [x] Given `llms.txt` and `ai.txt`, when fetched from `https://aiprofilephotomaker.com`, then they contain the product summary, allowed usage, and canonical URLs.
 - [x] Given the new SEO pages, when navigating between them, then CTA links preserve UTM parameters and fire GA4 events.
 - [x] Given comparison pages, when published, then all claims are verifiable or labeled as subjective and include a "verify pricing/features" note.
 

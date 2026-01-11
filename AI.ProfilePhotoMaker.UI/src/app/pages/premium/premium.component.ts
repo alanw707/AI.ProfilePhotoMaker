@@ -330,6 +330,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
         '@type': 'Organization',
         name: 'AI Profile Photo Maker',
         url: 'https://aiprofilephotomaker.com/',
+        logo: 'https://aiprofilephotomaker.com/Logo.PNG',
       },
       offers: {
         '@type': 'AggregateOffer',

@@ -75,6 +75,7 @@ export class VerifyEmailComponent implements OnInit {
         },
         error: err => {
           if (err?.status === 401 || err?.status === 403) {
+            this._authService.clearAuthCache();
             void this._router.navigate(['/auth/login'], {
               queryParams: {
                 message: 'Please sign in to continue.',

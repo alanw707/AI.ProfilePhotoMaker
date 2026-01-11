@@ -28,6 +28,8 @@ export interface StylePreviewListResponse {
 export class StylePreviewService {
   private _urlCache = new Map<string, string>();
   private _allPreviewsSubject = new BehaviorSubject<Map<string, string>>(new Map());
+  // Cache version for busting browser cache - update this when style previews change
+  private readonly _cacheVersion = '20260110';
 
   constructor(
     private _http: HttpClient,
@@ -196,7 +198,8 @@ export class StylePreviewService {
     const fileName = `${styleName.toLowerCase().replace(/[/\s]/g, '-')}.jpg`;
 
     // Direct Azure Blob Storage URL - use correct storage account
+    // Add cache-busting version parameter to ensure fresh images after updates
     const azureBlobBaseUrl = 'https://aipmstv16j74jubocuukg.blob.core.windows.net/style-previews';
-    return `${azureBlobBaseUrl}/${fileName}`;
+    return `${azureBlobBaseUrl}/${fileName}?v=${this._cacheVersion}`;
   }
 }

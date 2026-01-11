@@ -79,6 +79,24 @@ if (args.Length > 0 && !isTestingEnvironment)
         Environment.Exit(migrationExitCode);
     }
 
+    if (string.Equals(args[0], "upload-previews", StringComparison.OrdinalIgnoreCase))
+    {
+        using var scope = commandApp.Services.CreateScope();
+        var uploadService = scope.ServiceProvider.GetRequiredService<UploadStylePreviewsService>();
+        var dryRun = args.Any(arg => string.Equals(arg, "--dry-run", StringComparison.OrdinalIgnoreCase));
+        var force = args.Any(arg => string.Equals(arg, "--force", StringComparison.OrdinalIgnoreCase));
+        var exitCode = await uploadService.UploadStylePreviewsAsync(dryRun, force);
+        Environment.Exit(exitCode);
+    }
+
+    if (string.Equals(args[0], "list-previews", StringComparison.OrdinalIgnoreCase))
+    {
+        using var scope = commandApp.Services.CreateScope();
+        var uploadService = scope.ServiceProvider.GetRequiredService<UploadStylePreviewsService>();
+        var exitCode = await uploadService.ListStylePreviewsAsync();
+        Environment.Exit(exitCode);
+    }
+
     // Upload command functionality removed for MVP - development tooling should be separate
 }
 
@@ -630,7 +648,11 @@ builder.Services.AddCors(options =>
     });
     options.AddPolicy("AllowDevelopment", corsBuilder =>
     {
-        corsBuilder.WithOrigins("http://localhost:4200", "https://localhost:4200").AllowAnyMethod().AllowAnyHeader().AllowCredentials();
+        corsBuilder.WithOrigins(
+            "http://localhost:4200",
+            "https://localhost:4200",
+            "https://clear-anteater-usually.ngrok-free.app"
+        ).AllowAnyMethod().AllowAnyHeader().AllowCredentials();
     });
     options.AddPolicy("DebugAllowAll", corsBuilder =>
     {
@@ -736,7 +758,10 @@ if (app.Environment.IsDevelopment())
     });
 }
 app.UseCors(corsPolicy);
-app.UseIpRateLimiting();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseIpRateLimiting();
+}
 // app.UsePerformanceMonitoring(); // Removed monitoring middleware
 app.UseAuthentication();
 app.UseAuthorization();
