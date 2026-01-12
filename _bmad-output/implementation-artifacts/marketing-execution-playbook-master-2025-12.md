@@ -130,6 +130,7 @@ If a detail is owned by a sub-playbook, follow that source. This file defines ov
 - 2026-01-09: LinkedIn organic post #1 published (transformation hook).
 - 2026-01-12: Week 1 post content prepared (Posts 2-5 LinkedIn + X + Threads variants).
 - 2026-01-12: Content files created: `linkedin-organic-posts-week1.md`, `x-threads-posts-week1.md`.
+- 2026-01-12: LinkedIn organic post #2 published (checklist - 5 photo mistakes).
 
 ## LinkedIn First: Ads + Organic (Weeks 1-4)
 **Goal:** Build signal fast with a combined paid + posting engine.
