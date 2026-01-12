@@ -190,11 +190,6 @@
           </p>
           <div class="trust-stats">
             <div class="stat-item">
-              <span class="stat-number">5</span>
-              <span class="stat-label">Weekly top-up target</span>
-            </div>
-            <div class="stat-divider"></div>
-            <div class="stat-item">
               <span class="stat-number">Minutes</span>
               <span class="stat-label">Typical results</span>
             </div>
@@ -310,25 +305,9 @@
 
         <!-- Grid Summary -->
         <div class="styles-summary">
-          <div class="summary-stats">
-            <div class="stat-item">
-              <span class="stat-number">{{ styledPhotos.length }}+</span>
-              <span class="stat-label">Professional Styles</span>
-            </div>
-            <div class="stat-divider"></div>
-            <div class="stat-item">
-              <span class="stat-number">5</span>
-              <span class="stat-label">Weekly top-up target</span>
-            </div>
-            <div class="stat-divider"></div>
-            <div class="stat-item">
-              <span class="stat-number">Minutes</span>
-              <span class="stat-label">Typical results</span>
-            </div>
-          </div>
           <p class="summary-text">
-            Browse all our professional photo styles at once. Each style is carefully crafted to enhance your
-            professional image.
+            Browse all {{ styledPhotos.length }}+ professional photo styles. Each style is carefully crafted to enhance
+            your professional image.
           </p>
         </div>
 
@@ -336,7 +315,7 @@
         <div class="showcase-cta">
           <button (click)="getStarted()" class="btn-primary showcase-btn">
             <span class="btn-icon">🚀</span>
-            <span class="btn-text">Try enhancements</span>
+            <span class="btn-text">Start with enhancements</span>
             <span class="btn-arrow">→</span>
           </button>
           <p class="cta-subtext">
