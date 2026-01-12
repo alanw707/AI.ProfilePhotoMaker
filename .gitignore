@@ -27,6 +27,10 @@ AI.ProfilePhotoMaker.API/.env*
 AI.ProfilePhotoMaker.API/.env.development
 appsettings.Production.json
 appsettings.*.Production.json
+appsettings.Development.json
+AI.ProfilePhotoMaker.API/appsettings.Development.json
+!appsettings.Development.json.template
+!AI.ProfilePhotoMaker.API/appsettings.Development.json.template
 docker-compose.override.yml
 
 # Secret documentation files (keep local, don't commit)
