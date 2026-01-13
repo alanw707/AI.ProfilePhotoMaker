@@ -11,7 +11,7 @@
 | Day | Type | Status | Posted Date |
 |-----|------|--------|-------------|
 | Mon | Transformation | POSTED | 2026-01-09 |
-| Tue | Checklist | READY | |
+| Sun | Checklist | POSTED | 2026-01-12 |
 | Wed | Process Proof | READY | |
 | Thu | Speed Proof | READY | |
 | Fri | CTA Push | READY | |
