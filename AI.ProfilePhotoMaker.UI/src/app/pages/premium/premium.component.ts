@@ -313,7 +313,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
     });
     this.meta.updateTag({
       name: 'twitter:image',
-      content: 'https://aiprofilephotomaker.com/assets/twitter-card.svg',
+      content: 'https://aiprofilephotomaker.com/assets/twitter-card.png',
     });
     this.meta.updateTag({ name: 'twitter:url', content: canonicalUrl });
     this.meta.updateTag({ name: 'twitter:creator', content: '@aiprofilephoto' });

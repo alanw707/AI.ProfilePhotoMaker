@@ -20,7 +20,7 @@ const distBrowserIndexPath = path.join(distBrowserRoot, 'index.html');
 
 const CANONICAL_BASE = 'https://aiprofilephotomaker.com';
 const OG_IMAGE = 'https://aiprofilephotomaker.com/assets/og-image.png?v=2';
-const TWITTER_IMAGE = 'https://aiprofilephotomaker.com/assets/twitter-card.svg';
+const TWITTER_IMAGE = 'https://aiprofilephotomaker.com/assets/twitter-card.png';
 
 const distIndexCandidate = fs.existsSync(distBrowserIndexPath)
   ? distBrowserIndexPath
