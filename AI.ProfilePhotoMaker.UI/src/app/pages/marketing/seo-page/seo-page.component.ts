@@ -99,7 +99,7 @@ export class SeoPageComponent implements OnInit, OnDestroy {
     this._meta.updateTag({ property: 'og:url', content: canonicalUrl });
     this._meta.updateTag({
       property: 'og:image',
-      content: 'https://aiprofilephotomaker.com/assets/og-image.png',
+      content: 'https://aiprofilephotomaker.com/assets/og-image.png?v=2',
     });
     this._meta.updateTag({ property: 'og:site_name', content: 'AI Profile Photo Maker' });
 

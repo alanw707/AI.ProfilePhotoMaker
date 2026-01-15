@@ -423,7 +423,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     this._meta.updateTag({ property: 'og:url', content: 'https://aiprofilephotomaker.com/' });
     this._meta.updateTag({
       property: 'og:image',
-      content: 'https://aiprofilephotomaker.com/assets/og-image.png',
+      content: 'https://aiprofilephotomaker.com/assets/og-image.png?v=2',
     });
     this._meta.updateTag({ property: 'og:image:width', content: '945' });
     this._meta.updateTag({ property: 'og:image:height', content: '631' });
@@ -462,7 +462,7 @@ export class LandingComponent implements OnInit, OnDestroy {
       operatingSystem: 'Web',
       url: 'https://aiprofilephotomaker.com/',
       image: 'https://aiprofilephotomaker.com/assets/Logo.PNG',
-      screenshot: 'https://aiprofilephotomaker.com/assets/og-image.png',
+      screenshot: 'https://aiprofilephotomaker.com/assets/og-image.png?v=2',
       offers: {
         '@type': 'AggregateOffer',
         lowPrice: '9.99',
