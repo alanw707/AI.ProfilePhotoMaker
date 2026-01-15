@@ -442,7 +442,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     });
     this._meta.updateTag({
       name: 'twitter:image',
-      content: 'https://aiprofilephotomaker.com/assets/twitter-card.svg',
+      content: 'https://aiprofilephotomaker.com/assets/twitter-card.png',
     });
     this._meta.updateTag({ name: 'twitter:creator', content: '@aiprofilephoto' });
 
