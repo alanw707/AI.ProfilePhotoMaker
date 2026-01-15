@@ -298,7 +298,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
     this.meta.updateTag({ property: 'og:url', content: canonicalUrl });
     this.meta.updateTag({
       property: 'og:image',
-      content: 'https://aiprofilephotomaker.com/assets/og-image.png',
+      content: 'https://aiprofilephotomaker.com/assets/og-image.png?v=2',
     });
     this.meta.updateTag({ property: 'og:site_name', content: 'AI Profile Photo Maker' });
 
@@ -324,7 +324,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
       name: 'AI Headshot Packages',
       description:
         'AI headshot pricing plans with custom model training and professional-quality downloads.',
-      image: 'https://aiprofilephotomaker.com/assets/og-image.png',
+      image: 'https://aiprofilephotomaker.com/assets/og-image.png?v=2',
       url: canonicalUrl,
       brand: {
         '@type': 'Organization',
