@@ -338,7 +338,7 @@ header
 // ENHANCED HERO SECTION WITH ANIMATIONS
 // =============================================================================
 
-// Floating Particles Animation
+// Floating Particles Animation - Enhanced with depth
 .hero-background-animations
   position: absolute
   inset: 0
@@ -357,30 +357,40 @@ header
       border-radius: 50%
       opacity: 0.6
       animation: float-particle 8s ease-in-out infinite
+      will-change: transform, opacity
       
       &.particle-1
         top: 20%
         left: 10%
         animation-delay: 0s
         animation-duration: 12s
+        filter: blur(0.5px)
       
       &.particle-2
         top: 60%
         left: 80%
         animation-delay: 2s
         animation-duration: 10s
+        width: 6px
+        height: 6px
+        filter: blur(1px)
         
       &.particle-3
         top: 30%
         left: 70%
         animation-delay: 4s
         animation-duration: 14s
+        width: 3px
+        height: 3px
         
       &.particle-4
         top: 80%
         left: 20%
         animation-delay: 6s
         animation-duration: 11s
+        width: 5px
+        height: 5px
+        filter: blur(0.8px)
         
       &.particle-5
         top: 40%
@@ -393,6 +403,8 @@ header
         left: 5%
         animation-delay: 3s
         animation-duration: 9s
+        width: 4px
+        height: 4px
 
   .gradient-orbs
     position: absolute
@@ -404,6 +416,7 @@ header
       filter: blur(60px)
       opacity: 0.3
       animation: orb-float 20s ease-in-out infinite
+      will-change: transform
       
       &.orb-1
         width: 400px
@@ -412,6 +425,7 @@ header
         top: -200px
         right: -200px
         animation-delay: 0s
+        animation-duration: 25s
         
       &.orb-2
         width: 300px
@@ -420,15 +434,17 @@ header
         bottom: -150px
         left: -150px
         animation-delay: 10s
+        animation-duration: 30s
         
       &.orb-3
-        width: 200px
-        height: 200px
+        width: 250px
+        height: 250px
         background: linear-gradient(225deg, rgba(147, 51, 234, 0.3), rgba(79, 209, 199, 0.4))
         top: 50%
         left: 50%
         transform: translate(-50%, -50%)
         animation-delay: 5s
+        animation-duration: 20s
 
   .grid-pattern
     position: absolute
@@ -459,7 +475,7 @@ header
         animation: grid-pulse 10s ease-in-out infinite
         animation-delay: 4s
 
-// Enhanced Badge Animation
+// Enhanced Badge Animation with Glassmorphism
 .hero-badge-container
   position: absolute
   top: 0
@@ -474,21 +490,38 @@ header
     display: flex
     align-items: center
     justify-content: center
-    padding: 20px 0 // Increased padding for better vertical balance
-    background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.15), rgba(var(--accent-primary-rgb), 0.1))
-    border-top: 1px solid rgba(var(--primary-rgb), 0.2)
-    border-bottom: 1px solid rgba(var(--primary-rgb), 0.2)
-    backdrop-filter: blur(12px)
+    padding: 20px 0
+    
+    // Glassmorphism effect
+    background: rgba(var(--accent-primary-rgb), 0.08)
+    backdrop-filter: blur(20px) saturate(180%)
+    -webkit-backdrop-filter: blur(20px) saturate(180%)
+    
+    border-top: 1px solid rgba(var(--accent-primary-rgb), 0.2)
+    border-bottom: 1px solid rgba(var(--accent-primary-rgb), 0.2)
     width: 100%
-    min-height: 80px // Increased for better visual proportions
+    min-height: 80px
+    
+    // Light theme glassmorphism
+    :root:not([data-theme="dark"]) &
+      background: rgba(79, 209, 199, 0.06)
+      border-top: 1px solid rgba(79, 209, 199, 0.15)
+      border-bottom: 1px solid rgba(79, 209, 199, 0.15)
+      box-shadow: 0 4px 24px rgba(79, 209, 199, 0.08)
+    
+    // Dark theme glassmorphism
+    [data-theme="dark"] &
+      background: rgba(var(--accent-primary-rgb), 0.12)
+      border-top: 1px solid rgba(var(--accent-primary-rgb), 0.25)
+      border-bottom: 1px solid rgba(var(--accent-primary-rgb), 0.25)
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2)
     
     .badge-glow
       position: absolute
       inset: -2px
-      background: linear-gradient(45deg, var(--accent-primary), transparent, var(--accent-primary))
-      border-radius: 0 // Remove rounded corners for clean rectangular banner
+      background: linear-gradient(90deg, transparent, rgba(var(--accent-primary-rgb), 0.3), transparent)
       opacity: 0
-      animation: badge-glow 3s ease-in-out infinite
+      animation: badge-glow-sweep 3s ease-in-out infinite
       z-index: -1
       pointer-events: none
 
@@ -496,7 +529,8 @@ header
       font-size: 1.2rem
       margin-right: 8px
       display: inline-flex
-      align-items: center // Ensure icon stays aligned during bounce animation
+      align-items: center
+      filter: drop-shadow(0 2px 4px rgba(var(--accent-primary-rgb), 0.3))
       
     .badge-text
       font-weight: 600
@@ -505,6 +539,7 @@ header
       line-height: 1.3
       text-align: center
       white-space: nowrap
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1)
       
     .badge-shimmer
       position: absolute
@@ -512,9 +547,12 @@ header
       left: -100%
       width: 100%
       height: 100%
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)
-      animation: shimmer 2.5s ease-in-out infinite
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent)
+      animation: shimmer-sweep 3s ease-in-out infinite
       pointer-events: none
+      
+      [data-theme="dark"] &
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent)
 
 // Enhanced Headline Animation
 .hero-headline
@@ -738,26 +776,36 @@ header
     text-transform: uppercase
     letter-spacing: 1px
 
-// Animation Keyframes
+// Animation Keyframes - Enhanced with depth parallax
 @keyframes float-particle
   0%, 100%
-    transform: translateY(0) rotate(0deg)
+    transform: translateY(0) translateX(0) rotate(0deg)
     opacity: 0.6
+  25%
+    transform: translateY(-15px) translateX(5px) rotate(90deg)
+    opacity: 0.8
   50%
-    transform: translateY(-20px) rotate(180deg)
+    transform: translateY(-20px) translateX(-5px) rotate(180deg)
     opacity: 1
+  75%
+    transform: translateY(-10px) translateX(3px) rotate(270deg)
+    opacity: 0.8
 
 @keyframes orb-float
   0%, 100%
-    transform: translateY(0) scale(1)
-  50%
-    transform: translateY(-30px) scale(1.1)
+    transform: translateY(0) translateX(0) scale(1)
+  33%
+    transform: translateY(-30px) translateX(20px) scale(1.05)
+  66%
+    transform: translateY(-15px) translateX(-20px) scale(1.1)
 
 @keyframes grid-pulse
   0%, 100%
     opacity: 0.05
+    transform: scaleY(1)
   50%
     opacity: 0.15
+    transform: scaleY(1.02)
 
 @keyframes badge-glow
   0%, 100%
@@ -765,25 +813,31 @@ header
   50%
     opacity: 0.3
 
+@keyframes badge-glow-sweep
+  0%
+    transform: translateX(-100%)
+    opacity: 0
+  50%
+    opacity: 0.5
+  100%
+    transform: translateX(100%)
+    opacity: 0
+
 @keyframes shimmer
   0%
     left: -100%
   100%
     left: 100%
 
-@keyframes text-reveal
+@keyframes shimmer-sweep
   0%
+    left: -100%
     opacity: 0
-    transform: translateY(20px)
-  100%
+  50%
     opacity: 1
-    transform: translateY(0)
-
-@keyframes underline-expand
-  0%
-    width: 0
   100%
-    width: 120px
+    left: 100%
+    opacity: 0
 
 @keyframes fade-in-up
   0%
@@ -804,6 +858,26 @@ header
     transform: translateY(0) rotate(45deg)
   50%
     transform: translateY(8px) rotate(45deg)
+
+@keyframes pulse-badge
+  0%, 100%
+    box-shadow: 0 0 0 0 rgba(var(--accent-primary-rgb), 0.7)
+  50%
+    box-shadow: 0 0 0 8px rgba(var(--accent-primary-rgb), 0)
+
+@keyframes text-reveal
+  0%
+    opacity: 0
+    transform: translateY(10px)
+  100%
+    opacity: 1
+    transform: translateY(0)
+
+@keyframes underline-expand
+  0%
+    width: 0
+  100%
+    width: 120px
 
 // =============================================================================
 // ENHANCED STYLES GRID SHOWCASE
@@ -873,33 +947,38 @@ header
     margin: 0
     font-weight: 500
 
-// All Styles Grid - Shows all 20+ styles at once
+// All Styles Grid - Masonry-style layout with varied sizes
 .all-styles-grid
   padding: 32px
   display: grid
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))
+  grid-auto-rows: 280px
   gap: 24px
   max-height: none
   
   @media (max-width: 1200px)
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr))
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr))
+    grid-auto-rows: 250px
     gap: 20px
     
   @media (max-width: 768px)
     padding: 24px
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr))
+    grid-auto-rows: 200px
     gap: 16px
     
   @media (max-width: 640px)
     grid-template-columns: repeat(2, 1fr)
+    grid-auto-rows: 180px
     gap: 12px
     
   @media (max-width: 480px)
     grid-template-columns: repeat(2, 1fr)
+    grid-auto-rows: 160px
     gap: 8px
     padding: 16px
 
-// Individual Style Card - Enhanced UX Design
+// Individual Style Card - Enhanced UX Design with Masonry Support
 .style-card
   position: relative
   border-radius: 16px
@@ -909,6 +988,38 @@ header
   border: 2px solid transparent
   box-shadow: 0 8px 32px rgba(var(--primary-rgb), 0.25)
   overflow: hidden
+  
+  // Featured cards - larger grid spans for visual emphasis
+  &.featured
+    grid-column: span 2
+    grid-row: span 2
+    
+    .style-category-badge
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))
+      color: white
+      animation: pulse-badge 2s ease-in-out infinite
+      
+    @media (max-width: 768px)
+      grid-column: span 1
+      grid-row: span 2
+      
+    @media (max-width: 640px)
+      grid-column: span 2
+      grid-row: span 1
+  
+  // Tall cards for varied heights
+  &.tall
+    grid-row: span 2
+    
+    @media (max-width: 640px)
+      grid-row: span 1
+  
+  // Wide cards for variety
+  &.wide
+    grid-column: span 2
+    
+    @media (max-width: 640px)
+      grid-column: span 1
   
   &:hover
     transform: translateY(-6px)
@@ -923,19 +1034,29 @@ header
       
     .style-info-permanent
       background: rgba(var(--primary-rgb), 0.05)
+      
+    .style-category-badge
+      transform: scale(1.05)
+      box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.3)
     
-  // Image Container
+  // Image Container with Enhanced Treatments
   .style-image-container
     position: relative
     aspect-ratio: 4/5
     overflow: hidden
-    border-radius: 12px 12px 0 0
+    border-radius: 16px 16px 0 0
     
     .style-image
       width: 100%
       height: 100%
       object-fit: cover
-      transition: transform 0.4s ease
+      transition: transform 0.4s ease, filter 0.3s ease
+      filter: brightness(0.95) contrast(1.05) saturate(1.1)
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1)
+      
+      // Enhanced filter on hover
+      .style-card:hover &
+        filter: brightness(1) contrast(1.1) saturate(1.15)
       
     // Enhanced Hover Overlay
     .style-hover-overlay
@@ -1002,16 +1123,30 @@ header
       
       .style-category-badge
         display: inline-block
-        padding: 4px 10px
+        padding: 6px 12px
         background: rgba(var(--primary-rgb), 0.15)
+        backdrop-filter: blur(12px) saturate(180%)
+        -webkit-backdrop-filter: blur(12px) saturate(180%)
         color: var(--primary)
-        border-radius: 12px
+        border: 1px solid rgba(var(--primary-rgb), 0.25)
+        border-radius: 16px
         font-size: 0.7rem
         font-weight: 600
         text-transform: uppercase
         letter-spacing: 0.5px
         width: fit-content
         transition: all 0.3s ease
+        box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.15)
+        
+        // Glassmorphism enhancement for light theme
+        :root:not([data-theme="dark"]) &
+          background: rgba(255, 255, 255, 0.85)
+          border: 1px solid rgba(var(--primary-rgb), 0.2)
+          
+        // Dark theme glassmorphism
+        [data-theme="dark"] &
+          background: rgba(var(--primary-rgb), 0.2)
+          border: 1px solid rgba(var(--primary-rgb), 0.35)
         
       .style-title
         font-size: 1rem
@@ -1316,6 +1451,425 @@ header
       pointer-events: auto !important
 
 // =============================================================================
+// HERO GRID LAYOUT - ASYMMETRIC 60/40 SPLIT
+// =============================================================================
+
+.hero-grid-container
+  display: grid
+  grid-template-columns: 1.5fr 1fr
+  gap: 48px
+  max-width: 1400px
+  margin: 0 auto
+  padding: 180px 5% 80px
+  min-height: 90vh
+  align-items: center
+  position: relative
+  z-index: 10
+  
+  @media (max-width: 1024px)
+    grid-template-columns: 1fr
+    gap: 40px
+    padding: 160px 5% 60px
+    min-height: auto
+    
+  @media (max-width: 768px)
+    padding: 140px 4% 40px
+    gap: 32px
+
+// Hero Content (Left Column - 60%)
+.hero-content
+  display: flex
+  flex-direction: column
+  justify-content: center
+  pointer-events: none
+  
+  > *
+    pointer-events: auto
+  
+  @media (max-width: 1024px)
+    text-align: center
+    align-items: center
+    
+  @media (max-width: 768px)
+    text-align: center
+
+// Hero Visual (Right Column - 40%)
+.hero-visual
+  display: flex
+  align-items: center
+  justify-content: center
+  position: relative
+  min-height: 500px
+  
+  @media (max-width: 1024px)
+    min-height: 400px
+    order: -1 // Move visual above content on mobile
+    
+  @media (max-width: 768px)
+    min-height: 300px
+
+.visual-element
+  width: 100%
+  max-width: 500px
+  aspect-ratio: 4/5
+  border-radius: 24px
+  box-shadow: var(--depth-3)
+  transform: perspective(1000px) rotateY(-5deg)
+  transition: transform 0.6s var(--easing-smooth)
+  overflow: hidden
+  
+  &:hover
+    transform: perspective(1000px) rotateY(0deg) scale(1.02)
+    
+  @media (max-width: 1024px)
+    transform: perspective(1000px) rotateY(0deg)
+    max-width: 400px
+    
+  @media (max-width: 768px)
+    max-width: 100%
+    aspect-ratio: 1
+
+// Placeholder for visual anchor (temporary)
+.visual-placeholder
+  width: 100%
+  height: 100%
+  display: flex
+  flex-direction: column
+  align-items: center
+  justify-content: center
+  background: linear-gradient(135deg, rgba(var(--accent-primary-rgb), 0.1), rgba(var(--accent-secondary-rgb), 0.1))
+  border: 2px dashed rgba(var(--accent-primary-rgb), 0.3)
+  border-radius: 24px
+  
+  .placeholder-icon
+    font-size: 4rem
+    margin-bottom: 16px
+    animation: float-gentle 3s ease-in-out infinite
+    
+  .placeholder-text
+    font-size: 1.25rem
+    font-weight: 600
+    color: var(--text-secondary)
+
+// Visual Anchor Card - 3D Transform with Hover
+.visual-anchor-card
+  width: 100%
+  height: 100%
+  position: relative
+  background: var(--card-bg)
+  border-radius: 24px
+  padding: 48px 32px
+  display: flex
+  flex-direction: column
+  align-items: center
+  justify-content: center
+  box-shadow: var(--depth-3)
+  border: 1px solid var(--border-color)
+  overflow: hidden
+  transition: all 0.6s var(--easing-smooth)
+  
+  // Glassmorphism effect
+  backdrop-filter: blur(20px)
+  -webkit-backdrop-filter: blur(20px)
+  
+  // Light theme
+  :root:not([data-theme="dark"]) &
+    background: rgba(255, 255, 255, 0.95)
+    border: 1px solid rgba(0, 0, 0, 0.08)
+  
+  // Dark theme
+  [data-theme="dark"] &
+    background: rgba(var(--primary-rgb), 0.1)
+    border: 1px solid rgba(255, 255, 255, 0.1)
+  
+  &:hover
+    transform: translateY(-8px)
+    box-shadow: var(--depth-4)
+    
+    .card-decoration
+      opacity: 1
+      transform: scale(1.1)
+      
+    .visual-icon
+      transform: scale(1.1) rotate(5deg)
+
+// Decorative Elements
+.card-decoration
+  position: absolute
+  border-radius: 50%
+  opacity: 0.3
+  transition: all 0.6s var(--easing-smooth)
+  pointer-events: none
+  
+  &.card-decoration-1
+    width: 120px
+    height: 120px
+    background: linear-gradient(135deg, var(--accent-primary), transparent)
+    top: -60px
+    right: -60px
+    filter: blur(40px)
+    
+  &.card-decoration-2
+    width: 80px
+    height: 80px
+    background: linear-gradient(225deg, var(--accent-secondary), transparent)
+    bottom: -40px
+    left: -40px
+    filter: blur(30px)
+    
+  &.card-decoration-3
+    width: 60px
+    height: 60px
+    background: linear-gradient(45deg, rgba(147, 51, 234, 0.5), transparent)
+    top: 50%
+    left: 50%
+    transform: translate(-50%, -50%)
+    filter: blur(25px)
+
+// Visual Content
+.visual-content
+  position: relative
+  z-index: 1
+  text-align: center
+  width: 100%
+
+.visual-icon
+  width: 64px
+  height: 64px
+  margin: 0 auto 24px
+  color: var(--accent-primary)
+  transition: all 0.4s var(--easing-smooth)
+  
+  svg
+    width: 100%
+    height: 100%
+    filter: drop-shadow(0 4px 12px rgba(var(--accent-primary-rgb), 0.3))
+
+.visual-title
+  font-size: 1.75rem
+  font-weight: 700
+  color: var(--text-primary)
+  margin-bottom: 12px
+  line-height: 1.2
+
+.visual-description
+  font-size: 1rem
+  color: var(--text-secondary)
+  margin-bottom: 32px
+  line-height: 1.5
+
+// Stats Grid
+.visual-stats
+  display: grid
+  grid-template-columns: repeat(3, 1fr)
+  gap: 16px
+  width: 100%
+  
+  @media (max-width: 768px)
+    gap: 12px
+
+.stat-badge
+  display: flex
+  flex-direction: column
+  align-items: center
+  padding: 16px 12px
+  background: rgba(var(--accent-primary-rgb), 0.1)
+  border: 1px solid rgba(var(--accent-primary-rgb), 0.2)
+  border-radius: 12px
+  transition: all 0.3s var(--easing-smooth)
+  
+  &:hover
+    background: rgba(var(--accent-primary-rgb), 0.15)
+    transform: translateY(-2px)
+  
+  .stat-value
+    font-size: 1.25rem
+    font-weight: 700
+    color: var(--accent-primary)
+    line-height: 1
+    margin-bottom: 4px
+    
+  .stat-label
+    font-size: 0.75rem
+    color: var(--text-tertiary)
+    text-transform: uppercase
+    letter-spacing: 0.5px
+
+// Floating Badge
+.floating-badge
+  position: absolute
+  top: 24px
+  right: 24px
+  display: flex
+  align-items: center
+  gap: 8px
+  padding: 10px 16px
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))
+  color: white
+  border-radius: 20px
+  font-size: 0.875rem
+  font-weight: 600
+  box-shadow: 0 4px 16px rgba(var(--accent-primary-rgb), 0.4)
+  animation: float-gentle 3s ease-in-out infinite
+  z-index: 2
+  
+  .badge-icon
+    font-size: 1rem
+    
+  .badge-text
+    white-space: nowrap
+
+// =============================================================================
+// ENHANCED HERO TYPOGRAPHY WITH HIERARCHY
+// =============================================================================
+
+.hero-headline
+  animation: fade-in-up 1s ease-out 0.2s both
+  margin-bottom: 32px
+  
+  @media (max-width: 1024px)
+    margin-bottom: 28px
+
+// Main Heading - Enhanced Size Hierarchy
+.hero-main-heading
+  font-size: clamp(2.5rem, 6vw, 5rem)
+  font-weight: 800
+  line-height: 1.1
+  letter-spacing: -0.02em
+  
+  @media (max-width: 1024px)
+    font-size: clamp(2.25rem, 5vw, 4rem)
+    text-align: center
+    
+  @media (max-width: 768px)
+    font-size: clamp(2rem, 8vw, 3rem)
+    line-height: 1.15
+  
+  @media (max-width: 480px)
+    font-size: clamp(1.75rem, 9vw, 2.5rem)
+  
+  .headline-primary
+    color: var(--text-primary)
+    display: inline-block
+    animation: text-reveal 1s ease-out 0.5s both
+    font-weight: 800
+    
+  .headline-gradient
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary), var(--primary-hover))
+    background-size: 200% 200%
+    -webkit-background-clip: text
+    background-clip: text
+    -webkit-text-fill-color: transparent
+    animation: gradient-shift 3s ease-in-out infinite, text-reveal 1s ease-out 0.7s both
+    display: inline-block
+    margin-right: 0.5rem
+    font-weight: 800
+    position: relative
+    
+    // Add subtle glow effect
+    &::after
+      content: attr(data-text)
+      position: absolute
+      inset: 0
+      background: inherit
+      -webkit-background-clip: text
+      background-clip: text
+      filter: blur(20px)
+      opacity: 0.5
+      z-index: -1
+      
+  .headline-underline
+    width: 0
+    height: 4px
+    background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))
+    margin: 20px 0 0
+    border-radius: 2px
+    animation: underline-expand 1s ease-out 1s both
+    
+    @media (max-width: 1024px)
+      margin: 20px auto 0
+
+// Subheading - Enhanced Typography
+.hero-subheading
+  font-size: clamp(1.125rem, 2vw, 1.5rem)
+  line-height: 1.6
+  color: var(--text-secondary)
+  font-weight: 400
+  max-width: 600px
+  
+  @media (max-width: 1024px)
+    max-width: 100%
+    text-align: center
+    
+  @media (max-width: 768px)
+    font-size: clamp(1rem, 4vw, 1.25rem)
+    line-height: 1.5
+  
+  .text-emphasis
+    color: var(--accent-primary)
+    font-weight: 600
+    position: relative
+    
+    // Subtle underline effect
+    &::after
+      content: ''
+      position: absolute
+      bottom: -2px
+      left: 0
+      right: 0
+      height: 2px
+      background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))
+      opacity: 0.3
+      border-radius: 1px
+
+.hero-subtext
+  animation: fade-in-up 1s ease-out 0.4s both
+  margin-bottom: 48px
+  
+  @media (max-width: 1024px)
+    margin-bottom: 40px
+  
+  .subtext-highlight
+    width: 60px
+    height: 2px
+    background: var(--accent-primary)
+    margin: 24px 0 0
+    border-radius: 1px
+    opacity: 0
+    animation: fade-in 0.5s ease-out 1.2s both
+    
+    @media (max-width: 1024px)
+      margin: 24px auto 0
+
+.hero-actions
+  animation: fade-in-up 1s ease-out 0.6s both
+  margin-bottom: 48px
+  
+  @media (max-width: 1024px)
+    margin-bottom: 40px
+    
+    .flex
+      justify-content: center
+
+// Text Reveal Animation
+@keyframes text-reveal
+  0%
+    opacity: 0
+    transform: translateY(20px)
+  100%
+    opacity: 1
+    transform: translateY(0)
+
+@keyframes underline-expand
+  0%
+    width: 0
+  100%
+    width: 120px
+    
+    @media (max-width: 768px)
+      width: 80px
+
+// =============================================================================
 // CARD THEMING & ENHANCEMENTS
 // =============================================================================
 
@@ -1356,52 +1910,154 @@ header
     color: var(--text-secondary)
     line-height: 1.6
 
-// Pricing cards with enhanced styling
+// Pricing cards with enhanced styling - Glassmorphism & Depth Effects
 .pricing-card
   @include shared.card-base
-  background: var(--card-bg)
-  border: 1px solid var(--border-color)
+  position: relative
   padding: 32px 24px
   text-align: center
-  transition: all 0.3s ease
+  border-radius: 24px
+  overflow: visible
+  
+  // Apply glassmorphism effect
+  background: var(--glass-bg)
+  backdrop-filter: blur(20px) saturate(180%)
+  -webkit-backdrop-filter: blur(20px) saturate(180%)
+  border: 1px solid var(--glass-border)
+  box-shadow: var(--glass-shadow)
+  
+  // Smooth transitions for all effects
+  transition: all var(--timing-normal) var(--easing-smooth)
+  
+  // Fallback for browsers without backdrop-filter support
+  @supports not (backdrop-filter: blur(10px))
+    background: rgba(255, 255, 255, 0.95)
+    
+    [data-theme="dark"] &
+      background: rgba(44, 62, 80, 0.95)
   
   // Professional light theme styling
   :root:not([data-theme="dark"]) &
-    background: #ffffff
-    border: 1px solid rgba(0, 0, 0, 0.08)
-    box-shadow: var(--shadow-soft)
-  
-  &.recommended
-    border: 2px solid var(--accent-primary)
-    box-shadow: var(--shadow-lg)
-    transform: translateY(-8px)
+    background: rgba(255, 255, 255, 0.1)
+    border: 1px solid rgba(255, 255, 255, 0.2)
     
-    // Subtle glow effect
+    @supports not (backdrop-filter: blur(10px))
+      background: rgba(255, 255, 255, 0.95)
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08)
+  
+  // 3D hover effect - lift and scale
+  &:hover
+    transform: translateY(-12px) scale(1.02)
+    box-shadow: var(--depth-3)
+    border-color: rgba(var(--accent-primary-rgb), 0.5)
+    
+    // Enhance glow on hover
+    &::before
+      opacity: 0.6
+  
+  // Recommended card - elevated by default
+  &.recommended
+    transform: translateY(-16px) scale(1.05)
+    border: 2px solid var(--accent-primary)
+    box-shadow: var(--depth-2)
+    z-index: 10
+    
+    // Animated gradient border glow
     &::before
       content: ''
       position: absolute
       inset: -2px
-      background: linear-gradient(45deg, var(--accent-primary), var(--accent-secondary))
-      border-radius: inherit
+      background: var(--accent-gradient-1)
+      border-radius: 26px
       z-index: -1
-      opacity: 0.1
-      filter: blur(20px)
+      opacity: 0.3
+      filter: blur(12px)
+      transition: opacity var(--timing-normal) var(--easing-smooth)
+    
+    // Enhanced hover for recommended card
+    &:hover
+      transform: translateY(-20px) scale(1.06)
+      box-shadow: var(--depth-4)
+      
+      &::before
+        opacity: 0.8
 
 // =============================================================================
-// BUTTON THEMING
+// BUTTON THEMING - Enhanced CTA Buttons with Layered Design
 // =============================================================================
 
-// Primary buttons using shared mixin
+// Primary buttons with enhanced effects
 .btn-primary, .bg-primary-600
   @include shared.btn-primary
-  &
-    border-radius: 8px
+  position: relative
+  padding: 18px 36px
+  border-radius: 12px
+  font-weight: 600
+  font-size: 1.125rem
+  overflow: hidden
+  cursor: pointer
+  border: none
+  background: var(--accent-gradient-1)
+  color: white
+  transition: all var(--timing-normal) var(--easing-smooth)
+  
+  // Glow effect layer (hidden by default)
+  &::before
+    content: ''
+    position: absolute
+    inset: -4px
+    background: var(--accent-gradient-1)
+    border-radius: 16px
+    filter: blur(12px)
+    opacity: 0
+    z-index: -1
+    transition: opacity var(--timing-normal) var(--easing-smooth)
+  
+  // Ripple effect layer
+  &::after
+    content: ''
+    position: absolute
+    top: 50%
+    left: 50%
+    width: 0
+    height: 0
+    border-radius: 50%
+    background: rgba(255, 255, 255, 0.3)
+    transform: translate(-50%, -50%)
+    transition: width 0.6s, height 0.6s
+  
+  // Hover state - lift and glow
+  &:hover
+    transform: translateY(-2px) scale(1.02)
+    box-shadow: var(--depth-2)
+    
+    &::before
+      opacity: 1
+  
+  // Active/click state - ripple effect
+  &:active::after
+    width: 300px
+    height: 300px
+    transition: width 0s, height 0s
+  
+  // Icon animation on hover (if icon present)
+  svg
+    transition: transform var(--timing-normal) var(--easing-smooth)
+  
+  &:hover svg
+    transform: translateX(4px)
 
-// Secondary buttons
+// Secondary buttons with subtle effects
 .btn-secondary, .bg-white.text-gray-700
   @include shared.btn-secondary
-  &
-    border-radius: 8px
+  position: relative
+  padding: 18px 36px
+  border-radius: 12px
+  font-weight: 600
+  font-size: 1.125rem
+  cursor: pointer
+  overflow: hidden
+  transition: all var(--timing-normal) var(--easing-smooth)
   
   // Professional light theme secondary buttons
   :root:not([data-theme="dark"]) &
@@ -1414,14 +2070,14 @@ header
       transform: translateY(-1px)
       border-color: rgba(0, 0, 0, 0.16)
 
-// Modern consistent button styling - no more sharp ovals
+// Modern consistent button styling with enhanced border radius
 .landing-page
   button,
   .btn-primary,
   .btn-secondary,
   .hero-section button,
   .pricing-card button
-    border-radius: 8px
+    border-radius: 12px !important
 
 // =============================================================================
 // SECTION THEMING
@@ -1439,6 +2095,189 @@ header
   // Dark theme features section
   [data-theme="dark"] &
     background: var(--bg-secondary)
+
+// =============================================================================
+// FEATURES SECTION - BENTO GRID LAYOUT
+// =============================================================================
+
+// Bento Grid Container
+.features-bento-grid
+  @include shared.bento-grid(4, 24px)
+  max-width: 1400px
+  margin: 0 auto
+
+// Feature Card Base Styling with Glassmorphism
+.feature-card
+  @include shared.bento-item-base
+  @include shared.glass-card
+  position: relative
+  cursor: default
+  
+  // Decorative background element
+  .feature-decoration
+    position: absolute
+    top: -20px
+    right: -20px
+    width: 100px
+    height: 100px
+    background: var(--accent-gradient-1)
+    border-radius: 50%
+    opacity: 0.05
+    filter: blur(40px)
+    pointer-events: none
+    transition: opacity var(--timing-normal) var(--easing-smooth)
+  
+  // Icon Container with Gradient Background
+  .feature-icon-container
+    margin-bottom: 24px
+    
+    .feature-icon
+      font-size: 3rem
+      width: 80px
+      height: 80px
+      display: flex
+      align-items: center
+      justify-content: center
+      background: var(--accent-gradient-1)
+      border-radius: 20px
+      box-shadow: var(--depth-1)
+      transition: all var(--timing-normal) var(--easing-smooth)
+      
+      @media (max-width: 768px)
+        font-size: 2.5rem
+        width: 64px
+        height: 64px
+      
+      @media (max-width: 480px)
+        font-size: 2rem
+        width: 56px
+        height: 56px
+  
+  // Feature Content
+  .feature-content
+    flex: 1
+    
+    .feature-title
+      font-size: 1.5rem
+      font-weight: 700
+      color: var(--text-primary)
+      margin-bottom: 12px
+      line-height: 1.3
+      
+      @media (max-width: 768px)
+        font-size: 1.25rem
+      
+      @media (max-width: 480px)
+        font-size: 1.125rem
+    
+    .feature-description
+      font-size: 1rem
+      color: var(--text-secondary)
+      line-height: 1.6
+      
+      @media (max-width: 768px)
+        font-size: 0.9375rem
+      
+      @media (max-width: 480px)
+        font-size: 0.875rem
+  
+  // Hover Effects
+  &:hover
+    transform: translateY(-8px)
+    box-shadow: var(--depth-3)
+    border-color: rgba(var(--accent-primary-rgb), 0.5)
+    
+    .feature-decoration
+      opacity: 0.1
+    
+    .feature-icon-container .feature-icon
+      transform: scale(1.1) rotate(5deg)
+      box-shadow: var(--depth-2)
+
+// Bento Grid Size Variants
+.feature-card.feature-large
+  @include shared.bento-item-2x2
+  
+  .feature-icon-container .feature-icon
+    font-size: 4rem
+    width: 100px
+    height: 100px
+    
+    @media (max-width: 768px)
+      font-size: 3rem
+      width: 80px
+      height: 80px
+    
+    @media (max-width: 480px)
+      font-size: 2.5rem
+      width: 64px
+      height: 64px
+  
+  .feature-content
+    .feature-title
+      font-size: 2rem
+      
+      @media (max-width: 768px)
+        font-size: 1.5rem
+      
+      @media (max-width: 480px)
+        font-size: 1.25rem
+    
+    .feature-description
+      font-size: 1.125rem
+      
+      @media (max-width: 768px)
+        font-size: 1rem
+      
+      @media (max-width: 480px)
+        font-size: 0.9375rem
+
+.feature-card.feature-wide
+  @include shared.bento-item-2x1
+  
+  .feature-icon-container .feature-icon
+    font-size: 3.5rem
+    width: 90px
+    height: 90px
+    
+    @media (max-width: 768px)
+      font-size: 2.75rem
+      width: 72px
+      height: 72px
+    
+    @media (max-width: 480px)
+      font-size: 2.25rem
+      width: 60px
+      height: 60px
+  
+  .feature-content
+    .feature-title
+      font-size: 1.75rem
+      
+      @media (max-width: 768px)
+        font-size: 1.375rem
+      
+      @media (max-width: 480px)
+        font-size: 1.125rem
+
+.feature-card.feature-tall
+  @include shared.bento-item-1x2
+
+// Dark Theme Adjustments
+[data-theme="dark"]
+  .feature-card
+    background: rgba(var(--surface-bg), 0.6)
+    border-color: rgba(255, 255, 255, 0.15)
+    
+    &:hover
+      background: rgba(var(--surface-bg), 0.8)
+      border-color: rgba(var(--accent-primary-rgb), 0.6)
+    
+    .feature-decoration
+      opacity: 0.08
+      
+      &:hover
+        opacity: 0.15
 
 // Examples section with neutral medium gray background
 .examples-section
@@ -1687,52 +2526,139 @@ header
     background: var(--bg-tertiary)
     color: var(--text-secondary)
 
-// Testimonials section
+// Testimonials section - Asymmetric Layout with Glassmorphism
 .testimonial-card
   @include shared.card-base
-  @include shared.card-hover
-  background: var(--card-bg)
-  border: 1px solid var(--border-color)
+  position: relative
+  border-radius: 20px
+  overflow: hidden
+  
+  // Apply glassmorphism effect
+  background: var(--glass-bg)
+  backdrop-filter: blur(20px) saturate(180%)
+  -webkit-backdrop-filter: blur(20px) saturate(180%)
+  border: 1px solid var(--glass-border)
+  box-shadow: var(--glass-shadow)
+  
+  // Smooth transitions
+  transition: all var(--timing-normal) var(--easing-smooth)
+  
+  // Fallback for browsers without backdrop-filter support
+  @supports not (backdrop-filter: blur(10px))
+    background: rgba(255, 255, 255, 0.95)
+    
+    [data-theme="dark"] &
+      background: rgba(44, 62, 80, 0.95)
   
   // Professional light theme styling
   :root:not([data-theme="dark"]) &
-    background: #ffffff
-    border: 1px solid rgba(0, 0, 0, 0.08)
-    box-shadow: var(--shadow-soft)
+    background: rgba(255, 255, 255, 0.1)
+    border: 1px solid rgba(255, 255, 255, 0.2)
     
-    &:hover
-      box-shadow: var(--shadow-elegant)
-      transform: translateY(-2px)
+    @supports not (backdrop-filter: blur(10px))
+      background: rgba(255, 255, 255, 0.95)
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08)
+  
+  // Hover effect - lift and enhance
+  &:hover
+    transform: translateY(-4px)
+    box-shadow: var(--depth-2)
+    border-color: rgba(var(--accent-primary-rgb), 0.3)
+
+// Asymmetric staggered layout for testimonials grid
+#testimonials .grid
+  display: grid
+  grid-template-columns: repeat(3, 1fr)
+  gap: 24px
+  
+  // Stagger cards vertically for asymmetric effect
+  .testimonial-card
+    &:nth-child(1)
+      margin-top: 0
+    
+    &:nth-child(2)
+      margin-top: 40px
+    
+    &:nth-child(3)
+      margin-top: 20px
+  
+  // Responsive adjustments
+  @media (max-width: 1024px)
+    grid-template-columns: repeat(2, 1fr)
+    
+    .testimonial-card
+      &:nth-child(2)
+        margin-top: 30px
+      
+      &:nth-child(3)
+        margin-top: 0
+  
+  @media (max-width: 768px)
+    grid-template-columns: 1fr
+    
+    .testimonial-card
+      margin-top: 0 !important
 
 .testimonial-avatar
+  position: relative
   width: 72px
   height: 72px
-  border-radius: 18px
+  border-radius: 50%
   overflow: hidden
   flex-shrink: 0
   background: var(--surface-secondary)
-  border: 1px solid var(--border-color)
-  box-shadow: var(--shadow-soft)
-
+  
+  // Gradient border effect using pseudo-element
+  &::before
+    content: ''
+    position: absolute
+    inset: -3px
+    background: var(--accent-gradient-1)
+    border-radius: 50%
+    z-index: -1
+    opacity: 0.8
+  
+  // Smooth transitions
+  transition: transform var(--timing-normal) var(--easing-smooth)
+  
+  // Hover scale effect
+  &:hover
+    transform: scale(1.1)
+  
   img
     width: 100%
     height: 100%
     object-fit: cover
     display: block
+    border-radius: 50%
+    position: relative
+    z-index: 1
 
 .testimonial-verified
   display: inline-flex
   align-items: center
   gap: 8px
+  padding: 6px 12px
+  border-radius: 20px
   color: var(--text-tertiary)
   font-size: 0.75rem
   font-weight: 600
   line-height: 1.2
   text-transform: uppercase
   letter-spacing: 0.08em
+  
+  // Glassmorphism effect for badge
+  background: var(--glass-bg-light)
+  backdrop-filter: blur(12px)
+  -webkit-backdrop-filter: blur(12px)
+  border: 1px solid var(--glass-border-light)
+  
+  // Subtle pulse animation
+  animation: pulse-glow 3s ease-in-out infinite
 
 .testimonial-verified-icon
   color: var(--accent-success)
+  animation: pulse-glow 3s ease-in-out infinite
 
 .testimonial-meta
   min-width: 0
@@ -1741,13 +2667,11 @@ header
   .testimonial-avatar
     width: 68px
     height: 68px
-    border-radius: 17px
 
 @media (max-width: 640px)
   .testimonial-avatar
     width: 64px
     height: 64px
-    border-radius: 16px
 
 // =============================================================================
 // GLOBAL COLOR OVERRIDES

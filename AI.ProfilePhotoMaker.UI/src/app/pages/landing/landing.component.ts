@@ -51,6 +51,9 @@ interface StyledPhoto {
   style: string;
   category: string;
   description: string;
+  featured?: boolean;
+  tall?: boolean;
+  wide?: boolean;
 }
 
 @Component({
@@ -601,12 +604,18 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   createStyledPhotosFromStyles(): void {
     // Create styled photos array from actual styles
-    this.styledPhotos = this.availableStyles.slice(0, 20).map(style => ({
+    this.styledPhotos = this.availableStyles.slice(0, 20).map((style, index) => ({
       id: style.id,
       imageUrl: this._stylePreviewService.getCachedUrl(style.name),
       style: style.name,
       category: this.getCategoryFromStyleName(style.name),
       description: style.description,
+      // Assign featured status to first 3 styles for visual emphasis
+      featured: index < 3,
+      // Create varied heights - every 5th and 6th card is tall
+      tall: index % 7 === 4 || index % 7 === 5,
+      // Create varied widths - every 8th card is wide
+      wide: index % 8 === 7,
     }));
 
     // Subscribe to preview URL updates
@@ -732,6 +741,12 @@ export class LandingComponent implements OnInit, OnDestroy {
       style: style.name,
       category: style.category,
       description: style.description,
+      // Assign featured status to first 3 styles for visual emphasis
+      featured: index < 3,
+      // Create varied heights - every 5th and 6th card is tall
+      tall: index % 7 === 4 || index % 7 === 5,
+      // Create varied widths - every 8th card is wide
+      wide: index % 8 === 7,
     }));
   }
 

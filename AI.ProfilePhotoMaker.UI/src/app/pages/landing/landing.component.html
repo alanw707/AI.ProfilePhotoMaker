@@ -105,12 +105,13 @@
       </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8 pt-52 pb-16 relative z-10">
-      <div class="text-center max-w-6xl mx-auto">
+    <!-- Main Content - Asymmetric Grid Layout (60/40 split) -->
+    <div class="hero-grid-container">
+      <!-- Left Column: Content (60%) -->
+      <div class="hero-content">
         <!-- Enhanced Headline with Typing Animation -->
-        <div class="hero-headline mb-8 md:mb-10 pt-6">
-          <h1 class="text-4xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-6xl font-bold leading-[1.0] tracking-tight">
+        <div class="hero-headline mb-8 md:mb-10">
+          <h1 class="hero-main-heading">
             <span class="headline-primary">The Most Realistic</span>
             <br />
             <span class="headline-gradient">AI Generated</span>
@@ -120,18 +121,18 @@
         </div>
 
         <!-- Enhanced Subheadline -->
-        <div class="hero-subtext mb-14">
-          <p class="text-lg sm:text-xl md:text-2xl lg:text-3xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
+        <div class="hero-subtext mb-12">
+          <p class="hero-subheading">
             Transform your casual selfies into
-            <strong class="text-primary-600">stunning professional headshots</strong>
+            <strong class="text-emphasis">stunning professional headshots</strong>
             . Perfect for LinkedIn, resumes, dating apps, and social media.
           </p>
           <div class="subtext-highlight"></div>
         </div>
 
         <!-- Enhanced CTA Buttons -->
-        <div class="hero-actions mb-16">
-          <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
+        <div class="hero-actions mb-12">
+          <div class="flex flex-col sm:flex-row gap-6 items-start">
             <button (click)="getStarted()" class="cta-primary">
               <div class="btn-background"></div>
               <div class="btn-content">
@@ -201,6 +202,53 @@
           </div>
         </div>
       </div>
+
+      <!-- Right Column: Visual Anchor (40%) -->
+      <div class="hero-visual">
+        <div class="visual-element">
+          <!-- Visual Anchor: Floating Card with Example -->
+          <div class="visual-anchor-card">
+            <!-- Decorative Elements -->
+            <div class="card-decoration card-decoration-1"></div>
+            <div class="card-decoration card-decoration-2"></div>
+            <div class="card-decoration card-decoration-3"></div>
+
+            <!-- Main Content -->
+            <div class="visual-content">
+              <div class="visual-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                  <path d="M2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                </svg>
+              </div>
+              <h3 class="visual-title">Professional Results</h3>
+              <p class="visual-description">Transform your photos with AI-powered enhancement</p>
+
+              <!-- Stats Grid -->
+              <div class="visual-stats">
+                <div class="stat-badge">
+                  <span class="stat-value">20+</span>
+                  <span class="stat-label">Styles</span>
+                </div>
+                <div class="stat-badge">
+                  <span class="stat-value">HD</span>
+                  <span class="stat-label">Quality</span>
+                </div>
+                <div class="stat-badge">
+                  <span class="stat-value">Fast</span>
+                  <span class="stat-label">Results</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Floating Badge -->
+            <div class="floating-badge">
+              <span class="badge-icon">✨</span>
+              <span class="badge-text">AI Powered</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Scroll Indicator -->
@@ -210,10 +258,10 @@
     </div>
   </section>
 
-  <!-- Features Section -->
+  <!-- Features Section - Bento Grid Layout -->
   <section *ngIf="!showNotFound" id="features" class="features-section py-16 md:py-24">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="text-center mb-12 md:mb-16">
+      <div class="text-center mb-12 md:mb-16 animate-on-scroll">
         <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
           Why Choose AI Profile Photo Maker?
         </h2>
@@ -222,11 +270,78 @@
         </p>
       </div>
 
-      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-        <div *ngFor="let feature of features" class="feature-card">
-          <div class="text-4xl mb-4">{{ feature.icon }}</div>
-          <h3 class="text-xl font-semibold mb-3">{{ feature.title }}</h3>
-          <p>{{ feature.description }}</p>
+      <!-- Bento Grid with Varied Sizes -->
+      <div class="features-bento-grid">
+        <!-- AI-Powered Enhancement - Large Feature (2x2) -->
+        <div class="feature-card feature-large animate-on-scroll delay-1">
+          <div class="feature-icon-container">
+            <div class="feature-icon">{{ features[0].icon }}</div>
+          </div>
+          <div class="feature-content">
+            <h3 class="feature-title">{{ features[0].title }}</h3>
+            <p class="feature-description">{{ features[0].description }}</p>
+          </div>
+          <div class="feature-decoration"></div>
+        </div>
+
+        <!-- Multiple Style Options - Wide Feature (2x1) -->
+        <div class="feature-card feature-wide animate-on-scroll delay-2">
+          <div class="feature-icon-container">
+            <div class="feature-icon">{{ features[1].icon }}</div>
+          </div>
+          <div class="feature-content">
+            <h3 class="feature-title">{{ features[1].title }}</h3>
+            <p class="feature-description">{{ features[1].description }}</p>
+          </div>
+          <div class="feature-decoration"></div>
+        </div>
+
+        <!-- Instant Results - Standard (1x1) -->
+        <div class="feature-card animate-on-scroll delay-3">
+          <div class="feature-icon-container">
+            <div class="feature-icon">{{ features[2].icon }}</div>
+          </div>
+          <div class="feature-content">
+            <h3 class="feature-title">{{ features[2].title }}</h3>
+            <p class="feature-description">{{ features[2].description }}</p>
+          </div>
+          <div class="feature-decoration"></div>
+        </div>
+
+        <!-- Privacy First - Standard (1x1) -->
+        <div class="feature-card">
+          <div class="feature-icon-container">
+            <div class="feature-icon">{{ features[3].icon }}</div>
+          </div>
+          <div class="feature-content">
+            <h3 class="feature-title">{{ features[3].title }}</h3>
+            <p class="feature-description">{{ features[3].description }}</p>
+          </div>
+          <div class="feature-decoration"></div>
+        </div>
+
+        <!-- Works Everywhere - Standard (1x1) -->
+        <div class="feature-card">
+          <div class="feature-icon-container">
+            <div class="feature-icon">{{ features[4].icon }}</div>
+          </div>
+          <div class="feature-content">
+            <h3 class="feature-title">{{ features[4].title }}</h3>
+            <p class="feature-description">{{ features[4].description }}</p>
+          </div>
+          <div class="feature-decoration"></div>
+        </div>
+
+        <!-- HD Quality - Standard (1x1) -->
+        <div class="feature-card">
+          <div class="feature-icon-container">
+            <div class="feature-icon">{{ features[5].icon }}</div>
+          </div>
+          <div class="feature-content">
+            <h3 class="feature-title">{{ features[5].title }}</h3>
+            <p class="feature-description">{{ features[5].description }}</p>
+          </div>
+          <div class="feature-decoration"></div>
         </div>
       </div>
     </div>
@@ -235,7 +350,7 @@
   <!-- Styled Photos Showcase Section -->
   <section *ngIf="!showNotFound" id="examples" class="examples-section py-16 md:py-24">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="text-center mb-12 md:mb-16">
+      <div class="text-center mb-12 md:mb-16 animate-on-scroll">
         <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Explore Our Professional Styles</h2>
         <p class="text-xl text-gray-600 max-w-3xl mx-auto">
           Choose from 20+ AI-powered professional photo styles designed for every industry and personality
@@ -259,7 +374,16 @@
         <!-- Styles Grid - All 20+ styles visible -->
         <div class="all-styles-grid" *ngIf="!isLoadingStyles">
           <div
-            class="style-card"
+            class="style-card animate-on-scroll"
+            [class.featured]="photo.featured"
+            [class.tall]="photo.tall"
+            [class.wide]="photo.wide"
+            [class.delay-1]="i % 6 === 0"
+            [class.delay-2]="i % 6 === 1"
+            [class.delay-3]="i % 6 === 2"
+            [class.delay-4]="i % 6 === 3"
+            [class.delay-5]="i % 6 === 4"
+            [class.delay-6]="i % 6 === 5"
             *ngFor="let photo of styledPhotos; let i = index"
             (click)="onStyleCardClick(photo, i)"
             (keydown.enter)="onStyleCardClick(photo, i)"
@@ -329,7 +453,7 @@
   <!-- Pricing Section -->
   <section *ngIf="!showNotFound" id="pricing" class="pricing-section py-16 md:py-24">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="text-center mb-12 md:mb-16">
+      <div class="text-center mb-12 md:mb-16 animate-on-scroll">
         <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
         <p class="text-xl text-gray-600 max-w-3xl mx-auto">
           Choose the credit package that fits your needs. One-time purchase, no hidden fees.
@@ -337,7 +461,13 @@
       </div>
 
       <div id="pricing-cards" class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-        <div *ngFor="let plan of plans" class="pricing-card relative" [class.recommended]="plan.recommended">
+        <div
+          *ngFor="let plan of plans; let i = index"
+          class="pricing-card relative animate-on-scroll"
+          [class.recommended]="plan.recommended"
+          [class.delay-1]="i === 0"
+          [class.delay-2]="i === 1"
+          [class.delay-3]="i === 2">
           <!-- Recommended badge -->
           <div *ngIf="plan.recommended" class="absolute -top-5 left-1/2 transform -translate-x-1/2">
             <span
@@ -389,7 +519,7 @@
   <!-- Testimonials Section -->
   <section *ngIf="!showNotFound" id="testimonials" class="testimonials-section py-16 md:py-24">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="text-center mb-12 md:mb-16">
+      <div class="text-center mb-12 md:mb-16 animate-on-scroll">
         <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Built for LinkedIn-first profiles</h2>
         <p class="text-xl text-gray-600 max-w-3xl mx-auto">
           One credit balance powers enhancements, training, and generation, with weekly top-ups to 5 when below
@@ -397,7 +527,12 @@
       </div>
 
       <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-        <div *ngFor="let testimonial of testimonials" class="testimonial-card p-8">
+        <div
+          *ngFor="let testimonial of testimonials; let i = index"
+          class="testimonial-card p-8 animate-on-scroll"
+          [class.delay-1]="i === 0"
+          [class.delay-2]="i === 1"
+          [class.delay-3]="i === 2">
           <div class="flex items-center mb-4">
             <div class="testimonial-avatar mr-4">
               <img

@@ -1,0 +1,33 @@
+---
+inclusion: always
+---
+# Security, Configuration, and Secrets Handling
+
+Use environment variables, .NET user-secrets, or Azure Key Vault for sensitive config. Never commit secrets to source.
+
+## Configuration Sources
+- API config files: [AI.ProfilePhotoMaker.API/appsettings*.json](mdc:AI.ProfilePhotoMaker.API/appsettings.json)
+- Environment loader: [Program.cs → LoadEnvironmentVariables](mdc:AI.ProfilePhotoMaker.API/Program.cs)
+- Validation (fails fast): [Configuration/EnvironmentConfiguration.cs](mdc:AI.ProfilePhotoMaker.API/Configuration/EnvironmentConfiguration.cs)
+
+Required (per environment validation):
+- `MSSQL_SA_PASSWORD` or `ConnectionStrings__DefaultConnection`
+- `JWT_SECRET`
+- `REPLICATE_API_TOKEN` and `REPLICATE_WEBHOOK_SECRET`
+
+Optional (warn-only):
+- Stripe keys, Google OAuth, Azure Storage
+
+## Development Settings
+- Keep placeholders in `appsettings.Development.json`. Supply real values via user-secrets or `.env` (gitignored).
+- API runs on `http://0.0.0.0:5032` (dev profile). Angular dev server proxies `/api` to 5032.
+
+## Secret Scanning & Hygiene
+- No hardcoded keys in UI or API. Move any literals to env-driven config.
+- Stripe publishable key must not be hardcoded in UI services; obtain from config endpoint or build env.
+
+## Webhook Security
+- Replicate webhooks must pass signature validation: [Filters/ReplicateSignatureValidationAttribute.cs](mdc:AI.ProfilePhotoMaker.API/Filters/ReplicateSignatureValidationAttribute.cs)
+
+## Health/Readiness
+- Health endpoints: [Controllers/HealthController.cs](mdc:AI.ProfilePhotoMaker.API/Controllers/HealthController.cs)
