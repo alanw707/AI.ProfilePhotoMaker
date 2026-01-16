@@ -1142,6 +1142,84 @@ export const seoPages: Record<string, SeoPageContent> = {
       href: '/pricing',
     },
   },
+  pricing: {
+    slug: 'pricing',
+    title: 'AI Headshot Pricing Plans - AI Profile Photo Maker',
+    description:
+      'Compare AI headshot pricing plans. Choose the best package for LinkedIn-ready photos, custom AI training, and high-quality professional headshots.',
+    keywords:
+      'AI headshot pricing, AI headshot generator cost, LinkedIn headshot pricing, professional headshot plans, AI profile photo pricing',
+    h1: 'AI Headshot Pricing Plans',
+    hero: {
+      eyebrow: 'Pricing',
+      headline: 'AI Headshot Pricing Plans',
+      subhead:
+        'Create stunning, personalized profile photos with our advanced AI technology. Train your own custom model for unlimited professional results.',
+      ctaLabel: 'Get started',
+      ctaHref: '/auth/register',
+      secondaryCtaLabel: 'See examples',
+      secondaryCtaHref: '/examples',
+    },
+    highlights: [
+      { value: '$9', label: 'Starting price' },
+      { value: 'Minutes', label: 'Delivery time' },
+      { value: '14-day', label: 'Satisfaction guarantee' },
+    ],
+    sections: [
+      {
+        type: 'cards',
+        title: 'What you get',
+        items: [
+          {
+            title: 'Custom AI Training',
+            description:
+              'Train a personalized AI model with your photos for authentic, professional results.',
+          },
+          {
+            title: 'Multiple Styles',
+            description:
+              'Generate photos in various professional styles - corporate, creative, casual, and more.',
+          },
+          {
+            title: 'High Quality',
+            description:
+              'Professional-grade images perfect for LinkedIn, resumes, and business profiles.',
+          },
+        ],
+      },
+      {
+        type: 'faq',
+        title: 'Pricing FAQ',
+        items: [
+          {
+            question: 'What payment methods do you accept?',
+            answer: 'We accept all major credit cards through our secure Stripe payment system.',
+          },
+          {
+            question: 'Is there a refund policy?',
+            answer:
+              'Yes, we offer a 14-day satisfaction guarantee. See our refund policy for details.',
+          },
+          {
+            question: 'Can I upgrade my package later?',
+            answer: 'Yes, you can purchase additional credits anytime from your dashboard.',
+          },
+        ],
+      },
+    ],
+    relatedLinks: [
+      { label: 'How it works', href: '/how-it-works' },
+      { label: 'Examples', href: '/examples' },
+      { label: 'AI headshot generator', href: '/ai-headshot-generator' },
+      { label: 'Refund policy', href: '/legal/refund-policy' },
+    ],
+    cta: {
+      title: 'Ready to get professional headshots?',
+      description: 'Choose a plan and get your AI-generated headshots in minutes.',
+      label: 'Get started',
+      href: '/auth/register',
+    },
+  },
   help: {
     slug: 'help',
     title: 'Help and FAQ | AI Profile Photo Maker',
