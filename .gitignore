@@ -107,6 +107,7 @@ package-lock.json
 
 # Claude Code workspace files
 .claude/
+.opencode/
 
 # Temporary downloads and artifacts
 .downloads/
