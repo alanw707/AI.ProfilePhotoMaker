@@ -3,11 +3,11 @@ title: 'Landing Page Image-Led Redesign'
 slug: 'landing-page-image-led-redesign'
 created: '2026-01-20T05:18:11-08:00'
 status: 'in-progress'
-stepsCompleted: [1]
-tech_stack: []
-files_to_modify: []
-code_patterns: []
-test_patterns: []
+stepsCompleted: [1, 2]
+tech_stack: ['Angular (standalone components)', 'TypeScript', 'Sass', 'Tailwind utilities', 'Playwright (UI tests)']
+files_to_modify: ['AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.html', 'AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.sass', 'AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.ts', 'AI.ProfilePhotoMaker.UI/src/app/shared/styles/_redesign-system.sass', 'AI.ProfilePhotoMaker.UI/src/assets/marketing/before-after/*']
+code_patterns: ['Standalone Angular components with inline data arrays', 'Shared marketing header/footer components', 'Shared design system mixins via @use shared styles index', 'Image-heavy marketing layouts with responsive grids']
+test_patterns: ['Playwright UI tests in AI.ProfilePhotoMaker.UI/tests (SEO metadata smoke)']
 ---
 
 # Tech-Spec: Landing Page Image-Led Redesign
@@ -42,7 +42,11 @@ Redesign the landing page to be minimal and professional while shifting to an im
 
 ### Codebase Patterns
 
-Use the existing landing page structure in the Angular UI and keep sections largely intact while reworking visual presentation. Maintain responsive behavior and theme support.
+- Landing page is a standalone Angular component with template + Sass styling and data-driven arrays in the component class.
+- Shared marketing header/footer are reused across landing and SEO pages.
+- Shared design system mixins and variables are imported via `@use '../../shared/styles/index' as shared`.
+- Tailwind utilities are layered in for layout helpers; custom animations live in component Sass.
+- SEO pages use a structured, image-forward showcase pattern that includes before/after assets.
 
 ### Files to Reference
 
@@ -51,12 +55,18 @@ Use the existing landing page structure in the Angular UI and keep sections larg
 | AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.html | Landing page markup and section layout |
 | AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.sass | Landing page styling and animations |
 | AI.ProfilePhotoMaker.UI/src/app/pages/landing/landing.component.ts | Landing page data models and behaviors |
+| AI.ProfilePhotoMaker.UI/src/app/pages/marketing/seo-page/seo-page.component.html | Before/after showcase markup pattern |
+| AI.ProfilePhotoMaker.UI/src/app/pages/marketing/seo-page/seo-page.component.sass | Image card styling pattern for showcase |
+| AI.ProfilePhotoMaker.UI/src/app/shared/styles/_redesign-system.sass | Design system mixins, animation, and variables |
+| AI.ProfilePhotoMaker.UI/src/app/shared/styles/REDESIGN_SYSTEM_GUIDE.md | Design system usage and constraints |
+| AI.ProfilePhotoMaker.UI/src/assets/marketing/before-after/* | Existing before/after assets for image-led layout |
 
 ### Technical Decisions
 
 - Visual direction: minimal/pro with stronger image presence
-- Use before/after headshot imagery for hero/sections
+- Use before/after headshot imagery for hero/sections (reuse existing assets when possible)
 - Keep existing sections where possible; allow light reordering if needed
+- Favor shared redesign system mixins instead of new ad-hoc styles
 
 ## Implementation Plan
 
