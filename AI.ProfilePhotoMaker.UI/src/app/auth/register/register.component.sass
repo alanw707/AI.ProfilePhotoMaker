@@ -77,11 +77,30 @@
       &::placeholder
         color: var(--text-secondary)
 
-      // Fix Chrome/Edge autofill white-on-white
-      &:-webkit-autofill
-        -webkit-text-fill-color: var(--text-primary) !important
-        transition: background-color 9999s ease-in-out 0s
-        box-shadow: 0 0 0px 1000px var(--input-bg) inset
+      // Cross-browser autofill fix - must be in component for specificity
+      // Dark theme uses solid color (#1e2530) to override browser's autofill background
+      &:-webkit-autofill,
+      &:-webkit-autofill:hover,
+      &:-webkit-autofill:focus,
+      &:-webkit-autofill:active
+        -webkit-text-fill-color: #ffffff !important
+        -webkit-box-shadow: 0 0 0px 1000px #1e2530 inset !important
+        box-shadow: 0 0 0px 1000px #1e2530 inset !important
+        background-color: #1e2530 !important
+        border: 1px solid rgba(255, 255, 255, 0.1) !important
+        caret-color: #ffffff !important
+        transition: background-color 9999s ease-in-out 0s !important
+
+      // Firefox autofill
+      &:autofill,
+      &:autofill:hover,
+      &:autofill:focus,
+      &:autofill:active
+        -webkit-text-fill-color: #ffffff !important
+        box-shadow: 0 0 0px 1000px #1e2530 inset !important
+        background-color: #1e2530 !important
+        color: #ffffff !important
+        filter: none !important
 
     // Selects inherit the same styles; ensure text contrast
     select.form-control

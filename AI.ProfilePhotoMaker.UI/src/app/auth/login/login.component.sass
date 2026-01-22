@@ -69,8 +69,8 @@
         color: var(--text-tertiary) !important
         opacity: 0.8
 
-      // Fix Chrome/Edge autofill - ensure readable text color
-      // Must use solid dark color for box-shadow to fully cover Chrome's yellow autofill bg
+      // Cross-browser autofill fix - must be in component for specificity
+      // Dark theme uses solid color (#1e2530) to override browser's autofill background
       &:-webkit-autofill,
       &:-webkit-autofill:hover,
       &:-webkit-autofill:focus,
@@ -78,9 +78,21 @@
         -webkit-text-fill-color: #ffffff !important
         -webkit-box-shadow: 0 0 0px 1000px #1e2530 inset !important
         box-shadow: 0 0 0px 1000px #1e2530 inset !important
+        background-color: #1e2530 !important
         border: 1px solid rgba(255, 255, 255, 0.1) !important
         caret-color: #ffffff !important
-        transition: background-color 9999s ease-in-out 0s
+        transition: background-color 9999s ease-in-out 0s !important
+
+      // Firefox autofill
+      &:autofill,
+      &:autofill:hover,
+      &:autofill:focus,
+      &:autofill:active
+        -webkit-text-fill-color: #ffffff !important
+        box-shadow: 0 0 0px 1000px #1e2530 inset !important
+        background-color: #1e2530 !important
+        color: #ffffff !important
+        filter: none !important
 
       &.is-invalid
         border-color: var(--accent-danger)
