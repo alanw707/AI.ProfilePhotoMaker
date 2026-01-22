@@ -142,7 +142,7 @@
   --text-danger: #ff6b6b
   
   --card-bg: rgba(44, 62, 80, 0.95) !important
-  --input-bg: rgba(255, 255, 255, 0.05) !important
+  --input-bg: rgba(255, 255, 255, 0.12) !important
   --header-bg: rgba(44, 62, 80, 0.95) !important
   --hover-bg: rgba(79, 209, 199, 0.12) !important
   
@@ -528,6 +528,18 @@ html[data-theme="dark"] .landing-page div,
 [data-theme="dark"] div
   color: #f1f5f9 !important
 
+// DARK THEME - Exceptions for elements that need dark text on light backgrounds
+[data-theme="dark"] .style-badge-floating,
+[data-theme="dark"] .style-badge-floating *,
+html[data-theme="dark"] .style-badge-floating,
+html[data-theme="dark"] .style-badge-floating *
+  color: #1f2937 !important
+  background: rgba(255, 255, 255, 0.95) !important
+
+[data-theme="dark"] .grip-arrows,
+html[data-theme="dark"] .grip-arrows
+  color: #374151 !important
+
 // DARK THEME - Mobile menu overrides
 html[data-theme="dark"] .bg-white.shadow-lg,
 html[data-theme="dark"] .landing-page .bg-white.shadow-lg,
@@ -618,6 +630,28 @@ button
 
 input, textarea, select
   font-family: inherit
+  color: var(--text-primary)
+
+// Dark theme input autofill fix - global override
+// Chrome autofill uses yellow background + dark text by default
+// Must use solid dark color for box-shadow trick to fully cover autofill bg
+[data-theme="dark"]
+  input,
+  textarea,
+  select
+    color: #ffffff !important
+    -webkit-text-fill-color: #ffffff !important
+    
+    &:-webkit-autofill,
+    &:-webkit-autofill:hover,
+    &:-webkit-autofill:focus,
+    &:-webkit-autofill:active
+      -webkit-text-fill-color: #ffffff !important
+      -webkit-box-shadow: 0 0 0px 1000px #1e2530 inset !important
+      box-shadow: 0 0 0px 1000px #1e2530 inset !important
+      border: 1px solid rgba(255, 255, 255, 0.1) !important
+      caret-color: #ffffff !important
+      transition: background-color 9999s ease-in-out 0s
 
 // Theme Toggle Button Styles - Using Shared Mixin
 .theme-toggle

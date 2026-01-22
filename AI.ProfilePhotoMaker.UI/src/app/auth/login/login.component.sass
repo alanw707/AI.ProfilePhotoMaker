@@ -65,11 +65,22 @@
       color: var(--text-primary) !important
       background: var(--input-bg) !important
 
-      // Fix Chrome/Edge autofill white-on-white
-      &:-webkit-autofill
-        -webkit-text-fill-color: var(--text-primary) !important
+      &::placeholder
+        color: var(--text-tertiary) !important
+        opacity: 0.8
+
+      // Fix Chrome/Edge autofill - ensure readable text color
+      // Must use solid dark color for box-shadow to fully cover Chrome's yellow autofill bg
+      &:-webkit-autofill,
+      &:-webkit-autofill:hover,
+      &:-webkit-autofill:focus,
+      &:-webkit-autofill:active
+        -webkit-text-fill-color: #ffffff !important
+        -webkit-box-shadow: 0 0 0px 1000px #1e2530 inset !important
+        box-shadow: 0 0 0px 1000px #1e2530 inset !important
+        border: 1px solid rgba(255, 255, 255, 0.1) !important
+        caret-color: #ffffff !important
         transition: background-color 9999s ease-in-out 0s
-        box-shadow: 0 0 0px 1000px var(--input-bg) inset
 
       &.is-invalid
         border-color: var(--accent-danger)
