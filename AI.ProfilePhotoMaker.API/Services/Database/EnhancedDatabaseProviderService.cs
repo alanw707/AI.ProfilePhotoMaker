@@ -331,6 +331,15 @@ public class EnhancedDatabaseProviderService : IDatabaseProviderService
                     "Error Number: {ErrorNumber}, State: {ErrorState}",
                     attempt, maxAttempts, sqlEx.Number, sqlEx.State);
 
+                if (sqlEx.Number == 4060)
+                {
+                    if (await CanConnectToServerAsync())
+                    {
+                        _logger.LogInformation("Database not found yet; server connectivity verified.");
+                        return true;
+                    }
+                }
+
                 if (attempt == maxAttempts)
                 {
                     _logger.LogError(sqlEx, "All database connectivity attempts failed: {Message}", S(sqlEx.Message));
@@ -353,6 +362,34 @@ public class EnhancedDatabaseProviderService : IDatabaseProviderService
     public DatabaseProviderConfig GetProviderConfig()
     {
         return _providerConfig;
+    }
+
+    private async Task<bool> CanConnectToServerAsync()
+    {
+        try
+        {
+            var connectionString = GetConnectionString();
+            var builder = new SqlConnectionStringBuilder(connectionString)
+            {
+                InitialCatalog = "master",
+                ConnectTimeout = 15
+            };
+
+            await using var connection = new SqlConnection(builder.ConnectionString);
+            await connection.OpenAsync();
+
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT 1";
+            command.CommandTimeout = 5;
+
+            await command.ExecuteScalarAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Server connectivity check failed: {Message}", S(ex.Message));
+            return false;
+        }
     }
 
     private DatabaseProviderConfig InitializeProviderConfig()

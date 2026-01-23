@@ -495,3 +495,125 @@
   .hover-lift:hover,
   .hover-scale:hover
     transform: none !important
+
+// =============================================================================
+// IMAGE-LED LAYOUT MIXINS
+// =============================================================================
+
+// Before/After Card mixin for consistent styling
+@mixin before-after-card
+  position: relative
+  border-radius: 16px
+  overflow: hidden
+  background: var(--surface-bg)
+  transition: all var(--timing-normal) var(--easing-smooth)
+  
+  img
+    width: 100%
+    height: 100%
+    object-fit: cover
+    
+  &:hover
+    transform: scale(1.02)
+    box-shadow: var(--depth-2)
+
+// Before card styling
+@mixin before-card
+  @include before-after-card
+  border: 2px solid var(--glass-border)
+  
+// After card styling - highlighted
+@mixin after-card
+  @include before-after-card
+  border: 2px solid var(--accent-primary)
+  box-shadow: 0 8px 32px rgba(var(--accent-primary-rgb), 0.25)
+
+// Image frame with subtle shadow and border
+@mixin image-frame($radius: 16px)
+  border-radius: $radius
+  overflow: hidden
+  box-shadow: var(--depth-1)
+  border: 1px solid var(--glass-border)
+  transition: all var(--timing-normal) var(--easing-smooth)
+  
+  img
+    width: 100%
+    height: 100%
+    object-fit: cover
+    display: block
+    
+  &:hover
+    box-shadow: var(--depth-2)
+    transform: translateY(-4px)
+
+// Minimal section header
+@mixin section-header-minimal
+  text-align: center
+  margin-bottom: 48px
+  
+  h2
+    font-size: clamp(2rem, 4vw, 3rem)
+    font-weight: 700
+    color: var(--text-primary)
+    margin-bottom: 12px
+    
+  p
+    font-size: 1.125rem
+    color: var(--text-secondary)
+    max-width: 600px
+    margin: 0 auto
+
+// Compact trust bar
+@mixin trust-bar-compact
+  display: flex
+  flex-wrap: wrap
+  gap: 16px
+  align-items: center
+  font-size: 0.875rem
+  color: var(--text-secondary)
+  
+  strong
+    color: var(--text-primary)
+
+// Image placeholder fallback
+@mixin image-placeholder
+  display: flex
+  align-items: center
+  justify-content: center
+  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary))
+  color: var(--text-tertiary)
+  font-size: 0.875rem
+  min-height: 200px
+
+// =============================================================================
+// IMAGE-LED UTILITY CLASSES
+// =============================================================================
+
+// Before/After card classes
+.ba-card-before
+  @include before-card
+  
+.ba-card-after
+  @include after-card
+
+// Image frame utility
+.image-frame
+  @include image-frame
+
+.image-frame-lg
+  @include image-frame(20px)
+  
+.image-frame-sm
+  @include image-frame(12px)
+
+// Image placeholder
+.image-placeholder
+  @include image-placeholder
+
+// Section header minimal
+.section-header-minimal-util
+  @include section-header-minimal
+
+// Trust bar compact
+.trust-bar-compact
+  @include trust-bar-compact

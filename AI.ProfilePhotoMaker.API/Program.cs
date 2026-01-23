@@ -705,7 +705,7 @@ app.UseForwardedHeaders();
 app.UseResponseCompression();
 if (app.Environment.IsDevelopment())
 {
-    app.UseMiddleware<AI.ProfilePhotoMaker.API.Middleware.StorageProxyMiddleware>();
+    app.UseMiddleware<AI.ProfilePhotoMaker.API.Middleware.EnhancedStorageProxyMiddleware>();
 }
 // Inject JWT from secure cookie into Authorization header if present
 app.UseMiddleware<AI.ProfilePhotoMaker.API.Middleware.JwtCookieAuthMiddleware>();
@@ -928,7 +928,21 @@ static async Task ValidateReplicateConfigurationAsync(WebApplication app)
 
 static void LoadEnvironmentVariables(IWebHostEnvironment environment)
 {
-    var envFile = Path.Combine(environment.ContentRootPath, $".env.{environment.EnvironmentName.ToLower()}");
+    var explicitEnvFile = Environment.GetEnvironmentVariable("DEV_ENV_FILE")
+        ?? Environment.GetEnvironmentVariable("ENV_FILE");
+
+    string envFile;
+    if (!string.IsNullOrWhiteSpace(explicitEnvFile))
+    {
+        envFile = explicitEnvFile;
+    }
+    else
+    {
+        var repoRootEnv = Path.GetFullPath(Path.Combine(environment.ContentRootPath, "..", ".env"));
+        envFile = File.Exists(repoRootEnv)
+            ? repoRootEnv
+            : Path.Combine(environment.ContentRootPath, $".env.{environment.EnvironmentName.ToLower()}");
+    }
 
     if (File.Exists(envFile))
     {

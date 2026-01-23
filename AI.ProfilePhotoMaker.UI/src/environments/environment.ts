@@ -30,4 +30,9 @@ export const environment = {
     frontendUrl: 'http://localhost:4200',
     backendUrl: 'http://localhost:5032', // Updated to match actual API port
   },
+  azure: {
+    enabled: true,
+    storageUrl: 'https://aipmstv16j74jubocuukg.blob.core.windows.net',
+    stylePreviewUrl: 'https://aipmstv16j74jubocuukg.blob.core.windows.net',
+  },
 };

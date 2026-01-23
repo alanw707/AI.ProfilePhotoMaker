@@ -1,4 +1,6 @@
 import {
+  AfterViewChecked,
+  AfterViewInit,
   ChangeDetectorRef,
   Component,
   ElementRef,
@@ -28,7 +30,7 @@ interface Plan {
   originalPrice?: string;
   features: string[];
   recommended?: boolean;
-  creditCount: string;
+  headshotCount: string;
 }
 
 interface Testimonial {
@@ -56,6 +58,19 @@ interface StyledPhoto {
   wide?: boolean;
 }
 
+interface BeforeAfterPair {
+  id: number;
+  before: string;
+  after: string;
+  label?: string;
+}
+
+interface SocialProofStats {
+  totalHeadshots: number;
+  averageRating: number;
+  satisfactionGuarantee: number;
+}
+
 @Component({
   selector: 'app-landing',
   standalone: true,
@@ -77,7 +92,7 @@ interface StyledPhoto {
     ]),
   ],
 })
-export class LandingComponent implements OnInit, OnDestroy {
+export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked, OnDestroy {
   isAuthenticated = false;
   currentBeforeAfterIndex = 0;
   currentTestimonialIndex = 0;
@@ -88,6 +103,30 @@ export class LandingComponent implements OnInit, OnDestroy {
   showNotFound = false;
   private readonly structuredDataId = 'landing-structured-data';
   private readonly faqStructuredDataId = 'landing-faq-structured-data';
+  private prefersReducedMotion = false;
+
+  // Hero Before/After showcase
+  heroBeforeAfterPairs: BeforeAfterPair[] = [];
+  currentHeroPairIndex = 0;
+  private heroRotationInterval: ReturnType<typeof setInterval> | null = null;
+  private heroIntersectionObserver: IntersectionObserver | null = null;
+
+  // Interactive comparison slider
+  sliderPosition = 50; // Percentage from left (0-100)
+  isDraggingSlider = false;
+  hasInteractedWithSlider = false;
+  private boundMouseMove: ((e: MouseEvent) => void) | null = null;
+  private boundTouchMove: ((e: TouchEvent) => void) | null = null;
+  private boundDragEnd: (() => void) | null = null;
+  private capturedPointerId: number | null = null;
+  private pointerCaptureElement: HTMLElement | null = null;
+
+  // Social proof stats (displayed in hero)
+  socialProofStats: SocialProofStats = {
+    totalHeadshots: 5000, // Will be updated from API
+    averageRating: 4.8,
+    satisfactionGuarantee: 100,
+  };
 
   // Theme-related properties
   currentTheme$!: Observable<string>;
@@ -96,6 +135,7 @@ export class LandingComponent implements OnInit, OnDestroy {
   // Styled photos showcase - removed carousel, now using grid
 
   @ViewChild('comparisonSlider') comparisonSlider!: ElementRef;
+  @ViewChild('heroSection') heroSection?: ElementRef;
 
   features = [
     {
@@ -216,16 +256,125 @@ export class LandingComponent implements OnInit, OnDestroy {
       })
     );
     this.setupSEO();
+    this.initializeHeroBeforeAfter();
     this.initializeTestimonials();
     this.loadPackagesFromDatabase();
     this.loadAvailableStyles();
     this.startTestimonialRotation();
     this.observeElements();
     this.handleRouteData();
+    this.prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  ngAfterViewInit(): void {
+    // Apply touch-action fix and pointer-events fix separately - they're independent of heroSection/reduced motion
+    // Uses multiple timeouts to ensure Angular renders the *ngIf content first
+    if (typeof window !== 'undefined') {
+      setTimeout(() => this.applySliderTouchFix(), 200);
+      setTimeout(() => this.applySliderTouchFix(), 500);
+      setTimeout(() => this.applySliderTouchFix(), 1000);
+      // Also apply pointer-events fix at various intervals to catch all render states
+      setTimeout(() => this.applySliderPointerEventsFix(), 200);
+      setTimeout(() => this.applySliderPointerEventsFix(), 500);
+      setTimeout(() => this.applySliderPointerEventsFix(), 1000);
+    }
+
+    // Exit early for SSR, missing heroSection, or reduced motion preference
+    if (typeof window === 'undefined' || !this.heroSection || this.prefersReducedMotion) {
+      return;
+    }
+
+    this.heroIntersectionObserver = new IntersectionObserver(
+      entries => {
+        const isIntersecting = entries[0]?.isIntersecting ?? true;
+        if (isIntersecting) {
+          this.startHeroRotation();
+        } else {
+          this.stopHeroRotation();
+        }
+      },
+      { threshold: 0.3 }
+    );
+
+    this.heroIntersectionObserver.observe(this.heroSection.nativeElement);
+    this.startHeroRotation();
+  }
+
+  ngAfterViewChecked(): void {
+    // Continuously reapply pointer-events fix after each change detection cycle
+    // This is necessary because Angular may recreate DOM elements when hero images rotate
+    this.applySliderPointerEventsFix();
+  }
+
+  /**
+   * Lightweight fix that only sets pointer-events on comparison overlays.
+   * Called on every change detection cycle to ensure the fix persists.
+   */
+  private applySliderPointerEventsFix(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const beforeEl = document.querySelector('.comparison-before') as HTMLElement;
+    const afterEl = document.querySelector('.comparison-after') as HTMLElement;
+
+    // Use setProperty with 'important' for better cross-browser compatibility
+    if (beforeEl) {
+      beforeEl.style.setProperty('pointer-events', 'none', 'important');
+    }
+    if (afterEl) {
+      afterEl.style.setProperty('pointer-events', 'none', 'important');
+    }
+  }
+
+  /**
+   * Applies touch-action: none directly to the slider element.
+   * This ensures the slider can be dragged on touch devices without
+   * browser scroll interference.
+   * Uses both ViewChild and direct DOM query for reliability.
+   */
+  private applySliderTouchFix(): void {
+    // Try ViewChild first
+    let sliderEl = this.comparisonSlider?.nativeElement as HTMLElement | null;
+
+    // Fallback to direct DOM query if ViewChild not ready
+    if (!sliderEl) {
+      sliderEl = document.querySelector('.comparison-slider') as HTMLElement | null;
+    }
+
+    if (sliderEl) {
+      sliderEl.style.touchAction = 'none';
+
+      // Also apply to the slider handle if it exists
+      const handleEl = sliderEl.querySelector('.slider-handle') as HTMLElement;
+      if (handleEl) {
+        handleEl.style.touchAction = 'none';
+      }
+
+      // Fix pointer-events on overlay images so they don't intercept slider drag events
+      const beforeEl = sliderEl.querySelector('.comparison-before') as HTMLElement;
+      const afterEl = sliderEl.querySelector('.comparison-after') as HTMLElement;
+      if (beforeEl) {
+        beforeEl.style.pointerEvents = 'none';
+      }
+      if (afterEl) {
+        afterEl.style.pointerEvents = 'none';
+      }
+    }
   }
 
   ngOnDestroy(): void {
     this.themeSubscription.unsubscribe();
+
+    if (this.heroRotationInterval) {
+      clearInterval(this.heroRotationInterval);
+    }
+
+    if (this.heroIntersectionObserver) {
+      this.heroIntersectionObserver.disconnect();
+    }
 
     const structuredDataScript = document.getElementById(this.structuredDataId);
     if (structuredDataScript) {
@@ -240,6 +389,185 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   toggleTheme(): void {
     this.themeService.toggleTheme();
+  }
+
+  // Hero Before/After Methods
+  private initializeHeroBeforeAfter(): void {
+    // Use the existing marketing before/after assets
+    // Set-3 first - has best before/after parity (similar framing/distance)
+    this.heroBeforeAfterPairs = [
+      {
+        id: 1,
+        before: 'assets/marketing/before-after/set-3-before.jpg',
+        after: 'assets/marketing/before-after/set-3-after.png',
+        label: 'LinkedIn Ready',
+      },
+      {
+        id: 2,
+        before: 'assets/marketing/before-after/set-1-before.jpg',
+        after: 'assets/marketing/before-after/set-1-after.png',
+        label: 'Business Casual',
+      },
+      {
+        id: 3,
+        before: 'assets/marketing/before-after/set-2-before.jpg',
+        after: 'assets/marketing/before-after/set-2-after.png',
+        label: 'Corporate',
+      },
+    ];
+  }
+
+  private startHeroRotation(): void {
+    if (this.prefersReducedMotion || this.heroBeforeAfterPairs.length === 0) {
+      return;
+    }
+
+    this.stopHeroRotation();
+    this.heroRotationInterval = setInterval(() => {
+      this.currentHeroPairIndex =
+        (this.currentHeroPairIndex + 1) % this.heroBeforeAfterPairs.length;
+      this._cdr.detectChanges();
+      // Reapply touch-action fix after Angular renders new content
+      setTimeout(() => this.applySliderTouchFix(), 50);
+    }, 4000);
+  }
+
+  private stopHeroRotation(): void {
+    if (this.heroRotationInterval) {
+      clearInterval(this.heroRotationInterval);
+      this.heroRotationInterval = null;
+    }
+  }
+
+  selectHeroPair(index: number): void {
+    this.currentHeroPairIndex = index;
+    // Reset the rotation timer when manually selected
+    if (!this.prefersReducedMotion) {
+      this.startHeroRotation();
+    }
+    // Reapply touch-action fix after Angular renders the new content
+    setTimeout(() => this.applySliderTouchFix(), 50);
+  }
+
+  get currentHeroPair(): BeforeAfterPair | null {
+    return this.heroBeforeAfterPairs[this.currentHeroPairIndex] || null;
+  }
+
+  // Comparison slider interaction methods
+  startSliderDrag(event: MouseEvent | TouchEvent | PointerEvent): void {
+    // Prevent duplicate handling - if pointerdown fires, mousedown/touchstart also fire
+    // Only handle the first event type that arrives
+    if (this.isDraggingSlider) {
+      return;
+    }
+
+    event.preventDefault();
+    this.isDraggingSlider = true;
+    this.hasInteractedWithSlider = true;
+
+    // Stop auto-rotation while interacting
+    this.stopHeroRotation();
+
+    // CRITICAL: For PointerEvents, capture the pointer to ensure we receive all
+    // subsequent pointermove events even if the pointer leaves the element.
+    // This is essential for Windows browsers with touch-capable screens.
+    // We capture on the slider container, not the event target (which might be the SVG icon).
+    if (event instanceof PointerEvent && this.comparisonSlider?.nativeElement) {
+      try {
+        const sliderEl = this.comparisonSlider.nativeElement as HTMLElement;
+        sliderEl.setPointerCapture(event.pointerId);
+        this.capturedPointerId = event.pointerId;
+        this.pointerCaptureElement = sliderEl;
+      } catch {
+        // setPointerCapture may fail in some edge cases, continue with fallback
+      }
+    }
+
+    // Bind event listeners for drag - use pointer events as primary (modern browsers)
+    // with mouse/touch as fallback
+    this.boundMouseMove = (e: MouseEvent) => this.handleSliderMove(e);
+    this.boundTouchMove = (e: TouchEvent) => this.handleSliderMove(e);
+    this.boundDragEnd = () => this.endSliderDrag();
+
+    // Pointer events (modern, unified input)
+    document.addEventListener('pointermove', this.boundMouseMove as EventListener);
+    document.addEventListener('pointerup', this.boundDragEnd);
+    document.addEventListener('pointercancel', this.boundDragEnd);
+    // Mouse events (fallback)
+    document.addEventListener('mousemove', this.boundMouseMove);
+    document.addEventListener('mouseup', this.boundDragEnd);
+    // Touch events (fallback)
+    document.addEventListener('touchmove', this.boundTouchMove, { passive: false });
+    document.addEventListener('touchend', this.boundDragEnd);
+
+    // Handle initial position
+    this.handleSliderMove(event);
+  }
+
+  private handleSliderMove(event: MouseEvent | TouchEvent): void {
+    if (!this.isDraggingSlider || !this.comparisonSlider) {
+      return;
+    }
+
+    const sliderEl = this.comparisonSlider.nativeElement as HTMLElement;
+    const rect = sliderEl.getBoundingClientRect();
+
+    let clientX: number;
+    if (event instanceof TouchEvent) {
+      clientX = event.touches[0]?.clientX ?? 0;
+    } else {
+      clientX = event.clientX;
+    }
+
+    // Calculate position as percentage
+    const x = clientX - rect.left;
+    const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+
+    this.sliderPosition = percentage;
+    this._cdr.detectChanges();
+  }
+
+  private endSliderDrag(): void {
+    this.isDraggingSlider = false;
+
+    // Release pointer capture if we had one
+    if (this.capturedPointerId !== null && this.pointerCaptureElement) {
+      try {
+        this.pointerCaptureElement.releasePointerCapture(this.capturedPointerId);
+      } catch {
+        // releasePointerCapture may fail if already released, ignore
+      }
+      this.capturedPointerId = null;
+      this.pointerCaptureElement = null;
+    }
+
+    // Clean up all event listeners (pointer, mouse, and touch)
+    if (this.boundMouseMove) {
+      document.removeEventListener('pointermove', this.boundMouseMove as EventListener);
+      document.removeEventListener('mousemove', this.boundMouseMove);
+    }
+    if (this.boundTouchMove) {
+      document.removeEventListener('touchmove', this.boundTouchMove);
+    }
+    if (this.boundDragEnd) {
+      document.removeEventListener('pointerup', this.boundDragEnd);
+      document.removeEventListener('pointercancel', this.boundDragEnd);
+      document.removeEventListener('mouseup', this.boundDragEnd);
+      document.removeEventListener('touchend', this.boundDragEnd);
+    }
+
+    // Resume auto-rotation after a delay
+    setTimeout(() => {
+      if (!this.isDraggingSlider) {
+        this.startHeroRotation();
+      }
+    }, 3000);
+  }
+
+  adjustSlider(delta: number): void {
+    this.hasInteractedWithSlider = true;
+    this.sliderPosition = Math.max(0, Math.min(100, this.sliderPosition + delta));
+    this._cdr.detectChanges();
   }
 
   openCookiePreferences(): void {
@@ -279,7 +607,7 @@ export class LandingComponent implements OnInit, OnDestroy {
             originalPrice: pkg.bonusCredits > 0 ? `$${Math.floor(pkg.price + 10)}` : undefined,
             features: this.getPackageFeatures(pkg),
             recommended: pkg.name === 'Professional Pack',
-            creditCount: `${pkg.totalCredits} credits`,
+            headshotCount: this.formatHeadshotCount(pkg.totalCredits),
           }));
         }
       },
@@ -366,7 +694,7 @@ export class LandingComponent implements OnInit, OnDestroy {
         name: 'Starter',
         price: '$9',
         features: this.buildPackageFeatures('Starter', 50),
-        creditCount: '50 credits',
+        headshotCount: this.formatHeadshotCount(50),
       },
       {
         name: 'Professional',
@@ -374,15 +702,23 @@ export class LandingComponent implements OnInit, OnDestroy {
         originalPrice: '$29',
         features: this.buildPackageFeatures('Professional', 150),
         recommended: true,
-        creditCount: '150 credits',
+        headshotCount: this.formatHeadshotCount(150),
       },
       {
         name: 'Studio',
         price: '$39',
         features: this.buildPackageFeatures('Studio', 400),
-        creditCount: '400 credits',
+        headshotCount: this.formatHeadshotCount(400),
       },
     ];
+  }
+
+  private formatHeadshotCount(totalCredits: number): string {
+    const count = this.getStyledGenerationCount(totalCredits);
+    if (count === 0) {
+      return 'Model training credits';
+    }
+    return `Up to ${count} headshots`;
   }
 
   private setFallbackCreditCosts(): void {

@@ -10,6 +10,18 @@ API_DIR="${REPO_ROOT}/AI.ProfilePhotoMaker.API"
 PID_FILE="${REPO_ROOT}/api.pid"
 LOG_FILE="${REPO_ROOT}/api.log"
 
+if [[ -z ${DEV_ENV_FILE:-} ]]; then
+  if [[ -f "${REPO_ROOT}/.env" ]]; then
+    export DEV_ENV_FILE="${REPO_ROOT}/.env"
+  elif [[ -f "${REPO_ROOT}/local.env" ]]; then
+    export DEV_ENV_FILE="${REPO_ROOT}/local.env"
+  fi
+fi
+
+if [[ -n ${DEV_ENV_FILE:-} ]]; then
+  echo "ℹ️  Using env file: ${DEV_ENV_FILE}" | tee -a "$LOG_FILE"
+fi
+
 cd "$API_DIR"
 echo "Starting API from: $API_DIR (ASPNETCORE_ENVIRONMENT=$ASPNETCORE_ENVIRONMENT)"
 

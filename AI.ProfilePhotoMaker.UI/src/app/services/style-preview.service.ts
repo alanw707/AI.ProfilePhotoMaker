@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, catchError, of, map } from 'rxjs';
 import { ConfigService } from './config.service';
+import { environment } from '../../environments/environment';
 
 export interface StylePreviewResponse {
   success: boolean;
@@ -50,14 +51,14 @@ export class StylePreviewService {
       return of(cachedUrl);
     }
 
-    // Try direct Azure Blob Storage URL first (faster than API call)
-    const directUrl = this.getDirectAzureBlobUrl(styleName);
+    // Use direct storage URL if configured
+    const directUrl = this.getDirectStorageUrl(styleName);
     if (directUrl) {
       this._urlCache.set(styleName, directUrl);
       return of(directUrl);
     }
 
-    // Fetch from API as fallback
+    // Fetch from API as fallback (local development)
     const apiUrl = `${this._config.getApiUrl()}/style-preview/url/${encodeURIComponent(styleName)}`;
 
     return this._http.get<StylePreviewResponse | null>(apiUrl).pipe(
@@ -85,8 +86,35 @@ export class StylePreviewService {
     // First, pre-populate cache with known style preview URLs from Azure Blob Storage
     this.prePopulateKnownStyles();
 
-    // Always rely on direct Azure URLs and emit current cache; skip API prefetch entirely
-    this._allPreviewsSubject.next(new Map(this._urlCache));
+    const apiUrl = `${this._config.getApiUrl()}/style-preview/list`;
+    this._http
+      .get<StylePreviewListResponse | null>(apiUrl)
+      .pipe(
+        map(response => {
+          const urlMap = new Map<string, string>();
+          if (!response || !response.success) {
+            return urlMap;
+          }
+
+          response.previews.forEach(preview => {
+            if (preview.style && preview.url) {
+              urlMap.set(preview.style, preview.url);
+            }
+          });
+
+          return urlMap;
+        }),
+        catchError(error => {
+          console.warn('Failed to load style previews:', error);
+          return of(new Map<string, string>());
+        })
+      )
+      .subscribe(urlMap => {
+        urlMap.forEach((url, style) => {
+          this._urlCache.set(style, url);
+        });
+        this._allPreviewsSubject.next(new Map(this._urlCache));
+      });
   }
 
   /**
@@ -119,7 +147,7 @@ export class StylePreviewService {
     const urlMap = new Map<string, string>();
 
     knownStyles.forEach(styleName => {
-      const directUrl = this.getDirectAzureBlobUrl(styleName);
+      const directUrl = this.getDirectStorageUrl(styleName);
       if (directUrl) {
         this._urlCache.set(styleName, directUrl);
         urlMap.set(styleName, directUrl);
@@ -150,7 +178,7 @@ export class StylePreviewService {
     }
 
     // Try direct Azure Blob Storage URL first
-    const directUrl = this.getDirectAzureBlobUrl(styleName);
+    const directUrl = this.getDirectStorageUrl(styleName);
     if (directUrl) {
       // Cache the direct URL for future use
       this._urlCache.set(styleName, directUrl);
@@ -175,7 +203,7 @@ export class StylePreviewService {
    */
   private getFallbackUrl(styleName: string): string {
     // Try direct Azure Blob Storage URL first
-    const directUrl = this.getDirectAzureBlobUrl(styleName);
+    const directUrl = this.getDirectStorageUrl(styleName);
     if (directUrl) {
       return directUrl;
     }
@@ -188,7 +216,7 @@ export class StylePreviewService {
    * @param styleName - The style name
    * @returns Direct Azure Blob Storage URL or null if invalid
    */
-  private getDirectAzureBlobUrl(styleName: string): string | null {
+  private getDirectStorageUrl(styleName: string): string | null {
     if (!styleName) {
       return null;
     }
@@ -197,9 +225,25 @@ export class StylePreviewService {
     // Examples: "edgy/urban" -> "edgy-urban.jpg", "tech professional" -> "tech-professional.jpg"
     const fileName = `${styleName.toLowerCase().replace(/[/\s]/g, '-')}.jpg`;
 
-    // Direct Azure Blob Storage URL - use correct storage account
-    // Add cache-busting version parameter to ensure fresh images after updates
-    const azureBlobBaseUrl = 'https://aipmstv16j74jubocuukg.blob.core.windows.net/style-previews';
-    return `${azureBlobBaseUrl}/${fileName}?v=${this._cacheVersion}`;
+    const configuredBase = (
+      environment.azure?.stylePreviewUrl ?? environment.azure?.storageUrl
+    )?.trim();
+    const normalizedBase = configuredBase?.toLowerCase() ?? '';
+    const isInvalidBase =
+      !configuredBase ||
+      normalizedBase.includes('devstoreaccount1') ||
+      normalizedBase.includes('/profile-images') ||
+      normalizedBase.startsWith('/devstoreaccount1');
+
+    const storageUrl = isInvalidBase
+      ? 'https://aipmstv16j74jubocuukg.blob.core.windows.net'
+      : configuredBase;
+
+    const cleanBase = storageUrl.endsWith('/') ? storageUrl.slice(0, -1) : storageUrl;
+    const baseWithContainer = cleanBase.includes('/style-previews')
+      ? cleanBase
+      : `${cleanBase}/style-previews`;
+
+    return `${baseWithContainer}/${fileName}?v=${this._cacheVersion}`;
   }
 }

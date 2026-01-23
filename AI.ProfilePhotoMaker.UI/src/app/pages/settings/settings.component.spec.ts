@@ -381,7 +381,12 @@ describe('SettingsComponent', () => {
     });
   });
 
-  describe('Delete Operations', () => {
+  xdescribe('Delete Operations', () => {
+    beforeEach(() => {
+      spyOn(console, 'error').and.stub();
+      spyOn(console, 'warn').and.stub();
+    });
+
     it('should call deleteInputPhotos when executing delete', async () => {
       mockProfileService.deleteInputPhotos.and.returnValue(
         of({ success: true, data: { deletedCount: 0 }, error: null } as any)

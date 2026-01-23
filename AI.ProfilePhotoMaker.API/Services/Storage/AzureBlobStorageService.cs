@@ -286,6 +286,14 @@ public class AzureBlobStorageService : BaseStorageService
         var blobClient = containerClient.GetBlobClient(cleanPath);
         var url = blobClient.Uri.ToString();
 
+        if (IsAzuriteEndpoint(_blobServiceClient.Uri))
+        {
+            var appBaseUrl = Configuration["AppBaseUrl"]?.TrimEnd('/') ?? "http://localhost:5032";
+            var proxiedUrl = $"{appBaseUrl}/profile-images/{storagePath.TrimStart('/')}";
+            Logger.LogDebug("GetImageUrl (Azurite Proxy): {Url}", proxiedUrl);
+            return proxiedUrl;
+        }
+
         Logger.LogDebug("GetImageUrl (Azure Blob): {Url}", url);
         return url;
     }

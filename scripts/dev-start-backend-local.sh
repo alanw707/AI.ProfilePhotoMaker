@@ -22,4 +22,22 @@ set +a
 
 export DEV_ENV_FILE="$ENV_FILE"
 
-./dev-start.sh --docker
+./dev-start.sh --docker --api-only
+
+echo "➡️  Verifying backend containers are running"
+running_services="$(docker compose ps --services --status running 2>/dev/null || true)"
+missing_services=()
+
+for service in sql-server azurite api; do
+  if [[ " ${running_services} " != *" ${service} "* ]]; then
+    missing_services+=("${service}")
+  fi
+done
+
+if (( ${#missing_services[@]} > 0 )); then
+  echo "❌ Containers not running: ${missing_services[*]}"
+  docker compose ps
+  exit 1
+fi
+
+echo "✅ Backend containers running: sql-server azurite api"

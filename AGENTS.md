@@ -1,35 +1,173 @@
-# Repository Guidelines
+# AI.ProfilePhotoMaker - Agent Guidelines
 
-## Project Structure & Module Organization
-- `AI.ProfilePhotoMaker.API/`: ASP.NET Core Web API. Feature folders hold controllers, services, and EF Core models; shared cross-cutting code lives in `Configuration/`, `Constants/`, `Extensions/`, `Filters/`, and `Middleware/`. Data access is managed through `Data/` and `Migrations/`, SignalR hubs reside in `Hubs/`, and operational helpers/scripts are under `Scripts/`. API-specific Playwright checks sit in `tests/playwright/`.
-- `AI.ProfilePhotoMaker.API.Tests/`: xUnit suite organized by concern—`Unit/`, `Integration/`, `Controllers/`, `Services/`, `Infrastructure/`, and `Performance/`—with shared fixtures and builders scoped per folder.
-- `AI.ProfilePhotoMaker.UI/`: Angular front-end (`src/` feature modules, shared UI libraries, and services). Static assets live in `public/` and `.well-known/`; end-to-end setups live in `e2e/`, cross-browser utilities in `cypress/`, and supplementary docs/guides in `docs/`.
-- `tests/`: Repository-level Playwright flows (`tests/e2e`) that validate the combined API + UI experience.
-- `scripts/`: Automation for starting/stopping services, deployment validation, environment setup, and CI tooling.
-- `docs/` & `infrastructure/`: Operational runbooks, deployment guidance, and infrastructure-as-code assets.
+Guidelines for coding agents working in this repository.
 
-## Build, Test, and Development Commands
-- Full stack: `./dev-start.sh` (SQL Server, API on 5032, UI on 4200), `./dev-stop.sh`, and `./dev-test.sh` for smoke checks. Use `./dev-rebuild.sh [--api-only|--ui-only]` to rebuild and restart dev services without touching containers.
-- Docker-first local validation: use `./dev-start.sh --docker` to rebuild/recreate the API + UI containers (plus dependencies) and test against `http://localhost:4200`/`http://localhost:5032`. Avoid `dev-rebuild.sh`/`ui-start.sh` when the intention is to validate the Dockerized stack.
-- API: `dotnet build AI.ProfilePhotoMaker.sln`, then `dotnet run --project AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj` (or `cd AI.ProfilePhotoMaker.API && dotnet run`). Execute `dotnet test AI.ProfilePhotoMaker.API.Tests` for automated coverage. API release validation lives in `AI.ProfilePhotoMaker.API/tests/playwright` (`npm install` then `npx playwright test`).
-- UI: From `AI.ProfilePhotoMaker.UI/`, run `npm run dev:local` for UI-only dev, or `npm run dev:fullstack:local` to proxy to the API. Build with `npm run build` or `npm run build:dev`. Karma/Jasmine unit tests via `npm test`, broader integration suites with `npm run test:integration`, and Playwright coverage through `npm run playwright:install && npm run test:e2e` (variants exist for chrome/mobile/debug).
-- Ops scripts: `scripts/api-start.sh`, `scripts/ui-start.sh`, deployment validation helpers (`scripts/validate-*.sh`), and container tooling support day-to-day workflows.
+## Project Overview
 
-## Coding Style & Naming Conventions
-- C# (API): 4-space indentation; classes/methods PascalCase; locals/params camelCase; async methods end with `Async`. Keep feature logic co-located (controllers, services, validators, DTOs) and route shared middleware/extensions/constants to their dedicated folders.
-- TypeScript/Angular (UI): 2-space indent, single quotes, ESLint + Prettier enforced. Follow feature-based modules within `src/app`, keep filenames kebab-case (e.g., `profile-card.component.ts`), and run `npm run lint` plus `npm run format` before committing.
+- **Stack**: ASP.NET Core 8 Web API (C#) + Angular 19 (TypeScript)
+- **Database**: EF Core with SQL Server; migrations in `AI.ProfilePhotoMaker.API/Migrations/`
+- **Auth**: JWT + Google OAuth (`Services/Authentication/`)
+- **Storage**: Azure Blob or local (`Services/Storage/`)
+- **Payments**: Stripe (`Services/Payment/`)
 
-## Testing Guidelines
-- API: `AI.ProfilePhotoMaker.API.Tests` hosts unit, integration, controller, service, infrastructure, and performance suites. `dotnet test` exercises them; integration tests expect the SQL Server from `./dev-start.sh`.
-- UI: Component and unit coverage via Karma (`npm test`), with extended scenarios in `npm run test:integration`. Playwright (`npm run test:e2e`) verifies UI flows; headless/targeted variants exist for CI and debugging.
-- Cross-cutting E2E: Repository-level Playwright specs reside in `tests/e2e`, while API release readiness checks run from `AI.ProfilePhotoMaker.API/tests/playwright`. Keep all E2E tests deterministic and idempotent.
+## Build Commands
 
-## Commit & Pull Request Guidelines
-- Keep `main` stable—never open a PR without confirming with the team.
-- Use Conventional Commits (e.g., `feat(ui): add cropping tool`, `fix(api): null check in upload`).
-- PRs need a summary, linked issues, and test evidence (logs/screenshots for UI). Validate `npm run lint`, `npm run test`/`npm run test:e2e` as applicable, along with `dotnet build`, `dotnet test`, and API Playwright final validations when changing release-critical paths.
+```bash
+# API (.NET)
+dotnet build AI.ProfilePhotoMaker.sln
+dotnet run --project AI.ProfilePhotoMaker.API            # Port 5032
+dotnet ef database update -p AI.ProfilePhotoMaker.API
 
-## Security & Configuration Tips
-- Never commit secrets—follow `.env.example` and prefer environment variables or `dotnet user-secrets` locally.
-- Sensitive values (e.g., `REPLICATE_API_TOKEN`, Azure Storage) must stay in env/secrets. If adjusting ports or hosts, update `proxy.conf*.json`, `docker-compose.yml`, relevant scripts, and Playwright configs under `tests/`.
-- Consult `AI.ProfilePhotoMaker.API/SECURITY_NOTES.md` and `AI.ProfilePhotoMaker.API/MONITORING_SYSTEM_SUMMARY.md` when modifying auth, monitoring, or webhook integrations.
+# UI (Angular) - run from AI.ProfilePhotoMaker.UI/
+npm ci && npm run dev:local                              # Port 4200
+npm run build                                            # Production build
+
+# Full Stack
+./dev-start.sh                                           # SQL + API + UI
+```
+
+## Test Commands
+
+```bash
+# API (xUnit) - run single test with --filter
+dotnet test AI.ProfilePhotoMaker.API.Tests
+dotnet test AI.ProfilePhotoMaker.API.Tests --filter "FullyQualifiedName~ClassName"
+dotnet test AI.ProfilePhotoMaker.API.Tests --filter "DisplayName~test_name"
+dotnet test AI.ProfilePhotoMaker.API.Tests --filter "ClassName=MyTests&MethodName=MyTest"
+
+# UI Unit Tests (Karma) - run from AI.ProfilePhotoMaker.UI/
+npm test                                                 # All unit tests
+npm run test:integration                                 # Integration tests
+
+# E2E (Playwright) - run from AI.ProfilePhotoMaker.UI/
+npm run test:e2e                                         # All E2E
+npm run test:e2e:chrome                                  # Chrome only
+npx playwright test tests/mytest.spec.ts                 # Single file
+npx playwright test -g "test name"                       # By test name
+```
+
+## Lint & Format
+
+```bash
+# UI - run from AI.ProfilePhotoMaker.UI/
+npm run lint                    # ESLint check
+npm run lint:fix                # Auto-fix
+npm run format                  # Prettier format
+npm run quality:fix             # Lint + format
+
+# API
+dotnet build                    # Compiler warnings as lint
+```
+
+## Code Style - C# (.NET API)
+
+**Formatting**: 4-space indent, nullable enabled, implicit usings
+
+**Naming**:
+- Classes/methods/properties: `PascalCase`
+- Variables/parameters: `camelCase`
+- Private fields: `_camelCase`
+- Async methods: suffix `Async`
+
+**Patterns**:
+- Thin controllers; delegate to services
+- `async/await` only; never `.Result` or `.Wait()`
+- Register services in `Extensions/*ServiceExtensions.cs`
+- Return typed DTOs from `Models/DTOs/`
+- Use `ILogger<T>` with structured logging
+- Guard clauses; max 3 levels nesting
+- Use Options pattern for configuration
+
+**Error Handling**:
+- Fail fast with actionable messages
+- Return accurate HTTP status codes (never raw stack traces)
+- Use `[Authorize]` on sensitive endpoints
+
+## Code Style - TypeScript (Angular UI)
+
+**Formatting** (Prettier enforced):
+- 2-space indent, single quotes, semicolons required
+- Trailing commas (ES5), LF endings
+- 100 char width (120 for HTML)
+
+**Naming**:
+- Files: `kebab-case` (`profile-card.component.ts`)
+- Components: `PascalCase` class, `app-kebab-case` selector
+- Directives: `appCamelCase` selector
+- Variables/functions: `camelCase`
+- Interfaces/types/classes: `PascalCase`
+- Enums: `PascalCase` name, `UPPER_CASE` members
+
+**Patterns**:
+- Strongly type everything; avoid `any`
+- Use `Observable` with proper cleanup (`takeUntil`, `DestroyRef`)
+- HTTP calls in `services/*` using `HttpClient`
+- Auth in `interceptors/`
+- Prefer local state over global
+
+**Imports**: Group logically (Angular core > third-party > app modules > relative)
+
+## Project Structure
+
+```
+AI.ProfilePhotoMaker.API/
+  Controllers/          # Thin HTTP endpoints
+  Services/             # Business logic
+  Models/DTOs/          # Data transfer objects
+  Data/                 # DbContext
+  Migrations/           # EF Core migrations
+  Extensions/           # DI registration
+  Filters/              # Action filters
+
+AI.ProfilePhotoMaker.API.Tests/
+  Unit/                 # xUnit + Moq + FluentAssertions
+  Integration/          # WebApplicationFactory tests
+
+AI.ProfilePhotoMaker.UI/
+  src/app/              # Angular components/services
+  e2e/                  # Playwright E2E tests
+```
+
+## Security Guidelines
+
+- **Never commit secrets** - use `.env`, user-secrets, or Key Vault
+- Required env vars: `JWT_SECRET`, `REPLICATE_API_TOKEN`, `REPLICATE_WEBHOOK_SECRET`
+- Do not log PII, tokens, emails, or image contents
+- Validate uploads: max 20 files, 10MB each, jpg/png/webp only
+- Stripe: tokens/PaymentIntents only, never raw card data
+- Webhooks require signature validation
+
+## Testing Expectations
+
+- Add/update tests when changing behavior
+- Keep tests deterministic and idempotent
+- Use test fixtures from shared folders
+- API tests use: xUnit, Moq, FluentAssertions, AutoFixture
+- Integration tests need SQL Server (`./dev-start.sh`)
+
+## Commit Style
+
+Conventional Commits: `type(scope): description`
+```
+feat(ui): add cropping tool
+fix(api): null check in upload handler
+refactor(api): extract validation to service
+test(ui): add gallery component specs
+```
+
+## Pre-Commit Checklist
+
+1. `dotnet build AI.ProfilePhotoMaker.sln` - compiles
+2. `dotnet test AI.ProfilePhotoMaker.API.Tests` - passes
+3. `npm run lint` (UI) - no errors
+4. `npm run format:check` (UI) - valid
+5. `npm test` (UI) - passes
+6. No secrets in files
+
+## Key Principles
+
+- Prefer minimal, targeted edits; do not refactor unrelated code
+- Follow existing patterns in `Services/`, `Controllers/`, `Models/`
+- MVP scope: avoid over-engineering, YAGNI applies
+- Explain non-trivial changes in commit messages
+- When uncertain: ask about security, PII, payment flows, or breaking API changes
