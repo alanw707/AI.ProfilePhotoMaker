@@ -733,22 +733,36 @@ If conversion rates don't improve after Phase 1:
   - [x] Replace all "Start with enhancements" CTAs → "Get Your Professional Headshots"
   - [x] Add trust indicators below CTAs (delivery time, guarantee mentions)
 
+### Post-Phase 1 Bug Fixes & UX Cleanup ✅ COMPLETED (2026-01-24)
+
+- [x] **BF-1** Fix invisible pricing cards (animate-on-scroll race condition)
+- [x] **BF-2** Remove fake testimonials section entirely (was still rendering despite Phase 1 spec)
+- [x] **BF-3** Fix FAQ "credit packages" → "headshot packages" language
+- [x] **BF-4** Fix misleading "Try Any Style Free" CTA → "Get Your Headshots"
+- [x] **BF-5** Fix footer copyright 2024 → dynamic year
+- [x] **BF-6** Fix "Reviews" nav button scrolling to removed #testimonials anchor
+
 ### Phase 2 - Medium-Term
 
 - [ ] **2.1** Set up Trustpilot
-  - [ ] Create business account
+  - [ ] Create business account (manual — blocked on account setup)
   - [ ] Integrate widget
-  - [ ] Add review request to workflow
+  - [ ] Add review request to post-purchase workflow
 
-- [ ] **2.2** Add "How It Works" section
-  - [ ] Design section layout
-  - [ ] Create/source icons
+- [ ] **2.2** Redesign "How It Works" as 3-step flow
+  - [ ] Design 3-step layout (Upload → AI Processes → Download)
+  - [ ] Create/source step icons
   - [ ] Implement HTML/CSS
+  - Note: Current section has before/after + 6 feature cards; spec calls for focused 3-step process
 
-- [ ] **2.3** Add comparison section
-  - [ ] Design comparison layout
+- [ ] **2.3** Add AI vs Traditional Photography comparison section
+  - [ ] Design comparison layout (spec has full HTML ready in section 2.3)
   - [ ] Write compelling copy
   - [ ] Implement HTML/CSS
+
+- [ ] **2.4** Implement stats API endpoint
+  - [ ] `GET /api/stats` — real counts from database
+  - [ ] Replace hardcoded "5,000+" with live data
 
 ---
 
@@ -811,6 +825,55 @@ private formatHeadshotCount(totalCredits: number): string {
 - Frontend container rebuilt and running at `http://localhost:4200`
 - Visual verification completed
 - Build passes with only Sass deprecation warnings (not blocking)
+
+---
+
+### Session: 2026-01-24 (UX Review + Bug Fixes)
+
+#### Context
+
+Comprehensive visual UX review of landing page at `localhost:4200` (dark + light themes), followed by bug fixes. Ran via Docker containers (`./dev-start.sh --docker`).
+
+#### Bug Fixed: Invisible Pricing Cards
+
+**Root cause**: `.animate-on-scroll` CSS starts elements at `opacity: 0; transform: translateY(30px)`. The `IntersectionObserver` scans for these elements 100ms after `ngOnInit`, but pricing cards load **asynchronously** from the API and don't exist in the DOM at scan time.
+
+**Fix** (`landing.component.ts`):
+- Stored observer as `scrollObserver` class property (was local variable)
+- Added `observedElements` WeakSet to track already-observed elements
+- Created `observeNewElements()` — re-scans for `.animate-on-scroll` elements, skipping already-observed ones
+- Called `observeNewElements()` after pricing packages and styles finish loading (with `_cdr.detectChanges()` first)
+- Added **viewport fallback**: elements already visible when observed get `animate-in` immediately via `getBoundingClientRect()` check
+- Added `scrollObserver.disconnect()` cleanup in `ngOnDestroy`
+
+#### Other Fixes
+
+| Fix | File(s) | Details |
+|-----|---------|---------|
+| Remove fake testimonials | `landing.component.html`, `landing.component.ts` | Removed entire "Real Results" section with Tasmania-based fake names. Commented out `initializeTestimonials()` and `startTestimonialRotation()`. |
+| FAQ credit language | `landing.component.ts` | "How do credit packages work?" → "How do headshot packages work?" with rewritten answer |
+| Misleading CTA | `landing.component.html` | "Try Any Style Free" → "Get Your Headshots" in styles section |
+| Footer copyright | `marketing-footer.component.html/.ts` | Hardcoded "© 2024" → dynamic `{{ currentYear }}` |
+| Reviews nav | `marketing-header.component.ts` | Removed `scrollToSection('testimonials')` fallback; always navigates to `/reviews` |
+| Structured data date | `landing.component.ts` | `datePublished: '2024-01-01'` → `'2025-01-01'` |
+
+#### Commit
+
+`b614404` — `fix(ui): resolve invisible pricing cards, remove fake testimonials, fix landing page UX issues`
+
+#### What's Next (Phase 2)
+
+Priority order for next session:
+1. **2.3** AI vs Traditional Photography comparison section (spec has full HTML design ready)
+2. **2.2** "How It Works" 3-step redesign
+3. **2.4** Stats API endpoint (replace hardcoded "5,000+")
+4. **2.1** Trustpilot (blocked on manual account setup)
+
+#### Dev Environment Notes
+
+- Use `./dev-start.sh --docker` to run (rebuilds containers with latest code)
+- Test account: `testuser@example.com` / `TestPass123!`
+- Branch: `feature/ui-landing-page-redesign`
 
 ---
 
