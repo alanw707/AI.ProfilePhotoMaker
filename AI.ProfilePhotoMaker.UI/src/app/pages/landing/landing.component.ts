@@ -104,6 +104,8 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
   private readonly structuredDataId = 'landing-structured-data';
   private readonly faqStructuredDataId = 'landing-faq-structured-data';
   private prefersReducedMotion = false;
+  private scrollObserver: IntersectionObserver | null = null;
+  private observedElements = new WeakSet<Element>();
 
   // Hero Before/After showcase
   heroBeforeAfterPairs: BeforeAfterPair[] = [];
@@ -199,9 +201,9 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
         'Yes! You have full commercial rights to all enhanced photos. Use them for LinkedIn, resumes, websites, business cards, or any other purpose.',
     },
     {
-      question: 'How do credit packages work?',
+      question: 'How do headshot packages work?',
       answer:
-        'Credit packages are one-time purchases that unlock headshot style generations and model training. Credits never expire, so you can use them whenever you are ready.',
+        'Choose a package based on how many headshots you need. Each package is a one-time purchase that includes AI model training and a set number of professional headshot generations. Your package never expires, so you can use it whenever you are ready.',
     },
     {
       question: "What if I'm not satisfied with the results?",
@@ -257,10 +259,11 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
     );
     this.setupSEO();
     this.initializeHeroBeforeAfter();
-    this.initializeTestimonials();
+    // Testimonials disabled until real reviews are available (see spec 1.2)
+    // this.initializeTestimonials();
+    // this.startTestimonialRotation();
     this.loadPackagesFromDatabase();
     this.loadAvailableStyles();
-    this.startTestimonialRotation();
     this.observeElements();
     this.handleRouteData();
     this.prefersReducedMotion =
@@ -374,6 +377,10 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
 
     if (this.heroIntersectionObserver) {
       this.heroIntersectionObserver.disconnect();
+    }
+
+    if (this.scrollObserver) {
+      this.scrollObserver.disconnect();
     }
 
     const structuredDataScript = document.getElementById(this.structuredDataId);
@@ -618,6 +625,10 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
       },
       complete: () => {
         this.isLoadingPackages = false;
+        // Force change detection so Angular renders the pricing cards, then
+        // re-scan for dynamically added .animate-on-scroll elements.
+        this._cdr.detectChanges();
+        setTimeout(() => this.observeNewElements(), 100);
       },
     });
   }
@@ -815,7 +826,7 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
         url: 'https://aiprofilephotomaker.com/',
         logo: 'https://aiprofilephotomaker.com/Logo.PNG',
       },
-      datePublished: '2024-01-01',
+      datePublished: '2025-01-01',
       featureList: [
         'AI-powered photo enhancement',
         '20+ professional style options',
@@ -912,6 +923,8 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
     const finishLoading = () => {
       this.isLoadingStyles = false;
       this._cdr.detectChanges();
+      // Re-scan for dynamically rendered animate-on-scroll elements (style cards)
+      setTimeout(() => this.observeNewElements(), 100);
     };
 
     this._styleService.getActiveStyles().subscribe({
@@ -1241,7 +1254,7 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
   }
 
   observeElements(): void {
-    const observer = new IntersectionObserver(
+    this.scrollObserver = new IntersectionObserver(
       entries => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
@@ -1254,9 +1267,41 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
 
     // Observe all animatable elements
     setTimeout(() => {
-      const elements = document.querySelectorAll('.animate-on-scroll');
-      elements.forEach(el => observer.observe(el));
+      this.observeNewElements();
     }, 100);
+  }
+
+  /**
+   * Scans for any `.animate-on-scroll` elements not yet observed and adds them
+   * to the IntersectionObserver. Elements already visible in the viewport are
+   * immediately animated in (the observer may not fire for elements that were
+   * added while already in view). Safe to call multiple times (e.g. after async
+   * content like pricing packages finishes loading).
+   */
+  private observeNewElements(): void {
+    if (!this.scrollObserver) {
+      return;
+    }
+    const elements = document.querySelectorAll('.animate-on-scroll');
+    elements.forEach(el => {
+      if (!this.observedElements.has(el)) {
+        this.observedElements.add(el);
+        this.scrollObserver!.observe(el);
+
+        // Fallback: if the element is already in the viewport, animate it
+        // immediately. IntersectionObserver may not fire for elements that
+        // appear while already intersecting.
+        const rect = el.getBoundingClientRect();
+        const inViewport =
+          rect.top < window.innerHeight &&
+          rect.bottom > 0 &&
+          rect.left < window.innerWidth &&
+          rect.right > 0;
+        if (inViewport) {
+          el.classList.add('animate-in');
+        }
+      }
+    });
   }
 
   startComparison(event: MouseEvent | TouchEvent): void {

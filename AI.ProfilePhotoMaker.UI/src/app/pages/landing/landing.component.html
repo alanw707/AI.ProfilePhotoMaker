@@ -355,7 +355,7 @@
         <!-- Simple CTA -->
         <div class="styles-cta-minimal">
           <button (click)="getStarted()" class="cta-primary-new">
-            <span class="btn-text">Try Any Style Free</span>
+            <span class="btn-text">Get Your Headshots</span>
             <svg class="btn-arrow-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
             </svg>
@@ -466,42 +466,8 @@
     </div>
   </section>
 
-  <!-- Testimonials Section - Image-Led Proof -->
-  <section *ngIf="!showNotFound" id="testimonials" class="testimonials-section testimonials-minimal py-12 md:py-16">
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="section-header-minimal text-center mb-8 md:mb-12 animate-on-scroll">
-        <h2 class="section-title-minimal">Real Results</h2>
-        <p class="section-subtitle-minimal">Professionals who upgraded their first impression.</p>
-      </div>
-
-      <div class="testimonials-grid-minimal">
-        <div
-          class="testimonial-card-minimal animate-on-scroll"
-          *ngFor="let testimonial of testimonials.slice(0, 6); let i = index"
-          [class.delay-1]="i % 3 === 0"
-          [class.delay-2]="i % 3 === 1"
-          [class.delay-3]="i % 3 === 2">
-          <div class="testimonial-photo">
-            <img
-              [src]="testimonial.imageUrl"
-              [alt]="testimonial.name + ' headshot style example'"
-              loading="lazy"
-              decoding="async"
-              width="140"
-              height="175"
-              (error)="onImageError($event)" />
-          </div>
-          <div class="testimonial-body">
-            <p class="testimonial-quote">“{{ testimonial.content }}”</p>
-            <div class="testimonial-meta">
-              <span class="testimonial-name">{{ testimonial.name }}</span>
-              <span class="testimonial-role">{{ testimonial.role }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+  <!-- Testimonials Section - Hidden until real reviews are available (see spec 1.2) -->
+  <!-- TODO: Re-enable with real Trustpilot reviews or verified user testimonials -->
 
   <!-- FAQ Section - Clean Accordion -->
   <section *ngIf="!showNotFound" id="faq" class="faq-section faq-minimal py-12 md:py-16">
