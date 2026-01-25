@@ -271,6 +271,29 @@
       padding: 0 16px
       gap: 12px
       flex-wrap: wrap
+
+    // Mobile header layout: Logo left, hamburger right, user section full-width below
+    // Order ensures: [Logo (1)] [Hamburger (2)] on first row, [User Section (3)] on second row
+    .logo-section
+      flex: 1 1 auto
+      min-width: 0
+      order: 1
+
+      .logo-title
+        font-size: 14px
+        // No truncation - show full name on mobile
+
+    .mobile-menu-toggle
+      flex-shrink: 0
+      margin-left: auto
+      order: 2
+
+    // User section drops to full-width second row on mobile
+    .user-section
+      flex-basis: 100%
+      order: 3
+      margin-top: 8px
+      justify-content: space-between
     
     .nav-menu
       position: absolute  // Changed from fixed to absolute for natural positioning
@@ -352,44 +375,6 @@
       height: 20px
       color: var(--text-primary)
       transition: transform 0.3s ease
-    
-    .logo-section
-      flex: 1
-      
-      .logo-title
-        font-size: 16px
-    
-    .credit-display
-      padding: 6px 12px
-      
-      .credit-icon
-        font-size: 16px
-        
-      .credit-amount
-        font-size: 14px
-    
-    .user-section
-      order: 3
-      width: 100%
-      flex-direction: row
-      justify-content: space-between
-      align-items: center
-      border-top: 1px solid var(--border-color)
-      margin-top: 12px
-      padding-top: 12px
-      
-    .user-info
-      .user-name
-        font-size: 12px
-      
-      .user-email
-        display: none
-        
-    .guest-actions
-      .btn
-        padding: 6px 12px
-        font-size: 12px
-        font-family: 'Inter', sans-serif
 
 // Animation keyframes for staggered menu items
 @keyframes slideInStagger

@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI.ProfilePhotoMaker — Design Direction Explorations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ═══════════════════════════════════════════════════════════════════════
+     DESIGN DIRECTION SHOWCASE — AI.ProfilePhotoMaker
+     6 visual directions for extending landing page energy to all pages
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  :root {
+    --primary: #4fd1c7;
+    --primary-dark: #0891b2;
+    --primary-rgb: 79, 209, 199;
+    --accent-blue: #3b82f6;
+    --accent-purple: #764ba2;
+    --accent-indigo: #667eea;
+    --bg-dark: #1a1d23;
+    --bg-dark-2: #2c3e50;
+    --bg-dark-3: #334155;
+    --text-white: #ffffff;
+    --text-light: #f1f5f9;
+    --text-muted: #94a3b8;
+    --glass-bg: rgba(30, 41, 59, 0.3);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --success: #10b981;
+    --warning: #f59e0b;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #0f1117;
+    color: var(--text-white);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     SHOWCASE NAVIGATION
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  .showcase-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: rgba(15, 17, 23, 0.92);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .showcase-nav .logo {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--primary);
+    white-space: nowrap;
+    letter-spacing: -0.02em;
+  }
+
+  .showcase-nav .divider {
+    width: 1px;
+    height: 20px;
+    background: rgba(255,255,255,0.15);
+  }
+
+  .showcase-nav .label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+  }
+
+  .nav-pills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .nav-pill {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: transparent;
+    color: var(--text-muted);
+    transition: all 0.25s ease;
+    white-space: nowrap;
+  }
+
+  .nav-pill:hover {
+    border-color: rgba(79, 209, 199, 0.4);
+    color: var(--text-light);
+    background: rgba(79, 209, 199, 0.08);
+  }
+
+  .nav-pill.active {
+    background: linear-gradient(135deg, rgba(79,209,199,0.2), rgba(59,130,246,0.2));
+    border-color: rgba(79, 209, 199, 0.5);
+    color: var(--primary);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     SHOWCASE INTRO
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  .showcase-intro {
+    padding: 120px 40px 80px;
+    max-width: 900px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .showcase-intro h1 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 700;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, var(--primary), var(--accent-blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .showcase-intro p {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    max-width: 650px;
+    margin: 0 auto 32px;
+  }
+
+  .criteria-bar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .criteria-tag {
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-light);
+    background: rgba(255,255,255,0.04);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     DIRECTION SECTION — SHARED
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  .direction {
+    padding: 80px 40px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    scroll-margin-top: 70px;
+  }
+
+  .direction-header {
+    max-width: 1100px;
+    margin: 0 auto 48px;
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+  }
+
+  .direction-number {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+    font-size: 1.2rem;
+  }
+
+  .direction-meta h2 {
+    font-size: 1.6rem;
+    margin-bottom: 6px;
+  }
+
+  .direction-meta .subtitle {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+  }
+
+  .direction-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .direction-tag {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     MOCKUP FRAME — Container for each design direction preview
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  .mockup-frame {
+    max-width: 1100px;
+    margin: 0 auto;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 24px 80px rgba(0,0,0,0.4);
+  }
+
+  .mockup-browser-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: rgba(30, 41, 59, 0.6);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .mockup-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .mockup-dot.r { background: #ff5f57; }
+  .mockup-dot.y { background: #febc2e; }
+  .mockup-dot.g { background: #28c840; }
+
+  .mockup-url {
+    flex: 1;
+    margin-left: 8px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.06);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-family: 'Inter', monospace;
+  }
+
+  .mockup-content {
+    min-height: 600px;
+    position: relative;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     DIRECTION 1: GLASS CASCADE
+     Full glassmorphism treatment on every card and section
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  #d1 { background: linear-gradient(180deg, #0f1117 0%, #131620 100%); }
+  #d1 .direction-number { background: linear-gradient(135deg, var(--primary), var(--accent-blue)); color: white; }
+  #d1 .direction-tag { background: rgba(79,209,199,0.15); color: var(--primary); }
+
+  .d1-content {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+    padding: 0;
+  }
+
+  .d1-hero {
+    padding: 48px 40px 40px;
+    background: linear-gradient(135deg, #1e293b, #2d3a4d, #1e293b);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .d1-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(79,209,199,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .d1-hero h3 {
+    font-size: 1.6rem;
+    margin-bottom: 8px;
+  }
+
+  .d1-hero p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    max-width: 500px;
+  }
+
+  .d1-hero .eyebrow {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--primary);
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+
+  .d1-hero .highlight-stats {
+    display: flex;
+    gap: 32px;
+    margin-top: 24px;
+  }
+
+  .d1-hero .stat {
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 14px 20px;
+    text-align: center;
+  }
+
+  .d1-hero .stat .value {
+    font-family: 'Poppins', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  .d1-hero .stat .label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .d1-sections {
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .d1-section-header {
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+    color: var(--text-white);
+  }
+
+  .d1-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  .d1-card {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 28px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: default;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .d1-card::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, var(--primary), var(--accent-blue));
+    border-radius: inherit;
+    opacity: 0;
+    filter: blur(12px);
+    z-index: -1;
+    transition: opacity 0.3s ease;
+  }
+
+  .d1-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(79,209,199,0.3);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.3);
+  }
+
+  .d1-card:hover::after { opacity: 0.3; }
+
+  .d1-card .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary), var(--accent-blue));
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 14px;
+  }
+
+  .d1-card h4 {
+    font-size: 1rem;
+    margin-bottom: 8px;
+  }
+
+  .d1-card p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .d1-faq {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .d1-faq-item {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 18px 22px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+
+  .d1-faq-item:hover {
+    background: rgba(255,255,255,0.07);
+    border-color: rgba(79,209,199,0.2);
+  }
+
+  .d1-faq-item .question {
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .d1-faq-item .chevron {
+    color: var(--primary);
+    font-size: 1.1rem;
+    transition: transform 0.2s ease;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     DIRECTION 2: GRADIENT DEPTH
+     Sections use rich gradient backgrounds for visual variety
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  #d2 { background: linear-gradient(180deg, #111318 0%, #0f1117 100%); }
+  #d2 .direction-number { background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple)); color: white; }
+  #d2 .direction-tag { background: rgba(102,126,234,0.15); color: var(--accent-indigo); }
+
+  .d2-content { background: var(--bg-dark); }
+
+  .d2-hero {
+    padding: 48px 40px;
+    background: linear-gradient(135deg, #1a1040 0%, #2d1b69 40%, #1e293b 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .d2-hero::before {
+    content: '';
+    position: absolute;
+    top: -30%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 400px;
+    background: radial-gradient(ellipse, rgba(102,126,234,0.2) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .d2-hero .eyebrow {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent-indigo);
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+
+  .d2-hero h3 {
+    font-size: 1.6rem;
+    margin-bottom: 8px;
+    position: relative;
+  }
+
+  .d2-hero p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    max-width: 520px;
+  }
+
+  .d2-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .d2-section {
+    padding: 40px;
+  }
+
+  .d2-section:nth-child(odd) {
+    background: linear-gradient(135deg, rgba(30,41,59,0.8), rgba(51,65,85,0.4));
+  }
+
+  .d2-section:nth-child(even) {
+    background: linear-gradient(135deg, rgba(26,29,35,0.9), rgba(44,62,80,0.3));
+  }
+
+  .d2-section-title {
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid;
+    border-image: linear-gradient(90deg, var(--accent-indigo), transparent) 1;
+    display: inline-block;
+  }
+
+  .d2-steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  .d2-step {
+    padding: 28px;
+    border-radius: 14px;
+    background: linear-gradient(145deg, rgba(102,126,234,0.08), rgba(118,75,162,0.06));
+    border: 1px solid rgba(102,126,234,0.15);
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  .d2-step:hover {
+    transform: translateY(-3px);
+    border-color: rgba(102,126,234,0.35);
+    box-shadow: 0 12px 40px rgba(102,126,234,0.12);
+  }
+
+  .d2-step .num {
+    font-family: 'Poppins', sans-serif;
+    font-size: 2.4rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+
+  .d2-step h4 { font-size: 1rem; margin-bottom: 6px; }
+  .d2-step p { font-size: 0.85rem; color: var(--text-muted); }
+
+  .d2-comparison {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .d2-comparison th {
+    padding: 14px 20px;
+    background: rgba(102,126,234,0.12);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    color: var(--text-light);
+    text-align: left;
+  }
+
+  .d2-comparison td {
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 0.88rem;
+    color: var(--text-light);
+  }
+
+  .d2-comparison tr:nth-child(even) td {
+    background: rgba(255,255,255,0.02);
+  }
+
+  .d2-comparison .check { color: var(--success); font-weight: 600; }
+  .d2-comparison .cross { color: #ef4444; }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     DIRECTION 3: CARD ELEVATION
+     Prominent card shadows and elevation for depth without glass
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  #d3 { background: linear-gradient(180deg, #111318 0%, #0f1117 100%); }
+  #d3 .direction-number { background: linear-gradient(135deg, #10b981, var(--primary)); color: white; }
+  #d3 .direction-tag { background: rgba(16,185,129,0.15); color: var(--success); }
+
+  .d3-content { background: #161b22; }
+
+  .d3-hero {
+    padding: 48px 40px;
+    background: #1c2128;
+    border-bottom: 3px solid var(--primary);
+  }
+
+  .d3-hero .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    background: rgba(79,209,199,0.12);
+    border: 1px solid rgba(79,209,199,0.25);
+    font-size: 0.75rem;
+    color: var(--primary);
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
+  .d3-hero h3 { font-size: 1.6rem; margin-bottom: 8px; }
+  .d3-hero p { color: var(--text-muted); max-width: 520px; font-size: 0.95rem; }
+
+  .d3-sections { padding: 40px; display: flex; flex-direction: column; gap: 40px; }
+
+  .d3-section-title {
+    font-size: 1.15rem;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .d3-section-title .accent-bar {
+    width: 4px;
+    height: 22px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, var(--primary), var(--success));
+  }
+
+  .d3-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  .d3-card {
+    background: #1c2128;
+    border-radius: 12px;
+    padding: 28px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.05);
+    transition: all 0.25s ease;
+    position: relative;
+  }
+
+  .d3-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: 12px 12px 0 0;
+    background: linear-gradient(90deg, var(--primary), var(--success));
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+
+  .d3-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 4px 12px rgba(79,209,199,0.08);
+  }
+
+  .d3-card:hover::before { opacity: 1; }
+
+  .d3-card .icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(79,209,199,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    margin-bottom: 14px;
+  }
+
+  .d3-card h4 { font-size: 0.95rem; margin-bottom: 8px; }
+  .d3-card p { font-size: 0.83rem; color: var(--text-muted); line-height: 1.5; }
+
+  .d3-bullets {
+    background: #1c2128;
+    border-radius: 12px;
+    padding: 28px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .d3-bullets ul {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .d3-bullets li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.88rem;
+    color: var(--text-light);
+    padding: 8px 0;
+  }
+
+  .d3-bullets .bullet-check {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    background: rgba(16,185,129,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    color: var(--success);
+    margin-top: 2px;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     DIRECTION 4: AMBIENT GLOW
+     Floating glow orbs and animated accents behind content
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  #d4 { background: linear-gradient(180deg, #0d0f14 0%, #111318 100%); }
+  #d4 .direction-number { background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; }
+  #d4 .direction-tag { background: rgba(245,158,11,0.15); color: var(--warning); }
+
+  .d4-content {
+    background: #12141a;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .d4-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    animation: orb-float 8s ease-in-out infinite;
+    opacity: 0.4;
+  }
+
+  .d4-orb.teal {
+    width: 300px; height: 300px;
+    background: rgba(79,209,199,0.25);
+    top: 5%; left: -5%;
+    animation-delay: 0s;
+  }
+
+  .d4-orb.blue {
+    width: 250px; height: 250px;
+    background: rgba(59,130,246,0.2);
+    top: 40%; right: -8%;
+    animation-delay: -3s;
+  }
+
+  .d4-orb.purple {
+    width: 200px; height: 200px;
+    background: rgba(118,75,162,0.2);
+    bottom: 10%; left: 30%;
+    animation-delay: -5s;
+  }
+
+  @keyframes orb-float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(20px, -15px) scale(1.05); }
+    66% { transform: translate(-15px, 10px) scale(0.95); }
+  }
+
+  .d4-hero {
+    position: relative;
+    z-index: 1;
+    padding: 48px 40px;
+  }
+
+  .d4-hero h3 { font-size: 1.6rem; margin-bottom: 8px; }
+  .d4-hero p { color: var(--text-muted); max-width: 500px; font-size: 0.95rem; }
+
+  .d4-hero .glow-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+    padding: 12px 28px;
+    border-radius: 12px;
+    background: var(--primary);
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    animation: glow-pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes glow-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(79,209,199,0.5); }
+    50% { box-shadow: 0 0 24px 8px rgba(79,209,199,0); }
+  }
+
+  .d4-sections {
+    position: relative;
+    z-index: 1;
+    padding: 20px 40px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .d4-section-title {
+    font-size: 1.1rem;
+    margin-bottom: 16px;
+  }
+
+  .d4-showcase {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+
+  .d4-showcase-item {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .d4-showcase-item:hover {
+    border-color: rgba(79,209,199,0.25);
+    box-shadow: 0 0 32px rgba(79,209,199,0.08);
+    transform: translateY(-2px);
+  }
+
+  .d4-showcase-visual {
+    display: flex;
+    height: 160px;
+  }
+
+  .d4-showcase-visual .before,
+  .d4-showcase-visual .after {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+  }
+
+  .d4-showcase-visual .before {
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+  }
+
+  .d4-showcase-visual .after {
+    background: linear-gradient(135deg, #1e293b, #334155);
+    border-left: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .d4-showcase-visual .after::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(79,209,199,0.08), rgba(59,130,246,0.08));
+  }
+
+  .d4-showcase-text {
+    padding: 18px 20px;
+  }
+
+  .d4-showcase-text h4 { font-size: 0.92rem; margin-bottom: 4px; }
+  .d4-showcase-text p { font-size: 0.82rem; color: var(--text-muted); }
+
+  .d4-cta-band {
+    position: relative;
+    z-index: 1;
+    padding: 32px 40px;
+    background: linear-gradient(90deg, rgba(79,209,199,0.06), rgba(59,130,246,0.06));
+    border-top: 1px solid rgba(79,209,199,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .d4-cta-band h4 { font-size: 1.1rem; }
+  .d4-cta-band p { font-size: 0.85rem; color: var(--text-muted); }
+
+  .d4-cta-band .cta-btn {
+    padding: 10px 24px;
+    border-radius: 10px;
+    background: var(--primary);
+    color: white;
+    font-weight: 600;
+    font-size: 0.88rem;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     DIRECTION 5: EDITORIAL LAYOUT
+     Magazine-style sections with bold typography and asymmetric layout
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  #d5 { background: linear-gradient(180deg, #111318 0%, #0f1117 100%); }
+  #d5 .direction-number { background: linear-gradient(135deg, #ec4899, #f43f5e); color: white; }
+  #d5 .direction-tag { background: rgba(236,72,153,0.15); color: #ec4899; }
+
+  .d5-content { background: #13161c; }
+
+  .d5-hero {
+    padding: 56px 40px 48px;
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 48px;
+    align-items: center;
+    background: linear-gradient(135deg, #13161c, #1a1e28);
+  }
+
+  .d5-hero .overline {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #ec4899;
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+
+  .d5-hero h3 {
+    font-size: 2.2rem;
+    line-height: 1.15;
+    margin-bottom: 12px;
+    letter-spacing: -0.02em;
+  }
+
+  .d5-hero p {
+    font-size: 1.05rem;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+
+  .d5-hero .hero-sidebar {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 28px;
+  }
+
+  .d5-hero .hero-sidebar .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .d5-hero .hero-sidebar .stat-row:last-child { border-bottom: none; }
+
+  .d5-hero .hero-sidebar .stat-label {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+
+  .d5-hero .hero-sidebar .stat-value {
+    font-weight: 700;
+    font-family: 'Poppins', sans-serif;
+    color: var(--primary);
+  }
+
+  .d5-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .d5-section {
+    padding: 48px 40px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .d5-section-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #ec4899;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  .d5-section-title {
+    font-size: 1.4rem;
+    margin-bottom: 8px;
+    letter-spacing: -0.01em;
+  }
+
+  .d5-section-intro {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    max-width: 600px;
+    margin-bottom: 28px;
+  }
+
+  .d5-feature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .d5-feature {
+    padding: 24px;
+    border-left: 3px solid transparent;
+    transition: all 0.25s ease;
+    border-radius: 0 10px 10px 0;
+  }
+
+  .d5-feature:hover {
+    border-left-color: #ec4899;
+    background: rgba(236,72,153,0.04);
+  }
+
+  .d5-feature h4 { font-size: 0.95rem; margin-bottom: 6px; }
+  .d5-feature p { font-size: 0.83rem; color: var(--text-muted); }
+
+  .d5-faq-list {
+    max-width: 680px;
+  }
+
+  .d5-faq-item {
+    padding: 20px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    cursor: pointer;
+  }
+
+  .d5-faq-item .question {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+  }
+
+  .d5-faq-item .answer {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+
+  .d5-faq-item.open .answer {
+    max-height: 200px;
+    margin-top: 8px;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     DIRECTION 6: HYBRID — Best of all directions combined
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  #d6 { background: linear-gradient(180deg, #0f1117 0%, #131620 100%); }
+  #d6 .direction-number { background: linear-gradient(135deg, var(--primary), var(--accent-indigo), var(--accent-purple)); color: white; }
+  #d6 .direction-tag { background: rgba(79,209,199,0.12); color: var(--primary); }
+
+  .d6-content {
+    background: linear-gradient(180deg, #1e293b, #161b22);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .d6-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    pointer-events: none;
+    opacity: 0.3;
+    animation: orb-float 10s ease-in-out infinite;
+  }
+
+  .d6-orb.a { width: 280px; height: 280px; background: rgba(79,209,199,0.2); top: -5%; right: 5%; animation-delay: -2s; }
+  .d6-orb.b { width: 220px; height: 220px; background: rgba(102,126,234,0.15); bottom: 10%; left: -3%; animation-delay: -6s; }
+
+  .d6-hero {
+    position: relative;
+    z-index: 1;
+    padding: 48px 40px;
+    display: grid;
+    grid-template-columns: 1.3fr 0.7fr;
+    gap: 40px;
+    align-items: center;
+    background: linear-gradient(135deg, rgba(30,41,59,0.5), rgba(51,65,85,0.3));
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .d6-hero .eyebrow {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--primary);
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  .d6-hero h3 {
+    font-size: 1.7rem;
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+  }
+
+  .d6-hero p { color: var(--text-muted); font-size: 0.95rem; max-width: 480px; }
+
+  .d6-hero .cta-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .d6-hero .btn-primary {
+    padding: 11px 24px;
+    border-radius: 10px;
+    background: var(--primary);
+    color: white;
+    font-weight: 600;
+    font-size: 0.88rem;
+    border: none;
+    cursor: pointer;
+    animation: glow-pulse 3s ease-in-out infinite;
+  }
+
+  .d6-hero .btn-outline {
+    padding: 11px 24px;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-light);
+    font-weight: 500;
+    font-size: 0.88rem;
+    border: 1px solid rgba(255,255,255,0.15);
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+
+  .d6-hero .btn-outline:hover {
+    border-color: rgba(79,209,199,0.4);
+    background: rgba(79,209,199,0.06);
+  }
+
+  .d6-hero .panel {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 24px;
+  }
+
+  .d6-hero .panel .panel-title {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+
+  .d6-hero .panel .highlights {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+
+  .d6-hero .panel .highlight {
+    text-align: center;
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.03);
+  }
+
+  .d6-hero .panel .highlight .val {
+    font-family: 'Poppins', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  .d6-hero .panel .highlight .lbl {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .d6-sections {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .d6-section {
+    padding: 40px;
+    border-top: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .d6-section:nth-child(even) {
+    background: rgba(255,255,255,0.015);
+  }
+
+  .d6-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .d6-section-header .bar {
+    width: 3px;
+    height: 20px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, var(--primary), var(--accent-blue));
+  }
+
+  .d6-section-header h4 {
+    font-size: 1.15rem;
+  }
+
+  .d6-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+
+  .d6-card {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 24px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+
+  .d6-card::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, var(--primary), var(--accent-blue));
+    border-radius: inherit;
+    opacity: 0;
+    filter: blur(14px);
+    z-index: -1;
+    transition: opacity 0.3s ease;
+  }
+
+  .d6-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(79,209,199,0.25);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  }
+
+  .d6-card:hover::after { opacity: 0.25; }
+
+  .d6-card .step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--primary), var(--accent-blue));
+    font-weight: 700;
+    font-size: 0.8rem;
+    margin-bottom: 12px;
+  }
+
+  .d6-card h5 { font-size: 0.95rem; margin-bottom: 6px; }
+  .d6-card p { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; }
+
+  .d6-faq {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 720px;
+  }
+
+  .d6-faq-item {
+    background: rgba(255,255,255,0.03);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 16px 20px;
+    transition: all 0.25s ease;
+    cursor: pointer;
+  }
+
+  .d6-faq-item:hover {
+    border-color: rgba(79,209,199,0.2);
+    background: rgba(255,255,255,0.05);
+  }
+
+  .d6-faq-item .q {
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .d6-faq-item .q .chevron { color: var(--primary); }
+
+  .d6-cta-section {
+    position: relative;
+    z-index: 1;
+    padding: 36px 40px;
+    background: linear-gradient(135deg, rgba(79,209,199,0.06), rgba(59,130,246,0.06));
+    border-top: 1px solid rgba(79,209,199,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+
+  .d6-cta-section h4 { font-size: 1.1rem; margin-bottom: 4px; }
+  .d6-cta-section p { font-size: 0.85rem; color: var(--text-muted); }
+
+  .d6-cta-section .cta-btn {
+    padding: 11px 28px;
+    border-radius: 10px;
+    background: var(--primary);
+    color: white;
+    font-weight: 600;
+    font-size: 0.88rem;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    animation: glow-pulse 3s ease-in-out infinite;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     RESPONSIVE
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  @media (max-width: 768px) {
+    .showcase-nav { padding: 10px 16px; }
+    .direction { padding: 60px 20px; }
+    .direction-header { flex-direction: column; gap: 12px; }
+    .d1-cards, .d2-steps, .d3-cards, .d6-cards { grid-template-columns: 1fr; }
+    .d4-showcase { grid-template-columns: 1fr; }
+    .d5-hero { grid-template-columns: 1fr; gap: 24px; }
+    .d5-feature-grid { grid-template-columns: 1fr; }
+    .d6-hero { grid-template-columns: 1fr; gap: 24px; }
+    .d3-bullets ul { grid-template-columns: 1fr; }
+    .d4-cta-band, .d6-cta-section { flex-direction: column; text-align: center; }
+    .d1-hero .highlight-stats { flex-direction: column; gap: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     NAVIGATION
+     ═══════════════════════════════════════════════════════════════════════ -->
+
+<nav class="showcase-nav">
+  <span class="logo">AI.ProfilePhotoMaker</span>
+  <span class="divider"></span>
+  <span class="label">Design Directions</span>
+  <div class="nav-pills">
+    <button class="nav-pill active" onclick="scrollTo_('intro')">Overview</button>
+    <button class="nav-pill" onclick="scrollTo_('d1')">1. Glass Cascade</button>
+    <button class="nav-pill" onclick="scrollTo_('d2')">2. Gradient Depth</button>
+    <button class="nav-pill" onclick="scrollTo_('d3')">3. Card Elevation</button>
+    <button class="nav-pill" onclick="scrollTo_('d4')">4. Ambient Glow</button>
+    <button class="nav-pill" onclick="scrollTo_('d5')">5. Editorial</button>
+    <button class="nav-pill" onclick="scrollTo_('d6')">6. Hybrid</button>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     INTRO
+     ═══════════════════════════════════════════════════════════════════════ -->
+
+<section class="showcase-intro" id="intro">
+  <h1>Design Direction Explorations</h1>
+  <p>6 visual approaches for extending the landing page's energy to SEO marketing pages, pricing, and legal pages. Each mockup simulates an SEO page (like /ai-headshots-for-linkedin) using real section types.</p>
+  <div class="criteria-bar">
+    <span class="criteria-tag">Layout Hierarchy</span>
+    <span class="criteria-tag">Visual Depth</span>
+    <span class="criteria-tag">Motion & Life</span>
+    <span class="criteria-tag">Brand Consistency</span>
+    <span class="criteria-tag">Implementation Effort</span>
+    <span class="criteria-tag">Content Readability</span>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     DIRECTION 1: GLASS CASCADE
+     ═══════════════════════════════════════════════════════════════════════ -->
+
+<section class="direction" id="d1">
+  <div class="direction-header">
+    <div class="direction-number">1</div>
+    <div class="direction-meta">
+      <h2>Glass Cascade</h2>
+      <p class="subtitle">Full glassmorphism on every card and surface. The landing page treatment, everywhere.</p>
+      <div class="direction-tags">
+        <span class="direction-tag">Glassmorphism</span>
+        <span class="direction-tag">Hover Glow</span>
+        <span class="direction-tag">Existing Mixins</span>
+        <span class="direction-tag">Medium Effort</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup-frame">
+    <div class="mockup-browser-bar">
+      <span class="mockup-dot r"></span>
+      <span class="mockup-dot y"></span>
+      <span class="mockup-dot g"></span>
+      <span class="mockup-url">aiprofilephotomaker.com/ai-headshots-for-linkedin</span>
+    </div>
+    <div class="mockup-content d1-content">
+      <div class="d1-hero">
+        <p class="eyebrow">AI-Powered Professional Photos</p>
+        <h3>AI Headshots for LinkedIn</h3>
+        <p>Transform your casual selfies into studio-quality LinkedIn headshots. Stand out to recruiters with a professional photo that gets 21x more profile views.</p>
+        <div class="highlight-stats">
+          <div class="stat"><div class="value">$9</div><div class="label">Starting price</div></div>
+          <div class="stat"><div class="value">15 min</div><div class="label">Delivery time</div></div>
+          <div class="stat"><div class="value">100%</div><div class="label">Money-back</div></div>
+        </div>
+      </div>
+      <div class="d1-sections">
+        <div>
+          <h3 class="d1-section-header">How It Works</h3>
+          <div class="d1-cards">
+            <div class="d1-card">
+              <div class="step-num">1</div>
+              <h4>Upload Your Photos</h4>
+              <p>Upload 10-20 casual photos. Selfies, vacation pics — anything with your face clearly visible.</p>
+            </div>
+            <div class="d1-card">
+              <div class="step-num">2</div>
+              <h4>AI Learns Your Features</h4>
+              <p>Our AI studies your unique features to create authentic, professional headshots that look like you.</p>
+            </div>
+            <div class="d1-card">
+              <div class="step-num">3</div>
+              <h4>Download & Use</h4>
+              <p>Choose your favorites and download in high resolution, optimized for LinkedIn profile photos.</p>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3 class="d1-section-header">Frequently Asked Questions</h3>
+          <div class="d1-faq">
+            <div class="d1-faq-item"><div class="question">How long does it take to get my headshots?<span class="chevron">›</span></div></div>
+            <div class="d1-faq-item"><div class="question">What kind of photos should I upload?<span class="chevron">›</span></div></div>
+            <div class="d1-faq-item"><div class="question">Will the headshots look like me?<span class="chevron">›</span></div></div>
+            <div class="d1-faq-item"><div class="question">Do you offer a money-back guarantee?<span class="chevron">›</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     DIRECTION 2: GRADIENT DEPTH
+     ═══════════════════════════════════════════════════════════════════════ -->
+
+<section class="direction" id="d2">
+  <div class="direction-header">
+    <div class="direction-number">2</div>
+    <div class="direction-meta">
+      <h2>Gradient Depth</h2>
+      <p class="subtitle">Rich gradient backgrounds per section. Each section has a distinct visual layer with indigo/purple energy.</p>
+      <div class="direction-tags">
+        <span class="direction-tag">Gradient Sections</span>
+        <span class="direction-tag">Gradient Underlines</span>
+        <span class="direction-tag">Bold Numbers</span>
+        <span class="direction-tag">Low-Medium Effort</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup-frame">
+    <div class="mockup-browser-bar">
+      <span class="mockup-dot r"></span>
+      <span class="mockup-dot y"></span>
+      <span class="mockup-dot g"></span>
+      <span class="mockup-url">aiprofilephotomaker.com/ai-headshots-for-linkedin</span>
+    </div>
+    <div class="mockup-content d2-content">
+      <div class="d2-hero">
+        <p class="eyebrow">LinkedIn-Optimized AI Photography</p>
+        <h3>AI Headshots for LinkedIn</h3>
+        <p>Get studio-quality LinkedIn headshots from your selfies. Profiles with professional photos get 21x more views and 36x more messages.</p>
+      </div>
+      <div class="d2-sections">
+        <div class="d2-section">
+          <h3 class="d2-section-title">How It Works</h3>
+          <div class="d2-steps">
+            <div class="d2-step"><div class="num">01</div><h4>Upload Photos</h4><p>Upload 10-20 casual photos of yourself from any angle.</p></div>
+            <div class="d2-step"><div class="num">02</div><h4>AI Processing</h4><p>Your personal AI model learns your unique features in ~15 minutes.</p></div>
+            <div class="d2-step"><div class="num">03</div><h4>Get Headshots</h4><p>Download professional headshots in multiple styles, LinkedIn-ready.</p></div>
+          </div>
+        </div>
+        <div class="d2-section">
+          <h3 class="d2-section-title">AI vs Traditional Photography</h3>
+          <table class="d2-comparison">
+            <thead><tr><th>Feature</th><th>AI Profile Photo Maker</th><th>Traditional Studio</th></tr></thead>
+            <tbody>
+              <tr><td>Price</td><td class="check">$9 – $39</td><td class="cross">$150 – $500+</td></tr>
+              <tr><td>Delivery Time</td><td class="check">15 minutes</td><td class="cross">2-3 weeks</td></tr>
+              <tr><td>Multiple Styles</td><td class="check">Yes, unlimited looks</td><td class="cross">Limited by session</td></tr>
+              <tr><td>Convenience</td><td class="check">From any device, anywhere</td><td class="cross">Travel to studio</td></tr>
+              <tr><td>Money-Back Guarantee</td><td class="check">100% guaranteed</td><td class="cross">Rarely offered</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     DIRECTION 3: CARD ELEVATION
+     ═══════════════════════════════════════════════════════════════════════ -->
+
+<section class="direction" id="d3">
+  <div class="direction-header">
+    <div class="direction-number">3</div>
+    <div class="direction-meta">
+      <h2>Card Elevation</h2>
+      <p class="subtitle">Strong shadows and top-border accents. Clean, solid cards with physical depth — no blur effects.</p>
+      <div class="direction-tags">
+        <span class="direction-tag">Deep Shadows</span>
+        <span class="direction-tag">Accent Borders</span>
+        <span class="direction-tag">Clean Surfaces</span>
+        <span class="direction-tag">Low Effort</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup-frame">
+    <div class="mockup-browser-bar">
+      <span class="mockup-dot r"></span>
+      <span class="mockup-dot y"></span>
+      <span class="mockup-dot g"></span>
+      <span class="mockup-url">aiprofilephotomaker.com/ai-headshots-for-linkedin</span>
+    </div>
+    <div class="mockup-content d3-content">
+      <div class="d3-hero">
+        <div class="badge">✨ AI-Powered Professional Photos</div>
+        <h3>AI Headshots for LinkedIn</h3>
+        <p>Upload your casual selfies. Get studio-quality LinkedIn headshots in 15 minutes — not weeks at a photographer's studio.</p>
+      </div>
+      <div class="d3-sections">
+        <div>
+          <div class="d3-section-title"><span class="accent-bar"></span> Why AI Headshots</div>
+          <div class="d3-cards">
+            <div class="d3-card"><div class="icon">💰</div><h4>Save $150-500+</h4><p>Professional headshots from $9, not hundreds at a studio. Same quality, fraction of the cost.</p></div>
+            <div class="d3-card"><div class="icon">⚡</div><h4>Ready in 15 Minutes</h4><p>No booking, no waiting, no travel. Upload photos now, download headshots in minutes.</p></div>
+            <div class="d3-card"><div class="icon">🎨</div><h4>Multiple Styles</h4><p>Corporate, creative, casual — try different looks without booking multiple sessions.</p></div>
+          </div>
+        </div>
+        <div>
+          <div class="d3-section-title"><span class="accent-bar"></span> What You Get</div>
+          <div class="d3-bullets">
+            <ul>
+              <li><span class="bullet-check">✓</span> High-resolution headshots optimized for LinkedIn</li>
+              <li><span class="bullet-check">✓</span> Multiple professional styles to choose from</li>
+              <li><span class="bullet-check">✓</span> Personal AI model trained on your photos</li>
+              <li><span class="bullet-check">✓</span> 100% money-back guarantee if not satisfied</li>
+              <li><span class="bullet-check">✓</span> Photos deleted after 30 days for privacy</li>
+              <li><span class="bullet-check">✓</span> Download and use on any platform</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     DIRECTION 4: AMBIENT GLOW
+     ═══════════════════════════════════════════════════════════════════════ -->
+
+<section class="direction" id="d4">
+  <div class="direction-header">
+    <div class="direction-number">4</div>
+    <div class="direction-meta">
+      <h2>Ambient Glow</h2>
+      <p class="subtitle">Floating glow orbs and pulsing CTAs create a sense of energy and life. The page feels alive even when idle.</p>
+      <div class="direction-tags">
+        <span class="direction-tag">Floating Orbs</span>
+        <span class="direction-tag">CTA Pulse</span>
+        <span class="direction-tag">Before/After Showcase</span>
+        <span class="direction-tag">Medium Effort</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup-frame">
+    <div class="mockup-browser-bar">
+      <span class="mockup-dot r"></span>
+      <span class="mockup-dot y"></span>
+      <span class="mockup-dot g"></span>
+      <span class="mockup-url">aiprofilephotomaker.com/ai-headshots-for-linkedin</span>
+    </div>
+    <div class="mockup-content d4-content">
+      <div class="d4-orb teal"></div>
+      <div class="d4-orb blue"></div>
+      <div class="d4-orb purple"></div>
+
+      <div class="d4-hero">
+        <h3>AI Headshots for LinkedIn</h3>
+        <p>Professional headshots that make recruiters stop scrolling. Created by AI, powered by your photos, ready in minutes.</p>
+        <button class="glow-btn">Get Your Headshots →</button>
+      </div>
+
+      <div class="d4-sections">
+        <div>
+          <h3 class="d4-section-title">Style Showcase</h3>
+          <div class="d4-showcase">
+            <div class="d4-showcase-item">
+              <div class="d4-showcase-visual"><div class="before">Before</div><div class="after">After</div></div>
+              <div class="d4-showcase-text"><h4>Corporate Professional</h4><p>Clean, polished look perfect for finance, consulting, and corporate roles.</p></div>
+            </div>
+            <div class="d4-showcase-item">
+              <div class="d4-showcase-visual"><div class="before">Before</div><div class="after">After</div></div>
+              <div class="d4-showcase-text"><h4>Creative Professional</h4><p>Modern, approachable style ideal for tech, design, and startup environments.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d4-cta-band">
+        <div>
+          <h4>Ready to upgrade your LinkedIn presence?</h4>
+          <p>Join thousands of professionals who got their headshots in minutes, not weeks.</p>
+        </div>
+        <button class="cta-btn">Get Started — $9</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     DIRECTION 5: EDITORIAL LAYOUT
+     ═══════════════════════════════════════════════════════════════════════ -->
+
+<section class="direction" id="d5">
+  <div class="direction-header">
+    <div class="direction-number">5</div>
+    <div class="direction-meta">
+      <h2>Editorial Layout</h2>
+      <p class="subtitle">Magazine-style asymmetric layout with bold typography, accent overlines, and left-border hover accents. Content-forward, visually rich.</p>
+      <div class="direction-tags">
+        <span class="direction-tag">Asymmetric Grid</span>
+        <span class="direction-tag">Bold Type</span>
+        <span class="direction-tag">Left-Border Accents</span>
+        <span class="direction-tag">Low Effort</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup-frame">
+    <div class="mockup-browser-bar">
+      <span class="mockup-dot r"></span>
+      <span class="mockup-dot y"></span>
+      <span class="mockup-dot g"></span>
+      <span class="mockup-url">aiprofilephotomaker.com/ai-headshots-for-linkedin</span>
+    </div>
+    <div class="mockup-content d5-content">
+      <div class="d5-hero">
+        <div>
+          <p class="overline">LinkedIn-Ready AI Headshots</p>
+          <h3>Your Next Profile Photo<br>Is 15 Minutes Away</h3>
+          <p>Professional photographers charge $150-500. We deliver the same quality from your selfies for a fraction of the cost. Real AI, real results, real professional photos.</p>
+        </div>
+        <div class="hero-sidebar">
+          <div class="stat-row"><span class="stat-label">Starting from</span><span class="stat-value">$9</span></div>
+          <div class="stat-row"><span class="stat-label">Delivery time</span><span class="stat-value">~15 min</span></div>
+          <div class="stat-row"><span class="stat-label">Guarantee</span><span class="stat-value">100%</span></div>
+          <div class="stat-row"><span class="stat-label">Styles available</span><span class="stat-value">12+</span></div>
+        </div>
+      </div>
+      <div class="d5-sections">
+        <div class="d5-section">
+          <p class="d5-section-label">Features</p>
+          <h3 class="d5-section-title">Why Professionals Choose AI Headshots</h3>
+          <p class="d5-section-intro">Everything you need to look your best on LinkedIn, without the hassle of a traditional photo shoot.</p>
+          <div class="d5-feature-grid">
+            <div class="d5-feature"><h4>Personal AI Model</h4><p>Trained specifically on your photos for results that actually look like you — not a generic AI face.</p></div>
+            <div class="d5-feature"><h4>LinkedIn Optimized</h4><p>Dimensions and framing optimized for LinkedIn profile photos. One-click download, ready to use.</p></div>
+            <div class="d5-feature"><h4>Multiple Styles</h4><p>Corporate, creative, casual — generate headshots in different styles from a single upload session.</p></div>
+            <div class="d5-feature"><h4>Privacy First</h4><p>Your photos are deleted after 30 days. Full data export and deletion controls in account settings.</p></div>
+          </div>
+        </div>
+        <div class="d5-section">
+          <p class="d5-section-label">FAQ</p>
+          <h3 class="d5-section-title">Common Questions</h3>
+          <div class="d5-faq-list">
+            <div class="d5-faq-item open"><div class="question">How realistic are AI headshots?</div><div class="answer">Our AI trains a model specifically on your photos, so results look authentically like you. They're designed to be indistinguishable from traditional studio photography.</div></div>
+            <div class="d5-faq-item"><div class="question">What photos should I upload?</div><div class="answer">Any clear photos of your face — selfies, vacation photos, group photos where you're visible. 10-20 photos from different angles give the best results.</div></div>
+            <div class="d5-faq-item"><div class="question">Can I get a refund if I'm not happy?</div><div class="answer">Yes, 100% money-back guarantee. If you're not satisfied with your headshots, we'll refund your purchase.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     DIRECTION 6: HYBRID — Recommended combination
+     ═══════════════════════════════════════════════════════════════════════ -->
+
+<section class="direction" id="d6">
+  <div class="direction-header">
+    <div class="direction-number">6</div>
+    <div class="direction-meta">
+      <h2>Hybrid — Recommended</h2>
+      <p class="subtitle">Best elements combined: Glass cards with hover glow (#1), gradient hero (#2), accent bars (#3), ambient orbs (#4), and editorial structure (#5). Full toolkit, calibrated per page type.</p>
+      <div class="direction-tags">
+        <span class="direction-tag">Glass + Elevation</span>
+        <span class="direction-tag">Ambient Orbs</span>
+        <span class="direction-tag">Scroll Animation</span>
+        <span class="direction-tag">Editorial Structure</span>
+        <span class="direction-tag">CTA Pulse</span>
+        <span class="direction-tag">Medium Effort</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup-frame">
+    <div class="mockup-browser-bar">
+      <span class="mockup-dot r"></span>
+      <span class="mockup-dot y"></span>
+      <span class="mockup-dot g"></span>
+      <span class="mockup-url">aiprofilephotomaker.com/ai-headshots-for-linkedin</span>
+    </div>
+    <div class="mockup-content d6-content">
+      <div class="d6-orb a"></div>
+      <div class="d6-orb b"></div>
+
+      <div class="d6-hero">
+        <div>
+          <p class="eyebrow">AI-Powered Professional Photos</p>
+          <h3>AI Headshots for LinkedIn</h3>
+          <p>Transform your casual selfies into studio-quality LinkedIn headshots. Stand out to recruiters with a professional photo in minutes.</p>
+          <div class="cta-row">
+            <button class="btn-primary">Get Your Headshots</button>
+            <button class="btn-outline">See Pricing</button>
+          </div>
+        </div>
+        <div class="panel">
+          <p class="panel-title">At a glance</p>
+          <div class="highlights">
+            <div class="highlight"><div class="val">$9</div><div class="lbl">Starting price</div></div>
+            <div class="highlight"><div class="val">15 min</div><div class="lbl">Delivery</div></div>
+            <div class="highlight"><div class="val">100%</div><div class="lbl">Guarantee</div></div>
+            <div class="highlight"><div class="val">12+</div><div class="lbl">Styles</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d6-sections">
+        <div class="d6-section">
+          <div class="d6-section-header"><span class="bar"></span><h4>How It Works</h4></div>
+          <div class="d6-cards">
+            <div class="d6-card"><div class="step">1</div><h5>Upload Photos</h5><p>Upload 10-20 casual photos of yourself. Selfies, vacation pics — anything works.</p></div>
+            <div class="d6-card"><div class="step">2</div><h5>AI Learns You</h5><p>Our AI studies your unique features and creates your personal model in ~15 minutes.</p></div>
+            <div class="d6-card"><div class="step">3</div><h5>Get Headshots</h5><p>Choose styles, download high-res headshots optimized for LinkedIn profiles.</p></div>
+          </div>
+        </div>
+        <div class="d6-section">
+          <div class="d6-section-header"><span class="bar"></span><h4>Frequently Asked Questions</h4></div>
+          <div class="d6-faq">
+            <div class="d6-faq-item"><div class="q">How long does it take to get my headshots?<span class="chevron">›</span></div></div>
+            <div class="d6-faq-item"><div class="q">What kind of photos should I upload?<span class="chevron">›</span></div></div>
+            <div class="d6-faq-item"><div class="q">Will the headshots actually look like me?<span class="chevron">›</span></div></div>
+            <div class="d6-faq-item"><div class="q">Do you offer a money-back guarantee?<span class="chevron">›</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d6-cta-section">
+        <div>
+          <h4>Ready to upgrade your LinkedIn presence?</h4>
+          <p>Professional headshots in minutes — starting at just $9.</p>
+        </div>
+        <button class="cta-btn">Get Started →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div style="padding: 80px 40px; text-align: center; max-width: 700px; margin: 0 auto;">
+  <h2 style="font-size: 1.4rem; margin-bottom: 12px;">Which direction speaks to you?</h2>
+  <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 8px;">Pick a favorite, combine elements, or request modifications. Each direction can be applied at different intensity levels across page types.</p>
+  <p style="color: var(--text-muted); font-size: 0.85rem;">Direction 6 (Hybrid) is recommended — it brings the most visual richness while reusing existing design system code.</p>
+</div>
+
+<script>
+  function scrollTo_(id) {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    document.querySelectorAll('.nav-pill').forEach(p => p.classList.remove('active'));
+    event.target.classList.add('active');
+  }
+
+  // Update active pill on scroll
+  const sections = ['intro','d1','d2','d3','d4','d5','d6'];
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        document.querySelectorAll('.nav-pill').forEach((p, i) => {
+          p.classList.toggle('active', sections[i] === id);
+        });
+      }
+    });
+  }, { threshold: 0.3 });
+
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) observer.observe(el);
+  });
+</script>
+
+</body>
+</html>

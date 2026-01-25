@@ -1459,8 +1459,20 @@ header
   display: flex
   flex-direction: column
   justify-content: center
+  // Desktop: 100px top accounts for fixed header, 60px bottom for scroll cue
   padding: 100px 0 60px
   pointer-events: auto !important
+
+  @media (max-width: 768px)
+    // Tablet: Allow natural height, align content to top
+    // 72px top = header height (~64px) + spacing, 40px bottom for breathing room
+    min-height: auto
+    justify-content: flex-start
+    padding: 72px 0 40px
+
+  @media (max-width: 480px)
+    // Mobile: Tighter spacing - 64px top for smaller header, 32px bottom
+    padding: 64px 0 32px
 
 // Animated Mesh Gradient Background
 .hero-mesh-bg
@@ -1882,7 +1894,16 @@ header
   width: 100%
   max-width: 600px
   animation: fadeInUp 1s ease-out 0.6s both
-  padding-bottom: 80px  // Space for scroll cue below
+  // Desktop: 80px bottom padding provides space for scroll cue indicator
+  padding-bottom: 80px
+
+  @media (max-width: 768px)
+    // Tablet: Reduced padding as scroll cue is less prominent
+    padding-bottom: 48px
+
+  @media (max-width: 480px)
+    // Mobile: Minimal padding to maximize content visibility
+    padding-bottom: 32px
 
 .hero-cta-row
   display: flex
