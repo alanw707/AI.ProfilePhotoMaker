@@ -30,5 +30,6 @@ export const environment = {
     frontendUrl: 'https://aiprofilephotomaker.com',
     backendUrl: 'https://api.aiprofilephotomaker.com',
     storageUrl: 'https://aipmstv16j74jubocuukg.blob.core.windows.net',
+    stylePreviewUrl: 'https://aipmstv16j74jubocuukg.blob.core.windows.net',
   },
 };

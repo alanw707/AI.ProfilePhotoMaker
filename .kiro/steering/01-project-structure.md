@@ -1,0 +1,37 @@
+---
+inclusion: always
+---
+# AI.ProfilePhotoMaker — Project Structure Guide
+
+This workspace is a full-stack app with an ASP.NET Core API and an Angular UI.
+
+## Back end (C#/.NET 8)
+- API root: [AI.ProfilePhotoMaker.API/](mdc:AI.ProfilePhotoMaker.API)
+- Entry point and composition root: [Program.cs](mdc:AI.ProfilePhotoMaker.API/Program.cs)
+- Environment validation: [Configuration/EnvironmentConfiguration.cs](mdc:AI.ProfilePhotoMaker.API/Configuration/EnvironmentConfiguration.cs)
+- Database config & DI: [Extensions/DatabaseServiceExtensions.cs](mdc:AI.ProfilePhotoMaker.API/Extensions/DatabaseServiceExtensions.cs)
+- Data layer: [Data/](mdc:AI.ProfilePhotoMaker.API/Data)
+- Controllers: [Controllers/](mdc:AI.ProfilePhotoMaker.API/Controllers)
+- Services: [Services/](mdc:AI.ProfilePhotoMaker.API/Services)
+- Storage providers: [Services/Storage/](mdc:AI.ProfilePhotoMaker.API/Services/Storage)
+- Migrations: [Migrations/](mdc:AI.ProfilePhotoMaker.API/Migrations)
+- Webhook security filter: [Filters/ReplicateSignatureValidationAttribute.cs](mdc:AI.ProfilePhotoMaker.API/Filters/ReplicateSignatureValidationAttribute.cs)
+
+## Front end (Angular)
+- UI root: [AI.ProfilePhotoMaker.UI/](mdc:AI.ProfilePhotoMaker.UI)
+- Angular workspace: [angular.json](mdc:AI.ProfilePhotoMaker.UI/angular.json)
+- Dev proxy: [proxy.conf.json](mdc:AI.ProfilePhotoMaker.UI/proxy.conf.json)
+- Environments: [src/environments/](mdc:AI.ProfilePhotoMaker.UI/src/environments)
+- Auth interceptors/services: [src/app/interceptors/](mdc:AI.ProfilePhotoMaker.UI/src/app/interceptors), [src/app/services/](mdc:AI.ProfilePhotoMaker.UI/src/app/services)
+
+## Tests
+- API unit/integration: [AI.ProfilePhotoMaker.API.Tests/](mdc:AI.ProfilePhotoMaker.API.Tests)
+- API Playwright: [AI.ProfilePhotoMaker.API/tests/playwright/](mdc:AI.ProfilePhotoMaker.API/tests/playwright)
+- UI integration specs: [AI.ProfilePhotoMaker.UI/src/app/integration-tests/](mdc:AI.ProfilePhotoMaker.UI/src/app/integration-tests)
+
+## Deployment & Ops
+- Simple GitHub workflow: [.github/workflows/simple-deploy.yml](mdc:.github/workflows/simple-deploy.yml)
+- Infra as code (Bicep): [infrastructure/](mdc:infrastructure)
+- Deployment docs: [docs/deployment/](mdc:docs/deployment)
+
+Follow thin-controller/service-first patterns. Prefer minimal, targeted edits; preserve existing abstractions and naming.

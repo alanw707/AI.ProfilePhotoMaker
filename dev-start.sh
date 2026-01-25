@@ -21,6 +21,7 @@ API_PORT="${API_HTTP_PORT:-5032}"
 API_PROJECT="${SCRIPT_DIR}/AI.ProfilePhotoMaker.API/AI.ProfilePhotoMaker.API.csproj"
 DOCKER_OVERRIDE_FILE="${SCRIPT_DIR}/docker-compose.override.yml"
 DEFAULT_NGROK_DOMAIN="clear-anteater-usually.ngrok-free.app"
+DEV_ENV_FILE_PATH="${DEV_ENV_FILE:-}"
 
 get_user_secret() {
   local key="$1"
@@ -561,6 +562,22 @@ done
 if [[ $START_DOCKER == true ]]; then
   echo "➡️  Starting docker-compose stack"
 
+  if [[ -z ${DEV_ENV_FILE_PATH} && -f "${SCRIPT_DIR}/.env" && -f "${SCRIPT_DIR}/local.env" ]]; then
+    echo "⚠️  Both .env and local.env exist; using .env. Set DEV_ENV_FILE to override."
+  fi
+
+  if [[ -z ${DEV_ENV_FILE_PATH} ]]; then
+    if [[ -f "${SCRIPT_DIR}/.env" ]]; then
+      DEV_ENV_FILE_PATH="${SCRIPT_DIR}/.env"
+    elif [[ -f "${SCRIPT_DIR}/local.env" ]]; then
+      DEV_ENV_FILE_PATH="${SCRIPT_DIR}/local.env"
+    fi
+  fi
+
+  if [[ -n ${DEV_ENV_FILE_PATH} ]]; then
+    echo "ℹ️  docker compose using env file: ${DEV_ENV_FILE_PATH}"
+  fi
+
   # In docker mode, always use the reserved ngrok domain so URLs remain stable across restarts.
   export EXTERNAL_API_BASE_URL="${EXTERNAL_API_BASE_URL:-https://${DEFAULT_NGROK_DOMAIN}}"
   echo "ℹ️  Using External API base: $EXTERNAL_API_BASE_URL"
@@ -577,7 +594,11 @@ if [[ $START_DOCKER == true ]]; then
   if $START_API; then local_services+=(api); fi
   if $START_UI; then local_services+=(frontend); fi
 
-  docker compose up -d --build --force-recreate "${local_services[@]}"
+  if [[ -n ${DEV_ENV_FILE_PATH} ]]; then
+    docker compose --env-file "${DEV_ENV_FILE_PATH}" up -d --build --force-recreate "${local_services[@]}"
+  else
+    docker compose up -d --build --force-recreate "${local_services[@]}"
+  fi
 
   # Bring up ngrok only after the API is reachable, so the reserved URL doesn't intermittently 5xx.
   if wait_for_local_api "$API_PORT" 90; then

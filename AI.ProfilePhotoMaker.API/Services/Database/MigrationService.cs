@@ -47,6 +47,16 @@ public class MigrationService : IMigrationService
                 return result;
             }
 
+            if (!await _context.Database.CanConnectAsync())
+            {
+                _logger.LogInformation("Database not found; attempting to create it before migrations.");
+                if (!await EnsureDatabaseExistsAsync())
+                {
+                    result.Errors.Add("Failed to create database");
+                    return result;
+                }
+            }
+
             // Get pending migrations before applying
             var pendingMigrations = await _context.Database.GetPendingMigrationsAsync();
             result.AppliedMigrations.AddRange(pendingMigrations);
@@ -208,6 +218,42 @@ public class MigrationService : IMigrationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to ensure database creation: {Message}", S(ex.Message));
+            return false;
+        }
+    }
+
+    private async Task<bool> EnsureDatabaseExistsAsync()
+    {
+        try
+        {
+            var connectionString = _databaseProvider.GetConnectionString();
+            var builder = new SqlConnectionStringBuilder(connectionString);
+            var databaseName = builder.InitialCatalog;
+
+            if (string.IsNullOrWhiteSpace(databaseName))
+            {
+                _logger.LogWarning("Database name missing from connection string; cannot create database.");
+                return false;
+            }
+
+            builder.InitialCatalog = "master";
+            await using var connection = new SqlConnection(builder.ConnectionString);
+            await connection.OpenAsync();
+
+            await using var command = connection.CreateCommand();
+            command.CommandText = "IF DB_ID(@dbName) IS NULL EXEC('CREATE DATABASE [' + @dbName + ']')";
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "@dbName";
+            parameter.Value = databaseName;
+            command.Parameters.Add(parameter);
+
+            await command.ExecuteNonQueryAsync();
+            _logger.LogInformation("Database ensured: {Database}", S(databaseName));
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create database: {Message}", S(ex.Message));
             return false;
         }
     }

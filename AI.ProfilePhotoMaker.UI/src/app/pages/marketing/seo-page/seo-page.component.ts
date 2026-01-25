@@ -4,6 +4,7 @@ import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, ParamMap, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AnalyticsService } from '../../../services/analytics.service';
+import { AnimateOnScrollDirective } from '../../../shared/directives/animate-on-scroll.directive';
 import { MarketingFooterComponent } from '../../../shared/marketing-footer/marketing-footer.component';
 import { MarketingHeaderComponent } from '../../../shared/marketing-header/marketing-header.component';
 import {
@@ -22,7 +23,13 @@ import {
 @Component({
   selector: 'app-seo-page',
   standalone: true,
-  imports: [CommonModule, RouterModule, MarketingHeaderComponent, MarketingFooterComponent],
+  imports: [
+    CommonModule,
+    RouterModule,
+    MarketingHeaderComponent,
+    MarketingFooterComponent,
+    AnimateOnScrollDirective,
+  ],
   templateUrl: './seo-page.component.html',
   styleUrls: ['./seo-page.component.sass'],
 })
@@ -222,6 +229,27 @@ export class SeoPageComponent implements OnInit, OnDestroy {
 
   isFaqSection(section: SeoSection): section is SeoFaqSection {
     return section.type === 'faq';
+  }
+
+  // TrackBy functions for *ngFor performance optimization
+  trackByIndex(index: number): number {
+    return index;
+  }
+
+  trackByLabel(index: number, item: { label: string }): string {
+    return item.label;
+  }
+
+  trackByTitle(index: number, item: { title: string }): string {
+    return item.title;
+  }
+
+  trackByQuestion(index: number, item: { question: string }): string {
+    return item.question;
+  }
+
+  trackByHref(index: number, item: { href: string }): string {
+    return item.href;
   }
 
   private extractUtmParams(paramMap: ParamMap): Record<string, string> {

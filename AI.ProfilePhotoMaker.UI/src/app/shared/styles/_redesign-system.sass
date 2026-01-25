@@ -1,0 +1,620 @@
+// =============================================================================
+// LANDING PAGE REDESIGN - DESIGN SYSTEM FOUNDATION
+// =============================================================================
+// This file contains the extended design system for the landing page redesign
+// including new color palettes, glassmorphism effects, bento grid utilities,
+// and animation keyframes for modern micro-interactions.
+//
+// Requirements: 2.1, 5.1, 5.2, 5.5
+
+// =============================================================================
+// EXTENDED CSS VARIABLES - COLOR PALETTE
+// =============================================================================
+
+:root
+  // Extended Accent Gradients for Visual Interest
+  --accent-gradient-1: linear-gradient(135deg, #4fd1c7 0%, #3b82f6 100%)
+  --accent-gradient-2: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+  --accent-gradient-3: linear-gradient(135deg, #f093fb 0%, #f5576c 100%)
+  --accent-gradient-4: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)
+  
+  // Glassmorphism Variables
+  --glass-bg: rgba(255, 255, 255, 0.1)
+  --glass-bg-light: rgba(255, 255, 255, 0.05)
+  --glass-bg-strong: rgba(255, 255, 255, 0.15)
+  --glass-border: rgba(255, 255, 255, 0.2)
+  --glass-border-light: rgba(255, 255, 255, 0.1)
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1)
+  
+  // Depth Layer Shadows - Progressive elevation
+  --depth-1: 0 4px 16px rgba(0, 0, 0, 0.08)
+  --depth-2: 0 8px 32px rgba(0, 0, 0, 0.12)
+  --depth-3: 0 16px 48px rgba(0, 0, 0, 0.16)
+  --depth-4: 0 24px 64px rgba(0, 0, 0, 0.20)
+  
+  // Animation Timing Variables
+  --timing-fast: 200ms
+  --timing-normal: 300ms
+  --timing-slow: 500ms
+  --timing-slower: 800ms
+  --easing-smooth: cubic-bezier(0.4, 0, 0.2, 1)
+  --easing-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55)
+  --easing-ease-out: cubic-bezier(0.0, 0, 0.2, 1)
+  --easing-ease-in-out: cubic-bezier(0.4, 0, 0.6, 1)
+  
+  // RGB Values for rgba() usage
+  --accent-primary-rgb: 79, 209, 199
+  --accent-secondary-rgb: 59, 130, 246
+  --surface-bg: rgba(255, 255, 255, 0.95)
+  --surface-alt: rgba(248, 250, 252, 1)
+
+// Dark Theme Overrides
+[data-theme="dark"]
+  // Dark theme glassmorphism
+  --glass-bg: rgba(30, 41, 59, 0.3)
+  --glass-bg-light: rgba(30, 41, 59, 0.2)
+  --glass-bg-strong: rgba(30, 41, 59, 0.5)
+  --glass-border: rgba(255, 255, 255, 0.15)
+  --glass-border-light: rgba(255, 255, 255, 0.08)
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4)
+  
+  // Dark theme depth shadows
+  --depth-1: 0 4px 16px rgba(0, 0, 0, 0.3)
+  --depth-2: 0 8px 32px rgba(0, 0, 0, 0.4)
+  --depth-3: 0 16px 48px rgba(0, 0, 0, 0.5)
+  --depth-4: 0 24px 64px rgba(0, 0, 0, 0.6)
+  
+  // Dark theme surface colors
+  --surface-bg: rgba(44, 62, 80, 0.95)
+  --surface-alt: rgba(30, 41, 59, 1)
+
+// =============================================================================
+// GLASSMORPHISM MIXINS
+// =============================================================================
+
+// Base glassmorphism effect with backdrop blur
+@mixin glass-base
+  background: var(--glass-bg)
+  backdrop-filter: blur(20px) saturate(180%)
+  -webkit-backdrop-filter: blur(20px) saturate(180%)
+  border: 1px solid var(--glass-border)
+  box-shadow: var(--glass-shadow)
+
+// Light glassmorphism for subtle effects
+@mixin glass-light
+  background: var(--glass-bg-light)
+  backdrop-filter: blur(12px) saturate(150%)
+  -webkit-backdrop-filter: blur(12px) saturate(150%)
+  border: 1px solid var(--glass-border-light)
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06)
+
+// Strong glassmorphism for prominent elements
+@mixin glass-strong
+  background: var(--glass-bg-strong)
+  backdrop-filter: blur(30px) saturate(200%)
+  -webkit-backdrop-filter: blur(30px) saturate(200%)
+  border: 1px solid var(--glass-border)
+  box-shadow: var(--glass-shadow)
+
+// Glassmorphism card with hover effect
+@mixin glass-card
+  &
+    @include glass-base
+    border-radius: 20px
+    transition: all var(--timing-normal) var(--easing-smooth)
+  
+  @at-root #{&}:hover
+    transform: translateY(-4px)
+    box-shadow: var(--depth-2)
+    border-color: rgba(var(--accent-primary-rgb), 0.4)
+
+// Glassmorphism overlay for modals/overlays
+@mixin glass-overlay
+  background: rgba(0, 0, 0, 0.4)
+  backdrop-filter: blur(8px)
+  -webkit-backdrop-filter: blur(8px)
+
+// Fallback for browsers that don't support backdrop-filter
+@mixin glass-fallback
+  @supports not (backdrop-filter: blur(10px))
+    background: rgba(255, 255, 255, 0.95)
+    
+    [data-theme="dark"] &
+      background: rgba(44, 62, 80, 0.95)
+
+// =============================================================================
+// BENTO GRID SYSTEM UTILITIES
+// =============================================================================
+
+// Base bento grid container
+@mixin bento-grid($columns: 4, $gap: 24px)
+  display: grid
+  grid-template-columns: repeat($columns, 1fr)
+  grid-auto-rows: 200px
+  gap: $gap
+  
+  @media (max-width: 1024px)
+    grid-template-columns: repeat(3, 1fr)
+    grid-auto-rows: 180px
+    gap: 20px
+  
+  @media (max-width: 768px)
+    grid-template-columns: repeat(2, 1fr)
+    grid-auto-rows: 160px
+    gap: 16px
+  
+  @media (max-width: 480px)
+    grid-template-columns: 1fr
+    grid-auto-rows: 200px
+    gap: 12px
+
+// Bento grid item sizing utilities
+@mixin bento-item-1x1
+  grid-column: span 1
+  grid-row: span 1
+
+@mixin bento-item-2x1
+  grid-column: span 2
+  grid-row: span 1
+  
+  @media (max-width: 768px)
+    grid-column: span 2
+  
+  @media (max-width: 480px)
+    grid-column: span 1
+
+@mixin bento-item-1x2
+  grid-column: span 1
+  grid-row: span 2
+  
+  @media (max-width: 480px)
+    grid-row: span 1
+
+@mixin bento-item-2x2
+  grid-column: span 2
+  grid-row: span 2
+  
+  @media (max-width: 768px)
+    grid-column: span 2
+    grid-row: span 2
+  
+  @media (max-width: 480px)
+    grid-column: span 1
+    grid-row: span 1
+
+@mixin bento-item-3x1
+  grid-column: span 3
+  grid-row: span 1
+  
+  @media (max-width: 1024px)
+    grid-column: span 3
+  
+  @media (max-width: 768px)
+    grid-column: span 2
+  
+  @media (max-width: 480px)
+    grid-column: span 1
+
+// Bento grid item base styling
+@mixin bento-item-base
+  border-radius: 20px
+  padding: 32px
+  display: flex
+  flex-direction: column
+  justify-content: space-between
+  overflow: hidden
+  position: relative
+  transition: all var(--timing-normal) var(--easing-smooth)
+  
+  @media (max-width: 768px)
+    padding: 24px
+  
+  @media (max-width: 480px)
+    padding: 20px
+
+// =============================================================================
+// ANIMATION KEYFRAMES LIBRARY
+// =============================================================================
+
+// Fade in with upward motion
+@keyframes fade-in-up
+  from
+    opacity: 0
+    transform: translateY(30px)
+  to
+    opacity: 1
+    transform: translateY(0)
+
+// Fade in with downward motion
+@keyframes fade-in-down
+  from
+    opacity: 0
+    transform: translateY(-30px)
+  to
+    opacity: 1
+    transform: translateY(0)
+
+// Fade in from left
+@keyframes fade-in-left
+  from
+    opacity: 0
+    transform: translateX(-30px)
+  to
+    opacity: 1
+    transform: translateX(0)
+
+// Fade in from right
+@keyframes fade-in-right
+  from
+    opacity: 0
+    transform: translateX(30px)
+  to
+    opacity: 1
+    transform: translateX(0)
+
+// Scale in animation
+@keyframes scale-in
+  from
+    opacity: 0
+    transform: scale(0.9)
+  to
+    opacity: 1
+    transform: scale(1)
+
+// Gentle float animation
+@keyframes float-gentle
+  0%, 100%
+    transform: translateY(0)
+  50%
+    transform: translateY(-10px)
+
+// Pulse glow effect
+@keyframes pulse-glow
+  0%, 100%
+    opacity: 0.5
+    transform: scale(1)
+  50%
+    opacity: 1
+    transform: scale(1.05)
+
+// Shimmer effect for loading states
+@keyframes shimmer
+  0%
+    background-position: -1000px 0
+  100%
+    background-position: 1000px 0
+
+// Gradient animation
+@keyframes gradient-shift
+  0%
+    background-position: 0% 50%
+  50%
+    background-position: 100% 50%
+  100%
+    background-position: 0% 50%
+
+// Rotate animation
+@keyframes rotate
+  from
+    transform: rotate(0deg)
+  to
+    transform: rotate(360deg)
+
+// Bounce animation
+@keyframes bounce
+  0%, 100%
+    transform: translateY(0)
+  50%
+    transform: translateY(-10px)
+
+// Slide in from bottom
+@keyframes slide-in-bottom
+  from
+    transform: translateY(100%)
+    opacity: 0
+  to
+    transform: translateY(0)
+    opacity: 1
+
+// Slide in from top
+@keyframes slide-in-top
+  from
+    transform: translateY(-100%)
+    opacity: 0
+  to
+    transform: translateY(0)
+    opacity: 1
+
+// Ripple effect
+@keyframes ripple
+  0%
+    transform: scale(0)
+    opacity: 1
+  100%
+    transform: scale(4)
+    opacity: 0
+
+// Glow pulse for buttons
+@keyframes glow-pulse
+  0%, 100%
+    box-shadow: 0 0 0 0 rgba(var(--accent-primary-rgb), 0.7)
+  50%
+    box-shadow: 0 0 20px 10px rgba(var(--accent-primary-rgb), 0)
+
+// =============================================================================
+// MICRO-INTERACTION UTILITY CLASSES
+// =============================================================================
+
+// Hover lift effect
+.hover-lift
+  transition: transform var(--timing-normal) var(--easing-smooth), box-shadow var(--timing-normal) var(--easing-smooth)
+  
+  &:hover
+    transform: translateY(-4px)
+    box-shadow: var(--depth-2)
+
+// Hover scale effect
+.hover-scale
+  transition: transform var(--timing-normal) var(--easing-smooth)
+  
+  &:hover
+    transform: scale(1.05)
+
+// Hover glow effect
+.hover-glow
+  position: relative
+  transition: all var(--timing-normal) var(--easing-smooth)
+  
+  &::after
+    content: ''
+    position: absolute
+    inset: -4px
+    background: var(--accent-gradient-1)
+    border-radius: inherit
+    opacity: 0
+    filter: blur(12px)
+    z-index: -1
+    transition: opacity var(--timing-normal) var(--easing-smooth)
+  
+  &:hover::after
+    opacity: 0.6
+
+// Smooth color transition
+.smooth-color
+  transition: color var(--timing-normal) var(--easing-smooth), background-color var(--timing-normal) var(--easing-smooth)
+
+// Smooth border transition
+.smooth-border
+  transition: border-color var(--timing-normal) var(--easing-smooth)
+
+// =============================================================================
+// ANIMATION UTILITY CLASSES
+// =============================================================================
+
+.animate-fade-in-up
+  animation: fade-in-up var(--timing-slower) var(--easing-smooth) both
+
+.animate-fade-in-down
+  animation: fade-in-down var(--timing-slower) var(--easing-smooth) both
+
+.animate-fade-in-left
+  animation: fade-in-left var(--timing-slower) var(--easing-smooth) both
+
+.animate-fade-in-right
+  animation: fade-in-right var(--timing-slower) var(--easing-smooth) both
+
+.animate-scale-in
+  animation: scale-in var(--timing-slow) var(--easing-smooth) both
+
+.animate-float-gentle
+  animation: float-gentle 6s ease-in-out infinite
+
+.animate-pulse-glow
+  animation: pulse-glow 3s ease-in-out infinite
+
+.animate-shimmer
+  background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-tertiary) 50%, var(--bg-secondary) 75%)
+  background-size: 1000px 100%
+  animation: shimmer 2s infinite
+
+.animate-gradient
+  background-size: 200% 200%
+  animation: gradient-shift 5s ease infinite
+
+.animate-rotate
+  animation: rotate 2s linear infinite
+
+.animate-bounce
+  animation: bounce 2s ease-in-out infinite
+
+// Animation delay utilities
+@for $i from 1 through 10
+  .delay-#{$i}
+    animation-delay: #{$i * 0.1}s
+    transition-delay: #{$i * 0.1}s
+
+// =============================================================================
+// GRADIENT TEXT UTILITY
+// =============================================================================
+
+.gradient-text
+  background: var(--accent-gradient-1)
+  -webkit-background-clip: text
+  -webkit-text-fill-color: transparent
+  background-clip: text
+  color: transparent
+
+.gradient-text-2
+  background: var(--accent-gradient-2)
+  -webkit-background-clip: text
+  -webkit-text-fill-color: transparent
+  background-clip: text
+  color: transparent
+
+// =============================================================================
+// RESPONSIVE UTILITIES FOR REDESIGN
+// =============================================================================
+
+@mixin mobile-redesign
+  @media (max-width: 768px)
+    @content
+
+@mixin tablet-redesign
+  @media (min-width: 769px) and (max-width: 1024px)
+    @content
+
+@mixin desktop-redesign
+  @media (min-width: 1025px)
+    @content
+
+// =============================================================================
+// ACCESSIBILITY - REDUCED MOTION SUPPORT
+// =============================================================================
+
+@media (prefers-reduced-motion: reduce)
+  *,
+  *::before,
+  *::after
+    animation-duration: 0.01ms !important
+    animation-iteration-count: 1 !important
+    transition-duration: 0.01ms !important
+    scroll-behavior: auto !important
+  
+  .animate-fade-in-up,
+  .animate-fade-in-down,
+  .animate-fade-in-left,
+  .animate-fade-in-right,
+  .animate-scale-in,
+  .animate-float-gentle,
+  .animate-pulse-glow,
+  .animate-shimmer,
+  .animate-gradient,
+  .animate-rotate,
+  .animate-bounce
+    animation: none !important
+  
+  .hover-lift:hover,
+  .hover-scale:hover
+    transform: none !important
+
+// =============================================================================
+// IMAGE-LED LAYOUT MIXINS
+// =============================================================================
+
+// Before/After Card mixin for consistent styling
+@mixin before-after-card
+  position: relative
+  border-radius: 16px
+  overflow: hidden
+  background: var(--surface-bg)
+  transition: all var(--timing-normal) var(--easing-smooth)
+  
+  img
+    width: 100%
+    height: 100%
+    object-fit: cover
+    
+  &:hover
+    transform: scale(1.02)
+    box-shadow: var(--depth-2)
+
+// Before card styling
+@mixin before-card
+  @include before-after-card
+  border: 2px solid var(--glass-border)
+  
+// After card styling - highlighted
+@mixin after-card
+  @include before-after-card
+  border: 2px solid var(--accent-primary)
+  box-shadow: 0 8px 32px rgba(var(--accent-primary-rgb), 0.25)
+
+// Image frame with subtle shadow and border
+@mixin image-frame($radius: 16px)
+  border-radius: $radius
+  overflow: hidden
+  box-shadow: var(--depth-1)
+  border: 1px solid var(--glass-border)
+  transition: all var(--timing-normal) var(--easing-smooth)
+  
+  img
+    width: 100%
+    height: 100%
+    object-fit: cover
+    display: block
+    
+  &:hover
+    box-shadow: var(--depth-2)
+    transform: translateY(-4px)
+
+// Minimal section header
+@mixin section-header-minimal
+  text-align: center
+  margin-bottom: 48px
+  
+  h2
+    font-size: clamp(2rem, 4vw, 3rem)
+    font-weight: 700
+    color: var(--text-primary)
+    margin-bottom: 12px
+    
+  p
+    font-size: 1.125rem
+    color: var(--text-secondary)
+    max-width: 600px
+    margin: 0 auto
+
+// Compact trust bar
+@mixin trust-bar-compact
+  display: flex
+  flex-wrap: wrap
+  gap: 16px
+  align-items: center
+  font-size: 0.875rem
+  color: var(--text-secondary)
+  
+  strong
+    color: var(--text-primary)
+
+// Image placeholder fallback
+@mixin image-placeholder
+  display: flex
+  align-items: center
+  justify-content: center
+  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary))
+  color: var(--text-tertiary)
+  font-size: 0.875rem
+  min-height: 200px
+
+// =============================================================================
+// IMAGE-LED UTILITY CLASSES
+// =============================================================================
+
+// Before/After card classes
+.ba-card-before
+  @include before-card
+  
+.ba-card-after
+  @include after-card
+
+// Image frame utility
+.image-frame
+  @include image-frame
+
+.image-frame-lg
+  @include image-frame(20px)
+  
+.image-frame-sm
+  @include image-frame(12px)
+
+// Image placeholder
+.image-placeholder
+  @include image-placeholder
+
+// Section header minimal
+.section-header-minimal-util
+  @include section-header-minimal
+
+// Trust bar compact
+.trust-bar-compact
+  @include trust-bar-compact

@@ -11,6 +11,8 @@ import { CookieConsentService } from '../../services/cookie-consent.service';
   styleUrls: ['./marketing-footer.component.sass'],
 })
 export class MarketingFooterComponent {
+  readonly currentYear = new Date().getFullYear();
+
   constructor(private readonly cookieConsentService: CookieConsentService) {}
 
   openCookiePreferences(): void {

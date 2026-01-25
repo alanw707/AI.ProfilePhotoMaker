@@ -1,6 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Services.Storage;
+using Microsoft.EntityFrameworkCore;
+using System.Collections.Concurrent;
+using System.Net.Http;
 
 namespace AI.ProfilePhotoMaker.API.Controllers;
 
@@ -10,21 +14,32 @@ namespace AI.ProfilePhotoMaker.API.Controllers;
 /// It redirects to Azure Blob Storage URLs or serves placeholder images
 /// </summary>
 [Route("api/[controller]")]
+[Route("api/style-preview")]
 [ApiController]
 public class StylePreviewController : ControllerBase
 {
     private readonly IStorageService _storageService;
     private readonly IConfiguration _configuration;
     private readonly ILogger<StylePreviewController> _logger;
+    private readonly ApplicationDbContext _context;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IWebHostEnvironment _environment;
+    private static readonly ConcurrentDictionary<string, bool> CheckedPreviewUrls = new(StringComparer.OrdinalIgnoreCase);
     private static string S(string? value) => LoggingSanitizer.Sanitize(value);
 
     public StylePreviewController(
         IStorageService storageService,
         IConfiguration configuration,
+        ApplicationDbContext context,
+        IHttpClientFactory httpClientFactory,
+        IWebHostEnvironment environment,
         ILogger<StylePreviewController> logger)
     {
         _storageService = storageService;
         _configuration = configuration;
+        _context = context;
+        _httpClientFactory = httpClientFactory;
+        _environment = environment;
         _logger = logger;
     }
 
@@ -99,7 +114,6 @@ public class StylePreviewController : ControllerBase
     {
         try
         {
-            // Define the known styles (should match what's in the database)
             var knownStyles = new[]
             {
                 "corporate", "executive", "consultant", "linkedin", "medical",
@@ -108,9 +122,21 @@ public class StylePreviewController : ControllerBase
                 "glamour", "fitness", "retro-wave", "night-out", "digital-native"
             };
 
+            var styleNames = await _context.Styles
+                .AsNoTracking()
+                .Where(style => style.IsActive)
+                .OrderBy(style => style.Name)
+                .Select(style => style.Name)
+                .ToListAsync();
+
+            if (styleNames.Count == 0)
+            {
+                styleNames = knownStyles.ToList();
+            }
+
             var previews = new List<object>();
 
-            foreach (var style in knownStyles)
+            foreach (var style in styleNames)
             {
                 var fileName = $"{style}.jpg";
                 var storagePath = $"style-previews/{fileName}";
@@ -131,6 +157,16 @@ public class StylePreviewController : ControllerBase
                 {
                     // Use direct Azure Blob URL as fallback
                     url = GetDirectAzureBlobUrl(style) ?? "/api/placeholder/style-preview";
+                }
+
+                if (url.Contains("devstoreaccount1", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning("Style preview URL points to dev storage: {Url}", S(url));
+                }
+
+                if (_environment.IsDevelopment() && url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                {
+                    _ = CheckPreviewUrlAsync(url, style);
                 }
 
                 previews.Add(new
@@ -161,6 +197,32 @@ public class StylePreviewController : ControllerBase
         }
     }
 
+    private async Task CheckPreviewUrlAsync(string url, string style)
+    {
+        if (!CheckedPreviewUrls.TryAdd(url, true))
+        {
+            return;
+        }
+
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var client = _httpClientFactory.CreateClient();
+            using var request = new HttpRequestMessage(HttpMethod.Head, url);
+            var response = await client.SendAsync(request, cts.Token);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Style preview check failed ({StatusCode}) for {Style}: {Url}",
+                    (int)response.StatusCode, S(style), S(url));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Style preview check error for {Style}: {Url}", S(style), S(url));
+        }
+    }
+
     /// <summary>
     /// Generate direct Azure Blob Storage URL for a style
     /// </summary>
@@ -181,15 +243,21 @@ public class StylePreviewController : ControllerBase
 
         if (!string.IsNullOrEmpty(azureStorageConnection))
         {
-            // Parse storage account name from connection string
-            var accountNameMatch = System.Text.RegularExpressions.Regex.Match(
-                azureStorageConnection,
-                @"AccountName=([^;]+)",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            var isDevStorage = azureStorageConnection.Contains("UseDevelopmentStorage=true", StringComparison.OrdinalIgnoreCase)
+                               || azureStorageConnection.Contains("AccountName=devstoreaccount1", StringComparison.OrdinalIgnoreCase);
 
-            if (accountNameMatch.Success)
+            if (!isDevStorage)
             {
-                storageAccountName = accountNameMatch.Groups[1].Value;
+                // Parse storage account name from connection string
+                var accountNameMatch = System.Text.RegularExpressions.Regex.Match(
+                    azureStorageConnection,
+                    @"AccountName=([^;]+)",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+                if (accountNameMatch.Success)
+                {
+                    storageAccountName = accountNameMatch.Groups[1].Value;
+                }
             }
         }
 

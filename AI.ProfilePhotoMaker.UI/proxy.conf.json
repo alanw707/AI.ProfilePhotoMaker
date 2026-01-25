@@ -38,6 +38,12 @@
     "changeOrigin": true,
     "logLevel": "debug"
   },
+  "/profile-images": {
+    "target": "http://localhost:5032",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
   "/devstoreaccount1": {
     "target": "http://localhost:5032",
     "secure": false,

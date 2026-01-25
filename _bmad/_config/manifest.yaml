@@ -1,7 +1,7 @@
 installation:
   version: 6.0.0-alpha.23
-  installDate: 2026-01-11T15:52:42.732Z
-  lastUpdated: 2026-01-11T15:52:42.733Z
+  installDate: 2026-01-20T13:08:44.482Z
+  lastUpdated: 2026-01-20T13:08:44.482Z
 modules:
   - core
   - bmm
@@ -10,3 +10,4 @@ ides:
   - claude-code
   - cursor
   - github-copilot
+  - opencode
