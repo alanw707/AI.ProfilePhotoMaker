@@ -137,6 +137,7 @@ If a detail is owned by a sub-playbook, follow that source. This file defines ov
 - 2026-01-16: Added X/Twitter versions of all 4 posts (shorter, punchier format for cross-posting).
 - 2026-01-16: Drafted week 2 posts (Jan 27-31) with LinkedIn + X versions. See "Scheduled Posts Week 2" section.
 - 2026-01-16: **PLAYBOOK CONSISTENCY REVIEW** — Updated Phase 1 cadence, Content Calendar, X/Threads system to align with new 3x/week strategy. Deprecated legacy Week 1 organic posts. All sections now consistent with founder-led content pivot.
+- 2026-01-23: LinkedIn founder-led post published ("AI Hallucinated That Package").
 
 ## Scheduled Posts (Jan 17-24, 2026)
 
@@ -294,7 +295,7 @@ What's in your standard prompt template?
 #AIcoding #Security #SoloDeveloper #VibeCoding #BuildInPublic
 ```
 
-### Fri Jan 24 — "AI Hallucinated That Package" (🏗️ Build in Public)
+### Fri Jan 23 (Posted) — "AI Hallucinated That Package" (🏗️ Build in Public)
 
 **X/Twitter Version:**
 ```
