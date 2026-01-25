@@ -1092,6 +1092,14 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         /// </summary>
         private string GetFrontendBaseUrl()
         {
+            // Check environment variable first (used by Docker and local dev)
+            var envVar = Environment.GetEnvironmentVariable("APP_BASE_URL");
+            if (!string.IsNullOrWhiteSpace(envVar))
+            {
+                return envVar.TrimEnd('/');
+            }
+
+            // Fall back to configuration (appsettings.json)
             var configured = _configuration["AppBaseUrl"];
             if (!string.IsNullOrWhiteSpace(configured))
             {

@@ -219,7 +219,7 @@ export const seoPages: Record<string, SeoPageContent> = {
             description:
               'From a casual selfie to a crisp night-street portrait with cinematic neon glow.',
             beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
-            afterImage: '/assets/marketing/before-after/set-1-after.png',
+            afterImage: '/assets/marketing/before-after/set-1-after.jpg',
             beforeAlt: 'Casual selfie before headshot',
             afterAlt: 'Neon city headshot after',
           },

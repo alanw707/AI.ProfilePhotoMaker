@@ -400,25 +400,27 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
 
   // Hero Before/After Methods
   private initializeHeroBeforeAfter(): void {
-    // Use the existing marketing before/after assets
-    // Set-3 first - has best before/after parity (similar framing/distance)
+    // Map image sets to style labels based on actual content:
+    // set-1: urban/creative night scene → LinkedIn Ready
+    // set-2: casual athletic wear → Business Casual
+    // set-3: formal suit with tie → Corporate
     this.heroBeforeAfterPairs = [
       {
         id: 1,
-        before: 'assets/marketing/before-after/set-3-before.jpg',
-        after: 'assets/marketing/before-after/set-3-after.png',
+        before: 'assets/marketing/before-after/set-1-before.jpg',
+        after: 'assets/marketing/before-after/set-1-after.jpg',
         label: 'LinkedIn Ready',
       },
       {
         id: 2,
-        before: 'assets/marketing/before-after/set-1-before.jpg',
-        after: 'assets/marketing/before-after/set-1-after.png',
+        before: 'assets/marketing/before-after/set-2-before.jpg',
+        after: 'assets/marketing/before-after/set-2-after.png',
         label: 'Business Casual',
       },
       {
         id: 3,
-        before: 'assets/marketing/before-after/set-2-before.jpg',
-        after: 'assets/marketing/before-after/set-2-after.png',
+        before: 'assets/marketing/before-after/set-3-before.jpg',
+        after: 'assets/marketing/before-after/set-3-after.png',
         label: 'Corporate',
       },
     ];

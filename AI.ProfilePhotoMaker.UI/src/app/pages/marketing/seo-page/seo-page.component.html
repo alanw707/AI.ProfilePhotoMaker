@@ -40,7 +40,7 @@
           <div class="panel-card">
             <p class="panel-title">At a glance</p>
             <div class="panel-highlights" *ngIf="currentPage.highlights?.length; else heroSummary">
-              <div class="highlight" *ngFor="let highlight of currentPage.highlights">
+              <div class="highlight" *ngFor="let highlight of currentPage.highlights; trackBy: trackByLabel">
                 <div class="highlight-value">{{ highlight.value }}</div>
                 <div class="highlight-label">{{ highlight.label }}</div>
               </div>
@@ -53,7 +53,7 @@
       </div>
     </section>
 
-    <section class="page-section" *ngFor="let section of currentPage.sections">
+    <section class="page-section" *ngFor="let section of currentPage.sections; trackBy: trackByTitle">
       <div class="content-container">
         <div class="section-header">
           <h2>{{ section.title }}</h2>
@@ -63,8 +63,12 @@
         <div [ngSwitch]="section.type">
           <ng-container *ngSwitchCase="'steps'">
             <div class="steps-grid" *ngIf="isStepsSection(section)">
-              <div class="step-card" *ngFor="let item of section.items; let index = index">
-                <div class="step-number">{{ index + 1 }}</div>
+              <div
+                class="step-card"
+                *ngFor="let item of section.items; let i = index; trackBy: trackByTitle"
+                appAnimateOnScroll
+                [delay]="(i % 4) + 1">
+                <div class="step-number">{{ i + 1 }}</div>
                 <h3>{{ item.title }}</h3>
                 <p>{{ item.description }}</p>
               </div>
@@ -73,7 +77,11 @@
 
           <ng-container *ngSwitchCase="'cards'">
             <div class="cards-grid" *ngIf="isCardsSection(section)">
-              <div class="card" *ngFor="let item of section.items">
+              <div
+                class="card"
+                *ngFor="let item of section.items; let i = index; trackBy: trackByTitle"
+                appAnimateOnScroll
+                [delay]="(i % 4) + 1">
                 <h3>{{ item.title }}</h3>
                 <p>{{ item.description }}</p>
               </div>
@@ -83,14 +91,18 @@
           <ng-container *ngSwitchCase="'bullets'">
             <div class="bullet-grid" *ngIf="isBulletsSection(section)">
               <ul>
-                <li *ngFor="let item of section.items">{{ item }}</li>
+                <li *ngFor="let item of section.items; trackBy: trackByIndex">{{ item }}</li>
               </ul>
             </div>
           </ng-container>
 
           <ng-container *ngSwitchCase="'showcase'">
             <div class="showcase-grid" *ngIf="isShowcaseSection(section)">
-              <div class="showcase-item" *ngFor="let item of section.items">
+              <div
+                class="showcase-item"
+                *ngFor="let item of section.items; let i = index; trackBy: trackByTitle"
+                appAnimateOnScroll
+                [delay]="(i % 4) + 1">
                 <div class="showcase-visual">
                   <div class="visual-card before">
                     <ng-container *ngIf="item.beforeImage; else beforePlaceholder">
@@ -136,7 +148,11 @@
 
           <ng-container *ngSwitchCase="'testimonials'">
             <div class="testimonials-grid" *ngIf="isTestimonialsSection(section)">
-              <div class="testimonial-card" *ngFor="let item of section.items">
+              <div
+                class="testimonial-card"
+                *ngFor="let item of section.items; let i = index; trackBy: trackByIndex"
+                appAnimateOnScroll
+                [delay]="(i % 4) + 1">
                 <p class="quote">"{{ item.quote }}"</p>
                 <div class="author">
                   <span class="name">{{ item.name }}</span>
@@ -153,14 +169,14 @@
                   <thead>
                     <tr>
                       <th></th>
-                      <th *ngFor="let column of section.columns">{{ column }}</th>
+                      <th *ngFor="let column of section.columns; trackBy: trackByIndex">{{ column }}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr *ngFor="let row of section.rows">
+                    <tr *ngFor="let row of section.rows; trackBy: trackByLabel">
                       <td class="row-label" data-label="Feature">{{ row.label }}</td>
                       <td
-                        *ngFor="let value of row.values; let columnIndex = index"
+                        *ngFor="let value of row.values; let columnIndex = index; trackBy: trackByIndex"
                         [attr.data-label]="section.columns[columnIndex]">
                         {{ value }}
                       </td>
@@ -174,7 +190,7 @@
 
           <ng-container *ngSwitchCase="'faq'">
             <div class="faq-grid" *ngIf="isFaqSection(section)">
-              <details class="faq-item" *ngFor="let item of section.items">
+              <details class="faq-item" *ngFor="let item of section.items; trackBy: trackByQuestion">
                 <summary>{{ item.question }}</summary>
                 <p>{{ item.answer }}</p>
               </details>
@@ -202,9 +218,11 @@
         <div class="related-grid">
           <a
             class="related-card"
-            *ngFor="let link of currentPage.relatedLinks"
+            *ngFor="let link of currentPage.relatedLinks; let i = index; trackBy: trackByHref"
             [routerLink]="link.href"
-            [queryParams]="getQueryParamsForHref(link.href)">
+            [queryParams]="getQueryParamsForHref(link.href)"
+            appAnimateOnScroll
+            [delay]="(i % 4) + 1">
             <span>{{ link.label }}</span>
             <span class="arrow">→</span>
           </a>

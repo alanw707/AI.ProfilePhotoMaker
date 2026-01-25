@@ -98,11 +98,12 @@
 
 // Glassmorphism card with hover effect
 @mixin glass-card
-  @include glass-base
-  border-radius: 20px
-  transition: all var(--timing-normal) var(--easing-smooth)
+  &
+    @include glass-base
+    border-radius: 20px
+    transition: all var(--timing-normal) var(--easing-smooth)
   
-  &:hover
+  @at-root #{&}:hover
     transform: translateY(-4px)
     box-shadow: var(--depth-2)
     border-color: rgba(var(--accent-primary-rgb), 0.4)

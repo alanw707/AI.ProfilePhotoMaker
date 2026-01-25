@@ -4,8 +4,7 @@
 // Import shared styles first
 @use '../../shared/styles/index' as shared
 
-// Import Tailwind utilities (keeping for custom animations and utilities)
-@tailwind utilities
+// Tailwind utilities are included globally in styles.sass
 
 // Custom animations not covered by Tailwind
 @keyframes float
@@ -2716,7 +2715,6 @@ header
 
 // Secondary buttons with subtle effects
 .btn-secondary, .bg-white.text-gray-700
-  @include shared.btn-secondary
   position: relative
   padding: 18px 36px
   border-radius: 12px
@@ -2725,6 +2723,7 @@ header
   cursor: pointer
   overflow: hidden
   transition: all var(--timing-normal) var(--easing-smooth)
+  @include shared.btn-secondary
   
   // Professional light theme secondary buttons
   :root:not([data-theme="dark"]) &
@@ -2769,16 +2768,16 @@ header
 
 // Bento Grid Container
 .features-bento-grid
-  @include shared.bento-grid(4, 24px)
   max-width: 1400px
   margin: 0 auto
+  @include shared.bento-grid(4, 24px)
 
 // Feature Card Base Styling with Glassmorphism
 .feature-card
-  @include shared.bento-item-base
-  @include shared.glass-card
   position: relative
   cursor: default
+  @include shared.bento-item-base
+  @include shared.glass-card
   
   // Decorative background element
   .feature-decoration
@@ -4686,8 +4685,13 @@ header
     margin: 0 auto
     
     @media (max-width: 768px)
-      grid-template-columns: 1fr 1fr
+      grid-template-columns: 1fr
       gap: 16px
+      justify-items: center
+      max-width: 280px
+      
+    @media (max-width: 480px)
+      max-width: 240px
       
   .showcase-before,
   .showcase-after
@@ -4712,6 +4716,13 @@ header
       color: white
       border-radius: 6px
       
+    @media (max-width: 768px)
+      width: 100%
+      max-width: 280px
+      
+    @media (max-width: 480px)
+      max-width: 240px
+      
   .showcase-after
     box-shadow: var(--depth-2), 0 0 0 2px var(--accent-primary)
     
@@ -4733,8 +4744,6 @@ header
       height: 24px
       
     @media (max-width: 768px)
-      grid-column: 1 / -1
-      margin: 0 auto
       width: 40px
       height: 40px
       

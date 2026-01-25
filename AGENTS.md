@@ -24,7 +24,22 @@ npm run build                                            # Production build
 
 # Full Stack
 ./dev-start.sh                                           # SQL + API + UI
+
+# Docker Containers (preferred for previewing UI changes)
+docker compose build --no-cache                          # Rebuild containers
+docker compose up -d                                     # Start containers
+# Frontend: http://localhost:4200  |  API: http://localhost:5032
 ```
+
+## Previewing UI Changes
+
+**Always use Docker containers** (not the dev server) when previewing UI changes:
+
+```bash
+docker compose build --no-cache && docker compose up -d
+```
+
+Then browse to `http://localhost:4200`. This ensures you see the production build as it will be deployed.
 
 ## Test Commands
 
