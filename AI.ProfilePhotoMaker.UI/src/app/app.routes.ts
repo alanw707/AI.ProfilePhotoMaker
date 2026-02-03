@@ -491,7 +491,7 @@ export const routes: Routes = [
         pathMatch: 'full',
       },
     ],
-  }
+  },
 
   // 404 and Wildcard - Must be last
   {
