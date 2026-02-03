@@ -854,6 +854,304 @@ export const seoPages: Record<string, SeoPageContent> = {
       href: '/pricing',
     },
   },
+  'realtor-headshots': {
+    slug: 'realtor-headshots',
+    title: 'Realtor Headshots That Look Real (AI) | AI Profile Photo Maker',
+    description:
+      'Premium realtor headshots from your photos—polished, realistic, and consistent. Perfect for Zillow, LinkedIn, and Google Business.',
+    keywords:
+      'realtor headshots, real estate agent headshots, broker headshot, zillow headshot, professional realtor photo',
+    h1: 'Realtor Headshots That Build Trust in One Second',
+    hero: {
+      eyebrow: 'Real estate headshots',
+      headline: 'Realtor Headshots That Build Trust in One Second',
+      subhead:
+        'Create studio-quality realtor headshots from your photos—clean lighting, premium styling, and a natural look that still feels like you.',
+      ctaLabel: 'Create my headshot',
+      ctaHref: '/pricing',
+      secondaryCtaLabel: 'See examples',
+      secondaryCtaHref: '/examples',
+    },
+    highlights: [
+      { value: 'Zillow-ready', label: 'Profile formats' },
+      { value: 'Minutes', label: 'Typical delivery' },
+      { value: 'Premium', label: 'Professional look' },
+    ],
+    sections: [
+      {
+        type: 'bullets',
+        title: 'What top-producing agents get right',
+        intro: 'Small details make you look established before anyone reads your bio.',
+        items: [
+          'Approachable confidence (friendly, not forced).',
+          'Clean background and consistent lighting for instant credibility.',
+          'Modern, neutral styling that stays timeless across markets.',
+          'A headshot that matches your brand (luxury, modern, neighborhood expert).',
+        ],
+      },
+      {
+        type: 'cards',
+        title: 'Recommended looks for real estate',
+        items: [
+          {
+            title: 'Modern studio',
+            description: 'Crisp, bright, minimal—built for profile conversion.',
+          },
+          {
+            title: 'Luxury agent',
+            description: 'Warmer tones and premium styling that signals high-end service.',
+          },
+          {
+            title: 'Local expert',
+            description: 'Approachable, clean, and confident for neighborhood trust.',
+          },
+          {
+            title: 'Team consistency',
+            description: 'Match headshots across agents for a unified brokerage page.',
+          },
+        ],
+      },
+      {
+        type: 'steps',
+        title: 'How it works',
+        items: [
+          {
+            title: 'Upload a few photos',
+            description: 'No studio session needed—clear selfies work great.',
+          },
+          {
+            title: 'Choose a professional style',
+            description: 'Pick a look that matches your brand and market.',
+          },
+          {
+            title: 'Download your headshots',
+            description: 'Get images ready for Zillow, LinkedIn, and your website.',
+          },
+        ],
+      },
+      {
+        type: 'faq',
+        title: 'FAQ',
+        items: [
+          {
+            question: 'Do these headshots look like me?',
+            answer:
+              'Yes. We aim for a polished version of you—not a different person—so your headshot stays recognizable and natural.',
+          },
+          {
+            question: 'Can I use these on Zillow, Realtor.com, and Google Business?',
+            answer:
+              'Yes. The output is designed for major profile platforms and marketing pages.',
+          },
+          {
+            question: 'What should I wear for a realtor headshot?',
+            answer:
+              'Stick to solid colors and simple patterns. A blazer or jacket typically reads more premium and timeless.',
+          },
+          {
+            question: 'Can I standardize headshots for my team?',
+            answer:
+              'Yes. Use the same style preset across agents for a cohesive brokerage/team page.',
+          },
+        ],
+      },
+    ],
+    relatedLinks: [
+      { label: 'Examples', href: '/examples' },
+      { label: 'Reviews', href: '/reviews' },
+      { label: 'LinkedIn headshots', href: '/linkedin-headshots' },
+      { label: 'Professional headshots', href: '/professional-headshots' },
+      { label: 'Pricing', href: '/pricing' },
+    ],
+    cta: {
+      title: 'Ready for a premium realtor headshot?',
+      description: 'Create a polished headshot that fits your brand in minutes.',
+      label: 'Create my headshot',
+      href: '/pricing',
+    },
+  },
+  'lawyer-headshots': {
+    slug: 'lawyer-headshots',
+    title: 'Lawyer Headshots for Attorneys & Law Firms | AI Profile Photo Maker',
+    description:
+      'Premium attorney headshots that look credible and natural. Ideal for firm websites, LinkedIn, press, and speaking bios.',
+    keywords:
+      'lawyer headshots, attorney headshots, law firm headshots, professional attorney photo, partner headshot',
+    h1: 'Attorney Headshots That Signal Credibility',
+    hero: {
+      eyebrow: 'Attorney headshots',
+      headline: 'Attorney Headshots That Signal Credibility',
+      subhead:
+        'Create premium, realistic attorney headshots from your photos—designed for firm sites, press, and leadership bios.',
+      ctaLabel: 'Create my attorney headshot',
+      ctaHref: '/pricing',
+      secondaryCtaLabel: 'See examples',
+      secondaryCtaHref: '/examples',
+    },
+    highlights: [
+      { value: 'Credible', label: 'First impression' },
+      { value: 'Team-ready', label: 'Firm consistency' },
+      { value: 'Press-ready', label: 'Bio formats' },
+    ],
+    sections: [
+      {
+        type: 'bullets',
+        title: 'What a strong attorney headshot communicates',
+        items: [
+          'Professional authority without looking harsh.',
+          'Neutral, high-end styling that fits your practice area.',
+          'Consistent results across partners and associates.',
+          'Bio-ready images for websites, media, and events.',
+        ],
+      },
+      {
+        type: 'cards',
+        title: 'Best styles by practice type',
+        items: [
+          {
+            title: 'Corporate / business law',
+            description: 'Clean studio lighting and classic framing.',
+          },
+          {
+            title: 'Litigation',
+            description: 'Slightly sharper contrast for confident presence.',
+          },
+          {
+            title: 'Family / trusts',
+            description: 'Warmer tone and approachable styling.',
+          },
+          {
+            title: 'Boutique / modern firms',
+            description: 'Contemporary, minimal look that feels current.',
+          },
+        ],
+      },
+      {
+        type: 'bullets',
+        title: 'Perfect for',
+        items: [
+          'Firm websites and team pages',
+          'LinkedIn and professional directories',
+          'Press features and speaking bios',
+          'Podcast, webinar, and conference materials',
+        ],
+      },
+      {
+        type: 'faq',
+        title: 'FAQ',
+        items: [
+          {
+            question: 'Will this look AI-generated?',
+            answer:
+              'We optimize for realism—natural detail, clean lighting, and professional composition—so the result looks like a real headshot.',
+          },
+          {
+            question: 'Can our firm standardize headshots across the team?',
+            answer:
+              'Yes. Use the same style preset and background approach to keep your team page consistent and premium.',
+          },
+          {
+            question: 'What background works best for attorneys?',
+            answer:
+              'Neutral studio tones (light gray, off-white) are the most versatile for websites, press, and LinkedIn.',
+          },
+        ],
+      },
+    ],
+    relatedLinks: [
+      { label: 'Professional headshots', href: '/professional-headshots' },
+      { label: 'LinkedIn headshots', href: '/linkedin-headshots' },
+      { label: 'Examples', href: '/examples' },
+      { label: 'Reviews', href: '/reviews' },
+      { label: 'Pricing', href: '/pricing' },
+    ],
+    cta: {
+      title: 'Upgrade your attorney headshot',
+      description: 'Get a credible, premium look without scheduling a studio session.',
+      label: 'Create my attorney headshot',
+      href: '/pricing',
+    },
+  },
+  'doctor-headshots': {
+    slug: 'doctor-headshots',
+    title: 'Doctor Headshots for Clinics & Providers | AI Profile Photo Maker',
+    description:
+      'Premium medical headshots that feel trustworthy and human. Great for clinic sites, provider directories, and LinkedIn.',
+    keywords:
+      'doctor headshots, physician headshot, medical professional headshots, provider directory photo, clinic headshots',
+    h1: 'Medical Headshots That Feel Trustworthy and Human',
+    hero: {
+      eyebrow: 'Medical headshots',
+      headline: 'Medical Headshots That Feel Trustworthy and Human',
+      subhead:
+        'Patients decide fast. Create premium, realistic provider headshots from your photos—ideal for directories and clinic websites.',
+      ctaLabel: 'Create my provider headshot',
+      ctaHref: '/pricing',
+      secondaryCtaLabel: 'See reviews',
+      secondaryCtaHref: '/reviews',
+    },
+    highlights: [
+      { value: 'Clinic-ready', label: 'Provider pages' },
+      { value: 'Trusted', label: 'Patient first impression' },
+      { value: 'Consistent', label: 'Team branding' },
+    ],
+    sections: [
+      {
+        type: 'bullets',
+        title: 'What patients respond to',
+        items: [
+          'Warm, calm expression (confidence + empathy).',
+          'Clean lighting with minimal shadows.',
+          'Minimal distractions with simple, professional backgrounds.',
+          'Consistency across providers to increase clinic trust.',
+        ],
+      },
+      {
+        type: 'bullets',
+        title: 'Perfect for',
+        items: [
+          'Clinic websites and provider directories',
+          'Telehealth profiles and intake portals',
+          'LinkedIn and speaking bios',
+          'Media and press materials',
+        ],
+      },
+      {
+        type: 'faq',
+        title: 'FAQ',
+        items: [
+          {
+            question: 'Should I wear scrubs or a white coat?',
+            answer:
+              'Either works. For a premium look, professional attire with a white coat reads “provider” instantly and photographs well.',
+          },
+          {
+            question: 'Can we match headshots across multiple providers?',
+            answer:
+              'Yes. Pick one style preset and apply it across your team for a consistent, clinic-wide look.',
+          },
+          {
+            question: 'Will this work for dentists, NPs, PAs, therapists too?',
+            answer:
+              'Yes. The same approach works for most medical and clinical roles; you just choose the tone you want (more formal vs more approachable).',
+          },
+        ],
+      },
+    ],
+    relatedLinks: [
+      { label: 'Professional headshots', href: '/professional-headshots' },
+      { label: 'Examples', href: '/examples' },
+      { label: 'Reviews', href: '/reviews' },
+      { label: 'Pricing', href: '/pricing' },
+      { label: 'How it works', href: '/how-it-works' },
+    ],
+    cta: {
+      title: 'Ready for a premium provider headshot?',
+      description: 'Create a trustworthy, clinic-ready headshot in minutes.',
+      label: 'Create my provider headshot',
+      href: '/pricing',
+    },
+  },
   'compare-aragon-ai': {
     slug: 'compare/aragon-ai',
     title: 'AI Profile Photo Maker vs Aragon AI',
@@ -1139,6 +1437,252 @@ export const seoPages: Record<string, SeoPageContent> = {
       title: 'Unlock professional headshots with AI',
       description: 'Pick a style and get a full set of headshots in minutes.',
       label: 'Get your headshot in minutes',
+      href: '/pricing',
+    },
+  },
+  'dating-app-headshots': {
+    slug: 'dating-app-headshots',
+    title: 'Dating App Headshots | AI photos that still look like you',
+    description:
+      'Dating app headshots that look like you. Upgrade Tinder, Hinge, or Bumble photos with realistic, flattering AI headshots.',
+    keywords:
+      'dating app headshots, AI dating photos, Tinder headshot, Hinge profile photo, Bumble profile picture',
+    h1: 'Dating App Headshots That Look Like You',
+    hero: {
+      eyebrow: 'Dating app headshots',
+      headline: 'Dating App Headshots That Look Like You',
+      subhead: 'Upgrade your profile photos with realistic AI headshots that feel authentic.',
+      ctaLabel: 'Get your headshots',
+      ctaHref: '/pricing',
+      secondaryCtaLabel: 'See examples',
+      secondaryCtaHref: '/examples',
+    },
+    highlights: [
+      { value: 'Minutes', label: 'Typical delivery' },
+      { value: '20+', label: 'Style options' },
+      { value: 'Natural', label: 'Realistic output' },
+    ],
+    sections: [
+      {
+        type: 'cards',
+        title: 'Why dating apps need better headshots',
+        items: [
+          {
+            title: 'First impressions matter',
+            description: 'Clear, polished photos drive more profile views and matches.',
+          },
+          {
+            title: 'Still looks like you',
+            description: 'Natural detail preservation keeps your identity intact.',
+          },
+          {
+            title: 'Variety without a photoshoot',
+            description: 'Multiple looks from one upload flow—no studio required.',
+          },
+        ],
+      },
+      {
+        type: 'bullets',
+        title: 'Best practices for dating photos',
+        items: [
+          'Use well-lit selfies with a clear view of your face.',
+          'Choose styles that feel natural and approachable.',
+          'Mix casual and polished looks for more range.',
+        ],
+      },
+      {
+        type: 'faq',
+        title: 'Dating headshots FAQ',
+        items: [
+          {
+            question: 'Will these look like me?',
+            answer: 'Yes. The AI is trained on your selfies to keep your features consistent.',
+          },
+          {
+            question: 'Which apps do these work for?',
+            answer: 'Tinder, Hinge, Bumble, and any app that values clear profile photos.',
+          },
+          {
+            question: 'Can I generate multiple styles?',
+            answer: 'Yes. Create multiple looks and test what performs best.',
+          },
+        ],
+      },
+    ],
+    relatedLinks: [
+      { label: 'Examples', href: '/examples' },
+      { label: 'How it works', href: '/how-it-works' },
+      { label: 'AI headshot generator', href: '/ai-headshot-generator' },
+      { label: 'Pricing', href: '/pricing' },
+    ],
+    cta: {
+      title: 'Ready to refresh your dating profile?',
+      description: 'Generate natural, flattering headshots in minutes.',
+      label: 'Get your headshots',
+      href: '/pricing',
+    },
+  },
+  'real-estate-agent-headshots': {
+    slug: 'real-estate-agent-headshots',
+    title: 'Real Estate Agent Headshots | Professional photos for listings',
+    description:
+      'Real estate agent headshots for listings, marketing, and business cards. Polished, consistent headshots in minutes.',
+    keywords:
+      'real estate agent headshots, realtor headshot, real estate profile photo, professional realtor photo',
+    h1: 'Real Estate Agent Headshots',
+    hero: {
+      eyebrow: 'Real estate headshots',
+      headline: 'Real Estate Agent Headshots for Listings & Marketing',
+      subhead: 'Build trust with clients using polished, consistent headshots.',
+      ctaLabel: 'Get your headshot',
+      ctaHref: '/pricing',
+      secondaryCtaLabel: 'See examples',
+      secondaryCtaHref: '/examples',
+    },
+    highlights: [
+      { value: 'Consistent', label: 'Brand look' },
+      { value: 'Minutes', label: 'Typical delivery' },
+      { value: 'Multiple', label: 'Marketing uses' },
+    ],
+    sections: [
+      {
+        type: 'cards',
+        title: 'Why real estate agents use AI headshots',
+        items: [
+          {
+            title: 'Trust & credibility',
+            description: 'Professional headshots build confidence with new clients.',
+          },
+          {
+            title: 'Marketing-ready',
+            description: 'Use across listings, flyers, social media, and business cards.',
+          },
+          {
+            title: 'Consistent branding',
+            description: 'Keep a cohesive look across your team or brokerage.',
+          },
+        ],
+      },
+      {
+        type: 'bullets',
+        title: 'Best for',
+        items: [
+          'Listing presentations and agent bios.',
+          'Zillow, Realtor.com, and brokerage profiles.',
+          'Email signatures, business cards, and ads.',
+        ],
+      },
+      {
+        type: 'faq',
+        title: 'Real estate headshots FAQ',
+        items: [
+          {
+            question: 'Do I need a studio shoot?',
+            answer: 'No. Clear selfies are enough to create polished results.',
+          },
+          {
+            question: 'Will this work for teams?',
+            answer: 'Yes. Generate consistent styles across multiple agents.',
+          },
+          {
+            question: 'How fast are results?',
+            answer: 'Most users receive their headshots within minutes.',
+          },
+        ],
+      },
+    ],
+    relatedLinks: [
+      { label: 'Professional headshots', href: '/professional-headshots' },
+      { label: 'Examples', href: '/examples' },
+      { label: 'AI headshot generator', href: '/ai-headshot-generator' },
+      { label: 'Pricing', href: '/pricing' },
+    ],
+    cta: {
+      title: 'Get listing-ready headshots',
+      description: 'Upgrade your real estate profile photo in minutes.',
+      label: 'Get your headshot',
+      href: '/pricing',
+    },
+  },
+  'medical-professional-headshots': {
+    slug: 'medical-professional-headshots',
+    title: 'Medical Professional Headshots | Polished photos for healthcare',
+    description:
+      'Medical professional headshots for doctors, nurses, and clinicians. Professional, trustworthy photos in minutes.',
+    keywords:
+      'medical professional headshots, doctor headshot, nurse headshot, healthcare profile photo, clinician headshot',
+    h1: 'Medical Professional Headshots',
+    hero: {
+      eyebrow: 'Healthcare headshots',
+      headline: 'Medical Professional Headshots That Build Trust',
+      subhead: 'Polished, consistent headshots for doctors, nurses, and healthcare teams.',
+      ctaLabel: 'Get your headshot',
+      ctaHref: '/pricing',
+      secondaryCtaLabel: 'See examples',
+      secondaryCtaHref: '/examples',
+    },
+    highlights: [
+      { value: 'Trust', label: 'Patient-first look' },
+      { value: 'Minutes', label: 'Typical delivery' },
+      { value: 'Consistent', label: 'Team branding' },
+    ],
+    sections: [
+      {
+        type: 'cards',
+        title: 'Why healthcare teams choose AI headshots',
+        items: [
+          {
+            title: 'Professional credibility',
+            description: 'Clear, polished photos build confidence with patients.',
+          },
+          {
+            title: 'Consistent team photos',
+            description: 'Keep a unified look across clinics and provider directories.',
+          },
+          {
+            title: 'Fast onboarding',
+            description: 'Quick headshots for new hires without scheduling a studio.',
+          },
+        ],
+      },
+      {
+        type: 'bullets',
+        title: 'Common use cases',
+        items: [
+          'Provider bios on hospital or clinic websites.',
+          'Patient portals and telehealth profiles.',
+          'Practice directories and marketing materials.',
+        ],
+      },
+      {
+        type: 'faq',
+        title: 'Medical headshots FAQ',
+        items: [
+          {
+            question: 'Do these work for doctors and nurses?',
+            answer: 'Yes. The styles are designed for professional healthcare profiles.',
+          },
+          {
+            question: 'Can we standardize headshots across a team?',
+            answer: 'Yes. Choose a consistent style for the entire clinic or department.',
+          },
+          {
+            question: 'Are results fast?',
+            answer: 'Most users receive headshots within minutes after upload.',
+          },
+        ],
+      },
+    ],
+    relatedLinks: [
+      { label: 'Professional headshots', href: '/professional-headshots' },
+      { label: 'Examples', href: '/examples' },
+      { label: 'AI headshot generator', href: '/ai-headshot-generator' },
+      { label: 'Pricing', href: '/pricing' },
+    ],
+    cta: {
+      title: 'Upgrade your healthcare headshot',
+      description: 'Generate professional, trustworthy headshots in minutes.',
+      label: 'Get your headshot',
       href: '/pricing',
     },
   },
