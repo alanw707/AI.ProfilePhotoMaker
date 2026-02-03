@@ -264,6 +264,33 @@ export const routes: Routes = [
     },
   },
   {
+    path: 'realtor-headshots',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['realtor-headshots'].title,
+    data: {
+      seoPage: seoPages['realtor-headshots'],
+    },
+  },
+  {
+    path: 'lawyer-headshots',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['lawyer-headshots'].title,
+    data: {
+      seoPage: seoPages['lawyer-headshots'],
+    },
+  },
+  {
+    path: 'doctor-headshots',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['doctor-headshots'].title,
+    data: {
+      seoPage: seoPages['doctor-headshots'],
+    },
+  },
+  {
     path: 'compare',
     children: [
       {
@@ -417,6 +444,33 @@ export const routes: Routes = [
       seoPage: seoPages['features'],
     },
   },
+  {
+    path: 'dating-app-headshots',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['dating-app-headshots'].title,
+    data: {
+      seoPage: seoPages['dating-app-headshots'],
+    },
+  },
+  {
+    path: 'real-estate-agent-headshots',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['real-estate-agent-headshots'].title,
+    data: {
+      seoPage: seoPages['real-estate-agent-headshots'],
+    },
+  },
+  {
+    path: 'medical-professional-headshots',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['medical-professional-headshots'].title,
+    data: {
+      seoPage: seoPages['medical-professional-headshots'],
+    },
+  },
 
   // Help & Support
   {
@@ -437,7 +491,7 @@ export const routes: Routes = [
         pathMatch: 'full',
       },
     ],
-  },
+  }
 
   // 404 and Wildcard - Must be last
   {
