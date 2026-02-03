@@ -16,6 +16,8 @@ export interface SeoHero {
   ctaHref: string;
   secondaryCtaLabel?: string;
   secondaryCtaHref?: string;
+  imageSrc?: string;
+  imageAlt?: string;
 }
 
 export interface SeoCta {
@@ -871,6 +873,8 @@ export const seoPages: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
+      imageSrc: '/assets/marketing/before-after/set-1-after.jpg',
+      imageAlt: 'Premium realtor headshot example',
     },
     highlights: [
       { value: 'Zillow-ready', label: 'Profile formats' },
@@ -1014,6 +1018,8 @@ export const seoPages: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
+      imageSrc: '/assets/marketing/before-after/set-2-after.png',
+      imageAlt: 'Professional attorney headshot example',
     },
     highlights: [
       { value: 'Credible', label: 'First impression' },
@@ -1135,6 +1141,8 @@ export const seoPages: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See reviews',
       secondaryCtaHref: '/reviews',
+      imageSrc: '/assets/marketing/before-after/set-3-after.png',
+      imageAlt: 'Clinic-ready provider headshot example',
     },
     highlights: [
       { value: 'Clinic-ready', label: 'Provider pages' },
