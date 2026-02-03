@@ -16,6 +16,8 @@ export interface SeoHero {
   ctaHref: string;
   secondaryCtaLabel?: string;
   secondaryCtaHref?: string;
+  imageSrc?: string;
+  imageAlt?: string;
 }
 
 export interface SeoCta {
@@ -871,6 +873,8 @@ export const seoPages: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
+      imageSrc: '/assets/marketing/before-after/set-1-after.jpg',
+      imageAlt: 'Premium realtor headshot example',
     },
     highlights: [
       { value: 'Zillow-ready', label: 'Profile formats' },
@@ -908,6 +912,33 @@ export const seoPages: Record<string, SeoPageContent> = {
           {
             title: 'Team consistency',
             description: 'Match headshots across agents for a unified brokerage page.',
+          },
+        ],
+      },
+      {
+        type: 'showcase',
+        title: 'Before and after',
+        intro: 'Subtle improvements in lighting, background, and color add up to a more premium first impression.',
+        items: [
+          {
+            title: 'Clean, professional lighting',
+            description: 'Balanced exposure with natural detail—designed to look studio-shot, not filtered.',
+            beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-1-after.jpg',
+            beforeAlt: 'Original casual photo before enhancement',
+            afterAlt: 'Professional headshot after enhancement',
+          },
+          {
+            title: 'Background refinement',
+            description: 'A cleaner setting keeps the focus on you and your brand.',
+            beforeImage: '/assets/marketing/before-after/set-2-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-2-after.png',
+          },
+          {
+            title: 'Polished color and contrast',
+            description: 'Crisp but natural—ready for Zillow, LinkedIn, and your website.',
+            beforeImage: '/assets/marketing/before-after/set-3-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-3-after.png',
           },
         ],
       },
@@ -987,6 +1018,8 @@ export const seoPages: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
+      imageSrc: '/assets/marketing/before-after/set-2-after.png',
+      imageAlt: 'Professional attorney headshot example',
     },
     highlights: [
       { value: 'Credible', label: 'First impression' },
@@ -1002,6 +1035,25 @@ export const seoPages: Record<string, SeoPageContent> = {
           'Neutral, high-end styling that fits your practice area.',
           'Consistent results across partners and associates.',
           'Bio-ready images for websites, media, and events.',
+        ],
+      },
+      {
+        type: 'showcase',
+        title: 'Before and after',
+        intro: 'Professional lighting and a clean background make your headshot look established and press-ready.',
+        items: [
+          {
+            title: 'Polished, credible look',
+            description: 'A clean, neutral presentation that works for firm sites and press.',
+            beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-1-after.jpg',
+          },
+          {
+            title: 'Cleaner background',
+            description: 'Reduce distractions so the focus stays on you.',
+            beforeImage: '/assets/marketing/before-after/set-2-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-2-after.png',
+          },
         ],
       },
       {
@@ -1089,6 +1141,8 @@ export const seoPages: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See reviews',
       secondaryCtaHref: '/reviews',
+      imageSrc: '/assets/marketing/before-after/set-3-after.png',
+      imageAlt: 'Clinic-ready provider headshot example',
     },
     highlights: [
       { value: 'Clinic-ready', label: 'Provider pages' },
@@ -1104,6 +1158,19 @@ export const seoPages: Record<string, SeoPageContent> = {
           'Clean lighting with minimal shadows.',
           'Minimal distractions with simple, professional backgrounds.',
           'Consistency across providers to increase clinic trust.',
+        ],
+      },
+      {
+        type: 'showcase',
+        title: 'Before and after',
+        intro: 'A clean, calm headshot helps patients feel confident before they book.',
+        items: [
+          {
+            title: 'Clinic-ready presentation',
+            description: 'Professional lighting and a distraction-free background.',
+            beforeImage: '/assets/marketing/before-after/set-3-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-3-after.png',
+          },
         ],
       },
       {
