@@ -19,6 +19,18 @@
   position: relative
   overflow-x: hidden
 
+// Ensure hero content never sits under the marketing header on mobile/desktop
+main
+  padding-top: 72px
+
+@media (min-width: 768px)
+  main
+    padding-top: 88px
+
+@media (min-width: 1024px)
+  main
+    padding-top: 96px
+
 .content-container
   @include shared.content-container
   padding: 0 24px
