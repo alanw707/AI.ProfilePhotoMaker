@@ -17,9 +17,10 @@ AI Profile Photo Maker transforms 10-20 casual selfie photos into professional h
 4. Download high-resolution headshots
 
 ## Pricing
-- Free tier available (limited styles)
-- Starter: affordable entry plan
-- Pro: full style library + priority generation
+One-time purchase. No subscription. ~15 min delivery.
+- Starter: $9 (up to 10 headshots, basic styles)
+- Professional: $19 (up to 30 headshots, all premium styles, HD, most popular)
+- Studio: $39 (up to 80 headshots, HD+, advanced editing, commercial license)
 - See full pricing: https://aiprofilephotomaker.com/pricing
 
 ## Key Pages
