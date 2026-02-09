@@ -48,5 +48,21 @@ Allow: /
 User-agent: PerplexityBot
 Allow: /
 
+User-agent: CCBot
+Allow: /
+Disallow: /api/
+Disallow: /app/
+Disallow: /auth/
+Disallow: /admin/
+Disallow: /dashboard/
+
+User-agent: apple-ml-research
+Allow: /
+Disallow: /api/
+Disallow: /app/
+Disallow: /auth/
+Disallow: /admin/
+Disallow: /dashboard/
+
 User-agent: Bytespider
 Disallow: /
