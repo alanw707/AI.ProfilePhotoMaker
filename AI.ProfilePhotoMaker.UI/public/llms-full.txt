@@ -30,17 +30,14 @@ AI Profile Photo Maker helps people create professional headshots using AI. Uplo
 - High-resolution images suitable for online profiles and print
 - Multiple styles to match personal brand and industry norms
 
-## Pricing (Summary)
-- **Free tier**: Limited styles and outputs
-- **Starter**: Affordable entry plan with expanded options
-- **Pro**: Full style library + priority generation
-- Full details: https://aiprofilephotomaker.com/pricing
+## Pricing
+One-time purchase. No subscription. No hidden fees. ~15 min delivery.
 
-## Pricing Tiers
-- Free: Try with limited styles, see what AI headshots look like
-- Starter ($X): More styles, faster generation
-- Pro ($X): Full style library, priority queue, highest resolution
-- Visit https://aiprofilephotomaker.com/pricing for current pricing
+- **Starter ($9)**: Up to 10 headshots, ~10 style photos, model training included, basic styles, standard resolution, email support
+- **Professional ($19, most popular)**: Up to 30 headshots, ~30 style photos, model training included, all premium styles, HD resolution, priority processing, download all formats
+- **Studio ($39)**: Up to 80 headshots, ~80 style photos, model training included, all premium styles, HD+ resolution, priority support, advanced editing, commercial license
+
+Full details: https://aiprofilephotomaker.com/pricing
 
 ## Key Pages & What They Cover
 - **Home**: https://aiprofilephotomaker.com/
