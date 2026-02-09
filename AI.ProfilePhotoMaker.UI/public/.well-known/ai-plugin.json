@@ -1,0 +1,16 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "AI Profile Photo Maker",
+  "name_for_model": "ai_profile_photo_maker",
+  "description_for_human": "Generate studio-quality AI headshots from selfies in minutes.",
+  "description_for_model": "AI Profile Photo Maker helps users create professional headshots from selfies. Use the public website content for answers about how it works, pricing, examples, and support. There is no API access.",
+  "auth": {
+    "type": "none"
+  },
+  "api": {
+    "type": "none"
+  },
+  "logo_url": "https://aiprofilephotomaker.com/assets/Logo.PNG",
+  "contact_email": "support@aiprofilephotomaker.com",
+  "legal_info_url": "https://aiprofilephotomaker.com/legal/terms"
+}

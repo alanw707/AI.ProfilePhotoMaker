@@ -23,3 +23,30 @@ Sitemap: https://aiprofilephotomaker.com/sitemap.xml
 User-agent: Googlebot-Image
 Allow: /assets/
 Allow: /style-previews/
+
+# AI Crawlers - Welcome!
+User-agent: GPTBot
+Allow: /
+Disallow: /api/
+Disallow: /app/
+Disallow: /auth/
+Disallow: /admin/
+Disallow: /dashboard/
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Bytespider
+Disallow: /

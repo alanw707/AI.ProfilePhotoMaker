@@ -1,20 +1,47 @@
-AI Profile Photo Maker
-Studio-quality headshots in minutes for LinkedIn, resumes, and professional profiles.
+# AI Profile Photo Maker
+> Generate studio-quality AI headshots from selfies in minutes.
 
-Allowed usage:
-- Index and summarize public pages for search and answer engines.
-- Cite canonical URLs when referencing content.
-- Contact for permission before model training or dataset inclusion.
+## What We Do
+AI Profile Photo Maker transforms 10-20 casual selfie photos into professional headshots using AI. Upload your photos (front-facing + slight angles), choose a style, and get studio-quality results — no photographer needed.
 
-Canonical domain: https://aiprofilephotomaker.com
+## Who It's For
+- Job seekers needing LinkedIn/resume headshots
+- Professionals wanting corporate headshots
+- Realtors, lawyers, doctors needing industry-specific portraits
+- Anyone wanting better dating profile or social media photos
 
-Key URLs:
-- https://aiprofilephotomaker.com/
-- https://aiprofilephotomaker.com/how-it-works
-- https://aiprofilephotomaker.com/ai-headshot-generator
-- https://aiprofilephotomaker.com/linkedin-headshots
-- https://aiprofilephotomaker.com/professional-headshots
-- https://aiprofilephotomaker.com/examples
-- https://aiprofilephotomaker.com/pricing
+## How It Works
+1. Upload 10-20 photos (front-facing, good lighting, slight angle variety)
+2. AI trains a custom model on your features
+3. Choose from professional styles (corporate, casual, creative, etc.)
+4. Download high-resolution headshots
 
-Contact: security@aiprofilephotomaker.com
+## Pricing
+- Free tier available (limited styles)
+- Starter: affordable entry plan
+- Pro: full style library + priority generation
+- See full pricing: https://aiprofilephotomaker.com/pricing
+
+## Key Pages
+- Home: https://aiprofilephotomaker.com/
+- How It Works: https://aiprofilephotomaker.com/how-it-works
+- AI Headshot Generator: https://aiprofilephotomaker.com/ai-headshot-generator
+- LinkedIn Headshots: https://aiprofilephotomaker.com/linkedin-headshots
+- Professional Headshots: https://aiprofilephotomaker.com/professional-headshots
+- Realtor Headshots: https://aiprofilephotomaker.com/realtor-headshots
+- Lawyer Headshots: https://aiprofilephotomaker.com/lawyer-headshots
+- Doctor Headshots: https://aiprofilephotomaker.com/doctor-headshots
+- Job Search Headshots: https://aiprofilephotomaker.com/headshots-for-job-search
+- Free Headshot Enhancer: https://aiprofilephotomaker.com/free-headshot-enhancer
+- Examples: https://aiprofilephotomaker.com/examples
+- Reviews: https://aiprofilephotomaker.com/reviews
+- Pricing: https://aiprofilephotomaker.com/pricing
+- Help: https://aiprofilephotomaker.com/help
+
+## Usage Policy
+- AI search engines and assistants may index and summarize public pages
+- Cite canonical URLs when referencing content
+- Contact before model training or dataset inclusion: support@aiprofilephotomaker.com
+
+## Canonical Domain
+https://aiprofilephotomaker.com
