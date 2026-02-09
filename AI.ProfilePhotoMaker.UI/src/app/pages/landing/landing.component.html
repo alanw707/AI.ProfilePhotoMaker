@@ -42,12 +42,12 @@
   <!-- 404 Not Found Section -->
   <section
     *ngIf="showNotFound"
-    class="min-h-screen flex items-center justify-center px-4 py-16 bg-gradient-to-br from-slate-50 via-white to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950">
+    class="min-h-[calc(100vh-4rem)] flex items-start justify-center pt-16 md:pt-24 px-4 py-16 bg-gradient-to-br from-slate-50 via-white to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950">
     <div class="w-full max-w-xl">
       <div
         class="relative overflow-hidden rounded-2xl border border-white/60 dark:border-white/10 bg-white/80 dark:bg-slate-900/60 backdrop-blur-md shadow-xl px-6 py-10 md:px-10 md:py-12 text-center">
         <div
-          class="pointer-events-none absolute inset-x-0 -top-20 text-[96px] md:text-[140px] font-extrabold tracking-tight text-black/10 dark:text-white/10 select-none">
+          class="pointer-events-none absolute inset-x-0 -top-20 text-[120px] md:text-[180px] font-extrabold tracking-tight text-black/20 dark:text-white/20 select-none">
           404
         </div>
 
@@ -58,12 +58,12 @@
           </p>
 
           <div class="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              (click)="getStarted()"
+            <a
+              routerLink="/#examples"
               class="btn-primary px-8 py-4 text-lg font-semibold"
               style="border-radius: 10px !important">
-              Get Started
-            </button>
+              See Example Headshots
+            </a>
 
             <button
               (click)="router.navigate(['/'])"
@@ -73,12 +73,20 @@
             </button>
           </div>
 
-          <div class="mt-6 text-sm text-slate-600 dark:text-slate-300">
+          <div class="mt-6 text-base font-medium text-slate-600 dark:text-slate-300">
             <a class="underline hover:no-underline" routerLink="/pricing">Pricing</a>
             <span class="mx-2">•</span>
             <a class="underline hover:no-underline" routerLink="/#examples">Examples</a>
             <span class="mx-2">•</span>
             <a class="underline hover:no-underline" routerLink="/help">Help</a>
+          </div>
+
+          <div class="mt-6 text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">Popular pages</div>
+          <div class="mt-2 flex flex-wrap justify-center gap-3 text-base font-medium text-slate-600 dark:text-slate-300">
+            <a class="underline hover:no-underline" routerLink="/linkedin-headshots">AI LinkedIn Headshots</a>
+            <a class="underline hover:no-underline" routerLink="/professional-headshots">AI Corporate Headshots</a>
+            <a class="underline hover:no-underline" routerLink="/how-it-works">How It Works</a>
+            <a class="underline hover:no-underline" routerLink="/pricing">Pricing Plans</a>
           </div>
         </div>
       </div>
