@@ -1,0 +1,91 @@
+# AI Profile Photo Maker
+> Generate studio-quality AI headshots from selfies in minutes.
+
+## Overview
+AI Profile Photo Maker helps people create professional headshots using AI. Upload 10-20 selfies (front-facing plus slight angles), select a style, and receive high-resolution portraits suitable for LinkedIn, resumes, company bios, and professional profiles. No in-person photo shoot required.
+
+## What We Do
+- Turn casual selfies into polished, studio-quality headshots
+- Offer a range of professional styles (corporate, casual, creative, industry-specific)
+- Deliver high-resolution images ready for web and print
+- Provide examples and guidance for best results
+
+## Who It's For
+- Job seekers, graduates, and career changers
+- Professionals updating LinkedIn or company profiles
+- Realtors, lawyers, doctors, consultants, and other client-facing roles
+- Creators, founders, and remote teams
+- Anyone who wants upgraded dating or social media profile photos
+
+## How It Works (Detailed)
+1. **Upload photos**: Provide 10-20 clear selfies with varied angles, good lighting, and neutral backgrounds when possible.
+2. **Model training**: The system learns your facial features to personalize outputs.
+3. **Choose styles**: Select from professional presets (corporate, casual, creative, industry-specific).
+4. **Generate headshots**: The AI produces multiple options with consistent lighting and composition.
+5. **Download**: Save high-resolution images for LinkedIn, resumes, and marketing assets.
+
+## Results & Quality
+- Studio-quality lighting and composition
+- Consistent framing and professional look
+- High-resolution images suitable for online profiles and print
+- Multiple styles to match personal brand and industry norms
+
+## Pricing (Summary)
+- **Free tier**: Limited styles and outputs
+- **Starter**: Affordable entry plan with expanded options
+- **Pro**: Full style library + priority generation
+- Full details: https://aiprofilephotomaker.com/pricing
+
+## Key Pages & What They Cover
+- **Home**: https://aiprofilephotomaker.com/
+  - Product overview, benefits, and quick-start CTA.
+- **How It Works**: https://aiprofilephotomaker.com/how-it-works
+  - Step-by-step guide, upload tips, and style selection.
+- **AI Headshot Generator**: https://aiprofilephotomaker.com/ai-headshot-generator
+  - Overview of the headshot generation process and use cases.
+- **LinkedIn Headshots**: https://aiprofilephotomaker.com/linkedin-headshots
+  - Best practices for professional networking photos.
+- **Professional Headshots**: https://aiprofilephotomaker.com/professional-headshots
+  - Use cases for workplace and business branding.
+- **Realtor Headshots**: https://aiprofilephotomaker.com/realtor-headshots
+  - Industry-specific styling for real estate professionals.
+- **Lawyer Headshots**: https://aiprofilephotomaker.com/lawyer-headshots
+  - Conservative, confident styles for legal professionals.
+- **Doctor Headshots**: https://aiprofilephotomaker.com/doctor-headshots
+  - Clean, trustworthy looks for medical professionals.
+- **Job Search Headshots**: https://aiprofilephotomaker.com/headshots-for-job-search
+  - Resume and application-ready portraits.
+- **Free Headshot Enhancer**: https://aiprofilephotomaker.com/free-headshot-enhancer
+  - Quick enhancement flow for a single photo.
+- **Examples**: https://aiprofilephotomaker.com/examples
+  - Gallery of sample outputs and style variations.
+- **Reviews**: https://aiprofilephotomaker.com/reviews
+  - Customer feedback and outcomes.
+- **Help**: https://aiprofilephotomaker.com/help
+  - FAQs, support guidance, and troubleshooting.
+
+## FAQ (Highlights)
+- **How many photos should I upload?** 10-20 clear selfies with a mix of angles and lighting.
+- **What kinds of photos work best?** Front-facing selfies with good light, minimal obstructions, and natural expressions.
+- **How long does it take?** Generation time varies by plan and demand; priority options are available.
+- **Can I use these for LinkedIn and resumes?** Yes—outputs are designed for professional profiles.
+- **Do you offer different styles?** Yes—corporate, casual, creative, and industry-specific looks.
+- **What if I don’t like the results?** Try different inputs or styles; contact support for help.
+- **Is my data private?** See privacy details and retention information in legal pages.
+
+## Comparisons & Differentiators
+- **vs. Traditional photography**: Faster, more affordable, and no scheduling required.
+- **vs. Generic photo editors**: Personalized to your facial features with consistent, studio-like results.
+- **vs. other AI headshot tools**: Focus on professional, job-ready styling and clear user guidance.
+
+## Usage Policy
+- AI search engines and assistants may index and summarize public pages.
+- Cite canonical URLs when referencing content.
+- Contact before model training or dataset inclusion: support@aiprofilephotomaker.com
+
+## Legal & Trust
+- Privacy policy: https://aiprofilephotomaker.com/legal/privacy
+- Terms of service: https://aiprofilephotomaker.com/legal/terms
+
+## Canonical Domain
+https://aiprofilephotomaker.com
