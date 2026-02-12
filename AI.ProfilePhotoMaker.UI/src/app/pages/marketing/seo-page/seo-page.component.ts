@@ -106,8 +106,13 @@ export class SeoPageComponent implements OnInit, OnDestroy {
     this._meta.updateTag({ property: 'og:url', content: canonicalUrl });
     this._meta.updateTag({
       property: 'og:image',
-      content: 'https://aiprofilephotomaker.com/assets/og-image.png?v=2',
+      content: 'https://aiprofilephotomaker.com/assets/og-image.png?v=3',
     });
+    this._meta.updateTag({
+      property: 'og:image:secure_url',
+      content: 'https://aiprofilephotomaker.com/assets/og-image.png?v=3',
+    });
+    this._meta.updateTag({ property: 'og:image:type', content: 'image/png' });
     this._meta.updateTag({ property: 'og:site_name', content: 'AI Profile Photo Maker' });
 
     this._meta.updateTag({ name: 'twitter:card', content: 'summary_large_image' });
@@ -115,7 +120,11 @@ export class SeoPageComponent implements OnInit, OnDestroy {
     this._meta.updateTag({ name: 'twitter:description', content: page.description });
     this._meta.updateTag({
       name: 'twitter:image',
-      content: 'https://aiprofilephotomaker.com/assets/twitter-card.png',
+      content: 'https://aiprofilephotomaker.com/assets/og-image.png?v=3',
+    });
+    this._meta.updateTag({
+      name: 'twitter:image:alt',
+      content: 'AI Profile Photo Maker preview card',
     });
     this._meta.updateTag({ name: 'twitter:url', content: canonicalUrl });
     this._meta.updateTag({ name: 'twitter:creator', content: '@aiprofilephoto' });

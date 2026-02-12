@@ -298,8 +298,13 @@ export class PremiumComponent implements OnInit, OnDestroy {
     this.meta.updateTag({ property: 'og:url', content: canonicalUrl });
     this.meta.updateTag({
       property: 'og:image',
-      content: 'https://aiprofilephotomaker.com/assets/og-image.png?v=2',
+      content: 'https://aiprofilephotomaker.com/assets/og-image.png?v=3',
     });
+    this.meta.updateTag({
+      property: 'og:image:secure_url',
+      content: 'https://aiprofilephotomaker.com/assets/og-image.png?v=3',
+    });
+    this.meta.updateTag({ property: 'og:image:type', content: 'image/png' });
     this.meta.updateTag({ property: 'og:site_name', content: 'AI Profile Photo Maker' });
 
     this.meta.updateTag({ name: 'twitter:card', content: 'summary_large_image' });
@@ -313,7 +318,11 @@ export class PremiumComponent implements OnInit, OnDestroy {
     });
     this.meta.updateTag({
       name: 'twitter:image',
-      content: 'https://aiprofilephotomaker.com/assets/twitter-card.png',
+      content: 'https://aiprofilephotomaker.com/assets/og-image.png?v=3',
+    });
+    this.meta.updateTag({
+      name: 'twitter:image:alt',
+      content: 'AI Profile Photo Maker pricing preview',
     });
     this.meta.updateTag({ name: 'twitter:url', content: canonicalUrl });
     this.meta.updateTag({ name: 'twitter:creator', content: '@aiprofilephoto' });
@@ -324,7 +333,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
       name: 'AI Headshot Packages',
       description:
         'AI headshot pricing plans with custom model training and professional-quality downloads.',
-      image: 'https://aiprofilephotomaker.com/assets/og-image.png?v=2',
+      image: 'https://aiprofilephotomaker.com/assets/og-image.png?v=3',
       url: canonicalUrl,
       brand: {
         '@type': 'Organization',
