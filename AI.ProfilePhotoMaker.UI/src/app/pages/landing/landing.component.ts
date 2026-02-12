@@ -775,8 +775,13 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
     this._meta.updateTag({ property: 'og:url', content: 'https://aiprofilephotomaker.com/' });
     this._meta.updateTag({
       property: 'og:image',
-      content: 'https://aiprofilephotomaker.com/assets/og-image.png?v=2',
+      content: 'https://aiprofilephotomaker.com/assets/og-image.png?v=3',
     });
+    this._meta.updateTag({
+      property: 'og:image:secure_url',
+      content: 'https://aiprofilephotomaker.com/assets/og-image.png?v=3',
+    });
+    this._meta.updateTag({ property: 'og:image:type', content: 'image/png' });
     this._meta.updateTag({ property: 'og:image:width', content: '945' });
     this._meta.updateTag({ property: 'og:image:height', content: '631' });
     this._meta.updateTag({ property: 'og:site_name', content: 'AI Profile Photo Maker' });
@@ -794,7 +799,11 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
     });
     this._meta.updateTag({
       name: 'twitter:image',
-      content: 'https://aiprofilephotomaker.com/assets/twitter-card.png',
+      content: 'https://aiprofilephotomaker.com/assets/og-image.png?v=3',
+    });
+    this._meta.updateTag({
+      name: 'twitter:image:alt',
+      content: 'AI Profile Photo Maker preview card',
     });
     this._meta.updateTag({ name: 'twitter:creator', content: '@aiprofilephoto' });
 
@@ -814,7 +823,7 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
       operatingSystem: 'Web',
       url: 'https://aiprofilephotomaker.com/',
       image: 'https://aiprofilephotomaker.com/assets/Logo.PNG',
-      screenshot: 'https://aiprofilephotomaker.com/assets/og-image.png?v=2',
+      screenshot: 'https://aiprofilephotomaker.com/assets/og-image.png?v=3',
       offers: {
         '@type': 'AggregateOffer',
         lowPrice: '9.99',
