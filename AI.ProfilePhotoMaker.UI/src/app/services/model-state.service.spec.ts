@@ -103,4 +103,30 @@ describe('ModelStateService.getModelStatusFromData', () => {
     const result = service.getModelStatusFromData(data, null);
     expect(result.modelStatus).toBe('Ready for training');
   });
+
+  it('returns "Ready for training" when latest failure was retention-policy deletion', () => {
+    const data = {
+      hasTrainedModel: false,
+      latestTrainedModel: null,
+      allRequests: [
+        {
+          requestId: 'r1',
+          status: 'failed',
+          createdAt: '2025-08-06T00:00:00Z',
+          errorMessage: 'Deleted by retention policy after headshot images expired.',
+        },
+      ],
+    };
+
+    const result = service.getModelStatusFromData(data, null);
+    expect(result.modelStatus).toBe('Ready for training');
+  });
+
+  it('maps unified failed status with retention reason to "Ready for training"', () => {
+    const display = (service as any).mapUnifiedStatusToDisplay(
+      'Failed',
+      'Deleted by retention policy after headshot images expired.'
+    );
+    expect(display).toBe('Ready for training');
+  });
 });

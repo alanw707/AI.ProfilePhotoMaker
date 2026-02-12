@@ -73,7 +73,7 @@
               <p class="credit-hint">Net credits spent = charged - refunded.</p>
             </div>
 
-            <div class="error-actions">
+            <div class="error-actions" *ngIf="job.showPurchaseCreditsAction !== false">
               <button class="btn btn-primary btn-sm" type="button" (click)="purchaseCredits()">Purchase Credits</button>
             </div>
           </div>
