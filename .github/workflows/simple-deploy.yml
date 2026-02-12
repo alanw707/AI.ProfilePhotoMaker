@@ -222,6 +222,61 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: 🔎 Resolve custom domain certificate IDs
+        run: |
+          set -euo pipefail
+          echo "🔎 [INFO] Resolving managed certificate IDs for custom domains..."
+
+          CONTAINER_ENV_NAME="aipm-env-v1-6j74jubocuukg"
+          BACKEND_APP_NAME="aipm-api-v1"
+          FRONTEND_APP_NAME="aipm-web-v1"
+
+          BACKEND_CERT_ID=$(az containerapp show \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "$BACKEND_APP_NAME" \
+            --query "properties.configuration.ingress.customDomains[?name=='api.aiprofilephotomaker.com'].certificateId | [0]" \
+            --output tsv 2>/dev/null || true)
+
+          FRONTEND_CERT_ID=$(az containerapp show \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "$FRONTEND_APP_NAME" \
+            --query "properties.configuration.ingress.customDomains[?name=='aiprofilephotomaker.com'].certificateId | [0]" \
+            --output tsv 2>/dev/null || true)
+
+          # Fallback to environment certificate list if app bindings are temporarily empty.
+          if [[ -z "${BACKEND_CERT_ID:-}" || "${BACKEND_CERT_ID}" == "null" ]]; then
+            BACKEND_CERT_ID=$(az containerapp env certificate list \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --name "$CONTAINER_ENV_NAME" \
+              --query "[?properties.subjectName=='api.aiprofilephotomaker.com'].id | [0]" \
+              --output tsv 2>/dev/null || true)
+          fi
+
+          if [[ -z "${FRONTEND_CERT_ID:-}" || "${FRONTEND_CERT_ID}" == "null" ]]; then
+            FRONTEND_CERT_ID=$(az containerapp env certificate list \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --name "$CONTAINER_ENV_NAME" \
+              --query "[?properties.subjectName=='aiprofilephotomaker.com'].id | [0]" \
+              --output tsv 2>/dev/null || true)
+          fi
+
+          if [[ -z "${BACKEND_CERT_ID:-}" || "${BACKEND_CERT_ID}" == "null" ]]; then
+            echo "❌ [ERROR] Could not resolve backend certificate ID for api.aiprofilephotomaker.com"
+            az containerapp env certificate list --resource-group "${{ env.RESOURCE_GROUP }}" --name "$CONTAINER_ENV_NAME" --output table || true
+            exit 1
+          fi
+
+          if [[ -z "${FRONTEND_CERT_ID:-}" || "${FRONTEND_CERT_ID}" == "null" ]]; then
+            echo "❌ [ERROR] Could not resolve frontend certificate ID for aiprofilephotomaker.com"
+            az containerapp env certificate list --resource-group "${{ env.RESOURCE_GROUP }}" --name "$CONTAINER_ENV_NAME" --output table || true
+            exit 1
+          fi
+
+          echo "✅ [SUCCESS] Backend certificate ID resolved"
+          echo "✅ [SUCCESS] Frontend certificate ID resolved"
+          echo "BACKEND_CERT_ID=$BACKEND_CERT_ID" >> "$GITHUB_ENV"
+          echo "FRONTEND_CERT_ID=$FRONTEND_CERT_ID" >> "$GITHUB_ENV"
+
       - name: 🐳 Login to ACR
         run: |
           az acr login --name aipmcrv16j74jubocuukg
@@ -545,6 +600,12 @@ jobs:
               },
               "turnstileSecretKey": {
                 "value": "${{ secrets.TURNSITE_SECRET_KEY }}"
+              },
+              "backendCertificateId": {
+                "value": "${BACKEND_CERT_ID}"
+              },
+              "frontendCertificateId": {
+                "value": "${FRONTEND_CERT_ID}"
               }
             }
           }
