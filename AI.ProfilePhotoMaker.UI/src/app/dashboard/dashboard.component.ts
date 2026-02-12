@@ -64,6 +64,7 @@ interface ActiveJobViewModel {
   } | null;
   trainingRequestId?: string | null;
   predictionId?: string | null;
+  showPurchaseCreditsAction?: boolean;
 }
 
 interface CreditCalculation {
@@ -798,10 +799,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
       const isModelMissing =
         normalizedError.includes('deleted from replicate') ||
         normalizedError.includes('no longer exists on replicate') ||
-        normalizedError.includes('model was deleted');
+        normalizedError.includes('model was deleted') ||
+        normalizedError.includes('deleted by retention policy') ||
+        normalizedError.includes('retention policy') ||
+        normalizedError.includes('expired');
+
+      const isRetentionLifecycle = isModelMissing && (
+        normalizedError.includes('retention policy') || normalizedError.includes('expired')
+      );
 
       const errorDetails = isModelMissing
-        ? 'Your trained model can’t be found anymore. It may have been deleted or expired.'
+        ? isRetentionLifecycle
+          ? 'Your previous model was removed by the retention policy after images expired.'
+          : 'Your trained model can’t be found anymore. It may have been deleted or expired.'
         : isReplicateInterrupted
           ? 'Replicate interrupted the training job (code: PA). This is on Replicate’s side; please retry. Your credits should be refunded.'
           : rawErrorDetails.length > 240
@@ -810,18 +820,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
       return {
         kind: 'error',
-        title: isModelMissing
-          ? 'Model unavailable'
-          : isReplicateInterrupted
-            ? 'Training interrupted'
-            : 'Training failed',
+        title: isRetentionLifecycle
+          ? 'Model expired'
+          : isModelMissing
+            ? 'Model unavailable'
+            : isReplicateInterrupted
+              ? 'Training interrupted'
+              : 'Training failed',
         message: isModelMissing
-          ? 'Your trained model is no longer available. You can retrain and generate photos again.'
+          ? isRetentionLifecycle
+            ? 'Your model expired under the retention policy. Upload photos and retrain to generate new headshots.'
+            : 'Your trained model is no longer available. You can retrain and generate photos again.'
           : 'Your model training did not complete.',
         progressPercent: 0,
         errorDetails,
-        creditImpact,
+        creditImpact: isModelMissing ? null : creditImpact,
         trainingRequestId: current?.trainingRequestId ?? null,
+        showPurchaseCreditsAction: !isModelMissing,
       };
     }
 
@@ -835,6 +850,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         errorDetails,
         creditImpact,
         predictionId: generation.predictionId ?? null,
+        showPurchaseCreditsAction: true,
       };
     }
 

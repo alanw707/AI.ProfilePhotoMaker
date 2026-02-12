@@ -127,9 +127,7 @@ export class ModelStateService implements IModelStateService {
         : [];
       const wasDeleted = all.some(
         (req: any) =>
-          req.status === 'failed' &&
-          (req.errorMessage?.toLowerCase().includes('deleted from replicate') ||
-            req.errorMessage?.toLowerCase().includes('deleted by user'))
+          req.status === 'failed' && this.isModelUnavailableReason(req.errorMessage)
       );
 
       if (wasDeleted) {
@@ -215,10 +213,7 @@ export class ModelStateService implements IModelStateService {
     } else if (
       // If a model was deleted (by user or externally), surface an actionable state
       all.some(
-        (req: any) =>
-          req.status === 'failed' &&
-          (req.errorMessage?.toLowerCase().includes('deleted from replicate') ||
-            req.errorMessage?.toLowerCase().includes('deleted by user'))
+        (req: any) => req.status === 'failed' && this.isModelUnavailableReason(req.errorMessage)
       )
     ) {
       modelStatus = 'Ready for training';
@@ -269,9 +264,23 @@ export class ModelStateService implements IModelStateService {
 
   private mapUnifiedStatusToDisplay(statusCode: string, reason?: string | null): string {
     // Delegate to centralized status service for consistent display logic
-    if (statusCode === 'Failed' && reason?.includes('deleted')) {
+    if (statusCode === 'Failed' && this.isModelUnavailableReason(reason)) {
       return 'Ready for training'; // Special case for deleted models
     }
     return this.modelStatus.getStatusInfo(statusCode).displayText;
+  }
+
+  private isModelUnavailableReason(reason?: string | null): boolean {
+    const normalized = reason?.toLowerCase().trim() || '';
+    if (!normalized) {
+      return false;
+    }
+
+    return (
+      normalized.includes('deleted') ||
+      normalized.includes('expired') ||
+      normalized.includes('retention policy') ||
+      normalized.includes('no longer exists')
+    );
   }
 }

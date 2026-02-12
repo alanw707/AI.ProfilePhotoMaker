@@ -391,7 +391,12 @@ export class DashboardCoordinatorService implements IDashboardStateService {
                 // Delegate to centralized status service for consistent display logic
                 if (
                   unifiedStatus.statusCode === 'Failed' &&
-                  unifiedStatus.reason?.includes('deleted')
+                  (
+                    unifiedStatus.reason?.toLowerCase().includes('deleted') ||
+                    unifiedStatus.reason?.toLowerCase().includes('expired') ||
+                    unifiedStatus.reason?.toLowerCase().includes('retention policy') ||
+                    unifiedStatus.reason?.toLowerCase().includes('no longer exists')
+                  )
                 ) {
                   return 'Ready for training'; // Special case for deleted models
                 }
