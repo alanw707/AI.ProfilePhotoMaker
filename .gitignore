@@ -108,11 +108,32 @@ package-lock.json
 # Claude Code workspace files
 .claude/
 .opencode/
+CLAUDE.md
+AGENTS.md
+
+# AI IDE tooling configs (keep local only)
+.cursor/
+.cursorrules
+.kiro/
+.roo/
+.serena/
+
+# BMAD planning artifacts (keep local only)
+_bmad/
+_bmad-output/
+bdocs/
+
+# Development tools and utilities (keep local only)
+tools/
+~/
+
+# Deployment artifacts and reports
+container-verification-report*.json
+deployment-params.template.json
 
 # Temporary downloads and artifacts
 .downloads/
 .playwright-mcp/
-.cursor/rules/bmad/
 .github/agents/
 memory-bank/
 
