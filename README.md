@@ -76,8 +76,8 @@ Core capabilities:
 ## GitHub Workflows
 
 Core automation is defined here:
-- PR static analysis: `.github/workflows/pr-code-review.yml`
-- Main deployment pipeline: `.github/workflows/simple-deploy.yml`
+- PR static analysis: [`pr-code-review.yml`](.github/workflows/pr-code-review.yml)
+- Main deployment pipeline: [`simple-deploy.yml`](.github/workflows/simple-deploy.yml)
 
 Current behavior:
 - `pr-code-review.yml` runs on pull requests to `main`/`develop` and ignores markdown/doc-only changes.
@@ -165,10 +165,10 @@ AI.ProfilePhotoMaker/
 
 ## Documentation
 
-- Documentation index: `docs/INDEX.md`
-- Architecture overview: `docs/architecture/ARCHITECTURE_OVERVIEW.md`
-- Environment setup: `docs/setup/ENVIRONMENT_SETUP.md`
-- API reference: `docs/operations/API_REFERENCE.md`
+- Documentation index: [`docs/INDEX.md`](docs/INDEX.md)
+- Architecture overview: [`docs/architecture/ARCHITECTURE_OVERVIEW.md`](docs/architecture/ARCHITECTURE_OVERVIEW.md)
+- Environment setup: [`docs/setup/ENVIRONMENT_SETUP.md`](docs/setup/ENVIRONMENT_SETUP.md)
+- API reference: [`docs/operations/API_REFERENCE.md`](docs/operations/API_REFERENCE.md)
 
 ## Security Notes
 
