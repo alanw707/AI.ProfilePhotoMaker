@@ -1,92 +1,117 @@
 # AI Profile Photo Maker
 
-AI Profile Photo Maker is a full-stack app that generates professional profile photos from user-uploaded selfies.
+AI Profile Photo Maker is a full-stack platform for generating professional profile photos from user-uploaded selfies using AI model training and style-based generation.
 
-The repository contains:
+## Overview
+
+This repository includes:
 - `AI.ProfilePhotoMaker.API`: ASP.NET Core 8 Web API
 - `AI.ProfilePhotoMaker.UI`: Angular 19 frontend
-- `AI.ProfilePhotoMaker.API.Tests`: API test project
-- Docker and local scripts for full-stack development
+- `AI.ProfilePhotoMaker.API.Tests`: API tests (xUnit)
+- Docker, local development scripts, and deployment automation
 
-## What This Project Does
-
-- Authenticated user accounts (JWT + Google OAuth)
-- Selfie upload and validation pipeline
-- AI model training/generation workflow (Replicate integration, with local mock support)
-- Style-based photo generation and previews
-- Credit-based usage and Stripe payment integration
-- Blob/local image storage options
+Core capabilities:
+- Account auth with JWT + Google OAuth
+- Selfie upload validation and preprocessing
+- AI training + generation workflow (Replicate integration)
+- Style-based output generation and previewing
+- Credit-based billing and Stripe integration
+- Blob/local storage strategies
 
 ## Product Flow
 
 1. Sign up / sign in
-- UI: Angular auth pages and guards (`AI.ProfilePhotoMaker.UI/src/app/auth`, `AI.ProfilePhotoMaker.UI/src/app/guards`)
-- API: authentication endpoints (`AI.ProfilePhotoMaker.API/Controllers/AuthController.cs`)
+- UI: `AI.ProfilePhotoMaker.UI/src/app/auth`, `AI.ProfilePhotoMaker.UI/src/app/guards`
+- API: `AI.ProfilePhotoMaker.API/Controllers/AuthController.cs`
 
-2. Upload selfies for training
-- UI: upload and onboarding pages (`AI.ProfilePhotoMaker.UI/src/app/pages`)
-- API: image upload and validation (`AI.ProfilePhotoMaker.API/Controllers/ImageController.cs`)
+2. Upload selfies
+- UI: onboarding and upload pages in `AI.ProfilePhotoMaker.UI/src/app/pages`
+- API: upload + validation in `AI.ProfilePhotoMaker.API/Controllers/ImageController.cs`
 
 3. Start model training
-- API: Replicate training orchestration and status tracking
-  (`AI.ProfilePhotoMaker.API/Controllers/ReplicateController.cs`,
-  `AI.ProfilePhotoMaker.API/Controllers/ModelStatusController.cs`,
-  `AI.ProfilePhotoMaker.API/Controllers/ReplicateWebhookController.cs`)
+- API orchestration and status tracking:
+  - `AI.ProfilePhotoMaker.API/Controllers/ReplicateController.cs`
+  - `AI.ProfilePhotoMaker.API/Controllers/ModelStatusController.cs`
+  - `AI.ProfilePhotoMaker.API/Controllers/ReplicateWebhookController.cs`
 
-4. Choose styles and generate headshots
-- UI: style selection and generation workflow (`AI.ProfilePhotoMaker.UI/src/app/pages`, `AI.ProfilePhotoMaker.UI/src/app/shared`)
-- API: style + generation endpoints
-  (`AI.ProfilePhotoMaker.API/Controllers/StyleController.cs`,
-  `AI.ProfilePhotoMaker.API/Controllers/ProfileController.cs`)
+4. Select style and generate images
+- UI style flow: `AI.ProfilePhotoMaker.UI/src/app/pages`, `AI.ProfilePhotoMaker.UI/src/app/shared`
+- API generation endpoints:
+  - `AI.ProfilePhotoMaker.API/Controllers/StyleController.cs`
+  - `AI.ProfilePhotoMaker.API/Controllers/ProfileController.cs`
 
-5. Review, enhance, and manage results
-- API: gallery/profile/enhancement management
-  (`AI.ProfilePhotoMaker.API/Controllers/ProfileController.cs`,
-  `AI.ProfilePhotoMaker.API/Controllers/EnhancementController.cs`)
+5. Review, enhance, and manage outputs
+- API management + enhancement:
+  - `AI.ProfilePhotoMaker.API/Controllers/ProfileController.cs`
+  - `AI.ProfilePhotoMaker.API/Controllers/EnhancementController.cs`
 
 6. Purchase credits when needed
-- UI: billing flows in app pages/services
-- API: credit and Stripe handlers
-  (`AI.ProfilePhotoMaker.API/Controllers/CreditController.cs`,
-  `AI.ProfilePhotoMaker.API/Controllers/StripeWebhookController.cs`)
+- API billing + Stripe integration:
+  - `AI.ProfilePhotoMaker.API/Controllers/CreditController.cs`
+  - `AI.ProfilePhotoMaker.API/Controllers/StripeWebhookController.cs`
 
-## Tech Stack
+## Architecture At A Glance
 
-- Backend: .NET 8, ASP.NET Core Web API, EF Core, SQL Server
-- Frontend: Angular 19, TypeScript
-- Storage: Azure Blob Storage (or local/dev alternatives)
-- Payments: Stripe
-- Auth: JWT + Google OAuth
-- Containers: Docker Compose
+- Frontend: Angular SPA for auth, onboarding, style selection, dashboard, and gallery management
+- Backend: ASP.NET Core API with business services, async background jobs, webhook handlers, and health checks
+- Data: SQL Server via EF Core migrations in `AI.ProfilePhotoMaker.API/Migrations/`
+- Storage: Azure Blob (or local alternatives for development)
+- External integrations: Replicate (AI), Stripe (payments), Google OAuth
+- Runtime options: Docker Compose local stack and Azure deployment workflow
 
-## Quick Start (Docker, Recommended)
+## Technology Stack
 
-1. Clone the repository:
+| Area | Technology |
+| --- | --- |
+| Backend | .NET 8, ASP.NET Core Web API, EF Core, Serilog |
+| Frontend | Angular 19, TypeScript, RxJS |
+| Database | SQL Server |
+| Auth | JWT, Google OAuth |
+| AI | Replicate API + webhook callbacks |
+| Payments | Stripe |
+| Storage | Azure Blob Storage / local dev storage |
+| Testing | xUnit, Moq, FluentAssertions, Karma, Playwright |
+| DevOps | GitHub Actions, Docker Compose, Azure Container Apps |
+
+## GitHub Workflows
+
+Core automation is defined here:
+- PR static analysis: `.github/workflows/pr-code-review.yml`
+- Main deployment pipeline: `.github/workflows/simple-deploy.yml`
+
+Current behavior:
+- `pr-code-review.yml` runs on pull requests to `main`/`develop` and ignores markdown/doc-only changes.
+- `simple-deploy.yml` runs on push to `main` (and manual dispatch).
+
+## Quick Start (Docker Recommended)
+
+1. Clone:
 ```bash
 git clone https://github.com/alanw707/AI.ProfilePhotoMaker.git
 cd AI.ProfilePhotoMaker
 ```
 
-2. Create your environment file:
+2. Create environment file:
 ```bash
 cp .env.example .env
 ```
 
-3. Set required values in `.env`:
+3. Set required environment values in `.env`:
 - `MSSQL_SA_PASSWORD`
 - `JWT_SECRET`
 - `REPLICATE_API_TOKEN`
 - `REPLICATE_WEBHOOK_SECRET`
 
-For local development, you can keep `ENABLE_REPLICATE_MOCK=true` if you do not want to call live Replicate APIs.
+Optional for local development:
+- `ENABLE_REPLICATE_MOCK=true` to avoid live Replicate calls
 
-4. Build and start:
+4. Build and run containers:
 ```bash
 docker compose build --no-cache
 docker compose up -d
 ```
 
-5. Open:
+5. Access services:
 - Frontend: `http://localhost:4200`
 - API: `http://localhost:5032`
 
@@ -104,7 +129,7 @@ npm ci
 npm run dev:local
 ```
 
-## Build, Test, and Quality
+## Build, Test, Quality
 
 API:
 ```bash
@@ -112,14 +137,14 @@ dotnet build AI.ProfilePhotoMaker.sln
 dotnet test AI.ProfilePhotoMaker.API.Tests
 ```
 
-UI (run from `AI.ProfilePhotoMaker.UI`):
+UI (`AI.ProfilePhotoMaker.UI`):
 ```bash
 npm run lint
 npm run format:check
 npm test
 ```
 
-E2E (run from `AI.ProfilePhotoMaker.UI`):
+E2E (`AI.ProfilePhotoMaker.UI`):
 ```bash
 npm run test:e2e
 ```
@@ -129,26 +154,27 @@ npm run test:e2e
 ```text
 AI.ProfilePhotoMaker/
 ├── AI.ProfilePhotoMaker.API/        # ASP.NET Core API
-├── AI.ProfilePhotoMaker.API.Tests/  # xUnit tests
+├── AI.ProfilePhotoMaker.API.Tests/  # API tests
 ├── AI.ProfilePhotoMaker.UI/         # Angular frontend
-├── docs/                            # Product, architecture, ops docs
-├── scripts/                         # Dev/deploy scripts
-├── docker-compose.yml               # Local full-stack containers
+├── docs/                            # Product, architecture, operations
+├── scripts/                         # Dev/build/deploy scripts
+├── .github/workflows/               # PR analysis + deploy pipelines
+├── docker-compose.yml               # Full local stack
 └── README.md
 ```
 
 ## Documentation
 
 - Documentation index: `docs/INDEX.md`
-- Architecture: `docs/architecture/ARCHITECTURE_OVERVIEW.md`
+- Architecture overview: `docs/architecture/ARCHITECTURE_OVERVIEW.md`
 - Environment setup: `docs/setup/ENVIRONMENT_SETUP.md`
 - API reference: `docs/operations/API_REFERENCE.md`
 
 ## Security Notes
 
-- Do not commit secrets to git.
-- Use environment variables or secret stores (Key Vault/user-secrets).
-- Avoid logging PII, tokens, or uploaded image contents.
+- Never commit secrets to source control
+- Use environment variables, user-secrets, or Key Vault
+- Avoid logging PII, auth tokens, or uploaded image content
 
 ## License
 
