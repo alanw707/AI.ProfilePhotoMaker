@@ -269,6 +269,10 @@ export class LoginComponent implements OnInit {
   }
 
   loginWithGoogle(): void {
+    if (this.loading) {
+      return;
+    }
+
     this.submitAttempted = true;
     if (this.f['ageConfirmed'].value !== true) {
       this.f['ageConfirmed'].markAsTouched();
@@ -276,10 +280,13 @@ export class LoginComponent implements OnInit {
       return;
     }
 
+    this.loading = true;
+    this._cdr.markForCheck();
+
     // Get OAuth base URL from config service via constructor injection
     const oauthBaseUrl = this._configService.getOAuthBaseUrl();
     // Use standard OAuth flow - redirect to the external login endpoint
-    const oauthUrl = `${oauthBaseUrl}/api/auth/external-login/google?returnUrl=${encodeURIComponent(this.returnUrl)}&ageConfirmed=true`;
+    const oauthUrl = `${oauthBaseUrl}/api/auth/external-login/google?returnUrl=${encodeURIComponent(this.returnUrl)}`;
     window.location.href = oauthUrl;
   }
 
