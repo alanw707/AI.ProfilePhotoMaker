@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using AI.ProfilePhotoMaker.API.Constants;
@@ -38,6 +39,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private readonly IMemoryCache _cache;
         private readonly IDataProtector _oauthStateProtector;
         private static readonly TimeSpan OAuthStateLifetime = TimeSpan.FromMinutes(10);
+        private const string OAuthNonceCookieName = "AIPM.OAuthNonce";
         private static string S(string? value) => LoggingSanitizer.Sanitize(value);
         private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
         private static string LogSafe(string? value, int maxLength = 128)
@@ -168,6 +170,34 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private CookieOptions BuildAuthCookieOptions(DateTimeOffset? expires = null)
         {
             // Only set an explicit Domain when we are on our real domain; this prevents invalid cookies in tests/local.
+            var requestHost = Request?.Host.Host;
+            var configuredDomain = _configuration["Authentication:CookieDomain"];
+            string? domain = null;
+            if (!string.IsNullOrWhiteSpace(configuredDomain))
+            {
+                domain = configuredDomain;
+            }
+            else if (!string.IsNullOrWhiteSpace(requestHost) &&
+                     requestHost.EndsWith("aiprofilephotomaker.com", StringComparison.OrdinalIgnoreCase))
+            {
+                domain = ".aiprofilephotomaker.com";
+            }
+
+            var isHttps = Request?.IsHttps ?? !_environment.IsDevelopment();
+
+            return new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = isHttps,
+                SameSite = isHttps ? SameSiteMode.None : SameSiteMode.Lax,
+                Domain = domain,
+                Expires = expires,
+                Path = "/"
+            };
+        }
+
+        private CookieOptions BuildOAuthNonceCookieOptions(DateTimeOffset? expires = null)
+        {
             var requestHost = Request?.Host.Host;
             var configuredDomain = _configuration["Authentication:CookieDomain"];
             string? domain = null;
@@ -481,7 +511,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             // Generate state parameter for security
             var safeReturnUrl = NormalizeReturnUrl(returnUrl);
-            var state = CreateOAuthState(safeReturnUrl);
+            var (state, nonce) = CreateOAuthState(safeReturnUrl);
+            Response.Cookies.Append(
+                OAuthNonceCookieName,
+                nonce,
+                BuildOAuthNonceCookieOptions(DateTimeOffset.UtcNow.Add(OAuthStateLifetime)));
 
             // Manually construct the Google OAuth URL
             var authUrl = $"https://accounts.google.com/o/oauth2/v2/auth?" +
@@ -527,7 +561,11 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
 
             // Generate state parameter for security
-            var state = CreateOAuthState(safeReturnUrl);
+            var (state, nonce) = CreateOAuthState(safeReturnUrl);
+            Response.Cookies.Append(
+                OAuthNonceCookieName,
+                nonce,
+                BuildOAuthNonceCookieOptions(DateTimeOffset.UtcNow.Add(OAuthStateLifetime)));
 
             var backendBaseUrl = ResolveBackendBaseUrl();
             var redirectUri = BuildGoogleRedirectUri(backendBaseUrl);
@@ -556,11 +594,26 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return Redirect($"{frontendBaseUrl}/auth/login?error=oauth_error");
             }
 
-            if (!TryReadOAuthState(state, out var returnUrl, out var stateError))
+            if (!TryReadOAuthState(state, out var returnUrl, out var expectedNonce, out var stateError))
             {
                 _logger.LogWarning("OAuth callback rejected due to invalid state: {StateError}", S(stateError));
                 return Redirect($"{frontendBaseUrl}/auth/login?error={stateError}");
             }
+
+            if (!Request.Cookies.TryGetValue(OAuthNonceCookieName, out var cookieNonce) ||
+                string.IsNullOrWhiteSpace(cookieNonce))
+            {
+                return Redirect($"{frontendBaseUrl}/auth/login?error=missing_state");
+            }
+
+            var expectedNonceBytes = Encoding.UTF8.GetBytes(expectedNonce);
+            var cookieNonceBytes = Encoding.UTF8.GetBytes(cookieNonce);
+            if (!CryptographicOperations.FixedTimeEquals(expectedNonceBytes, cookieNonceBytes))
+            {
+                return Redirect($"{frontendBaseUrl}/auth/login?error=invalid_state");
+            }
+
+            Response.Cookies.Delete(OAuthNonceCookieName, BuildOAuthNonceCookieOptions());
 
             // Validate authorization code
             if (string.IsNullOrEmpty(code))
@@ -1009,24 +1062,26 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             return returnUrl.StartsWith("/", StringComparison.Ordinal) ? returnUrl : "/app/dashboard";
         }
 
-        private string CreateOAuthState(string returnUrl)
+        private (string state, string nonce) CreateOAuthState(string returnUrl)
         {
+            var nonce = Guid.NewGuid().ToString("N");
             var payload = new OAuthStatePayload
             {
                 ReturnUrl = NormalizeReturnUrl(returnUrl),
                 IssuedAtUtc = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 ExpiresAtUtc = DateTimeOffset.UtcNow.Add(OAuthStateLifetime).ToUnixTimeSeconds(),
-                Nonce = Guid.NewGuid().ToString("N")
+                Nonce = nonce
             };
 
             var json = JsonSerializer.Serialize(payload);
             var protectedState = _oauthStateProtector.Protect(json);
-            return WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(protectedState));
+            return (WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(protectedState)), nonce);
         }
 
-        private bool TryReadOAuthState(string? state, out string returnUrl, out string errorCode)
+        private bool TryReadOAuthState(string? state, out string returnUrl, out string nonce, out string errorCode)
         {
             returnUrl = "/app/dashboard";
+            nonce = string.Empty;
             errorCode = "invalid_state";
 
             if (string.IsNullOrWhiteSpace(state))
@@ -1055,6 +1110,12 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 }
 
                 returnUrl = NormalizeReturnUrl(payload.ReturnUrl);
+                nonce = payload.Nonce;
+                if (string.IsNullOrWhiteSpace(nonce))
+                {
+                    return false;
+                }
+
                 return true;
             }
             catch
