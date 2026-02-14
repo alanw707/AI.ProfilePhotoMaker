@@ -511,7 +511,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         [HttpGet("external-login/{provider}")]
-        public IActionResult ExternalLogin(string provider, string returnUrl = "/app/dashboard", bool ageConfirmed = false)
+        public IActionResult ExternalLogin(string provider, string returnUrl = "/app/dashboard")
         {
             if (!string.Equals(provider, "google", StringComparison.OrdinalIgnoreCase))
             {
@@ -519,13 +519,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
 
             var safeReturnUrl = NormalizeReturnUrl(returnUrl);
-
-            if (!ageConfirmed)
-            {
-                var frontendBaseUrl = GetFrontendBaseUrl();
-                var encodedReturnUrl = Uri.EscapeDataString(safeReturnUrl);
-                return Redirect($"{frontendBaseUrl}/auth/login?error=age_confirmation_required&returnUrl={encodedReturnUrl}");
-            }
 
             var (clientId, _) = GetGoogleClientSettings();
             if (string.IsNullOrEmpty(clientId))
