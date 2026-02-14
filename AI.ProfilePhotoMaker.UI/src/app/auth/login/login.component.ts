@@ -269,12 +269,19 @@ export class LoginComponent implements OnInit {
   }
 
   loginWithGoogle(): void {
+    if (this.loading) {
+      return;
+    }
+
     this.submitAttempted = true;
     if (this.f['ageConfirmed'].value !== true) {
       this.f['ageConfirmed'].markAsTouched();
       this._cdr.markForCheck();
       return;
     }
+
+    this.loading = true;
+    this._cdr.markForCheck();
 
     // Get OAuth base URL from config service via constructor injection
     const oauthBaseUrl = this._configService.getOAuthBaseUrl();

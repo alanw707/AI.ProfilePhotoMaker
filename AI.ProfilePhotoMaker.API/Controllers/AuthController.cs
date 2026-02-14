@@ -11,6 +11,7 @@ using AI.ProfilePhotoMaker.API.Services.Authentication.interfaces;
 using AI.ProfilePhotoMaker.API.Services.Notifications;
 using AI.ProfilePhotoMaker.API.Services.Security;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
@@ -35,6 +36,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         private readonly IEmailNotificationService _emailNotificationService;
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly IMemoryCache _cache;
+        private readonly IDataProtector _oauthStateProtector;
+        private static readonly TimeSpan OAuthStateLifetime = TimeSpan.FromMinutes(10);
         private static string S(string? value) => LoggingSanitizer.Sanitize(value);
         private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
         private static string LogSafe(string? value, int maxLength = 128)
@@ -77,7 +80,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             ITurnstileVerificationService turnstile,
             IEmailNotificationService emailNotificationService,
             IServiceScopeFactory scopeFactory,
-            IMemoryCache cache)
+            IMemoryCache cache,
+            IDataProtectionProvider dataProtectionProvider)
         {
             _authService = authService;
             _userManager = userManager;
@@ -91,6 +95,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             _emailNotificationService = emailNotificationService;
             _scopeFactory = scopeFactory;
             _cache = cache;
+            _oauthStateProtector = dataProtectionProvider.CreateProtector("OAuthState.v1");
         }
 
         private void QueueSignupEmails(string email)
@@ -475,38 +480,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             var redirectUri = BuildGoogleRedirectUri(backendBaseUrl);
 
             // Generate state parameter for security
-            var state = Guid.NewGuid().ToString();
             var safeReturnUrl = NormalizeReturnUrl(returnUrl);
-
-            try
-            {
-                HttpContext.Session.SetString("oauth_state", state);
-                HttpContext.Session.SetString("oauth_return_url", safeReturnUrl);
-            }
-            catch (Exception ex)
-            {
-                // Environment-aware session error handling
-                _logger.LogWarning(ex, "Session initialization failed in OAuth URL generation: {ErrorMessage}", S(ex.Message));
-
-                if (_environment.IsDevelopment())
-                {
-                    // In development, log but continue without session - reduced security but functional OAuth
-                    _logger.LogWarning("Development environment: Continuing OAuth flow without session state (reduced CSRF protection)");
-
-                    // Continue without session - skip setting session state
-                    // OAuth will work but with reduced CSRF protection in development
-                }
-                else
-                {
-                    // In production, session failure is a configuration issue that should be addressed
-                    _logger.LogError("Production environment: Session initialization failed - this indicates a configuration issue");
-                    return BadRequest(new
-                    {
-                        error = "Session initialization failed. Please check HTTPS and session configuration.",
-                        details = _environment.IsDevelopment() ? ex.Message : "Contact support if this issue persists"
-                    });
-                }
-            }
+            var state = CreateOAuthState(safeReturnUrl);
 
             // Manually construct the Google OAuth URL
             var authUrl = $"https://accounts.google.com/o/oauth2/v2/auth?" +
@@ -559,37 +534,7 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             }
 
             // Generate state parameter for security
-            var state = Guid.NewGuid().ToString();
-
-            try
-            {
-                HttpContext.Session.SetString("oauth_state", state);
-                HttpContext.Session.SetString("oauth_return_url", safeReturnUrl);
-            }
-            catch (Exception ex)
-            {
-                // Environment-aware session error handling
-                _logger.LogWarning(ex, "Session initialization failed in external login: {ErrorMessage}", S(ex.Message));
-
-                if (_environment.IsDevelopment())
-                {
-                    // In development, log but continue without session - reduced security but functional OAuth
-                    _logger.LogWarning("Development environment: Continuing OAuth flow without session state (reduced CSRF protection)");
-
-                    // Continue without session - skip setting session state
-                    // OAuth will work but with reduced CSRF protection in development
-                }
-                else
-                {
-                    // In production, session failure is a configuration issue that should be addressed
-                    _logger.LogError("Production environment: Session initialization failed - this indicates a configuration issue");
-                    return BadRequest(new
-                    {
-                        error = "Session initialization failed. Please check HTTPS and session configuration.",
-                        details = _environment.IsDevelopment() ? ex.Message : "Contact support if this issue persists"
-                    });
-                }
-            }
+            var state = CreateOAuthState(safeReturnUrl);
 
             var backendBaseUrl = ResolveBackendBaseUrl();
             var redirectUri = BuildGoogleRedirectUri(backendBaseUrl);
@@ -611,22 +556,6 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
             var frontendBaseUrl = GetFrontendBaseUrl();
 
-            string? returnUrl = null;
-            string? sessionState = null;
-
-            try
-            {
-                returnUrl = HttpContext.Session.GetString("oauth_return_url") ?? "/app/dashboard";
-                sessionState = HttpContext.Session.GetString("oauth_state");
-            }
-            catch (Exception)
-            {
-                returnUrl = "/app/dashboard"; // Default fallback
-                sessionState = null; // Will trigger session_expired error below
-            }
-
-            returnUrl = NormalizeReturnUrl(returnUrl);
-
             // Handle OAuth errors
             if (!string.IsNullOrEmpty(error))
             {
@@ -634,54 +563,10 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return Redirect($"{frontendBaseUrl}/auth/login?error=oauth_error");
             }
 
-            // Validate state parameter - CRITICAL SECURITY CHECK
-            // sessionState is already retrieved above with error handling
-
-            // SECURITY: Always validate state parameter to prevent Login CSRF attacks
-            // Environment-aware state validation
-            if (string.IsNullOrEmpty(sessionState))
+            if (!TryReadOAuthState(state, out var returnUrl, out var stateError))
             {
-                if (_environment.IsDevelopment())
-                {
-                    // In development, session might not be available - log warning but continue
-                    _logger.LogWarning("Development environment: Session state missing - OAuth callback continuing with reduced CSRF protection");
-
-                    // Still validate that state parameter was provided by OAuth provider
-                    if (string.IsNullOrEmpty(state))
-                    {
-                        _logger.LogError("OAuth callback missing state parameter entirely - rejecting");
-                        return Redirect($"{frontendBaseUrl}/auth/login?error=missing_state");
-                    }
-
-                    // Continue with reduced security - log this for visibility
-                    _logger.LogWarning("Development OAuth callback proceeding without session state validation (CSRF protection reduced)");
-                }
-                else
-                {
-                    // In production, session state is required - reject the request
-                    _logger.LogError("Production environment: Session state missing - potential CSRF attack or session configuration issue");
-                    return Redirect($"{frontendBaseUrl}/auth/login?error=session_expired");
-                }
-            }
-            else
-            {
-                // Session state available - perform full validation
-
-                // If state parameter is missing from callback, this is suspicious - reject
-                if (string.IsNullOrEmpty(state))
-                {
-                    _logger.LogError("OAuth callback missing state parameter - potential CSRF attack");
-                    return Redirect($"{frontendBaseUrl}/auth/login?error=missing_state");
-                }
-
-                // Compare state values - must match exactly
-                if (state != sessionState)
-                {
-                    _logger.LogError("OAuth state mismatch - potential CSRF attack");
-                    return Redirect($"{frontendBaseUrl}/auth/login?error=invalid_state");
-                }
-
-                _logger.LogInformation("OAuth state validation passed successfully");
+                _logger.LogWarning("OAuth callback rejected due to invalid state: {StateError}", S(stateError));
+                return Redirect($"{frontendBaseUrl}/auth/login?error={stateError}");
             }
 
             // Validate authorization code
@@ -1131,6 +1016,60 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             return returnUrl.StartsWith("/", StringComparison.Ordinal) ? returnUrl : "/app/dashboard";
         }
 
+        private string CreateOAuthState(string returnUrl)
+        {
+            var payload = new OAuthStatePayload
+            {
+                ReturnUrl = NormalizeReturnUrl(returnUrl),
+                IssuedAtUtc = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                ExpiresAtUtc = DateTimeOffset.UtcNow.Add(OAuthStateLifetime).ToUnixTimeSeconds(),
+                Nonce = Guid.NewGuid().ToString("N")
+            };
+
+            var json = JsonSerializer.Serialize(payload);
+            var protectedState = _oauthStateProtector.Protect(json);
+            return WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(protectedState));
+        }
+
+        private bool TryReadOAuthState(string? state, out string returnUrl, out string errorCode)
+        {
+            returnUrl = "/app/dashboard";
+            errorCode = "invalid_state";
+
+            if (string.IsNullOrWhiteSpace(state))
+            {
+                errorCode = "missing_state";
+                return false;
+            }
+
+            try
+            {
+                var protectedBytes = WebEncoders.Base64UrlDecode(state);
+                var protectedState = Encoding.UTF8.GetString(protectedBytes);
+                var json = _oauthStateProtector.Unprotect(protectedState);
+                var payload = JsonSerializer.Deserialize<OAuthStatePayload>(json);
+
+                if (payload == null || string.IsNullOrWhiteSpace(payload.ReturnUrl))
+                {
+                    return false;
+                }
+
+                var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                if (payload.ExpiresAtUtc <= now)
+                {
+                    errorCode = "state_expired";
+                    return false;
+                }
+
+                returnUrl = NormalizeReturnUrl(payload.ReturnUrl);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
 
         [HttpPost("set-cookie")]
         [ApiExplorerSettings(IgnoreApi = true)]
@@ -1203,5 +1142,13 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         public string FamilyName { get; set; } = "";
         public string Picture { get; set; } = "";
         public string Locale { get; set; } = "";
+    }
+
+    public class OAuthStatePayload
+    {
+        public string ReturnUrl { get; set; } = "/app/dashboard";
+        public long IssuedAtUtc { get; set; }
+        public long ExpiresAtUtc { get; set; }
+        public string Nonce { get; set; } = string.Empty;
     }
 }
