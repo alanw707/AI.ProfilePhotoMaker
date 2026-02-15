@@ -26,14 +26,6 @@
               ">
               {{ currentPage.hero.secondaryCtaLabel }}
             </a>
-            <a
-              *ngIf="currentPage.slug !== 'free-headshot-enhancer'"
-              class="btn btn-secondary"
-              [routerLink]="'/free-headshot-enhancer'"
-              [queryParams]="getQueryParamsForHref('/free-headshot-enhancer')"
-              (click)="onCtaClick('hero_free_enhancer', 'Try enhancer', '/free-headshot-enhancer')">
-              Try enhancer
-            </a>
           </div>
         </div>
         <div class="hero-panel">
@@ -43,6 +35,8 @@
                 class="hero-image"
                 [src]="currentPage.hero.imageSrc"
                 [alt]="currentPage.hero.imageAlt || currentPage.hero.headline"
+                width="360"
+                height="450"
                 (error)="onHeroImageError($event, currentPage.hero.imageFallbackSrc)"
                 loading="eager"
                 decoding="async" />
@@ -121,6 +115,8 @@
                         class="visual-photo"
                         [src]="item.beforeImage"
                         [alt]="item.beforeAlt || item.title + ' before headshot'"
+                        width="300"
+                        height="375"
                         loading="lazy"
                         decoding="async" />
                     </ng-container>
@@ -138,6 +134,8 @@
                         class="visual-photo"
                         [src]="item.afterImage"
                         [alt]="item.afterAlt || item.title + ' after headshot'"
+                        width="300"
+                        height="375"
                         loading="lazy"
                         decoding="async" />
                     </ng-container>
@@ -207,15 +205,6 @@
               </details>
             </div>
           </ng-container>
-        </div>
-        <div class="section-cta" *ngIf="currentPage.slug !== 'free-headshot-enhancer'">
-          <a
-            class="btn btn-secondary"
-            [routerLink]="'/free-headshot-enhancer'"
-            [queryParams]="getQueryParamsForHref('/free-headshot-enhancer')"
-            (click)="onCtaClick('section_free_enhancer', 'Try enhancer', '/free-headshot-enhancer')">
-            Try enhancer
-          </a>
         </div>
       </div>
     </section>
