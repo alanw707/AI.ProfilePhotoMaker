@@ -4876,9 +4876,6 @@ header
   
   &:hover
     transform: scale(1.03)
-    
-    .style-overlay-minimal
-      opacity: 1
 
 .style-image-wrapper
   position: relative
@@ -4891,18 +4888,20 @@ header
 
 .style-overlay-minimal
   position: absolute
-  inset: 0
-  background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%)
-  opacity: 0
-  transition: opacity 0.3s ease
-  display: flex
-  align-items: flex-end
-  padding: 16px
+  left: 0
+  right: 0
+  bottom: 0
+  background: rgba(0, 0, 0, 0.58)
+  opacity: 1
+  transition: background 0.3s ease
+  padding: 10px 12px
+  backdrop-filter: blur(1px)
   
   .style-name-overlay
     color: white
     font-size: 0.875rem
     font-weight: 600
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6)
 
 .styles-cta-minimal
   margin-top: 48px
