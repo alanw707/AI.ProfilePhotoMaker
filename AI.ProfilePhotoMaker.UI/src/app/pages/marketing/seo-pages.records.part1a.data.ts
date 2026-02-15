@@ -395,6 +395,8 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
+      imageSrc: '/assets/marketing/before-after/set-2-after.png',
+      imageAlt: 'Professional AI headshot result',
     },
     highlights: [
       { value: 'Studio', label: 'Quality results' },
@@ -403,20 +405,43 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
     ],
     sections: [
       {
+        type: 'showcase',
+        title: 'Before and after results',
+        intro: 'See how everyday photos become polished, profile-ready headshots.',
+        items: [
+          {
+            title: 'Sharper lighting and framing',
+            description: 'Balanced light and cleaner framing for a stronger first impression.',
+            beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-1-after.jpg',
+            beforeAlt: 'Casual selfie before AI headshot generation',
+            afterAlt: 'Professional AI-generated headshot after processing',
+          },
+          {
+            title: 'Polished profile-ready finish',
+            description: 'Natural detail with a professional look that still feels like you.',
+            beforeImage: '/assets/marketing/before-after/set-3-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-3-after.png',
+            beforeAlt: 'Original photo before enhancement',
+            afterAlt: 'Refined AI headshot for LinkedIn and resumes',
+          },
+        ],
+      },
+      {
         type: 'cards',
         title: 'Why AI headshots',
         items: [
           {
             title: 'Skip the studio',
-            description: 'No scheduling or travel. Get professional results from home.',
+            description: 'No scheduling or travel, just polished results from home.',
           },
           {
             title: 'Consistent results',
-            description: 'Multiple looks with one upload flow for a cohesive brand image.',
+            description: 'Generate multiple looks that stay consistent across profiles.',
           },
           {
             title: 'Realistic output',
-            description: 'Natural detail and lighting tuned for authenticity.',
+            description: 'Natural detail and lighting tuned for believable results.',
           },
         ],
       },
@@ -426,27 +451,16 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
         items: [
           {
             title: 'Upload at least 10 clear selfies',
-            description:
-              'Use at least 10 clear selfies with varied angles and lighting so the model learns your features accurately.',
+            description: 'Use varied angles and lighting for stronger face consistency.',
           },
           {
             title: 'Select your style',
-            description: 'LinkedIn, classic, or creative styles tailored to your goals.',
+            description: 'Choose LinkedIn, classic, or creative looks for your goals.',
           },
           {
             title: 'Download your headshots',
-            description: 'Use your best shots anywhere you need a professional photo.',
+            description: 'Download your favorites for LinkedIn, resumes, and websites.',
           },
-        ],
-      },
-      {
-        type: 'bullets',
-        title: 'Popular use cases',
-        items: [
-          'LinkedIn and professional networking profiles.',
-          'Resumes, cover letters, and job applications.',
-          'Portfolio sites and personal branding.',
-          'Team bios and company directories.',
         ],
       },
       {
@@ -498,11 +512,41 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
+      imageSrc: '/assets/marketing/before-after/set-3-after.png',
+      imageAlt: 'LinkedIn-ready professional headshot',
     },
+    highlights: [
+      { value: 'Profile-ready', label: 'Framing and crop' },
+      { value: 'Natural', label: 'Realistic skin tones' },
+      { value: 'Minutes', label: 'To publish-ready shots' },
+    ],
     sections: [
       {
+        type: 'showcase',
+        title: 'LinkedIn before and after',
+        intro: 'Compare casual uploads with polished results designed for profile visibility.',
+        items: [
+          {
+            title: 'Clean profile framing',
+            description: 'Head-and-shoulders crop that reads clearly in feed and search.',
+            beforeImage: '/assets/marketing/before-after/set-2-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-2-after.png',
+            beforeAlt: 'Casual photo before LinkedIn optimization',
+            afterAlt: 'LinkedIn-ready headshot after optimization',
+          },
+          {
+            title: 'Professional lighting and tone',
+            description: 'Balanced lighting and natural color for a credible first impression.',
+            beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-1-after.jpg',
+            beforeAlt: 'Original selfie before styling',
+            afterAlt: 'Professional LinkedIn headshot after styling',
+          },
+        ],
+      },
+      {
         type: 'cards',
-        title: 'Ideal framing and background',
+        title: 'What works best on LinkedIn',
         items: [
           {
             title: 'Head and shoulders focus',
@@ -516,21 +560,6 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
             title: 'Soft professional lighting',
             description: 'Balanced light that keeps skin tones natural.',
           },
-        ],
-      },
-      {
-        type: 'bullets',
-        title: 'Outfit guidance',
-        items: [
-          'Choose solid colors that contrast with the background.',
-          'Avoid loud patterns that distract from your face.',
-          'Wear what you would use in a professional meeting.',
-        ],
-      },
-      {
-        type: 'cards',
-        title: 'Common mistakes to avoid',
-        items: [
           {
             title: 'Overly filtered images',
             description: 'Heavy filters reduce trust and look artificial.',
@@ -542,6 +571,10 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
           {
             title: 'Low resolution uploads',
             description: 'Clear, high quality selfies deliver better results.',
+          },
+          {
+            title: 'Solid-color outfits',
+            description: 'Simple, professional clothing keeps focus on your face.',
           },
         ],
       },

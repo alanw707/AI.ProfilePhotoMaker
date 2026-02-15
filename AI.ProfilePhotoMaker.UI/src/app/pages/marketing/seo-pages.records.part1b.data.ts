@@ -202,6 +202,34 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
     ],
     sections: [
       {
+        type: 'showcase',
+        title: 'Before and after',
+        intro:
+          'Subtle improvements in lighting, background, and color add up to a more premium first impression.',
+        items: [
+          {
+            title: 'Clean, professional lighting',
+            description: 'Balanced exposure with natural detail for a studio-quality result.',
+            beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-1-after.jpg',
+            beforeAlt: 'Original casual photo before enhancement',
+            afterAlt: 'Professional headshot after enhancement',
+          },
+          {
+            title: 'Background refinement',
+            description: 'A cleaner setting keeps the focus on you and your brand.',
+            beforeImage: '/assets/marketing/before-after/set-2-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-2-after.png',
+          },
+          {
+            title: 'Polished color and contrast',
+            description: 'Crisp but natural, ready for Zillow, LinkedIn, and your site.',
+            beforeImage: '/assets/marketing/before-after/set-3-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-3-after.png',
+          },
+        ],
+      },
+      {
         type: 'bullets',
         title: 'What top-producing agents get right',
         intro: 'Small details make you look established before anyone reads your bio.',
@@ -231,35 +259,6 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
           {
             title: 'Team consistency',
             description: 'Match headshots across agents for a unified brokerage page.',
-          },
-        ],
-      },
-      {
-        type: 'showcase',
-        title: 'Before and after',
-        intro:
-          'Subtle improvements in lighting, background, and color add up to a more premium first impression.',
-        items: [
-          {
-            title: 'Clean, professional lighting',
-            description:
-              'Balanced exposure with natural detail—designed to look studio-shot, not filtered.',
-            beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
-            afterImage: '/assets/marketing/before-after/set-1-after.jpg',
-            beforeAlt: 'Original casual photo before enhancement',
-            afterAlt: 'Professional headshot after enhancement',
-          },
-          {
-            title: 'Background refinement',
-            description: 'A cleaner setting keeps the focus on you and your brand.',
-            beforeImage: '/assets/marketing/before-after/set-2-before.jpg',
-            afterImage: '/assets/marketing/before-after/set-2-after.png',
-          },
-          {
-            title: 'Polished color and contrast',
-            description: 'Crisp but natural—ready for Zillow, LinkedIn, and your website.',
-            beforeImage: '/assets/marketing/before-after/set-3-before.jpg',
-            afterImage: '/assets/marketing/before-after/set-3-after.png',
           },
         ],
       },
