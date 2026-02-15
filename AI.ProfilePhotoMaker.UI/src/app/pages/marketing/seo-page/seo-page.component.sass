@@ -801,6 +801,16 @@ main
   .hero-panel
     justify-content: flex-start
 
+  .hero-panel-stack
+    width: 100%
+    max-width: 360px
+
+  .hero-image-card,
+  .panel-card
+    width: 100%
+    max-width: 360px
+    min-width: 0
+
   .showcase-visual
     grid-template-columns: repeat(2, minmax(0, 1fr))
 
@@ -818,6 +828,21 @@ main
 @media (max-width: 640px)
   .hero-copy h1
     font-size: 2.3rem
+
+  .hero-panel,
+  .hero-panel-stack
+    width: 100%
+    max-width: 100%
+
+  .hero-image-card,
+  .panel-card
+    width: 100%
+    max-width: 100%
+    min-width: 0
+    box-sizing: border-box
+
+  .panel-card
+    padding: 20px
 
   .cta-row
     flex-direction: column
