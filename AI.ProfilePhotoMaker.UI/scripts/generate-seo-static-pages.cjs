@@ -81,7 +81,42 @@ console.log(
 );
 
 function loadSeoPages(filePath) {
-  const source = fs.readFileSync(filePath, 'utf8');
+  // Preferred path: evaluate the TS module graph via ts-node so relative imports resolve.
+  try {
+    const tsNode = require('ts-node');
+    tsNode.register({
+      transpileOnly: true,
+      compilerOptions: {
+        module: 'commonjs',
+        target: 'es2022',
+      },
+    });
+
+    const resolvedPath = require.resolve(filePath);
+    delete require.cache[resolvedPath];
+    const tsModule = require(resolvedPath);
+    if (tsModule && tsModule.seoPages) {
+      return tsModule.seoPages;
+    }
+  } catch (error) {
+    // Fallback below retains legacy behavior when ts-node is unavailable.
+  }
+
+  // Fallback path: transpile and eval a single file.
+  const loadedModule = loadTsModule(filePath, new Map());
+  if (!loadedModule || !loadedModule.seoPages) {
+    throw new Error('seoPages export not found in seo-pages.data.ts');
+  }
+  return loadedModule.seoPages;
+}
+
+function loadTsModule(filePath, moduleCache) {
+  const resolvedFilePath = path.resolve(filePath);
+  if (moduleCache.has(resolvedFilePath)) {
+    return moduleCache.get(resolvedFilePath).exports;
+  }
+
+  const source = fs.readFileSync(resolvedFilePath, 'utf8');
   const { outputText } = ts.transpileModule(source, {
     compilerOptions: {
       module: ts.ModuleKind.CommonJS,
@@ -90,13 +125,57 @@ function loadSeoPages(filePath) {
   });
 
   const moduleShim = { exports: {} };
-  const wrapper = new Function('require', 'module', 'exports', outputText);
-  wrapper(require, moduleShim, moduleShim.exports);
+  moduleCache.set(resolvedFilePath, moduleShim);
 
-  if (!moduleShim.exports.seoPages) {
-    throw new Error('seoPages export not found in seo-pages.data.ts');
+  const localRequire = moduleSpecifier => {
+    if (!moduleSpecifier.startsWith('.')) {
+      return require(moduleSpecifier);
+    }
+
+    const localPath = resolveLocalModulePath(path.dirname(resolvedFilePath), moduleSpecifier);
+    if (localPath.endsWith('.ts')) {
+      return loadTsModule(localPath, moduleCache);
+    }
+    return require(localPath);
+  };
+
+  const wrapper = new Function(
+    'require',
+    'module',
+    'exports',
+    '__filename',
+    '__dirname',
+    outputText
+  );
+  wrapper(
+    localRequire,
+    moduleShim,
+    moduleShim.exports,
+    resolvedFilePath,
+    path.dirname(resolvedFilePath)
+  );
+
+  return moduleShim.exports;
+}
+
+function resolveLocalModulePath(baseDir, moduleSpecifier) {
+  const candidateBase = path.resolve(baseDir, moduleSpecifier);
+  const candidates = [
+    candidateBase,
+    `${candidateBase}.ts`,
+    `${candidateBase}.js`,
+    `${candidateBase}.json`,
+    path.join(candidateBase, 'index.ts'),
+    path.join(candidateBase, 'index.js'),
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
   }
-  return moduleShim.exports.seoPages;
+
+  throw new Error(`Cannot resolve local module "${moduleSpecifier}" from "${baseDir}"`);
 }
 
 function buildStructuredData(page, canonicalUrl) {
