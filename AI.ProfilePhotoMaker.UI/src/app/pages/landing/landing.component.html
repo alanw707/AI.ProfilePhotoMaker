@@ -82,7 +82,8 @@
           </div>
 
           <div class="mt-6 text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">Popular pages</div>
-          <div class="mt-2 flex flex-wrap justify-center gap-3 text-base font-medium text-slate-600 dark:text-slate-300">
+          <div
+            class="mt-2 flex flex-wrap justify-center gap-3 text-base font-medium text-slate-600 dark:text-slate-300">
             <a class="underline hover:no-underline" routerLink="/linkedin-headshots">AI LinkedIn Headshots</a>
             <a class="underline hover:no-underline" routerLink="/professional-headshots">AI Corporate Headshots</a>
             <a class="underline hover:no-underline" routerLink="/how-it-works">How It Works</a>
@@ -114,11 +115,15 @@
           <span class="badge-text">Studio-quality AI headshots</span>
         </div>
         <h1 class="hero-title-immersive">
-          <span class="title-line">Upload <strong>10–20 photos</strong></span>
+          <span class="title-line">
+            Upload
+            <strong>10–20 photos</strong>
+          </span>
           <span class="title-gradient">Get pro headshots</span>
         </h1>
         <p class="hero-subtitle-immersive">
-          Front + slight angles works best. Perfect for LinkedIn, business profiles, and socials — delivered in ~15 minutes.
+          Front + slight angles works best. Perfect for LinkedIn, business profiles, and socials — delivered in ~15
+          minutes.
         </p>
       </div>
 
@@ -362,7 +367,7 @@
             [class.delay-2]="i % 4 === 1"
             [class.delay-3]="i % 4 === 2"
             [class.delay-4]="i % 4 === 3"
-            *ngFor="let photo of styledPhotos.slice(0, 12); let i = index"
+            *ngFor="let photo of styledPhotos.slice(0, 20); let i = index"
             (click)="onStyleCardClick(photo, i)"
             (keydown.enter)="onStyleCardClick(photo, i)"
             (keydown.space)="onStyleCardClick(photo, i)"

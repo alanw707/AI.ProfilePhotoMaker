@@ -18,6 +18,7 @@ export interface SeoHero {
   secondaryCtaHref?: string;
   imageSrc?: string;
   imageAlt?: string;
+  imageFallbackSrc?: string;
 }
 
 export interface SeoCta {
@@ -103,6 +104,12 @@ export interface SeoPageContent {
   relatedLinks?: SeoLink[];
   cta: SeoCta;
 }
+
+const STYLE_PREVIEW_BASE_URL = 'https://aipmstv16j74jubocuukg.blob.core.windows.net/style-previews';
+const STYLE_PREVIEW_CACHE_VERSION = '20260110';
+
+const buildRoleStylePreviewUrl = (styleName: 'medical' | 'executive'): string =>
+  `${STYLE_PREVIEW_BASE_URL}/${styleName}.jpg?v=${STYLE_PREVIEW_CACHE_VERSION}`;
 
 export const seoPages: Record<string, SeoPageContent> = {
   'how-it-works': {
@@ -918,11 +925,13 @@ export const seoPages: Record<string, SeoPageContent> = {
       {
         type: 'showcase',
         title: 'Before and after',
-        intro: 'Subtle improvements in lighting, background, and color add up to a more premium first impression.',
+        intro:
+          'Subtle improvements in lighting, background, and color add up to a more premium first impression.',
         items: [
           {
             title: 'Clean, professional lighting',
-            description: 'Balanced exposure with natural detail—designed to look studio-shot, not filtered.',
+            description:
+              'Balanced exposure with natural detail—designed to look studio-shot, not filtered.',
             beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
             afterImage: '/assets/marketing/before-after/set-1-after.jpg',
             beforeAlt: 'Original casual photo before enhancement',
@@ -971,8 +980,7 @@ export const seoPages: Record<string, SeoPageContent> = {
           },
           {
             question: 'Can I use these on Zillow, Realtor.com, and Google Business?',
-            answer:
-              'Yes. The output is designed for major profile platforms and marketing pages.',
+            answer: 'Yes. The output is designed for major profile platforms and marketing pages.',
           },
           {
             question: 'What should I wear for a realtor headshot?',
@@ -1018,8 +1026,9 @@ export const seoPages: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
-      imageSrc: '/assets/marketing/before-after/set-2-after.png',
-      imageAlt: 'Professional attorney headshot example',
+      imageSrc: buildRoleStylePreviewUrl('executive'),
+      imageAlt: 'Professional attorney executive-style headshot',
+      imageFallbackSrc: '/assets/marketing/before-after/set-2-after.png',
     },
     highlights: [
       { value: 'Credible', label: 'First impression' },
@@ -1040,7 +1049,8 @@ export const seoPages: Record<string, SeoPageContent> = {
       {
         type: 'showcase',
         title: 'Before and after',
-        intro: 'Professional lighting and a clean background make your headshot look established and press-ready.',
+        intro:
+          'Professional lighting and a clean background make your headshot look established and press-ready.',
         items: [
           {
             title: 'Polished, credible look',
@@ -1141,8 +1151,9 @@ export const seoPages: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See reviews',
       secondaryCtaHref: '/reviews',
-      imageSrc: '/assets/marketing/before-after/set-3-after.png',
-      imageAlt: 'Clinic-ready provider headshot example',
+      imageSrc: buildRoleStylePreviewUrl('medical'),
+      imageAlt: 'Clinic-ready medical provider headshot',
+      imageFallbackSrc: '/assets/marketing/before-after/set-3-after.png',
     },
     highlights: [
       { value: 'Clinic-ready', label: 'Provider pages' },

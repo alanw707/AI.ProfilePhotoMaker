@@ -82,6 +82,14 @@ export class SeoPageComponent implements OnInit, OnDestroy {
     });
   }
 
+  onHeroImageError(event: Event, fallbackSrc?: string): void {
+    const image = event.target as HTMLImageElement | null;
+    if (!image || !fallbackSrc || image.src.endsWith(fallbackSrc)) {
+      return;
+    }
+    image.src = fallbackSrc;
+  }
+
   getQueryParamsForHref(href?: string): Record<string, string> | null {
     if (!href) {
       return null;
