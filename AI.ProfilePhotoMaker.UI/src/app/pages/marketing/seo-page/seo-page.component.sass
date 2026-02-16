@@ -2,15 +2,21 @@
 @tailwind utilities
 
 // =============================================================================
-// SEO PAGE - DIRECTION 6: HYBRID DESIGN SYSTEM
+// SEO PAGE - EDITORIAL PROOF LAYOUT (Mobile-First)
 // =============================================================================
-// Extends landing page visual energy to secondary marketing pages with:
-// - Glass cards with hover glow
-// - Ambient glow orbs for "alive" feel
-// - Gradient hero treatment
-// - Section accent bars
-// - Scroll-triggered entrance animations
-// - CTA pulse animation
+// Mobile-first redesign with:
+// - Mobile-first responsive (min-width breakpoints)
+// - Fluid typography with clamp()
+// - No glassmorphism - clean borders/shadows
+// - No ambient orbs
+// - Image containment with aspect-ratio
+// - Editorial visual hierarchy
+
+// Breakpoints
+$bp-sm: 480px
+$bp-md: 768px
+$bp-lg: 1024px
+$bp-xl: 1280px
 
 .seo-page
   @include shared.page-container
@@ -23,105 +29,65 @@
 main
   padding-top: 72px
 
-@media (min-width: 768px)
-  main
+  @media (min-width: $bp-md)
     padding-top: 88px
 
-@media (min-width: 1024px)
-  main
+  @media (min-width: $bp-lg)
     padding-top: 96px
 
 .content-container
   @include shared.content-container
-  padding: 0 24px
+  padding-inline: clamp(16px, 4vw, 24px)
   position: relative
   z-index: 1
 
 // =============================================================================
-// BUTTON STYLES WITH CTA PULSE
+// BUTTON STYLES
 // =============================================================================
 
 .btn
   &.btn-primary
     @include shared.btn-primary
-    position: relative
-
-    // CTA glow-pulse animation for primary buttons in CTA sections
-    &.btn-pulse
-      animation: cta-glow-pulse 3s ease-in-out infinite
 
   &.btn-secondary
     @include shared.btn-secondary
 
-@keyframes cta-glow-pulse
-  0%, 100%
-    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18), 0 0 0 0 rgba(79, 209, 199, 0.4)
-  50%
-    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18), 0 0 20px 8px rgba(79, 209, 199, 0)
-
 // =============================================================================
-// HERO SECTION - ENHANCED WITH GRADIENT DEPTH & AMBIENT ORBS
+// HERO SECTION - EDITORIAL LAYOUT (No Glassmorphism, No Orbs)
 // =============================================================================
 
 .hero
   position: relative
-  padding: 104px 0 72px
-  background: var(--hero-bg)
+  padding: clamp(48px, 8vw, 104px) 0 clamp(32px, 5vw, 72px)
+  background: var(--bg-primary)
   overflow: hidden
-
-  // Ambient glow orbs - creates "alive" feeling
-  &::before
-    content: ''
-    position: absolute
-    top: -120px
-    right: -120px
-    width: 400px
-    height: 400px
-    border-radius: 50%
-    background: radial-gradient(circle, rgba(79, 209, 199, 0.3), transparent 70%)
-    filter: blur(60px)
-    opacity: 0.8
-    animation: orb-float-gentle 20s ease-in-out infinite
-    pointer-events: none
-
-  &::after
-    content: ''
-    position: absolute
-    bottom: -140px
-    left: -140px
-    width: 450px
-    height: 450px
-    border-radius: 50%
-    background: radial-gradient(circle, rgba(59, 130, 246, 0.25), transparent 70%)
-    filter: blur(80px)
-    opacity: 0.7
-    animation: orb-float-gentle 25s ease-in-out infinite reverse
-    pointer-events: none
-
-@keyframes orb-float-gentle
-  0%, 100%
-    transform: translate(0, 0) scale(1)
-  33%
-    transform: translate(20px, -20px) scale(1.05)
-  66%
-    transform: translate(-15px, 15px) scale(0.98)
 
 .hero-grid
   position: relative
   display: grid
-  grid-template-columns: repeat(2, minmax(0, 1fr))
-  gap: 40px
+  grid-template-columns: 1fr
+  gap: clamp(24px, 5vw, 40px)
   align-items: flex-start
   z-index: 1
 
+  @media (min-width: $bp-lg)
+    grid-template-columns: 1.2fr 0.8fr
+    gap: clamp(32px, 6vw, 56px)
+
 .hero-copy
+  order: 2
+
+  @media (min-width: $bp-lg)
+    order: 1
+
   max-width: 620px
 
   h1
-    font-size: 3rem
+    font-size: clamp(1.75rem, 5vw, 3rem)
     line-height: 1.1
     letter-spacing: -0.02em
-    margin-bottom: 20px
+    margin-bottom: clamp(12px, 3vw, 20px)
+    overflow-wrap: break-word
 
 .eyebrow
   text-transform: uppercase
@@ -129,12 +95,12 @@ main
   font-weight: 600
   font-size: 0.8rem
   color: var(--accent-primary)
-  margin-bottom: 16px
+  margin-bottom: clamp(12px, 2vw, 16px)
 
 .subhead
-  font-size: 1.1rem
+  font-size: clamp(0.95rem, 2vw, 1.1rem)
   color: var(--text-secondary)
-  margin-bottom: 28px
+  margin-bottom: clamp(20px, 4vw, 28px)
   max-width: 520px
 
 .cta-row
@@ -144,148 +110,126 @@ main
   align-items: center
 
   .btn
-    min-height: 44px
+    min-height: 48px
+    width: 100%
 
-.section-cta
-  margin-top: 24px
-  display: flex
-  gap: 12px
-  flex-wrap: wrap
+    @media (min-width: $bp-sm)
+      width: auto
 
 // =============================================================================
-// HERO PANEL - GLASSMORPHISM CARD
+// HERO PANEL - CLEAN CARD (No Glassmorphism)
 // =============================================================================
 
 .hero-panel
+  order: 1
   display: flex
-  justify-content: flex-end
+  justify-content: flex-start
   padding-top: 8px
+  width: 100%
+
+  @media (min-width: $bp-lg)
+    order: 2
+    justify-content: flex-end
+    padding-top: 0
 
 .hero-panel-stack
   display: flex
   flex-direction: column
   align-items: stretch
-  gap: 16px
+  gap: clamp(12px, 3vw, 16px)
+  width: 100%
 
 .hero-image-card
-  width: 360px
-  max-width: 360px
+  width: 100%
+  max-width: min(360px, 100%)
   overflow: hidden
-  border-radius: 18px
-  @include shared.glass-card
+  border-radius: 16px
+  box-shadow: var(--depth-1)
   padding: 10px
+  box-sizing: border-box
 
 .hero-image
   display: block
   width: 100%
   height: auto
   border-radius: 12px
+  aspect-ratio: 4 / 5
+  object-fit: cover
 
 .panel-card
-  padding: 28px
-  min-width: 260px
-  max-width: 360px
+  padding: clamp(16px, 3vw, 28px)
+  width: 100%
+  max-width: min(360px, 100%)
   position: relative
   overflow: hidden
-  @include shared.glass-card
+  border: 1px solid var(--border-color)
+  border-radius: 16px
+  box-shadow: var(--depth-1)
+  box-sizing: border-box
 
-  // Hover glow effect
-  &::after
-    content: ''
-    position: absolute
-    inset: -4px
-    background: var(--accent-gradient-1)
-    border-radius: inherit
-    opacity: 0
-    filter: blur(16px)
-    z-index: -1
-    transition: opacity var(--timing-normal) var(--easing-smooth)
-
-  &:hover::after
-    opacity: 0.4
+  &:hover
+    border-color: rgba(79, 209, 199, 0.3)
 
 .panel-title
   font-weight: 600
-  margin-bottom: 16px
+  font-size: clamp(1rem, 2vw, 1.1rem)
+  margin-bottom: clamp(12px, 2vw, 16px)
 
 .panel-summary
   color: var(--text-secondary)
+  font-size: clamp(0.9rem, 1.5vw, 0.95rem)
 
 .panel-highlights
-  display: grid
-  gap: 16px
+  display: flex
+  flex-wrap: wrap
+  gap: clamp(12px, 3vw, 24px)
 
 .highlight
   display: flex
   align-items: baseline
-  gap: 12px
+  gap: 8px
 
 .highlight-value
-  font-size: 1.6rem
+  font-size: clamp(1.2rem, 3vw, 1.6rem)
   font-weight: 700
   color: var(--accent-primary)
 
 .highlight-label
   color: var(--text-secondary)
-  font-size: 0.95rem
+  font-size: clamp(0.8rem, 1.5vw, 0.95rem)
 
 // =============================================================================
-// PAGE SECTIONS - WITH ALTERNATING BACKGROUNDS & ACCENT BARS
+// PAGE SECTIONS - EDITORIAL (No Alternating BGs, No Orbs)
 // =============================================================================
 
 .page-section
-  padding: 72px 0
+  padding: clamp(48px, 8vw, 72px) 0
   position: relative
 
-  // Alternating subtle background for visual rhythm
-  &:nth-of-type(even)
-    background: var(--subtle-gradient)
-
-  // Third ambient orb for deeper sections
-  &:nth-child(3n)::before
-    content: ''
-    position: absolute
-    top: 50%
-    right: -200px
-    width: 350px
-    height: 350px
-    border-radius: 50%
-    background: radial-gradient(circle, rgba(147, 51, 234, 0.12), transparent 70%)
-    filter: blur(70px)
-    opacity: 0.6
-    transform: translateY(-50%)
-    pointer-events: none
+  // No alternating backgrounds - whitespace creates rhythm
+  // No ambient orbs
 
 // =============================================================================
-// SECTION HEADER - WITH ACCENT BAR
+// SECTION HEADER - CLEAN (No Accent Bar)
 // =============================================================================
 
 .section-header
   max-width: 720px
-  margin-bottom: 36px
+  margin-bottom: clamp(24px, 5vw, 36px)
   position: relative
-  padding-left: 20px
 
-  // Accent bar on section headers
-  &::before
-    content: ''
-    position: absolute
-    left: 0
-    top: 4px
-    bottom: 4px
-    width: 4px
-    background: var(--accent-gradient-1)
-    border-radius: 2px
+  // No accent bar - typography creates hierarchy
 
   h2
-    font-size: 2rem
+    font-size: clamp(1.5rem, 3.5vw, 2rem)
+    overflow-wrap: break-word
 
   p
     color: var(--text-secondary)
-    margin-top: 12px
+    margin-top: clamp(8px, 2vw, 12px)
 
 // =============================================================================
-// CARD GRIDS
+// CARD GRIDS - MOBILE-FIRST
 // =============================================================================
 
 .steps-grid,
@@ -294,225 +238,198 @@ main
 .testimonials-grid,
 .related-grid
   display: grid
-  gap: 24px
+  gap: clamp(16px, 4vw, 24px)
 
 .steps-grid
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))
+  grid-template-columns: 1fr
+
+  @media (min-width: $bp-sm)
+    grid-template-columns: repeat(2, 1fr)
+
+  @media (min-width: $bp-md)
+    grid-template-columns: repeat(3, 1fr)
 
 .cards-grid
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr))
+  grid-template-columns: 1fr
+
+  @media (min-width: $bp-sm)
+    grid-template-columns: repeat(2, 1fr)
 
 .showcase-grid
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))
+  grid-template-columns: 1fr
+
+  @media (min-width: $bp-md)
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))
 
 .testimonials-grid
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr))
+  grid-template-columns: 1fr
+
+  @media (min-width: $bp-sm)
+    grid-template-columns: repeat(2, 1fr)
+
+  @media (min-width: $bp-md)
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))
 
 .related-grid
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))
+  grid-template-columns: 1fr
+
+  @media (min-width: $bp-sm)
+    grid-template-columns: repeat(2, 1fr)
 
 // =============================================================================
-// STEP CARD - GLASSMORPHISM WITH HOVER GLOW
+// STEP CARD - CLEAN CARD (No Glassmorphism, No Hover Lift)
 // =============================================================================
 
 .step-card
-  padding: 24px
+  padding: clamp(16px, 3vw, 24px)
   position: relative
   overflow: hidden
-  @include shared.glass-card
-
-  // Scroll entrance animation class
-  &.animate-on-scroll
-    opacity: 0
-    transform: translateY(30px)
-    transition: all 0.6s var(--easing-smooth)
-
-    &.animate-in
-      opacity: 1
-      transform: translateY(0)
-
-  // Hover glow pseudo-element
-  &::after
-    content: ''
-    position: absolute
-    inset: -4px
-    background: var(--accent-gradient-1)
-    border-radius: inherit
-    opacity: 0
-    filter: blur(12px)
-    z-index: -1
-    transition: opacity var(--timing-normal) var(--easing-smooth)
+  border: 1px solid var(--border-color)
+  border-radius: 12px
+  box-shadow: var(--depth-1)
+  transition: border-color var(--timing-normal) var(--easing-smooth), box-shadow var(--timing-normal) var(--easing-smooth)
 
   &:hover
-    transform: translateY(-6px)
-    box-shadow: var(--depth-3)
-
-    &::after
-      opacity: 0.5
+    border-color: rgba(79, 209, 199, 0.4)
+    box-shadow: var(--depth-2)
 
 .step-number
-  width: 40px
-  height: 40px
+  width: clamp(32px, 5vw, 40px)
+  height: clamp(32px, 5vw, 40px)
   border-radius: 50%
   display: grid
   place-items: center
   background: var(--accent-gradient-1)
   color: white
   font-weight: 700
-  font-size: 1.1rem
-  margin-bottom: 16px
+  font-size: clamp(0.9rem, 2vw, 1.1rem)
+  margin-bottom: clamp(12px, 2vw, 16px)
   box-shadow: 0 4px 12px rgba(79, 209, 199, 0.3)
 
 // =============================================================================
-// FEATURE CARD - GLASSMORPHISM WITH HOVER GLOW
+// FEATURE CARD - CLEAN CARD (No Glassmorphism, No Hover Lift)
 // =============================================================================
 
 .card
-  padding: 24px
+  padding: clamp(16px, 3vw, 24px)
   position: relative
   overflow: hidden
-  @include shared.glass-card
-
-  &.animate-on-scroll
-    opacity: 0
-    transform: translateY(30px)
-    transition: all 0.6s var(--easing-smooth)
-
-    &.animate-in
-      opacity: 1
-      transform: translateY(0)
-
-  &::after
-    content: ''
-    position: absolute
-    inset: -4px
-    background: var(--accent-gradient-1)
-    border-radius: inherit
-    opacity: 0
-    filter: blur(12px)
-    z-index: -1
-    transition: opacity var(--timing-normal) var(--easing-smooth)
+  border: 1px solid var(--border-color)
+  border-radius: 12px
+  box-shadow: var(--depth-1)
+  transition: border-color var(--timing-normal) var(--easing-smooth), box-shadow var(--timing-normal) var(--easing-smooth)
 
   &:hover
-    transform: translateY(-6px)
-    box-shadow: var(--depth-3)
-
-    &::after
-      opacity: 0.5
+    border-color: rgba(79, 209, 199, 0.4)
+    box-shadow: var(--depth-2)
 
 // =============================================================================
-// BULLET GRID - ENHANCED WITH GLASS EFFECT
+// BULLET GRID - CLEAN (No Glass Effect)
 // =============================================================================
 
 .bullet-grid
   ul
     list-style: none
     display: grid
-    gap: 12px
+    gap: clamp(8px, 2vw, 12px)
 
   li
-    padding: 16px 20px
-    border-radius: 12px
-    transition: all var(--timing-normal) var(--easing-smooth)
-    @include shared.glass-light
+    display: flex
+    align-items: flex-start
+    gap: 12px
+    padding: clamp(12px, 2vw, 16px) clamp(16px, 3vw, 20px)
+    border-radius: 8px
+    border: 1px solid var(--border-color)
+    transition: border-color var(--timing-normal) var(--easing-smooth), background var(--timing-normal) var(--easing-smooth)
+
+    &::before
+      content: '✓'
+      flex-shrink: 0
+      width: 20px
+      height: 20px
+      display: grid
+      place-items: center
+      font-weight: 700
+      color: var(--accent-primary)
 
     &:hover
-      transform: translateX(4px)
       border-color: rgba(79, 209, 199, 0.4)
+      background: rgba(79, 209, 199, 0.03)
 
 // =============================================================================
-// SHOWCASE ITEM - GLASSMORPHISM WITH HOVER GLOW
+// SHOWCASE ITEM - CLEAN (No Glassmorphism, No Hover Lift)
 // =============================================================================
 
 .showcase-item
-  padding: 20px
+  padding: clamp(14px, 3vw, 20px)
   position: relative
   overflow: hidden
-  @include shared.glass-card
-
-  &.animate-on-scroll
-    opacity: 0
-    transform: translateY(30px)
-    transition: all 0.6s var(--easing-smooth)
-
-    &.animate-in
-      opacity: 1
-      transform: translateY(0)
-
-  &::after
-    content: ''
-    position: absolute
-    inset: -4px
-    background: var(--accent-gradient-1)
-    border-radius: inherit
-    opacity: 0
-    filter: blur(12px)
-    z-index: -1
-    transition: opacity var(--timing-normal) var(--easing-smooth)
+  border: 1px solid var(--border-color)
+  border-radius: 12px
+  box-shadow: var(--depth-1)
+  transition: border-color var(--timing-normal) var(--easing-smooth), box-shadow var(--timing-normal) var(--easing-smooth)
 
   &:hover
-    transform: translateY(-6px)
-    box-shadow: var(--depth-3)
-
-    &::after
-      opacity: 0.5
+    border-color: rgba(79, 209, 199, 0.4)
+    box-shadow: var(--depth-2)
 
 .showcase-visual
   display: grid
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.25fr)
-  gap: 14px
+  grid-template-columns: 1fr
+  gap: 10px
   align-items: end
-  margin-bottom: 16px
+  margin-bottom: clamp(12px, 2vw, 16px)
+
+  @media (min-width: $bp-sm)
+    grid-template-columns: repeat(2, 1fr)
+    gap: 14px
 
 .visual-card
   position: relative
-  border-radius: 16px
-  padding: 10px
+  border-radius: 12px
+  padding: 8px
   font-weight: 600
   color: var(--text-primary)
-  background: linear-gradient(150deg, rgba(148, 163, 184, 0.25), rgba(148, 163, 184, 0.05))
   border: 1px solid var(--border-color)
   overflow: hidden
   min-height: 0
-  transition: transform var(--timing-normal) var(--easing-smooth)
+  transition: border-color var(--timing-normal) var(--easing-smooth)
 
   .showcase-item:hover &
-    transform: scale(1.02)
+    border-color: rgba(79, 209, 199, 0.3)
 
   .visual-photo,
   .portrait-frame
     width: 100%
     height: 100%
-    border-radius: 12px
+    border-radius: 8px
 
   span
     position: absolute
-    left: 16px
-    right: 16px
-    bottom: 10px
-    padding: 6px 10px
-    font-size: 0.78rem
+    left: 12px
+    right: 12px
+    bottom: 8px
+    padding: 4px 8px
+    font-size: 0.7rem
     letter-spacing: 0.08em
     text-transform: uppercase
     text-align: center
     color: #e2e8f0
-    background: rgba(15, 23, 42, 0.5)
+    background: rgba(15, 23, 42, 0.6)
     border: 1px solid rgba(148, 163, 184, 0.35)
     border-radius: 999px
-    backdrop-filter: blur(6px)
 
 .visual-photo
   object-fit: cover
   display: block
+  aspect-ratio: 4 / 5
 
 .visual-card.before
   align-self: end
-  aspect-ratio: 4 / 5
 
 .visual-card.after
-  background: linear-gradient(150deg, rgba(79, 209, 199, 0.32), rgba(79, 130, 246, 0.08))
-  aspect-ratio: 3 / 4
-  border-color: rgba(79, 209, 199, 0.3)
+  background: linear-gradient(150deg, rgba(79, 209, 199, 0.15), rgba(79, 130, 246, 0.05))
+  border-color: rgba(79, 209, 199, 0.25)
 
 .portrait-frame
   position: relative
@@ -522,79 +439,53 @@ main
   align-items: center
   justify-content: center
   overflow: hidden
+  aspect-ratio: 4 / 5
 
 .portrait-glow
   position: absolute
-  width: 120px
-  height: 120px
+  width: 80px
+  height: 80px
   border-radius: 50%
-  background: radial-gradient(circle, rgba(79, 209, 199, 0.45), transparent 70%)
-  opacity: 0.9
-  animation: pulse-glow 3s ease-in-out infinite
-
-@keyframes pulse-glow
-  0%, 100%
-    opacity: 0.7
-    transform: scale(1)
-  50%
-    opacity: 1
-    transform: scale(1.1)
+  background: radial-gradient(circle, rgba(79, 209, 199, 0.35), transparent 70%)
+  opacity: 0.7
 
 .portrait-head
-  width: 36px
-  height: 36px
+  width: 28px
+  height: 28px
   border-radius: 50%
   background: rgba(26, 32, 44, 0.22)
 
 .portrait-shoulders
-  width: 70px
-  height: 34px
+  width: 56px
+  height: 28px
   border-radius: 50px 50px 16px 16px
-  margin-top: 10px
+  margin-top: 8px
   background: rgba(26, 32, 44, 0.18)
 
 // =============================================================================
-// TESTIMONIAL CARD - GLASSMORPHISM WITH HOVER GLOW
+// TESTIMONIAL CARD - CLEAN (No Glassmorphism, No Hover Lift)
 // =============================================================================
 
 .testimonial-card
-  padding: 24px
+  padding: clamp(16px, 3vw, 24px)
   position: relative
   overflow: hidden
-  @include shared.glass-card
-
-  &.animate-on-scroll
-    opacity: 0
-    transform: translateY(30px)
-    transition: all 0.6s var(--easing-smooth)
-
-    &.animate-in
-      opacity: 1
-      transform: translateY(0)
-
-  &::after
-    content: ''
-    position: absolute
-    inset: -4px
-    background: var(--accent-gradient-2)
-    border-radius: inherit
-    opacity: 0
-    filter: blur(12px)
-    z-index: -1
-    transition: opacity var(--timing-normal) var(--easing-smooth)
+  border: 1px solid var(--border-color)
+  border-radius: 12px
+  box-shadow: var(--depth-1)
+  transition: border-color var(--timing-normal) var(--easing-smooth), box-shadow var(--timing-normal) var(--easing-smooth)
 
   &:hover
-    transform: translateY(-6px)
-    box-shadow: var(--depth-3)
-
-    &::after
-      opacity: 0.4
+    border-color: rgba(79, 209, 199, 0.4)
+    box-shadow: var(--depth-2)
 
   .quote
-    font-size: 1rem
-    margin-bottom: 16px
+    font-size: clamp(0.9rem, 1.5vw, 1rem)
+    margin-bottom: clamp(12px, 2vw, 16px)
     color: var(--text-secondary)
     font-style: italic
+    border-left: 3px solid var(--accent-primary)
+    padding-left: clamp(12px, 2vw, 16px)
 
   .author
     display: flex
@@ -608,13 +499,14 @@ main
     font-size: 0.9rem
 
 // =============================================================================
-// COMPARISON TABLE - GLASSMORPHISM
+// COMPARISON TABLE - CLEAN
 // =============================================================================
 
 .comparison-table
-  padding: 24px
+  padding: clamp(16px, 3vw, 24px)
   overflow: hidden
-  @include shared.glass-card
+  border: 1px solid var(--border-color)
+  border-radius: 12px
 
   .table-wrapper
     overflow-x: auto
@@ -626,7 +518,7 @@ main
 
   th,
   td
-    border-bottom: 1px solid var(--glass-border-light)
+    border-bottom: 1px solid var(--border-color)
     padding: 12px
     text-align: left
     vertical-align: top
@@ -640,25 +532,25 @@ main
     color: var(--text-primary)
 
 .comparison-note
-  margin-top: 16px
+  margin-top: clamp(12px, 2vw, 16px)
   color: var(--text-tertiary)
+  font-size: clamp(0.85rem, 1.5vw, 0.9rem)
 
 // =============================================================================
-// FAQ SECTION - GLASSMORPHISM
+// FAQ SECTION - CLEAN
 // =============================================================================
 
 .faq-grid
   display: grid
-  gap: 12px
+  gap: clamp(8px, 2vw, 12px)
 
 .faq-item
-  padding: 16px 20px
-  border-radius: 12px
-  transition: all var(--timing-normal) var(--easing-smooth)
-  @include shared.glass-light
+  padding: clamp(12px, 2vw, 16px) clamp(16px, 3vw, 20px)
+  border-radius: 8px
+  border: 1px solid var(--border-color)
+  transition: border-color var(--timing-normal) var(--easing-smooth)
 
   &[open]
-    background: var(--glass-bg)
     border-color: rgba(79, 209, 199, 0.3)
 
   summary
@@ -682,15 +574,16 @@ main
     transform: rotate(45deg)
 
   p
-    margin-top: 12px
+    margin-top: clamp(8px, 2vw, 12px)
     color: var(--text-secondary)
+    font-size: clamp(0.9rem, 1.5vw, 0.95rem)
 
 // =============================================================================
-// RELATED LINKS - GLASSMORPHISM WITH HOVER
+// RELATED LINKS - CLEAN
 // =============================================================================
 
 .related-card
-  padding: 20px
+  padding: clamp(14px, 3vw, 20px)
   text-decoration: none
   color: inherit
   display: flex
@@ -698,25 +591,13 @@ main
   justify-content: space-between
   position: relative
   overflow: hidden
-  @include shared.glass-card
-
-  &::after
-    content: ''
-    position: absolute
-    inset: -4px
-    background: var(--accent-gradient-1)
-    border-radius: inherit
-    opacity: 0
-    filter: blur(12px)
-    z-index: -1
-    transition: opacity var(--timing-normal) var(--easing-smooth)
+  border: 1px solid var(--border-color)
+  border-radius: 12px
+  transition: border-color var(--timing-normal) var(--easing-smooth), box-shadow var(--timing-normal) var(--easing-smooth)
 
   &:hover
-    transform: translateY(-4px)
+    border-color: rgba(79, 209, 199, 0.4)
     box-shadow: var(--depth-2)
-
-    &::after
-      opacity: 0.4
 
     .arrow
       transform: translateX(4px)
@@ -726,61 +607,60 @@ main
   transition: transform var(--timing-normal) var(--easing-smooth)
 
 // =============================================================================
-// CTA SECTION - GLASSMORPHISM WITH PULSE
+// CTA SECTION - CLEAN (No Glassmorphism)
 // =============================================================================
 
 .cta-section
-  padding: 0 0 96px
-  margin-top: 48px
-  position: relative
+  padding: 0 0 clamp(48px, 8vw, 96px)
+  margin-top: clamp(32px, 5vw, 48px)
 
 .cta-card
-  padding: 40px
+  padding: clamp(24px, 5vw, 40px)
   display: flex
   align-items: center
   justify-content: space-between
-  gap: 24px
-  border-radius: 24px
+  gap: clamp(16px, 4vw, 24px)
+  border-radius: 16px
   position: relative
-  overflow: hidden
-  @include shared.glass-strong
+  border: 1px solid var(--border-color)
+  background: var(--bg-primary)
 
-  // Ambient glow behind CTA
-  &::before
-    content: ''
-    position: absolute
-    top: 50%
-    left: 50%
-    width: 200%
-    height: 200%
-    background: radial-gradient(circle, rgba(79, 209, 199, 0.15), transparent 50%)
-    transform: translate(-50%, -50%)
-    pointer-events: none
+  flex-direction: column
+  align-items: flex-start
+
+  .btn-primary
+    width: 100%
+    min-height: 48px
+
+  @media (min-width: $bp-md)
+    flex-direction: row
+    align-items: center
+
+    .btn-primary
+      width: auto
 
   h2
-    margin-bottom: 8px
+    font-size: clamp(1.25rem, 3vw, 1.5rem)
+    margin-bottom: clamp(4px, 1vw, 8px)
 
   p
     color: var(--text-secondary)
     margin: 0
+    font-size: clamp(0.9rem, 1.5vw, 1rem)
 
   .btn-primary
-    animation: cta-glow-pulse 3s ease-in-out infinite
     flex-shrink: 0
 
 // =============================================================================
-// SCROLL ENTRANCE ANIMATIONS
+// SCROLL ENTRANCE ANIMATIONS - FADE ONLY (No TranslateY)
 // =============================================================================
 
-// Generic scroll animation class - applied via directive
 .animate-on-scroll
   opacity: 0
-  transform: translateY(30px)
-  transition: opacity 0.6s var(--easing-smooth), transform 0.6s var(--easing-smooth)
+  transition: opacity 0.6s var(--easing-smooth)
 
   &.animate-in
     opacity: 1
-    transform: translateY(0)
 
 // Stagger delays for grid items
 @for $i from 1 through 8
@@ -788,125 +668,23 @@ main
     transition-delay: #{$i * 0.1}s
 
 // =============================================================================
-// RESPONSIVE STYLES
+// RESPONSIVE STYLES - MOBILE-FIRST (Additional refinements)
 // =============================================================================
 
-@media (max-width: 960px)
-  .hero
-    padding-top: 88px
-
-  .hero-grid
-    grid-template-columns: 1fr
-
-  .hero-panel
-    justify-content: flex-start
-
-  .hero-panel-stack
-    width: 100%
-    max-width: 360px
-
-  .hero-image-card,
-  .panel-card
-    width: 100%
-    max-width: 360px
-    min-width: 0
-
-  .showcase-visual
-    grid-template-columns: repeat(2, minmax(0, 1fr))
-
-  .cta-card
-    flex-direction: column
-    align-items: flex-start
-    padding: 32px
-
-  .section-header
-    padding-left: 16px
-
-    &::before
-      width: 3px
-
-@media (max-width: 640px)
+// Tablet adjustments
+@media (min-width: $bp-md)
   .hero-copy h1
-    font-size: 2.3rem
+    font-size: clamp(2rem, 4vw, 3rem)
 
-  .hero-panel,
-  .hero-panel-stack
-    width: 100%
-    max-width: 100%
-
-  .hero-image-card,
-  .panel-card
-    width: 100%
-    max-width: 100%
-    min-width: 0
-    box-sizing: border-box
-
-  .panel-card
-    padding: 20px
-
-  .cta-row
-    flex-direction: column
-    align-items: stretch
-
-  .cta-row .btn
-    width: 100%
-
-  .showcase-visual
-    grid-template-columns: 1fr
-
-  .section-header
-    padding-left: 14px
-
-  .comparison-table
-    padding: 18px
-
-    table,
-    thead,
-    tbody,
-    tr,
-    th,
-    td
-      display: block
-      width: 100%
-
-    thead
-      display: none
-
-    tr
-      @include shared.glass-light
-      border-radius: 14px
-      padding: 10px 12px 4px
-      margin-bottom: 12px
-
-    td
-      border-bottom: 1px solid var(--glass-border-light)
-      padding: 10px 0
-      display: flex
-      justify-content: space-between
-      gap: 12px
-
-      &::before
-        content: attr(data-label)
-        font-weight: 600
-        color: var(--text-tertiary)
-        flex: 0 0 42%
-
-    td:last-child
-      border-bottom: none
+// Desktop - hero is already handled in main grid
 
 // =============================================================================
 // REDUCED MOTION SUPPORT
 // =============================================================================
 
 @media (prefers-reduced-motion: reduce)
-  .hero::before,
-  .hero::after,
-  .page-section::before
-    animation: none
-
   .animate-on-scroll
     opacity: 1
-    transform: none
     transition: none
 
   .step-card,
@@ -918,12 +696,5 @@ main
     &:hover
       transform: none
 
-    &::after
-      transition: none
-
   .portrait-glow
     animation: none
-
-  @keyframes cta-glow-pulse
-    0%, 100%
-      box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18)

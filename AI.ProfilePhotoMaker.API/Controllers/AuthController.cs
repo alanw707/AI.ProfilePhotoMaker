@@ -600,20 +600,32 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 return Redirect($"{frontendBaseUrl}/auth/login?error={stateError}");
             }
 
-            if (!Request.Cookies.TryGetValue(OAuthNonceCookieName, out var cookieNonce) ||
-                string.IsNullOrWhiteSpace(cookieNonce))
-            {
-                return Redirect($"{frontendBaseUrl}/auth/login?error=missing_state");
-            }
+            var hasNonceCookie = Request.Cookies.TryGetValue(OAuthNonceCookieName, out var cookieNonce) &&
+                                 !string.IsNullOrWhiteSpace(cookieNonce);
+            var isDevelopmentNgrokCallback = _environment.IsDevelopment() &&
+                                             Request.Host.Host.Contains("ngrok", StringComparison.OrdinalIgnoreCase);
 
-            var expectedNonceBytes = Encoding.UTF8.GetBytes(expectedNonce);
-            var cookieNonceBytes = Encoding.UTF8.GetBytes(cookieNonce);
-            if (!CryptographicOperations.FixedTimeEquals(expectedNonceBytes, cookieNonceBytes))
+            if (!hasNonceCookie)
             {
-                return Redirect($"{frontendBaseUrl}/auth/login?error=invalid_state");
-            }
+                if (!isDevelopmentNgrokCallback)
+                {
+                    return Redirect($"{frontendBaseUrl}/auth/login?error=missing_state");
+                }
 
-            Response.Cookies.Delete(OAuthNonceCookieName, BuildOAuthNonceCookieOptions());
+                _logger.LogWarning(
+                    "OAuth nonce cookie missing for development ngrok callback. Proceeding with protected state validation only.");
+            }
+            else
+            {
+                var expectedNonceBytes = Encoding.UTF8.GetBytes(expectedNonce);
+                var cookieNonceBytes = Encoding.UTF8.GetBytes(cookieNonce!);
+                if (!CryptographicOperations.FixedTimeEquals(expectedNonceBytes, cookieNonceBytes))
+                {
+                    return Redirect($"{frontendBaseUrl}/auth/login?error=invalid_state");
+                }
+
+                Response.Cookies.Delete(OAuthNonceCookieName, BuildOAuthNonceCookieOptions());
+            }
 
             // Validate authorization code
             if (string.IsNullOrEmpty(code))

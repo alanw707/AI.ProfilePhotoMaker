@@ -4,6 +4,33 @@
   <main>
     <section class="hero">
       <div class="content-container hero-grid">
+        <div class="hero-panel">
+          <div class="hero-panel-stack">
+            <div class="hero-image-card" *ngIf="currentPage.hero.imageSrc" appAnimateOnScroll [delay]="1">
+              <img
+                class="hero-image"
+                [src]="currentPage.hero.imageSrc"
+                [alt]="currentPage.hero.imageAlt || currentPage.hero.headline"
+                width="360"
+                height="450"
+                (error)="onHeroImageError($event, currentPage.hero.imageFallbackSrc)"
+                loading="eager"
+                decoding="async" />
+            </div>
+            <div class="panel-card" appAnimateOnScroll [delay]="2">
+              <p class="panel-title">At a glance</p>
+              <div class="panel-highlights" *ngIf="currentPage.highlights?.length; else heroSummary">
+                <div class="highlight" *ngFor="let highlight of currentPage.highlights; trackBy: trackByLabel">
+                  <div class="highlight-value">{{ highlight.value }}</div>
+                  <div class="highlight-label">{{ highlight.label }}</div>
+                </div>
+              </div>
+              <ng-template #heroSummary>
+                <p class="panel-summary">{{ currentPage.description }}</p>
+              </ng-template>
+            </div>
+          </div>
+        </div>
         <div class="hero-copy">
           <p class="eyebrow" *ngIf="currentPage.hero.eyebrow">{{ currentPage.hero.eyebrow }}</p>
           <h1>{{ currentPage.h1 }}</h1>
@@ -26,39 +53,6 @@
               ">
               {{ currentPage.hero.secondaryCtaLabel }}
             </a>
-            <a
-              *ngIf="currentPage.slug !== 'free-headshot-enhancer'"
-              class="btn btn-secondary"
-              [routerLink]="'/free-headshot-enhancer'"
-              [queryParams]="getQueryParamsForHref('/free-headshot-enhancer')"
-              (click)="onCtaClick('hero_free_enhancer', 'Try enhancer', '/free-headshot-enhancer')">
-              Try enhancer
-            </a>
-          </div>
-        </div>
-        <div class="hero-panel">
-          <div class="hero-panel-stack">
-            <div class="hero-image-card" *ngIf="currentPage.hero.imageSrc" appAnimateOnScroll [delay]="1">
-              <img
-                class="hero-image"
-                [src]="currentPage.hero.imageSrc"
-                [alt]="currentPage.hero.imageAlt || currentPage.hero.headline"
-                (error)="onHeroImageError($event, currentPage.hero.imageFallbackSrc)"
-                loading="eager"
-                decoding="async" />
-            </div>
-            <div class="panel-card" appAnimateOnScroll [delay]="2">
-              <p class="panel-title">At a glance</p>
-              <div class="panel-highlights" *ngIf="currentPage.highlights?.length; else heroSummary">
-                <div class="highlight" *ngFor="let highlight of currentPage.highlights; trackBy: trackByLabel">
-                  <div class="highlight-value">{{ highlight.value }}</div>
-                  <div class="highlight-label">{{ highlight.label }}</div>
-                </div>
-              </div>
-              <ng-template #heroSummary>
-                <p class="panel-summary">{{ currentPage.description }}</p>
-              </ng-template>
-            </div>
           </div>
         </div>
       </div>
@@ -121,6 +115,8 @@
                         class="visual-photo"
                         [src]="item.beforeImage"
                         [alt]="item.beforeAlt || item.title + ' before headshot'"
+                        width="300"
+                        height="375"
                         loading="lazy"
                         decoding="async" />
                     </ng-container>
@@ -138,12 +134,13 @@
                         class="visual-photo"
                         [src]="item.afterImage"
                         [alt]="item.afterAlt || item.title + ' after headshot'"
+                        width="300"
+                        height="375"
                         loading="lazy"
                         decoding="async" />
                     </ng-container>
                     <ng-template #afterPlaceholder>
                       <div class="portrait-frame">
-                        <div class="portrait-glow"></div>
                         <div class="portrait-head"></div>
                         <div class="portrait-shoulders"></div>
                       </div>
@@ -208,15 +205,6 @@
             </div>
           </ng-container>
         </div>
-        <div class="section-cta" *ngIf="currentPage.slug !== 'free-headshot-enhancer'">
-          <a
-            class="btn btn-secondary"
-            [routerLink]="'/free-headshot-enhancer'"
-            [queryParams]="getQueryParamsForHref('/free-headshot-enhancer')"
-            (click)="onCtaClick('section_free_enhancer', 'Try enhancer', '/free-headshot-enhancer')">
-            Try enhancer
-          </a>
-        </div>
       </div>
     </section>
 
@@ -229,7 +217,7 @@
         <div class="related-grid">
           <a
             class="related-card"
-            *ngFor="let link of currentPage.relatedLinks; let i = index; trackBy: trackByHref"
+            *ngFor="let link of currentPage.relatedLinks; let i = index; trackBy: trackByIndex"
             [routerLink]="link.href"
             [queryParams]="getQueryParamsForHref(link.href)"
             appAnimateOnScroll

@@ -7,6 +7,49 @@
     </div>
 
     <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
+      <div class="form-group age-confirm">
+        <label class="checkbox-label">
+          <input type="checkbox" formControlName="ageConfirmed" aria-required="true" />
+          <span>
+            I confirm that I am at least 13 years old and have read the
+            <a routerLink="/legal/children-privacy">Children's Privacy Policy</a>
+            .
+            <span class="age-confirm-note">Required for email and Google sign-up.</span>
+          </span>
+        </label>
+        <div *ngIf="shouldShowAgeError()" class="invalid-feedback">
+          You must confirm you are at least 13 years old to create an account.
+        </div>
+      </div>
+
+      <div class="social-login-buttons">
+        <button
+          type="button"
+          class="btn btn-google"
+          (click)="registerWithGoogle()"
+          [disabled]="loading || f['ageConfirmed'].value !== true">
+          <svg viewBox="0 0 24 24" width="20" height="20">
+            <path
+              fill="#4285F4"
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+            <path
+              fill="#34A853"
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+            <path
+              fill="#FBBC05"
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+            <path
+              fill="#EA4335"
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+          </svg>
+          Create account via Google
+        </button>
+      </div>
+
+      <div class="social-login-divider">
+        <span>OR</span>
+      </div>
+
       <div class="form-row">
         <div class="form-group">
           <label for="firstName">First Name</label>
@@ -16,8 +59,7 @@
             formControlName="firstName"
             class="form-control"
             [class.is-invalid]="f['firstName'].invalid && f['firstName'].touched"
-            placeholder="Enter your first name"
-          />
+            placeholder="Enter your first name" />
           <div *ngIf="shouldShowFirstNameError()" class="invalid-feedback">
             <div *ngIf="f['firstName'].errors?.['required']">First name is required</div>
             <div *ngIf="f['firstName'].errors?.['minlength']">First name must be at least 2 characters</div>
@@ -32,8 +74,7 @@
             formControlName="lastName"
             class="form-control"
             [class.is-invalid]="f['lastName'].invalid && f['lastName'].touched"
-            placeholder="Enter your last name"
-          />
+            placeholder="Enter your last name" />
           <div *ngIf="shouldShowLastNameError()" class="invalid-feedback">
             <div *ngIf="f['lastName'].errors?.['required']">Last name is required</div>
             <div *ngIf="f['lastName'].errors?.['minlength']">Last name must be at least 2 characters</div>
@@ -48,8 +89,7 @@
             id="gender"
             formControlName="gender"
             class="form-control"
-            [class.is-invalid]="f['gender'].invalid && f['gender'].touched"
-          >
+            [class.is-invalid]="f['gender'].invalid && f['gender'].touched">
             <option value="">Select Gender</option>
             <option value="male">Male</option>
             <option value="female">Female</option>
@@ -67,8 +107,7 @@
             id="ethnicity"
             formControlName="ethnicity"
             class="form-control"
-            [class.is-invalid]="f['ethnicity'].invalid && f['ethnicity'].touched"
-          >
+            [class.is-invalid]="f['ethnicity'].invalid && f['ethnicity'].touched">
             <option value="">Select Ethnicity</option>
             <option value="asian">Asian</option>
             <option value="black">Black/African American</option>
@@ -94,8 +133,7 @@
           formControlName="email"
           class="form-control"
           [class.is-invalid]="f['email'].invalid && f['email'].touched"
-          placeholder="Enter your email"
-        />
+          placeholder="Enter your email" />
         <div *ngIf="shouldShowEmailError()" class="invalid-feedback">
           <div *ngIf="f['email'].errors?.['required']">Email is required</div>
           <div *ngIf="f['email'].errors?.['email']">Please enter a valid email</div>
@@ -110,8 +148,7 @@
           formControlName="password"
           class="form-control"
           [class.is-invalid]="f['password'].invalid && f['password'].touched"
-          placeholder="Enter your password"
-        />
+          placeholder="Enter your password" />
         <div *ngIf="shouldShowPasswordError()" class="invalid-feedback">
           <div *ngIf="f['password'].errors?.['required']">Password is required</div>
           <div *ngIf="f['password'].errors?.['minlength']">Password must be at least 8 characters</div>
@@ -128,27 +165,15 @@
           id="confirmPassword"
           formControlName="confirmPassword"
           class="form-control"
-          [class.is-invalid]="(f['confirmPassword'].invalid && f['confirmPassword'].touched) || registerForm.errors?.['passwordMismatch']"
-          placeholder="Confirm your password"
-        />
+          [class.is-invalid]="
+            (f['confirmPassword'].invalid && f['confirmPassword'].touched) || registerForm.errors?.['passwordMismatch']
+          "
+          placeholder="Confirm your password" />
         <div *ngIf="shouldShowConfirmPasswordError()" class="invalid-feedback">
           <div *ngIf="f['confirmPassword'].errors?.['required']">Please confirm your password</div>
         </div>
         <div *ngIf="registerForm.errors?.['passwordMismatch'] && f['confirmPassword'].touched" class="invalid-feedback">
           Passwords do not match
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label class="checkbox-label">
-          <input type="checkbox" formControlName="ageConfirmed" />
-          <span>
-            I confirm that I am at least 13 years old and have read the
-            <a routerLink="/legal/children-privacy">Children's Privacy Policy</a>.
-          </span>
-        </label>
-        <div *ngIf="shouldShowAgeError()" class="invalid-feedback">
-          You must confirm you are at least 13 years old to create an account.
         </div>
       </div>
 
@@ -159,14 +184,9 @@
       <app-turnstile
         *ngIf="turnstileSiteKey"
         [siteKey]="turnstileSiteKey"
-        (tokenChange)="onTurnstileTokenChange($event)"
-      ></app-turnstile>
+        (tokenChange)="onTurnstileTokenChange($event)"></app-turnstile>
 
-      <button
-        type="submit"
-        class="btn btn-primary btn-block"
-        [disabled]="loading || registerForm.invalid"
-      >
+      <button type="submit" class="btn btn-primary btn-block" [disabled]="loading || registerForm.invalid">
         <span *ngIf="loading" class="spinner"></span>
         {{ loading ? 'Creating Account...' : 'Create Account' }}
       </button>
@@ -175,9 +195,7 @@
     <div class="register-footer">
       <p>
         Already have an account?
-        <button type="button" class="btn-link" (click)="navigateToLogin()">
-          Sign in here
-        </button>
+        <button type="button" class="btn-link" (click)="navigateToLogin()">Sign in here</button>
       </p>
     </div>
   </div>

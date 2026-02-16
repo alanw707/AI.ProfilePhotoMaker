@@ -261,7 +261,7 @@ export const seoPagesPart2: Record<string, SeoPageContent> = {
       subhead:
         'Create stunning, personalized profile photos with our advanced AI technology. Train your own custom model for unlimited professional results.',
       ctaLabel: 'Get started',
-      ctaHref: '/auth/register',
+      ctaHref: '/dashboard',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
     },
@@ -322,7 +322,7 @@ export const seoPagesPart2: Record<string, SeoPageContent> = {
       title: 'Ready to get professional headshots?',
       description: 'Choose a plan and get your AI-generated headshots in minutes.',
       label: 'Get started',
-      href: '/auth/register',
+      href: '/dashboard',
     },
   },
   help: {

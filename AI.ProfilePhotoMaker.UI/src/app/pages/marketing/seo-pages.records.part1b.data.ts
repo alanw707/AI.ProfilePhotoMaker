@@ -1,5 +1,11 @@
 import type { SeoPageContent } from './seo-pages.types';
 
+const STYLE_PREVIEW_BASE_URL = 'https://aipmstv16j74jubocuukg.blob.core.windows.net/style-previews';
+const STYLE_PREVIEW_CACHE_VERSION = '20260110';
+
+const buildRoleStylePreviewUrl = (styleName: 'medical' | 'executive'): string =>
+  `${STYLE_PREVIEW_BASE_URL}/${styleName}.jpg?v=${STYLE_PREVIEW_CACHE_VERSION}`;
+
 export const seoPagesPart1b: Record<string, SeoPageContent> = {
   'professional-headshots': {
     slug: 'professional-headshots',
@@ -19,6 +25,29 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
       secondaryCtaHref: '/how-it-works',
     },
     sections: [
+      {
+        type: 'showcase',
+        title: 'Before and after results',
+        intro: 'See how casual photos become polished professional headshots.',
+        items: [
+          {
+            title: 'Professional studio look',
+            description: 'Clean lighting and background for a credible business presence.',
+            beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-1-after.jpg',
+            beforeAlt: 'Casual photo before professional headshot',
+            afterAlt: 'Professional studio headshot after',
+          },
+          {
+            title: 'Corporate ready',
+            description: 'Balanced exposure and professional styling for team pages.',
+            beforeImage: '/assets/marketing/before-after/set-2-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-2-after.png',
+            beforeAlt: 'Original photo before enhancement',
+            afterAlt: 'Corporate-ready headshot after',
+          },
+        ],
+      },
       {
         type: 'cards',
         title: 'Business use cases',
@@ -116,6 +145,29 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
     },
     sections: [
       {
+        type: 'showcase',
+        title: 'Job search transformation',
+        intro: 'Stand out in applicant tracking systems with a polished professional photo.',
+        items: [
+          {
+            title: 'Approachable professional',
+            description: 'Warm, confident look that builds trust with recruiters.',
+            beforeImage: '/assets/marketing/before-after/set-2-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-2-after.png',
+            beforeAlt: 'Casual photo before job search headshot',
+            afterAlt: 'Approachable professional headshot after',
+          },
+          {
+            title: 'LinkedIn optimized',
+            description: 'Clean framing and lighting designed for profile visibility.',
+            beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-1-after.jpg',
+            beforeAlt: 'Original selfie before optimization',
+            afterAlt: 'LinkedIn-optimized headshot after',
+          },
+        ],
+      },
+      {
         type: 'bullets',
         title: 'Why recruiters care',
         items: [
@@ -192,8 +244,9 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
-      imageSrc: '/assets/marketing/before-after/set-1-after.jpg',
+      imageSrc: buildRoleStylePreviewUrl('executive'),
       imageAlt: 'Premium realtor headshot example',
+      imageFallbackSrc: '/assets/marketing/before-after/set-1-after.jpg',
     },
     highlights: [
       { value: 'Zillow-ready', label: 'Profile formats' },
@@ -202,14 +255,31 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
     ],
     sections: [
       {
-        type: 'bullets',
-        title: 'What top-producing agents get right',
-        intro: 'Small details make you look established before anyone reads your bio.',
+        type: 'showcase',
+        title: 'Before and after',
+        intro:
+          'Subtle improvements in lighting, background, and color add up to a more premium first impression.',
         items: [
-          'Approachable confidence (friendly, not forced).',
-          'Clean background and consistent lighting for instant credibility.',
-          'Modern, neutral styling that stays timeless across markets.',
-          'A headshot that matches your brand (luxury, modern, neighborhood expert).',
+          {
+            title: 'Clean, professional lighting',
+            description: 'Balanced exposure with natural detail for a studio-quality result.',
+            beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-1-after.jpg',
+            beforeAlt: 'Original casual photo before enhancement',
+            afterAlt: 'Professional headshot after enhancement',
+          },
+          {
+            title: 'Background refinement',
+            description: 'A cleaner setting keeps the focus on you and your brand.',
+            beforeImage: '/assets/marketing/before-after/set-2-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-2-after.png',
+          },
+          {
+            title: 'Polished color and contrast',
+            description: 'Crisp but natural, ready for Zillow, LinkedIn, and your site.',
+            beforeImage: '/assets/marketing/before-after/set-3-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-3-after.png',
+          },
         ],
       },
       {
@@ -231,53 +301,6 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
           {
             title: 'Team consistency',
             description: 'Match headshots across agents for a unified brokerage page.',
-          },
-        ],
-      },
-      {
-        type: 'showcase',
-        title: 'Before and after',
-        intro:
-          'Subtle improvements in lighting, background, and color add up to a more premium first impression.',
-        items: [
-          {
-            title: 'Clean, professional lighting',
-            description:
-              'Balanced exposure with natural detail—designed to look studio-shot, not filtered.',
-            beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
-            afterImage: '/assets/marketing/before-after/set-1-after.jpg',
-            beforeAlt: 'Original casual photo before enhancement',
-            afterAlt: 'Professional headshot after enhancement',
-          },
-          {
-            title: 'Background refinement',
-            description: 'A cleaner setting keeps the focus on you and your brand.',
-            beforeImage: '/assets/marketing/before-after/set-2-before.jpg',
-            afterImage: '/assets/marketing/before-after/set-2-after.png',
-          },
-          {
-            title: 'Polished color and contrast',
-            description: 'Crisp but natural—ready for Zillow, LinkedIn, and your website.',
-            beforeImage: '/assets/marketing/before-after/set-3-before.jpg',
-            afterImage: '/assets/marketing/before-after/set-3-after.png',
-          },
-        ],
-      },
-      {
-        type: 'steps',
-        title: 'How it works',
-        items: [
-          {
-            title: 'Upload a few photos',
-            description: 'No studio session needed—clear selfies work great.',
-          },
-          {
-            title: 'Choose a professional style',
-            description: 'Pick a look that matches your brand and market.',
-          },
-          {
-            title: 'Download your headshots',
-            description: 'Get images ready for Zillow, LinkedIn, and your website.',
           },
         ],
       },
