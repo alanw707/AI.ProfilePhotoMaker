@@ -4,30 +4,6 @@
   <main>
     <section class="hero">
       <div class="content-container hero-grid">
-        <div class="hero-copy">
-          <p class="eyebrow" *ngIf="currentPage.hero.eyebrow">{{ currentPage.hero.eyebrow }}</p>
-          <h1>{{ currentPage.h1 }}</h1>
-          <p class="subhead">{{ currentPage.hero.subhead }}</p>
-          <div class="cta-row">
-            <a
-              class="btn btn-primary"
-              [routerLink]="currentPage.hero.ctaHref"
-              [queryParams]="getQueryParamsForHref(currentPage.hero.ctaHref)"
-              (click)="onCtaClick('hero_primary', currentPage.hero.ctaLabel, currentPage.hero.ctaHref)">
-              {{ currentPage.hero.ctaLabel }}
-            </a>
-            <a
-              *ngIf="currentPage.hero.secondaryCtaLabel"
-              class="btn btn-secondary"
-              [routerLink]="currentPage.hero.secondaryCtaHref"
-              [queryParams]="getQueryParamsForHref(currentPage.hero.secondaryCtaHref)"
-              (click)="
-                onCtaClick('hero_secondary', currentPage.hero.secondaryCtaLabel, currentPage.hero.secondaryCtaHref)
-              ">
-              {{ currentPage.hero.secondaryCtaLabel }}
-            </a>
-          </div>
-        </div>
         <div class="hero-panel">
           <div class="hero-panel-stack">
             <div class="hero-image-card" *ngIf="currentPage.hero.imageSrc" appAnimateOnScroll [delay]="1">
@@ -53,6 +29,30 @@
                 <p class="panel-summary">{{ currentPage.description }}</p>
               </ng-template>
             </div>
+          </div>
+        </div>
+        <div class="hero-copy">
+          <p class="eyebrow" *ngIf="currentPage.hero.eyebrow">{{ currentPage.hero.eyebrow }}</p>
+          <h1>{{ currentPage.h1 }}</h1>
+          <p class="subhead">{{ currentPage.hero.subhead }}</p>
+          <div class="cta-row">
+            <a
+              class="btn btn-primary"
+              [routerLink]="currentPage.hero.ctaHref"
+              [queryParams]="getQueryParamsForHref(currentPage.hero.ctaHref)"
+              (click)="onCtaClick('hero_primary', currentPage.hero.ctaLabel, currentPage.hero.ctaHref)">
+              {{ currentPage.hero.ctaLabel }}
+            </a>
+            <a
+              *ngIf="currentPage.hero.secondaryCtaLabel"
+              class="btn btn-secondary"
+              [routerLink]="currentPage.hero.secondaryCtaHref"
+              [queryParams]="getQueryParamsForHref(currentPage.hero.secondaryCtaHref)"
+              (click)="
+                onCtaClick('hero_secondary', currentPage.hero.secondaryCtaLabel, currentPage.hero.secondaryCtaHref)
+              ">
+              {{ currentPage.hero.secondaryCtaLabel }}
+            </a>
           </div>
         </div>
       </div>
@@ -141,7 +141,6 @@
                     </ng-container>
                     <ng-template #afterPlaceholder>
                       <div class="portrait-frame">
-                        <div class="portrait-glow"></div>
                         <div class="portrait-head"></div>
                         <div class="portrait-shoulders"></div>
                       </div>
@@ -218,7 +217,7 @@
         <div class="related-grid">
           <a
             class="related-card"
-            *ngFor="let link of currentPage.relatedLinks; let i = index; trackBy: trackByHref"
+            *ngFor="let link of currentPage.relatedLinks; let i = index; trackBy: trackByIndex"
             [routerLink]="link.href"
             [queryParams]="getQueryParamsForHref(link.href)"
             appAnimateOnScroll

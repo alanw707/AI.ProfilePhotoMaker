@@ -1,5 +1,11 @@
 import type { SeoPageContent } from './seo-pages.types';
 
+const STYLE_PREVIEW_BASE_URL = 'https://aipmstv16j74jubocuukg.blob.core.windows.net/style-previews';
+const STYLE_PREVIEW_CACHE_VERSION = '20260110';
+
+const buildRoleStylePreviewUrl = (styleName: 'medical' | 'executive'): string =>
+  `${STYLE_PREVIEW_BASE_URL}/${styleName}.jpg?v=${STYLE_PREVIEW_CACHE_VERSION}`;
+
 export const seoPagesPart1b: Record<string, SeoPageContent> = {
   'professional-headshots': {
     slug: 'professional-headshots',
@@ -192,8 +198,9 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
-      imageSrc: '/assets/marketing/before-after/set-1-after.jpg',
+      imageSrc: buildRoleStylePreviewUrl('executive'),
       imageAlt: 'Premium realtor headshot example',
+      imageFallbackSrc: '/assets/marketing/before-after/set-1-after.jpg',
     },
     highlights: [
       { value: 'Zillow-ready', label: 'Profile formats' },
@@ -230,17 +237,6 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
         ],
       },
       {
-        type: 'bullets',
-        title: 'What top-producing agents get right',
-        intro: 'Small details make you look established before anyone reads your bio.',
-        items: [
-          'Approachable confidence (friendly, not forced).',
-          'Clean background and consistent lighting for instant credibility.',
-          'Modern, neutral styling that stays timeless across markets.',
-          'A headshot that matches your brand (luxury, modern, neighborhood expert).',
-        ],
-      },
-      {
         type: 'cards',
         title: 'Recommended looks for real estate',
         items: [
@@ -259,24 +255,6 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
           {
             title: 'Team consistency',
             description: 'Match headshots across agents for a unified brokerage page.',
-          },
-        ],
-      },
-      {
-        type: 'steps',
-        title: 'How it works',
-        items: [
-          {
-            title: 'Upload a few photos',
-            description: 'No studio session needed—clear selfies work great.',
-          },
-          {
-            title: 'Choose a professional style',
-            description: 'Pick a look that matches your brand and market.',
-          },
-          {
-            title: 'Download your headshots',
-            description: 'Get images ready for Zillow, LinkedIn, and your website.',
           },
         ],
       },

@@ -1,5 +1,11 @@
 import type { SeoPageContent } from './seo-pages.types';
 
+const STYLE_PREVIEW_BASE_URL = 'https://aipmstv16j74jubocuukg.blob.core.windows.net/style-previews';
+const STYLE_PREVIEW_CACHE_VERSION = '20260110';
+
+const buildRoleStylePreviewUrl = (styleName: 'medical' | 'executive'): string =>
+  `${STYLE_PREVIEW_BASE_URL}/${styleName}.jpg?v=${STYLE_PREVIEW_CACHE_VERSION}`;
+
 export const seoPagesPart1a: Record<string, SeoPageContent> = {
   'how-it-works': {
     slug: 'how-it-works',
@@ -309,8 +315,8 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
       headline: 'Headshot Enhancer',
       subhead:
         'Improve your existing profile photo fast with your credit balance. Weekly top-ups restore credits to 5 when below.',
-      ctaLabel: 'Try the enhancer',
-      ctaHref: '/auth/register',
+      ctaLabel: 'Get started',
+      ctaHref: '/dashboard',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
     },
@@ -375,8 +381,8 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
     cta: {
       title: 'Start with enhancement credits',
       description: 'Create an account and improve your profile photo today.',
-      label: 'Try the enhancer',
-      href: '/auth/register',
+      label: 'Get started',
+      href: '/dashboard',
     },
   },
   'ai-headshot-generator': {
@@ -395,8 +401,9 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
-      imageSrc: '/assets/marketing/before-after/set-2-after.png',
+      imageSrc: buildRoleStylePreviewUrl('executive'),
       imageAlt: 'Professional AI headshot result',
+      imageFallbackSrc: '/assets/marketing/before-after/set-2-after.png',
     },
     highlights: [
       { value: 'Studio', label: 'Quality results' },
@@ -512,8 +519,9 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
-      imageSrc: '/assets/marketing/before-after/set-3-after.png',
+      imageSrc: buildRoleStylePreviewUrl('executive'),
       imageAlt: 'LinkedIn-ready professional headshot',
+      imageFallbackSrc: '/assets/marketing/before-after/set-3-after.png',
     },
     highlights: [
       { value: 'Profile-ready', label: 'Framing and crop' },
@@ -557,24 +565,12 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
             description: 'Neutral backdrops that keep attention on you.',
           },
           {
-            title: 'Soft professional lighting',
-            description: 'Balanced light that keeps skin tones natural.',
+            title: 'Natural professional lighting',
+            description: 'Balanced light and tone that reads trustworthy and real.',
           },
           {
-            title: 'Overly filtered images',
-            description: 'Heavy filters reduce trust and look artificial.',
-          },
-          {
-            title: 'Busy backgrounds',
-            description: 'Cluttered scenes pull focus from your face.',
-          },
-          {
-            title: 'Low resolution uploads',
-            description: 'Clear, high quality selfies deliver better results.',
-          },
-          {
-            title: 'Solid-color outfits',
-            description: 'Simple, professional clothing keeps focus on your face.',
+            title: 'Simple outfit styling',
+            description: 'Solid colors and minimal patterns keep focus on your face.',
           },
         ],
       },
