@@ -327,6 +327,29 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
     ],
     sections: [
       {
+        type: 'showcase',
+        title: 'Enhancement results',
+        intro: 'See the difference AI enhancement makes to existing photos.',
+        items: [
+          {
+            title: 'Lighting and clarity improvement',
+            description: 'Balanced exposure with preserved natural detail.',
+            beforeImage: '/assets/marketing/before-after/set-3-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-3-after.png',
+            beforeAlt: 'Original photo before enhancement',
+            afterAlt: 'Enhanced photo with better lighting',
+          },
+          {
+            title: 'Background refinement',
+            description: 'Cleaner background for professional presentation.',
+            beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-1-after.jpg',
+            beforeAlt: 'Photo with distracting background',
+            afterAlt: 'Photo with clean professional background',
+          },
+        ],
+      },
+      {
         type: 'bullets',
         title: 'What the enhancer improves',
         items: [

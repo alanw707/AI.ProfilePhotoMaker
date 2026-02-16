@@ -285,8 +285,18 @@ export class LoginComponent implements OnInit {
 
     // Get OAuth base URL from config service via constructor injection
     const oauthBaseUrl = this._configService.getOAuthBaseUrl();
+    const query = new URLSearchParams({
+      returnUrl: this.returnUrl,
+    });
+
+    // ngrok free domains can show an interstitial page that drops OAuth nonce cookies.
+    // This query parameter bypasses that warning page for local OAuth testing.
+    if (oauthBaseUrl.includes('ngrok')) {
+      query.set('ngrok-skip-browser-warning', 'true');
+    }
+
     // Use standard OAuth flow - redirect to the external login endpoint
-    const oauthUrl = `${oauthBaseUrl}/api/auth/external-login/google?returnUrl=${encodeURIComponent(this.returnUrl)}`;
+    const oauthUrl = `${oauthBaseUrl}/api/auth/external-login/google?${query.toString()}`;
     window.location.href = oauthUrl;
   }
 

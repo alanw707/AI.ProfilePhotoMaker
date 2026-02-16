@@ -122,10 +122,7 @@ export class RegisterComponent {
 
     // ASP.NET model state validation: { errors: { Field: [msg] } }
     if (error?.error?.errors) {
-      const allErrors = Object.values(error.error.errors)
-        .flat()
-        .filter(Boolean)
-        .join(' ');
+      const allErrors = Object.values(error.error.errors).flat().filter(Boolean).join(' ');
       if (allErrors) {
         return allErrors;
       }
@@ -178,34 +175,35 @@ export class RegisterComponent {
         })
       )
       .subscribe({
-      next: _response => {
-        // Registration successful. Require email verification before accessing /app.
-        this._router
-          .navigate(['/auth/verify-email'])
-          .then(success => {
-            if (success === false) {
+        next: _response => {
+          // Registration successful. Require email verification before accessing /app.
+          this._router
+            .navigate(['/auth/verify-email'])
+            .then(success => {
+              if (success === false) {
+                this.error =
+                  'Registration succeeded, but navigation failed. Please try logging in.';
+                this.turnstileToken = '';
+                this.turnstile?.reset();
+                this._cdr.markForCheck();
+              }
+            })
+            .catch(error => {
+              console.error('Registration navigation error:', error);
               this.error = 'Registration succeeded, but navigation failed. Please try logging in.';
               this.turnstileToken = '';
               this.turnstile?.reset();
               this._cdr.markForCheck();
-            }
-          })
-          .catch(error => {
-            console.error('Registration navigation error:', error);
-            this.error = 'Registration succeeded, but navigation failed. Please try logging in.';
-            this.turnstileToken = '';
-            this.turnstile?.reset();
-            this._cdr.markForCheck();
-          });
-      },
-      error: error => {
-        const apiMessage = this.extractErrorMessage(error);
-        this.error = apiMessage;
-        this.turnstileToken = '';
-        this.turnstile?.reset();
-        this._cdr.markForCheck();
-      },
-    });
+            });
+        },
+        error: error => {
+          const apiMessage = this.extractErrorMessage(error);
+          this.error = apiMessage;
+          this.turnstileToken = '';
+          this.turnstile?.reset();
+          this._cdr.markForCheck();
+        },
+      });
   }
 
   navigateToLogin(): void {
@@ -216,8 +214,17 @@ export class RegisterComponent {
     // Use consistent OAuth base URL method for registration
     const oauthBaseUrl = this._configService.getOAuthBaseUrl();
     const fullReturnUrl = `${this._configService.frontendBaseUrl}/app/dashboard`;
+    const query = new URLSearchParams({
+      returnUrl: fullReturnUrl,
+    });
 
-    const oauthUrl = `${oauthBaseUrl}/api/auth/external-login/Google?returnUrl=${encodeURIComponent(fullReturnUrl)}`;
+    // ngrok free domains can show an interstitial page that drops OAuth nonce cookies.
+    // This query parameter bypasses that warning page for local OAuth testing.
+    if (oauthBaseUrl.includes('ngrok')) {
+      query.set('ngrok-skip-browser-warning', 'true');
+    }
+
+    const oauthUrl = `${oauthBaseUrl}/api/auth/external-login/Google?${query.toString()}`;
     window.location.href = oauthUrl;
   }
 }

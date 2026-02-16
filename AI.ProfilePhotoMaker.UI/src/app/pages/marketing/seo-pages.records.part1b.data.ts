@@ -26,6 +26,29 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
     },
     sections: [
       {
+        type: 'showcase',
+        title: 'Before and after results',
+        intro: 'See how casual photos become polished professional headshots.',
+        items: [
+          {
+            title: 'Professional studio look',
+            description: 'Clean lighting and background for a credible business presence.',
+            beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-1-after.jpg',
+            beforeAlt: 'Casual photo before professional headshot',
+            afterAlt: 'Professional studio headshot after',
+          },
+          {
+            title: 'Corporate ready',
+            description: 'Balanced exposure and professional styling for team pages.',
+            beforeImage: '/assets/marketing/before-after/set-2-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-2-after.png',
+            beforeAlt: 'Original photo before enhancement',
+            afterAlt: 'Corporate-ready headshot after',
+          },
+        ],
+      },
+      {
         type: 'cards',
         title: 'Business use cases',
         items: [
@@ -121,6 +144,29 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
       secondaryCtaHref: '/examples',
     },
     sections: [
+      {
+        type: 'showcase',
+        title: 'Job search transformation',
+        intro: 'Stand out in applicant tracking systems with a polished professional photo.',
+        items: [
+          {
+            title: 'Approachable professional',
+            description: 'Warm, confident look that builds trust with recruiters.',
+            beforeImage: '/assets/marketing/before-after/set-2-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-2-after.png',
+            beforeAlt: 'Casual photo before job search headshot',
+            afterAlt: 'Approachable professional headshot after',
+          },
+          {
+            title: 'LinkedIn optimized',
+            description: 'Clean framing and lighting designed for profile visibility.',
+            beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
+            afterImage: '/assets/marketing/before-after/set-1-after.jpg',
+            beforeAlt: 'Original selfie before optimization',
+            afterAlt: 'LinkedIn-optimized headshot after',
+          },
+        ],
+      },
       {
         type: 'bullets',
         title: 'Why recruiters care',
