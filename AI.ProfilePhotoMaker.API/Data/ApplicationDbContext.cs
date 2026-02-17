@@ -32,6 +32,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     // Credit Package management (new unified system)
     public virtual DbSet<CreditPackage> CreditPackages { get; set; }
     public virtual DbSet<CreditPurchase> CreditPurchases { get; set; }
+    public virtual DbSet<AdminAuditLog> AdminAuditLogs { get; set; }
+    public virtual DbSet<Coupon> Coupons { get; set; }
+    public virtual DbSet<CouponRedemption> CouponRedemptions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -48,6 +51,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         ConfigureFeedbackSubmissionRelationships(builder);
         ConfigurePendingGenerationRelationships(builder);
         ConfigureCreditPackageRelationships(builder);
+        ConfigureAdminRelationships(builder);
         ConfigureRetentionDeletionWarningLogRelationships(builder);
 
         // Configure indexes for performance - ENHANCED FOR OPTIMIZATION
@@ -205,6 +209,29 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasDatabaseName("IX_CreditPurchases_PaymentTransactionId_Unique");
     }
 
+    private void ConfigureAdminRelationships(ModelBuilder builder)
+    {
+        builder.Entity<AdminAuditLog>()
+            .HasIndex(l => new { l.AdminUserId, l.CreatedAt })
+            .HasDatabaseName("IX_AdminAuditLogs_AdminUserId_CreatedAt");
+
+        builder.Entity<Coupon>()
+            .HasIndex(c => c.Code)
+            .IsUnique()
+            .HasDatabaseName("IX_Coupons_Code_Unique");
+
+        builder.Entity<Coupon>()
+            .HasMany(c => c.Redemptions)
+            .WithOne(r => r.Coupon)
+            .HasForeignKey(r => r.CouponId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<CouponRedemption>()
+            .HasIndex(r => new { r.CouponId, r.UserId })
+            .IsUnique()
+            .HasDatabaseName("IX_CouponRedemptions_CouponId_UserId_Unique");
+    }
+
     private void ConfigurePerformanceIndexes(ModelBuilder builder)
     {
         // User lookup indexes
@@ -356,6 +383,22 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<CreditPurchase>()
             .Property(p => p.AmountPaid)
+            .HasPrecision(10, 2);
+
+        builder.Entity<Coupon>()
+            .Property(c => c.DiscountValue)
+            .HasPrecision(10, 2);
+
+        builder.Entity<CouponRedemption>()
+            .Property(r => r.DiscountApplied)
+            .HasPrecision(10, 2);
+
+        builder.Entity<CouponRedemption>()
+            .Property(r => r.OriginalPrice)
+            .HasPrecision(10, 2);
+
+        builder.Entity<CouponRedemption>()
+            .Property(r => r.FinalPrice)
             .HasPrecision(10, 2);
     }
 

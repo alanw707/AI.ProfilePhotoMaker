@@ -42,6 +42,7 @@ public sealed class FakeStripePaymentService : IStripePaymentService
     public Task<PaymentIntentResponse> CreatePaymentIntentAsync(
         string userId,
         int packageId,
+        string? couponCode = null,
         CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new PaymentIntentResponse(

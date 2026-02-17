@@ -22,6 +22,7 @@ public class CreditControllerPaymentConfigTests
     private readonly Mock<ICreditPackageService> _creditPackageService = new();
     private readonly Mock<IBasicTierService> _basicTierService = new();
     private readonly Mock<IStripePaymentService> _stripePaymentService = new();
+    private readonly Mock<ICouponService> _couponService = new();
     private readonly Mock<IWebHostEnvironment> _environment = new();
     private readonly Mock<ILogger<CreditController>> _logger = new();
 
@@ -134,6 +135,7 @@ public class CreditControllerPaymentConfigTests
             Options.Create(stripeOptions),
             Options.Create(simulationOptions),
             _environment.Object,
+            _couponService.Object,
             _logger.Object)
         {
             ControllerContext = ControllerContextFactory.CreateWithUser("test-user")

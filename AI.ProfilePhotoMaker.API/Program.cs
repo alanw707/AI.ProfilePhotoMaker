@@ -393,6 +393,8 @@ builder.Services.AddResponseCompression(options =>
 });
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<ICouponService, CouponService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IBasicTierService, AI.ProfilePhotoMaker.API.Services.BasicTierService>();
 builder.Services.AddScoped<AI.ProfilePhotoMaker.API.Services.IUserContextService, AI.ProfilePhotoMaker.API.Services.UserContextService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.StartupDiagnosticsHostedService>();
@@ -679,6 +681,18 @@ if (!app.Environment.IsEnvironment("Testing"))
     else
     {
         app.Logger.LogInformation("Database migrations skipped (AutoMigrateOnStartup=false)");
+    }
+}
+
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    try
+    {
+        await SeedAdminRole.SeedAsync(app.Services, app.Configuration, app.Logger);
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogWarning(ex, "Admin role seeding failed during startup");
     }
 }
 

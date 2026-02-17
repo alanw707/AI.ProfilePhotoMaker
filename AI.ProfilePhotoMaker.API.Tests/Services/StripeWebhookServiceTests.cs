@@ -509,7 +509,12 @@ public class StripeWebhookServiceTests
             Options.Create(simulationOptions));
 
         var email = new DummyEmailNotificationService();
-        return new StripeWebhookService(context, creditPackageService, NullLogger<StripeWebhookService>.Instance, email);
+        return new StripeWebhookService(
+            context,
+            creditPackageService,
+            NullLogger<StripeWebhookService>.Instance,
+            email,
+            new DummyCouponService());
     }
 
     private sealed class DummyEmailNotificationService : IEmailNotificationService
@@ -522,6 +527,15 @@ public class StripeWebhookServiceTests
         public Task SendEmailVerificationAsync(string userId, string? email, string encodedToken) => Task.CompletedTask;
         public Task SendWelcomeAsync(string userId, string? email, string? firstName = null) => Task.CompletedTask;
         public Task SendRetentionDeletionWarningAsync(string userId, string? email, int imageCount, DateTime deletionDate, int daysUntilDeletion) => Task.CompletedTask;
+    }
+
+    private sealed class DummyCouponService : ICouponService
+    {
+        public Task<(bool IsValid, string Message, decimal DiscountAmount)> ValidateCouponAsync(string code, string userId, decimal originalPrice)
+            => Task.FromResult((true, "ok", 0m));
+
+        public Task<bool> RedeemCouponAsync(string code, string userId, decimal originalPrice, decimal discountApplied)
+            => Task.FromResult(true);
     }
 
     private static ApplicationDbContext CreateContext()

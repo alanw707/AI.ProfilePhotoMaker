@@ -1,0 +1,66 @@
+<section class="admin-shell">
+  <header class="admin-header">
+    <div>
+      <p class="admin-kicker">Compliance</p>
+      <h1>Audit Log</h1>
+      <p class="admin-subtitle">Trace administrative actions with full context and change history.</p>
+    </div>
+  </header>
+
+  <nav class="admin-nav">
+    <a routerLink="/admin/dashboard" routerLinkActive="is-active">Overview</a>
+    <a routerLink="/admin/users" routerLinkActive="is-active">Users</a>
+    <a routerLink="/admin/coupons" routerLinkActive="is-active">Coupons</a>
+    <a routerLink="/admin/audit-log" routerLinkActive="is-active">Audit Log</a>
+  </nav>
+
+  <section class="admin-panel">
+    <div class="toolbar">
+      <div class="field-group search-group">
+        <label for="action-filter">Filter by action</label>
+        <input id="action-filter" [(ngModel)]="actionFilter" placeholder="CreditsAdded, CouponUpdated..." />
+      </div>
+      <button class="btn btn-primary" (click)="loadLogs()">Apply</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Admin</th>
+            <th>Action</th>
+            <th>Target</th>
+            <th>Old Value</th>
+            <th>New Value</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let log of logs">
+            <td>{{ log.createdAt | date: 'yyyy-MM-dd HH:mm' }}</td>
+            <td class="mono-text">{{ log.adminEmail }}</td>
+            <td>
+              <span class="pill pill-credit">{{ log.action }}</span>
+            </td>
+            <td class="mono-text">{{ log.targetUserEmail || '-' }}</td>
+            <td class="mono-text">{{ log.oldValue || '-' }}</td>
+            <td class="mono-text">{{ log.newValue || '-' }}</td>
+            <td>
+              <span>{{ expanded[log.id] ? log.details || '-' : preview(log.details) }}</span>
+              <button
+                class="btn btn-ghost btn-sm"
+                *ngIf="log.details && log.details.length > 80"
+                (click)="toggleDetails(log.id)">
+                {{ expanded[log.id] ? 'Less' : 'More' }}
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="logs.length === 0">
+            <td class="empty-state" colspan="7">No entries found for the current filter.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>

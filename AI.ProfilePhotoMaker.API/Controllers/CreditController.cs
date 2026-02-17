@@ -20,6 +20,7 @@ public class CreditController : BaseController
     private readonly StripeOptions _stripeOptions;
     private readonly PaymentSimulationOptions _paymentSimulationOptions;
     private readonly IWebHostEnvironment _environment;
+    private readonly ICouponService _couponService;
 
     public CreditController(
         ICreditPackageService creditPackageService,
@@ -28,6 +29,7 @@ public class CreditController : BaseController
         IOptions<StripeOptions> stripeOptions,
         IOptions<PaymentSimulationOptions> paymentSimulationOptions,
         IWebHostEnvironment environment,
+        ICouponService couponService,
         ILogger<CreditController> logger)
         : base(logger)
     {
@@ -37,6 +39,7 @@ public class CreditController : BaseController
         _stripeOptions = stripeOptions.Value;
         _paymentSimulationOptions = paymentSimulationOptions.Value;
         _environment = environment;
+        _couponService = couponService;
     }
 
     /// <summary>
@@ -184,7 +187,7 @@ public class CreditController : BaseController
 
         try
         {
-            var intent = await _stripePaymentService.CreatePaymentIntentAsync(userId, dto.PackageId, cancellationToken);
+            var intent = await _stripePaymentService.CreatePaymentIntentAsync(userId, dto.PackageId, dto.CouponCode, cancellationToken);
 
             return SuccessResponse(new
             {
@@ -193,6 +196,7 @@ public class CreditController : BaseController
                 publishableKey = intent.PublishableKey,
                 paymentTransactionId = intent.PaymentTransactionId,
                 packageId = dto.PackageId,
+                couponCode = dto.CouponCode,
                 isSimulation = false
             });
         }
@@ -293,5 +297,24 @@ public class CreditController : BaseController
         };
 
         return SuccessResponse(config);
+    }
+
+    [HttpPost("validate-coupon")]
+    [Authorize]
+    public async Task<IActionResult> ValidateCoupon([FromBody] ValidateCouponDto dto)
+    {
+        var authCheck = ValidateAuthentication();
+        if (authCheck != null) return authCheck;
+
+        var userId = GetCurrentUserId()!;
+        var (isValid, message, discountAmount) = await _couponService.ValidateCouponAsync(dto.Code, userId, dto.OriginalPrice);
+
+        return SuccessResponse(new
+        {
+            isValid,
+            message,
+            discountAmount,
+            finalPrice = Math.Max(0m, dto.OriginalPrice - discountAmount)
+        });
     }
 }

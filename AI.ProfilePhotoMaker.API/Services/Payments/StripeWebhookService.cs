@@ -3,6 +3,7 @@ using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Services.Notifications;
+using AI.ProfilePhotoMaker.API.Services;
 using Microsoft.EntityFrameworkCore;
 using Stripe;
 
@@ -14,17 +15,20 @@ public class StripeWebhookService : IStripeWebhookService
     private readonly ICreditPackageService _creditPackageService;
     private readonly ILogger<StripeWebhookService> _logger;
     private readonly IEmailNotificationService _emailNotificationService;
+    private readonly ICouponService _couponService;
 
     public StripeWebhookService(
         ApplicationDbContext dbContext,
         ICreditPackageService creditPackageService,
         ILogger<StripeWebhookService> logger,
-        IEmailNotificationService emailNotificationService)
+        IEmailNotificationService emailNotificationService,
+        ICouponService couponService)
     {
         _dbContext = dbContext;
         _creditPackageService = creditPackageService;
         _logger = logger;
         _emailNotificationService = emailNotificationService;
+        _couponService = couponService;
     }
 
     public async Task HandleEventAsync(Event stripeEvent, CancellationToken cancellationToken = default)
@@ -74,6 +78,9 @@ public class StripeWebhookService : IStripeWebhookService
         }
 
         metadata.TryGetValue("payment_transaction_id", out var transactionIdRaw);
+        metadata.TryGetValue("coupon_code", out var couponCode);
+        metadata.TryGetValue("original_price", out var originalPriceRaw);
+        metadata.TryGetValue("discount_amount", out var discountAmountRaw);
 
         PaymentTransaction? transaction = null;
         if (!string.IsNullOrWhiteSpace(transactionIdRaw) && int.TryParse(transactionIdRaw, out var transactionId))
@@ -115,6 +122,40 @@ public class StripeWebhookService : IStripeWebhookService
             transaction.FailureReason = null;
 
             await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        bool couponRedemptionFailed = false;
+        if (!string.IsNullOrWhiteSpace(couponCode)
+            && decimal.TryParse(originalPriceRaw, out var originalPrice)
+            && decimal.TryParse(discountAmountRaw, out var discountAmount)
+            && discountAmount > 0)
+        {
+            var redeemed = await _couponService.RedeemCouponAsync(couponCode, userId, originalPrice, discountAmount);
+            if (!redeemed)
+            {
+                couponRedemptionFailed = true;
+                _logger.LogError("CRITICAL: Coupon redemption failed after successful payment intent {PaymentIntentId}. Transaction {TransactionId} requires manual review. User {UserId} paid {Amount} but coupon {CouponCode} was not redeemed.",
+                    LoggingSanitizer.SanitizeId(paymentIntent.Id),
+                    transaction.Id,
+                    LoggingSanitizer.SanitizeId(userId),
+                    originalPrice,
+                    LoggingSanitizer.Sanitize(couponCode));
+            }
+        }
+
+        // If coupon redemption failed, flag transaction for manual review instead of processing normally
+        if (couponRedemptionFailed)
+        {
+            transaction.Status = PaymentStatus.PendingReview;
+            transaction.FailureReason = $"Coupon redemption failed for coupon {couponCode}. Manual review required.";
+            transaction.ProcessedAt = DateTime.UtcNow;
+            transaction.UpdatedAt = DateTime.UtcNow;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            _logger.LogWarning("Transaction {TransactionId} marked as PendingReview due to coupon redemption failure. User {UserId} paid but credits were NOT awarded.",
+                transaction.Id,
+                LoggingSanitizer.SanitizeId(userId));
+            return;
         }
 
         var purchaseResult = await _creditPackageService.PurchaseCreditPackageAsync(userId, packageId, transaction.Id.ToString());

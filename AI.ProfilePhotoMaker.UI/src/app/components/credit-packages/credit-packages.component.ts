@@ -72,6 +72,15 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
   billingDetailsTouched = false;
   isCardElementFocused = false;
   isAwaitingWebhookConfirmation = false;
+  couponExpanded = false;
+  couponCode = '';
+  isValidatingCoupon = false;
+  couponValidation: {
+    isValid: boolean;
+    message: string;
+    discountAmount: number;
+    finalPrice: number;
+  } | null = null;
   private _pendingPaymentTransactionId: string | null = null;
   private _pendingPaymentPackageId: number | null = null;
   private _pendingPaymentAttempts = 0;
@@ -276,32 +285,37 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
     this._cdr.markForCheck();
     this._scrollToPurchaseForm();
 
-    this._creditService.createPaymentIntent({ packageId: pkg.id }).subscribe({
-      next: async response => {
-        if (!response.success) {
-          this._handlePaymentError(
-            response.error?.message || 'Unable to start payment with Stripe.'
-          );
-          return;
-        }
+    this._creditService
+      .createPaymentIntent({
+        packageId: pkg.id,
+        couponCode: this.couponValidation?.isValid ? this.couponCode : undefined,
+      })
+      .subscribe({
+        next: async response => {
+          if (!response.success) {
+            this._handlePaymentError(
+              response.error?.message || 'Unable to start payment with Stripe.'
+            );
+            return;
+          }
 
-        try {
-          this.isLoadingIntent = false;
-          this._cdr.detectChanges();
-          await this._initializeStripe(response.data);
-          this._cdr.detectChanges();
-        } catch (error) {
-          console.error('Stripe initialization failed', error);
-          this._handlePaymentError(
-            error instanceof Error ? error.message : 'Unable to initialize Stripe payment.'
-          );
-        }
-      },
-      error: error => {
-        console.error('createPaymentIntent error', error);
-        this._handlePaymentError('Unable to initialize payment. Please try again.');
-      },
-    });
+          try {
+            this.isLoadingIntent = false;
+            this._cdr.detectChanges();
+            await this._initializeStripe(response.data);
+            this._cdr.detectChanges();
+          } catch (error) {
+            console.error('Stripe initialization failed', error);
+            this._handlePaymentError(
+              error instanceof Error ? error.message : 'Unable to initialize Stripe payment.'
+            );
+          }
+        },
+        error: error => {
+          console.error('createPaymentIntent error', error);
+          this._handlePaymentError('Unable to initialize payment. Please try again.');
+        },
+      });
   }
 
   private _shouldUsePaymentSimulation(): boolean {
@@ -713,6 +727,49 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
   cancelPurchase(): void {
     this.selectedPackage = null;
     this._resetStripeState();
+    this.couponValidation = null;
+    this.couponCode = '';
+    this.couponExpanded = false;
+  }
+
+  validateCoupon(): void {
+    if (!this.selectedPackage || !this.couponCode.trim()) {
+      this.couponValidation = null;
+      return;
+    }
+
+    this.isValidatingCoupon = true;
+    this._creditService
+      .validateCoupon(this.couponCode.trim(), this.selectedPackage.price)
+      .subscribe({
+        next: response => {
+          this.couponValidation = response.data;
+          this.isValidatingCoupon = false;
+          this._cdr.markForCheck();
+        },
+        error: () => {
+          this.couponValidation = {
+            isValid: false,
+            message: 'Invalid coupon',
+            discountAmount: 0,
+            finalPrice: this.selectedPackage?.price || 0,
+          };
+          this.isValidatingCoupon = false;
+          this._cdr.markForCheck();
+        },
+      });
+  }
+
+  getFinalPrice(): number {
+    if (!this.selectedPackage) {
+      return 0;
+    }
+
+    if (this.couponValidation?.isValid) {
+      return this.couponValidation.finalPrice;
+    }
+
+    return this.selectedPackage.price;
   }
 
   onCountryCodeChange(value: string): void {

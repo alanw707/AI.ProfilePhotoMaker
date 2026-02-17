@@ -545,8 +545,14 @@ namespace AI.ProfilePhotoMaker.API.Controllers
         }
 
         [HttpGet("external-login/{provider}")]
-        public IActionResult ExternalLogin(string provider, string returnUrl = "/app/dashboard")
+        public IActionResult ExternalLogin(string provider, string returnUrl = "/app/dashboard", bool ageConfirmed = false)
         {
+            if (!ageConfirmed)
+            {
+                var frontendBaseUrl = GetFrontendBaseUrl();
+                return Redirect($"{frontendBaseUrl}/auth/login?error=age_confirmation_required");
+            }
+
             if (!string.Equals(provider, "google", StringComparison.OrdinalIgnoreCase))
             {
                 return BadRequest(new { error = $"{provider} OAuth not implemented yet" });
@@ -657,7 +663,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
                 }
 
                 // Generate JWT token
-                var tokenInfo = _authService.GenerateJwtToken(user);
+                var roles = await _userManager.GetRolesAsync(user);
+                var tokenInfo = _authService.GenerateJwtToken(user, roles);
 
                 // Set secure, HttpOnly cookie for JWT so the browser can send it on subsequent API requests
                 var cookieName = _configuration["Authentication:TokenCookieName"] ?? "AuthToken";
@@ -985,6 +992,26 @@ namespace AI.ProfilePhotoMaker.API.Controllers
             // If the request is authenticated via JWT (cookie-based), return 204.
             // Otherwise the [Authorize] attribute will result in 401.
             return NoContent();
+        }
+
+        [HttpGet("user-roles")]
+        [Authorize]
+        public async Task<IActionResult> GetUserRoles()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Unauthorized(new { success = false, error = new { code = "Unauthorized", message = "User not authenticated." } });
+            }
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return NotFound(new { success = false, error = new { code = "NotFound", message = "User not found." } });
+            }
+
+            var roles = await _userManager.GetRolesAsync(user);
+            return Ok(new { success = true, data = new { roles }, error = (object?)null });
         }
 
         [HttpGet("profile-completion-status")]

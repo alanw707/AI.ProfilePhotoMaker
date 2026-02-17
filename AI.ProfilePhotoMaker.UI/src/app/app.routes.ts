@@ -4,6 +4,7 @@ import { LoginComponent } from './auth/login/login.component';
 import { RegisterComponent } from './auth/register/register.component';
 import { guestGuard } from './guards/guest.guard';
 import { AppGuard } from './guards/app.guard';
+import { AdminGuard } from './guards/admin.guard';
 import { seoPages } from './pages/marketing/seo-pages.data';
 
 export const routes: Routes = [
@@ -489,6 +490,54 @@ export const routes: Routes = [
         path: 'faq',
         redirectTo: '',
         pathMatch: 'full',
+      },
+    ],
+  },
+
+  // Admin Routes (protected by AdminGuard)
+  {
+    path: 'admin',
+    canActivate: [AdminGuard],
+    canActivateChild: [AdminGuard],
+    children: [
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./admin/admin-dashboard/admin-dashboard.component').then(
+            m => m.AdminDashboardComponent
+          ),
+        title: 'Admin Dashboard',
+      },
+      {
+        path: 'users',
+        loadComponent: () =>
+          import('./admin/admin-users/admin-users.component').then(m => m.AdminUsersComponent),
+        title: 'User Management',
+      },
+      {
+        path: 'users/:userId',
+        loadComponent: () =>
+          import('./admin/admin-user-detail/admin-user-detail.component').then(
+            m => m.AdminUserDetailComponent
+          ),
+        title: 'User Detail',
+      },
+      {
+        path: 'coupons',
+        loadComponent: () =>
+          import('./admin/admin-coupons/admin-coupons.component').then(
+            m => m.AdminCouponsComponent
+          ),
+        title: 'Coupon Management',
+      },
+      {
+        path: 'audit-log',
+        loadComponent: () =>
+          import('./admin/admin-audit-log/admin-audit-log.component').then(
+            m => m.AdminAuditLogComponent
+          ),
+        title: 'Audit Log',
       },
     ],
   },

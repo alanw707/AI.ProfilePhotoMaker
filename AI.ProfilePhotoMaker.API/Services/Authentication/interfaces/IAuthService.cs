@@ -11,5 +11,5 @@ public interface IAuthService
     Task<AuthResponseDto> ProcessExternalLoginAsync(string provider, string code, string? state = null);
     Task<ProfileCompletionCheckDto> CheckProfileCompletionAsync(string userId);
     Task<bool> CompleteProfileAsync(string userId, ProfileCompletionDto model);
-    (string Token, DateTime Expiration) GenerateJwtToken(ApplicationUser user);
+    (string Token, DateTime Expiration) GenerateJwtToken(ApplicationUser user, IList<string> roles);
 }

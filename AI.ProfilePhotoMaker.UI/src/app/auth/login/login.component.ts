@@ -86,7 +86,14 @@ export class LoginComponent implements OnInit {
       }
 
       if (params['error']) {
-        this.error = 'OAuth login failed: ' + params['error'];
+        const errorCode = params['error'];
+        if (errorCode === 'age_confirmation_required') {
+          this.error = this.ageConfirmationMessage;
+        } else if (errorCode === 'access_denied') {
+          this.error = 'OAuth login was denied. Please try again or use email/password.';
+        } else {
+          this.error = 'OAuth login failed: ' + errorCode;
+        }
         this._cdr.markForCheck();
         return;
       }
@@ -287,6 +294,7 @@ export class LoginComponent implements OnInit {
     const oauthBaseUrl = this._configService.getOAuthBaseUrl();
     const query = new URLSearchParams({
       returnUrl: this.returnUrl,
+      ageConfirmed: 'true',
     });
 
     // ngrok free domains can show an interstitial page that drops OAuth nonce cookies.

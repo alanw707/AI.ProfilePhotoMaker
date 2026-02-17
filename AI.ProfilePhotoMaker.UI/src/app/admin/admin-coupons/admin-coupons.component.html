@@ -1,0 +1,129 @@
+<section class="admin-shell">
+  <header class="admin-header">
+    <div>
+      <p class="admin-kicker">Promotions</p>
+      <h1>Coupon Management</h1>
+      <p class="admin-subtitle">Create and maintain discount codes with controlled usage limits.</p>
+    </div>
+  </header>
+
+  <nav class="admin-nav">
+    <a routerLink="/admin/dashboard" routerLinkActive="is-active">Overview</a>
+    <a routerLink="/admin/users" routerLinkActive="is-active">Users</a>
+    <a routerLink="/admin/coupons" routerLinkActive="is-active">Coupons</a>
+    <a routerLink="/admin/audit-log" routerLinkActive="is-active">Audit Log</a>
+  </nav>
+
+  <section class="admin-panel">
+    <h2>Create Coupon</h2>
+    <div class="field-grid">
+      <div class="field-group">
+        <label for="coupon-code">Code</label>
+        <input id="coupon-code" [(ngModel)]="model.code" placeholder="SAVE20" />
+      </div>
+      <div class="field-group">
+        <label for="coupon-type">Type</label>
+        <select id="coupon-type" [(ngModel)]="model.discountType">
+          <option [ngValue]="1">Percentage</option>
+          <option [ngValue]="2">Fixed Amount</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label for="coupon-value">Value</label>
+        <input id="coupon-value" type="number" [(ngModel)]="model.discountValue" />
+      </div>
+      <div class="field-group">
+        <label for="coupon-max">Max Usages</label>
+        <input id="coupon-max" type="number" [(ngModel)]="model.maxUsages" />
+      </div>
+      <div class="field-group field-span-2">
+        <label for="coupon-expire">Expires At</label>
+        <input id="coupon-expire" type="datetime-local" [(ngModel)]="model.expiresAt" />
+      </div>
+    </div>
+
+    <p class="warning-text" *ngIf="model.discountType === 1 && model.discountValue === 100">
+      Warning: this creates a fully free coupon.
+    </p>
+
+    <div class="action-row">
+      <button class="btn btn-primary" (click)="createCoupon()">Create Coupon</button>
+    </div>
+    <p class="success-text" *ngIf="warning">{{ warning }}</p>
+  </section>
+
+  <section class="admin-panel">
+    <h2>Existing Coupons</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Type</th>
+            <th>Value</th>
+            <th>Usage</th>
+            <th>Expires</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let coupon of coupons">
+            <td class="mono-text">{{ coupon.code }}</td>
+            <td>{{ coupon.discountType }}</td>
+            <td>{{ coupon.discountValue }}</td>
+            <td>{{ coupon.currentUsages }}/{{ coupon.maxUsages }}</td>
+            <td>{{ coupon.expiresAt || '-' }}</td>
+            <td>
+              <span class="pill" [class.pill-success]="coupon.isActive" [class.pill-danger]="!coupon.isActive">
+                {{ coupon.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td>
+              <div class="action-row">
+                <button class="btn btn-ghost" (click)="startEdit(coupon)">Edit</button>
+                <button class="btn btn-danger" (click)="deleteCoupon(coupon.id)">Deactivate</button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="coupons.length === 0">
+            <td class="empty-state" colspan="7">No coupons yet. Create your first code above.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="admin-panel" *ngIf="editCouponId">
+    <h2>Edit Coupon</h2>
+    <div class="field-grid">
+      <div class="field-group">
+        <label for="edit-max">Max Usages</label>
+        <input id="edit-max" type="number" [(ngModel)]="editModel.maxUsages" />
+      </div>
+      <div class="field-group">
+        <label for="edit-expire">Expires At</label>
+        <input id="edit-expire" type="datetime-local" [(ngModel)]="editModel.expiresAt" />
+      </div>
+      <div class="field-group checkbox-group">
+        <label>
+          <input type="checkbox" [(ngModel)]="editModel.isActive" />
+          Active
+        </label>
+      </div>
+    </div>
+    <div class="action-row">
+      <button class="btn btn-primary" (click)="saveEdit()">Save</button>
+      <button class="btn btn-ghost" (click)="cancelEdit()">Cancel</button>
+    </div>
+  </section>
+
+  <section class="admin-panel danger-panel" *ngIf="confirmDeleteId">
+    <h2>Confirm Deactivation</h2>
+    <p class="form-subtitle">Coupon ID {{ confirmDeleteId }} will be marked inactive.</p>
+    <div class="action-row">
+      <button class="btn btn-danger" (click)="confirmDelete()">Confirm</button>
+      <button class="btn btn-ghost" (click)="cancelDelete()">Cancel</button>
+    </div>
+  </section>
+</section>
