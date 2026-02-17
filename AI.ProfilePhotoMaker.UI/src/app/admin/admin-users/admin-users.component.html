@@ -1,0 +1,137 @@
+<section class="admin-shell">
+  <header class="admin-header">
+    <div>
+      <p class="admin-kicker">User Operations</p>
+      <h1>User Management</h1>
+      <p class="admin-subtitle">Search accounts, view details, and apply controlled account actions.</p>
+    </div>
+  </header>
+
+  <nav class="admin-nav">
+    <a routerLink="/admin/dashboard" routerLinkActive="is-active">Overview</a>
+    <a routerLink="/admin/users" routerLinkActive="is-active">Users</a>
+    <a routerLink="/admin/coupons" routerLinkActive="is-active">Coupons</a>
+    <a routerLink="/admin/audit-log" routerLinkActive="is-active">Audit Log</a>
+  </nav>
+
+  <section class="admin-panel">
+    <p class="success-text" *ngIf="actionMessage && actionMessageType === 'success'">{{ actionMessage }}</p>
+    <p class="error-text" *ngIf="actionMessage && actionMessageType === 'error'">{{ actionMessage }}</p>
+
+    <div class="toolbar">
+      <div class="field-group search-group">
+        <label for="user-search">Search</label>
+        <input id="user-search" [(ngModel)]="search" placeholder="Email or name" (keydown.enter)="onSearch()" />
+      </div>
+      <button class="btn btn-primary" (click)="onSearch()">Search</button>
+    </div>
+
+    <div class="table-wrap desktop-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Name</th>
+            <th>Credits</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let user of users">
+            <td class="mono-text">{{ user.email }}</td>
+            <td>{{ user.firstName }} {{ user.lastName }}</td>
+            <td>
+              <span class="pill pill-credit">{{ user.credits }}</span>
+            </td>
+            <td>
+              <span class="pill" [class.pill-danger]="user.isLockedOut" [class.pill-success]="!user.isLockedOut">
+                {{ user.isLockedOut ? 'Locked' : 'Active' }}
+              </span>
+            </td>
+            <td>
+              <div class="action-row">
+                <a class="btn btn-ghost" [routerLink]="['/admin/users', user.id]">View</a>
+                <button class="btn btn-warning" *ngIf="!user.isLockedOut" (click)="startAction(user, 'deactivate')">
+                  Deactivate
+                </button>
+                <button class="btn btn-success" *ngIf="user.isLockedOut" (click)="startAction(user, 'reactivate')">
+                  Reactivate
+                </button>
+                <button class="btn btn-ghost" (click)="startAction(user, 'credits')">Adjust Credits</button>
+                <button class="btn btn-danger" (click)="startAction(user, 'delete')">Delete</button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="users.length === 0">
+            <td class="empty-state" colspan="5">No users found for this query.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mobile-user-list">
+      <article class="mobile-user-card" *ngFor="let user of users">
+        <div class="mobile-user-row">
+          <h3>{{ user.firstName }} {{ user.lastName }}</h3>
+          <span class="pill" [class.pill-danger]="user.isLockedOut" [class.pill-success]="!user.isLockedOut">
+            {{ user.isLockedOut ? 'Locked' : 'Active' }}
+          </span>
+        </div>
+        <p class="mono-text mobile-email">{{ user.email }}</p>
+        <div class="mobile-user-meta">
+          <span class="pill pill-credit">Credits: {{ user.credits }}</span>
+        </div>
+        <div class="action-row">
+          <a class="btn btn-ghost" [routerLink]="['/admin/users', user.id]">View</a>
+          <button class="btn btn-warning" *ngIf="!user.isLockedOut" (click)="startAction(user, 'deactivate')">
+            Deactivate
+          </button>
+          <button class="btn btn-success" *ngIf="user.isLockedOut" (click)="startAction(user, 'reactivate')">
+            Reactivate
+          </button>
+          <button class="btn btn-ghost" (click)="startAction(user, 'credits')">Adjust Credits</button>
+          <button class="btn btn-danger" (click)="startAction(user, 'delete')">Delete</button>
+        </div>
+      </article>
+
+      <div class="empty-state" *ngIf="users.length === 0">No users found for this query.</div>
+    </div>
+
+    <footer class="pager">
+      <button class="btn btn-ghost" (click)="prevPage()" [disabled]="page <= 1">Previous</button>
+      <span>Page {{ page }} of {{ totalPages }}</span>
+      <button class="btn btn-ghost" (click)="nextPage()" [disabled]="page * pageSize >= totalCount">Next</button>
+    </footer>
+  </section>
+
+  <section class="admin-panel" *ngIf="pendingAction && selectedUserId">
+    <h2>Confirm Action</h2>
+    <p class="form-subtitle">
+      Target user:
+      <strong>{{ selectedUserLabel }}</strong>
+    </p>
+    <p class="form-subtitle">
+      Action:
+      <strong>{{ pendingAction }}</strong>
+    </p>
+
+    <div class="field-grid">
+      <div class="field-group" *ngIf="pendingAction === 'credits'">
+        <label for="credit-amount">Amount (+/-)</label>
+        <input id="credit-amount" type="number" [(ngModel)]="creditAmount" />
+      </div>
+      <div class="field-group field-span-2">
+        <label for="action-reason">Reason</label>
+        <input id="action-reason" [(ngModel)]="reason" placeholder="Required for audit log" />
+      </div>
+    </div>
+
+    <div class="action-row">
+      <button class="btn btn-primary" (click)="submitAction()" [disabled]="isSubmitting">
+        {{ isSubmitting ? 'Submitting...' : 'Submit' }}
+      </button>
+      <button class="btn btn-ghost" (click)="cancelAction()" [disabled]="isSubmitting">Cancel</button>
+    </div>
+  </section>
+</section>

@@ -21,6 +21,7 @@ public class PurchaseCreditPackageRequestDto
 public class CreatePaymentIntentRequestDto
 {
     public int PackageId { get; set; }
+    public string? CouponCode { get; set; }
 }
 
 public class UserCreditStatusDto

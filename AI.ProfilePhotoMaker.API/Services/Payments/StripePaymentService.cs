@@ -2,6 +2,7 @@ using AI.ProfilePhotoMaker.API.Configuration;
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
+using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.Payments.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +18,7 @@ public class StripePaymentService : IStripePaymentService
     private readonly StripeOptions _options;
     private readonly StripeClient _stripeClient;
     private readonly IWebHostEnvironment _environment;
+    private readonly ICouponService _couponService;
     private static string S(string? value) => LoggingSanitizer.Sanitize(value);
     private static string Sid(string? value) => LoggingSanitizer.SanitizeId(value);
 
@@ -25,16 +27,18 @@ public class StripePaymentService : IStripePaymentService
         ILogger<StripePaymentService> logger,
         IOptions<StripeOptions> options,
         StripeClient stripeClient,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        ICouponService couponService)
     {
         _dbContext = dbContext;
         _logger = logger;
         _options = options.Value;
         _stripeClient = stripeClient;
         _environment = environment;
+        _couponService = couponService;
     }
 
-    public async Task<PaymentIntentResponse> CreatePaymentIntentAsync(string userId, int packageId, CancellationToken cancellationToken = default)
+    public async Task<PaymentIntentResponse> CreatePaymentIntentAsync(string userId, int packageId, string? couponCode = null, CancellationToken cancellationToken = default)
     {
         if (_environment.IsDevelopment() && !_options.AllowLiveKeysInDevelopment && _options.UsesLiveMode())
         {
@@ -74,7 +78,24 @@ public class StripePaymentService : IStripePaymentService
             throw new InvalidOperationException("Credit package not found or inactive");
         }
 
-        var amountInCents = ConvertAmountToStripeLong(package.Price);
+        var originalPrice = package.Price;
+        var discountAmount = 0m;
+        string? appliedCouponCode = null;
+
+        if (!string.IsNullOrWhiteSpace(couponCode))
+        {
+            var validation = await _couponService.ValidateCouponAsync(couponCode, userId, originalPrice);
+            if (!validation.IsValid)
+            {
+                throw new InvalidOperationException(validation.Message);
+            }
+
+            discountAmount = validation.DiscountAmount;
+            appliedCouponCode = couponCode.Trim().ToUpperInvariant();
+        }
+
+        var finalPrice = Math.Max(0m, originalPrice - discountAmount);
+        var amountInCents = ConvertAmountToStripeLong(finalPrice);
 
         var paymentIntentService = new PaymentIntentService(_stripeClient);
         var metadata = new Dictionary<string, string>
@@ -82,8 +103,14 @@ public class StripePaymentService : IStripePaymentService
             ["user_id"] = userId,
             ["package_id"] = package.Id.ToString(),
             ["package_name"] = package.Name,
-            ["package_total_credits"] = package.TotalCredits.ToString()
+            ["package_total_credits"] = package.TotalCredits.ToString(),
+            ["original_price"] = originalPrice.ToString("0.00"),
+            ["discount_amount"] = discountAmount.ToString("0.00")
         };
+        if (!string.IsNullOrWhiteSpace(appliedCouponCode))
+        {
+            metadata["coupon_code"] = appliedCouponCode;
+        }
 
         var createOptions = new PaymentIntentCreateOptions
         {
@@ -124,7 +151,7 @@ public class StripePaymentService : IStripePaymentService
         {
             UserId = userId,
             ExternalTransactionId = paymentIntent.Id,
-            Amount = package.Price,
+            Amount = finalPrice,
             Currency = paymentIntent.Currency.ToUpperInvariant(),
             PaymentProvider = "stripe",
             Status = PaymentStatus.Pending,

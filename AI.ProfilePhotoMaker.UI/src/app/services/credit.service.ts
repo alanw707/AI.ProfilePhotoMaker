@@ -61,6 +61,13 @@ export interface CreatePaymentIntentResponse {
   isSimulation: boolean;
 }
 
+export interface CouponValidationPreview {
+  isValid: boolean;
+  message: string;
+  discountAmount: number;
+  finalPrice: number;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data: T;
@@ -113,7 +120,7 @@ export class CreditService {
   /**
    * Create a payment intent for Stripe
    */
-  createPaymentIntent(request: { packageId: number }): Observable<{
+  createPaymentIntent(request: { packageId: number; couponCode?: string }): Observable<{
     success: boolean;
     data: CreatePaymentIntentResponse;
     error?: { code: string; message: string };
@@ -123,6 +130,16 @@ export class CreditService {
       data: CreatePaymentIntentResponse;
       error?: { code: string; message: string };
     }>(this._configService.buildApiEndpoint('credit/create-payment-intent'), request);
+  }
+
+  validateCoupon(
+    code: string,
+    originalPrice: number
+  ): Observable<ApiResponse<CouponValidationPreview>> {
+    return this._http.post<ApiResponse<CouponValidationPreview>>(
+      this._configService.buildApiEndpoint('credit/validate-coupon'),
+      { code, originalPrice }
+    );
   }
 
   /**

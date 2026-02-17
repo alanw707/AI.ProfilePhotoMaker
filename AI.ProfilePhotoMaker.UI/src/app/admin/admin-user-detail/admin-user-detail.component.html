@@ -1,0 +1,12 @@
+<section *ngIf="user">
+  <h1>User Detail</h1>
+  <p>Email: {{ user.email }}</p>
+  <p>Name: {{ user.firstName }} {{ user.lastName }}</p>
+  <p>Credits: {{ user.credits }}</p>
+  <p>Gender: {{ user.gender || '-' }}</p>
+  <p>Ethnicity: {{ user.ethnicity || '-' }}</p>
+  <p>Subscription: {{ user.subscriptionTier }}</p>
+  <p>Email Confirmed: {{ user.emailConfirmed ? 'Yes' : 'No' }}</p>
+  <p>Roles: {{ (user.roles || []).join(', ') }}</p>
+  <a routerLink="/admin/users">Back to users</a>
+</section>

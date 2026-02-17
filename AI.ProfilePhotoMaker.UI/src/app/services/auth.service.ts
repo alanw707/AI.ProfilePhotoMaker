@@ -82,6 +82,12 @@ export class AuthService {
   private _currentUserSubject = new BehaviorSubject<AuthResponseDto | null>(this.getCurrentUser());
   public currentUser$ = this._currentUserSubject.asObservable();
 
+  private _rolesSubject = new BehaviorSubject<string[]>([]);
+  public roles$ = this._rolesSubject.asObservable();
+  public isAdmin$ = this.roles$.pipe(map(roles => roles.includes('Admin')));
+  private _rolesLoaded = false;
+  private _rolesInFlight$?: Observable<string[]>;
+
   // De-duplication holder for profile completion checks
   private _profileStatusInFlight$?: Observable<ProfileCompletionCheckDto>;
   // De-duplication holder for session validation checks
@@ -118,6 +124,8 @@ export class AuthService {
         const needsHydration = !current || (!current.firstName && !current.lastName);
         if (needsHydration) {
           this.hydrateUserFromProfile();
+        } else {
+          this.loadUserRoles();
         }
       }
       return of(this._sessionProbeResult === 'valid');
@@ -128,6 +136,8 @@ export class AuthService {
       const needsHydration = !current || (!current.firstName && !current.lastName);
       if (needsHydration) {
         this.hydrateUserFromProfile();
+      } else {
+        this.loadUserRoles();
       }
       return of(true);
     }
@@ -140,6 +150,8 @@ export class AuthService {
         const needsHydration = !current || (!current.firstName && !current.lastName);
         if (needsHydration) {
           this.hydrateUserFromProfile();
+        } else {
+          this.loadUserRoles();
         }
         return true;
       }),
@@ -262,6 +274,7 @@ export class AuthService {
 
             // Hydrate display name from server profile
             this.hydrateUserFromProfile();
+            this.loadUserRoles();
           }
         },
       });
@@ -390,11 +403,56 @@ export class AuthService {
           };
           localStorage.setItem('currentUser', JSON.stringify(updated));
           this._currentUserSubject.next(updated);
+          this.loadUserRoles();
         },
         error: () => {
           // Non-fatal; keep placeholder
+          this.loadUserRoles();
         },
       });
+  }
+
+  public ensureRolesLoaded(): Observable<string[]> {
+    if (!this._isAuthenticatedSubject.value) {
+      this._rolesSubject.next([]);
+      return of([]);
+    }
+
+    if (this._rolesLoaded) {
+      return of(this._rolesSubject.value);
+    }
+
+    if (this._rolesInFlight$) {
+      return this._rolesInFlight$;
+    }
+
+    this._rolesInFlight$ = this._http
+      .get<{
+        success: boolean;
+        data?: { roles?: string[] };
+      }>(this._config.buildApiEndpoint('auth/user-roles'))
+      .pipe(
+        map(response => {
+          const roles = response?.data?.roles || [];
+          this._rolesSubject.next(roles);
+          this._rolesLoaded = true;
+          return roles;
+        }),
+        catchError(() => {
+          this._rolesSubject.next([]);
+          return of([]);
+        }),
+        finalize(() => {
+          this._rolesInFlight$ = undefined;
+        }),
+        shareReplay(1)
+      );
+
+    return this._rolesInFlight$;
+  }
+
+  private loadUserRoles(): void {
+    this.ensureRolesLoaded().subscribe();
   }
 
   private extractUserFromToken(token: string): AuthResponseDto | null {
@@ -599,6 +657,9 @@ export class AuthService {
    */
   private clearAllAuthData(): void {
     this._sessionProbeResult = 'unknown';
+    this._rolesLoaded = false;
+    this._rolesInFlight$ = undefined;
+    this._rolesSubject.next([]);
     const authKeys = [
       this.TOKEN_KEY,
       'authToken',
@@ -677,6 +738,8 @@ export class AuthService {
       localStorage.clear();
       this._isAuthenticatedSubject.next(false);
       this._currentUserSubject.next(null);
+      this._rolesLoaded = false;
+      this._rolesSubject.next([]);
       this._router.navigate(['/auth/login']);
       console.log('🔒 Force logout completed');
     } catch (error) {
@@ -692,6 +755,10 @@ export class AuthService {
 
   isAuthenticated(): boolean {
     return this._isAuthenticatedSubject.value;
+  }
+
+  isAdmin(): boolean {
+    return this._rolesSubject.value.includes('Admin');
   }
 
   getCurrentUserId(): string | null {
@@ -743,6 +810,7 @@ export class AuthService {
       // Update reactive state
       this._isAuthenticatedSubject.next(true);
       this._currentUserSubject.next(authResult);
+      this._rolesLoaded = false;
 
       console.log('🔒 Secure session established successfully');
     } catch (error) {

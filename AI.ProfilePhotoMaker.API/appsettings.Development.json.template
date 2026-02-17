@@ -16,6 +16,9 @@
     "WebhookSecret": "STORED_IN_USER_SECRETS"
   },
   "AppBaseUrl": "http://localhost:4200",
+  "AdminSettings": {
+    "InitialAdminEmail": "admin@example.com"
+  },
   "Email": {
     "Enabled": true,
     "FromEmail": "no-reply@aiprofilephotomaker.com",

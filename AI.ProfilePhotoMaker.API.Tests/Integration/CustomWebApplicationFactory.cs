@@ -158,8 +158,10 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         services.AddScoped<AI.ProfilePhotoMaker.API.Services.IUserContextService, AI.ProfilePhotoMaker.API.Services.UserContextService>();
         services.AddScoped<AI.ProfilePhotoMaker.API.Data.IUserProfileRepository, AI.ProfilePhotoMaker.API.Data.UserProfileRepository>();
         services.AddScoped<AI.ProfilePhotoMaker.API.Services.IPendingGenerationService, AI.ProfilePhotoMaker.API.Services.PendingGenerationService>();
+        services.AddScoped<IAdminService, AdminService>();
         services.AddScoped<ICreditPackageService, FakeCreditPackageService>();
         services.AddScoped<IStripePaymentService, FakeStripePaymentService>();
+        services.AddScoped<ICouponService, FakeCouponService>();
         services.AddScoped<OpenAIImageGenerationService>(sp =>
             new OpenAIImageGenerationService(
                 new HttpClient(sp.GetRequiredService<FakeOpenAiHttpMessageHandler>(), disposeHandler: false),
@@ -347,6 +349,19 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
         public Task<List<string>> ListFilesAsync(string prefix)
             => Task.FromResult(new List<string> { $"{prefix}/sample-file.jpg" });
+    }
+
+    private sealed class FakeCouponService : ICouponService
+    {
+        public Task<(bool IsValid, string Message, decimal DiscountAmount)> ValidateCouponAsync(string code, string userId, decimal originalPrice)
+        {
+            return Task.FromResult((false, "Coupon not available in test factory", 0m));
+        }
+
+        public Task<bool> RedeemCouponAsync(string code, string userId, decimal originalPrice, decimal discountApplied)
+        {
+            return Task.FromResult(true);
+        }
     }
 
     private sealed class FakeModelDiscoveryService : AI.ProfilePhotoMaker.API.Services.IModelDiscoveryService

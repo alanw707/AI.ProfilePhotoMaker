@@ -19,8 +19,40 @@
         <span>{{ selectedPackage.totalCredits }}</span>
       </div>
       <div class="summary-row">
-        <span>Amount Due</span>
+        <span>Original Amount</span>
         <span>${{ selectedPackage.price }}</span>
+      </div>
+      <div class="summary-row" *ngIf="couponValidation?.isValid">
+        <span>Coupon Discount</span>
+        <span>- ${{ couponValidation?.discountAmount }}</span>
+      </div>
+      <div class="summary-row">
+        <span>Amount Due</span>
+        <span>${{ getFinalPrice() }}</span>
+      </div>
+    </div>
+
+    <div class="coupon-section">
+      <button type="button" (click)="couponExpanded = !couponExpanded">
+        {{ couponExpanded ? 'Hide coupon code' : 'Have a coupon code?' }}
+      </button>
+
+      <div *ngIf="couponExpanded">
+        <input
+          type="text"
+          [(ngModel)]="couponCode"
+          placeholder="Enter coupon code"
+          [ngModelOptions]="{ standalone: true }" />
+        <button type="button" (click)="validateCoupon()" [disabled]="isValidatingCoupon">
+          {{ isValidatingCoupon ? 'Checking...' : 'Apply Coupon' }}
+        </button>
+
+        <div *ngIf="couponValidation?.isValid" class="coupon-success">
+          Coupon applied! {{ couponValidation?.message }}
+        </div>
+        <div *ngIf="couponValidation && !couponValidation.isValid" class="coupon-error">
+          {{ couponValidation.message }}
+        </div>
       </div>
     </div>
 

@@ -1,0 +1,47 @@
+.action-row .btn
+  white-space: nowrap
+
+.admin-panel h2
+  margin-bottom: 0.35rem
+
+.mobile-user-list
+  display: none
+
+.mobile-user-card
+  border: 1px solid var(--border-color)
+  border-radius: 12px
+  padding: 0.8rem
+  margin-bottom: 0.75rem
+  background: color-mix(in srgb, var(--card-bg) 92%, transparent)
+
+.mobile-user-row
+  display: flex
+  align-items: center
+  justify-content: space-between
+  gap: 0.5rem
+
+  h3
+    margin: 0
+    font-size: 1.05rem
+
+.mobile-email
+  margin: 0.35rem 0 0.65rem 0
+  word-break: break-all
+
+.mobile-user-meta
+  margin-bottom: 0.7rem
+
+@media (max-width: 760px)
+  .desktop-table-wrap
+    display: none
+
+  .mobile-user-list
+    display: block
+
+  .action-row
+    gap: 0.35rem
+
+  .action-row .btn,
+  .action-row a.btn
+    font-size: 0.76rem
+    padding: 0.38rem 0.54rem

@@ -1,0 +1,250 @@
+.admin-shell
+  min-height: calc(100vh - 88px)
+  padding: 2rem clamp(1rem, 2.6vw, 2.75rem)
+  background: radial-gradient(circle at 0% 0%, rgba(79, 209, 199, 0.12), transparent 36%), radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.1), transparent 32%), var(--bg-primary)
+
+.admin-header
+  display: flex
+  justify-content: space-between
+  align-items: flex-start
+  gap: 1rem
+  margin-bottom: 1rem
+
+  h1
+    margin: 0
+    font-size: clamp(1.8rem, 3vw, 2.4rem)
+    letter-spacing: -0.02em
+
+.admin-kicker
+  margin: 0 0 0.25rem 0
+  font-size: 0.78rem
+  text-transform: uppercase
+  letter-spacing: 0.15em
+  color: var(--accent-primary)
+  font-weight: 700
+
+.admin-subtitle
+  margin: 0
+  color: var(--text-tertiary)
+  max-width: 680px
+
+.admin-nav
+  display: inline-flex
+  flex-wrap: wrap
+  gap: 0.5rem
+  margin: 0 0 1.25rem 0
+  padding: 0.45rem
+  border: 1px solid var(--border-color)
+  border-radius: 14px
+  background: color-mix(in srgb, var(--card-bg) 88%, transparent)
+
+  a
+    padding: 0.5rem 0.8rem
+    border-radius: 9px
+    color: var(--text-secondary)
+    font-size: 0.9rem
+    font-weight: 600
+    transition: background-color 0.2s ease, color 0.2s ease
+
+  a:hover
+    background: var(--hover-bg)
+    color: var(--text-primary)
+
+  a.is-active
+    background: linear-gradient(120deg, color-mix(in srgb, var(--accent-primary) 24%, transparent), color-mix(in srgb, var(--accent-secondary) 24%, transparent))
+    color: var(--text-primary)
+
+.admin-panel
+  margin-bottom: 1.2rem
+  padding: 1.1rem
+  border-radius: 16px
+  border: 1px solid var(--border-color)
+  background: color-mix(in srgb, var(--card-bg) 92%, transparent)
+  box-shadow: var(--shadow-sm)
+
+  h2
+    margin: 0 0 0.8rem 0
+    font-size: 1.2rem
+
+.danger-panel
+  border-color: color-mix(in srgb, var(--accent-danger) 50%, var(--border-color))
+
+.toolbar
+  display: flex
+  flex-wrap: wrap
+  align-items: end
+  gap: 0.85rem
+  margin-bottom: 0.9rem
+
+.field-grid
+  display: grid
+  grid-template-columns: repeat(2, minmax(0, 1fr))
+  gap: 0.85rem
+
+.field-span-2
+  grid-column: 1 / -1
+
+.field-group
+  display: flex
+  flex-direction: column
+  gap: 0.35rem
+
+  label
+    font-size: 0.84rem
+    font-weight: 600
+    color: var(--text-secondary)
+
+  input,
+  select
+    width: 100%
+    border: 1px solid var(--border-color)
+    border-radius: 10px
+    padding: 0.56rem 0.65rem
+    background: var(--input-bg)
+    color: var(--text-primary)
+
+  input:focus,
+  select:focus
+    outline: none
+    border-color: var(--accent-primary)
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 28%, transparent)
+
+.search-group
+  min-width: min(410px, 100%)
+
+.table-wrap
+  overflow-x: auto
+  border: 1px solid var(--border-color)
+  border-radius: 12px
+
+table
+  width: 100%
+  border-collapse: collapse
+
+th,
+td
+  padding: 0.68rem 0.72rem
+  text-align: left
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent)
+  vertical-align: middle
+
+th
+  font-size: 0.76rem
+  text-transform: uppercase
+  letter-spacing: 0.08em
+  color: var(--text-tertiary)
+  background: color-mix(in srgb, var(--hover-bg) 80%, transparent)
+
+tr:hover td
+  background: color-mix(in srgb, var(--hover-bg) 86%, transparent)
+
+.action-row
+  display: flex
+  flex-wrap: wrap
+  gap: 0.42rem
+
+.btn
+  border: 1px solid var(--border-color)
+  border-radius: 9px
+  padding: 0.44rem 0.72rem
+  font-size: 0.82rem
+  font-weight: 700
+  cursor: pointer
+  color: var(--text-primary)
+  background: color-mix(in srgb, var(--card-bg) 90%, transparent)
+
+.btn:disabled
+  opacity: 0.45
+  cursor: not-allowed
+
+.btn-primary
+  background: linear-gradient(120deg, color-mix(in srgb, var(--accent-primary) 42%, transparent), color-mix(in srgb, var(--accent-secondary) 36%, transparent))
+
+.btn-danger
+  border-color: color-mix(in srgb, var(--accent-danger) 52%, var(--border-color))
+  color: color-mix(in srgb, var(--accent-danger) 82%, var(--text-primary))
+
+.btn-warning
+  border-color: color-mix(in srgb, var(--accent-warning) 62%, var(--border-color))
+  color: color-mix(in srgb, var(--accent-warning) 65%, var(--text-primary))
+
+.btn-success
+  border-color: color-mix(in srgb, var(--accent-success) 58%, var(--border-color))
+  color: color-mix(in srgb, var(--accent-success) 72%, var(--text-primary))
+
+.btn-ghost
+  background: transparent
+
+.btn-sm
+  padding: 0.25rem 0.5rem
+  font-size: 0.75rem
+
+.pill
+  display: inline-flex
+  align-items: center
+  justify-content: center
+  border-radius: 999px
+  padding: 0.2rem 0.56rem
+  font-size: 0.74rem
+  font-weight: 700
+  background: color-mix(in srgb, var(--hover-bg) 82%, transparent)
+
+.pill-success
+  background: color-mix(in srgb, var(--accent-success) 24%, transparent)
+
+.pill-danger
+  background: color-mix(in srgb, var(--accent-danger) 21%, transparent)
+
+.pill-credit
+  background: color-mix(in srgb, var(--accent-secondary) 22%, transparent)
+
+.mono-text
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace
+  font-size: 0.82rem
+
+.empty-state
+  color: var(--text-tertiary)
+  text-align: center
+  padding: 1.35rem
+
+.pager
+  margin-top: 0.8rem
+  display: flex
+  align-items: center
+  justify-content: space-between
+  gap: 0.8rem
+  color: var(--text-secondary)
+
+.form-subtitle
+  margin: 0.2rem 0 0.8rem 0
+  color: var(--text-secondary)
+
+.warning-text
+  color: color-mix(in srgb, var(--accent-warning) 80%, var(--text-primary))
+  margin-top: 0.7rem
+
+.success-text
+  color: color-mix(in srgb, var(--accent-success) 80%, var(--text-primary))
+  margin-top: 0.65rem
+
+.error-text
+  color: color-mix(in srgb, var(--accent-danger) 82%, var(--text-primary))
+  margin-top: 0.65rem
+
+@media (max-width: 900px)
+  .field-grid
+    grid-template-columns: 1fr
+
+  .field-span-2
+    grid-column: auto
+
+@media (max-width: 640px)
+  .admin-shell
+    padding: 1rem 0.75rem 1.4rem
+
+  .admin-panel
+    padding: 0.85rem
+
+  th,
+  td
+    padding: 0.58rem

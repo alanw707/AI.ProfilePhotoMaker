@@ -211,11 +211,17 @@ export class RegisterComponent {
   }
 
   registerWithGoogle(): void {
+    if (this.f['ageConfirmed'].value !== true) {
+      this.f['ageConfirmed'].markAsTouched();
+      return;
+    }
+
     // Use consistent OAuth base URL method for registration
     const oauthBaseUrl = this._configService.getOAuthBaseUrl();
     const fullReturnUrl = `${this._configService.frontendBaseUrl}/app/dashboard`;
     const query = new URLSearchParams({
       returnUrl: fullReturnUrl,
+      ageConfirmed: 'true',
     });
 
     // ngrok free domains can show an interstitial page that drops OAuth nonce cookies.

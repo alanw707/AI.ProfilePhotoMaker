@@ -1,0 +1,54 @@
+<section class="admin-shell">
+  <header class="admin-header">
+    <div>
+      <p class="admin-kicker">Operations Center</p>
+      <h1>Admin Dashboard</h1>
+      <p class="admin-subtitle">Manage users, credits, coupons, and operational audits.</p>
+    </div>
+  </header>
+
+  <nav class="admin-nav">
+    <a routerLink="/admin/dashboard" routerLinkActive="is-active">Overview</a>
+    <a routerLink="/admin/users" routerLinkActive="is-active">Users</a>
+    <a routerLink="/admin/coupons" routerLinkActive="is-active">Coupons</a>
+    <a routerLink="/admin/audit-log" routerLinkActive="is-active">Audit Log</a>
+  </nav>
+
+  <div class="metrics-grid">
+    <article class="metric-card">
+      <p>Total Users</p>
+      <h2>{{ dashboard.totalUsers }}</h2>
+    </article>
+    <article class="metric-card">
+      <p>Active Users</p>
+      <h2>{{ dashboard.activeUsers }}</h2>
+    </article>
+    <article class="metric-card">
+      <p>Credits Outstanding</p>
+      <h2>{{ dashboard.totalCreditsOutstanding }}</h2>
+    </article>
+    <article class="metric-card">
+      <p>Credits Purchased</p>
+      <h2>{{ dashboard.totalCreditsPurchased }}</h2>
+    </article>
+    <article class="metric-card">
+      <p>Active Coupons</p>
+      <h2>{{ dashboard.activeCoupons }}</h2>
+    </article>
+  </div>
+
+  <section class="quick-actions">
+    <a routerLink="/admin/users" class="action-card">
+      <h3>User Management</h3>
+      <p>Search accounts, lock/unlock users, and adjust credit balances.</p>
+    </a>
+    <a routerLink="/admin/coupons" class="action-card">
+      <h3>Coupon Management</h3>
+      <p>Create discount codes, manage limits, and deactivate promotions.</p>
+    </a>
+    <a routerLink="/admin/audit-log" class="action-card">
+      <h3>Audit Log</h3>
+      <p>Review every admin action with timestamped change details.</p>
+    </a>
+  </section>
+</section>

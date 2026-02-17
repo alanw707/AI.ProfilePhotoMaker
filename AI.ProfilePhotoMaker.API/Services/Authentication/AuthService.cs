@@ -105,7 +105,8 @@ public class AuthService : IAuthService
         await _context.SaveChangesAsync();
 
         // Generate token for successful registration to automatically log in the user
-        var token = GenerateJwtToken(user);
+        var roles = await _userManager.GetRolesAsync(user);
+        var token = GenerateJwtToken(user, roles);
         return new AuthResponseDto(true, "User created successfully!", token.Token, token.Expiration, user.Email, user.FirstName, user.LastName);
     }
 
@@ -123,12 +124,13 @@ public class AuthService : IAuthService
             return new AuthResponseDto(false, "Invalid email or password!", "", DateTime.MinValue);
         }
 
-        var token = GenerateJwtToken(user);
+        var roles = await _userManager.GetRolesAsync(user);
+        var token = GenerateJwtToken(user, roles);
         return new AuthResponseDto(true, "Login successful!", token.Token, token.Expiration, user.Email, user.FirstName, user.LastName);
     }
 
     // JWT token generation for external login
-    public (string Token, DateTime Expiration) GenerateJwtToken(ApplicationUser user)
+    public (string Token, DateTime Expiration) GenerateJwtToken(ApplicationUser user, IList<string> roles)
     {
         // Example dummy token and expiration
         if (user.UserName != null)
@@ -142,6 +144,7 @@ public class AuthService : IAuthService
                 new Claim(ClaimTypes.GivenName, user.FirstName ?? ""),
                 new Claim(ClaimTypes.Surname, user.LastName ?? "")
             };
+            authClaims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
             // Read JWT configuration using the same key casing used by validation ("Jwt")
             var secret = _configuration["Jwt:Secret"];
@@ -227,7 +230,8 @@ public class AuthService : IAuthService
             var user = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
             if (user != null)
             {
-                var token = GenerateJwtToken(user);
+                var roles = await _userManager.GetRolesAsync(user);
+                var token = GenerateJwtToken(user, roles);
                 return new AuthResponseDto(true, "External login successful!", token.Token, token.Expiration, user.Email, user.FirstName, user.LastName);
             }
         }
@@ -249,7 +253,8 @@ public class AuthService : IAuthService
             var addLoginResult = await _userManager.AddLoginAsync(existingUser, info);
             if (addLoginResult.Succeeded)
             {
-                var token = GenerateJwtToken(existingUser);
+                var roles = await _userManager.GetRolesAsync(existingUser);
+                var token = GenerateJwtToken(existingUser, roles);
                 return new AuthResponseDto(true, "External login added and login successful!", token.Token, token.Expiration, existingUser.Email, existingUser.FirstName, existingUser.LastName);
             }
             else
@@ -268,7 +273,8 @@ public class AuthService : IAuthService
             var addLoginResult = await _userManager.AddLoginAsync(newUser, info);
             if (addLoginResult.Succeeded)
             {
-                var token = GenerateJwtToken(newUser);
+                var roles = await _userManager.GetRolesAsync(newUser);
+                var token = GenerateJwtToken(newUser, roles);
                 return new AuthResponseDto(true, "User created and external login successful!", token.Token, token.Expiration, newUser.Email, newUser.FirstName, newUser.LastName);
             }
         }

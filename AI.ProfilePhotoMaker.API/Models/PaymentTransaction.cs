@@ -45,7 +45,8 @@ public enum PaymentStatus
     Completed = 1, // Alias for Succeeded
     Failed = 2,
     Cancelled = 3,
-    Refunded = 4
+    Refunded = 4,
+    PendingReview = 5 // Flagged for manual review (e.g., coupon redemption failure after payment)
 }
 
 public enum PaymentType
