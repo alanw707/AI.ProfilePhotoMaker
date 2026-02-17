@@ -235,6 +235,7 @@ public class AdminService : IAdminService
         // Admin credit adjustment limits to prevent abuse
         const int MaxCreditsPerAdjustment = 10000;
         const int MaxCreditBalance = 100000;
+        var isSqlServer = _context.Database.IsSqlServer();
 
         if (dto.Amount > MaxCreditsPerAdjustment)
         {
@@ -251,13 +252,23 @@ public class AdminService : IAdminService
         {
             return await strategy.ExecuteAsync(async () =>
             {
-                await using var transaction = await _context.Database.BeginTransactionAsync();
+                await using var transaction = isSqlServer
+                    ? await _context.Database.BeginTransactionAsync()
+                    : null;
 
                 // Read the profile with a lock hint to prevent concurrent modifications.
                 // Use FromSqlRaw with UPDLOCK to serialize concurrent credit adjustments for the same user.
-                var profile = await _context.UserProfiles
-                    .FromSqlRaw("SELECT * FROM UserProfiles WITH (UPDLOCK) WHERE UserId = {0}", dto.UserId)
-                    .FirstOrDefaultAsync();
+                UserProfile? profile;
+                if (isSqlServer)
+                {
+                    profile = await _context.UserProfiles
+                        .FromSqlRaw("SELECT * FROM UserProfiles WITH (UPDLOCK) WHERE UserId = {0}", dto.UserId)
+                        .FirstOrDefaultAsync();
+                }
+                else
+                {
+                    profile = await _context.UserProfiles.FirstOrDefaultAsync(p => p.UserId == dto.UserId);
+                }
 
                 if (profile == null)
                 {
@@ -283,7 +294,10 @@ public class AdminService : IAdminService
                 AddAuditLog(adminUserId, action, dto.UserId, dto.Reason, oldValue.ToString(), newValue.ToString());
 
                 await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
+                if (transaction != null)
+                {
+                    await transaction.CommitAsync();
+                }
                 return (true, "Credits adjusted", newValue);
             });
         }
