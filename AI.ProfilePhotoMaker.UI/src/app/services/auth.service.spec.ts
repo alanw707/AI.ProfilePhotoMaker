@@ -30,6 +30,8 @@ describe('AuthService', () => {
   });
 
   afterEach(() => {
+    const pendingRoleRequests = httpMock.match('/api/auth/user-roles');
+    pendingRoleRequests.forEach(req => req.flush({ success: true, data: { roles: [] } }));
     httpMock.verify();
     localStorage.clear();
   });
@@ -466,6 +468,8 @@ describe('AuthService Integration Tests', () => {
   });
 
   afterEach(() => {
+    const pendingRoleRequests = httpMock.match('/api/auth/user-roles');
+    pendingRoleRequests.forEach(req => req.flush({ success: true, data: { roles: [] } }));
     httpMock.verify();
     localStorage.clear();
   });
