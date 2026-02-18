@@ -59,6 +59,7 @@ export class AdminUsersComponent implements OnInit {
     this.pendingAction = action;
     this.reason = '';
     this.creditAmount = 0;
+    this.isSubmitting = false;
     this.actionMessage = '';
     this.actionMessageType = '';
   }
@@ -69,6 +70,7 @@ export class AdminUsersComponent implements OnInit {
     this.pendingAction = null;
     this.reason = '';
     this.creditAmount = 0;
+    this.isSubmitting = false;
   }
 
   submitAction(): void {
@@ -107,12 +109,14 @@ export class AdminUsersComponent implements OnInit {
     this.isSubmitting = true;
     request$.pipe(finalize(() => (this.isSubmitting = false))).subscribe({
       next: () => {
+        this.isSubmitting = false;
         this.actionMessage = 'Action completed successfully.';
         this.actionMessageType = 'success';
         this.cancelAction();
         this.loadUsers();
       },
       error: error => {
+        this.isSubmitting = false;
         this.actionMessage = error?.message || 'Action failed. Please try again.';
         this.actionMessageType = 'error';
       },
