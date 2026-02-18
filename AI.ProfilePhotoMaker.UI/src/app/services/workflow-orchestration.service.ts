@@ -203,6 +203,10 @@ export class WorkflowOrchestrationService {
   private _pollingInterval?: NodeJS.Timeout;
   private _photoCompletionPollingInterval?: NodeJS.Timeout;
   private _timeBasedProgressInterval?: NodeJS.Timeout;
+  /** Suppresses direct frontend generation when backend handles it via PendingGenerationService.
+   *  Set in queueBackgroundGeneration(), reset in _startModelTraining() and resetProgress().
+   *  See also DashboardComponent._backgroundQueued for the UI-level click guard. */
+  private _backgroundGenerationQueued = false;
 
   // Lazy-loaded services
   private _fileUploadService: FileUploadService | null = null;
@@ -246,6 +250,7 @@ export class WorkflowOrchestrationService {
 
   resetProgress(): void {
     this._progress.next(this._initialProgress);
+    this._backgroundGenerationQueued = false;
     this._clearAllIntervals();
   }
 
@@ -586,6 +591,9 @@ export class WorkflowOrchestrationService {
     selectedStyles: StyleOption[],
     imagesPerStyle: number
   ): Promise<void> {
+    // Reset background generation flag for this new session
+    this._backgroundGenerationQueued = false;
+
     try {
       // Safety guard: never train if model already ready (race conditions, stale state)
       try {
@@ -983,7 +991,18 @@ export class WorkflowOrchestrationService {
                 this.getProgress().trainingId
               );
               if (finalVersion) {
-                await this._generateImagesWithStyles(selectedStyles, imagesPerStyle, finalVersion);
+                if (this._backgroundGenerationQueued) {
+                  // Backend will handle generation via ProcessTrainingCompletion → ProcessAsync
+                  this._logger.workflowDebug(
+                    'Skipping frontend generation — background generation queued'
+                  );
+                } else {
+                  await this._generateImagesWithStyles(
+                    selectedStyles,
+                    imagesPerStyle,
+                    finalVersion
+                  );
+                }
               } else {
                 // If we somehow still couldn't resolve, inform user but avoid hard stop
                 this._deps.notificationService.warning(
@@ -999,11 +1018,17 @@ export class WorkflowOrchestrationService {
                         60000
                       );
                       if (laterVersion) {
-                        await this._generateImagesWithStyles(
-                          selectedStyles,
-                          imagesPerStyle,
-                          laterVersion
-                        );
+                        if (this._backgroundGenerationQueued) {
+                          this._logger.workflowDebug(
+                            'Skipping frontend generation (retry path) — background generation queued'
+                          );
+                        } else {
+                          await this._generateImagesWithStyles(
+                            selectedStyles,
+                            imagesPerStyle,
+                            laterVersion
+                          );
+                        }
                       }
                     });
                   }, 15000);
@@ -1011,6 +1036,7 @@ export class WorkflowOrchestrationService {
               }
             } else if (status === 'failed') {
               clearInterval(this._pollingInterval);
+              this._backgroundGenerationQueued = false;
               this._setProgress({
                 isTraining: false,
                 progressPercentage: 0,
@@ -1788,31 +1814,44 @@ export class WorkflowOrchestrationService {
   async queueBackgroundGeneration(
     selectedStyles: StyleOption[],
     imagesPerStyle: number
-  ): Promise<void> {
+  ): Promise<boolean> {
+    // Set flag synchronously before any await so the polling interval sees it immediately.
+    // The flag may be reset below on early-exit or API failure.
+    this._backgroundGenerationQueued = true;
+
     const trainingId = this.getProgress().trainingId;
     if (!trainingId || selectedStyles.length === 0) {
-      return;
+      this._backgroundGenerationQueued = false;
+      return false;
     }
 
     try {
       const replicateService = await this._loadReplicateService();
-      await firstValueFrom(
+      const result = await firstValueFrom(
         replicateService.queueGeneration(
           trainingId,
           selectedStyles.map(s => s.name),
           imagesPerStyle
         )
       );
-      this._deps.notificationService.info(
-        'Background Generation Queued',
-        'We will start generating your selected styles as soon as training is ready.'
-      );
+      if (!result || !result.success) {
+        this._backgroundGenerationQueued = false;
+        return false;
+      } else {
+        this._deps.notificationService.info(
+          'Background Generation Queued',
+          'We will start generating your selected styles as soon as training is ready.'
+        );
+        return true;
+      }
     } catch (error) {
+      this._backgroundGenerationQueued = false;
       this._logger.error('Failed to queue background generation', error);
       this._deps.notificationService.warning(
         'Could not queue generation',
         'Please stay on this page or retry to ensure generation starts after training.'
       );
+      return false;
     }
   }
 }

@@ -83,7 +83,10 @@ interface WorkflowOrchestrationService {
     imagesPerStyle: number,
     modelStatus: string
   ): CreditCalculation;
-  queueBackgroundGeneration(selectedStyles: StyleOption[], imagesPerStyle: number): Promise<void>;
+  queueBackgroundGeneration(
+    selectedStyles: StyleOption[],
+    imagesPerStyle: number
+  ): Promise<boolean>;
   dismissSuccessMessage(): void;
   pause(): void;
 }
@@ -119,6 +122,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Lazy-loaded service
   private _workflowService: WorkflowOrchestrationService | null = null;
+  /** Guards duplicate "Continue in Background" clicks for the full training session.
+   *  Reset in startTrainingWithStyles(). See also WorkflowOrchestrationService._backgroundGenerationQueued. */
+  private _backgroundQueued = false;
   private readonly _subscriptions = new Subscription();
   private _workflowProgressSubject = new BehaviorSubject<WorkflowProgress>({
     isTraining: false,
@@ -405,6 +411,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const selectedStyles = this.availableStyles.filter(s => s.selected);
 
     this.isTrainingStarted = true;
+    this._backgroundQueued = false; // Reset for new session
     this.currentStep = 3;
     this._setOptimisticActiveJob('training');
 
@@ -587,6 +594,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   continueInBackground(): void {
+    // Guard: stays true for the entire training session (reset in startTrainingWithStyles).
+    // This prevents duplicate queue requests, not just rapid clicks.
+    if (this._backgroundQueued) {
+      return;
+    }
+    this._backgroundQueued = true;
+
     const selectedStyles = this.availableStyles.filter(s => s.selected);
 
     const queueWork = async () => {
@@ -595,17 +609,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
           await this._loadWorkflowService();
         }
         if (this._workflowService) {
-          await this._workflowService.queueBackgroundGeneration(
+          const success = await this._workflowService.queueBackgroundGeneration(
             selectedStyles,
             this.imagesPerStyle
           );
+          if (!success) {
+            this._backgroundQueued = false; // Sync with service flag — allow retry
+          }
         }
       } catch (error) {
-        console.error('Failed to queue background generation', error);
+        this._backgroundQueued = false; // Allow retry on failure
+        this._logger.error('Failed to queue background generation', error);
       }
     };
 
-    queueWork();
+    void queueWork();
 
     this._notificationService.info(
       'Continuing in Background',
@@ -804,9 +822,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
         normalizedError.includes('retention policy') ||
         normalizedError.includes('expired');
 
-      const isRetentionLifecycle = isModelMissing && (
-        normalizedError.includes('retention policy') || normalizedError.includes('expired')
-      );
+      const isRetentionLifecycle =
+        isModelMissing &&
+        (normalizedError.includes('retention policy') || normalizedError.includes('expired'));
 
       const errorDetails = isModelMissing
         ? isRetentionLifecycle
