@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -14,6 +14,10 @@ import { AdminService } from '../../services/admin.service';
   styleUrls: ['../admin-shared.sass', './admin-users.component.sass'],
 })
 export class AdminUsersComponent implements OnInit {
+  constructor(
+    private _adminService: AdminService,
+    private _cdr: ChangeDetectorRef
+  ) {}
   users: any[] = [];
   search = '';
   page = 1;
@@ -31,8 +35,6 @@ export class AdminUsersComponent implements OnInit {
   get totalPages(): number {
     return Math.max(1, Math.ceil(this.totalCount / this.pageSize));
   }
-
-  constructor(private _adminService: AdminService) {}
 
   ngOnInit(): void {
     this.loadUsers();
@@ -71,6 +73,7 @@ export class AdminUsersComponent implements OnInit {
     this.reason = '';
     this.creditAmount = 0;
     this.isSubmitting = false;
+    this._cdr.detectChanges();
   }
 
   submitAction(): void {
@@ -107,20 +110,29 @@ export class AdminUsersComponent implements OnInit {
     }
 
     this.isSubmitting = true;
-    request$.pipe(finalize(() => (this.isSubmitting = false))).subscribe({
-      next: () => {
-        this.isSubmitting = false;
-        this.actionMessage = 'Action completed successfully.';
-        this.actionMessageType = 'success';
-        this.cancelAction();
-        this.loadUsers();
-      },
-      error: error => {
-        this.isSubmitting = false;
-        this.actionMessage = error?.message || 'Action failed. Please try again.';
-        this.actionMessageType = 'error';
-      },
-    });
+    request$
+      .pipe(
+        finalize(() => {
+          this.isSubmitting = false;
+          this._cdr.detectChanges();
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.isSubmitting = false;
+          this.actionMessage = 'Action completed successfully.';
+          this.actionMessageType = 'success';
+          this.cancelAction();
+          this._cdr.detectChanges();
+          this.loadUsers();
+        },
+        error: error => {
+          this.isSubmitting = false;
+          this.actionMessage = error?.message || 'Action failed. Please try again.';
+          this.actionMessageType = 'error';
+          this._cdr.detectChanges();
+        },
+      });
   }
 
   nextPage(): void {
