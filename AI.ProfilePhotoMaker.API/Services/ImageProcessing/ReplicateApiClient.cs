@@ -24,7 +24,7 @@ public class ReplicateApiClient : IReplicateApiClient
     private static readonly string[] s_realismPromptModifiers =
     {
         "natural skin texture",
-        "subtle skin pores",
+        "soft natural finish",
         "soft natural sheen",
         "realistic skin detail",
         "unretouched look",
@@ -978,7 +978,13 @@ public class ReplicateApiClient : IReplicateApiClient
             .Replace("{subject}", "person");
 
         // Clean up extra spaces
-        return result.Replace("  ", " ").Trim();
+        result = result.Replace("  ", " ").Trim();
+
+        // Universal blemish guard: always negate moles/spots regardless of DB template content
+        if (!string.IsNullOrWhiteSpace(result))
+            result += ", moles, dark spots, skin blemishes, birthmarks, skin spots";
+
+        return result;
     }
 
     internal static StyleTuningResult ResolveStyleTuning(IConfiguration configuration, string styleName)

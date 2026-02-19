@@ -359,7 +359,13 @@ public class MockReplicateApiClient : IReplicateApiClient
             .Replace("{subject}", "person");
 
         // Clean up extra spaces
-        return result.Replace("  ", " ").Trim();
+        result = result.Replace("  ", " ").Trim();
+
+        // Universal blemish guard: always negate moles/spots regardless of DB template content
+        if (!string.IsNullOrWhiteSpace(result))
+            result += ", moles, dark spots, skin blemishes, birthmarks, skin spots";
+
+        return result;
     }
 
 
