@@ -163,7 +163,7 @@ public class ReplicateApiClientStyleTuningTests
         var allowedModifiers = new[]
         {
             "natural skin texture",
-            "subtle skin pores",
+            "soft natural finish",
             "soft natural sheen",
             "realistic skin detail",
             "unretouched look",
