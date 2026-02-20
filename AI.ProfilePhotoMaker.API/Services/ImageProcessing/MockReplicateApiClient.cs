@@ -275,9 +275,9 @@ public class MockReplicateApiClient : IReplicateApiClient
 
         if (style == null)
         {
-            // Fallback to corporate style (exists in database)
+            // Fallback to linkedin style (most generic professional style)
             var defaultStyle = await _context.Styles
-                .Where(s => s.Name.ToLower() == "corporate" && s.IsActive)
+                .Where(s => s.Name.ToLower() == "linkedin" && s.IsActive)
                 .Select(s => new { s.PromptTemplate, s.NegativePromptTemplate })
                 .FirstOrDefaultAsync();
 

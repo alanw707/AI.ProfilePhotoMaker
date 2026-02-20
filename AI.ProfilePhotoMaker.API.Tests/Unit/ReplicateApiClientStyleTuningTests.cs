@@ -16,7 +16,7 @@ namespace AI.ProfilePhotoMaker.API.Tests.Unit;
 public class ReplicateApiClientStyleTuningTests
 {
     [Theory]
-    [InlineData("corporate", 2.8, 34)]
+    [InlineData("executive", 2.8, 34)]
     [InlineData("CASUAL", 2.3, 40)]
     [InlineData("unknown", 3.0, 28)]
     public async Task GenerateImagesAsync_ResolvesStyleTuningByGroup(
@@ -187,7 +187,7 @@ public class ReplicateApiClientStyleTuningTests
                 ["Replicate:StyleTuning:ProNumInferenceSteps"] = "34",
                 ["Replicate:StyleTuning:CasualGuidanceScale"] = "2.3",
                 ["Replicate:StyleTuning:CasualNumInferenceSteps"] = "40",
-                ["Replicate:StyleTuning:ProStyles:0"] = "corporate",
+                ["Replicate:StyleTuning:ProStyles:0"] = "executive",
                 ["Replicate:StyleTuning:CasualRelaxedStyles:0"] = "casual"
             })
             .Build();
@@ -207,10 +207,10 @@ public class ReplicateApiClientStyleTuningTests
             new Style
             {
                 Id = 1000,
-                Name = "corporate",
-                Description = "Corporate style",
-                PromptTemplate = "A photo of {subject}, corporate portrait",
-                NegativePromptTemplate = "casual clothes, unprofessional",
+                Name = "executive",
+                Description = "Executive leadership portrait",
+                PromptTemplate = "A photo of {subject}, executive leadership portrait of {gender} {ethnicity}, formal attire",
+                NegativePromptTemplate = "casual clothes, unprofessional, waxy skin, plastic skin",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -221,7 +221,7 @@ public class ReplicateApiClientStyleTuningTests
                 Name = "casual",
                 Description = "Casual style",
                 PromptTemplate = "A photo of {subject}, casual portrait",
-                NegativePromptTemplate = "formal business attire, suit, tie",
+                NegativePromptTemplate = "formal business attire, suit, tie, waxy skin, plastic skin",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
