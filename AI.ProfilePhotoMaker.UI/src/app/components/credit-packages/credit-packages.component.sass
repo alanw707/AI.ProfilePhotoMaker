@@ -10,7 +10,7 @@
     
   // Mobile padding optimization
   @media (max-width: 640px)
-    padding: 1.25rem 0.75rem
+    padding: 1.25rem 0.5rem
 
 .header
   text-align: center
@@ -54,10 +54,10 @@
 
   @media (max-width: 768px)
     padding: 1.75rem 1.25rem
-    max-width: 520px
+    max-width: 640px
 
   @media (max-width: 480px)
-    padding: 1.1rem 0.75rem
+    padding: 1rem 0.65rem
     border-radius: 12px
     box-shadow: none
     max-width: 100%
@@ -133,7 +133,7 @@
     min-width: 0
 
     @media (max-width: 480px)
-      padding: 1.1rem 1.25rem
+      padding: 1rem
       border-radius: 12px
 
   .card-block
@@ -191,7 +191,7 @@
   .stripe-card-container
     border: 1px solid rgba(102, 126, 234, 0.35)
     border-radius: 14px
-    padding: 1rem 1.25rem
+    padding: 1.1rem 0.85rem
     background: rgba(244, 248, 255, 0.92)
     transition: border-color 0.2s ease, box-shadow 0.2s ease
     min-width: 0
@@ -203,8 +203,11 @@
     #card-element
       display: block
       width: 100%
-      min-height: 52px
+      min-height: 56px
       position: relative
+
+    @media (max-width: 480px)
+      padding: 1rem 0.75rem
 
   .card-supporting-text
     margin: 0

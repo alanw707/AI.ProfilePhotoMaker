@@ -377,7 +377,7 @@ export class CreditPackagesComponent implements OnInit, OnDestroy {
           fontSize: '16px',
           fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
           fontSmoothing: 'antialiased',
-          letterSpacing: '0.4px',
+          letterSpacing: '0.2px',
           lineHeight: '24px',
           iconColor: '#55d0ff',
           backgroundColor: 'transparent',
