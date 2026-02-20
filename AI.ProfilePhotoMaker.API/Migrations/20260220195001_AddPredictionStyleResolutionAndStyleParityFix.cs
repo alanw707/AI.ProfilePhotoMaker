@@ -58,8 +58,15 @@ SET [PromptTemplate] = '{subject}, fitness professional portrait of {gender} {et
 WHERE [Name] = 'fitness';
 ");
 
-            // Ensure digital-native canonical row is Id=20 and migrate existing references from Id=21.
+            // Ensure digital-native canonical row is Id=20 and migrate existing references safely.
             migrationBuilder.Sql(@"
+-- Step 1: free the unique Name slot in case digital-native currently exists on non-20 rows.
+UPDATE [Styles]
+SET [Name] = CONCAT('digital-native-legacy-', CAST([Id] AS nvarchar(20))),
+    [UpdatedAt] = GETUTCDATE()
+WHERE [Name] = 'digital-native' AND [Id] <> 20;
+
+-- Step 2: upsert canonical Id=20 row.
 IF NOT EXISTS (SELECT 1 FROM [Styles] WHERE [Id] = 20)
 BEGIN
     INSERT INTO [Styles] ([Id], [Name], [Description], [PromptTemplate], [NegativePromptTemplate], [IsActive], [CreatedAt], [UpdatedAt])
@@ -77,23 +84,24 @@ BEGIN
     WHERE [Id] = 20;
 END
 
-IF EXISTS (SELECT 1 FROM [Styles] WHERE [Id] = 21)
+-- Step 3: remap style references from any legacy digital-native rows to Id=20.
+IF EXISTS (SELECT 1 FROM [Styles] WHERE [Name] LIKE 'digital-native-legacy-%')
 BEGIN
     IF OBJECT_ID('UserStyleSelections', 'U') IS NOT NULL
     BEGIN
         UPDATE [UserStyleSelections]
         SET [StyleId] = 20
-        WHERE [StyleId] = 21;
+        WHERE [StyleId] IN (SELECT [Id] FROM [Styles] WHERE [Name] LIKE 'digital-native-legacy-%');
     END
 
     IF OBJECT_ID('UserProfiles', 'U') IS NOT NULL AND COL_LENGTH('UserProfiles', 'StyleId') IS NOT NULL
     BEGIN
         UPDATE [UserProfiles]
         SET [StyleId] = 20
-        WHERE [StyleId] = 21;
+        WHERE [StyleId] IN (SELECT [Id] FROM [Styles] WHERE [Name] LIKE 'digital-native-legacy-%');
     END
 
-    DELETE FROM [Styles] WHERE [Id] = 21;
+    DELETE FROM [Styles] WHERE [Name] LIKE 'digital-native-legacy-%';
 END
 ");
         }
@@ -123,6 +131,15 @@ END
             // Keep rollback data-safe: recreate style 21 if missing and remap references back,
             // but do not hard-delete style 20 because it may be referenced in live data.
             migrationBuilder.Sql(@"
+IF EXISTS (SELECT 1 FROM [Styles] WHERE [Id] = 20 AND [Name] = 'digital-native')
+   AND NOT EXISTS (SELECT 1 FROM [Styles] WHERE [Id] = 21)
+BEGIN
+    UPDATE [Styles]
+    SET [Name] = 'digital-native-legacy-20',
+        [UpdatedAt] = GETUTCDATE()
+    WHERE [Id] = 20;
+END
+
 IF NOT EXISTS (SELECT 1 FROM [Styles] WHERE [Id] = 21)
 BEGIN
     INSERT INTO [Styles] ([Id], [Name], [Description], [PromptTemplate], [NegativePromptTemplate], [IsActive], [CreatedAt], [UpdatedAt])
