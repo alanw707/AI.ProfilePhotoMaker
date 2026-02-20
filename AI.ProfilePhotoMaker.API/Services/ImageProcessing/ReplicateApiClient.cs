@@ -18,6 +18,14 @@ namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 /// </summary>
 public class ReplicateApiClient : IReplicateApiClient
 {
+    private sealed record StylePromptResolution(
+        string RequestedStyle,
+        string ResolvedStyle,
+        int? ResolvedStyleId,
+        string PromptTemplate,
+        string NegativePromptTemplate,
+        bool UsedFallback);
+
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, ReplicatePredictionResult> s_mockPredictions
         = new();
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<IConfiguration, StyleTuningCacheEntry> s_styleTuningCache = new();
@@ -556,17 +564,23 @@ public class ReplicateApiClient : IReplicateApiClient
         try
         {
             // Get style template from database and create prompt
-            var stylePrompts = await GetStylePromptsFromDatabase(style);
-            string stylePrompt = CreateFluxStylePrompt(stylePrompts.PromptTemplate, userInfo, userId);
-            string negativePrompt = CreateFluxNegativePrompt(stylePrompts.NegativePromptTemplate, userInfo);
-            var styleTuning = ResolveStyleTuning(_configuration, style);
+            var styleResolution = await GetStylePromptsFromDatabase(style);
+            string stylePrompt = CreateFluxStylePrompt(styleResolution.PromptTemplate, userInfo, userId);
+            string negativePrompt = CreateFluxNegativePrompt(styleResolution.NegativePromptTemplate, userInfo);
+            var styleTuning = ResolveStyleTuning(_configuration, styleResolution.ResolvedStyle);
             stylePrompt = ApplyRealismModifier(stylePrompt);
 
-            _logger.LogInformation("Generating images with model version: {ModelVersion} for user: {UserId}, style: {Style}",
-                S(trainedModelVersion), Sid(userId), S(style));
+            _logger.LogInformation(
+                "Generating images with model version: {ModelVersion} for user: {UserId}, requestedStyle: {RequestedStyle}, resolvedStyle: {ResolvedStyle}, resolvedStyleId: {ResolvedStyleId}, fallback: {Fallback}",
+                S(trainedModelVersion),
+                Sid(userId),
+                S(styleResolution.RequestedStyle),
+                S(styleResolution.ResolvedStyle),
+                styleResolution.ResolvedStyleId,
+                styleResolution.UsedFallback);
             _logger.LogDebug(
                 "Resolved style tuning for {Style} ({Group}) => guidance {GuidanceScale}, steps {NumInferenceSteps}",
-                S(style),
+                S(styleResolution.ResolvedStyle),
                 styleTuning.Group,
                 styleTuning.GuidanceScale,
                 styleTuning.NumInferenceSteps);
@@ -601,11 +615,18 @@ public class ReplicateApiClient : IReplicateApiClient
                     ["num_inference_steps"] = styleTuning.NumInferenceSteps,
                     // Metadata for webhook processing
                     ["user_id"] = userId,
-                    ["style"] = style
+                    ["style"] = styleResolution.ResolvedStyle,
+                    ["requested_style"] = styleResolution.RequestedStyle,
+                    ["resolved_style"] = styleResolution.ResolvedStyle
                 },
                 webhook = webhookUrl,
                 webhook_events_filter = new[] { "completed" }
             };
+
+            if (styleResolution.ResolvedStyleId.HasValue)
+            {
+                predictionRequest.input["resolved_style_id"] = styleResolution.ResolvedStyleId.Value;
+            }
 
             var content = new StringContent(
                 JsonSerializer.Serialize(predictionRequest),
@@ -669,7 +690,10 @@ public class ReplicateApiClient : IReplicateApiClient
                     {
                         Id = result.Id!,
                         UserId = userId,
-                        Style = style,
+                        Style = styleResolution.ResolvedStyle,
+                        RequestedStyle = styleResolution.RequestedStyle,
+                        ResolvedStyle = styleResolution.ResolvedStyle,
+                        ResolvedStyleId = styleResolution.ResolvedStyleId,
                         CreatedAt = DateTime.UtcNow
                     });
                     await _context.SaveChangesAsync();
@@ -722,10 +746,10 @@ public class ReplicateApiClient : IReplicateApiClient
     {
         try
         {
-            var stylePrompts = await GetStylePromptsFromDatabase(style);
-            string stylePrompt = CreateFluxStylePromptBasic(stylePrompts.PromptTemplate, userInfo);
-            string negativePrompt = CreateFluxNegativePrompt(stylePrompts.NegativePromptTemplate, userInfo);
-            var styleTuning = ResolveStyleTuning(_configuration, style);
+            var styleResolution = await GetStylePromptsFromDatabase(style);
+            string stylePrompt = CreateFluxStylePromptBasic(styleResolution.PromptTemplate, userInfo);
+            string negativePrompt = CreateFluxNegativePrompt(styleResolution.NegativePromptTemplate, userInfo);
+            var styleTuning = ResolveStyleTuning(_configuration, styleResolution.ResolvedStyle);
             stylePrompt = ApplyRealismModifier(stylePrompt);
 
             var modelId = _configuration["Replicate:FluxGenerationModelId"];
@@ -896,34 +920,51 @@ public class ReplicateApiClient : IReplicateApiClient
     /// <summary>
     /// Gets style prompts from database
     /// </summary>
-    private async Task<(string PromptTemplate, string NegativePromptTemplate)> GetStylePromptsFromDatabase(string styleName)
+    private async Task<StylePromptResolution> GetStylePromptsFromDatabase(string styleName)
     {
+        var requestedStyle = StyleNameNormalizer.Normalize(styleName);
+
         var style = await _context.Styles
-            .Where(s => s.Name.ToLower() == styleName.ToLower() && s.IsActive)
-            .Select(s => new { s.PromptTemplate, s.NegativePromptTemplate })
+            .Where(s => s.Name == requestedStyle && s.IsActive)
+            .Select(s => new { s.Id, s.Name, s.PromptTemplate, s.NegativePromptTemplate })
             .FirstOrDefaultAsync();
 
         if (style == null)
         {
             // Fallback to linkedin style (most generic professional style)
             var defaultStyle = await _context.Styles
-                .Where(s => s.Name.ToLower() == "linkedin" && s.IsActive)
-                .Select(s => new { s.PromptTemplate, s.NegativePromptTemplate })
+                .Where(s => s.Name == "linkedin" && s.IsActive)
+                .Select(s => new { s.Id, s.Name, s.PromptTemplate, s.NegativePromptTemplate })
                 .FirstOrDefaultAsync();
 
             if (defaultStyle == null)
             {
                 // Ultimate fallback if no styles exist in database
-                return (
+                return new StylePromptResolution(
+                    requestedStyle,
+                    "linkedin",
+                    null,
                     "professional portrait of a {gender} {ethnicity}, {subject}, composition: well-balanced frame with subject focus, lighting: flattering soft light with subtle highlighting, color palette: balanced natural tones, mood: confident and approachable, technical details: high resolution with excellent clarity, additional elements: simple professional background, appropriate attire for industry",
-                    "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation"
-                );
+                    "deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation",
+                    true);
             }
 
-            return (defaultStyle.PromptTemplate, defaultStyle.NegativePromptTemplate);
+            return new StylePromptResolution(
+                requestedStyle,
+                defaultStyle.Name,
+                defaultStyle.Id,
+                defaultStyle.PromptTemplate,
+                defaultStyle.NegativePromptTemplate,
+                true);
         }
 
-        return (style.PromptTemplate, style.NegativePromptTemplate);
+        return new StylePromptResolution(
+            requestedStyle,
+            style.Name,
+            style.Id,
+            style.PromptTemplate,
+            style.NegativePromptTemplate,
+            false);
     }
 
     /// <summary>

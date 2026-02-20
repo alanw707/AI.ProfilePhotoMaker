@@ -121,16 +121,21 @@ export class GalleryComponent implements OnInit {
                 ? ('generated' as const)
                 : ('original' as const);
 
+            const styleDisplay = this._getDisplayStyleLabel(
+              img.style,
+              !!img.isGenerated && !isEnhanced
+            );
+
             const title = isEnhanced
               ? 'Enhanced Photo'
               : img.isGenerated
-                ? `${this.formatStyleName(img.style)} Photo`
+                ? `${styleDisplay} Photo`
                 : 'Uploaded Photo';
 
             const description = isEnhanced
               ? 'AI-enhanced photo'
               : img.isGenerated
-                ? `Generated ${this.formatStyleName(img.style)} style profile photo`
+                ? `Generated ${styleDisplay} style profile photo`
                 : 'Original uploaded image';
 
             return {
@@ -569,7 +574,9 @@ Downloading ${downloadableImages.length} completed image${downloadableImages.len
       }, 100);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      alert(`Failed to create zip file: ${errorMessage}\n\nPlease try downloading images individually.`);
+      alert(
+        `Failed to create zip file: ${errorMessage}\n\nPlease try downloading images individually.`
+      );
     } finally {
       this.isDownloading = false;
       this.downloadProgress = 0;
@@ -591,5 +598,18 @@ Downloading ${downloadableImages.length} completed image${downloadableImages.len
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ');
+  }
+
+  private _getDisplayStyleLabel(style: string | null | undefined, isGenerated: boolean): string {
+    const normalized = (style || '').trim().toLowerCase();
+    if (!isGenerated) {
+      return this.formatStyleName(style || '');
+    }
+
+    if (!normalized) {
+      return 'Unmapped Style';
+    }
+
+    return this.formatStyleName(normalized);
   }
 }

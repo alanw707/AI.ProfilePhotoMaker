@@ -138,7 +138,7 @@ public class ReplicateMockIntegrationTests : IClassFixture<CustomWebApplicationF
         {
             TrainedModelVersion = "", // Empty string to use DB model
             UserId = "test-user-1", // Will be overridden by claims
-            Style = "corporate",
+            Style = "casual",
             NumOutputs = 2
         });
 
@@ -183,5 +183,90 @@ public class ReplicateMockIntegrationTests : IClassFixture<CustomWebApplicationF
         // Ownership enforcement: unknown prediction should yield 404
         var nf = await client.GetAsync($"/api/replicate/generate/status/{Guid.NewGuid()}");
         nf.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Generate_WithKnownStyle_PersistsRequestedAndResolvedStyleMetadata()
+    {
+        await _factory.EnsureTestUserWithCreditsAsync("test-user-1", 100);
+        var client = _factory.CreateAuthenticatedClient();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var userId = "test-user-1";
+            var existingModels = db.ModelCreationRequests.Where(m => m.UserId == userId).ToList();
+            db.ModelCreationRequests.RemoveRange(existingModels);
+            db.ModelCreationRequests.Add(new ModelCreationRequest
+            {
+                UserId = userId,
+                ModelName = "user-test",
+                ReplicateModelId = "mock/user-test",
+                TrainedModelVersion = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                Status = ModelCreationStatus.Ready,
+                CreatedAt = DateTime.UtcNow,
+                CompletedAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var genResp = await client.PostAsJsonAsync("/api/replicate/generate", new
+        {
+            TrainedModelVersion = "",
+            UserId = "test-user-1",
+            Style = "casual",
+            NumOutputs = 1
+        });
+
+        genResp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var verifyScope = _factory.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var prediction = await verifyDb.Predictions.OrderByDescending(p => p.CreatedAt).FirstAsync();
+
+        prediction.RequestedStyle.Should().Be("casual");
+        prediction.ResolvedStyle.Should().Be("casual");
+        prediction.Style.Should().Be("casual");
+    }
+
+    [Fact]
+    public async Task GenerateBatch_WithInvalidStyle_ReturnsBadRequest()
+    {
+        await _factory.EnsureTestUserWithCreditsAsync("test-user-1", 100);
+        var client = _factory.CreateAuthenticatedClient();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var userId = "test-user-1";
+            var existingModels = db.ModelCreationRequests.Where(m => m.UserId == userId).ToList();
+            db.ModelCreationRequests.RemoveRange(existingModels);
+            db.ModelCreationRequests.Add(new ModelCreationRequest
+            {
+                UserId = userId,
+                ModelName = "user-test",
+                ReplicateModelId = "mock/user-test",
+                TrainedModelVersion = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                Status = ModelCreationStatus.Ready,
+                CreatedAt = DateTime.UtcNow,
+                CompletedAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.PostAsJsonAsync("/api/replicate/generate/batch", new
+        {
+            TrainedModelVersion = "",
+            UserId = "test-user-1",
+            Styles = new[] { "casual", "not-a-real-style" },
+            NumOutputsPerStyle = 1
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var payload = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
+        payload.Should().NotBeNull();
+
+        var error = (System.Text.Json.JsonElement)payload!["error"];
+        error.GetProperty("code").GetString().Should().Be("InvalidStyle");
     }
 }

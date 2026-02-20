@@ -22,6 +22,7 @@ NC='\033[0m'
 
 BRANCH=""
 SKIP_TESTS="false"
+RUN_DB_MIGRATIONS="true"
 AUTO_PUSH="true"
 IMAGE_TAG="${IMAGE_TAG:-}"
 BUILD_NUMBER=""
@@ -33,6 +34,8 @@ Usage: scripts/deploy-branch-via-actions.sh [options]
 Options:
   --branch <name>      Branch to deploy (defaults to current)
   --skip-tests         Pass skip_tests=true to workflow
+  --skip-db-migrations Pass run_db_migrations=false to workflow
+  --run-db-migrations  Pass run_db_migrations=true to workflow
   --no-git-push        Do not push the branch before triggering workflow
   --image-tag <tag>    Override IMAGE_TAG/BUILD_NUMBER (default timestamp)
   --help               Show this help
@@ -47,6 +50,10 @@ while [[ $# -gt 0 ]]; do
             BRANCH="$2"; shift 2;;
         --skip-tests)
             SKIP_TESTS="true"; shift;;
+        --skip-db-migrations)
+            RUN_DB_MIGRATIONS="false"; shift;;
+        --run-db-migrations)
+            RUN_DB_MIGRATIONS="true"; shift;;
         --no-git-push)
             AUTO_PUSH="false"; shift;;
         --image-tag)
@@ -74,6 +81,7 @@ echo -e "${BOLD}${BLUE}🚀 Branch deployment helper${NC}"
 echo -e "${BLUE}Branch:${NC} $BRANCH"
 echo -e "${BLUE}Image Tag:${NC} $IMAGE_TAG"
 echo -e "${BLUE}Skip Tests:${NC} $SKIP_TESTS"
+echo -e "${BLUE}Run DB Migrations:${NC} $RUN_DB_MIGRATIONS"
 echo
 
 for tool in gh jq git; do
@@ -108,7 +116,7 @@ fi
 START_EPOCH=$(date -u +%s)
 
 echo -e "${BLUE}▶️ Triggering workflow '${WORKFLOW_NAME}' on branch ${BRANCH}...${NC}"
-gh workflow run "$WORKFLOW_FILE" --ref "$BRANCH" -f skip_tests="$SKIP_TESTS"
+gh workflow run "$WORKFLOW_FILE" --ref "$BRANCH" -f skip_tests="$SKIP_TESTS" -f run_db_migrations="$RUN_DB_MIGRATIONS"
 
 echo -e "${BLUE}⏱️ Waiting for workflow run to register...${NC}"
 RUN_ID=""

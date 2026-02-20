@@ -1085,11 +1085,19 @@ export class WorkflowOrchestrationService {
         `Starting batch generation for ${selectedStyles.length} style(s)...`
       );
 
+      const canonicalStyles = selectedStyles
+        .map(style => this._toCanonicalStyleName(style.name))
+        .filter((style): style is string => style.length > 0);
+
+      if (canonicalStyles.length === 0) {
+        throw new Error('No valid styles selected for generation');
+      }
+
       // CONSOLIDATED APPROACH: Generate images for all selected styles in a single batch request
       const generateRequest: GenerateBatchImagesRequest = {
         trainedModelVersion: modelVersion,
         userId,
-        styles: selectedStyles.map(style => style.name),
+        styles: canonicalStyles,
         userInfo: {
           gender: this._deps.stateService.getState().userProfile?.gender,
           ethnicity: this._deps.stateService.getState().userProfile?.ethnicity,
@@ -1825,14 +1833,19 @@ export class WorkflowOrchestrationService {
       return false;
     }
 
+    const canonicalStyles = selectedStyles
+      .map(style => this._toCanonicalStyleName(style.name))
+      .filter((style): style is string => style.length > 0);
+
+    if (canonicalStyles.length === 0) {
+      this._backgroundGenerationQueued = false;
+      return false;
+    }
+
     try {
       const replicateService = await this._loadReplicateService();
       const result = await firstValueFrom(
-        replicateService.queueGeneration(
-          trainingId,
-          selectedStyles.map(s => s.name),
-          imagesPerStyle
-        )
+        replicateService.queueGeneration(trainingId, canonicalStyles, imagesPerStyle)
       );
       if (!result || !result.success) {
         this._backgroundGenerationQueued = false;
@@ -1853,5 +1866,9 @@ export class WorkflowOrchestrationService {
       );
       return false;
     }
+  }
+
+  private _toCanonicalStyleName(styleName: string | null | undefined): string {
+    return (styleName || '').trim().toLowerCase();
   }
 }

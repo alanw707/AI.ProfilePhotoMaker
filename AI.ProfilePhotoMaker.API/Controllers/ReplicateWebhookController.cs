@@ -80,6 +80,7 @@ public class ReplicateWebhookController : ControllerBase
             // Extract user_id and style from payload.Input safely
             string? userId = null;
             string? style = null;
+            Prediction? prediction = null;
             if (safePayload.Input is null)
             {
                 _logger.LogWarning("Webhook payload.Input is null");
@@ -96,6 +97,25 @@ public class ReplicateWebhookController : ControllerBase
                 _logger.LogInformation("Webhook input contains user_id: {UserId}, style: {Style}", Sid(userId), S(style));
                 _logger.LogInformation("Webhook Status: {Status}, IsCompleted: {IsCompleted}, HasFailed: {HasFailed}, HasOutput: {HasOutput}",
                     S(safePayload.Status), safePayload.IsCompleted, safePayload.HasFailed, safePayload.GeneratedImageUrls?.Any() == true);
+            }
+
+            if (!string.IsNullOrWhiteSpace(safePayload.Id))
+            {
+                prediction = await _dbContext.Predictions.FirstOrDefaultAsync(p => p.Id == safePayload.Id);
+                if (prediction != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(userId) && !string.Equals(userId, prediction.UserId, StringComparison.Ordinal))
+                    {
+                        _logger.LogWarning(
+                            "Webhook user_id mismatch for prediction {PredictionId}: payload={PayloadUserId}, db={DbUserId}. Using database user.",
+                            Sid(safePayload.Id),
+                            Sid(userId),
+                            Sid(prediction.UserId));
+                    }
+
+                    userId = prediction.UserId;
+                    style = prediction.ResolvedStyle ?? prediction.Style ?? style;
+                }
             }
 
             // Only process if completed and not failed and has output
@@ -165,12 +185,14 @@ public class ReplicateWebhookController : ControllerBase
                             continue;
                         }
 
+                        var persistedStyle = style ?? "Unknown";
+
                         var processedImage = new ProcessedImage
                         {
                             UserProfileId = userProfile.Id,
                             OriginalImageUrl = publicUrl ?? replicateUrl, // Use storage URL if download succeeded, fallback to Replicate URL
                             ProcessedImageUrl = publicUrl ?? replicateUrl, // Use same logic for both URLs to prevent empty strings
-                            Style = style ?? "Unknown",
+                            Style = persistedStyle,
                             IsGenerated = true,
                             IsOriginalUpload = false,
                             CreatedAt = DateTime.UtcNow
@@ -201,23 +223,19 @@ public class ReplicateWebhookController : ControllerBase
                         S(style),
                         S(string.Join(", ", savedImageIds)));
 
-                    // Update Predictions table with completion status (enables local status checking)
-                    try
+                    if (prediction != null)
                     {
-                        var prediction = await _dbContext.Predictions.FirstOrDefaultAsync(p => p.Id == safePayload.Id);
-                        if (prediction != null)
-                        {
-                            _logger.LogInformation("Prediction {PredictionId} completed successfully for user {UserId}", Sid(safePayload.Id), Sid(userId));
-                            // Note: Full completion tracking would require adding CompletedAt, Status fields via migration
-                        }
-                        else
-                        {
-                            _logger.LogWarning("Prediction {PredictionId} not found in local database for completion update", Sid(safePayload.Id));
-                        }
+                        _logger.LogInformation(
+                            "Prediction {PredictionId} completed successfully for user {UserId} with requestedStyle={RequestedStyle}, resolvedStyle={ResolvedStyle}, resolvedStyleId={ResolvedStyleId}",
+                            Sid(safePayload.Id),
+                            Sid(userId),
+                            S(prediction.RequestedStyle),
+                            S(prediction.ResolvedStyle),
+                            prediction.ResolvedStyleId);
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        _logger.LogWarning(ex, "Failed to update prediction completion status for {PredictionId}", Sid(safePayload.Id));
+                        _logger.LogWarning("Prediction {PredictionId} not found in local database for completion update", Sid(safePayload.Id));
                     }
 
                     // Send real-time notification to user (eliminates need for polling)
