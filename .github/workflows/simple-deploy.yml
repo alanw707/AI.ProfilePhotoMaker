@@ -15,6 +15,11 @@ on:
         required: false
         default: false
         type: boolean
+      run_db_migrations:
+        description: 'Apply pending EF migrations during deploy'
+        required: false
+        default: true
+        type: boolean
 
 env:
   RESOURCE_GROUP: aiprofilemaker-v1
@@ -290,6 +295,7 @@ jobs:
           IMAGE_TAG=${{ env.IMAGE_TAG }} ./scripts/push-to-acr.sh
 
       - name: 🧭 Apply pending EF migrations (prod DB)
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_db_migrations == true }}
         env:
           SQL_CONNECTION_STRING: "Server=tcp:aipm-sql-v1-6j74jubocuukg.database.windows.net,1433;Initial Catalog=aipmdb;User ID=sqladmin;Password=${{ secrets.SQL_ADMIN_PASSWORD }};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
         run: |
@@ -317,6 +323,11 @@ jobs:
             --connection "$SQL_CONNECTION_STRING"
 
           echo "✅ Migrations applied successfully."
+
+      - name: ⏭️ Skip EF migrations (manual override)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_db_migrations != true }}
+        run: |
+          echo "⏭️ Skipping EF migrations because run_db_migrations=false"
           
       - name: 🏗️ Ensure Resource Group
         run: |

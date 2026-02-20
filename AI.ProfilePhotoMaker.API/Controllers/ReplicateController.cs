@@ -433,6 +433,27 @@ public class ReplicateController : ControllerBase
             });
         }
 
+        var normalizedRequestedStyle = StyleNameNormalizer.Normalize(dto.Style);
+        if (string.IsNullOrWhiteSpace(normalizedRequestedStyle))
+        {
+            return BadRequest(new
+            {
+                success = false,
+                error = new { code = "InvalidStyle", message = "A valid style is required." }
+            });
+        }
+
+        var singleStyleExists = await _dbContext.Styles
+            .AnyAsync(s => s.IsActive && s.Name == normalizedRequestedStyle);
+        if (!singleStyleExists)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                error = new { code = "InvalidStyle", message = $"Unknown style '{normalizedRequestedStyle}'." }
+            });
+        }
+
         // Check if user has sufficient credits for styled generation (5 credits per image)
         var availableCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
         var requiredCredits = dto.NumOutputs * CreditCostConfig.GetCreditCost("styled_generation");
@@ -583,7 +604,7 @@ public class ReplicateController : ControllerBase
                 });
             }
 
-            var result = await _replicateApiClient.GenerateImagesAsync(modelVersionToUse, userId, dto.Style, userInfo);
+            var result = await _replicateApiClient.GenerateImagesAsync(modelVersionToUse, userId, normalizedRequestedStyle, userInfo);
 
             var remainingCredits = await _basicTierService.GetAvailableCreditsAsync(userId);
 
@@ -662,6 +683,63 @@ public class ReplicateController : ControllerBase
         if (dto.Styles == null || !dto.Styles.Any())
             return BadRequest(new { success = false, error = new { code = "NoStyles", message = "At least one style must be specified." } });
 
+        var normalizedRequestedStyles = dto.Styles
+            .Select(StyleNameNormalizer.Normalize)
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .ToList();
+
+        if (!normalizedRequestedStyles.Any())
+            return BadRequest(new { success = false, error = new { code = "NoStyles", message = "At least one valid style must be specified." } });
+
+        var duplicateStyles = normalizedRequestedStyles
+            .GroupBy(s => s, StringComparer.Ordinal)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+        if (duplicateStyles.Count > 0)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                error = new
+                {
+                    code = "DuplicateStyles",
+                    message = "Duplicate styles are not allowed in batch requests.",
+                    duplicateStyles
+                }
+            });
+        }
+
+        var activeStyles = await _dbContext.Styles
+            .Where(s => s.IsActive)
+            .Select(s => s.Name)
+            .ToListAsync();
+
+        var activeStyleSet = new HashSet<string>(activeStyles, StringComparer.Ordinal);
+
+        var unknownStyles = normalizedRequestedStyles
+            .Where(s => !activeStyleSet.Contains(s))
+            .ToList();
+
+        if (unknownStyles.Count > 0)
+        {
+            _logger.LogWarning(
+                "Batch generation rejected due to unknown styles for user {UserId}: {Styles}",
+                Sid(userId),
+                S(string.Join(",", unknownStyles)));
+
+            return BadRequest(new
+            {
+                success = false,
+                error = new
+                {
+                    code = "InvalidStyle",
+                    message = "One or more requested styles are invalid.",
+                    invalidStyles = unknownStyles
+                }
+            });
+        }
+
         if (dto.NumOutputsPerStyle < 1 || dto.NumOutputsPerStyle > 4)
         {
             return BadRequest(new
@@ -673,7 +751,7 @@ public class ReplicateController : ControllerBase
 
         // Calculate total credits required (5 credits per image)
         var costPerImage = CreditCostConfig.GetCreditCost("styled_generation");
-        var totalImages = dto.Styles.Count * dto.NumOutputsPerStyle;
+        var totalImages = normalizedRequestedStyles.Count * dto.NumOutputsPerStyle;
         var requiredCredits = totalImages * costPerImage;
         var correlationId = $"styled_generation:{Guid.NewGuid()}";
 
@@ -801,7 +879,7 @@ public class ReplicateController : ControllerBase
                 });
             }
 
-            foreach (var style in dto.Styles)
+            foreach (var style in normalizedRequestedStyles)
             {
                 try
                 {

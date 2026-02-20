@@ -296,6 +296,15 @@ public class ReplicateApiClientNegativePromptTests
 
         // Fallback to linkedin should have used linkedin's negative prompt template
         Assert.Contains("linkedin-specific-negative-term", negativePromptValue, StringComparison.OrdinalIgnoreCase);
+
+        Assert.Equal("nonexistent-style", input.GetProperty("requested_style").GetString());
+        Assert.Equal("linkedin", input.GetProperty("resolved_style").GetString());
+        Assert.Equal("linkedin", input.GetProperty("style").GetString());
+
+        var prediction = await db.Predictions.SingleAsync();
+        Assert.Equal("nonexistent-style", prediction.RequestedStyle);
+        Assert.Equal("linkedin", prediction.ResolvedStyle);
+        Assert.Equal("linkedin", prediction.Style);
     }
 
     [Fact]
@@ -385,4 +394,3 @@ public class ReplicateApiClientNegativePromptTests
         Assert.Equal(string.Empty, negativePromptValue);
     }
 }
-

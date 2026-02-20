@@ -233,4 +233,44 @@ public class StylePromptTokenValidationTests
             }
         }
     }
+
+    [Fact]
+    public void CasualStyle_SeedData_ContainsAntiTankTopAndUndershirtGuards()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(databaseName: $"CasualClothingValidation_{Guid.NewGuid()}")
+            .Options;
+
+        using var context = new ApplicationDbContext(options);
+        context.Database.EnsureCreated();
+
+        var casual = context.Styles.FirstOrDefault(s => s.Name == "casual");
+        Assert.NotNull(casual);
+
+        var negative = casual!.NegativePromptTemplate;
+        Assert.Contains("tank top", negative, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("undershirt", negative, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("shirtless", negative, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no shirt", negative, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void FitnessStyle_SeedData_ContainsAntiEdgyUrbanTerms_AndOmitsTankTopBlockers()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(databaseName: $"FitnessBoundaryValidation_{Guid.NewGuid()}")
+            .Options;
+
+        using var context = new ApplicationDbContext(options);
+        context.Database.EnsureCreated();
+
+        var fitness = context.Styles.FirstOrDefault(s => s.Name == "fitness");
+        Assert.NotNull(fitness);
+
+        var negative = fitness!.NegativePromptTemplate;
+        Assert.Contains("edgy-urban style", negative, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("city street fashion", negative, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("tank top", negative, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("undershirt", negative, StringComparison.OrdinalIgnoreCase);
+    }
 }

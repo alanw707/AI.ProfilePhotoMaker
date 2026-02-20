@@ -1,6 +1,7 @@
 using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
+using AI.ProfilePhotoMaker.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -126,8 +127,14 @@ public class StyleController : ControllerBase
     {
         try
         {
+            var normalizedName = StyleNameNormalizer.Normalize(name);
+            if (string.IsNullOrWhiteSpace(normalizedName))
+            {
+                return BadRequest(new { success = false, error = new { code = "InvalidStyleName", message = "Style name is required." } });
+            }
+
             var style = await _context.Styles
-                .Where(s => s.Name.ToLower() == name.ToLower() && s.IsActive)
+                .Where(s => s.Name == normalizedName && s.IsActive)
                 .Select(s => new
                 {
                     s.Id,
@@ -278,9 +285,15 @@ public class StyleController : ControllerBase
 
         try
         {
+            var normalizedName = StyleNameNormalizer.Normalize(dto.Name);
+            if (string.IsNullOrWhiteSpace(normalizedName))
+            {
+                return BadRequest(new { success = false, error = new { code = "InvalidStyleName", message = "Style name is required." } });
+            }
+
             // Check if style name already exists
             var existingStyle = await _context.Styles
-                .FirstOrDefaultAsync(s => s.Name.ToLower() == dto.Name.ToLower());
+                .FirstOrDefaultAsync(s => s.Name == normalizedName);
 
             if (existingStyle != null)
             {
@@ -289,7 +302,7 @@ public class StyleController : ControllerBase
 
             var style = new Style
             {
-                Name = dto.Name,
+                Name = normalizedName,
                 Description = dto.Description,
                 PromptTemplate = dto.PromptTemplate,
                 NegativePromptTemplate = dto.NegativePromptTemplate,
@@ -332,17 +345,24 @@ public class StyleController : ControllerBase
             // Check if new name conflicts with existing style
             if (!string.IsNullOrEmpty(dto.Name) && dto.Name != style.Name)
             {
+                var normalizedName = StyleNameNormalizer.Normalize(dto.Name);
+                if (string.IsNullOrWhiteSpace(normalizedName))
+                {
+                    return BadRequest(new { success = false, error = new { code = "InvalidStyleName", message = "Style name is required." } });
+                }
+
                 var existingStyle = await _context.Styles
-                    .FirstOrDefaultAsync(s => s.Name.ToLower() == dto.Name.ToLower() && s.Id != id);
+                    .FirstOrDefaultAsync(s => s.Name == normalizedName && s.Id != id);
 
                 if (existingStyle != null)
                 {
                     return Conflict(new { success = false, error = new { code = "StyleExists", message = "A style with this name already exists." } });
                 }
+
+                style.Name = normalizedName;
             }
 
             // Update fields
-            if (!string.IsNullOrEmpty(dto.Name)) style.Name = dto.Name;
             if (!string.IsNullOrEmpty(dto.Description)) style.Description = dto.Description;
             if (!string.IsNullOrEmpty(dto.PromptTemplate)) style.PromptTemplate = dto.PromptTemplate;
             if (!string.IsNullOrEmpty(dto.NegativePromptTemplate)) style.NegativePromptTemplate = dto.NegativePromptTemplate;

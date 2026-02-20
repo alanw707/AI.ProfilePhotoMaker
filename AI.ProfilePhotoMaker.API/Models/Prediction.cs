@@ -12,6 +12,13 @@ public class Prediction
 
     public string? Style { get; set; }
 
+    [MaxLength(100)]
+    public string? RequestedStyle { get; set; }
+
+    [MaxLength(100)]
+    public string? ResolvedStyle { get; set; }
+
+    public int? ResolvedStyleId { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
-

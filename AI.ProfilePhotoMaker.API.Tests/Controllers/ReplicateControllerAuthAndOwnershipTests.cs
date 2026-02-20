@@ -88,6 +88,10 @@ public class ReplicateControllerAuthAndOwnershipTests
         var mockReplicate = new Mock<IReplicateApiClient>(MockBehavior.Strict);
         var mockBasic = new Mock<IBasicTierService>(MockBehavior.Strict);
 
+        // Credits are checked before user-context mismatch in current flow
+        mockBasic.Setup(s => s.GetAvailableCreditsAsync("user-123"))
+                 .ReturnsAsync(999);
+
         // Credits sufficient so code reaches our InvalidUserContext gate
         mockBasic.Setup(s => s.GetAvailableCreditsAsync("user-123"))
                  .ReturnsAsync(999);
@@ -118,7 +122,6 @@ public class ReplicateControllerAuthAndOwnershipTests
         var mockReplicate = new Mock<IReplicateApiClient>(MockBehavior.Strict);
         var mockBasic = new Mock<IBasicTierService>(MockBehavior.Strict);
 
-        // Enough credits
         mockBasic.Setup(s => s.GetAvailableCreditsAsync("user-123"))
                  .ReturnsAsync(999);
 
@@ -128,7 +131,7 @@ public class ReplicateControllerAuthAndOwnershipTests
         {
             TrainedModelVersion = "owner/model:version",
             UserId = "other-user",
-            Style = "corporate",
+            Style = "casual",
             NumOutputs = 1
         };
 
@@ -156,7 +159,7 @@ public class ReplicateControllerAuthAndOwnershipTests
         {
             TrainedModelVersion = "owner/model:version",
             UserId = "other-user",
-            Styles = new List<string> { "corporate" },
+            Styles = new List<string> { "casual" },
             NumOutputsPerStyle = 1
         };
 

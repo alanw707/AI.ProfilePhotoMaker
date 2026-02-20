@@ -11,6 +11,13 @@ namespace AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 
 public class MockReplicateApiClient : IReplicateApiClient
 {
+    private sealed record StylePromptResolution(
+        string RequestedStyle,
+        string ResolvedStyle,
+        int? ResolvedStyleId,
+        string PromptTemplate,
+        string NegativePromptTemplate);
+
     private static readonly Dictionary<string, ReplicateTrainingResult> Trainings = new();
     private static readonly Dictionary<string, ReplicatePredictionResult> Predictions = new();
     private static readonly HashSet<string> CreatedModels = new();
@@ -150,10 +157,10 @@ public class MockReplicateApiClient : IReplicateApiClient
 
     public async Task<ReplicatePredictionResult> GenerateImagesAsync(string trainedModelVersion, string userId, string style, UserInfo? userInfo = null, int numOutputs = 2)
     {
-        var stylePrompts = await GetStylePromptsFromDatabase(style);
-        var stylePrompt = CreateFluxStylePrompt(stylePrompts.PromptTemplate, userInfo, userId);
-        var negativePrompt = CreateFluxNegativePrompt(stylePrompts.NegativePromptTemplate, userInfo);
-        var tuning = ReplicateApiClient.ResolveStyleTuning(_configuration, style);
+        var styleResolution = await GetStylePromptsFromDatabase(style);
+        var stylePrompt = CreateFluxStylePrompt(styleResolution.PromptTemplate, userInfo, userId);
+        var negativePrompt = CreateFluxNegativePrompt(styleResolution.NegativePromptTemplate, userInfo);
+        var tuning = ReplicateApiClient.ResolveStyleTuning(_configuration, styleResolution.ResolvedStyle);
         stylePrompt = ReplicateApiClient.ApplyRealismModifier(stylePrompt);
 
         var id = Guid.NewGuid().ToString();
@@ -166,7 +173,9 @@ public class MockReplicateApiClient : IReplicateApiClient
             Input = new Dictionary<string, object>
             {
                 { "user_id", userId },
-                { "style", style },
+                { "style", styleResolution.ResolvedStyle },
+                { "requested_style", styleResolution.RequestedStyle },
+                { "resolved_style", styleResolution.ResolvedStyle },
                 { "prompt", stylePrompt },
                 { "txt", stylePrompt },
                 { "negative_prompt", negativePrompt },
@@ -176,9 +185,22 @@ public class MockReplicateApiClient : IReplicateApiClient
             Urls = new ReplicateUrls { Get = $"/mock/predictions/{id}" }
         };
         Predictions[id] = result;
+        if (styleResolution.ResolvedStyleId.HasValue)
+        {
+            result.Input!["resolved_style_id"] = styleResolution.ResolvedStyleId.Value;
+        }
 
         // Persist ownership
-        _context.Predictions.Add(new Prediction { Id = id, UserId = userId, Style = style, CreatedAt = DateTime.UtcNow });
+        _context.Predictions.Add(new Prediction
+        {
+            Id = id,
+            UserId = userId,
+            Style = styleResolution.ResolvedStyle,
+            RequestedStyle = styleResolution.RequestedStyle,
+            ResolvedStyle = styleResolution.ResolvedStyle,
+            ResolvedStyleId = styleResolution.ResolvedStyleId,
+            CreatedAt = DateTime.UtcNow
+        });
         await _context.SaveChangesAsync();
 
         // Complete with mock URLs
@@ -199,10 +221,10 @@ public class MockReplicateApiClient : IReplicateApiClient
 
     public async Task<ReplicatePredictionResult> GenerateBaseStylePreviewAsync(string style, UserInfo? userInfo = null, int numOutputs = 1)
     {
-        var stylePrompts = await GetStylePromptsFromDatabase(style);
-        var stylePrompt = CreateFluxStylePromptBasic(stylePrompts.PromptTemplate, userInfo);
-        var negativePrompt = CreateFluxNegativePrompt(stylePrompts.NegativePromptTemplate, userInfo);
-        var tuning = ReplicateApiClient.ResolveStyleTuning(_configuration, style);
+        var styleResolution = await GetStylePromptsFromDatabase(style);
+        var stylePrompt = CreateFluxStylePromptBasic(styleResolution.PromptTemplate, userInfo);
+        var negativePrompt = CreateFluxNegativePrompt(styleResolution.NegativePromptTemplate, userInfo);
+        var tuning = ReplicateApiClient.ResolveStyleTuning(_configuration, styleResolution.ResolvedStyle);
         stylePrompt = ReplicateApiClient.ApplyRealismModifier(stylePrompt);
 
         var id = Guid.NewGuid().ToString();
@@ -261,36 +283,39 @@ public class MockReplicateApiClient : IReplicateApiClient
         return Task.FromResult(Guid.NewGuid().ToString());
     }
 
-    private async Task<(string PromptTemplate, string NegativePromptTemplate)> GetStylePromptsFromDatabase(string styleName)
+    private async Task<StylePromptResolution> GetStylePromptsFromDatabase(string styleName)
     {
-        if (string.IsNullOrWhiteSpace(styleName))
+        var requestedStyle = StyleNameNormalizer.Normalize(styleName);
+        if (string.IsNullOrWhiteSpace(requestedStyle))
         {
-            return GetFallbackPrompts();
+            var fallback = GetFallbackPrompts();
+            return new StylePromptResolution("", "linkedin", null, fallback.PromptTemplate, fallback.NegativePromptTemplate);
         }
 
         var style = await _context.Styles
-            .Where(s => s.Name.ToLower() == styleName.ToLower() && s.IsActive)
-            .Select(s => new { s.PromptTemplate, s.NegativePromptTemplate })
+            .Where(s => s.Name == requestedStyle && s.IsActive)
+            .Select(s => new { s.Id, s.Name, s.PromptTemplate, s.NegativePromptTemplate })
             .FirstOrDefaultAsync();
 
         if (style == null)
         {
             // Fallback to linkedin style (most generic professional style)
             var defaultStyle = await _context.Styles
-                .Where(s => s.Name.ToLower() == "linkedin" && s.IsActive)
-                .Select(s => new { s.PromptTemplate, s.NegativePromptTemplate })
+                .Where(s => s.Name == "linkedin" && s.IsActive)
+                .Select(s => new { s.Id, s.Name, s.PromptTemplate, s.NegativePromptTemplate })
                 .FirstOrDefaultAsync();
 
             if (defaultStyle == null)
             {
                 // Ultimate fallback if no styles exist in database
-                return GetFallbackPrompts();
+                var fallback = GetFallbackPrompts();
+                return new StylePromptResolution(requestedStyle, "linkedin", null, fallback.PromptTemplate, fallback.NegativePromptTemplate);
             }
 
-            return (defaultStyle.PromptTemplate, defaultStyle.NegativePromptTemplate);
+            return new StylePromptResolution(requestedStyle, defaultStyle.Name, defaultStyle.Id, defaultStyle.PromptTemplate, defaultStyle.NegativePromptTemplate);
         }
 
-        return (style.PromptTemplate, style.NegativePromptTemplate);
+        return new StylePromptResolution(requestedStyle, style.Name, style.Id, style.PromptTemplate, style.NegativePromptTemplate);
     }
 
     private static (string PromptTemplate, string NegativePromptTemplate) GetFallbackPrompts()
