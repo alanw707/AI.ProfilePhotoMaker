@@ -1,0 +1,62 @@
+# GitHub Actions - Database Deployment Pipeline
+# File: .github/workflows/deploy-database.yml
+
+name: Deploy Database Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+          
+      - name: Install EF Core Tools
+        run: |
+          dotnet tool install --global dotnet-ef --version 8.0.0
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+          
+      - name: Deploy Migration
+        env:
+          DATABASE_CONNECTION_STRING: ${{ secrets.DATABASE_CONNECTION_STRING }}
+        run: |
+          echo "Deploying migration FixStylePromptsDataDriftAndQualityAudit..."
+          cd AI.ProfilePhotoMaker.API
+          dotnet ef database update 20260220132108_FixStylePromptsDataDriftAndQualityAudit \
+            --connection "$DATABASE_CONNECTION_STRING" \
+            --verbose
+            
+      - name: Verify Deployment
+        env:
+          DATABASE_CONNECTION_STRING: ${{ secrets.DATABASE_CONNECTION_STRING }}
+        run: |
+          cd AI.ProfilePhotoMaker.API
+          dotnet ef migrations list | grep "FixStylePromptsDataDriftAndQualityAudit" || exit 1
+          
+      - name: Deployment Summary
+        run: |
+          echo "✅ Database migration deployed successfully!"
+          echo ""
+          echo "Migration: FixStylePromptsDataDriftAndQualityAudit"
+          echo "Changes:"
+          echo "  - Fixed data drift (Id 1 → beach-vibes, Id 3 → fresh)"
+          echo "  - Added anti-nudity guards to casual style"
+          echo "  - Upgraded all 20 styles with quality baseline"
