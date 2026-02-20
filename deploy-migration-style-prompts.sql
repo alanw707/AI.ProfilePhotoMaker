@@ -182,7 +182,7 @@ IF NOT EXISTS (
     WHERE [MigrationId] = N'20260220132108_FixStylePromptsDataDriftAndQualityAudit'
 )
 BEGIN
-    EXEC(N'UPDATE [Styles] SET [CreatedAt] = ''2026-02-20T13:21:07.5638924Z'', [NegativePromptTemplate] = N''blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, suit, tie, blazer, formal business attire, corporate headshot, boardroom, studio backdrop, stiff pose, arms crossed, cold expression, luxury executive vibe, courthouse, doctor coat, medical scrubs, beachwear, nightclub, neon lighting, full body shot, watermark, text, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, poreless skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, exaggerated wrinkles, overly deep wrinkles, shirtless, bare chest, bare torso, topless, no shirt, nude, undressed'', [UpdatedAt] = ''2026-02-20T13:21:07.5638924Z''
+    EXEC(N'UPDATE [Styles] SET [CreatedAt] = ''2026-02-20T13:21:07.5638924Z'', [NegativePromptTemplate] = N''blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, suit, tie, blazer, formal business attire, corporate headshot, boardroom, studio backdrop, stiff pose, arms crossed, cold expression, luxury executive vibe, courthouse, doctor coat, medical scrubs, beachwear, nightclub, neon lighting, full body shot, watermark, text, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, poreless skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, exaggerated wrinkles, overly deep wrinkles, shirtless, bare chest, bare torso, topless, no shirt, nude, undressed, exposed skin, skin showing, without shirt, uncovered chest'', [PromptTemplate] = N''{subject}, casual lifestyle portrait of {gender} {ethnicity}, wearing a casual t-shirt or hoodie or crewneck sweater (fully clothed upper body), relaxed candid smile or laugh, outdoors (park/city street) or cozy home background, golden-hour natural light, relaxed posture (hands in pockets or open gesture), natural skin texture, minimal retouching, medium close-up portrait, shallow depth of field'', [UpdatedAt] = ''2026-02-20T13:21:07.5638924Z''
     WHERE [Id] = 14;
     SELECT @@ROWCOUNT');
 END;
@@ -266,4 +266,3 @@ GO
 
 COMMIT;
 GO
-
