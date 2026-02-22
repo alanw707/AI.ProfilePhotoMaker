@@ -186,8 +186,16 @@ public class AdminController : BaseController
     [HttpGet("dashboard")]
     public async Task<IActionResult> GetDashboard()
     {
-        var dashboard = await _adminService.GetDashboardAsync();
-        return SuccessResponse(dashboard);
+        try
+        {
+            var dashboard = await _adminService.GetDashboardAsync();
+            return SuccessResponse(dashboard);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load admin dashboard statistics");
+            return ErrorResponse("InternalError", "Failed to load dashboard statistics", 500);
+        }
     }
 
     [HttpPost("cleanup-orphaned-model")]

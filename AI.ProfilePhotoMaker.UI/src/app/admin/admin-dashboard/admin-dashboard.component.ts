@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, timeout } from 'rxjs/operators';
 import { AdminService } from '../../services/admin.service';
 
 @Component({
@@ -41,7 +41,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.error = null;
     this._adminService
       .getDashboard()
-      .pipe(takeUntil(this.destroy$))
+      .pipe(timeout(15000), takeUntil(this.destroy$))
       .subscribe({
         next: data => {
           this.dashboard = data;
