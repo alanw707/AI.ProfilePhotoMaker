@@ -1,86 +1,342 @@
 .blog-page
-  max-width: 1120px
+  --blog-content-width: min(1120px, calc(100% - 2rem))
+  width: var(--blog-content-width)
   margin: 0 auto
-  padding: 2rem 1rem 4rem
+  padding: clamp(5.8rem, 8vw, 7.2rem) 0 clamp(4rem, 8vw, 6rem)
+  position: relative
+
+  &::before
+    content: ''
+    position: absolute
+    inset: 1.25rem 0 auto
+    height: min(320px, 42vw)
+    background: radial-gradient(circle at 12% 16%, rgba(79, 209, 199, 0.22), transparent 56%), radial-gradient(circle at 84% 8%, rgba(59, 130, 246, 0.2), transparent 54%)
+    pointer-events: none
+    z-index: 0
+
+  > *
+    position: relative
+    z-index: 1
 
 .blog-hero
-  margin-bottom: 2rem
+  border: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent)
+  background: linear-gradient(160deg, color-mix(in srgb, var(--card-bg) 90%, transparent), color-mix(in srgb, var(--bg-secondary) 80%, transparent))
+  box-shadow: var(--shadow-md)
+  border-radius: 24px
+  padding: clamp(1.6rem, 2.6vw, 2.2rem)
+  margin-bottom: clamp(1.1rem, 2.6vw, 2rem)
 
   h1
-    font-size: clamp(1.8rem, 3vw, 2.6rem)
-    margin-bottom: 0.5rem
+    font-size: clamp(2rem, 4.8vw, 3.4rem)
+    line-height: 1.1
+    letter-spacing: -0.02em
+    margin-bottom: 0.8rem
 
   p
-    color: #6b7280
+    color: var(--text-secondary)
+    font-size: clamp(1rem, 1.55vw, 1.22rem)
+    max-width: 62ch
+
+.blog-eyebrow
+  text-transform: uppercase
+  letter-spacing: 0.09em
+  font-size: 0.75rem
+  font-weight: 700
+  color: color-mix(in srgb, var(--accent-primary) 80%, var(--text-primary))
+  margin-bottom: 0.7rem
 
 .blog-grid
   display: grid
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))
-  gap: 1rem
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr))
+  gap: clamp(0.95rem, 1.8vw, 1.5rem)
 
-.post-card
-  display: block
-  border: 1px solid #e5e7eb
-  border-radius: 12px
-  padding: 1rem
+.blog-menu-block
+  border: 1px solid color-mix(in srgb, var(--border-color) 78%, transparent)
+  border-radius: 18px
+  background: color-mix(in srgb, var(--card-bg) 95%, transparent)
+  box-shadow: var(--shadow-sm)
+  padding: 0.95rem 1rem
+  margin-bottom: clamp(0.95rem, 1.8vw, 1.35rem)
+
+.blog-menu-title
+  margin: 0 0 0.55rem
+  font-size: 0.8rem
+  text-transform: uppercase
+  letter-spacing: 0.08em
+  font-weight: 700
+  color: color-mix(in srgb, var(--text-secondary) 84%, var(--text-primary))
+
+.blog-menu-links
+  display: flex
+  flex-wrap: wrap
+  gap: 0.5rem
+
+.blog-menu-link
+  display: inline-flex
+  align-items: center
+  max-width: 100%
   text-decoration: none
-  color: inherit
-  transition: transform 0.12s ease, box-shadow 0.12s ease
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 30%, var(--border-color))
+  border-radius: 999px
+  background: color-mix(in srgb, var(--accent-primary) 10%, transparent)
+  color: color-mix(in srgb, var(--text-primary) 88%, var(--accent-primary))
+  font-size: 0.83rem
+  font-weight: 600
+  line-height: 1.2
+  padding: 0.38rem 0.68rem
+  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease
 
   &:hover
+    border-color: color-mix(in srgb, var(--accent-primary) 55%, var(--border-color))
+    background: color-mix(in srgb, var(--accent-primary) 18%, transparent)
     transform: translateY(-1px)
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06)
+
+.blog-menu-block--footer
+  margin-top: 0.3rem
+  margin-bottom: 0
+
+.post-card
+  display: flex
+  flex-direction: column
+  border: 1px solid color-mix(in srgb, var(--border-color) 80%, transparent)
+  border-radius: 20px
+  padding: clamp(1.05rem, 1.8vw, 1.35rem)
+  text-decoration: none
+  color: inherit
+  background: linear-gradient(170deg, color-mix(in srgb, var(--card-bg) 94%, transparent), color-mix(in srgb, var(--bg-secondary) 88%, transparent))
+  box-shadow: var(--shadow-sm)
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease
+
+  &:hover
+    transform: translateY(-3px)
+    border-color: color-mix(in srgb, var(--accent-primary) 36%, var(--border-color))
+    box-shadow: var(--shadow-lg)
 
   h2
-    font-size: 1.2rem
-    margin: 0.5rem 0
+    font-size: clamp(1.22rem, 1.9vw, 1.5rem)
+    margin: 0.45rem 0 0.7rem
+    line-height: 1.32
 
   p
-    color: #4b5563
+    color: var(--text-secondary)
+    margin-bottom: 0.9rem
+    line-height: 1.65
+
+.post-meta
+  display: flex
+  align-items: center
+  justify-content: space-between
+  font-size: 0.86rem
+  color: color-mix(in srgb, var(--text-secondary) 82%, var(--text-primary))
 
 .read-more
-  color: #2563eb
-  font-weight: 600
+  color: color-mix(in srgb, var(--accent-primary) 75%, var(--accent-secondary))
+  font-weight: 700
+  letter-spacing: 0.01em
+  margin-top: auto
 
 .blog-post
-  max-width: 760px
+  max-width: min(860px, 100%)
+  margin: 0 auto
+  display: grid
+  gap: 1rem
+
+.blog-post-header
+  border: 1px solid color-mix(in srgb, var(--border-color) 76%, transparent)
+  background: linear-gradient(160deg, color-mix(in srgb, var(--card-bg) 92%, transparent), color-mix(in srgb, var(--bg-secondary) 84%, transparent))
+  box-shadow: var(--shadow-md)
+  border-radius: 24px
+  padding: clamp(1.3rem, 2.4vw, 2rem)
+  margin-bottom: 1rem
 
   h1
-    font-size: clamp(2rem, 4vw, 2.8rem)
-    margin: 0.5rem 0 0.75rem
+    font-size: clamp(2rem, 5.1vw, 4rem)
+    line-height: 1.12
+    letter-spacing: -0.03em
+    margin: 0.75rem 0 0.8rem
+
+  time
+    color: color-mix(in srgb, var(--text-secondary) 78%, var(--text-primary))
+    font-size: 0.9rem
+    font-weight: 600
 
 .post-description
-  color: #4b5563
-  margin-bottom: 0.8rem
+  color: var(--text-secondary)
+  margin-bottom: 0.95rem
+  max-width: 70ch
+  line-height: 1.66
+  font-size: clamp(1rem, 1.6vw, 1.28rem)
 
 .back-link
-  display: inline-block
-  margin-bottom: 0.8rem
+  display: inline-flex
+  align-items: center
+  gap: 0.5rem
+  margin-bottom: 0.45rem
   text-decoration: none
-  color: #2563eb
+  color: color-mix(in srgb, var(--accent-primary) 70%, var(--accent-secondary))
+  font-weight: 600
+
+  &:hover
+    text-decoration: underline
+
+.blog-content-card
+  border: 1px solid color-mix(in srgb, var(--border-color) 82%, transparent)
+  border-radius: 22px
+  background: color-mix(in srgb, var(--card-bg) 96%, transparent)
+  box-shadow: var(--shadow-sm)
+  padding: clamp(1.3rem, 2.1vw, 2.2rem)
 
 .post-content
-  margin-top: 1.2rem
   line-height: 1.8
+  font-size: clamp(1rem, 1.3vw, 1.1rem)
+  color: var(--text-secondary)
+  max-width: 72ch
+  margin: 0 auto
+
+  > p:first-of-type
+    font-size: clamp(1.05rem, 1.7vw, 1.3rem)
+    line-height: 1.72
+    color: color-mix(in srgb, var(--text-primary) 78%, var(--text-secondary))
+
+  > p:first-of-type::first-letter
+    font-size: 1.95em
+    line-height: 0.85
+    font-weight: 700
+    margin-right: 0.06em
+    color: color-mix(in srgb, var(--accent-primary) 68%, var(--text-primary))
 
   h2
-    margin-top: 1.7rem
-    margin-bottom: 0.6rem
+    margin-top: 2.15rem
+    margin-bottom: 0.72rem
+    color: var(--text-primary)
+    font-size: clamp(1.45rem, 3vw, 2.2rem)
+    line-height: 1.24
+    padding-top: 0.9rem
+    border-top: 1px solid color-mix(in srgb, var(--border-color) 74%, transparent)
+
+  p
+    margin-bottom: 1rem
+
+  p + p
+    margin-top: 0.25rem
 
   p, li
-    color: #111827
+    color: color-mix(in srgb, var(--text-secondary) 90%, var(--text-primary))
+
+  strong
+    color: var(--text-primary)
+    font-weight: 700
+
+  em
+    color: color-mix(in srgb, var(--accent-secondary) 72%, var(--text-primary))
 
   ul, ol
-    padding-left: 1.4rem
+    padding-left: 1.35rem
+    margin-bottom: 1rem
+
+  li
+    margin-bottom: 0.48rem
+
+  ul li::marker, ol li::marker
+    color: color-mix(in srgb, var(--accent-primary) 72%, var(--text-primary))
+    font-weight: 700
+
+  a
+    color: color-mix(in srgb, var(--accent-primary) 70%, var(--accent-secondary))
+    text-decoration-thickness: 1.5px
+    text-underline-offset: 2px
+
+    &:hover
+      color: var(--accent-primary)
 
 .tags
   display: flex
   flex-wrap: wrap
-  gap: 0.4rem
+  gap: 0.42rem
+  margin-bottom: 0.9rem
 
 .tag
-  font-size: 0.75rem
-  border: 1px solid #d1d5db
+  font-size: 0.76rem
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 34%, var(--border-color))
+  background: color-mix(in srgb, var(--accent-primary) 13%, transparent)
   border-radius: 999px
-  padding: 0.1rem 0.55rem
-  color: #374151
+  padding: 0.2rem 0.58rem
+  color: color-mix(in srgb, var(--text-primary) 88%, var(--accent-primary))
+  font-weight: 600
+
+.blog-empty-state
+  border: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent)
+  background: color-mix(in srgb, var(--card-bg) 94%, transparent)
+  box-shadow: var(--shadow-sm)
+  border-radius: 20px
+  padding: 1.25rem
+
+[data-theme="dark"]
+  .blog-hero
+    background: linear-gradient(164deg, rgba(30, 41, 59, 0.92), rgba(23, 31, 47, 0.94))
+    border-color: rgba(79, 209, 199, 0.2)
+
+  .post-card
+    background: linear-gradient(170deg, rgba(30, 41, 59, 0.92), rgba(23, 31, 47, 0.93))
+    border-color: rgba(148, 163, 184, 0.28)
+
+  .blog-post-header
+    background: linear-gradient(165deg, rgba(30, 41, 59, 0.95), rgba(20, 27, 40, 0.96))
+    border-color: rgba(79, 209, 199, 0.24)
+
+  .blog-content-card
+    background: linear-gradient(180deg, #f8fafc, #f1f5f9)
+    border-color: rgba(59, 130, 246, 0.22)
+    box-shadow: 0 12px 34px rgba(2, 6, 23, 0.28)
+
+  .post-content
+    color: #1e293b
+
+    h2
+      color: #0f172a
+      border-top-color: rgba(148, 163, 184, 0.45)
+
+    p, li
+      color: #1f2937
+
+    strong
+      color: #0f172a
+
+    a
+      color: #0369a1
+
+    em
+      color: #1d4ed8
+
+  .tag
+    background: rgba(79, 209, 199, 0.16)
+    border-color: rgba(79, 209, 199, 0.42)
+
+  .blog-menu-block
+    background: linear-gradient(165deg, rgba(30, 41, 59, 0.92), rgba(20, 27, 40, 0.95))
+    border-color: rgba(148, 163, 184, 0.24)
+
+  .blog-menu-link
+    border-color: rgba(79, 209, 199, 0.42)
+    background: rgba(79, 209, 199, 0.13)
+    color: #dcf9f5
+
+    &:hover
+      background: rgba(79, 209, 199, 0.21)
+
+@media (max-width: 640px)
+  .blog-page
+    --blog-content-width: calc(100% - 1.2rem)
+    padding-top: 5.4rem
+
+  .blog-hero
+    border-radius: 18px
+
+  .blog-grid
+    grid-template-columns: 1fr
+
+  .blog-post-header
+    border-radius: 18px
+
+  .blog-content-card
+    border-radius: 18px

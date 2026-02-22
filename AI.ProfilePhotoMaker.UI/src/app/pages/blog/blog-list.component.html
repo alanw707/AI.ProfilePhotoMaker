@@ -2,19 +2,31 @@
 
 <main class="blog-page">
   <section class="blog-hero">
+    <p class="blog-eyebrow">Insights and playbooks</p>
     <h1>AI Profile Photo Maker Blog</h1>
     <p>Practical guides for better AI headshots, LinkedIn profiles, and personal branding.</p>
   </section>
 
+  <nav class="blog-menu-block" aria-label="Blog quick navigation">
+    <p class="blog-menu-title">Quick read menu</p>
+    <div class="blog-menu-links">
+      <a class="blog-menu-link" *ngFor="let post of menuPosts" [routerLink]="['/blog', post.slug]">
+        {{ post.title }}
+      </a>
+    </div>
+  </nav>
+
   <section class="blog-grid">
     <a class="post-card" *ngFor="let post of posts" [routerLink]="['/blog', post.slug]">
-      <time [attr.datetime]="post.dateIso">{{ post.dateIso | date:'longDate' }}</time>
+      <div class="post-meta">
+        <time [attr.datetime]="post.dateIso">{{ post.dateIso | date: 'longDate' }}</time>
+      </div>
       <h2>{{ post.title }}</h2>
       <p>{{ post.description }}</p>
       <div class="tags">
         <span class="tag" *ngFor="let tag of post.tags">{{ tag }}</span>
       </div>
-      <span class="read-more">Read article →</span>
+      <span class="read-more">Read article -></span>
     </a>
   </section>
 </main>
