@@ -332,6 +332,20 @@ export const routes: Routes = [
     pathMatch: 'full',
   },
 
+  // Blog
+  {
+    path: 'blog',
+    loadComponent: () =>
+      import('./pages/blog/blog-list.component').then(m => m.BlogListComponent),
+    title: 'Blog - AI Profile Photo Maker',
+  },
+  {
+    path: 'blog/:slug',
+    loadComponent: () =>
+      import('./pages/blog/blog-post.component').then(m => m.BlogPostComponent),
+    title: 'Blog Post - AI Profile Photo Maker',
+  },
+
   // Legal Pages
   {
     path: 'legal',

@@ -1,0 +1,22 @@
+<app-marketing-header></app-marketing-header>
+
+<main class="blog-page">
+  <section class="blog-hero">
+    <h1>AI Profile Photo Maker Blog</h1>
+    <p>Practical guides for better AI headshots, LinkedIn profiles, and personal branding.</p>
+  </section>
+
+  <section class="blog-grid">
+    <a class="post-card" *ngFor="let post of posts" [routerLink]="['/blog', post.slug]">
+      <time [attr.datetime]="post.dateIso">{{ post.dateIso | date:'longDate' }}</time>
+      <h2>{{ post.title }}</h2>
+      <p>{{ post.description }}</p>
+      <div class="tags">
+        <span class="tag" *ngFor="let tag of post.tags">{{ tag }}</span>
+      </div>
+      <span class="read-more">Read article →</span>
+    </a>
+  </section>
+</main>
+
+<app-marketing-footer></app-marketing-footer>
