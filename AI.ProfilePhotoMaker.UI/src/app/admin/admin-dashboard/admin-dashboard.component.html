@@ -14,7 +14,19 @@
     <a routerLink="/admin/audit-log" routerLinkActive="is-active">Audit Log</a>
   </nav>
 
-  <div class="metrics-grid">
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="empty-state">
+    <p>Loading dashboard statistics...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error" class="error-text" role="alert" aria-live="polite">
+    <p>{{ error }}</p>
+    <button class="btn btn-primary" (click)="loadDashboard()" [disabled]="isLoading">Retry</button>
+  </div>
+
+  <!-- Metrics Grid (only show when not loading and no error) -->
+  <div class="metrics-grid" *ngIf="!isLoading && !error">
     <article class="metric-card">
       <p>Total Users</p>
       <h2>{{ dashboard.totalUsers }}</h2>
