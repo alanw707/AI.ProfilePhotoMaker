@@ -105,6 +105,7 @@
 
       <button class="nav-link nav-link-button" type="button" (click)="navigateToPricing()">Pricing</button>
       <button class="nav-link nav-link-button" type="button" (click)="navigateToReviews()">Reviews</button>
+      <a class="nav-link" routerLink="/blog" (click)="closeAllMenus()">Blog</a>
 
       <ng-container *ngIf="!isAuthenticated; else authenticatedActions">
         <a class="nav-link ghost" routerLink="/auth/login" (click)="closeAllMenus()">Login</a>

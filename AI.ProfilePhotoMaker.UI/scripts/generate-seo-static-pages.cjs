@@ -11,6 +11,7 @@ const dataPath = path.join(
   'marketing',
   'seo-pages.data.ts'
 );
+const blogDataPath = path.join(projectRoot, 'src', 'app', 'pages', 'blog', 'blog.data.ts');
 const templatePath = path.join(projectRoot, 'src', 'index.html');
 const publicRoot = path.join(projectRoot, 'public');
 const distRoot = path.join(projectRoot, 'dist', 'ai.profile-photo-maker.ui');
@@ -32,6 +33,7 @@ const outputRoot = useDistTemplate
   ? path.dirname(distIndexCandidate)
   : publicRoot;
 const seoPages = loadSeoPages(dataPath);
+const blogPosts = loadBlogPosts(blogDataPath);
 
 Object.values(seoPages).forEach(page => {
   const slug = String(page.slug || '').replace(/^\/+|\/+$/g, '');
@@ -76,8 +78,84 @@ Object.values(seoPages).forEach(page => {
   fs.writeFileSync(path.join(outputDir, 'index.html'), html, 'utf8');
 });
 
+const blogListCanonicalUrl = `${CANONICAL_BASE}/blog`;
+const blogListTitle = 'Blog - AI Profile Photo Maker';
+const blogListDescription =
+  'Practical guides and tips for better AI headshots, LinkedIn photos, and professional profile pictures.';
+let blogListHtml = template;
+blogListHtml = replaceTitle(blogListHtml, blogListTitle);
+blogListHtml = replaceMeta(blogListHtml, 'name', 'title', blogListTitle);
+blogListHtml = replaceMeta(blogListHtml, 'name', 'description', blogListDescription);
+blogListHtml = replaceMeta(blogListHtml, 'name', 'keywords', 'AI headshots, LinkedIn photos, profile branding, blog');
+blogListHtml = replaceMeta(blogListHtml, 'name', 'robots', 'index, follow', {
+  insertAfter: 'description',
+});
+blogListHtml = replaceMeta(blogListHtml, 'property', 'og:title', blogListTitle);
+blogListHtml = replaceMeta(blogListHtml, 'property', 'og:description', blogListDescription);
+blogListHtml = replaceMeta(blogListHtml, 'property', 'og:type', 'website');
+blogListHtml = replaceMeta(blogListHtml, 'property', 'og:url', blogListCanonicalUrl);
+blogListHtml = replaceMeta(blogListHtml, 'property', 'og:image', OG_IMAGE);
+blogListHtml = replaceMeta(blogListHtml, 'property', 'og:site_name', 'AI Profile Photo Maker');
+blogListHtml = replaceMeta(blogListHtml, 'name', 'twitter:card', 'summary_large_image');
+blogListHtml = replaceMeta(blogListHtml, 'name', 'twitter:title', blogListTitle);
+blogListHtml = replaceMeta(blogListHtml, 'name', 'twitter:description', blogListDescription);
+blogListHtml = replaceMeta(blogListHtml, 'name', 'twitter:image', TWITTER_IMAGE);
+blogListHtml = replaceMeta(blogListHtml, 'name', 'twitter:url', blogListCanonicalUrl);
+blogListHtml = replaceMeta(blogListHtml, 'name', 'twitter:creator', '@aiprofilephoto');
+blogListHtml = replaceCanonical(blogListHtml, blogListCanonicalUrl);
+blogListHtml = injectStructuredData(
+  blogListHtml,
+  buildBlogCollectionStructuredData(blogListCanonicalUrl),
+  null
+);
+blogListHtml = injectStaticBody(blogListHtml, 'AI Profile Photo Maker Blog', blogListDescription);
+blogListHtml = normalizeAssetUrls(blogListHtml);
+const blogListOutputDir = path.join(outputRoot, 'blog');
+fs.mkdirSync(blogListOutputDir, { recursive: true });
+fs.writeFileSync(path.join(blogListOutputDir, 'index.html'), blogListHtml, 'utf8');
+
+blogPosts.forEach(post => {
+  const slug = String(post.slug || '').replace(/^\/+|\/+$/g, '');
+  if (!slug) {
+    return;
+  }
+
+  const routeSlug = `blog/${slug}`;
+  const canonicalUrl = `${CANONICAL_BASE}/${routeSlug}`;
+  const title = `${post.title} - AI Profile Photo Maker`;
+  const description = String(post.description || '').trim();
+  const keywords = Array.isArray(post.tags) ? post.tags.join(', ') : 'AI headshots, LinkedIn photos';
+
+  let html = template;
+  html = replaceTitle(html, title);
+  html = replaceMeta(html, 'name', 'title', title);
+  html = replaceMeta(html, 'name', 'description', description);
+  html = replaceMeta(html, 'name', 'keywords', keywords);
+  html = replaceMeta(html, 'name', 'robots', 'index, follow', { insertAfter: 'description' });
+  html = replaceMeta(html, 'property', 'og:title', post.title);
+  html = replaceMeta(html, 'property', 'og:description', description);
+  html = replaceMeta(html, 'property', 'og:type', 'article');
+  html = replaceMeta(html, 'property', 'og:url', canonicalUrl);
+  html = replaceMeta(html, 'property', 'og:image', OG_IMAGE);
+  html = replaceMeta(html, 'property', 'og:site_name', 'AI Profile Photo Maker');
+  html = replaceMeta(html, 'name', 'twitter:card', 'summary_large_image');
+  html = replaceMeta(html, 'name', 'twitter:title', post.title);
+  html = replaceMeta(html, 'name', 'twitter:description', description);
+  html = replaceMeta(html, 'name', 'twitter:image', TWITTER_IMAGE);
+  html = replaceMeta(html, 'name', 'twitter:url', canonicalUrl);
+  html = replaceMeta(html, 'name', 'twitter:creator', '@aiprofilephoto');
+  html = replaceCanonical(html, canonicalUrl);
+  html = injectStructuredData(html, buildBlogPostStructuredData(post, canonicalUrl), null);
+  html = injectStaticBody(html, post.title, description);
+  html = normalizeAssetUrls(html);
+
+  const outputDir = path.join(outputRoot, routeSlug);
+  fs.mkdirSync(outputDir, { recursive: true });
+  fs.writeFileSync(path.join(outputDir, 'index.html'), html, 'utf8');
+});
+
 console.log(
-  `Generated ${Object.keys(seoPages).length} SEO static pages in ${outputRoot}.`
+  `Generated ${Object.keys(seoPages).length + blogPosts.length + 1} SEO static pages in ${outputRoot}.`
 );
 
 function loadSeoPages(filePath) {
@@ -108,6 +186,34 @@ function loadSeoPages(filePath) {
     throw new Error('seoPages export not found in seo-pages.data.ts');
   }
   return loadedModule.seoPages;
+}
+
+function loadBlogPosts(filePath) {
+  try {
+    const tsNode = require('ts-node');
+    tsNode.register({
+      transpileOnly: true,
+      compilerOptions: {
+        module: 'commonjs',
+        target: 'es2022',
+      },
+    });
+
+    const resolvedPath = require.resolve(filePath);
+    delete require.cache[resolvedPath];
+    const tsModule = require(resolvedPath);
+    if (tsModule && Array.isArray(tsModule.blogPosts)) {
+      return tsModule.blogPosts;
+    }
+  } catch (error) {
+    // Fallback below retains behavior when ts-node is unavailable.
+  }
+
+  const loadedModule = loadTsModule(filePath, new Map());
+  if (!loadedModule || !Array.isArray(loadedModule.blogPosts)) {
+    throw new Error('blogPosts export not found in blog.data.ts');
+  }
+  return loadedModule.blogPosts;
 }
 
 function loadTsModule(filePath, moduleCache) {
@@ -195,6 +301,45 @@ function buildStructuredData(page, canonicalUrl) {
       name: 'AI Profile Photo Maker',
       url: `${CANONICAL_BASE}/`,
     },
+  };
+}
+
+function buildBlogCollectionStructuredData(canonicalUrl) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Blog',
+    name: 'AI Profile Photo Maker Blog',
+    description:
+      'Practical guides and tips for better AI headshots, LinkedIn photos, and professional profile pictures.',
+    url: canonicalUrl,
+    publisher: {
+      '@type': 'Organization',
+      name: 'AI Profile Photo Maker',
+      url: `${CANONICAL_BASE}/`,
+    },
+  };
+}
+
+function buildBlogPostStructuredData(post, canonicalUrl) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.title,
+    description: post.description,
+    datePublished: post.dateIso,
+    dateModified: post.dateIso,
+    mainEntityOfPage: canonicalUrl,
+    author: {
+      '@type': 'Organization',
+      name: post.author || 'AI Profile Photo Maker',
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'AI Profile Photo Maker',
+      url: `${CANONICAL_BASE}/`,
+    },
+    image: OG_IMAGE,
+    keywords: Array.isArray(post.tags) ? post.tags.join(', ') : undefined,
   };
 }
 
