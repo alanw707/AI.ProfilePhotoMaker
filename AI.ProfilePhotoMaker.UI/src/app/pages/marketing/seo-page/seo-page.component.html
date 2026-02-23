@@ -38,7 +38,8 @@
           <div class="cta-row">
             <a
               class="btn btn-primary"
-              [routerLink]="currentPage.hero.ctaHref"
+              [routerLink]="getRouterLinkForHref(currentPage.hero.ctaHref)"
+              [fragment]="getFragmentForHref(currentPage.hero.ctaHref)"
               [queryParams]="getQueryParamsForHref(currentPage.hero.ctaHref)"
               (click)="onCtaClick('hero_primary', currentPage.hero.ctaLabel, currentPage.hero.ctaHref)">
               {{ currentPage.hero.ctaLabel }}
@@ -46,7 +47,8 @@
             <a
               *ngIf="currentPage.hero.secondaryCtaLabel"
               class="btn btn-secondary"
-              [routerLink]="currentPage.hero.secondaryCtaHref"
+              [routerLink]="getRouterLinkForHref(currentPage.hero.secondaryCtaHref)"
+              [fragment]="getFragmentForHref(currentPage.hero.secondaryCtaHref)"
               [queryParams]="getQueryParamsForHref(currentPage.hero.secondaryCtaHref)"
               (click)="
                 onCtaClick('hero_secondary', currentPage.hero.secondaryCtaLabel, currentPage.hero.secondaryCtaHref)
@@ -218,7 +220,8 @@
           <a
             class="related-card"
             *ngFor="let link of currentPage.relatedLinks; let i = index; trackBy: trackByIndex"
-            [routerLink]="link.href"
+            [routerLink]="getRouterLinkForHref(link.href)"
+            [fragment]="getFragmentForHref(link.href)"
             [queryParams]="getQueryParamsForHref(link.href)"
             appAnimateOnScroll
             [delay]="(i % 4) + 1">
@@ -237,7 +240,8 @@
         </div>
         <a
           class="btn btn-primary"
-          [routerLink]="currentPage.cta.href"
+          [routerLink]="getRouterLinkForHref(currentPage.cta.href)"
+          [fragment]="getFragmentForHref(currentPage.cta.href)"
           [queryParams]="getQueryParamsForHref(currentPage.cta.href)"
           (click)="onCtaClick('footer_primary', currentPage.cta.label, currentPage.cta.href)">
           {{ currentPage.cta.label }}

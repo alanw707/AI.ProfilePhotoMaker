@@ -99,6 +99,17 @@ export class SeoPageComponent implements OnInit, OnDestroy {
       : null;
   }
 
+  getRouterLinkForHref(href?: string): string | null {
+    if (!href) {
+      return null;
+    }
+    return this.isReviewsLink(href) ? '/' : href;
+  }
+
+  getFragmentForHref(href?: string): string | undefined {
+    return href && this.isReviewsLink(href) ? 'testimonials' : undefined;
+  }
+
   private applySeo(page: SeoPageContent): void {
     const canonicalUrl = this.buildCanonicalUrl(page.slug);
 
@@ -283,5 +294,9 @@ export class SeoPageComponent implements OnInit, OnDestroy {
 
   private isPricingLink(href: string): boolean {
     return href.startsWith('/pricing');
+  }
+
+  private isReviewsLink(href: string): boolean {
+    return href.startsWith('/reviews');
   }
 }

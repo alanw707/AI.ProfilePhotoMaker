@@ -129,7 +129,7 @@ export class MarketingHeaderComponent implements OnInit, OnDestroy {
   }
 
   navigateToReviews(): void {
-    void this.router.navigate(['/reviews']);
+    void this.navigationService.navigateToSection('testimonials');
     this.closeAllMenus();
   }
 

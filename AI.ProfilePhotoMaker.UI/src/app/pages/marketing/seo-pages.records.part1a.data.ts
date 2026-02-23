@@ -52,6 +52,29 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
         ],
       },
       {
+        type: 'showcase' as const,
+        title: 'See the transformation',
+        intro: 'Upload a casual photo and get back a polished, professional headshot.',
+        items: [
+          {
+            title: 'Academic transformation',
+            description: 'A relaxed home photo becomes a distinguished faculty portrait.',
+            beforeImage: '/assets/marketing/before-after/academic1-before.jpg',
+            afterImage: '/assets/marketing/before-after/academic1-after.jpg',
+            beforeAlt: 'Casual home photo before transformation',
+            afterAlt: 'Professional academic headshot after transformation',
+          },
+          {
+            title: 'Corporate upgrade',
+            description: 'From coffee mug in hand to corner office ready.',
+            beforeImage: '/assets/marketing/before-after/executive-before.jpeg',
+            afterImage: '/assets/marketing/before-after/executive-after.jpg',
+            beforeAlt: 'Casual photo before corporate headshot',
+            afterAlt: 'Executive corporate headshot',
+          },
+        ],
+      },
+      {
         type: 'cards',
         title: 'Why the results feel natural',
         intro: 'Our pipeline is tuned for realism, not plastic faces or harsh filters.',
@@ -84,7 +107,7 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'LinkedIn headshots', href: '/linkedin-headshots' },
       { label: 'Professional headshots', href: '/professional-headshots' },
-      { label: 'Headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Corporate headshot', href: '/corporate-headshot' },
       { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
@@ -119,30 +142,30 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
         intro: 'Each set is trained on your photos for consistency and realism.',
         items: [
           {
-            title: 'Neon city upgrade',
+            title: 'Executive boardroom ready',
             description:
-              'From a casual selfie to a crisp night-street portrait with cinematic neon glow.',
-            beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
-            afterImage: '/assets/marketing/before-after/set-1-after.jpg',
-            beforeAlt: 'Casual selfie before headshot',
-            afterAlt: 'Neon city headshot after',
+              'From a casual home photo to a polished executive portrait with city skyline backdrop.',
+            beforeImage: '/assets/marketing/before-after/executive-before.jpeg',
+            afterImage: '/assets/marketing/before-after/executive-after.jpg',
+            beforeAlt: 'Casual home photo before executive headshot',
+            afterAlt: 'Executive headshot with suit and city backdrop',
           },
           {
-            title: 'Event to studio casual',
+            title: 'Academic faculty portrait',
             description:
-              'From a formal event photo to a relaxed studio-style headshot with clean light.',
-            beforeImage: '/assets/marketing/before-after/set-2-before.jpg',
-            afterImage: '/assets/marketing/before-after/set-2-after.png',
-            beforeAlt: 'Formal event photo before headshot',
-            afterAlt: 'Studio casual headshot after',
+              'A relaxed selfie transformed into a distinguished faculty directory headshot.',
+            beforeImage: '/assets/marketing/before-after/academic1-before.jpg',
+            afterImage: '/assets/marketing/before-after/academic1-after.jpg',
+            beforeAlt: 'Casual selfie before academic headshot',
+            afterAlt: 'Professional academic headshot with library backdrop',
           },
           {
-            title: 'Outdoor casual to executive',
-            description: 'From a bright outdoor snapshot to a polished suit-and-tie portrait.',
-            beforeImage: '/assets/marketing/before-after/set-3-before.jpg',
-            afterImage: '/assets/marketing/before-after/set-3-after.png',
-            beforeAlt: 'Outdoor casual photo before headshot',
-            afterAlt: 'Executive headshot after',
+            title: 'LinkedIn career ready',
+            description: 'Coffee shop snapshot to corporate hallway portrait in minutes.',
+            beforeImage: '/assets/marketing/before-after/linkedin-before.jpeg',
+            afterImage: '/assets/marketing/before-after/linkedin-after.jpg',
+            beforeAlt: 'Coffee shop photo before LinkedIn headshot',
+            afterAlt: 'Professional LinkedIn headshot in corporate setting',
           },
         ],
       },
@@ -190,7 +213,7 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
       { label: 'How it works', href: '/how-it-works' },
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'LinkedIn headshots', href: '/linkedin-headshots' },
-      { label: 'Headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Corporate headshot', href: '/corporate-headshot' },
       { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
@@ -200,148 +223,48 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
       href: '/pricing',
     },
   },
-  reviews: {
-    slug: 'reviews',
-    title: 'AI Headshot Reviews | What customers say',
+  'corporate-headshot': {
+    slug: 'corporate-headshot',
+    title: 'Corporate Headshots | Polished photos for teams and leaders',
     description:
-      'Read verified reviews for AI Profile Photo Maker. Professionals share how AI headshots improved LinkedIn, resumes, and profiles.',
-    keywords: 'AI headshot reviews, customer testimonials, AI profile photo maker reviews',
-    h1: 'AI Headshot Reviews from Professionals',
+      'Create polished corporate headshots for leadership pages, team profiles, and company directories. Fast turnaround with realistic results.',
+    keywords: 'corporate headshots, business headshots, executive headshots, team profile photos',
+    h1: 'Corporate Headshots',
     hero: {
-      eyebrow: 'Reviews',
-      headline: 'AI Headshot Reviews from Professionals',
-      subhead: 'Real feedback from customers who upgraded their profiles with AI headshots.',
+      eyebrow: 'Corporate headshots',
+      headline: 'Corporate Headshots',
+      subhead:
+        'Create consistent, polished headshots for executives and teams without booking a studio.',
       ctaLabel: 'Get your headshot in minutes',
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
+      imageSrc: '/assets/marketing/before-after/academic2-after.jpg',
+      imageAlt: 'Corporate-style professional headshot result',
+      imageFallbackSrc: '/assets/marketing/before-after/set-2-after.png',
     },
     highlights: [
-      { value: '4.9/5', label: 'Average rating' },
-      { value: 'Minutes', label: 'Typical delivery' },
-      { value: '10k+', label: 'Headshots delivered' },
-    ],
-    sections: [
-      {
-        type: 'testimonials',
-        title: 'What customers are saying',
-        items: [
-          {
-            quote: 'My LinkedIn profile finally looks polished. The results felt realistic.',
-            name: 'Amelia Walsh',
-            role: 'Customer',
-          },
-          {
-            quote: 'Super straightforward flow and the turnaround was fast.',
-            name: 'Lachlan Reid',
-            role: 'Customer',
-          },
-          {
-            quote: 'The output still looks like me, just more professional.',
-            name: 'Noah Bennett',
-            role: 'Customer',
-          },
-        ],
-      },
-      {
-        type: 'cards',
-        title: 'Why professionals choose us',
-        items: [
-          {
-            title: 'Looks authentic',
-            description: 'Subtle retouching keeps your face consistent and realistic.',
-          },
-          {
-            title: 'Fast delivery',
-            description: 'Most customers receive their first set in minutes.',
-          },
-          {
-            title: 'Flexible styles',
-            description: 'LinkedIn, corporate, creative, and more in one package.',
-          },
-        ],
-      },
-      {
-        type: 'bullets',
-        title: 'Most common feedback',
-        items: [
-          'Profiles look more professional within a day.',
-          'Headshots feel consistent across teams.',
-          'AI results still look like the real person.',
-        ],
-      },
-      {
-        type: 'faq',
-        title: 'Reviews FAQ',
-        items: [
-          {
-            question: 'Are these testimonials real?',
-            answer: 'Yes. Feedback is collected from real customers after delivery.',
-          },
-          {
-            question: 'How fast do people get results?',
-            answer: 'Most customers receive their first headshots in minutes.',
-          },
-          {
-            question: 'What if I need a different style?',
-            answer: 'You can generate additional styles anytime from your account.',
-          },
-        ],
-      },
-    ],
-    relatedLinks: [
-      { label: 'Examples', href: '/examples' },
-      { label: 'How it works', href: '/how-it-works' },
-      { label: 'Pricing', href: '/pricing' },
-      { label: 'Headshot enhancer', href: '/free-headshot-enhancer' },
-    ],
-    cta: {
-      title: 'See why customers recommend us',
-      description: 'Upload clear selfies and get a full headshot gallery in minutes.',
-      label: 'Get your headshot in minutes',
-      href: '/pricing',
-    },
-  },
-  'free-headshot-enhancer': {
-    slug: 'free-headshot-enhancer',
-    title: 'Headshot Enhancer | Improve your profile photo fast',
-    description:
-      'Improve your existing profile photo with your credit balance. Weekly top-ups restore credits to 5 when below. Fix lighting, background, and color fast.',
-    keywords:
-      'headshot enhancer, profile photo enhancer, AI photo enhancement, headshot retouching',
-    h1: 'Headshot Enhancer',
-    hero: {
-      eyebrow: 'Headshot enhancer',
-      headline: 'Headshot Enhancer',
-      subhead:
-        'Improve your existing profile photo fast with your credit balance. Weekly top-ups restore credits to 5 when below.',
-      ctaLabel: 'Get started',
-      ctaHref: '/dashboard',
-      secondaryCtaLabel: 'See examples',
-      secondaryCtaHref: '/examples',
-    },
-    highlights: [
-      { value: 'Weekly', label: 'Top-up to 5' },
-      { value: 'Minutes', label: 'Typical turnaround' },
-      { value: 'No card', label: 'Required to start' },
+      { value: 'Consistent', label: 'Team look and feel' },
+      { value: 'Minutes', label: 'To first results' },
+      { value: 'Professional', label: 'Brand-ready output' },
     ],
     sections: [
       {
         type: 'showcase',
-        title: 'Enhancement results',
-        intro: 'See the difference AI enhancement makes to existing photos.',
+        title: 'Corporate headshot results',
+        intro: 'See how everyday uploads become polished, business-ready portraits.',
         items: [
           {
-            title: 'Lighting and clarity improvement',
-            description: 'Balanced exposure with preserved natural detail.',
-            beforeImage: '/assets/marketing/before-after/set-3-before.jpg',
-            afterImage: '/assets/marketing/before-after/set-3-after.png',
-            beforeAlt: 'Original photo before enhancement',
-            afterAlt: 'Enhanced photo with better lighting',
+            title: 'Executive polish',
+            description: 'Balanced lighting and clean framing for leadership profiles.',
+            beforeImage: '/assets/marketing/before-after/academic2-before.jpg',
+            afterImage: '/assets/marketing/before-after/academic2-after.jpg',
+            beforeAlt: 'Casual photo before corporate headshot processing',
+            afterAlt: 'Polished corporate headshot after processing',
           },
           {
-            title: 'Background refinement',
-            description: 'Cleaner background for professional presentation.',
+            title: 'Brand-safe presentation',
+            description: 'Professional background cleanup for company websites and directories.',
             beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
             afterImage: '/assets/marketing/before-after/set-1-after.jpg',
             beforeAlt: 'Photo with distracting background',
@@ -351,12 +274,12 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
       },
       {
         type: 'bullets',
-        title: 'What the enhancer improves',
+        title: 'What corporate headshots should deliver',
         items: [
-          'Lighting cleanup to reduce harsh shadows or uneven exposure.',
-          'Background cleanup for a cleaner, professional look.',
-          'Color correction for natural skin tones.',
-          'Detail preservation for realistic facial features.',
+          'Consistent style across executives and team members.',
+          'Professional wardrobe and background styling.',
+          'Natural skin tones and realistic facial detail.',
+          'Profile-ready framing for websites and LinkedIn.',
         ],
       },
       {
@@ -364,34 +287,35 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
         title: 'Best for',
         items: [
           {
-            title: 'LinkedIn refresh',
-            description: 'Turn a casual photo into a polished professional profile picture.',
+            title: 'Leadership pages',
+            description: 'Create consistent executive portraits for company leadership profiles.',
           },
           {
-            title: 'Team bios',
-            description: 'Keep headshots consistent across team pages and directories.',
+            title: 'Team directories',
+            description: 'Keep every team profile aligned with your brand presentation.',
           },
           {
-            title: 'Resume updates',
-            description: 'Get a clean headshot for applications and portfolios.',
+            title: 'Sales and recruiting',
+            description: 'Use polished photos across proposals, bios, and recruiting materials.',
           },
         ],
       },
       {
         type: 'steps',
-        title: 'How credits work',
+        title: 'How it works',
         items: [
           {
-            title: 'Create an account',
-            description: 'Sign up once and get a credit balance with weekly top-ups when below 5.',
+            title: 'Upload clear selfies',
+            description:
+              'Share varied, well-lit photos so the model captures your features accurately.',
           },
           {
-            title: 'Upload your photo',
-            description: 'Choose an existing profile photo to improve.',
+            title: 'Choose corporate-friendly styles',
+            description: 'Pick looks that match your industry, role, and brand tone.',
           },
           {
-            title: 'Download your enhanced image',
-            description: 'Use the improved version across your professional profiles.',
+            title: 'Download and publish',
+            description: 'Use your favorites for websites, LinkedIn, decks, and team directories.',
           },
         ],
       },
@@ -402,10 +326,10 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
       { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
-      title: 'Start with enhancement credits',
-      description: 'Create an account and improve your profile photo today.',
-      label: 'Get started',
-      href: '/dashboard',
+      title: 'Need corporate-ready headshots fast?',
+      description: 'Generate polished portraits for your team and brand in minutes.',
+      label: 'Get your headshot in minutes',
+      href: '/pricing',
     },
   },
   'ai-headshot-generator': {
@@ -516,7 +440,7 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
       { label: 'LinkedIn headshots', href: '/linkedin-headshots' },
       { label: 'Professional headshots', href: '/professional-headshots' },
       { label: 'Headshots for job search', href: '/headshots-for-job-search' },
-      { label: 'Headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Corporate headshot', href: '/corporate-headshot' },
       { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
@@ -542,9 +466,8 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
-      imageSrc: buildRoleStylePreviewUrl('executive'),
+      imageSrc: '/assets/marketing/before-after/linkedin-after.jpg',
       imageAlt: 'LinkedIn-ready professional headshot',
-      imageFallbackSrc: '/assets/marketing/before-after/set-3-after.png',
     },
     highlights: [
       { value: 'Profile-ready', label: 'Framing and crop' },
@@ -558,20 +481,20 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
         intro: 'Compare casual uploads with polished results designed for profile visibility.',
         items: [
           {
-            title: 'Clean profile framing',
-            description: 'Head-and-shoulders crop that reads clearly in feed and search.',
-            beforeImage: '/assets/marketing/before-after/set-2-before.jpg',
-            afterImage: '/assets/marketing/before-after/set-2-after.png',
-            beforeAlt: 'Casual photo before LinkedIn optimization',
-            afterAlt: 'LinkedIn-ready headshot after optimization',
+            title: 'Professional profile upgrade',
+            description: 'From a coffee shop snapshot to a polished corporate portrait.',
+            beforeImage: '/assets/marketing/before-after/linkedin-before.jpeg',
+            afterImage: '/assets/marketing/before-after/linkedin-after.jpg',
+            beforeAlt: 'Casual photo before LinkedIn headshot',
+            afterAlt: 'LinkedIn-ready professional headshot',
           },
           {
-            title: 'Professional lighting and tone',
-            description: 'Balanced lighting and natural color for a credible first impression.',
+            title: 'Clean profile framing',
+            description: 'Casual selfie transformed into a crisp, well-lit LinkedIn photo.',
             beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
             afterImage: '/assets/marketing/before-after/set-1-after.jpg',
-            beforeAlt: 'Original selfie before styling',
-            afterAlt: 'Professional LinkedIn headshot after styling',
+            beforeAlt: 'Casual selfie before LinkedIn optimization',
+            afterAlt: 'LinkedIn-optimized professional headshot',
           },
         ],
       },
@@ -620,7 +543,7 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'Professional headshots', href: '/professional-headshots' },
       { label: 'Headshots for job search', href: '/headshots-for-job-search' },
-      { label: 'Headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Corporate headshot', href: '/corporate-headshot' },
       { label: 'Pricing', href: '/pricing' },
     ],
     cta: {

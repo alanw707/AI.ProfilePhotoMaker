@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, inject, OnInit } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -19,6 +19,7 @@ import { environment } from '../environments/environment';
 })
 export class AppComponent implements OnInit {
   title = 'AI.ProfilePhotoMaker.UI';
+  showBackToTop = false;
 
   private readonly _router = inject(Router);
   private readonly _authService = inject(AuthService);
@@ -44,6 +45,15 @@ export class AppComponent implements OnInit {
       this._updateCanonicalUrl(navigation.urlAfterRedirects);
       this._resetScrollPosition(navigation.urlAfterRedirects);
     });
+  }
+
+  scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    this.showBackToTop = window.scrollY > 500;
   }
 
   private _handleOAuthCallback(): void {

@@ -113,6 +113,9 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
   private heroRotationInterval: ReturnType<typeof setInterval> | null = null;
   private heroIntersectionObserver: IntersectionObserver | null = null;
 
+  // Testimonial rotation
+  private testimonialInterval: ReturnType<typeof setInterval> | null = null;
+
   // Interactive comparison slider
   sliderPosition = 50; // Percentage from left (0-100)
   isDraggingSlider = false;
@@ -259,9 +262,8 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
     );
     this.setupSEO();
     this.initializeHeroBeforeAfter();
-    // Testimonials disabled until real reviews are available (see spec 1.2)
-    // this.initializeTestimonials();
-    // this.startTestimonialRotation();
+    this.initializeTestimonials();
+    this.startTestimonialRotation();
     this.loadPackagesFromDatabase();
     this.loadAvailableStyles();
     this.observeElements();
@@ -375,6 +377,10 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
       clearInterval(this.heroRotationInterval);
     }
 
+    if (this.testimonialInterval) {
+      clearInterval(this.testimonialInterval);
+    }
+
     if (this.heroIntersectionObserver) {
       this.heroIntersectionObserver.disconnect();
     }
@@ -407,21 +413,45 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
     this.heroBeforeAfterPairs = [
       {
         id: 1,
-        before: 'assets/marketing/before-after/set-1-before.jpg',
-        after: 'assets/marketing/before-after/set-1-after.jpg',
-        label: 'LinkedIn Ready',
+        before: 'assets/marketing/before-after/beach-vibes-before.jpg',
+        after: 'assets/marketing/before-after/beach-vibes-after.jpg',
+        label: 'Beach Vibes',
       },
       {
         id: 2,
-        before: 'assets/marketing/before-after/set-2-before.jpg',
-        after: 'assets/marketing/before-after/set-2-after.png',
-        label: 'Business Casual',
+        before: 'assets/marketing/before-after/linkedin-before.jpeg',
+        after: 'assets/marketing/before-after/linkedin-after.jpg',
+        label: 'LinkedIn Professional',
       },
       {
         id: 3,
-        before: 'assets/marketing/before-after/set-3-before.jpg',
-        after: 'assets/marketing/before-after/set-3-after.png',
-        label: 'Corporate',
+        before: 'assets/marketing/before-after/executive-before.jpeg',
+        after: 'assets/marketing/before-after/executive-after.jpg',
+        label: 'Executive',
+      },
+      {
+        id: 4,
+        before: 'assets/marketing/before-after/medical-before.jpg',
+        after: 'assets/marketing/before-after/medical.jpg',
+        label: 'Medical Professional',
+      },
+      {
+        id: 5,
+        before: 'assets/marketing/before-after/academic1-before.jpg',
+        after: 'assets/marketing/before-after/academic1-after.jpg',
+        label: 'Academic',
+      },
+      {
+        id: 6,
+        before: 'assets/marketing/before-after/academic2-before.jpg',
+        after: 'assets/marketing/before-after/academic2-after.jpg',
+        label: 'Academic Scholar',
+      },
+      {
+        id: 7,
+        before: 'assets/marketing/before-after/set-1-before.jpg',
+        after: 'assets/marketing/before-after/set-1-after.jpg',
+        label: 'LinkedIn Ready',
       },
     ];
   }
@@ -1207,61 +1237,65 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
   }
 
   startTestimonialRotation(): void {
-    setInterval(() => {
+    if (this.testimonials.length === 0) {
+      return;
+    }
+    this.testimonialInterval = setInterval(() => {
       this.currentTestimonialIndex = (this.currentTestimonialIndex + 1) % this.testimonials.length;
     }, 5000);
   }
 
   private initializeTestimonials(): void {
-    const testimonialData: Omit<Testimonial, 'imageUrl'>[] = [
+    this.testimonials = [
       {
-        name: 'Amelia Walsh',
-        role: 'Recruitment Consultant (Hobart)',
+        name: 'Prof. Richard',
+        role: 'University Professor',
         content:
-          'My LinkedIn profile finally looks polished. The results felt realistic, and I got a set I’m happy to use across applications.',
-        style: 'linkedin',
+          "I needed a professional headshot for my department page but didn't want to sit through a studio session. Uploaded a photo from my living room and got back something that looks like it belongs in a faculty directory. My students barely recognized me.",
+        style: 'academic',
+        imageUrl: 'assets/marketing/before-after/academic1-after.jpg',
       },
       {
-        name: 'Lachlan Reid',
-        role: 'Software Engineer (Launceston)',
+        name: 'David',
+        role: 'Postdoctoral Researcher',
         content:
-          'Super straightforward flow and the turnaround was fast. The enhanced photos looked clean without feeling over-processed.',
-        style: 'tech-professional',
+          "As a researcher applying for faculty positions, first impressions matter. This tool turned my phone selfie into a polished headshot that I'm now using on my CV, lab website, and conference profiles. Saved me a trip to the photographer.",
+        style: 'academic',
+        imageUrl: 'assets/marketing/before-after/academic2-after.jpg',
       },
       {
-        name: 'Sophie Kline',
-        role: 'Account Executive (Burnie)',
+        name: 'Ashley',
+        role: 'Content Creator',
         content:
-          'I needed something professional for client-facing work. The style options helped me find a look that fits my industry.',
-        style: 'edgy-urban',
+          'I wanted a natural, sun-kissed look for my dating profile without hiring a photographer. The beach vibes style nailed exactly what I was going for. My friends thought I had a professional shoot done in Malibu!',
+        style: 'dating',
+        imageUrl: 'assets/marketing/before-after/beach-vibes-after.jpg',
       },
       {
-        name: 'Noah Bennett',
-        role: 'Project Manager (Hobart)',
+        name: 'Raj',
+        role: 'VP of Operations',
         content:
-          'I was worried it would look fake, but the output still looks like me—just more professional. Great for LinkedIn.',
+          'Our entire leadership team needed updated headshots for the annual report. Instead of coordinating schedules with a photographer, everyone uploaded a casual photo and we had boardroom-ready portraits within the hour. The ROI on time alone was incredible.',
         style: 'executive',
+        imageUrl: 'assets/marketing/before-after/executive-after.jpg',
       },
       {
-        name: 'Grace Nolan',
-        role: 'Small Business Owner (Devonport)',
+        name: 'Brianna',
+        role: 'Marketing Manager',
         content:
-          'I started with enhancements, then upgraded for headshots. The final set gave me consistent photos across platforms.',
-        style: 'glamour',
+          "I was between jobs and needed a sharp LinkedIn photo fast. Didn't have time or budget for a professional session. The result looked so polished that two recruiters commented on my profile photo during interviews. Worth every penny.",
+        style: 'linkedin',
+        imageUrl: 'assets/marketing/before-after/linkedin-after.jpg',
       },
       {
-        name: 'Ethan Price',
-        role: 'Graduate Job Seeker (Kingston)',
+        name: 'Dr. Sofia',
+        role: 'Family Medicine Physician',
         content:
-          'Easy to use and the results came back in minutes. It helped me feel more confident sending out applications.',
-        style: 'creative',
+          'Patients want to see a friendly, trustworthy face before booking an appointment. My old headshot was from residency. This gave me a clean, professional medical portrait that I now use on the clinic website and my health network profiles.',
+        style: 'medical',
+        imageUrl: 'assets/marketing/before-after/medical.jpg',
       },
     ];
-
-    this.testimonials = testimonialData.map(testimonial => ({
-      ...testimonial,
-      imageUrl: this._stylePreviewService.getCachedUrl(testimonial.style),
-    }));
   }
 
   observeElements(): void {
@@ -1385,6 +1419,14 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
         }
       }
     });
+
+    this.themeSubscription.add(
+      this._route.fragment.subscribe(fragment => {
+        if (fragment) {
+          setTimeout(() => this.navigation.scrollToSection(fragment), 120);
+        }
+      })
+    );
   }
 
   onImageError(event: Event): void {

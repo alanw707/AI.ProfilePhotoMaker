@@ -181,12 +181,27 @@ html
   &:hover::after
     opacity: 0.6
 
-// Testimonial card hover effect
+// Testimonial card hover effect (base styles in testimonials section block below)
 .testimonial-card
+  background: var(--card-bg, #ffffff)
+  border: 1px solid var(--border-color, #e5e7eb)
+  border-radius: 16px
+  padding: 1.75rem
+  display: flex
+  flex-direction: column
+  gap: 1rem
   transition: transform 0.3s ease, box-shadow 0.3s ease
-  
+
   &:hover
     transform: translateY(-5px)
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08)
+
+  [data-theme="dark"] &
+    background: var(--card-bg)
+    border-color: rgba(255, 255, 255, 0.08)
+
+    &:hover
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3)
 
 // Feature card hover effect
 .feature-card
@@ -296,6 +311,7 @@ html
 // Theme toggle button using shared mixin
 .theme-toggle
   @include shared.theme-toggle-button
+
 
 // =============================================================================
 // HEADER THEMING
@@ -1850,10 +1866,13 @@ header
   justify-content: center
   gap: 8px
   margin-top: 24px
+  width: 100%
 
 .nav-pill
   display: flex
+  flex: 1
   align-items: center
+  justify-content: center
   gap: 6px
   padding: 8px 16px
   background: rgba(var(--border-color-rgb), 0.1)
@@ -3338,18 +3357,18 @@ header
   gap: 8px
   padding: 6px 12px
   border-radius: 20px
-  color: var(--text-tertiary)
+  color: #22c55e
   font-size: 0.75rem
   font-weight: 600
   line-height: 1.2
-  text-transform: uppercase
-  letter-spacing: 0.08em
+  text-transform: none
+  letter-spacing: 0.01em
   
   // Glassmorphism effect for badge
-  background: var(--glass-bg-light)
+  background: rgba(34, 197, 94, 0.12)
   backdrop-filter: blur(12px)
   -webkit-backdrop-filter: blur(12px)
-  border: 1px solid var(--glass-border-light)
+  border: 1px solid rgba(34, 197, 94, 0.3)
   
   // Subtle pulse animation
   animation: pulse-glow 3s ease-in-out infinite
@@ -3612,6 +3631,7 @@ header
     svg
       width: 18px
       height: 18px
+
       
 // Landscape mobile devices
 @media (max-width: 768px) and (orientation: landscape)
@@ -5780,6 +5800,124 @@ header
       opacity: 0.06
       width: 250px
       height: 250px
+
+// =============================================================================
+// TESTIMONIALS SECTION
+// =============================================================================
+
+.testimonials-section
+  background: var(--bg-secondary)
+
+  [data-theme="dark"] &
+    background: var(--bg-secondary)
+
+.testimonials-grid
+  display: grid
+  grid-template-columns: 1fr
+  gap: 1.5rem
+  list-style: none
+  padding: 0
+  margin: 0
+
+  @media (min-width: 640px)
+    grid-template-columns: repeat(2, 1fr)
+
+  @media (min-width: 1024px)
+    grid-template-columns: repeat(3, 1fr)
+
+.testimonial-quote-mark
+  color: var(--accent-primary, #4fd1c7)
+  opacity: 0.6
+  line-height: 1
+  flex-shrink: 0
+
+.testimonial-quote
+  flex: 1
+  margin: 0
+  padding: 0
+  border: none
+
+  p
+    color: var(--text-secondary)
+    font-size: 0.9375rem
+    line-height: 1.7
+    margin: 0
+
+.testimonial-stars
+  display: flex
+  align-items: center
+  gap: 2px
+
+.testimonial-star-icon
+  color: #f59e0b
+  flex-shrink: 0
+
+.testimonial-author
+  display: flex
+  align-items: center
+  gap: 0.75rem
+  margin-top: auto
+
+.author-avatar-wrapper
+  flex-shrink: 0
+
+.author-avatar
+  border-radius: 50%
+  object-fit: cover
+  object-position: center top
+  width: 48px
+  height: 48px
+  display: block
+
+.author-avatar-fallback
+  width: 48px
+  height: 48px
+  border-radius: 50%
+  background: linear-gradient(135deg, var(--accent-primary, #4fd1c7), var(--accent-secondary, #7c3aed))
+  color: white
+  display: flex
+  align-items: center
+  justify-content: center
+  font-size: 1.1rem
+  font-weight: 700
+  flex-shrink: 0
+
+.author-info
+  display: flex
+  flex-direction: column
+  gap: 0.125rem
+  flex: 1
+  min-width: 0
+
+.author-name
+  font-weight: 600
+  font-size: 0.9375rem
+  color: var(--text-primary)
+  display: block
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+
+.author-role
+  font-size: 0.8125rem
+  color: var(--text-secondary)
+  display: block
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+
+.testimonial-verified
+  display: flex
+  align-items: center
+  gap: 0.25rem
+  color: #16a34a
+  font-size: 0.75rem
+  font-weight: 500
+  flex-shrink: 0
+  margin-left: auto
+
+  [data-theme="dark"] &
+    color: #4ade80
 
 // =============================================================================
 // REDUCED MOTION - Disable animations for accessibility

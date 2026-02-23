@@ -176,9 +176,20 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
         items: [
           {
             title: 'Clinic-ready presentation',
-            description: 'Professional lighting and a distraction-free background.',
-            beforeImage: '/assets/marketing/before-after/set-3-before.jpg',
-            afterImage: '/assets/marketing/before-after/set-3-after.png',
+            description: 'A garden selfie becomes a trustworthy medical portrait with white coat.',
+            beforeImage: '/assets/marketing/before-after/medical-before.jpg',
+            afterImage: '/assets/marketing/before-after/medical.jpg',
+            beforeAlt: 'Casual photo before doctor headshot',
+            afterAlt: 'Professional doctor headshot with white coat and stethoscope',
+          },
+          {
+            title: 'Faculty medical portrait',
+            description:
+              'From a casual snap to an academic medical portrait worthy of any department page.',
+            beforeImage: '/assets/marketing/before-after/academic2-before.jpg',
+            afterImage: '/assets/marketing/before-after/academic2-after.jpg',
+            beforeAlt: 'Casual photo before medical faculty headshot',
+            afterAlt: 'Professional medical faculty headshot',
           },
         ],
       },
@@ -328,7 +339,7 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'Examples', href: '/examples' },
       { label: 'Professional headshots', href: '/professional-headshots' },
-      { label: 'Headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Corporate headshot', href: '/corporate-headshot' },
       { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
@@ -438,7 +449,7 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'Examples', href: '/examples' },
       { label: 'Professional headshots', href: '/professional-headshots' },
-      { label: 'Headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Corporate headshot', href: '/corporate-headshot' },
       { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
@@ -459,46 +470,157 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
     hero: {
       eyebrow: 'Features',
       headline: 'AI Headshot Features Built for Professional Profiles',
-      subhead: 'Realistic headshots, fast turnaround, and privacy-first processing.',
+      subhead:
+        'Upload casual selfies and get studio-quality headshots in minutes — realistic detail, flexible styles, and privacy-first processing.',
       ctaLabel: 'Get your headshot in minutes',
       ctaHref: '/pricing',
-      secondaryCtaLabel: 'How it works',
-      secondaryCtaHref: '/how-it-works',
+      secondaryCtaLabel: 'See examples',
+      secondaryCtaHref: '/examples',
+      imageSrc: '/assets/marketing/before-after/executive-after.jpg',
+      imageAlt: 'AI-generated professional headshot with studio lighting',
     },
+    highlights: [
+      { value: '~15 min', label: 'Typical delivery' },
+      { value: '20+', label: 'Style options' },
+      { value: 'HD', label: 'Resolution output' },
+    ],
     sections: [
       {
-        type: 'cards',
-        title: 'Core capabilities',
+        type: 'showcase' as const,
+        title: 'See the AI in action',
+        intro:
+          'Upload a casual photo and get back a polished, professional headshot — lighting, background, and framing all refined automatically.',
         items: [
           {
-            title: 'AI-powered enhancement',
-            description: 'Transforms casual photos into polished headshots with natural detail.',
+            title: 'Executive polish',
+            description:
+              'A relaxed home photo becomes a boardroom-ready portrait with balanced lighting and a clean city backdrop.',
+            beforeImage: '/assets/marketing/before-after/executive-before.jpeg',
+            afterImage: '/assets/marketing/before-after/executive-after.jpg',
+            beforeAlt: 'Casual home photo before AI headshot processing',
+            afterAlt: 'Executive headshot with suit and city skyline backdrop',
           },
           {
-            title: 'Multiple style options',
-            description: 'Choose from LinkedIn, classic, or creative looks.',
-          },
-          {
-            title: 'Fast delivery',
-            description: 'Most headshot sets are ready within minutes.',
+            title: 'LinkedIn-ready clarity',
+            description:
+              'From a coffee shop snapshot to a crisp corporate portrait with professional framing and natural skin tones.',
+            beforeImage: '/assets/marketing/before-after/linkedin-before.jpeg',
+            afterImage: '/assets/marketing/before-after/linkedin-after.jpg',
+            beforeAlt: 'Coffee shop snapshot before LinkedIn headshot',
+            afterAlt: 'LinkedIn-optimized professional headshot',
           },
         ],
       },
       {
         type: 'cards',
-        title: 'Built for professionals',
+        title: 'Core capabilities',
         items: [
           {
-            title: 'Privacy-first processing',
-            description: 'Encrypted uploads and user-controlled deletion options.',
+            title: 'Custom AI model training',
+            description:
+              'Each headshot set is trained on your photos so results stay consistent with your facial features and identity.',
           },
           {
-            title: 'High-resolution outputs',
-            description: 'Headshots that look sharp across digital and print use cases.',
+            title: '20+ professional styles',
+            description:
+              'Choose from LinkedIn classic, corporate modern, creative portrait, academic, medical, and more.',
           },
           {
-            title: 'Cross-platform ready',
-            description: 'Use your headshots on LinkedIn, resumes, and portfolios.',
+            title: 'Natural detail preservation',
+            description:
+              'Balanced retouching keeps skin texture, facial features, and expressions realistic — no plastic AI look.',
+          },
+          {
+            title: 'Fast delivery',
+            description:
+              'Most headshot sets are ready within minutes after upload, not hours or days.',
+          },
+        ],
+      },
+      {
+        type: 'showcase' as const,
+        title: 'Works across professions',
+        intro:
+          'The same upload flow produces headshots tailored to different industries and use cases.',
+        items: [
+          {
+            title: 'Academic faculty portrait',
+            description:
+              'A casual selfie transformed into a distinguished faculty directory headshot with warm, scholarly backdrop.',
+            beforeImage: '/assets/marketing/before-after/academic1-before.jpg',
+            afterImage: '/assets/marketing/before-after/academic1-after.jpg',
+            beforeAlt: 'Casual selfie before academic headshot',
+            afterAlt: 'Professional academic headshot with library backdrop',
+          },
+          {
+            title: 'Medical provider portrait',
+            description:
+              'From an outdoor photo to a clinic-ready portrait with white coat and professional medical setting.',
+            beforeImage: '/assets/marketing/before-after/medical-before.jpg',
+            afterImage: '/assets/marketing/before-after/medical.jpg',
+            beforeAlt: 'Casual outdoor photo before medical headshot',
+            afterAlt: 'Professional medical headshot with white coat',
+          },
+          {
+            title: 'Lifestyle and dating',
+            description:
+              'A backyard snapshot becomes a sun-kissed, approachable portrait perfect for dating apps and social profiles.',
+            beforeImage: '/assets/marketing/before-after/beach-vibes-before.jpg',
+            afterImage: '/assets/marketing/before-after/beach-vibes-after.jpg',
+            beforeAlt: 'Casual garden photo before lifestyle headshot',
+            afterAlt: 'Beach vibes portrait with golden hour lighting',
+          },
+        ],
+      },
+      {
+        type: 'steps',
+        title: 'How it works',
+        items: [
+          {
+            title: 'Upload 10–20 clear selfies',
+            description:
+              'Front-facing shots with variety in angles and lighting help the AI model learn your features accurately.',
+          },
+          {
+            title: 'Choose your styles',
+            description:
+              'Pick from LinkedIn, corporate, creative, medical, academic, and more — each optimized for its use case.',
+          },
+          {
+            title: 'Download and publish',
+            description:
+              'Get high-resolution headshots in minutes. Use them across LinkedIn, resumes, websites, and directories.',
+          },
+        ],
+      },
+      {
+        type: 'bullets',
+        title: 'Built for professionals',
+        items: [
+          'Privacy-first processing with encrypted uploads and user-controlled data deletion.',
+          'High-resolution output that looks sharp across digital and print formats.',
+          'Cross-platform ready — optimized framing for LinkedIn, resumes, team pages, and portfolios.',
+          'Team-friendly workflow for consistent headshots across departments and locations.',
+        ],
+      },
+      {
+        type: 'faq',
+        title: 'Features FAQ',
+        items: [
+          {
+            question: 'How many photos should I upload?',
+            answer:
+              'We recommend 10–20 clear selfies with varied angles and lighting for the best results.',
+          },
+          {
+            question: 'Will the headshots look like me?',
+            answer:
+              'Yes. The AI is trained on your photos to preserve your facial features and identity.',
+          },
+          {
+            question: 'Can I use these commercially?',
+            answer:
+              'Yes. You can use your headshots for business profiles, marketing, and professional use.',
           },
         ],
       },
@@ -506,12 +628,14 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
     relatedLinks: [
       { label: 'Examples', href: '/examples' },
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
+      { label: 'How it works', href: '/how-it-works' },
+      { label: 'Corporate headshot', href: '/corporate-headshot' },
       { label: 'Pricing', href: '/pricing' },
-      { label: 'Headshot enhancer', href: '/free-headshot-enhancer' },
     ],
     cta: {
-      title: 'Unlock professional headshots with AI',
-      description: 'Pick a style and get a full set of headshots in minutes.',
+      title: 'Ready to see these features in action?',
+      description:
+        'Upload your selfies and get a full gallery of professional headshots in minutes.',
       label: 'Get your headshot in minutes',
       href: '/pricing',
     },
