@@ -10,6 +10,8 @@ import { NotificationComponent } from './components/shared/notification/notifica
 import { CookieConsentComponent } from './components/shared/cookie-consent/cookie-consent.component';
 import { environment } from '../environments/environment';
 
+import { WebMCPService } from './services/webmcp.service';
+
 @Component({
   selector: 'app-root',
   imports: [RouterOutlet, NotificationComponent, CookieConsentComponent],
@@ -18,6 +20,8 @@ import { environment } from '../environments/environment';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent implements OnInit {
+  private readonly webmcpService = inject(WebMCPService);
+
   title = 'AI.ProfilePhotoMaker.UI';
 
   private readonly _router = inject(Router);
@@ -33,6 +37,9 @@ export class AppComponent implements OnInit {
 
     // Initialize analytics tracking once consent is granted
     this._analyticsService.init();
+
+    // Register WebMCP tools for agentic interactions
+    this.webmcpService.registerTools();
 
     // Clean up OAuth URL token if present and navigate
     this._handleOAuthCallback();
