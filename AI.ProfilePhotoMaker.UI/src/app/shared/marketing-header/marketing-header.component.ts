@@ -13,6 +13,7 @@ import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { NavigationService } from '../../services/navigation.service';
+import { ThemeService } from '../../services/theme.service';
 
 type MarketingMenu = 'features' | 'use-cases' | 'compare' | null;
 
@@ -31,6 +32,7 @@ export class MarketingHeaderComponent implements OnInit, OnDestroy {
   isAuthenticated = false;
   isMobileMenuOpen = false;
   activeMenu: MarketingMenu = null;
+  currentTheme$!: typeof this.themeService.theme$;
 
   private readonly subscriptions = new Subscription();
 
@@ -39,8 +41,15 @@ export class MarketingHeaderComponent implements OnInit, OnDestroy {
     private readonly router: Router,
     private readonly navigationService: NavigationService,
     private readonly cdr: ChangeDetectorRef,
-    private readonly elementRef: ElementRef<HTMLElement>
-  ) {}
+    private readonly elementRef: ElementRef<HTMLElement>,
+    private readonly themeService: ThemeService
+  ) {
+    this.currentTheme$ = this.themeService.theme$;
+  }
+
+  toggleTheme(): void {
+    this.themeService.toggleTheme();
+  }
 
   ngOnInit(): void {
     this.subscriptions.add(

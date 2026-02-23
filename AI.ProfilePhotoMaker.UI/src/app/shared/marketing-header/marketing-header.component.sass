@@ -13,9 +13,9 @@
   left: 0
   right: 0
   z-index: 1000
-  background: linear-gradient(135deg, rgba(17, 24, 39, 0.94), rgba(30, 41, 59, 0.9))
-  border-bottom: 1px solid rgba(148, 163, 184, 0.2)
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.35)
+  background: linear-gradient(135deg, rgba(233, 236, 239, 0.96), rgba(222, 226, 230, 0.92))
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08)
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06)
   backdrop-filter: blur(18px) saturate(160%)
   -webkit-backdrop-filter: blur(18px) saturate(160%)
   height: var(--marketing-header-height)
@@ -25,11 +25,13 @@
   display: flex
   align-items: center
   box-sizing: border-box
-  color: #e2e8f0
+  color: var(--text-primary)
 
-  [data-theme='dark'] &
+  :host-context([data-theme='dark']) &
     background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.92))
     border-bottom: 1px solid rgba(148, 163, 184, 0.16)
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.35)
+    color: #e2e8f0
 
 .header-inner
   @include shared.content-container
@@ -46,27 +48,40 @@
   align-items: center
   gap: 12px
   text-decoration: none
-  color: #f8fafc
+  color: #1e293b
   font-weight: 600
   font-family: 'Poppins', sans-serif
   line-height: 1
   letter-spacing: 0.2px
 
+  :host-context([data-theme='dark']) &
+    color: #f8fafc
+
   img
     width: 40px
     height: 40px
     display: block
-    filter: drop-shadow(0 6px 12px rgba(15, 23, 42, 0.45))
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15))
+
+    :host-context([data-theme='dark']) &
+      filter: drop-shadow(0 6px 12px rgba(15, 23, 42, 0.45))
+
+.theme-toggle
+  @include shared.theme-toggle-button
 
 .menu-toggle
   display: none
-  background: rgba(15, 23, 42, 0.3)
-  border: 1px solid rgba(148, 163, 184, 0.35)
+  background: rgba(0, 0, 0, 0.06)
+  border: 1px solid rgba(0, 0, 0, 0.12)
   border-radius: 12px
   padding: 10px 12px
   cursor: pointer
   position: relative
   color: inherit
+
+  :host-context([data-theme='dark']) &
+    background: rgba(15, 23, 42, 0.3)
+    border-color: rgba(148, 163, 184, 0.35)
 
   &:focus-visible
     outline: 2px solid var(--accent-primary)
@@ -89,7 +104,7 @@
 
 .nav-link
   text-decoration: none
-  color: rgba(226, 232, 240, 0.82)
+  color: rgba(30, 41, 59, 0.78)
   font-weight: 500
   font-size: 0.95rem
   padding: 8px 12px
@@ -100,7 +115,15 @@
   cursor: pointer
   line-height: 1
 
+  :host-context([data-theme='dark']) &
+    color: rgba(226, 232, 240, 0.82)
+
   &:hover
+    color: #1e293b
+    background: rgba(0, 0, 0, 0.06)
+    border-color: rgba(0, 0, 0, 0.1)
+
+  :host-context([data-theme='dark']) &:hover
     color: #f8fafc
     background: rgba(148, 163, 184, 0.18)
     border-color: rgba(148, 163, 184, 0.35)
@@ -125,27 +148,42 @@
   line-height: 1
   padding: 10px 18px
   border-radius: 8px
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18)
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12)
+
+  :host-context([data-theme='dark']) &
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18)
 
   &:hover
     color: #ffffff
     background: var(--primary-dark)
     border-color: var(--primary-dark)
     transform: translateY(-1px)
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16)
+
+  :host-context([data-theme='dark']) &:hover
     box-shadow: 0 10px 18px rgba(15, 23, 42, 0.22)
 
   &:active
     transform: translateY(0)
-    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18)
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12)
 
 .nav-link.ghost
-  border-color: rgba(148, 163, 184, 0.35)
-  color: rgba(226, 232, 240, 0.9)
+  border-color: rgba(0, 0, 0, 0.15)
+  color: rgba(30, 41, 59, 0.85)
   border-radius: 8px
   padding: 10px 18px
-  background: rgba(15, 23, 42, 0.25)
+  background: rgba(0, 0, 0, 0.04)
+
+  :host-context([data-theme='dark']) &
+    border-color: rgba(148, 163, 184, 0.35)
+    color: rgba(226, 232, 240, 0.9)
+    background: rgba(15, 23, 42, 0.25)
 
   &:hover
+    border-color: rgba(0, 0, 0, 0.2)
+    background: rgba(0, 0, 0, 0.08)
+
+  :host-context([data-theme='dark']) &:hover
     border-color: rgba(148, 163, 184, 0.55)
     background: rgba(148, 163, 184, 0.18)
 
@@ -172,8 +210,8 @@
   top: calc(100% + 12px)
   left: 0
   min-width: 240px
-  background: rgba(15, 23, 42, 0.98)
-  border: 1px solid rgba(148, 163, 184, 0.2)
+  background: rgba(255, 255, 255, 0.98)
+  border: 1px solid rgba(0, 0, 0, 0.1)
   border-radius: 16px
   box-shadow: var(--shadow-lg)
   padding: 16px
@@ -184,6 +222,10 @@
   transition: opacity 0.2s ease, transform 0.2s ease
   display: grid
   gap: 8px
+
+  :host-context([data-theme='dark']) &
+    background: rgba(15, 23, 42, 0.98)
+    border-color: rgba(148, 163, 184, 0.2)
 
   &::before
     content: ''
@@ -203,12 +245,19 @@
 
   a
     text-decoration: none
-    color: rgba(226, 232, 240, 0.85)
+    color: rgba(30, 41, 59, 0.85)
     font-size: 0.9rem
     padding: 6px 8px
     border-radius: 8px
 
+    :host-context([data-theme='dark']) &
+      color: rgba(226, 232, 240, 0.85)
+
     &:hover
+      color: #1e293b
+      background: rgba(0, 0, 0, 0.06)
+
+    :host-context([data-theme='dark']) &:hover
       color: #f8fafc
       background: rgba(148, 163, 184, 0.2)
 
@@ -219,10 +268,13 @@
   position: fixed
   inset: 0
   z-index: 50
-  background: rgba(15, 23, 42, 0.35)
+  background: rgba(0, 0, 0, 0.2)
   opacity: 0
   pointer-events: none
   transition: opacity 0.2s ease
+
+  :host-context([data-theme='dark']) &
+    background: rgba(15, 23, 42, 0.35)
 
   &.active
     opacity: 1
@@ -240,15 +292,19 @@
     left: 16px
     flex-direction: column
     align-items: stretch
-    background: rgba(15, 23, 42, 0.98)
+    background: rgba(255, 255, 255, 0.98)
     border-radius: 16px
     padding: 16px
     box-shadow: var(--shadow-lg)
-    border: 1px solid rgba(148, 163, 184, 0.2)
+    border: 1px solid rgba(0, 0, 0, 0.1)
     transform: translateY(-16px)
     opacity: 0
     pointer-events: none
     transition: opacity 0.2s ease, transform 0.2s ease
+
+    :host-context([data-theme='dark']) &
+      background: rgba(15, 23, 42, 0.98)
+      border-color: rgba(148, 163, 184, 0.2)
 
     &.open
       opacity: 1
