@@ -7,14 +7,14 @@ export type Theme = 'light' | 'dark';
   providedIn: 'root',
 })
 export class ThemeService {
-  private _currentTheme = new BehaviorSubject<Theme>('dark');
+  private _currentTheme = new BehaviorSubject<Theme>('light');
   public theme$ = this._currentTheme.asObservable();
 
   constructor() {
-    // Check for saved theme preference or default to dark
+    // Check for saved theme preference or default to light
     const savedTheme = localStorage.getItem('theme') as Theme;
 
-    const initialTheme = savedTheme || 'dark';
+    const initialTheme = savedTheme || 'light';
     this.setTheme(initialTheme);
   }
 
