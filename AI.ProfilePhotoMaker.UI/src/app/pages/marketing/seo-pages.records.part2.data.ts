@@ -17,6 +17,8 @@ export const seoPagesPart2: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
+      imageSrc: '/assets/marketing/before-after/beach-vibes-after.jpg',
+      imageAlt: 'Casual, sun-kissed dating app headshot',
     },
     highlights: [
       { value: 'Minutes', label: 'Typical delivery' },
@@ -39,6 +41,21 @@ export const seoPagesPart2: Record<string, SeoPageContent> = {
           {
             title: 'Variety without a photoshoot',
             description: 'Multiple looks from one upload flow—no studio required.',
+          },
+        ],
+      },
+      {
+        type: 'showcase' as const,
+        title: 'Dating profile transformations',
+        intro: 'See how everyday photos become swipe-worthy profile pictures.',
+        items: [
+          {
+            title: 'Golden hour glow',
+            description: 'A backyard snapshot transformed into a sun-kissed beach portrait.',
+            beforeImage: '/assets/marketing/before-after/beach-vibes-before.jpg',
+            afterImage: '/assets/marketing/before-after/beach-vibes-after.jpg',
+            beforeAlt: 'Casual garden photo before dating headshot',
+            afterAlt: 'Beach vibes dating profile photo with golden hour lighting',
           },
         ],
       },
@@ -99,6 +116,8 @@ export const seoPagesPart2: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
+      imageSrc: '/assets/marketing/before-after/executive-after.jpg',
+      imageAlt: 'Professional real estate agent headshot in business suit',
     },
     highlights: [
       { value: 'Consistent', label: 'Brand look' },
@@ -181,6 +200,8 @@ export const seoPagesPart2: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
+      imageSrc: '/assets/marketing/before-after/medical.jpg',
+      imageAlt: 'Medical professional headshot with white coat and stethoscope',
     },
     highlights: [
       { value: 'Trust', label: 'Patient-first look' },
@@ -203,6 +224,21 @@ export const seoPagesPart2: Record<string, SeoPageContent> = {
           {
             title: 'Fast onboarding',
             description: 'Quick headshots for new hires without scheduling a studio.',
+          },
+        ],
+      },
+      {
+        type: 'showcase' as const,
+        title: 'Medical headshot transformations',
+        intro: 'Professional portraits that build patient trust before the first visit.',
+        items: [
+          {
+            title: 'White coat portrait',
+            description: 'From an outdoor casual photo to a clean, professional medical headshot.',
+            beforeImage: '/assets/marketing/before-after/medical-before.jpg',
+            afterImage: '/assets/marketing/before-after/medical.jpg',
+            beforeAlt: 'Casual outdoor photo before medical headshot',
+            afterAlt: 'Professional medical headshot with white coat and stethoscope',
           },
         ],
       },

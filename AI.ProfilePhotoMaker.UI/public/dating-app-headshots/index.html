@@ -27,6 +27,7 @@
     <!-- Primary Meta Tags -->
     <meta name="title" content="Dating App Headshots | AI photos that still look like you" />
     <meta name="description" content="Dating app headshots that look like you. Upgrade Tinder, Hinge, or Bumble photos with realistic, flattering AI headshots." />
+    <meta name="robots" content="index, follow" />
     <meta name="keywords" content="dating app headshots, AI dating photos, Tinder headshot, Hinge profile photo, Bumble profile picture" />
     <meta name="language" content="English" />
     <meta name="author" content="AI Profile Photo Maker" />
@@ -37,6 +38,8 @@
     <meta property="og:title" content="Dating App Headshots | AI photos that still look like you" />
     <meta property="og:description" content="Dating app headshots that look like you. Upgrade Tinder, Hinge, or Bumble photos with realistic, flattering AI headshots." />
     <meta property="og:image" content="https://aiprofilephotomaker.com/assets/og-image.png?v=2" />
+    <meta property="og:image:secure_url" content="https://aiprofilephotomaker.com/assets/og-image.png?v=3" />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="945" />
     <meta property="og:image:height" content="631" />
 
@@ -46,6 +49,7 @@
     <meta name="twitter:title" content="Dating App Headshots | AI photos that still look like you" />
     <meta name="twitter:description" content="Dating app headshots that look like you. Upgrade Tinder, Hinge, or Bumble photos with realistic, flattering AI headshots." />
     <meta name="twitter:image" content="https://aiprofilephotomaker.com/assets/twitter-card.png" />
+    <meta name="twitter:image:alt" content="AI Profile Photo Maker preview card" />
 
     <!-- PWA -->
     <meta name="theme-color" content="#0f766e" />
@@ -67,8 +71,31 @@
 
     <!-- Web App Manifest -->
     <link rel="manifest" href="/manifest.json" />
-    <meta name="robots" content="index, follow" />
-  <meta property="og:site_name" content="AI Profile Photo Maker" />
+    <script>
+      (function () {
+        if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+          return;
+        }
+
+        if (!('serviceWorker' in navigator)) {
+          return;
+        }
+
+        navigator.serviceWorker
+          .getRegistrations()
+          .then(function (registrations) {
+            return Promise.all(
+              registrations.map(function (registration) {
+                return registration.unregister();
+              })
+            );
+          })
+          .catch(function () {
+            return undefined;
+          });
+      })();
+    </script>
+    <meta property="og:site_name" content="AI Profile Photo Maker" />
   <meta name="twitter:creator" content="@aiprofilephoto" />
   <script id="seo-structured-data" type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"Dating App Headshots That Look Like You","description":"Dating app headshots that look like you. Upgrade Tinder, Hinge, or Bumble photos with realistic, flattering AI headshots.","url":"https://aiprofilephotomaker.com/dating-app-headshots","isPartOf":{"@type":"WebSite","name":"AI Profile Photo Maker","url":"https://aiprofilephotomaker.com/"},"publisher":{"@type":"Organization","name":"AI Profile Photo Maker","url":"https://aiprofilephotomaker.com/"}}</script>
     <script id="seo-faq-structured-data" type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Will these look like me?","acceptedAnswer":{"@type":"Answer","text":"Yes. The AI is trained on your selfies to keep your features consistent."}},{"@type":"Question","name":"Which apps do these work for?","acceptedAnswer":{"@type":"Answer","text":"Tinder, Hinge, Bumble, and any app that values clear profile photos."}},{"@type":"Question","name":"Can I generate multiple styles?","acceptedAnswer":{"@type":"Answer","text":"Yes. Create multiple looks and test what performs best."}}]}</script>

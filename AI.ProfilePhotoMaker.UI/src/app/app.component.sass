@@ -1,0 +1,54 @@
+.app-back-to-top
+  position: fixed
+  right: 24px
+  bottom: 24px
+  z-index: 2100
+  display: inline-flex
+  align-items: center
+  gap: 6px
+  min-width: 64px
+  height: 44px
+  padding: 0 14px
+  border: 1px solid rgba(148, 163, 184, 0.35)
+  border-radius: 999px
+  background: rgba(15, 23, 42, 0.9)
+  color: #f8fafc
+  font-weight: 600
+  font-size: 0.88rem
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.35)
+  backdrop-filter: blur(10px)
+  -webkit-backdrop-filter: blur(10px)
+  cursor: pointer
+  opacity: 0
+  transform: translateY(10px)
+  pointer-events: none
+  transition: opacity 0.25s ease, transform 0.25s ease, background 0.2s ease
+
+  &.visible
+    opacity: 1
+    transform: translateY(0)
+    pointer-events: auto
+
+  &:hover
+    background: rgba(30, 41, 59, 0.95)
+
+  &:focus-visible
+    outline: 2px solid var(--accent-primary)
+    outline-offset: 2px
+
+  [data-theme='light'] &
+    background: rgba(255, 255, 255, 0.92)
+    color: #0f172a
+    border-color: rgba(148, 163, 184, 0.45)
+
+    &:hover
+      background: rgba(241, 245, 249, 0.97)
+
+@media (max-width: 768px)
+  .app-back-to-top
+    right: 16px
+    bottom: 16px
+    height: 42px
+    min-width: 60px
+    padding: 0 12px
+    font-size: 0.84rem

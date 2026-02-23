@@ -1,11 +1,5 @@
 import type { SeoPageContent } from './seo-pages.types';
 
-const STYLE_PREVIEW_BASE_URL = 'https://aipmstv16j74jubocuukg.blob.core.windows.net/style-previews';
-const STYLE_PREVIEW_CACHE_VERSION = '20260110';
-
-const buildRoleStylePreviewUrl = (styleName: 'medical' | 'executive'): string =>
-  `${STYLE_PREVIEW_BASE_URL}/${styleName}.jpg?v=${STYLE_PREVIEW_CACHE_VERSION}`;
-
 export const seoPagesPart1b: Record<string, SeoPageContent> = {
   'professional-headshots': {
     slug: 'professional-headshots',
@@ -23,6 +17,8 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'How it works',
       secondaryCtaHref: '/how-it-works',
+      imageSrc: '/assets/marketing/before-after/academic1-after.jpg',
+      imageAlt: 'Distinguished professional headshot',
     },
     sections: [
       {
@@ -31,20 +27,21 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
         intro: 'See how casual photos become polished professional headshots.',
         items: [
           {
-            title: 'Professional studio look',
-            description: 'Clean lighting and background for a credible business presence.',
-            beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
-            afterImage: '/assets/marketing/before-after/set-1-after.jpg',
+            title: 'Executive presence',
+            description: 'A relaxed home photo becomes a boardroom-ready executive portrait.',
+            beforeImage: '/assets/marketing/before-after/executive-before.jpeg',
+            afterImage: '/assets/marketing/before-after/executive-after.jpg',
             beforeAlt: 'Casual photo before professional headshot',
-            afterAlt: 'Professional studio headshot after',
+            afterAlt: 'Professional executive headshot',
           },
           {
             title: 'Corporate ready',
-            description: 'Balanced exposure and professional styling for team pages.',
-            beforeImage: '/assets/marketing/before-after/set-2-before.jpg',
-            afterImage: '/assets/marketing/before-after/set-2-after.png',
+            description:
+              'From casual to polished — a professional headshot that commands attention.',
+            beforeImage: '/assets/marketing/before-after/linkedin-before.jpeg',
+            afterImage: '/assets/marketing/before-after/linkedin-after.jpg',
             beforeAlt: 'Original photo before enhancement',
-            afterAlt: 'Corporate-ready headshot after',
+            afterAlt: 'Corporate-ready professional headshot',
           },
         ],
       },
@@ -116,7 +113,7 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
       { label: 'LinkedIn headshots', href: '/linkedin-headshots' },
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'Examples', href: '/examples' },
-      { label: 'Headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Corporate headshot', href: '/corporate-headshot' },
       { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
@@ -142,6 +139,8 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
+      imageSrc: '/assets/marketing/before-after/set-1-after.jpg',
+      imageAlt: 'LinkedIn-ready professional headshot for job seekers',
     },
     sections: [
       {
@@ -151,19 +150,19 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
         items: [
           {
             title: 'Approachable professional',
-            description: 'Warm, confident look that builds trust with recruiters.',
-            beforeImage: '/assets/marketing/before-after/set-2-before.jpg',
-            afterImage: '/assets/marketing/before-after/set-2-after.png',
+            description: 'Stand out to recruiters with a polished, confident headshot.',
+            beforeImage: '/assets/marketing/before-after/linkedin-before.jpeg',
+            afterImage: '/assets/marketing/before-after/linkedin-after.jpg',
             beforeAlt: 'Casual photo before job search headshot',
-            afterAlt: 'Approachable professional headshot after',
+            afterAlt: 'Approachable professional headshot for job applications',
           },
           {
             title: 'LinkedIn optimized',
-            description: 'Clean framing and lighting designed for profile visibility.',
+            description: 'From everyday selfie to profile-ready portrait that gets noticed.',
             beforeImage: '/assets/marketing/before-after/set-1-before.jpg',
             afterImage: '/assets/marketing/before-after/set-1-after.jpg',
             beforeAlt: 'Original selfie before optimization',
-            afterAlt: 'LinkedIn-optimized headshot after',
+            afterAlt: 'LinkedIn-optimized headshot for job seekers',
           },
         ],
       },
@@ -217,7 +216,7 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
       { label: 'LinkedIn headshots', href: '/linkedin-headshots' },
       { label: 'AI headshot generator', href: '/ai-headshot-generator' },
       { label: 'Professional headshots', href: '/professional-headshots' },
-      { label: 'Headshot enhancer', href: '/free-headshot-enhancer' },
+      { label: 'Corporate headshot', href: '/corporate-headshot' },
       { label: 'Pricing', href: '/pricing' },
     ],
     cta: {
@@ -244,9 +243,8 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
       ctaHref: '/pricing',
       secondaryCtaLabel: 'See examples',
       secondaryCtaHref: '/examples',
-      imageSrc: buildRoleStylePreviewUrl('executive'),
+      imageSrc: '/assets/marketing/before-after/executive-after.jpg',
       imageAlt: 'Premium realtor headshot example',
-      imageFallbackSrc: '/assets/marketing/before-after/set-1-after.jpg',
     },
     highlights: [
       { value: 'Zillow-ready', label: 'Profile formats' },

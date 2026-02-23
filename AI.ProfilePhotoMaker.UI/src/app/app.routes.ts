@@ -212,21 +212,22 @@ export const routes: Routes = [
   },
   {
     path: 'reviews',
+    canActivate: [() => inject(Router).createUrlTree(['/'], { fragment: 'testimonials' })],
+    pathMatch: 'full',
+  },
+  {
+    path: 'corporate-headshot',
     loadComponent: () =>
       import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
-    title: seoPages['reviews'].title,
+    title: seoPages['corporate-headshot'].title,
     data: {
-      seoPage: seoPages['reviews'],
+      seoPage: seoPages['corporate-headshot'],
     },
   },
   {
     path: 'free-headshot-enhancer',
-    loadComponent: () =>
-      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
-    title: seoPages['free-headshot-enhancer'].title,
-    data: {
-      seoPage: seoPages['free-headshot-enhancer'],
-    },
+    redirectTo: 'corporate-headshot',
+    pathMatch: 'full',
   },
   {
     path: 'ai-headshot-generator',
@@ -335,14 +336,12 @@ export const routes: Routes = [
   // Blog
   {
     path: 'blog',
-    loadComponent: () =>
-      import('./pages/blog/blog-list.component').then(m => m.BlogListComponent),
+    loadComponent: () => import('./pages/blog/blog-list.component').then(m => m.BlogListComponent),
     title: 'Blog - AI Profile Photo Maker',
   },
   {
     path: 'blog/:slug',
-    loadComponent: () =>
-      import('./pages/blog/blog-post.component').then(m => m.BlogPostComponent),
+    loadComponent: () => import('./pages/blog/blog-post.component').then(m => m.BlogPostComponent),
     title: 'Blog Post - AI Profile Photo Maker',
   },
 

@@ -27,6 +27,7 @@
     <!-- Primary Meta Tags -->
     <meta name="title" content="Lawyer Headshots for Attorneys &amp; Law Firms | AI Profile Photo Maker" />
     <meta name="description" content="Premium attorney headshots that look credible and natural. Ideal for firm websites, LinkedIn, press, and speaking bios." />
+    <meta name="robots" content="index, follow" />
     <meta name="keywords" content="lawyer headshots, attorney headshots, law firm headshots, professional attorney photo, partner headshot" />
     <meta name="language" content="English" />
     <meta name="author" content="AI Profile Photo Maker" />
@@ -37,6 +38,8 @@
     <meta property="og:title" content="Lawyer Headshots for Attorneys &amp; Law Firms | AI Profile Photo Maker" />
     <meta property="og:description" content="Premium attorney headshots that look credible and natural. Ideal for firm websites, LinkedIn, press, and speaking bios." />
     <meta property="og:image" content="https://aiprofilephotomaker.com/assets/og-image.png?v=2" />
+    <meta property="og:image:secure_url" content="https://aiprofilephotomaker.com/assets/og-image.png?v=3" />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="945" />
     <meta property="og:image:height" content="631" />
 
@@ -46,6 +49,7 @@
     <meta name="twitter:title" content="Lawyer Headshots for Attorneys &amp; Law Firms | AI Profile Photo Maker" />
     <meta name="twitter:description" content="Premium attorney headshots that look credible and natural. Ideal for firm websites, LinkedIn, press, and speaking bios." />
     <meta name="twitter:image" content="https://aiprofilephotomaker.com/assets/twitter-card.png" />
+    <meta name="twitter:image:alt" content="AI Profile Photo Maker preview card" />
 
     <!-- PWA -->
     <meta name="theme-color" content="#0f766e" />
@@ -67,8 +71,31 @@
 
     <!-- Web App Manifest -->
     <link rel="manifest" href="/manifest.json" />
-    <meta name="robots" content="index, follow" />
-  <meta property="og:site_name" content="AI Profile Photo Maker" />
+    <script>
+      (function () {
+        if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+          return;
+        }
+
+        if (!('serviceWorker' in navigator)) {
+          return;
+        }
+
+        navigator.serviceWorker
+          .getRegistrations()
+          .then(function (registrations) {
+            return Promise.all(
+              registrations.map(function (registration) {
+                return registration.unregister();
+              })
+            );
+          })
+          .catch(function () {
+            return undefined;
+          });
+      })();
+    </script>
+    <meta property="og:site_name" content="AI Profile Photo Maker" />
   <meta name="twitter:creator" content="@aiprofilephoto" />
   <script id="seo-structured-data" type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"Attorney Headshots That Signal Credibility","description":"Premium attorney headshots that look credible and natural. Ideal for firm websites, LinkedIn, press, and speaking bios.","url":"https://aiprofilephotomaker.com/lawyer-headshots","isPartOf":{"@type":"WebSite","name":"AI Profile Photo Maker","url":"https://aiprofilephotomaker.com/"},"publisher":{"@type":"Organization","name":"AI Profile Photo Maker","url":"https://aiprofilephotomaker.com/"}}</script>
     <script id="seo-faq-structured-data" type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Will this look AI-generated?","acceptedAnswer":{"@type":"Answer","text":"We optimize for realism—natural detail, clean lighting, and professional composition—so the result looks like a real headshot."}},{"@type":"Question","name":"Can our firm standardize headshots across the team?","acceptedAnswer":{"@type":"Answer","text":"Yes. Use the same style preset and background approach to keep your team page consistent and premium."}},{"@type":"Question","name":"What background works best for attorneys?","acceptedAnswer":{"@type":"Answer","text":"Neutral studio tones (light gray, off-white) are the most versatile for websites, press, and LinkedIn."}}]}</script>

@@ -1,3 +1,12 @@
 <router-outlet></router-outlet>
+<button
+  type="button"
+  class="app-back-to-top"
+  [class.visible]="showBackToTop"
+  (click)="scrollToTop()"
+  aria-label="Scroll to top">
+  <span aria-hidden="true">↑</span>
+  <span>Top</span>
+</button>
 <app-notification></app-notification>
 <app-cookie-consent></app-cookie-consent>
