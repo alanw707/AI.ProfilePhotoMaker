@@ -11,7 +11,8 @@ public class BasicTierService : IBasicTierService
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<BasicTierService> _logger;
-    private const int WeeklyCredits = 5;
+    private const int WeeklyCredits = 5; // Weekly top-up amount (unchanged)
+    private const int SignupCredits = 25; // Free trial: 15 (train) + 5x2 (2 headshots)
     private const int DaysInWeek = 7;
     private static readonly MethodInfo? ExecuteUpdateAsyncMethod = typeof(RelationalQueryableExtensions)
         .GetMethods(BindingFlags.Public | BindingFlags.Static)

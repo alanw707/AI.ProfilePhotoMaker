@@ -95,7 +95,7 @@ public class AuthService : IAuthService
             Gender = model.Gender,
             Ethnicity = model.Ethnicity,
             SubscriptionTier = SubscriptionTier.Basic,
-            Credits = 5,
+            Credits = 25,
             LastCreditReset = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -316,7 +316,7 @@ public class AuthService : IAuthService
                 Gender = model.Gender,
                 Ethnicity = model.Ethnicity,
                 SubscriptionTier = SubscriptionTier.Basic,
-                Credits = 5,
+                Credits = 25,
                 LastCreditReset = DateTime.UtcNow,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
