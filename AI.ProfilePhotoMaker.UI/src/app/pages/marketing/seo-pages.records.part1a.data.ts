@@ -9,6 +9,7 @@ const buildRoleStylePreviewUrl = (styleName: 'medical' | 'executive'): string =>
 export const seoPagesPart1a: Record<string, SeoPageContent> = {
   'how-it-works': {
     slug: 'how-it-works',
+    ctaIntent: 'pricing',
     title: 'How AI Profile Photo Maker Works | Studio-quality headshots in minutes',
     description:
       'Studio-quality headshots in minutes. Upload clear selfies and get professional results fast.',
@@ -119,6 +120,7 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
   },
   examples: {
     slug: 'examples',
+    ctaIntent: 'headshots',
     title: 'AI Headshot Examples | Before and After Results',
     description:
       'See before and after AI headshot examples. Realistic, professional results tailored to your input photos.',
@@ -225,6 +227,7 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
   },
   'corporate-headshot': {
     slug: 'corporate-headshot',
+    ctaIntent: 'headshots',
     title: 'Corporate Headshots | Polished photos for teams and leaders',
     description:
       'Create polished corporate headshots for leadership pages, team profiles, and company directories. Fast turnaround with realistic results.',
@@ -334,6 +337,7 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
   },
   'ai-headshot-generator': {
     slug: 'ai-headshot-generator',
+    ctaIntent: 'headshots',
     title: 'AI Headshot Generator for Professional Profiles',
     description:
       'Create studio-quality AI headshots for LinkedIn, resumes, and professional profiles. Fast, realistic, and private.',
@@ -452,6 +456,7 @@ export const seoPagesPart1a: Record<string, SeoPageContent> = {
   },
   'linkedin-headshots': {
     slug: 'linkedin-headshots',
+    ctaIntent: 'headshots',
     title: 'LinkedIn Headshots That Look Like You',
     description:
       'Professional LinkedIn headshots that look like you. Realistic, polished, and optimized for profile visibility.',

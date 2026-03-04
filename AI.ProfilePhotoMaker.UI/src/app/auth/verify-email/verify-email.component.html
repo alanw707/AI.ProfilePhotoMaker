@@ -3,23 +3,29 @@
     <div class="verify-header">
       <h1>AI Profile Photo Maker</h1>
       <h2>Verify your email</h2>
-      <p>
-        We sent you a verification email. Please confirm your email address to continue.
-      </p>
+      <p class="progress-indicator">{{ getProgressStep() }}</p>
+      <p>We sent you a verification email. Please confirm your email address to continue.</p>
     </div>
 
-    <div *ngIf="isLoading" class="status">
-      Checking verification status…
+    <div *ngIf="signupIntent" class="urgency-banner">
+      {{ getUrgencyMessage() }}
     </div>
 
-    <div *ngIf="!isLoading && isEmailConfirmed" class="status success">
-      Email verified. Redirecting…
+    <div *ngIf="isLoading" class="status">Checking verification status…</div>
+
+    <div *ngIf="!isLoading && isEmailConfirmed" class="status success">Email verified. Redirecting…</div>
+
+    <div *ngIf="signupIntent && !isLoading && !isEmailConfirmed" class="preview-teaser">
+      <p class="preview-title">Your first results are ready right after verification</p>
+      <div class="preview-grid">
+        <div class="preview-image-card" *ngFor="let image of getPreviewImages()">
+          <img [src]="image.src" [alt]="image.alt" loading="lazy" decoding="async" />
+        </div>
+      </div>
     </div>
 
     <div *ngIf="!isLoading && !isEmailConfirmed" class="actions">
-      <button class="btn btn-primary" type="button" (click)="refreshStatus()">
-        I’ve verified — continue
-      </button>
+      <button class="btn btn-primary" type="button" (click)="refreshStatus()">I’ve verified — continue</button>
       <button class="btn btn-secondary" type="button" (click)="resend()" [disabled]="isResending">
         {{ isResending ? 'Sending…' : 'Resend verification email' }}
       </button>
@@ -28,8 +34,7 @@
         class="btn btn-outline"
         type="button"
         (click)="devConfirm()"
-        [disabled]="isDevConfirming"
-      >
+        [disabled]="isDevConfirming">
         {{ isDevConfirming ? 'Confirming…' : 'Dev: Mark verified' }}
       </button>
       <button class="btn btn-outline" type="button" (click)="logout()">Logout</button>

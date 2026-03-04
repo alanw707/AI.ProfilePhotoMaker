@@ -4,6 +4,12 @@ import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, ParamMap, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AnalyticsService } from '../../../services/analytics.service';
+import {
+  IntentTrackingService,
+  SignupCtaType,
+  SignupIntent,
+} from '../../../services/intent-tracking.service';
+import { SEO_PAGE_INTENT_TAXONOMY } from '../seo-intent-taxonomy';
 import { AnimateOnScrollDirective } from '../../../shared/directives/animate-on-scroll.directive';
 import { MarketingFooterComponent } from '../../../shared/marketing-footer/marketing-footer.component';
 import { MarketingHeaderComponent } from '../../../shared/marketing-header/marketing-header.component';
@@ -45,6 +51,7 @@ export class SeoPageComponent implements OnInit, OnDestroy {
   private readonly _route = inject(ActivatedRoute);
   private readonly _document = inject(DOCUMENT);
   private readonly _analytics = inject(AnalyticsService);
+  private readonly _intentTracking = inject(IntentTrackingService);
   private readonly _subscriptions = new Subscription();
 
   ngOnInit(): void {
@@ -69,15 +76,22 @@ export class SeoPageComponent implements OnInit, OnDestroy {
     this.removeStructuredData(this.faqStructuredDataId);
   }
 
-  onCtaClick(position: string, label: string, href?: string): void {
+  onCtaClick(position: string, label: string, href?: string, ctaIntent?: SignupCtaType): void {
     if (!this.page) {
       return;
     }
+    const resolvedIntent = this.resolveCtaIntent(href, ctaIntent);
+    const ctaSignupIntent = this.buildSignupIntent(resolvedIntent);
+    if (ctaSignupIntent && this.getRouterLinkForHref(href, ctaIntent) === '/auth/register') {
+      this._intentTracking.storeIntent(ctaSignupIntent);
+    }
+
     this._analytics.trackEvent('seo_cta_click', {
       page: this.page.slug,
       position,
       label,
       destination: href ?? '',
+      ctaIntent: resolvedIntent ?? 'none',
       ...this.utmParams,
     });
   }
@@ -90,18 +104,30 @@ export class SeoPageComponent implements OnInit, OnDestroy {
     image.src = fallbackSrc;
   }
 
-  getQueryParamsForHref(href?: string): Record<string, string> | null {
+  getQueryParamsForHref(href?: string, ctaIntent?: SignupCtaType): Record<string, string> | null {
     if (!href) {
       return null;
     }
-    return this.isPricingLink(href) && Object.keys(this.utmParams).length > 0
-      ? this.utmParams
-      : null;
+
+    const queryParams: Record<string, string> = { ...this.utmParams };
+    const routerLink = this.getRouterLinkForHref(href, ctaIntent);
+    const resolvedIntent = this.resolveCtaIntent(href, ctaIntent);
+    const signupIntent = this.buildSignupIntent(resolvedIntent);
+
+    if (routerLink === '/auth/register' && signupIntent) {
+      queryParams['intent'] = JSON.stringify(signupIntent);
+    }
+
+    return Object.keys(queryParams).length > 0 ? queryParams : null;
   }
 
-  getRouterLinkForHref(href?: string): string | null {
+  getRouterLinkForHref(href?: string, ctaIntent?: SignupCtaType): string | null {
     if (!href) {
       return null;
+    }
+    const resolvedIntent = this.resolveCtaIntent(href, ctaIntent);
+    if (this.isPricingLink(href) && resolvedIntent && resolvedIntent !== 'pricing') {
+      return '/auth/register';
     }
     return this.isReviewsLink(href) ? '/' : href;
   }
@@ -298,5 +324,37 @@ export class SeoPageComponent implements OnInit, OnDestroy {
 
   private isReviewsLink(href: string): boolean {
     return href.startsWith('/reviews');
+  }
+
+  private resolveCtaIntent(href?: string, ctaIntent?: SignupCtaType): SignupCtaType | null {
+    if (!href || !this.page) {
+      return null;
+    }
+
+    if (ctaIntent) {
+      return ctaIntent;
+    }
+
+    if (!this.isPricingLink(href)) {
+      return null;
+    }
+
+    if (this.page.ctaIntent) {
+      return this.page.ctaIntent;
+    }
+
+    return SEO_PAGE_INTENT_TAXONOMY[this.page.slug] ?? 'pricing';
+  }
+
+  private buildSignupIntent(ctaType: SignupCtaType | null): SignupIntent | null {
+    if (!ctaType || !this.page) {
+      return null;
+    }
+
+    return {
+      sourcePage: this.page.slug,
+      ctaType,
+      timestamp: Date.now(),
+    };
   }
 }

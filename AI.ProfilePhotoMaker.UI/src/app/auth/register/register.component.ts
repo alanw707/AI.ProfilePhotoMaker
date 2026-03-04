@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ViewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -7,11 +13,12 @@ import {
   Validators,
 } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService, RegisterDto } from '../../services/auth.service';
 import { ConfigService } from '../../services/config.service';
 import { TurnstileComponent } from '../../shared/turnstile/turnstile.component';
 import { finalize } from 'rxjs';
+import { IntentTrackingService } from '../../services/intent-tracking.service';
 
 @Component({
   selector: 'app-register',
@@ -21,7 +28,7 @@ import { finalize } from 'rxjs';
   styleUrls: ['./register.component.sass'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class RegisterComponent {
+export class RegisterComponent implements OnInit {
   @ViewChild(TurnstileComponent) turnstile?: TurnstileComponent;
   registerForm: FormGroup;
   loading = false;
@@ -32,9 +39,11 @@ export class RegisterComponent {
   constructor(
     private _formBuilder: FormBuilder,
     private _authService: AuthService,
+    private _route: ActivatedRoute,
     private _router: Router,
     private _configService: ConfigService,
-    private _cdr: ChangeDetectorRef
+    private _cdr: ChangeDetectorRef,
+    private _intentTracking: IntentTrackingService
   ) {
     this.turnstileSiteKey = this._configService.turnstileSiteKey;
     this.registerForm = this._formBuilder.group(
@@ -59,6 +68,37 @@ export class RegisterComponent {
         validators: this.passwordMatchValidator,
       }
     );
+  }
+
+  ngOnInit(): void {
+    const intentParam = this._route.snapshot.queryParamMap.get('intent');
+    if (!intentParam) {
+      return;
+    }
+
+    const parsed = this.parseIntentParam(intentParam);
+    if (parsed === null) {
+      console.warn('Failed to parse signup intent query param.');
+      return;
+    }
+
+    if (this._intentTracking.isValidIntent(parsed)) {
+      this._intentTracking.storeIntent(parsed);
+    } else {
+      console.warn('Register intent query param is invalid and was ignored.');
+    }
+  }
+
+  private parseIntentParam(intentParam: string): unknown | null {
+    try {
+      return JSON.parse(intentParam) as unknown;
+    } catch {
+      try {
+        return JSON.parse(decodeURIComponent(intentParam)) as unknown;
+      } catch {
+        return null;
+      }
+    }
   }
 
   get f(): Record<string, AbstractControl> {

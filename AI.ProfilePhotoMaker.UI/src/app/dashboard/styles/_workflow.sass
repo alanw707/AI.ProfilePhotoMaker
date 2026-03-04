@@ -409,6 +409,21 @@ $spacing-2xl: 48px
       margin: 0
       line-height: 1.6
       opacity: 0.9
+
+    .personalized-welcome
+      color: var(--accent-primary, #7DD3D8)
+
+    .quick-start-row
+      margin-top: $spacing-lg
+      display: flex
+      justify-content: center
+      gap: $spacing-sm
+      flex-wrap: wrap
+
+      .quick-start-cta
+        width: auto
+        min-width: 220px
+        padding-inline: 20px
       
   .options-grid
     display: grid
@@ -433,6 +448,10 @@ $spacing-2xl: 48px
       transform: translateY(-4px)
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12)
       border-color: var(--primary-color, #3b82f6)
+
+    &.highlighted
+      border-color: var(--accent-primary, #7DD3D8)
+      box-shadow: 0 10px 26px rgba(125, 211, 216, 0.24)
       
     &.premium-option
       border-color: rgba(125, 211, 216, 0.3)
