@@ -16,6 +16,7 @@ export interface SeoHero {
   ctaHref: string;
   secondaryCtaLabel?: string;
   secondaryCtaHref?: string;
+  ctaIntent?: 'headshots' | 'enhance' | 'pricing';
   imageSrc?: string;
   imageAlt?: string;
   imageFallbackSrc?: string;
@@ -26,6 +27,7 @@ export interface SeoCta {
   description: string;
   label: string;
   href: string;
+  ctaIntent?: 'headshots' | 'enhance' | 'pricing';
 }
 
 export interface SeoSectionBase {
@@ -98,6 +100,7 @@ export interface SeoPageContent {
   description: string;
   keywords: string;
   h1: string;
+  ctaIntent?: 'headshots' | 'enhance' | 'pricing';
   hero: SeoHero;
   highlights?: SeoHighlight[];
   sections: SeoSection[];

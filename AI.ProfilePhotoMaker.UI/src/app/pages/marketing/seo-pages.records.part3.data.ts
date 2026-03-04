@@ -3,6 +3,7 @@ import type { SeoPageContent } from './seo-pages.types';
 export const seoPagesPart3: Record<string, SeoPageContent> = {
   'nurse-headshots': {
     slug: 'nurse-headshots',
+    ctaIntent: 'headshots',
     title: 'Nurse Headshots | Professional Photos for Nurses & Practitioners',
     description:
       'AI-powered nurse headshots for LinkedIn, hospital directories, and professional profiles. Create a trustworthy and approachable look in minutes.',
@@ -12,7 +13,8 @@ export const seoPagesPart3: Record<string, SeoPageContent> = {
     hero: {
       eyebrow: 'Nursing Headshots',
       headline: 'Nurse Headshots That Convey Trust & Compassion',
-      subhead: 'Generate polished, friendly, and professional headshots perfect for your nursing career.',
+      subhead:
+        'Generate polished, friendly, and professional headshots perfect for your nursing career.',
       ctaLabel: 'Get Your Headshots',
       ctaHref: '/pricing',
     },
@@ -28,15 +30,18 @@ export const seoPagesPart3: Record<string, SeoPageContent> = {
         items: [
           {
             title: 'Build Patient Trust',
-            description: 'A warm, professional photo helps build immediate trust with patients and their families.',
+            description:
+              'A warm, professional photo helps build immediate trust with patients and their families.',
           },
           {
             title: 'Enhance Your Professional Profile',
-            description: 'A polished headshot is essential for LinkedIn, certifications, and speaking engagements.',
+            description:
+              'A polished headshot is essential for LinkedIn, certifications, and speaking engagements.',
           },
           {
             title: 'Create a Consistent Team Look',
-            description: 'Ensure a unified and professional look for your entire nursing unit or clinic staff.',
+            description:
+              'Ensure a unified and professional look for your entire nursing unit or clinic staff.',
           },
         ],
       },
@@ -56,15 +61,18 @@ export const seoPagesPart3: Record<string, SeoPageContent> = {
         items: [
           {
             question: 'What should I wear for my nurse headshot?',
-            answer: 'Solid-colored scrubs or professional business casual attire work best. Aim for a clean and simple look.',
+            answer:
+              'Solid-colored scrubs or professional business casual attire work best. Aim for a clean and simple look.',
           },
           {
             question: 'Can I get a photo in my scrubs?',
-            answer: 'Yes, our AI can generate professional headshots of you in scrubs or other professional attire.',
+            answer:
+              'Yes, our AI can generate professional headshots of you in scrubs or other professional attire.',
           },
           {
             question: 'Is this suitable for NP or DNP profiles?',
-            answer: 'Absolutely. The styles are perfect for Nurse Practitioners, doctoral candidates, and other advanced practice nurses.',
+            answer:
+              'Absolutely. The styles are perfect for Nurse Practitioners, doctoral candidates, and other advanced practice nurses.',
           },
         ],
       },
@@ -78,6 +86,7 @@ export const seoPagesPart3: Record<string, SeoPageContent> = {
   },
   'teacher-headshots': {
     slug: 'teacher-headshots',
+    ctaIntent: 'headshots',
     title: 'Teacher Headshots | Friendly & Professional Photos for Educators',
     description:
       'Create warm, approachable, and professional teacher headshots for school websites, LinkedIn, and classroom materials. AI-powered and ready in minutes.',
@@ -87,7 +96,8 @@ export const seoPagesPart3: Record<string, SeoPageContent> = {
     hero: {
       eyebrow: 'Educator Headshots',
       headline: 'Teacher Headshots That Look Approachable & Professional',
-      subhead: 'Generate a polished, friendly photo for your school profile, website, or professional portfolio.',
+      subhead:
+        'Generate a polished, friendly photo for your school profile, website, or professional portfolio.',
       ctaLabel: 'Get Your Headshots',
       ctaHref: '/pricing',
     },
@@ -103,15 +113,18 @@ export const seoPagesPart3: Record<string, SeoPageContent> = {
         items: [
           {
             title: 'Connect with Parents & Students',
-            description: 'A warm, professional photo on the school website or your bio helps build immediate rapport.',
+            description:
+              'A warm, professional photo on the school website or your bio helps build immediate rapport.',
           },
           {
             title: 'Support Your Professional Development',
-            description: 'Perfect for conference bios, publications, and your professional learning network profiles.',
+            description:
+              'Perfect for conference bios, publications, and your professional learning network profiles.',
           },
           {
             title: 'Create a Cohesive Faculty Page',
-            description: 'Outfit your entire department or school with consistent, high-quality headshots easily.',
+            description:
+              'Outfit your entire department or school with consistent, high-quality headshots easily.',
           },
         ],
       },
@@ -131,15 +144,18 @@ export const seoPagesPart3: Record<string, SeoPageContent> = {
         items: [
           {
             question: 'What is the best background for a teacher headshot?',
-            answer: 'We offer classic, simple backgrounds that look professional and are not distracting, perfect for any school website.',
+            answer:
+              'We offer classic, simple backgrounds that look professional and are not distracting, perfect for any school website.',
           },
           {
             question: 'What should I wear for a teacher headshot?',
-            answer: 'Business casual is a great choice. A simple blouse, collared shirt, or blazer projects professionalism and warmth.',
+            answer:
+              'Business casual is a great choice. A simple blouse, collared shirt, or blazer projects professionalism and warmth.',
           },
           {
             question: 'Can administrators and other staff use this?',
-            answer: 'Yes, our service is perfect for teachers, principals, counselors, and all school administrative staff.',
+            answer:
+              'Yes, our service is perfect for teachers, principals, counselors, and all school administrative staff.',
           },
         ],
       },

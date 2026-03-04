@@ -10,6 +10,11 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { environment } from '../../../environments/environment';
+import { IntentTrackingService, SignupIntent } from '../../services/intent-tracking.service';
+import {
+  getHeadshotsWelcomeCopy,
+  getIntentPreviewImages,
+} from '../../services/signup-intent-personalization';
 
 @Component({
   selector: 'app-verify-email',
@@ -26,6 +31,7 @@ export class VerifyEmailComponent implements OnInit {
   isDevConfirming = false;
   message = '';
   error = '';
+  signupIntent: SignupIntent | null = null;
   readonly showDevBypass =
     !environment.production &&
     (window.location.hostname.includes('localhost') ||
@@ -35,8 +41,10 @@ export class VerifyEmailComponent implements OnInit {
   private readonly _route = inject(ActivatedRoute);
   private readonly _router = inject(Router);
   private readonly _cdr = inject(ChangeDetectorRef);
+  private readonly _intentTracking = inject(IntentTrackingService);
 
   ngOnInit(): void {
+    this.signupIntent = this._intentTracking.getIntent();
     const message = this._route.snapshot.queryParamMap.get('message');
     if (message) {
       this.message = message;
@@ -180,6 +188,30 @@ export class VerifyEmailComponent implements OnInit {
     const redirectUrl = sessionStorage.getItem('redirectUrl') || '/app/dashboard';
     sessionStorage.removeItem('redirectUrl');
     void this._router.navigateByUrl(redirectUrl);
+  }
+
+  getProgressStep(): string {
+    return 'Step 2 of 3: Verify Email';
+  }
+
+  getUrgencyMessage(): string {
+    if (!this.signupIntent) {
+      return 'Your 25 free credits are waiting! Complete verification to get started.';
+    }
+
+    if (this.signupIntent.ctaType === 'headshots') {
+      return getHeadshotsWelcomeCopy(this.signupIntent).urgency;
+    }
+
+    if (this.signupIntent.ctaType === 'enhance') {
+      return 'Your 25 free credits are waiting! Complete verification to enhance your photos.';
+    }
+
+    return 'Your 25 free credits are waiting! Complete verification to start creating your profile photos.';
+  }
+
+  getPreviewImages(): { src: string; alt: string }[] {
+    return getIntentPreviewImages(this.signupIntent);
   }
 
   logout(): void {

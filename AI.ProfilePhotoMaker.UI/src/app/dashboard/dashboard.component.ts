@@ -35,6 +35,8 @@ import { NavigationService } from '../services/navigation.service';
 import { environment } from '../../environments/environment';
 import { DashboardState } from '../interfaces/service.interfaces';
 import { FileUploadService, UnifiedModelStatusResponse } from '../services/file-upload.service';
+import { IntentTrackingService, SignupIntent } from '../services/intent-tracking.service';
+import { getHeadshotsWelcomeCopy } from '../services/signup-intent-personalization';
 // Lazy-loaded service types
 interface WorkflowProgress {
   isTraining: boolean;
@@ -73,6 +75,11 @@ interface CreditCalculation {
   totalCredits: number;
   hasEnoughCredits: boolean;
   remainingCredits: number;
+}
+
+interface DashboardCta {
+  label: string;
+  route: string;
 }
 
 interface WorkflowOrchestrationService {
@@ -119,6 +126,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   imagesPerStyle = 2;
   availableStyles: StyleOption[] = [];
   selectedStyles = 0;
+  signupIntent: SignupIntent | null = null;
 
   // Lazy-loaded service
   private _workflowService: WorkflowOrchestrationService | null = null;
@@ -142,6 +150,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // State-based getters for template - removed, using stateService.getState() directly
   private _activeJobPolling?: Subscription;
+  private _intentCleared = false;
+  private readonly _ctaConfig: Record<string, { primary: DashboardCta; secondary: DashboardCta }> =
+    {
+      headshots: {
+        primary: { label: 'Start Training Your Model', route: '/pricing' },
+        secondary: { label: 'Enhance a Photo First', route: '/app/enhance' },
+      },
+      enhance: {
+        primary: { label: 'Enhance Your First Photo', route: '/app/enhance' },
+        secondary: { label: 'Explore Premium Studio', route: '/pricing' },
+      },
+      pricing: {
+        primary: { label: 'View Packages', route: '/pricing' },
+        secondary: { label: 'Browse Examples', route: '/examples' },
+      },
+    };
 
   getTotalAvailableCredits(): number {
     const state = this.stateService.getState();
@@ -177,7 +201,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private readonly _injector: Injector,
     private readonly _cdr: ChangeDetectorRef,
     private readonly _logger: LoggingService,
-    private readonly _fileUploadService: FileUploadService
+    private readonly _fileUploadService: FileUploadService,
+    private readonly _intentTracking: IntentTrackingService
   ) {
     this.state$ = this.stateService.state$;
     this.workflowProgress$ = this._workflowProgressSubject.asObservable();
@@ -198,6 +223,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this._router.navigate(['/auth/login']);
       return;
     }
+
+    this.signupIntent = this._intentTracking.getIntent();
 
     // Subscribe to state changes to update UI
     this._subscriptions.add(
@@ -224,6 +251,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
         // Update current step based on progress
         this._updateCurrentStep();
+
+        if (!this._intentCleared && this.signupIntent && this.isFirstTimeUser()) {
+          this._intentTracking.clearIntent();
+          this._intentCleared = true;
+        }
 
         // Force change detection for async updates
         this._cdr.detectChanges();
@@ -435,6 +467,65 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isPremiumWorkflow(): boolean {
     const state = this.stateService.getState();
     return state.isPremiumWorkflow || this.getTotalAvailableCredits() > 0;
+  }
+
+  isFirstTimeUser(): boolean {
+    const state = this.stateService.getState();
+    return state.uploadedImages === 0 && state.generatedPhotosCount === 0;
+  }
+
+  showPersonalizedGetStarted(): boolean {
+    return !!this.signupIntent && this.isFirstTimeUser();
+  }
+
+  isHeadshotsIntent(): boolean {
+    return this.signupIntent?.ctaType === 'headshots';
+  }
+
+  isEnhanceIntent(): boolean {
+    return this.signupIntent?.ctaType === 'enhance';
+  }
+
+  getWelcomeMessage(): string {
+    if (!this.signupIntent) {
+      return 'Welcome to AI Profile Photo Maker';
+    }
+
+    if (this.signupIntent.ctaType === 'headshots') {
+      return getHeadshotsWelcomeCopy(this.signupIntent).title;
+    }
+
+    if (this.signupIntent.ctaType === 'enhance') {
+      return "Let's enhance your photos!";
+    }
+
+    return 'Welcome to AI Profile Photo Maker';
+  }
+
+  getWelcomeDescription(): string {
+    if (!this.signupIntent) {
+      return 'Create stunning, professional AI-generated profile photos with our advanced technology';
+    }
+
+    if (this.signupIntent.ctaType === 'headshots') {
+      return getHeadshotsWelcomeCopy(this.signupIntent).description;
+    }
+
+    if (this.signupIntent.ctaType === 'enhance') {
+      return 'Jump into fast enhancements for your existing photos, then explore premium studio generation anytime.';
+    }
+
+    return 'Choose your best path below and use your 25 free credits to get results today.';
+  }
+
+  getPrimaryCta(): DashboardCta {
+    const intentKey = this.signupIntent?.ctaType ?? 'pricing';
+    return this._ctaConfig[intentKey].primary;
+  }
+
+  getSecondaryCta(): DashboardCta {
+    const intentKey = this.signupIntent?.ctaType ?? 'pricing';
+    return this._ctaConfig[intentKey].secondary;
   }
 
   getStepStatus(step: number): string {

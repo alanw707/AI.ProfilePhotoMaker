@@ -84,12 +84,20 @@
       <section class="get-started-section" *ngIf="!isPremiumWorkflow()">
         <div class="get-started-card">
           <div class="get-started-header">
-            <h2>Welcome to AI Profile Photo Maker</h2>
-            <p>Create stunning, professional AI-generated profile photos with our advanced technology</p>
+            <h2 [class.personalized-welcome]="showPersonalizedGetStarted()">{{ getWelcomeMessage() }}</h2>
+            <p>{{ getWelcomeDescription() }}</p>
+            <div *ngIf="showPersonalizedGetStarted()" class="quick-start-row">
+              <a class="btn btn-primary quick-start-cta" [routerLink]="getPrimaryCta().route">
+                {{ getPrimaryCta().label }}
+              </a>
+              <a class="btn btn-secondary quick-start-cta" [routerLink]="getSecondaryCta().route">
+                {{ getSecondaryCta().label }}
+              </a>
+            </div>
           </div>
 
           <div class="options-grid">
-            <div class="option-card premium-option">
+            <div class="option-card premium-option" [class.highlighted]="isHeadshotsIntent()">
               <div class="option-header">
                 <div class="option-icon">🎯</div>
                 <h3>Premium Studio</h3>
@@ -114,7 +122,7 @@
               </div>
             </div>
 
-            <div class="option-card basic-option">
+            <div class="option-card basic-option" [class.highlighted]="isEnhanceIntent()">
               <div class="option-header">
                 <div class="option-icon">⚡</div>
                 <h3>Basic Enhancement</h3>

@@ -38,20 +38,46 @@
           <div class="cta-row">
             <a
               class="btn btn-primary"
-              [routerLink]="getRouterLinkForHref(currentPage.hero.ctaHref)"
+              [routerLink]="
+                getRouterLinkForHref(currentPage.hero.ctaHref, currentPage.hero.ctaIntent || currentPage.ctaIntent)
+              "
               [fragment]="getFragmentForHref(currentPage.hero.ctaHref)"
-              [queryParams]="getQueryParamsForHref(currentPage.hero.ctaHref)"
-              (click)="onCtaClick('hero_primary', currentPage.hero.ctaLabel, currentPage.hero.ctaHref)">
+              [queryParams]="
+                getQueryParamsForHref(currentPage.hero.ctaHref, currentPage.hero.ctaIntent || currentPage.ctaIntent)
+              "
+              (click)="
+                onCtaClick(
+                  'hero_primary',
+                  currentPage.hero.ctaLabel,
+                  currentPage.hero.ctaHref,
+                  currentPage.hero.ctaIntent || currentPage.ctaIntent
+                )
+              ">
               {{ currentPage.hero.ctaLabel }}
             </a>
             <a
               *ngIf="currentPage.hero.secondaryCtaLabel"
               class="btn btn-secondary"
-              [routerLink]="getRouterLinkForHref(currentPage.hero.secondaryCtaHref)"
+              [routerLink]="
+                getRouterLinkForHref(
+                  currentPage.hero.secondaryCtaHref,
+                  currentPage.hero.ctaIntent || currentPage.ctaIntent
+                )
+              "
               [fragment]="getFragmentForHref(currentPage.hero.secondaryCtaHref)"
-              [queryParams]="getQueryParamsForHref(currentPage.hero.secondaryCtaHref)"
+              [queryParams]="
+                getQueryParamsForHref(
+                  currentPage.hero.secondaryCtaHref,
+                  currentPage.hero.ctaIntent || currentPage.ctaIntent
+                )
+              "
               (click)="
-                onCtaClick('hero_secondary', currentPage.hero.secondaryCtaLabel, currentPage.hero.secondaryCtaHref)
+                onCtaClick(
+                  'hero_secondary',
+                  currentPage.hero.secondaryCtaLabel,
+                  currentPage.hero.secondaryCtaHref,
+                  currentPage.hero.ctaIntent || currentPage.ctaIntent
+                )
               ">
               {{ currentPage.hero.secondaryCtaLabel }}
             </a>
@@ -240,10 +266,19 @@
         </div>
         <a
           class="btn btn-primary"
-          [routerLink]="getRouterLinkForHref(currentPage.cta.href)"
+          [routerLink]="getRouterLinkForHref(currentPage.cta.href, currentPage.cta.ctaIntent || currentPage.ctaIntent)"
           [fragment]="getFragmentForHref(currentPage.cta.href)"
-          [queryParams]="getQueryParamsForHref(currentPage.cta.href)"
-          (click)="onCtaClick('footer_primary', currentPage.cta.label, currentPage.cta.href)">
+          [queryParams]="
+            getQueryParamsForHref(currentPage.cta.href, currentPage.cta.ctaIntent || currentPage.ctaIntent)
+          "
+          (click)="
+            onCtaClick(
+              'footer_primary',
+              currentPage.cta.label,
+              currentPage.cta.href,
+              currentPage.cta.ctaIntent || currentPage.ctaIntent
+            )
+          ">
           {{ currentPage.cta.label }}
         </a>
       </div>

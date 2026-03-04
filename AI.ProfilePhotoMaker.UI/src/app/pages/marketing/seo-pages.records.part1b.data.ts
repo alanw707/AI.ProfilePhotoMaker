@@ -3,6 +3,7 @@ import type { SeoPageContent } from './seo-pages.types';
 export const seoPagesPart1b: Record<string, SeoPageContent> = {
   'professional-headshots': {
     slug: 'professional-headshots',
+    ctaIntent: 'headshots',
     title: 'Professional Headshots Without the Studio',
     description:
       'Consistent, high-quality professional headshots for teams and individuals. Skip studio scheduling and get results fast.',
@@ -125,6 +126,7 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
   },
   'headshots-for-job-search': {
     slug: 'headshots-for-job-search',
+    ctaIntent: 'headshots',
     title: 'Headshots for Job Seekers | Make a strong first impression',
     description:
       'Headshots for job seekers who want a polished, professional photo before applying. Fast, realistic results.',
@@ -228,6 +230,7 @@ export const seoPagesPart1b: Record<string, SeoPageContent> = {
   },
   'realtor-headshots': {
     slug: 'realtor-headshots',
+    ctaIntent: 'headshots',
     title: 'Realtor Headshots That Look Real (AI) | AI Profile Photo Maker',
     description:
       'Premium realtor headshots from your photos—polished, realistic, and consistent. Perfect for Zillow, LinkedIn, and Google Business.',

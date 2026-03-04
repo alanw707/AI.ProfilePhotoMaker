@@ -9,6 +9,7 @@ const buildRoleStylePreviewUrl = (styleName: 'medical' | 'executive'): string =>
 export const seoPagesPart1c: Record<string, SeoPageContent> = {
   'lawyer-headshots': {
     slug: 'lawyer-headshots',
+    ctaIntent: 'headshots',
     title: 'Lawyer Headshots for Attorneys & Law Firms | AI Profile Photo Maker',
     description:
       'Premium attorney headshots that look credible and natural. Ideal for firm websites, LinkedIn, press, and speaking bios.',
@@ -134,6 +135,7 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
   },
   'doctor-headshots': {
     slug: 'doctor-headshots',
+    ctaIntent: 'headshots',
     title: 'Doctor Headshots for Clinics & Providers | AI Profile Photo Maker',
     description:
       'Premium medical headshots that feel trustworthy and human. Great for clinic sites, provider directories, and LinkedIn.',
@@ -241,6 +243,7 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
   },
   'compare-aragon-ai': {
     slug: 'compare/aragon-ai',
+    ctaIntent: 'pricing',
     title: 'AI Profile Photo Maker vs Aragon AI',
     description:
       'Compare AI Profile Photo Maker and Aragon AI workflows, expectations, and positioning. Verify pricing and features before purchase.',
@@ -351,6 +354,7 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
   },
   'compare-headshotpro': {
     slug: 'compare/headshotpro',
+    ctaIntent: 'pricing',
     title: 'AI Profile Photo Maker vs HeadshotPro',
     description:
       'Compare AI Profile Photo Maker and HeadshotPro workflows, expectations, and positioning. Verify pricing and features before purchase.',
@@ -461,6 +465,7 @@ export const seoPagesPart1c: Record<string, SeoPageContent> = {
   },
   features: {
     slug: 'features',
+    ctaIntent: 'pricing',
     title: 'AI Headshot Features Built for Professional Profiles',
     description:
       'Explore AI Profile Photo Maker features: realistic headshots, fast turnaround, privacy-first processing, and flexible styles.',

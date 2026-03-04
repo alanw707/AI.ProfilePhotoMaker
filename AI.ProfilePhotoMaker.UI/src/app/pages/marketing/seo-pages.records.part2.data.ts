@@ -3,6 +3,7 @@ import type { SeoPageContent } from './seo-pages.types';
 export const seoPagesPart2: Record<string, SeoPageContent> = {
   'dating-app-headshots': {
     slug: 'dating-app-headshots',
+    ctaIntent: 'headshots',
     title: 'Dating App Headshots | AI photos that still look like you',
     description:
       'Dating app headshots that look like you. Upgrade Tinder, Hinge, or Bumble photos with realistic, flattering AI headshots.',
@@ -102,6 +103,7 @@ export const seoPagesPart2: Record<string, SeoPageContent> = {
   },
   'real-estate-agent-headshots': {
     slug: 'real-estate-agent-headshots',
+    ctaIntent: 'headshots',
     title: 'Real Estate Agent Headshots | Professional photos for listings',
     description:
       'Real estate agent headshots for listings, marketing, and business cards. Polished, consistent headshots in minutes.',
@@ -186,6 +188,7 @@ export const seoPagesPart2: Record<string, SeoPageContent> = {
   },
   'medical-professional-headshots': {
     slug: 'medical-professional-headshots',
+    ctaIntent: 'headshots',
     title: 'Medical Professional Headshots | Polished photos for healthcare',
     description:
       'Medical professional headshots for doctors, nurses, and clinicians. Professional, trustworthy photos in minutes.',
@@ -285,6 +288,7 @@ export const seoPagesPart2: Record<string, SeoPageContent> = {
   },
   pricing: {
     slug: 'pricing',
+    ctaIntent: 'pricing',
     title: 'AI Headshot Pricing Plans - AI Profile Photo Maker',
     description:
       'Compare AI headshot pricing plans. Choose the best package for LinkedIn-ready photos, custom AI training, and high-quality professional headshots.',
@@ -363,6 +367,7 @@ export const seoPagesPart2: Record<string, SeoPageContent> = {
   },
   help: {
     slug: 'help',
+    ctaIntent: 'pricing',
     title: 'Help and FAQ | AI Profile Photo Maker',
     description:
       'Get answers to common questions about AI Profile Photo Maker, including upload tips, privacy, and turnaround times.',

@@ -37,6 +37,51 @@
     font-size: 14px
     margin: 0
 
+  .progress-indicator
+    margin: 0 0 10px
+    font-size: 12px
+    text-transform: uppercase
+    letter-spacing: 0.06em
+    color: var(--text-secondary)
+
+.urgency-banner
+  margin: 0 0 16px
+  padding: 12px 14px
+  border-radius: 10px
+  background: var(--accent-gradient-1)
+  color: var(--text-primary)
+  font-size: 13px
+  font-weight: 600
+  text-align: center
+  animation: pulse-glow 2.4s ease-in-out infinite
+
+.preview-teaser
+  margin: 0 0 18px
+
+  .preview-title
+    margin: 0 0 10px
+    text-align: center
+    color: var(--text-secondary)
+    font-size: 13px
+
+  .preview-grid
+    display: grid
+    grid-template-columns: repeat(2, minmax(0, 1fr))
+    gap: 12px
+
+  .preview-image-card
+    border-radius: 10px
+    overflow: hidden
+    border: 1px solid var(--border-color)
+    background: var(--surface-secondary)
+
+    img
+      display: block
+      width: 100%
+      aspect-ratio: 4 / 5
+      object-fit: cover
+      filter: blur(3px) saturate(0.9)
+
 .status
   color: var(--text-secondary)
   font-size: 14px
@@ -84,3 +129,8 @@
   &.error
     color: var(--text-danger)
 
+@keyframes pulse-glow
+  0%, 100%
+    box-shadow: 0 0 0 0 rgba(125, 211, 216, 0.2)
+  50%
+    box-shadow: 0 0 0 8px rgba(125, 211, 216, 0)
