@@ -90,7 +90,7 @@ describe('DashboardComponent intent personalization', () => {
       intentTracking
     );
 
-    return { component, intentTracking };
+    return { component, intentTracking, navigation };
   };
 
   it('identifies first-time users', () => {
@@ -149,5 +149,23 @@ describe('DashboardComponent intent personalization', () => {
     component.ngOnInit();
 
     expect(intentTracking.clearIntent).toHaveBeenCalled();
+  });
+
+  it('routes upgrade credit action to pricing plans', () => {
+    const { component, navigation } = createComponent();
+
+    component.onCreditAction({ action: 'upgrade' });
+
+    expect(navigation.goToPricingPlans).toHaveBeenCalled();
+  });
+
+  it('routes out-of-credits modal upgrade to pricing plans', () => {
+    const { component, navigation } = createComponent();
+
+    component.showOutOfCreditsModal = true;
+    component.onOutOfCreditsUpgradeClicked();
+
+    expect(component.showOutOfCreditsModal).toBeFalse();
+    expect(navigation.goToPricingPlans).toHaveBeenCalled();
   });
 });

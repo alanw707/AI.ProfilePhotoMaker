@@ -133,6 +133,15 @@ describe('CreditDisplayComponent', () => {
   });
 
   describe('Insufficient Credits Warning', () => {
+    it('should show warning when no credits are available in headshot context', () => {
+      component.displayContext = 'headshots';
+      component.userCreditStatus = {
+        credits: 0,
+      };
+
+      expect(component.shouldShowInsufficientCreditsWarning()).toBe(true);
+    });
+
     it('should show warning when required credits exceed available credits', () => {
       component.userCreditStatus = {
         credits: 5,

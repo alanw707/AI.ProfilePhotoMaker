@@ -182,10 +182,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     switch (event.action) {
       case 'purchase':
       case 'viewPackages':
-        this._navigation.goToPricingPlans();
-        break;
       case 'upgrade':
-        this._router.navigate(['/premium']);
+        this._navigation.goToPricingPlans();
         break;
       default:
       // Unknown credit action - silently ignore
@@ -205,7 +203,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   onOutOfCreditsUpgradeClicked(): void {
     this.showOutOfCreditsModal = false;
-    void this._router.navigate(['/app/premium']);
+    this._navigation.goToPricingPlans();
   }
 
   constructor(
