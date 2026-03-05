@@ -18,6 +18,7 @@ import { AuthService, RegisterDto } from '../../services/auth.service';
 import { ConfigService } from '../../services/config.service';
 import { TurnstileComponent } from '../../shared/turnstile/turnstile.component';
 import { finalize } from 'rxjs';
+import { IntentTrackingService } from '../../services/intent-tracking.service';
 
 @Component({
   selector: 'app-register',
@@ -41,7 +42,8 @@ export class RegisterComponent implements OnInit {
     private _route: ActivatedRoute,
     private _router: Router,
     private _configService: ConfigService,
-    private _cdr: ChangeDetectorRef
+    private _cdr: ChangeDetectorRef,
+    private _intentTracking: IntentTrackingService
   ) {
     this.turnstileSiteKey = this._configService.turnstileSiteKey;
     this.registerForm = this._formBuilder.group(
@@ -70,6 +72,35 @@ export class RegisterComponent implements OnInit {
 
   ngOnInit(): void {
     this.storeRedirectUrl();
+
+    const intentParam = this._route.snapshot.queryParamMap.get('intent');
+    if (!intentParam) {
+      return;
+    }
+
+    const parsed = this.parseIntentParam(intentParam);
+    if (parsed === null) {
+      console.warn('Failed to parse signup intent query param.');
+      return;
+    }
+
+    if (this._intentTracking.isValidIntent(parsed)) {
+      this._intentTracking.storeIntent(parsed);
+    } else {
+      console.warn('Register intent query param is invalid and was ignored.');
+    }
+  }
+
+  private parseIntentParam(intentParam: string): unknown | null {
+    try {
+      return JSON.parse(intentParam) as unknown;
+    } catch {
+      try {
+        return JSON.parse(decodeURIComponent(intentParam)) as unknown;
+      } catch {
+        return null;
+      }
+    }
   }
 
   private storeRedirectUrl(): void {
@@ -84,6 +115,7 @@ export class RegisterComponent implements OnInit {
   private isSafeReturnUrl(returnUrl: string): boolean {
     return returnUrl.startsWith('/') && !returnUrl.startsWith('//');
   }
+
   get f(): Record<string, AbstractControl> {
     return this.registerForm.controls;
   }
