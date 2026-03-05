@@ -71,6 +71,8 @@ export class RegisterComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.storeRedirectUrl();
+
     const intentParam = this._route.snapshot.queryParamMap.get('intent');
     if (!intentParam) {
       return;
@@ -99,6 +101,19 @@ export class RegisterComponent implements OnInit {
         return null;
       }
     }
+  }
+
+  private storeRedirectUrl(): void {
+    const returnUrl = this._route.snapshot.queryParamMap.get('returnUrl');
+    if (!returnUrl || !this.isSafeReturnUrl(returnUrl)) {
+      return;
+    }
+
+    sessionStorage.setItem('redirectUrl', returnUrl);
+  }
+
+  private isSafeReturnUrl(returnUrl: string): boolean {
+    return returnUrl.startsWith('/') && !returnUrl.startsWith('//');
   }
 
   get f(): Record<string, AbstractControl> {
