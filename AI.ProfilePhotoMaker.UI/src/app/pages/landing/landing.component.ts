@@ -952,10 +952,12 @@ export class LandingComponent implements OnInit, AfterViewInit, AfterViewChecked
 
   getStarted(): void {
     if (this.isAuthenticated) {
-      void this.navigation.goToEnhance();
+      void this.navigation.goToDashboard();
       return;
     }
-    void this.navigation.navigateTo('/auth/login', { queryParams: { returnUrl: '/app/enhance' } });
+    void this.navigation.navigateTo('/auth/register', {
+      queryParams: { returnUrl: '/app/dashboard' },
+    });
   }
 
   loadAvailableStyles(): void {

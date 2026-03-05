@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ViewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -7,7 +13,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService, RegisterDto } from '../../services/auth.service';
 import { ConfigService } from '../../services/config.service';
 import { TurnstileComponent } from '../../shared/turnstile/turnstile.component';
@@ -21,7 +27,7 @@ import { finalize } from 'rxjs';
   styleUrls: ['./register.component.sass'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class RegisterComponent {
+export class RegisterComponent implements OnInit {
   @ViewChild(TurnstileComponent) turnstile?: TurnstileComponent;
   registerForm: FormGroup;
   loading = false;
@@ -32,6 +38,7 @@ export class RegisterComponent {
   constructor(
     private _formBuilder: FormBuilder,
     private _authService: AuthService,
+    private _route: ActivatedRoute,
     private _router: Router,
     private _configService: ConfigService,
     private _cdr: ChangeDetectorRef
@@ -61,6 +68,22 @@ export class RegisterComponent {
     );
   }
 
+  ngOnInit(): void {
+    this.storeRedirectUrl();
+  }
+
+  private storeRedirectUrl(): void {
+    const returnUrl = this._route.snapshot.queryParamMap.get('returnUrl');
+    if (!returnUrl || !this.isSafeReturnUrl(returnUrl)) {
+      return;
+    }
+
+    sessionStorage.setItem('redirectUrl', returnUrl);
+  }
+
+  private isSafeReturnUrl(returnUrl: string): boolean {
+    return returnUrl.startsWith('/') && !returnUrl.startsWith('//');
+  }
   get f(): Record<string, AbstractControl> {
     return this.registerForm.controls;
   }

@@ -23,12 +23,12 @@ describe('LandingComponent styles grid', () => {
       'navigateToSection',
       'navigateTo',
       'scrollToSection',
-      'goToEnhance',
+      'goToDashboard',
     ]);
     navigationSpy.getCurrentRoute.and.returnValue('/');
     navigationSpy.navigateToSection.and.returnValue(Promise.resolve(true));
     navigationSpy.navigateTo.and.returnValue(Promise.resolve(true));
-    navigationSpy.goToEnhance.and.returnValue(Promise.resolve(true));
+    navigationSpy.goToDashboard.and.returnValue(Promise.resolve(true));
 
     const themeServiceMock = {
       theme$: of('light'),
@@ -104,5 +104,27 @@ describe('LandingComponent styles grid', () => {
 
     const cards = fixture.nativeElement.querySelectorAll('.styles-image-grid .style-card-minimal');
     expect(cards.length).toBe(20);
+  });
+
+  it('routes authenticated users to dashboard on getStarted', () => {
+    const navigation = TestBed.inject(NavigationService) as jasmine.SpyObj<NavigationService>;
+    component.isAuthenticated = true;
+
+    component.getStarted();
+
+    expect(navigation.goToDashboard).toHaveBeenCalled();
+    expect(navigation.navigateTo).not.toHaveBeenCalled();
+  });
+
+  it('routes guests to register with dashboard returnUrl on getStarted', () => {
+    const navigation = TestBed.inject(NavigationService) as jasmine.SpyObj<NavigationService>;
+    component.isAuthenticated = false;
+
+    component.getStarted();
+
+    expect(navigation.navigateTo).toHaveBeenCalledWith('/auth/register', {
+      queryParams: { returnUrl: '/app/dashboard' },
+    });
+    expect(navigation.goToDashboard).not.toHaveBeenCalled();
   });
 });
