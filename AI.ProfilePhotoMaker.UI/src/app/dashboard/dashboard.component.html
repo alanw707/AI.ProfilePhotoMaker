@@ -152,7 +152,8 @@
             [isLoading]="!(state$ | async)?.creditsInfo && !(state$ | async)?.userCreditStatus"
             displayContext="headshots"
             [showPurchasePrompt]="true"
-            (creditActionRequested)="onCreditAction($event)"></app-credit-display>
+            (creditActionRequested)="onCreditAction($event)"
+            (showUpgradeModal)="openOutOfCreditsModal()"></app-credit-display>
         </div>
       </section>
 
@@ -316,3 +317,10 @@
     </div>
   </main>
 </div>
+
+<!-- Out of Credits Modal -->
+<app-out-of-credits-modal
+  [isVisible]="showOutOfCreditsModal"
+  (closed)="closeOutOfCreditsModal()"
+  (upgradeClicked)="onOutOfCreditsUpgradeClicked()">
+</app-out-of-credits-modal>

@@ -1,0 +1,32 @@
+<div class="modal-overlay" *ngIf="isVisible" (click)="onOverlayClick($event)" role="dialog" aria-modal="true" aria-labelledby="modal-headline">
+  <div class="modal-card">
+    <button class="modal-close-btn" (click)="onClose()" aria-label="Close modal">✕</button>
+
+    <div class="modal-icon">🎉</div>
+
+    <h2 class="modal-headline" id="modal-headline">You've used your 25 free credits!</h2>
+    <p class="modal-subheadline">Ready to unlock your professional headshots?</p>
+
+    <ul class="modal-benefits">
+      <li>
+        <span class="benefit-icon">✨</span>
+        <span>Custom AI trained on <strong>YOUR</strong> photos</span>
+      </li>
+      <li>
+        <span class="benefit-icon">⚡</span>
+        <span>Multiple professional styles</span>
+      </li>
+      <li>
+        <span class="benefit-icon">🔒</span>
+        <span>High-resolution downloads</span>
+      </li>
+    </ul>
+
+    <div class="modal-actions">
+      <button class="btn btn-primary modal-cta" (click)="onUpgradeClick()">
+        Get More Credits →
+      </button>
+      <button class="modal-dismiss" (click)="onClose()">Maybe later</button>
+    </div>
+  </div>
+</div>

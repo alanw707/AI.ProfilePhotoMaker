@@ -46,6 +46,8 @@ export class CreditDisplayComponent {
   @Input() displayContext: CreditDisplayContext = 'default';
 
   @Output() creditActionRequested = new EventEmitter<CreditActionEvent>();
+  /** Emitted when the user should be shown the out-of-credits upgrade modal. */
+  @Output() showUpgradeModal = new EventEmitter<void>();
 
   /**
    * Gets the total available credits
@@ -110,6 +112,13 @@ export class CreditDisplayComponent {
    */
   onCreditAction(action: 'purchase' | 'upgrade' | 'viewPackages', context?: string): void {
     this.creditActionRequested.emit({ action, context });
+  }
+
+  /**
+   * Opens the out-of-credits upgrade modal
+   */
+  onShowUpgradeModal(): void {
+    this.showUpgradeModal.emit();
   }
 
   /**

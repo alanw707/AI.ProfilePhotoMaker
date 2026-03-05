@@ -1,6 +1,6 @@
 import { Injectable, inject, Injector, NgZone } from '@angular/core';
 import { LoggingService } from './logging.service';
-import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
 import { NotificationService } from './notification.service';
 import { DashboardStateService } from './dashboard-state.service';
@@ -200,6 +200,9 @@ export class WorkflowOrchestrationService {
   private readonly _progress = new BehaviorSubject<WorkflowProgress>(this._initialProgress);
   readonly progress$ = this._progress.asObservable();
 
+  /** Emits when a generation attempt is blocked because the user has 0 credits. */
+  readonly showOutOfCreditsModal$ = new Subject<void>();
+
   private _pollingInterval?: NodeJS.Timeout;
   private _photoCompletionPollingInterval?: NodeJS.Timeout;
   private _timeBasedProgressInterval?: NodeJS.Timeout;
@@ -370,10 +373,8 @@ export class WorkflowOrchestrationService {
       const availableCredits = this._getAvailableCredits();
 
       if (availableCredits === 0) {
-        this._deps.notificationService.error(
-          'Credits Not Loaded',
-          `Unable to load current credit balance. Please refresh the page and try again.`
-        );
+        // Emit modal trigger — dashboard will intercept and show the out-of-credits modal
+        this.showOutOfCreditsModal$.next();
       } else {
         this._deps.notificationService.error(
           'Insufficient Credits',

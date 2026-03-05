@@ -20,6 +20,7 @@ import {
 } from '../components/dashboard/style-selector/style-selector.component';
 import { FileUploadSectionComponent } from '../components/dashboard/file-upload-section/file-upload-section.component';
 import { CreditDisplayComponent } from '../components/dashboard/credit-display/credit-display.component';
+import { OutOfCreditsModalComponent } from '../components/out-of-credits-modal/out-of-credits-modal.component';
 
 import { AuthService } from '../services/auth.service';
 import { StyleService } from '../services/style.service';
@@ -84,6 +85,7 @@ interface DashboardCta {
 
 interface WorkflowOrchestrationService {
   progress$: Observable<WorkflowProgress>;
+  showOutOfCreditsModal$: import('rxjs').Subject<void>;
   startTrainingWithStyles(selectedStyles: StyleOption[], imagesPerStyle: number): Promise<void>;
   calculateCredits(
     selectedStyles: StyleOption[],
@@ -110,6 +112,7 @@ interface WorkflowOrchestrationService {
     StyleSelectorComponent,
     FileUploadSectionComponent,
     CreditDisplayComponent,
+    OutOfCreditsModalComponent,
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.sass'],
@@ -119,6 +122,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   state$: Observable<DashboardState>;
   workflowProgress$: Observable<WorkflowProgress>;
   activeJob: ActiveJobViewModel | null = null;
+
+  // Out-of-credits modal state
+  showOutOfCreditsModal = false;
 
   // Component-specific state
   currentStep = 1;
@@ -184,6 +190,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
       default:
       // Unknown credit action - silently ignore
     }
+  }
+
+  // Out-of-credits modal handlers
+  openOutOfCreditsModal(): void {
+    this.showOutOfCreditsModal = true;
+    this._cdr.detectChanges();
+  }
+
+  closeOutOfCreditsModal(): void {
+    this.showOutOfCreditsModal = false;
+    this._cdr.detectChanges();
+  }
+
+  onOutOfCreditsUpgradeClicked(): void {
+    this.showOutOfCreditsModal = false;
+    void this._router.navigate(['/app/premium']);
   }
 
   constructor(
@@ -435,6 +457,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this._workflowService.progress$.subscribe(progress => {
         this._workflowProgressSubject.next(progress);
         this._hydrateActiveJobFromWorkflowProgress(progress);
+      })
+    );
+
+    // Subscribe to out-of-credits modal trigger
+    this._subscriptions.add(
+      this._workflowService.showOutOfCreditsModal$.subscribe(() => {
+        this.openOutOfCreditsModal();
       })
     );
   }

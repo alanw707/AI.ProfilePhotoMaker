@@ -1,0 +1,152 @@
+// Out of Credits Modal
+.modal-overlay
+  position: fixed
+  inset: 0
+  background: rgba(0, 0, 0, 0.75)
+  display: flex
+  align-items: center
+  justify-content: center
+  z-index: 1000
+  padding: 16px
+  backdrop-filter: blur(4px)
+  animation: fadeIn 0.2s ease
+
+.modal-card
+  background: var(--card-bg, #ffffff)
+  border-radius: 20px
+  padding: 40px 32px 32px
+  max-width: 480px
+  width: 100%
+  position: relative
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.3)
+  text-align: center
+  animation: slideUp 0.25s ease
+
+.modal-close-btn
+  position: absolute
+  top: 16px
+  right: 16px
+  background: transparent
+  border: none
+  color: var(--text-tertiary, #6b7280)
+  font-size: 18px
+  cursor: pointer
+  width: 32px
+  height: 32px
+  display: flex
+  align-items: center
+  justify-content: center
+  border-radius: 50%
+  transition: background 0.2s ease, color 0.2s ease
+
+  &:hover
+    background: var(--bg-secondary, #f3f4f6)
+    color: var(--text-primary, #1a202c)
+
+.modal-icon
+  font-size: 52px
+  margin-bottom: 16px
+  line-height: 1
+
+.modal-headline
+  font-family: 'Poppins', sans-serif
+  font-size: 22px
+  font-weight: 700
+  color: var(--text-primary, #1a202c)
+  margin: 0 0 8px 0
+  line-height: 1.3
+
+.modal-subheadline
+  font-size: 16px
+  color: var(--text-secondary, #4a5568)
+  margin: 0 0 24px 0
+
+.modal-benefits
+  list-style: none
+  padding: 0
+  margin: 0 0 28px 0
+  text-align: left
+  background: var(--bg-secondary, #f8f9fa)
+  border-radius: 12px
+  padding: 16px 20px
+  display: flex
+  flex-direction: column
+  gap: 12px
+
+  li
+    display: flex
+    align-items: center
+    gap: 12px
+    font-size: 15px
+    color: var(--text-primary, #1a202c)
+
+    .benefit-icon
+      font-size: 18px
+      flex-shrink: 0
+      width: 24px
+      text-align: center
+
+    strong
+      color: var(--accent-primary, #4fd1c7)
+
+.modal-actions
+  display: flex
+  flex-direction: column
+  align-items: center
+  gap: 12px
+
+.modal-cta
+  width: 100%
+  padding: 14px 24px
+  font-size: 16px
+  font-weight: 600
+  border-radius: 10px
+  cursor: pointer
+  transition: transform 0.2s ease, box-shadow 0.2s ease
+
+  &:hover
+    transform: translateY(-2px)
+    box-shadow: 0 8px 20px rgba(79, 209, 199, 0.35)
+
+.modal-dismiss
+  background: transparent
+  border: none
+  color: var(--text-tertiary, #9ca3af)
+  font-size: 14px
+  cursor: pointer
+  padding: 4px 8px
+  border-radius: 4px
+  transition: color 0.2s ease
+
+  &:hover
+    color: var(--text-secondary, #4a5568)
+
+// Animations
+@keyframes fadeIn
+  from
+    opacity: 0
+  to
+    opacity: 1
+
+@keyframes slideUp
+  from
+    opacity: 0
+    transform: translateY(24px)
+  to
+    opacity: 1
+    transform: translateY(0)
+
+// Mobile responsive
+@media (max-width: 480px)
+  .modal-card
+    padding: 32px 20px 24px
+
+  .modal-headline
+    font-size: 19px
+
+  .modal-subheadline
+    font-size: 14px
+
+  .modal-cta
+    font-size: 15px
+    padding: 12px 20px

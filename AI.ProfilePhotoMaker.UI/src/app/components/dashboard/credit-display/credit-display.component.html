@@ -73,18 +73,26 @@
     <div class="warning-content">
       <div class="warning-header">
         <span class="warning-icon">⚠️</span>
-        <h5>Insufficient Credits</h5>
+        <h5>{{ getTotalAvailableCredits() === 0 ? 'Out of Credits' : 'Insufficient Credits' }}</h5>
       </div>
-      <p>
-        You need
-        <strong>{{ requiredCredits }}</strong>
-        credits but only have
-        <strong>{{ getTotalAvailableCredits() }}</strong>
-        . Please purchase more credits to continue.
-      </p>
-      <button class="btn btn-primary" (click)="onCreditAction('purchase', 'insufficient-credits')">
-        Purchase Credits
-      </button>
+      <ng-container *ngIf="getTotalAvailableCredits() === 0; else partialCredits">
+        <p>You've used all your free credits. Upgrade to get more and unlock professional headshots.</p>
+        <button class="btn btn-primary" (click)="onShowUpgradeModal()">
+          Get More Credits →
+        </button>
+      </ng-container>
+      <ng-template #partialCredits>
+        <p>
+          You need
+          <strong>{{ requiredCredits }}</strong>
+          credits but only have
+          <strong>{{ getTotalAvailableCredits() }}</strong>
+          . Please purchase more credits to continue.
+        </p>
+        <button class="btn btn-primary" (click)="onCreditAction('purchase', 'insufficient-credits')">
+          Purchase Credits
+        </button>
+      </ng-template>
     </div>
   </div>
 
