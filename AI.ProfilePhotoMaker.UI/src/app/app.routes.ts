@@ -485,6 +485,24 @@ export const routes: Routes = [
       seoPage: seoPages['medical-professional-headshots'],
     },
   },
+  {
+    path: 'nurse-headshots',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['nurse-headshots'].title,
+    data: {
+      seoPage: seoPages['nurse-headshots'],
+    },
+  },
+  {
+    path: 'teacher-headshots',
+    loadComponent: () =>
+      import('./pages/marketing/seo-page/seo-page.component').then(m => m.SeoPageComponent),
+    title: seoPages['teacher-headshots'].title,
+    data: {
+      seoPage: seoPages['teacher-headshots'],
+    },
+  },
 
   // Help & Support
   {
