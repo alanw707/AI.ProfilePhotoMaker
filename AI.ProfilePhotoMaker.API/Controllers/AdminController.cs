@@ -43,13 +43,13 @@ public class AdminController : BaseController
         var authCheck = ValidateAuthentication();
         if (authCheck != null) return authCheck;
 
-        var user = await _adminService.GetUserDetailAsync(userId);
-        if (user == null)
+        var diagnostics = await _adminService.GetUserDiagnosticsAsync(userId);
+        if (diagnostics == null)
         {
             return ErrorResponse("NotFound", "User not found", 404);
         }
 
-        return SuccessResponse(user);
+        return SuccessResponse(diagnostics);
     }
 
     [HttpPost("users/{userId}/deactivate")]

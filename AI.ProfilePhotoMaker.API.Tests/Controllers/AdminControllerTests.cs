@@ -35,12 +35,29 @@ public class AdminControllerTests
     [Fact]
     public async Task GetUserDetail_ReturnsNotFound_WhenUserDoesNotExist()
     {
-        _adminService.Setup(s => s.GetUserDetailAsync("missing")).ReturnsAsync((AdminUserDetailDto?)null);
+        _adminService.Setup(s => s.GetUserDiagnosticsAsync("missing")).ReturnsAsync((AdminUserDiagnosticsDto?)null);
 
         var controller = CreateController();
         var result = await controller.GetUserDetail("missing");
 
         Assert.IsType<NotFoundObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task GetUserDetail_ReturnsOk_WithDiagnosticsPayload()
+    {
+        _adminService
+            .Setup(s => s.GetUserDiagnosticsAsync("u1"))
+            .ReturnsAsync(new AdminUserDiagnosticsDto
+            {
+                User = new AdminUserDetailDto { Id = "u1", Email = "u1@example.com" },
+                Metrics = new AdminUserMetricsDto { CurrentCredits = 3 }
+            });
+
+        var controller = CreateController();
+        var result = await controller.GetUserDetail("u1");
+
+        Assert.IsType<OkObjectResult>(result);
     }
 
     [Fact]

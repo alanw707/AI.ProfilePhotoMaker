@@ -20,7 +20,7 @@ public class AdminServiceTests
         using var context = CreateContext();
         var userId = await SeedUserWithProfileAsync(context, credits: 2);
         var userManager = UserManagerMockFactory.Create();
-        var service = new AdminService(context, userManager.Object, NullLogger<AdminService>.Instance);
+        var service = CreateService(context, userManager.Object);
 
         var result = await service.AdjustCreditsAsync(new AdminCreditAdjustmentDto
         {
@@ -39,7 +39,7 @@ public class AdminServiceTests
         using var context = CreateContext();
         var userId = await SeedUserWithProfileAsync(context, credits: 10);
         var userManager = UserManagerMockFactory.Create();
-        var service = new AdminService(context, userManager.Object, NullLogger<AdminService>.Instance);
+        var service = CreateService(context, userManager.Object);
 
         var result = await service.AdjustCreditsAsync(new AdminCreditAdjustmentDto
         {
@@ -68,7 +68,7 @@ public class AdminServiceTests
         userManager.Setup(m => m.SetLockoutEnabledAsync(user, true)).ReturnsAsync(IdentityResult.Success);
         userManager.Setup(m => m.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue)).ReturnsAsync(IdentityResult.Success);
 
-        var service = new AdminService(context, userManager.Object, NullLogger<AdminService>.Instance);
+        var service = CreateService(context, userManager.Object);
         var ok = await service.DeactivateUserAsync("u1", "admin-1", "policy");
 
         Assert.True(ok);
@@ -80,7 +80,7 @@ public class AdminServiceTests
     {
         using var context = CreateContext();
         var userManager = UserManagerMockFactory.Create();
-        var service = new AdminService(context, userManager.Object, NullLogger<AdminService>.Instance);
+        var service = CreateService(context, userManager.Object);
 
         var ok = await service.DeactivateUserAsync("admin-1", "admin-1", "self");
         Assert.False(ok);
@@ -98,7 +98,7 @@ public class AdminServiceTests
         userManager.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
         userManager.Setup(m => m.SetLockoutEndDateAsync(user, null)).ReturnsAsync(IdentityResult.Success);
 
-        var service = new AdminService(context, userManager.Object, NullLogger<AdminService>.Instance);
+        var service = CreateService(context, userManager.Object);
         var ok = await service.ReactivateUserAsync("u1", "admin-1", "ok");
 
         Assert.True(ok);
@@ -136,7 +136,7 @@ public class AdminServiceTests
         userManager.Setup(m => m.GetUsersInRoleAsync("Admin")).ReturnsAsync(adminUsers);
         userManager.Setup(m => m.DeleteAsync(user)).ReturnsAsync(IdentityResult.Success);
 
-        var service = new AdminService(context, userManager.Object, NullLogger<AdminService>.Instance);
+        var service = CreateService(context, userManager.Object);
         var result = await service.DeleteUserAsync(userId, "admin-a", "cleanup");
 
         Assert.True(result.Success);
@@ -156,7 +156,7 @@ public class AdminServiceTests
         userManager.Setup(m => m.FindByIdAsync("admin-last")).ReturnsAsync(user);
         userManager.Setup(m => m.GetUsersInRoleAsync("Admin")).ReturnsAsync(new List<ApplicationUser> { user });
 
-        var service = new AdminService(context, userManager.Object, NullLogger<AdminService>.Instance);
+        var service = CreateService(context, userManager.Object);
         var result = await service.DeleteUserAsync("admin-last", "admin-other", "cleanup");
 
         Assert.False(result.Success);
@@ -179,12 +179,136 @@ public class AdminServiceTests
         });
         userManager.Setup(m => m.DeleteAsync(user)).ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "boom" }));
 
-        var service = new AdminService(context, userManager.Object, NullLogger<AdminService>.Instance);
+        var service = CreateService(context, userManager.Object);
         var result = await service.DeleteUserAsync(userId, "admin-a", "cleanup");
 
         Assert.False(result.Success);
         Assert.Contains("failed", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(await context.AdminAuditLogs.Where(l => l.Action == "UserDeleted" && l.TargetUserId == userId).ToListAsync());
+    }
+
+    [Fact]
+    public async Task GetUserDiagnosticsAsync_ReturnsNull_WhenUserDoesNotExist()
+    {
+        using var context = CreateContext();
+        var userManager = UserManagerMockFactory.Create();
+        var service = CreateService(context, userManager.Object);
+
+        var result = await service.GetUserDiagnosticsAsync("missing");
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetUserDiagnosticsAsync_AggregatesTimelinePurchasesAndImages()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserWithProfileAsync(context, credits: 0);
+        var profile = await context.UserProfiles.FirstAsync(p => p.UserId == userId);
+        var adminUser = new ApplicationUser
+        {
+            Id = "admin-1",
+            UserName = "admin",
+            Email = "admin@example.com"
+        };
+
+        context.Users.Add(adminUser);
+        context.ProcessedImages.AddRange(
+            new ProcessedImage
+            {
+                UserProfileId = profile.Id,
+                OriginalImageUrl = "https://cdn.example.com/upload.jpg",
+                ProcessedImageUrl = "https://cdn.example.com/upload-processed.jpg",
+                Style = "source",
+                IsOriginalUpload = true,
+                CreatedAt = DateTime.UtcNow.AddHours(-5),
+                ScheduledDeletionDate = DateTime.UtcNow.AddDays(30)
+            },
+            new ProcessedImage
+            {
+                UserProfileId = profile.Id,
+                OriginalImageUrl = "https://cdn.example.com/input.jpg",
+                ProcessedImageUrl = "https://cdn.example.com/generated.jpg",
+                Style = "corporate",
+                IsGenerated = true,
+                CreatedAt = DateTime.UtcNow.AddHours(-2),
+                ScheduledDeletionDate = DateTime.UtcNow.AddDays(30)
+            });
+        context.UsageLogs.Add(new UsageLog
+        {
+            UserId = userId,
+            Action = "basic_generation",
+            Details = "Generated 2 headshots",
+            CreditsCost = 20,
+            CreditsRemaining = 0,
+            CreatedAt = DateTime.UtcNow.AddHours(-1)
+        });
+        context.ModelCreationRequests.Add(new ModelCreationRequest
+        {
+            UserId = userId,
+            ModelName = "exec-v1",
+            Status = ModelCreationStatus.Ready,
+            CreatedAt = DateTime.UtcNow.AddHours(-7),
+            CompletedAt = DateTime.UtcNow.AddHours(-6)
+        });
+        context.PendingGenerationRequests.Add(new PendingGenerationRequest
+        {
+            UserId = userId,
+            TrainingRequestId = "train-123",
+            Status = PendingGenerationStatus.Succeeded,
+            CreatedAt = DateTime.UtcNow.AddHours(-4),
+            CompletedAt = DateTime.UtcNow.AddHours(-3)
+        });
+        context.AdminAuditLogs.Add(new AdminAuditLog
+        {
+            AdminUserId = "admin-1",
+            Action = "CreditsAdded",
+            TargetUserId = userId,
+            Details = "Courtesy adjustment",
+            OldValue = "0",
+            NewValue = "10",
+            CreatedAt = DateTime.UtcNow.AddHours(-8)
+        });
+        await context.SaveChangesAsync();
+
+        var purchaseHistory = new List<CreditPurchase>
+        {
+            new()
+            {
+                Id = 42,
+                UserId = userId,
+                PackageId = 3,
+                Package = new CreditPackage { Id = 3, Name = "Starter Pack", Credits = 20, Price = 9.99m },
+                CreditsAwarded = 20,
+                AmountPaid = 9.99m,
+                PaymentProvider = "stripe",
+                Status = PaymentStatus.Completed,
+                PurchaseDate = DateTime.UtcNow.AddHours(-9),
+                CompletedAt = DateTime.UtcNow.AddHours(-9)
+            }
+        };
+
+        var userManager = UserManagerMockFactory.Create();
+        userManager.Setup(m => m.GetRolesAsync(It.IsAny<ApplicationUser>())).ReturnsAsync(new List<string> { "User" });
+
+        var creditPackageService = new Mock<ICreditPackageService>();
+        creditPackageService.Setup(service => service.GetUserPurchaseHistoryAsync(userId)).ReturnsAsync(purchaseHistory);
+
+        var service = CreateService(context, userManager.Object, creditPackageService.Object);
+        var diagnostics = await service.GetUserDiagnosticsAsync(userId);
+
+        Assert.NotNull(diagnostics);
+        Assert.Equal(0, diagnostics!.Metrics.CurrentCredits);
+        Assert.Equal(20, diagnostics.Metrics.TotalCreditsPurchased);
+        Assert.Equal(20, diagnostics.Metrics.TotalCreditsConsumed);
+        Assert.True(diagnostics.Metrics.HasUsageHistory);
+        Assert.Equal(2, diagnostics.RecentImages.Count);
+        Assert.Single(diagnostics.RecentPurchases);
+        Assert.Contains(diagnostics.ActivityHistory, entry => entry.EventType == "usage");
+        Assert.Contains(diagnostics.ActivityHistory, entry => entry.EventType == "purchase");
+        Assert.Contains(diagnostics.ActivityHistory, entry => entry.EventType == "upload");
+        Assert.Contains(diagnostics.ActivityHistory, entry => entry.EventType == "generation");
+        Assert.Contains(diagnostics.ActivityHistory, entry => entry.EventType == "admin");
     }
 
     private static ApplicationDbContext CreateContext()
@@ -220,5 +344,27 @@ public class AdminServiceTests
 
         await context.SaveChangesAsync();
         return userId;
+    }
+
+    private static AdminService CreateService(
+        ApplicationDbContext context,
+        UserManager<ApplicationUser> userManager,
+        ICreditPackageService? creditPackageService = null)
+    {
+        if (creditPackageService == null)
+        {
+            var creditPackageServiceMock = new Mock<ICreditPackageService>();
+            creditPackageServiceMock
+                .Setup(service => service.GetUserPurchaseHistoryAsync(It.IsAny<string>()))
+                .ReturnsAsync(Array.Empty<CreditPurchase>());
+            creditPackageService = creditPackageServiceMock.Object;
+        }
+
+        return new AdminService(
+            context,
+            new UserProfileRepository(context),
+            creditPackageService,
+            userManager,
+            NullLogger<AdminService>.Instance);
     }
 }

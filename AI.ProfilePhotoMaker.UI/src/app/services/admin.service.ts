@@ -25,6 +25,72 @@ export interface AdminUserDetailDto extends AdminUserListDto {
   roles: string[];
 }
 
+export interface AdminUserMetricsDto {
+  currentCredits: number;
+  totalProcessedImages: number;
+  originalUploads: number;
+  generatedImages: number;
+  purchaseCount: number;
+  totalCreditsPurchased: number;
+  totalCreditsConsumed: number;
+  lastPurchaseAt: string | null;
+  lastImageUploadAt: string | null;
+  lastImageGenerationAt: string | null;
+  lastActivityAt: string | null;
+  hasUsageHistory: boolean;
+}
+
+export interface AdminCreditPurchaseHistoryDto {
+  id: number;
+  packageName: string;
+  creditsAwarded: number;
+  amountPaid: number;
+  paymentProvider: string;
+  status: string;
+  purchaseDate: string;
+  completedAt: string | null;
+}
+
+export interface AdminRecentImageDto {
+  id: number;
+  imageUrl: string;
+  kind: string;
+  style: string | null;
+  createdAt: string;
+  isGenerated: boolean;
+  isOriginalUpload: boolean;
+}
+
+export interface AdminUserActivityDto {
+  eventType: string;
+  title: string;
+  description: string | null;
+  status: string | null;
+  occurredAt: string;
+  creditsDelta: number | null;
+  creditsRemaining: number | null;
+  imageUrl: string | null;
+}
+
+export interface AdminUserAdminActionDto {
+  id: number;
+  adminEmail: string;
+  action: string;
+  details: string | null;
+  oldValue: string | null;
+  newValue: string | null;
+  createdAt: string;
+}
+
+export interface AdminUserDiagnosticsDto {
+  user: AdminUserDetailDto;
+  metrics: AdminUserMetricsDto;
+  recentPurchases: AdminCreditPurchaseHistoryDto[];
+  recentImages: AdminRecentImageDto[];
+  activityHistory: AdminUserActivityDto[];
+  recentAdminActions: AdminUserAdminActionDto[];
+}
+
 export interface AdminCreditAdjustmentDto {
   userId: string;
   amount: number;
@@ -103,8 +169,8 @@ export class AdminService extends BaseHttpService {
     );
   }
 
-  getUserDetail(userId: string): Observable<AdminUserDetailDto> {
-    return this.get<AdminUserDetailDto>(`admin/users/${userId}`, { withCredentials: true });
+  getUserDetail(userId: string): Observable<AdminUserDiagnosticsDto> {
+    return this.get<AdminUserDiagnosticsDto>(`admin/users/${userId}`, { withCredentials: true });
   }
 
   deactivateUser(userId: string, reason: string): Observable<{ userId: string }> {

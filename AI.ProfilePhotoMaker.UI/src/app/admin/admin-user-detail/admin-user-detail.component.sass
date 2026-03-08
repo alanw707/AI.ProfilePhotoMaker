@@ -1,0 +1,179 @@
+.hero-grid
+  display: grid
+  grid-template-columns: repeat(3, minmax(0, 1fr))
+  gap: 1rem
+  margin-bottom: 1.2rem
+
+.hero-card
+  padding: 1.15rem
+  border: 1px solid var(--border-color)
+  border-radius: 18px
+  background: linear-gradient(160deg, color-mix(in srgb, var(--card-bg) 92%, transparent), color-mix(in srgb, var(--accent-primary) 10%, transparent))
+  box-shadow: var(--shadow-sm)
+
+  h2
+    margin: 0.2rem 0 0.35rem
+    font-size: clamp(1.8rem, 3vw, 2.4rem)
+
+.hero-label
+  margin: 0
+  color: var(--text-secondary)
+  font-size: 0.8rem
+  text-transform: uppercase
+  letter-spacing: 0.1em
+
+.hero-copy
+  margin: 0
+  color: var(--text-secondary)
+
+.panel-heading
+  display: flex
+  justify-content: space-between
+  align-items: flex-start
+  gap: 0.75rem
+  margin-bottom: 1rem
+
+  h2
+    margin: 0
+
+.compact-heading
+  margin-bottom: 0.45rem
+
+.badge-row
+  display: flex
+  flex-wrap: wrap
+  gap: 0.5rem
+
+.detail-grid
+  display: grid
+  grid-template-columns: repeat(4, minmax(0, 1fr))
+  gap: 0.85rem
+
+.detail-item
+  padding: 0.85rem
+  border-radius: 14px
+  background: color-mix(in srgb, var(--hover-bg) 88%, transparent)
+  border: 1px solid color-mix(in srgb, var(--border-color) 78%, transparent)
+
+  span
+    display: block
+    margin-bottom: 0.4rem
+    color: var(--text-secondary)
+    font-size: 0.82rem
+
+  strong
+    display: block
+    line-height: 1.35
+
+.metrics-detail-grid
+  margin-top: 0.9rem
+
+.stats-grid
+  display: grid
+  grid-template-columns: repeat(4, minmax(0, 1fr))
+  gap: 0.85rem
+
+.stat-card
+  padding: 0.95rem
+  border-radius: 16px
+  background: color-mix(in srgb, var(--card-bg) 90%, transparent)
+  border: 1px solid color-mix(in srgb, var(--border-color) 78%, transparent)
+
+  span
+    display: block
+    color: var(--text-secondary)
+    margin-bottom: 0.35rem
+
+  strong
+    font-size: 1.5rem
+
+.panel-grid
+  display: grid
+  grid-template-columns: repeat(2, minmax(0, 1fr))
+  gap: 1rem
+
+.timeline
+  display: grid
+  gap: 0.9rem
+
+.timeline-item
+  display: grid
+  grid-template-columns: 16px 1fr
+  gap: 0.8rem
+  align-items: start
+
+.timeline-marker
+  width: 12px
+  height: 12px
+  margin-top: 0.35rem
+  border-radius: 999px
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent-primary) 14%, transparent)
+
+.timeline-content
+  padding: 0.95rem
+  border-radius: 14px
+  border: 1px solid color-mix(in srgb, var(--border-color) 78%, transparent)
+  background: color-mix(in srgb, var(--card-bg) 90%, transparent)
+
+  p
+    margin: 0 0 0.5rem
+    color: var(--text-secondary)
+
+.image-grid
+  display: grid
+  grid-template-columns: repeat(4, minmax(0, 1fr))
+  gap: 0.9rem
+
+.image-card
+  overflow: hidden
+  border-radius: 16px
+  border: 1px solid color-mix(in srgb, var(--border-color) 78%, transparent)
+  background: color-mix(in srgb, var(--card-bg) 92%, transparent)
+
+  img
+    display: block
+    width: 100%
+    aspect-ratio: 1 / 1
+    object-fit: cover
+    background: color-mix(in srgb, var(--hover-bg) 90%, transparent)
+
+.image-meta
+  padding: 0.8rem
+
+  p
+    margin: 0.5rem 0 0
+    color: var(--text-secondary)
+
+.admin-actions-list
+  display: grid
+  gap: 0.75rem
+
+.admin-action-item
+  padding: 0.95rem
+  border-radius: 14px
+  border: 1px solid color-mix(in srgb, var(--border-color) 78%, transparent)
+  background: color-mix(in srgb, var(--card-bg) 90%, transparent)
+
+  p
+    margin: 0.25rem 0 0
+    color: var(--text-secondary)
+
+@media (max-width: 1080px)
+  .hero-grid,
+  .stats-grid,
+  .detail-grid,
+  .panel-grid,
+  .image-grid
+    grid-template-columns: repeat(2, minmax(0, 1fr))
+
+@media (max-width: 680px)
+  .hero-grid,
+  .stats-grid,
+  .detail-grid,
+  .panel-grid,
+  .image-grid
+    grid-template-columns: 1fr
+
+  .panel-heading
+    flex-direction: column
