@@ -6,7 +6,7 @@ namespace AI.ProfilePhotoMaker.API.Services;
 public interface IAdminService
 {
     Task<(List<AdminUserListDto> Users, int TotalCount)> GetUsersAsync(int page, int pageSize, string? searchTerm);
-    Task<AdminUserDetailDto?> GetUserDetailAsync(string userId);
+    Task<AdminUserDiagnosticsDto?> GetUserDiagnosticsAsync(string userId);
     Task<bool> DeactivateUserAsync(string userId, string adminUserId, string reason);
     Task<bool> ReactivateUserAsync(string userId, string adminUserId, string reason);
     Task<(bool Success, string Message)> DeleteUserAsync(string userId, string adminUserId, string reason);

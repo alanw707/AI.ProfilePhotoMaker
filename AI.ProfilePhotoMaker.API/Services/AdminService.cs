@@ -10,16 +10,26 @@ namespace AI.ProfilePhotoMaker.API.Services;
 
 public class AdminService : IAdminService
 {
+    private const int RecentPurchaseLimit = 8;
+    private const int RecentImageLimit = 8;
+    private const int ActivityHistoryLimit = 30;
+
     private readonly ApplicationDbContext _context;
+    private readonly IUserProfileRepository _userProfileRepository;
+    private readonly ICreditPackageService _creditPackageService;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<AdminService> _logger;
 
     public AdminService(
         ApplicationDbContext context,
+        IUserProfileRepository userProfileRepository,
+        ICreditPackageService creditPackageService,
         UserManager<ApplicationUser> userManager,
         ILogger<AdminService> logger)
     {
         _context = context;
+        _userProfileRepository = userProfileRepository;
+        _creditPackageService = creditPackageService;
         _userManager = userManager;
         _logger = logger;
     }
@@ -64,7 +74,7 @@ public class AdminService : IAdminService
         return (users, totalCount);
     }
 
-    public async Task<AdminUserDetailDto?> GetUserDetailAsync(string userId)
+    public async Task<AdminUserDiagnosticsDto?> GetUserDiagnosticsAsync(string userId)
     {
         var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
         if (user == null)
@@ -72,10 +82,40 @@ public class AdminService : IAdminService
             return null;
         }
 
-        var profile = await _context.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId);
-        var roles = await _userManager.GetRolesAsync(user);
+        var profile = await _userProfileRepository.GetByUserIdLightAsync(userId);
+        var profileStats = await _userProfileRepository.GetUserProfileStatsAsync(userId);
+        var profileWithRecentImages = await _userProfileRepository.GetProfileWithRecentImagesAsync(userId, RecentImageLimit);
+        var purchases = (await _creditPackageService.GetUserPurchaseHistoryAsync(userId))
+            .Take(RecentPurchaseLimit)
+            .ToList();
+        var usageLogs = await _context.UsageLogs
+            .AsNoTracking()
+            .Where(log => log.UserId == userId)
+            .OrderByDescending(log => log.CreatedAt)
+            .Take(12)
+            .ToListAsync();
+        var modelRequests = await _context.ModelCreationRequests
+            .AsNoTracking()
+            .Where(request => request.UserId == userId)
+            .OrderByDescending(request => request.CreatedAt)
+            .Take(8)
+            .ToListAsync();
+        var pendingGenerationRequests = await _context.PendingGenerationRequests
+            .AsNoTracking()
+            .Where(request => request.UserId == userId)
+            .OrderByDescending(request => request.CreatedAt)
+            .Take(8)
+            .ToListAsync();
+        var adminAuditLogs = await _context.AdminAuditLogs
+            .AsNoTracking()
+            .Where(log => log.TargetUserId == userId)
+            .OrderByDescending(log => log.CreatedAt)
+            .Take(8)
+            .ToListAsync();
+        var roles = await _userManager.GetRolesAsync(user) ?? Array.Empty<string>();
+        var adminEmails = await ResolveAdminEmailsAsync(adminAuditLogs);
 
-        return new AdminUserDetailDto
+        var userDetail = new AdminUserDetailDto
         {
             Id = user.Id,
             Email = user.Email ?? string.Empty,
@@ -90,6 +130,82 @@ public class AdminService : IAdminService
             SubscriptionTier = profile?.SubscriptionTier.ToString() ?? SubscriptionTier.Basic.ToString(),
             EmailConfirmed = user.EmailConfirmed,
             Roles = roles.ToList()
+        };
+
+        var recentImages = profileWithRecentImages?.RecentImages
+            .Select(image => new AdminRecentImageDto
+            {
+                Id = image.Id,
+                ImageUrl = ResolveImageUrl(image),
+                Kind = image.IsGenerated ? "Generated" : image.IsOriginalUpload ? "Upload" : "Image",
+                Style = string.IsNullOrWhiteSpace(image.Style) ? null : image.Style,
+                CreatedAt = image.CreatedAt,
+                IsGenerated = image.IsGenerated,
+                IsOriginalUpload = image.IsOriginalUpload
+            })
+            .ToList() ?? new List<AdminRecentImageDto>();
+
+        var recentPurchases = purchases
+            .Select(purchase => new AdminCreditPurchaseHistoryDto
+            {
+                Id = purchase.Id,
+                PackageName = purchase.Package?.Name ?? $"Package {purchase.PackageId}",
+                CreditsAwarded = purchase.CreditsAwarded,
+                AmountPaid = purchase.AmountPaid,
+                PaymentProvider = purchase.PaymentProvider,
+                Status = purchase.Status.ToString(),
+                PurchaseDate = purchase.PurchaseDate,
+                CompletedAt = purchase.CompletedAt
+            })
+            .ToList();
+
+        var recentAdminActions = adminAuditLogs
+            .Select(log => new AdminUserAdminActionDto
+            {
+                Id = log.Id,
+                AdminEmail = adminEmails.TryGetValue(log.AdminUserId, out var adminEmail) ? adminEmail : log.AdminUserId,
+                Action = log.Action,
+                Details = log.Details,
+                OldValue = log.OldValue,
+                NewValue = log.NewValue,
+                CreatedAt = log.CreatedAt
+            })
+            .ToList();
+
+        var activityHistory = BuildActivityHistory(
+            usageLogs,
+            recentPurchases,
+            recentImages,
+            modelRequests,
+            pendingGenerationRequests,
+            recentAdminActions);
+
+        var totalCreditsConsumed = usageLogs
+            .Where(log => log.CreditsCost.HasValue && log.CreditsCost.Value > 0)
+            .Sum(log => log.CreditsCost ?? 0);
+
+        return new AdminUserDiagnosticsDto
+        {
+            User = userDetail,
+            Metrics = new AdminUserMetricsDto
+            {
+                CurrentCredits = userDetail.Credits,
+                TotalProcessedImages = profileStats?.TotalProcessedImages ?? 0,
+                OriginalUploads = profileStats?.OriginalUploads ?? 0,
+                GeneratedImages = profileStats?.GeneratedImages ?? 0,
+                PurchaseCount = recentPurchases.Count,
+                TotalCreditsPurchased = recentPurchases.Sum(purchase => purchase.CreditsAwarded),
+                TotalCreditsConsumed = totalCreditsConsumed,
+                LastPurchaseAt = recentPurchases.FirstOrDefault()?.PurchaseDate,
+                LastImageUploadAt = profileStats?.LastImageUpload,
+                LastImageGenerationAt = profileStats?.LastImageGeneration,
+                LastActivityAt = activityHistory.FirstOrDefault()?.OccurredAt,
+                HasUsageHistory = usageLogs.Count > 0 || recentPurchases.Count > 0 || recentImages.Count > 0
+            },
+            RecentPurchases = recentPurchases,
+            RecentImages = recentImages,
+            ActivityHistory = activityHistory,
+            RecentAdminActions = recentAdminActions
         };
     }
 
@@ -488,6 +604,144 @@ public class AdminService : IAdminService
             TotalCreditsPurchased = totalCreditsPurchased,
             ActiveCoupons = activeCoupons
         };
+    }
+
+    private async Task<Dictionary<string, string>> ResolveAdminEmailsAsync(List<AdminAuditLog> adminAuditLogs)
+    {
+        var adminIds = adminAuditLogs
+            .Select(log => log.AdminUserId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct()
+            .ToList();
+
+        if (adminIds.Count == 0)
+        {
+            return new Dictionary<string, string>();
+        }
+
+        return await _context.Users
+            .AsNoTracking()
+            .Where(user => adminIds.Contains(user.Id))
+            .ToDictionaryAsync(user => user.Id, user => user.Email ?? user.Id);
+    }
+
+    private static string ResolveImageUrl(AI.ProfilePhotoMaker.API.Data.ProcessedImageDto image)
+    {
+        if (image.IsGenerated && !string.IsNullOrWhiteSpace(image.ProcessedImageUrl))
+        {
+            return image.ProcessedImageUrl;
+        }
+
+        if (image.IsOriginalUpload && !string.IsNullOrWhiteSpace(image.OriginalImageUrl))
+        {
+            return image.OriginalImageUrl;
+        }
+
+        return !string.IsNullOrWhiteSpace(image.ProcessedImageUrl)
+            ? image.ProcessedImageUrl
+            : image.OriginalImageUrl;
+    }
+
+    private static List<AdminUserActivityDto> BuildActivityHistory(
+        List<UsageLog> usageLogs,
+        List<AdminCreditPurchaseHistoryDto> recentPurchases,
+        List<AdminRecentImageDto> recentImages,
+        List<ModelCreationRequest> modelRequests,
+        List<PendingGenerationRequest> pendingGenerationRequests,
+        List<AdminUserAdminActionDto> recentAdminActions)
+    {
+        var activity = new List<AdminUserActivityDto>();
+
+        activity.AddRange(usageLogs.Select(log => new AdminUserActivityDto
+        {
+            EventType = "usage",
+            Title = HumanizeAction(log.Action),
+            Description = log.Details,
+            Status = log.CreditsCost.HasValue ? $"Consumed {log.CreditsCost.Value} credits" : null,
+            OccurredAt = log.CreatedAt,
+            CreditsDelta = log.CreditsCost.HasValue ? -log.CreditsCost.Value : null,
+            CreditsRemaining = log.CreditsRemaining
+        }));
+
+        activity.AddRange(recentPurchases.Select(purchase => new AdminUserActivityDto
+        {
+            EventType = "purchase",
+            Title = "Credits purchased",
+            Description = $"{purchase.PackageName} via {purchase.PaymentProvider}",
+            Status = purchase.Status,
+            OccurredAt = purchase.PurchaseDate,
+            CreditsDelta = purchase.CreditsAwarded
+        }));
+
+        activity.AddRange(recentImages.Select(image => new AdminUserActivityDto
+        {
+            EventType = image.IsGenerated ? "generation" : "upload",
+            Title = image.IsGenerated ? "Generated new headshot" : "Uploaded source image",
+            Description = image.Style,
+            Status = image.Kind,
+            OccurredAt = image.CreatedAt,
+            ImageUrl = image.ImageUrl
+        }));
+
+        activity.AddRange(modelRequests.Select(request => new AdminUserActivityDto
+        {
+            EventType = "model",
+            Title = "Model training request",
+            Description = request.ModelName,
+            Status = request.Status.ToString(),
+            OccurredAt = request.CompletedAt ?? request.CreatedAt
+        }));
+
+        activity.AddRange(pendingGenerationRequests.Select(request => new AdminUserActivityDto
+        {
+            EventType = "generation-request",
+            Title = "Queued generation request",
+            Description = $"Training request {request.TrainingRequestId}",
+            Status = request.Status.ToString(),
+            OccurredAt = request.CompletedAt ?? request.StartedAt ?? request.CreatedAt
+        }));
+
+        activity.AddRange(recentAdminActions.Select(action => new AdminUserActivityDto
+        {
+            EventType = "admin",
+            Title = HumanizeAction(action.Action),
+            Description = $"{action.AdminEmail}: {action.Details ?? "No details recorded"}",
+            Status = "Admin action",
+            OccurredAt = action.CreatedAt
+        }));
+
+        return activity
+            .OrderByDescending(entry => entry.OccurredAt)
+            .Take(ActivityHistoryLimit)
+            .ToList();
+    }
+
+    private static string HumanizeAction(string action)
+    {
+        if (string.IsNullOrWhiteSpace(action))
+        {
+            return "Activity";
+        }
+
+        var builder = new System.Text.StringBuilder(action.Length + 8);
+        for (var index = 0; index < action.Length; index++)
+        {
+            var character = action[index];
+            if (character == '_' || character == '-')
+            {
+                builder.Append(' ');
+                continue;
+            }
+
+            if (index > 0 && char.IsUpper(character) && !char.IsUpper(action[index - 1]))
+            {
+                builder.Append(' ');
+            }
+
+            builder.Append(builder.Length == 0 ? char.ToUpperInvariant(character) : character);
+        }
+
+        return builder.ToString();
     }
 
     /// <summary>

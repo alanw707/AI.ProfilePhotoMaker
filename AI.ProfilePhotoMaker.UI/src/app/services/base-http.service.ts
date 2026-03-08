@@ -186,7 +186,7 @@ export class BaseHttpService {
     }
 
     // Log error for debugging
-    console.error(`HTTP ${method} ${endpoint} failed:`, {
+    console.error('HTTP %s %s failed:', method, endpoint, {
       code: errorCode,
       message: errorMessage,
       status: error.status,

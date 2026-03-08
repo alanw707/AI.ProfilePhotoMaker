@@ -24,6 +24,78 @@ public class AdminUserDetailDto : AdminUserListDto
     public List<string> Roles { get; set; } = new();
 }
 
+public class AdminUserDiagnosticsDto
+{
+    public AdminUserDetailDto User { get; set; } = new();
+    public AdminUserMetricsDto Metrics { get; set; } = new();
+    public List<AdminCreditPurchaseHistoryDto> RecentPurchases { get; set; } = new();
+    public List<AdminRecentImageDto> RecentImages { get; set; } = new();
+    public List<AdminUserActivityDto> ActivityHistory { get; set; } = new();
+    public List<AdminUserAdminActionDto> RecentAdminActions { get; set; } = new();
+}
+
+public class AdminUserMetricsDto
+{
+    public int CurrentCredits { get; set; }
+    public int TotalProcessedImages { get; set; }
+    public int OriginalUploads { get; set; }
+    public int GeneratedImages { get; set; }
+    public int PurchaseCount { get; set; }
+    public int TotalCreditsPurchased { get; set; }
+    public int TotalCreditsConsumed { get; set; }
+    public DateTime? LastPurchaseAt { get; set; }
+    public DateTime? LastImageUploadAt { get; set; }
+    public DateTime? LastImageGenerationAt { get; set; }
+    public DateTime? LastActivityAt { get; set; }
+    public bool HasUsageHistory { get; set; }
+}
+
+public class AdminCreditPurchaseHistoryDto
+{
+    public int Id { get; set; }
+    public string PackageName { get; set; } = string.Empty;
+    public int CreditsAwarded { get; set; }
+    public decimal AmountPaid { get; set; }
+    public string PaymentProvider { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public DateTime PurchaseDate { get; set; }
+    public DateTime? CompletedAt { get; set; }
+}
+
+public class AdminRecentImageDto
+{
+    public int Id { get; set; }
+    public string ImageUrl { get; set; } = string.Empty;
+    public string Kind { get; set; } = string.Empty;
+    public string? Style { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public bool IsGenerated { get; set; }
+    public bool IsOriginalUpload { get; set; }
+}
+
+public class AdminUserActivityDto
+{
+    public string EventType { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? Status { get; set; }
+    public DateTime OccurredAt { get; set; }
+    public int? CreditsDelta { get; set; }
+    public int? CreditsRemaining { get; set; }
+    public string? ImageUrl { get; set; }
+}
+
+public class AdminUserAdminActionDto
+{
+    public int Id { get; set; }
+    public string AdminEmail { get; set; } = string.Empty;
+    public string Action { get; set; } = string.Empty;
+    public string? Details { get; set; }
+    public string? OldValue { get; set; }
+    public string? NewValue { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
 public class AdminCreditAdjustmentDto
 {
     [Required]

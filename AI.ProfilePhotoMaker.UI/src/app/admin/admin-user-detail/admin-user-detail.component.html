@@ -1,12 +1,272 @@
-<section *ngIf="user">
-  <h1>User Detail</h1>
-  <p>Email: {{ user.email }}</p>
-  <p>Name: {{ user.firstName }} {{ user.lastName }}</p>
-  <p>Credits: {{ user.credits }}</p>
-  <p>Gender: {{ user.gender || '-' }}</p>
-  <p>Ethnicity: {{ user.ethnicity || '-' }}</p>
-  <p>Subscription: {{ user.subscriptionTier }}</p>
-  <p>Email Confirmed: {{ user.emailConfirmed ? 'Yes' : 'No' }}</p>
-  <p>Roles: {{ (user.roles || []).join(', ') }}</p>
-  <a routerLink="/admin/users">Back to users</a>
+<section class="admin-shell">
+  <header class="admin-header">
+    <div>
+      <p class="admin-kicker">User Diagnostics</p>
+      <h1>Admin User Detail</h1>
+      <p class="admin-subtitle">
+        Inspect credits, purchases, uploads, generations, and recent operational activity for a single account.
+      </p>
+    </div>
+    <a class="btn btn-ghost" routerLink="/admin/users">Back to users</a>
+  </header>
+
+  <nav class="admin-nav">
+    <a routerLink="/admin/dashboard" routerLinkActive="is-active">Overview</a>
+    <a routerLink="/admin/users" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: false }">Users</a>
+    <a routerLink="/admin/coupons" routerLinkActive="is-active">Coupons</a>
+    <a routerLink="/admin/audit-log" routerLinkActive="is-active">Audit Log</a>
+  </nav>
+
+  <div *ngIf="isLoading" class="empty-state">
+    <p>Loading user diagnostics...</p>
+  </div>
+
+  <div *ngIf="error" class="error-text admin-panel" role="alert" aria-live="polite">
+    <p>{{ error }}</p>
+    <div class="action-row">
+      <button class="btn btn-primary" (click)="loadUserDiagnostics()" [disabled]="isLoading">Retry</button>
+      <a class="btn btn-ghost" routerLink="/admin/users">Return to user list</a>
+    </div>
+  </div>
+
+  <ng-container *ngIf="!isLoading && !error && diagnostics as diagnostics">
+    <section class="hero-grid">
+      <article class="hero-card">
+        <p class="hero-label">Current credits</p>
+        <h2>{{ diagnostics.metrics.currentCredits }}</h2>
+        <p class="hero-copy">
+          {{
+            diagnostics.metrics.hasUsageHistory
+              ? 'This user has recorded product activity.'
+              : 'No product activity has been recorded yet.'
+          }}
+        </p>
+      </article>
+      <article class="hero-card">
+        <p class="hero-label">Usage balance</p>
+        <h2>{{ diagnostics.metrics.totalCreditsPurchased - diagnostics.metrics.totalCreditsConsumed }}</h2>
+        <p class="hero-copy">
+          Purchased {{ diagnostics.metrics.totalCreditsPurchased }} / consumed
+          {{ diagnostics.metrics.totalCreditsConsumed }}
+        </p>
+      </article>
+      <article class="hero-card">
+        <p class="hero-label">Last activity</p>
+        <h2>
+          {{
+            diagnostics.metrics.lastActivityAt ? (diagnostics.metrics.lastActivityAt | date: 'MMM d, y') : 'No activity'
+          }}
+        </h2>
+        <p class="hero-copy">
+          {{
+            diagnostics.metrics.lastActivityAt
+              ? (diagnostics.metrics.lastActivityAt | date: 'shortTime')
+              : 'No events available yet.'
+          }}
+        </p>
+      </article>
+    </section>
+
+    <section class="admin-panel">
+      <div class="panel-heading">
+        <div>
+          <h2>{{ diagnostics.user.firstName }} {{ diagnostics.user.lastName }}</h2>
+          <p class="mono-text">{{ diagnostics.user.email }}</p>
+        </div>
+        <div class="badge-row">
+          <span class="pill pill-credit">{{ diagnostics.user.subscriptionTier }}</span>
+          <span
+            class="pill"
+            [class.pill-success]="!diagnostics.user.isLockedOut"
+            [class.pill-danger]="diagnostics.user.isLockedOut">
+            {{ diagnostics.user.isLockedOut ? 'Locked' : 'Active' }}
+          </span>
+          <span class="pill" [class.pill-success]="diagnostics.user.emailConfirmed">
+            {{ diagnostics.user.emailConfirmed ? 'Email confirmed' : 'Email unverified' }}
+          </span>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-item">
+          <span>Created</span>
+          <strong>{{ diagnostics.user.createdAt | date: 'medium' }}</strong>
+        </div>
+        <div class="detail-item">
+          <span>Gender</span>
+          <strong>{{ diagnostics.user.gender || 'Not provided' }}</strong>
+        </div>
+        <div class="detail-item">
+          <span>Ethnicity</span>
+          <strong>{{ diagnostics.user.ethnicity || 'Not provided' }}</strong>
+        </div>
+        <div class="detail-item">
+          <span>Roles</span>
+          <strong>{{ diagnostics.user.roles.length ? diagnostics.user.roles.join(', ') : 'User' }}</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="admin-panel">
+      <h2>Usage Snapshot</h2>
+      <div class="stats-grid">
+        <article class="stat-card">
+          <span>Total images</span>
+          <strong>{{ diagnostics.metrics.totalProcessedImages }}</strong>
+        </article>
+        <article class="stat-card">
+          <span>Uploaded images</span>
+          <strong>{{ diagnostics.metrics.originalUploads }}</strong>
+        </article>
+        <article class="stat-card">
+          <span>Generated images</span>
+          <strong>{{ diagnostics.metrics.generatedImages }}</strong>
+        </article>
+        <article class="stat-card">
+          <span>Purchases</span>
+          <strong>{{ diagnostics.metrics.purchaseCount }}</strong>
+        </article>
+      </div>
+      <div class="detail-grid metrics-detail-grid">
+        <div class="detail-item">
+          <span>Last purchase</span>
+          <strong>
+            {{
+              diagnostics.metrics.lastPurchaseAt
+                ? (diagnostics.metrics.lastPurchaseAt | date: 'medium')
+                : 'No purchases'
+            }}
+          </strong>
+        </div>
+        <div class="detail-item">
+          <span>Last upload</span>
+          <strong>
+            {{
+              diagnostics.metrics.lastImageUploadAt
+                ? (diagnostics.metrics.lastImageUploadAt | date: 'medium')
+                : 'No uploads'
+            }}
+          </strong>
+        </div>
+        <div class="detail-item">
+          <span>Last generation</span>
+          <strong>
+            {{
+              diagnostics.metrics.lastImageGenerationAt
+                ? (diagnostics.metrics.lastImageGenerationAt | date: 'medium')
+                : 'No generations'
+            }}
+          </strong>
+        </div>
+        <div class="detail-item">
+          <span>Zero-credit diagnosis</span>
+          <strong>
+            {{
+              diagnostics.metrics.currentCredits === 0 && diagnostics.metrics.hasUsageHistory
+                ? 'Credits likely consumed through usage'
+                : diagnostics.metrics.currentCredits === 0
+                  ? 'No usage history visible yet'
+                  : 'Credits remain available'
+            }}
+          </strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel-grid">
+      <article class="admin-panel">
+        <h2>Recent Credit Purchases</h2>
+        <div class="table-wrap" *ngIf="diagnostics.recentPurchases.length; else noPurchases">
+          <table>
+            <thead>
+              <tr>
+                <th>Package</th>
+                <th>Credits</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Purchased</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let purchase of diagnostics.recentPurchases">
+                <td>{{ purchase.packageName }}</td>
+                <td>{{ purchase.creditsAwarded }}</td>
+                <td>{{ purchase.amountPaid | currency }}</td>
+                <td>{{ purchase.status }}</td>
+                <td>{{ purchase.purchaseDate | date: 'medium' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ng-template #noPurchases>
+          <div class="empty-state">No credit purchases recorded for this user.</div>
+        </ng-template>
+      </article>
+
+      <article class="admin-panel">
+        <h2>Recent Admin Actions</h2>
+        <div *ngIf="diagnostics.recentAdminActions.length; else noAdminActions" class="admin-actions-list">
+          <div class="admin-action-item" *ngFor="let action of diagnostics.recentAdminActions">
+            <div class="panel-heading compact-heading">
+              <strong>{{ action.action }}</strong>
+              <span>{{ action.createdAt | date: 'medium' }}</span>
+            </div>
+            <p>{{ action.adminEmail }}</p>
+            <p>{{ action.details || 'No details recorded.' }}</p>
+          </div>
+        </div>
+        <ng-template #noAdminActions>
+          <div class="empty-state">No admin actions have been recorded for this user.</div>
+        </ng-template>
+      </article>
+    </section>
+
+    <section class="admin-panel">
+      <div class="panel-heading">
+        <h2>Recent Activity</h2>
+        <span class="pill">{{ diagnostics.activityHistory.length }} events</span>
+      </div>
+      <div *ngIf="diagnostics.activityHistory.length; else noActivity" class="timeline">
+        <article class="timeline-item" *ngFor="let event of diagnostics.activityHistory">
+          <div class="timeline-marker" [attr.data-event-type]="event.eventType"></div>
+          <div class="timeline-content">
+            <div class="panel-heading compact-heading">
+              <strong>{{ event.title }}</strong>
+              <span>{{ event.occurredAt | date: 'medium' }}</span>
+            </div>
+            <p *ngIf="event.description">{{ event.description }}</p>
+            <div class="badge-row">
+              <span class="pill" *ngIf="event.status">{{ event.status }}</span>
+              <span class="pill pill-credit" *ngIf="event.creditsDelta !== null">
+                {{ event.creditsDelta! > 0 ? '+' : '' }}{{ event.creditsDelta }} credits
+              </span>
+              <span class="pill" *ngIf="event.creditsRemaining !== null">Remaining: {{ event.creditsRemaining }}</span>
+            </div>
+          </div>
+        </article>
+      </div>
+      <ng-template #noActivity>
+        <div class="empty-state">No activity history is available for this account.</div>
+      </ng-template>
+    </section>
+
+    <section class="admin-panel">
+      <h2>Recent Images</h2>
+      <div *ngIf="diagnostics.recentImages.length; else noImages" class="image-grid">
+        <article class="image-card" *ngFor="let image of diagnostics.recentImages">
+          <img [src]="image.imageUrl" [alt]="image.kind + ' image'" loading="lazy" />
+          <div class="image-meta">
+            <div class="badge-row">
+              <span class="pill">{{ image.kind }}</span>
+              <span class="pill" *ngIf="image.style">{{ image.style }}</span>
+            </div>
+            <p>{{ image.createdAt | date: 'medium' }}</p>
+          </div>
+        </article>
+      </div>
+      <ng-template #noImages>
+        <div class="empty-state">No uploaded or generated images are available for this user.</div>
+      </ng-template>
+    </section>
+  </ng-container>
 </section>
