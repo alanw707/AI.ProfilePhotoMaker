@@ -104,7 +104,9 @@ export class CreditDisplayComponent {
    * Determines if we should show insufficient credits warning
    */
   shouldShowInsufficientCreditsWarning(): boolean {
-    return this.requiredCredits > 0 && !this.hasEnoughCredits;
+    const hasNoCreditsInHeadshotFlow =
+      this.isHeadshotContext() && this.getTotalAvailableCredits() === 0;
+    return hasNoCreditsInHeadshotFlow || (this.requiredCredits > 0 && !this.hasEnoughCredits);
   }
 
   /**

@@ -332,10 +332,10 @@ xdescribe('DashboardComponent', () => {
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/pricing']);
     });
 
-    it('should navigate to premium for upgrade action', () => {
+    it('should navigate to pricing for upgrade action', () => {
       component.onCreditAction({ action: 'upgrade' });
 
-      expect(mockRouter.navigate).toHaveBeenCalledWith(['/premium']);
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/pricing']);
     });
 
     it('should ignore unknown credit action without throwing', () => {
