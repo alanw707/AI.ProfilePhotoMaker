@@ -201,6 +201,8 @@ builder.Services.Configure<RetentionPolicyBackgroundServiceOptions>(
     builder.Configuration.GetSection(RetentionPolicyBackgroundServiceOptions.SectionName));
 builder.Services.Configure<RetentionNotificationOptions>(
     builder.Configuration.GetSection(RetentionNotificationOptions.SectionName));
+builder.Services.Configure<AbandonedUploadOptions>(
+    builder.Configuration.GetSection(AbandonedUploadOptions.SectionName));
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
 builder.Services.PostConfigure<StripeOptions>(options =>
@@ -539,6 +541,7 @@ builder.Services.AddHostedService<TrainingPollingBackgroundService>();
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.BasicTierBackgroundService>();
 // ModelExpirationBackgroundService removed - YAGNI principle (was doing nothing but logging)
 builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.RetentionPolicyBackgroundService>();
+builder.Services.AddHostedService<AI.ProfilePhotoMaker.API.Services.AbandonedUploadBackgroundService>();
 
 // Model sync health monitoring - removed dependency
 // builder.Services.AddModelSyncHealthMonitoring();

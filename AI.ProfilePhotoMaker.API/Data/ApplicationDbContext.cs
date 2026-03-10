@@ -20,6 +20,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public virtual DbSet<Prediction> Predictions { get; set; }
     public virtual DbSet<PendingGenerationRequest> PendingGenerationRequests { get; set; }
     public virtual DbSet<RetentionDeletionWarningLog> RetentionDeletionWarningLogs { get; set; }
+    public virtual DbSet<AbandonedUploadNudgeLog> AbandonedUploadNudgeLogs { get; set; }
 
     // Subscription management
     public virtual DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
@@ -53,6 +54,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         ConfigureCreditPackageRelationships(builder);
         ConfigureAdminRelationships(builder);
         ConfigureRetentionDeletionWarningLogRelationships(builder);
+        ConfigureAbandonedUploadNudgeLogRelationships(builder);
         ConfigurePredictionRelationships(builder);
 
         // Configure indexes for performance - ENHANCED FOR OPTIMIZATION
@@ -182,6 +184,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<RetentionDeletionWarningLog>()
             .HasIndex(log => new { log.UserId, log.DaysBeforeDeletion, log.DeletionDate })
             .HasDatabaseName("IX_RetentionDeletionWarningLogs_UserId_DaysBeforeDeletion_DeletionDate")
+            .IsUnique();
+    }
+
+    private void ConfigureAbandonedUploadNudgeLogRelationships(ModelBuilder builder)
+    {
+        // One nudge email per user, ever
+        builder.Entity<AbandonedUploadNudgeLog>()
+            .HasIndex(log => log.UserId)
+            .HasDatabaseName("IX_AbandonedUploadNudgeLogs_UserId")
             .IsUnique();
     }
 
