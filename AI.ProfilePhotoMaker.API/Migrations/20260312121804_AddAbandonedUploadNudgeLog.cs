@@ -186,10 +186,11 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 columns: new[] { "CreatedAt", "UpdatedAt" },
                 values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
-            migrationBuilder.CreateIndex(
-                name: "IX_Predictions_ResolvedStyleId",
-                table: "Predictions",
-                column: "ResolvedStyleId");
+            // Idempotent: index may already exist from a prior migration
+            migrationBuilder.Sql(@"
+                IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Predictions_ResolvedStyleId' AND object_id = OBJECT_ID('Predictions'))
+                    CREATE INDEX [IX_Predictions_ResolvedStyleId] ON [Predictions] ([ResolvedStyleId]);
+            ");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AbandonedUploadNudgeLogs_UserId",
@@ -197,28 +198,29 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 column: "UserId",
                 unique: true);
 
-            migrationBuilder.AddForeignKey(
-                name: "FK_Predictions_Styles_ResolvedStyleId",
-                table: "Predictions",
-                column: "ResolvedStyleId",
-                principalTable: "Styles",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.SetNull);
+            // Idempotent: FK may already exist from a prior migration
+            migrationBuilder.Sql(@"
+                IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Predictions_Styles_ResolvedStyleId')
+                    ALTER TABLE [Predictions] ADD CONSTRAINT [FK_Predictions_Styles_ResolvedStyleId]
+                        FOREIGN KEY ([ResolvedStyleId]) REFERENCES [Styles] ([Id]) ON DELETE SET NULL;
+            ");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_Predictions_Styles_ResolvedStyleId",
-                table: "Predictions");
+            migrationBuilder.Sql(@"
+                IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Predictions_Styles_ResolvedStyleId')
+                    ALTER TABLE [Predictions] DROP CONSTRAINT [FK_Predictions_Styles_ResolvedStyleId];
+            ");
 
             migrationBuilder.DropTable(
                 name: "AbandonedUploadNudgeLogs");
 
-            migrationBuilder.DropIndex(
-                name: "IX_Predictions_ResolvedStyleId",
-                table: "Predictions");
+            migrationBuilder.Sql(@"
+                IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Predictions_ResolvedStyleId' AND object_id = OBJECT_ID('Predictions'))
+                    DROP INDEX [IX_Predictions_ResolvedStyleId] ON [Predictions];
+            ");
 
             migrationBuilder.UpdateData(
                 table: "CreditPackages",
