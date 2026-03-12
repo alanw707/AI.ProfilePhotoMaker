@@ -142,6 +142,29 @@ public class EmailNotificationService : IEmailNotificationService
         return SendEmailAsync(email, subject, body, "welcome", userId);
     }
 
+    public Task SendAbandonedUploadNudgeAsync(string userId, string? email, string? firstName = null)
+    {
+        var subject = "Still want your professional headshots?";
+        var cta = BuildCtaLink("app/dashboard");
+        var safeName = WebUtility.HtmlEncode(firstName ?? string.Empty);
+        var greeting = string.IsNullOrWhiteSpace(safeName) ? "Hey!" : $"Hey {safeName},";
+
+        var body = $@"<p style=""margin:0 0 16px;""><strong>{greeting}</strong></p>
+                      <p style=""margin:0 0 16px;"">You created your account but haven't uploaded photos yet — that's the only step left to get your professional headshots.</p>
+                      <p style=""margin:0 0 16px;"">No studio. No photographer. No awkward posing. Just upload 10–20 selfies from your phone and our AI will do the rest.</p>
+                      <p style=""margin:0 0 16px;""><strong>What makes good photos?</strong></p>
+                      <ul style=""margin:0 0 16px; padding-left:20px;"">
+                        <li>Front-facing selfies with your face clearly visible</li>
+                        <li>A few different angles and expressions</li>
+                        <li>Good lighting (natural light works great)</li>
+                        <li>Phone photos are totally fine</li>
+                      </ul>
+                      <p style=""margin:0 0 16px;"">It takes about 2 minutes to upload and you'll have professional headshots ready in no time.</p>
+                      {BuildPrimaryButton("Upload my photos now", cta)}";
+
+        return SendEmailAsync(email, subject, body, "abandoned-upload-nudge", userId);
+    }
+
     public Task SendRetentionDeletionWarningAsync(string userId, string? email, int imageCount, DateTime deletionDate, int daysUntilDeletion)
     {
         // Determine subject and message based on days until deletion
