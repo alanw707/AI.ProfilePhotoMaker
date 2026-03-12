@@ -30,161 +30,161 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                 keyColumn: "Id",
                 keyValue: 1,
                 column: "CreatedAt",
-                value: new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7840));
+                value: new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc));
 
             migrationBuilder.UpdateData(
                 table: "CreditPackages",
                 keyColumn: "Id",
                 keyValue: 2,
                 column: "CreatedAt",
-                value: new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7843));
+                value: new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc));
 
             migrationBuilder.UpdateData(
                 table: "CreditPackages",
                 keyColumn: "Id",
                 keyValue: 3,
                 column: "CreatedAt",
-                value: new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7845));
+                value: new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc));
 
             migrationBuilder.UpdateData(
                 table: "Styles",
                 keyColumn: "Id",
                 keyValue: 1,
                 columns: new[] { "CreatedAt", "UpdatedAt" },
-                values: new object[] { new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7988), new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7988) });
+                values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.UpdateData(
                 table: "Styles",
                 keyColumn: "Id",
                 keyValue: 2,
                 columns: new[] { "CreatedAt", "UpdatedAt" },
-                values: new object[] { new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7990), new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7991) });
+                values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.UpdateData(
                 table: "Styles",
                 keyColumn: "Id",
                 keyValue: 3,
                 columns: new[] { "CreatedAt", "UpdatedAt" },
-                values: new object[] { new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7993), new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7993) });
+                values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.UpdateData(
                 table: "Styles",
                 keyColumn: "Id",
                 keyValue: 4,
                 columns: new[] { "CreatedAt", "UpdatedAt" },
-                values: new object[] { new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7995), new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7995) });
+                values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.UpdateData(
                 table: "Styles",
                 keyColumn: "Id",
                 keyValue: 5,
                 columns: new[] { "CreatedAt", "UpdatedAt" },
-                values: new object[] { new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7997), new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7998) });
+                values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.UpdateData(
                 table: "Styles",
                 keyColumn: "Id",
                 keyValue: 6,
                 columns: new[] { "CreatedAt", "UpdatedAt" },
-                values: new object[] { new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8000), new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8000) });
+                values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.UpdateData(
                 table: "Styles",
                 keyColumn: "Id",
                 keyValue: 7,
                 columns: new[] { "CreatedAt", "UpdatedAt" },
-                values: new object[] { new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8002), new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8002) });
+                values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.UpdateData(
                 table: "Styles",
                 keyColumn: "Id",
                 keyValue: 8,
                 columns: new[] { "CreatedAt", "UpdatedAt" },
-                values: new object[] { new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8004), new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8005) });
+                values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.UpdateData(
                 table: "Styles",
                 keyColumn: "Id",
                 keyValue: 9,
                 columns: new[] { "CreatedAt", "UpdatedAt" },
-                values: new object[] { new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8007), new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8007) });
+                values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.UpdateData(
                 table: "Styles",
                 keyColumn: "Id",
                 keyValue: 10,
                 columns: new[] { "CreatedAt", "UpdatedAt" },
-                values: new object[] { new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8009), new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8009) });
+                values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.UpdateData(
                 table: "Styles",
                 keyColumn: "Id",
                 keyValue: 11,
                 columns: new[] { "CreatedAt", "UpdatedAt" },
-                values: new object[] { new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8011), new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8012) });
+                values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.UpdateData(
                 table: "Styles",
                 keyColumn: "Id",
                 keyValue: 12,
                 columns: new[] { "CreatedAt", "UpdatedAt" },
-                values: new object[] { new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8013), new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8014) });
+                values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.UpdateData(
                 table: "Styles",
                 keyColumn: "Id",
                 keyValue: 13,
                 columns: new[] { "CreatedAt", "UpdatedAt" },
-                values: new object[] { new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8016), new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8016) });
+                values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.UpdateData(
                 table: "Styles",
                 keyColumn: "Id",
                 keyValue: 14,
                 columns: new[] { "CreatedAt", "UpdatedAt" },
-                values: new object[] { new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8018), new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8018) });
+                values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.UpdateData(
                 table: "Styles",
                 keyColumn: "Id",
                 keyValue: 15,
                 columns: new[] { "CreatedAt", "UpdatedAt" },
-                values: new object[] { new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8020), new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8021) });
+                values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.UpdateData(
                 table: "Styles",
                 keyColumn: "Id",
                 keyValue: 16,
                 columns: new[] { "CreatedAt", "UpdatedAt" },
-                values: new object[] { new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8022), new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8023) });
+                values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.UpdateData(
                 table: "Styles",
                 keyColumn: "Id",
                 keyValue: 17,
                 columns: new[] { "CreatedAt", "UpdatedAt" },
-                values: new object[] { new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8025), new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8025) });
+                values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.UpdateData(
                 table: "Styles",
                 keyColumn: "Id",
                 keyValue: 18,
                 columns: new[] { "CreatedAt", "UpdatedAt" },
-                values: new object[] { new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8027), new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8028) });
+                values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.UpdateData(
                 table: "Styles",
                 keyColumn: "Id",
                 keyValue: 19,
                 columns: new[] { "CreatedAt", "UpdatedAt" },
-                values: new object[] { new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8030), new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8030) });
+                values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.UpdateData(
                 table: "Styles",
                 keyColumn: "Id",
                 keyValue: 20,
                 columns: new[] { "CreatedAt", "UpdatedAt" },
-                values: new object[] { new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8032), new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8032) });
+                values: new object[] { new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc) });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Predictions_ResolvedStyleId",

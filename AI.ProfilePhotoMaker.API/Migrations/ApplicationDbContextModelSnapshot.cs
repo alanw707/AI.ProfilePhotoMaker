@@ -314,7 +314,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 1,
                             BonusCredits = 0,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7840),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Credits = 50,
                             Description = "Perfect for trying out custom training and styled generations",
                             DisplayOrder = 1,
@@ -326,7 +326,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 2,
                             BonusCredits = 30,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7843),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Credits = 120,
                             Description = "Most popular - great for professionals",
                             DisplayOrder = 2,
@@ -338,7 +338,7 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         {
                             Id = 3,
                             BonusCredits = 100,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7845),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Credits = 300,
                             Description = "Best value for content creators and businesses",
                             DisplayOrder = 3,
@@ -813,222 +813,222 @@ namespace AI.ProfilePhotoMaker.API.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7988),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Sun-kissed vacation mode portrait",
                             IsActive = true,
                             Name = "beach-vibes",
                             NegativePromptTemplate = "blurry, low quality, out of focus, distorted face, bad anatomy, extra fingers, bad hands, winter clothes, cold weather, indoor office, formal business attire, full body shot, watermark, text, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, beauty filter, heavy retouching, shirtless, bare chest, topless, nude, undressed",
                             PromptTemplate = "{subject}, professional portrait of {gender} {ethnicity}, subtle beach vacation aesthetic, sun-kissed healthy glow, soft coastal background with blurred ocean hints, warm golden hour lighting, relaxed confident expression, casual summer style, natural beachy hair texture, healthy natural skin, even skin tone, natural skin texture, minimal retouching, head-and-shoulders framing",
-                            UpdatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7988)
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7990),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Executive leadership portrait",
                             IsActive = true,
                             Name = "executive",
                             NegativePromptTemplate = "blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, hoodie, t-shirt, casual streetwear, coworking space, cafe, classroom, lecture hall, library, bookshelves, campus, influencer glam, fashion editorial, nightclub, beach, neon lighting, playful pose, full body shot, watermark, text, forced grin, exaggerated smile, grimace, open mouth, tongue, extreme head tilt, multiple watches, watch on both wrists, excessive bracelets, oversized jewelry, sunglasses, hat, visible logos, full body action, dramatic gestures, arms flailing, unnatural hand positions, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, shirtless, bare chest, topless, nude, undressed",
                             PromptTemplate = "{subject}, executive leadership portrait of {gender} {ethnicity}, formal suit with crisp shirt and tie, corporate boardroom or high-rise office background, composed authoritative expression, relaxed shoulders, subtle 3/4 angle, polished professional lighting, healthy natural skin, even skin tone, natural skin texture, minimal retouching, head-and-shoulders framing, high-resolution",
-                            UpdatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7991)
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
                             Id = 3,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7993),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Clean energetic refreshed portrait",
                             IsActive = true,
                             Name = "fresh",
                             NegativePromptTemplate = "blurry, low quality, out of focus, distorted face, bad anatomy, extra fingers, bad hands, tired, exhausted, dull skin, dark shadows, heavy makeup, messy appearance, full body shot, watermark, text, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, beauty filter, heavy retouching",
                             PromptTemplate = "{subject}, professional portrait of {gender} {ethnicity}, fresh clean aesthetic, dewy glowing skin, bright airy background, soft natural lighting, energetic refreshed expression, healthy vitality, natural skin texture, minimal retouching, head-and-shoulders framing",
-                            UpdatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7993)
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
                             Id = 4,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7995),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "LinkedIn professional networking",
                             IsActive = true,
                             Name = "linkedin",
                             NegativePromptTemplate = "blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, hoodie, t-shirt, tank top, athletic wear, coworking space, outdoor, park, city street, campus, library, bookshelves, lecture hall, cluttered background, busy background, neon lighting, cyberpunk, synthwave, fashion editorial, nightclub, beach, full body shot, watermark, text, forced grin, exaggerated smile, grimace, open mouth, tongue, extreme head tilt, multiple watches, watch on both wrists, excessive bracelets, oversized jewelry, sunglasses, hat, visible logos, full body action, dramatic gestures, arms flailing, unnatural hand positions, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, shirtless, bare chest, topless, nude, undressed",
                             PromptTemplate = "{subject}, LinkedIn-ready headshot of {gender} {ethnicity}, business-casual wardrobe (blazer or crisp button-down, no tie), clean professional background with subtle variety such as a soft neutral gradient (warm gray, ivory, muted taupe, or soft slate), a clean off-white or warm gray studio backdrop, or a minimal modern office interior with gentle bokeh, professional and uncluttered, direct eye contact, warm confident smile, relaxed shoulders, soft diffused daylight, healthy natural skin, even skin tone, natural skin texture, minimal retouching, head-and-shoulders framing, sharp focus",
-                            UpdatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7995)
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
                             Id = 5,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7997),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Modern 80s synthwave aesthetic portrait",
                             IsActive = true,
                             Name = "retro-wave",
                             NegativePromptTemplate = "harsh spotlight, overexposed face, blown highlights, magenta skin, neon wash on face, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, poreless skin, beauty filter, heavy retouching, oily skin, exaggerated makeup, cyberpunk armor, sci-fi helmet, sunglasses, hat, visible logos, distorted face, bad anatomy, extra fingers, bad hands, watermark, text, HDR, oversharpened, shirtless, bare chest, topless, nude, undressed",
                             PromptTemplate = "{subject}, professional portrait of {gender} {ethnicity}, modern retro wave aesthetic, neon city night backdrop with soft pink and blue accents, soft diffused key light with balanced fill, natural skin tones, realistic skin texture, subtle rim light, shallow depth of field, neon bokeh background, 85mm lens, cinematic color grading, confident trendy expression, contemporary style with vintage flair, subtle film grain",
-                            UpdatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(7998)
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
                             Id = 6,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8000),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Healthcare professional style",
                             IsActive = true,
                             Name = "medical",
                             NegativePromptTemplate = "unprofessional attire, harsh expression, inappropriate background, distracting elements, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, poreless skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, exaggerated wrinkles, overly deep wrinkles, shirtless, bare chest, topless, nude, undressed, blurry, low quality, out of focus, distorted face, bad anatomy, extra fingers, bad hands, full body shot, watermark, text",
                             PromptTemplate = "{subject}, medical professional portrait of {gender} {ethnicity}, healthcare style, professional medical attire, trustworthy healthcare provider appearance, warm caring expression, clinical background",
-                            UpdatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8000)
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
                             Id = 7,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8002),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Sophisticated evening portrait",
                             IsActive = true,
                             Name = "night-out",
                             NegativePromptTemplate = "harsh spotlight, front lighting, on-camera flash, direct key light, frontal key, beauty lighting, glamour retouch, overexposed face, blown highlights, neon wash on face, magenta skin, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, poreless skin, beauty filter, heavy retouching, oily skin, exaggerated makeup, club strobe lighting, cyberpunk, sci-fi helmet, sunglasses, hat, visible logos, distorted face, bad anatomy, extra fingers, bad hands, watermark, text, HDR, oversharpened, formal suit, suit and tie, tuxedo, casual daywear, bright daylight, morning light, workout clothes, plain appearance, shirtless, bare chest, topless, nude, undressed",
                             PromptTemplate = "{subject}, professional portrait of {gender} {ethnicity}, sophisticated night-out aesthetic, evening city lounge or street bokeh background, ambient street lighting only, soft side key light with gentle fill, no frontal key, no flash, natural skin tones, realistic skin texture, subtle rim light, cinematic color grading, confident social expression, subtle glamour, shallow depth of field, 85mm lens, subtle film grain",
-                            UpdatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8002)
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
                             Id = 8,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8004),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Entrepreneurial business style",
                             IsActive = true,
                             Name = "entrepreneur",
                             NegativePromptTemplate = "blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, formal suit and tie, corporate boardroom, conservative law firm vibe, stiff studio headshot, doctor coat, medical scrubs, influencer glam, nightclub, beach, workout clothes, neon cyberpunk, full body shot, watermark, text, forced grin, exaggerated smile, grimace, open mouth, tongue, extreme head tilt, multiple watches, watch on both wrists, excessive bracelets, oversized jewelry, sunglasses, hat, visible logos, full body action, dramatic gestures, arms flailing, unnatural hand positions, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, shirtless, bare chest, topless, nude, undressed",
                             PromptTemplate = "{subject}, entrepreneur personal-brand portrait of {gender} {ethnicity}, premium smart-casual wardrobe (tailored blazer without tie or premium knit), boutique office, studio, or upscale cafe background, warm confident expression, relaxed shoulders, slight 3/4 angle, cinematic but natural lighting, healthy natural skin, even skin tone, natural skin texture, minimal retouching, medium close-up portrait, shallow depth of field",
-                            UpdatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8005)
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
                             Id = 9,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8007),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Startup professional style",
                             IsActive = true,
                             Name = "startup",
                             NegativePromptTemplate = "blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, formal suit, tie, tuxedo, corporate boardroom, traditional office, stiff studio pose, luxury executive vibe, courthouse, doctor coat, medical scrubs, neon cyberpunk, full body shot, watermark, text, forced grin, exaggerated smile, grimace, open mouth, tongue, extreme head tilt, multiple watches, watch on both wrists, excessive bracelets, oversized jewelry, sunglasses, hat, visible logos, full body action, dramatic gestures, arms flailing, unnatural hand positions, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, shirtless, bare chest, topless, nude, undressed",
                             PromptTemplate = "{subject}, startup founder portrait of {gender} {ethnicity}, casual-professional wardrobe (hoodie, crewneck, or casual jacket), modern coworking or open office background, bright natural window light, approachable energetic expression, relaxed posture, slight 3/4 angle, healthy natural skin, even skin tone, natural skin texture, minimal retouching, medium close-up portrait, shallow depth of field",
-                            UpdatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8007)
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
                             Id = 10,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8009),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Technology professional style",
                             IsActive = true,
                             Name = "tech-professional",
                             NegativePromptTemplate = "blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, suit and tie, tuxedo, hoodie, coworking space, startup founder vibe, boardroom, courthouse, doctor coat, medical scrubs, neon lighting, cyberpunk, synthwave, heavy color gels, nightclub, beach, influencer glam, full body shot, watermark, text, forced grin, exaggerated smile, grimace, open mouth, tongue, extreme head tilt, multiple watches, watch on both wrists, excessive bracelets, oversized jewelry, sunglasses, hat, visible logos, full body action, dramatic gestures, arms flailing, unnatural hand positions, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, shirtless, bare chest, topless, nude, undressed",
                             PromptTemplate = "{subject}, modern tech professional headshot of {gender} {ethnicity}, smart-casual tech attire (open-collar shirt or fine knit sweater, no hoodie, no tie), contemporary tech office or product lab background with subtle monitors or whiteboards, calm focused expression, relaxed shoulders, gentle head tilt, clean cool-neutral palette, soft diffused lighting, healthy natural skin, even skin tone, natural skin texture, minimal retouching, head-and-shoulders framing, high-resolution",
-                            UpdatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8009)
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
                             Id = 11,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8011),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Social media influencer style",
                             IsActive = true,
                             Name = "influencer",
                             NegativePromptTemplate = "formal business wear, rigid posture, corporate setting, boring expression, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, poreless skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, exaggerated wrinkles, overly deep wrinkles, blurry, low quality, out of focus, distorted face, bad anatomy, extra fingers, bad hands, full body shot, watermark, text, shirtless, bare chest, topless, nude, undressed",
                             PromptTemplate = "{subject}, influencer portrait of {gender} {ethnicity}, engaging personality style, trendy professional appearance, charismatic expression",
-                            UpdatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8012)
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
                             Id = 12,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8013),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Digital nomad professional",
                             IsActive = true,
                             Name = "digital-nomad",
                             NegativePromptTemplate = "formal suit, rigid corporate setting, stiff posture, traditional office background, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, poreless skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, exaggerated wrinkles, overly deep wrinkles, blurry, low quality, out of focus, distorted face, bad anatomy, extra fingers, bad hands, full body shot, watermark, text, shirtless, bare chest, topless, nude, undressed",
                             PromptTemplate = "{subject}, digital nomad portrait of {gender} {ethnicity}, remote work professional style, casual modern attire, location-independent professional",
-                            UpdatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8014)
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
                             Id = 13,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8016),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Creative professional style",
                             IsActive = true,
                             Name = "creative",
                             NegativePromptTemplate = "blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, corporate suit, suit and tie, boardroom, LinkedIn headshot, plain gray background, courthouse, doctor coat, medical scrubs, bohemian costume, hippie, festival, oil painting, illustration, sketch, cartoon, anime, cyberpunk, synthwave, neon lighting, heavy color gels, glamour makeup, nightclub, beach, graffiti, leather jacket, streetwear, selfie, ring light, full body shot, watermark, text, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, poreless skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, exaggerated wrinkles, overly deep wrinkles, shirtless, bare chest, topless, nude, undressed",
                             PromptTemplate = "{subject}, creative professional portrait of {gender} {ethnicity}, modern creative director vibe, stylish contemporary outfit, subtle colorful studio or gallery background, bright airy daylight, playful confident expression, clean editorial photography, head-and-shoulders framing, natural skin texture, minimal retouching, sharp focus, high-resolution",
-                            UpdatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8016)
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
                             Id = 14,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8018),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Casual professional style",
                             IsActive = true,
                             Name = "casual",
                             NegativePromptTemplate = "blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, suit, tie, blazer, formal business attire, corporate headshot, boardroom, studio backdrop, stiff pose, arms crossed, cold expression, luxury executive vibe, courthouse, doctor coat, medical scrubs, beachwear, nightclub, neon lighting, full body shot, watermark, text, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, poreless skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, exaggerated wrinkles, overly deep wrinkles, shirtless, bare chest, bare torso, topless, no shirt, nude, undressed, exposed skin, skin showing, without shirt, uncovered chest, tank top, undershirt, muscle tank, sleeveless shirt",
                             PromptTemplate = "{subject}, casual lifestyle portrait of {gender} {ethnicity}, wearing a casual t-shirt or henley or hoodie or crewneck sweater (fully clothed upper body), relaxed candid smile or laugh, outdoors (park/city street) or cozy home background, golden-hour natural light, relaxed posture (hands in pockets or open gesture), natural skin texture, minimal retouching, medium close-up portrait, shallow depth of field",
-                            UpdatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8018)
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
                             Id = 15,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8020),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Artistic creative portrait",
                             IsActive = true,
                             Name = "artistic",
                             NegativePromptTemplate = "blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, corporate headshot, LinkedIn, suit and tie, boardroom, modern office, coworking, hoodie, influencer, ring light, selfie, bright flat lighting, neon cyberpunk, synthwave, beach, nightclub, glamour makeup, fashion editorial, illustration, sketch, cartoon, anime, full body shot, watermark, text, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, poreless skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, exaggerated wrinkles, overly deep wrinkles, shirtless, bare chest, topless, nude, undressed",
                             PromptTemplate = "{subject}, fine-art portrait photography of {gender} {ethnicity}, cinematic moody studio lighting, chiaroscuro, textured backdrop, cinematic color grading, contemplative expression, artistic composition, subtle film grain, head-and-shoulders framing, natural skin texture, minimal retouching, high-resolution",
-                            UpdatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8021)
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
                             Id = 16,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8022),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Edgy urban style",
                             IsActive = true,
                             Name = "edgy-urban",
                             NegativePromptTemplate = "blurry, low quality, out of focus, distorted face, bad anatomy, extra fingers, bad hands, conservative formal, traditional business, bland conventional, full body shot, watermark, text, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, beauty filter, heavy retouching, shirtless, bare chest, topless, nude, undressed",
                             PromptTemplate = "{subject}, edgy urban portrait of {gender} {ethnicity}, modern urban style, contemporary city fashion, bold confident expression",
-                            UpdatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8023)
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
                             Id = 17,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8025),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Glamour portrait style",
                             IsActive = true,
                             Name = "glamour",
                             NegativePromptTemplate = "blurry, low quality, out of focus, distorted face, bad anatomy, extra fingers, bad hands, casual simple, plain appearance, understated look, full body shot, watermark, text, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, beauty filter, heavy retouching, shirtless, bare chest, topless, nude, undressed",
                             PromptTemplate = "{subject}, glamour portrait of {gender} {ethnicity}, elegant sophisticated style, polished glamorous appearance, high-end fashion aesthetic",
-                            UpdatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8025)
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
                             Id = 18,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8027),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Academic professional style",
                             IsActive = true,
                             Name = "academic",
                             NegativePromptTemplate = "blurry, low quality, out of focus, noise, artifacts, distorted face, bad anatomy, extra fingers, bad hands, corporate boardroom, high-rise office, executive suite, hoodie, streetwear, nightclub, beach, neon lighting, plain backdrop, blank wall, studio backdrop, fashion editorial, glamour makeup, forced grin, exaggerated smile, grimace, open mouth, tongue, extreme head tilt, multiple watches, watch on both wrists, excessive bracelets, oversized jewelry, sunglasses, hat, visible logos, full body action, dramatic gestures, arms flailing, unnatural hand positions, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, beauty filter, heavy retouching, blown highlights, overexposed face, harsh facial shadows, HDR, oversharpened, too much clarity, shirtless, bare chest, topless, nude, undressed",
                             PromptTemplate = "{subject}, academic professional portrait of {gender} {ethnicity}, scholarly wardrobe (tweed blazer or cardigan with button-down), university library stacks or lecture hall background, subtle campus ambiance, thoughtful expression, relaxed shoulders, slight 3/4 angle, soft natural window light, healthy natural skin, even skin tone, natural skin texture, minimal retouching, head-and-shoulders framing, high-resolution",
-                            UpdatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8028)
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
                             Id = 19,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8030),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Fitness professional style",
                             IsActive = true,
                             Name = "fitness",
                             NegativePromptTemplate = "blurry, low quality, out of focus, distorted face, bad anatomy, extra fingers, bad hands, sedentary look, unhealthy appearance, low energy, leather jacket, city street fashion, edgy-urban style, nightclub look, suit and tie, corporate boardroom, full body shot, watermark, text, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, beauty filter, heavy retouching",
                             PromptTemplate = "{subject}, fitness professional portrait of {gender} {ethnicity}, athletic performance aesthetic, fitted athletic apparel, gym or wellness studio backdrop, energetic confident expression",
-                            UpdatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8030)
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
                             Id = 20,
-                            CreatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8032),
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Modern tech creator portrait",
                             IsActive = true,
                             Name = "digital-native",
                             NegativePromptTemplate = "blurry, low quality, out of focus, distorted face, bad anatomy, extra fingers, bad hands, outdated technology, old fashioned, formal business, analog aesthetic, traditional office, full body shot, watermark, text, waxy skin, plastic skin, airbrushed skin, over-smoothed skin, beauty filter, heavy retouching, shirtless, bare chest, topless, nude, undressed",
                             PromptTemplate = "{subject}, professional portrait of {gender} {ethnicity}, modern digital creator aesthetic, subtle RGB accent lighting, clean tech-inspired background, confident creative expression, contemporary casual style, soft purple and cyan color accents, approachable online personality",
-                            UpdatedAt = new DateTime(2026, 3, 12, 11, 37, 13, 709, DateTimeKind.Utc).AddTicks(8032)
+                            UpdatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
                 });
 
