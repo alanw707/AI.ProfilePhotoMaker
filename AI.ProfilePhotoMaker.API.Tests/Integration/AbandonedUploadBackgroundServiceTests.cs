@@ -268,6 +268,29 @@ public class AbandonedUploadBackgroundServiceTests
         Assert.Equal("user-ok", harness.EmailService.NudgeCalls[0].UserId);
     }
 
+    [Fact]
+    public async Task FailedUserDoesNotPoisonChangeTrackerForSubsequentUsers()
+    {
+        var timeProvider = CreateTimeProvider();
+        var emailService = new CapturingEmailNotificationService { ThrowOnNudge = true, ThrowOnceOnly = true };
+        using var harness = CreateHarness(emailService, timeProvider: timeProvider);
+
+        await SeedUserAsync(harness, "user-fail", "fail@example.com", "Mia",
+            createdAt: timeProvider.GetUtcNow().UtcDateTime.AddHours(-5));
+        await SeedUserAsync(harness, "user-ok", "ok@example.com", "Nora",
+            createdAt: timeProvider.GetUtcNow().UtcDateTime.AddHours(-6));
+
+        await harness.BackgroundService.PerformAbandonedUploadCheck();
+
+        // Verify the successful user's nudge log was actually persisted
+        using var scope = harness.Provider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var logs = await db.AbandonedUploadNudgeLogs.AsNoTracking().ToListAsync();
+
+        Assert.Single(logs);
+        Assert.Equal("user-ok", logs[0].UserId);
+    }
+
     // ── Multiple users ───────────────────────────────────────────────
 
     [Fact]

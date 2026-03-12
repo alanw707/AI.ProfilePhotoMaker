@@ -168,10 +168,12 @@ public class AbandonedUploadBackgroundService : BackgroundService
             }
             catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
             {
+                dbContext.ChangeTracker.Clear();
                 skippedCount++;
             }
             catch (Exception ex)
             {
+                dbContext.ChangeTracker.Clear();
                 errorCount++;
                 _logger.LogWarning(ex, "Failed to send abandoned upload nudge to user {UserId}", candidate.UserId);
             }
