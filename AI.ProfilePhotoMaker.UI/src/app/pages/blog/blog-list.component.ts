@@ -4,6 +4,7 @@ import { Meta, Title } from '@angular/platform-browser';
 import { RouterModule } from '@angular/router';
 import { MarketingFooterComponent } from '../../shared/marketing-footer/marketing-footer.component';
 import { MarketingHeaderComponent } from '../../shared/marketing-header/marketing-header.component';
+import { BlogService, BlogPostSummary } from '../../services/blog.service';
 import { blogPosts } from './blog.data';
 
 @Component({
@@ -14,14 +15,44 @@ import { blogPosts } from './blog.data';
   styleUrls: ['./blog.sass'],
 })
 export class BlogListComponent implements OnInit {
-  posts = blogPosts;
-  menuPosts = blogPosts.slice(0, 4);
+  posts: BlogPostSummary[] = [];
+  menuPosts: BlogPostSummary[] = [];
+  loading = true;
 
   private readonly _meta = inject(Meta);
   private readonly _title = inject(Title);
   private readonly _document = inject(DOCUMENT);
+  private readonly _blogService = inject(BlogService);
 
   ngOnInit(): void {
+    this.loadPosts();
+    this.setMetaTags();
+  }
+
+  private loadPosts(): void {
+    this._blogService.getPosts().subscribe({
+      next: (data) => {
+        this.posts = data;
+        this.menuPosts = data.slice(0, 4);
+        this.loading = false;
+      },
+      error: () => {
+        // Fallback to static data already handled by service
+        this.posts = blogPosts.map(p => ({
+          slug: p.slug,
+          title: p.title,
+          description: p.description,
+          dateIso: p.dateIso,
+          author: p.author,
+          tags: p.tags,
+        }));
+        this.menuPosts = this.posts.slice(0, 4);
+        this.loading = false;
+      },
+    });
+  }
+
+  private setMetaTags(): void {
     const canonicalUrl = 'https://aiprofilephotomaker.com/blog';
 
     this._title.setTitle('Blog - AI Profile Photo Maker');
