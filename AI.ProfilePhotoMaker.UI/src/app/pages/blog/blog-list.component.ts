@@ -1,9 +1,11 @@
 import { CommonModule, DOCUMENT } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { RouterModule } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';
 import { MarketingFooterComponent } from '../../shared/marketing-footer/marketing-footer.component';
 import { MarketingHeaderComponent } from '../../shared/marketing-header/marketing-header.component';
+import { BlogService, BlogPostSummary } from '../../services/blog.service';
 import { blogPosts } from './blog.data';
 
 @Component({
@@ -13,15 +15,51 @@ import { blogPosts } from './blog.data';
   templateUrl: './blog-list.component.html',
   styleUrls: ['./blog.sass'],
 })
-export class BlogListComponent implements OnInit {
-  posts = blogPosts;
-  menuPosts = blogPosts.slice(0, 4);
+export class BlogListComponent implements OnInit, OnDestroy {
+  posts: BlogPostSummary[] = [];
+  menuPosts: BlogPostSummary[] = [];
+  loading = true;
 
+  private readonly _destroy$ = new Subject<void>();
   private readonly _meta = inject(Meta);
   private readonly _title = inject(Title);
   private readonly _document = inject(DOCUMENT);
+  private readonly _blogService = inject(BlogService);
 
   ngOnInit(): void {
+    this.loadPosts();
+    this.setMetaTags();
+  }
+
+  ngOnDestroy(): void {
+    this._destroy$.next();
+    this._destroy$.complete();
+  }
+
+  private loadPosts(): void {
+    this._blogService.getPosts().pipe(takeUntil(this._destroy$)).subscribe({
+      next: (data) => {
+        this.posts = data;
+        this.menuPosts = data.slice(0, 4);
+        this.loading = false;
+      },
+      error: () => {
+        // Fallback to static data already handled by service
+        this.posts = blogPosts.map(p => ({
+          slug: p.slug,
+          title: p.title,
+          description: p.description,
+          dateIso: p.dateIso,
+          author: p.author,
+          tags: p.tags,
+        }));
+        this.menuPosts = this.posts.slice(0, 4);
+        this.loading = false;
+      },
+    });
+  }
+
+  private setMetaTags(): void {
     const canonicalUrl = 'https://aiprofilephotomaker.com/blog';
 
     this._title.setTitle('Blog - AI Profile Photo Maker');

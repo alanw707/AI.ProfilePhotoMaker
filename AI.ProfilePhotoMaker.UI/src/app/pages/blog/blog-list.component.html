@@ -7,28 +7,34 @@
     <p>Practical guides for better AI headshots, LinkedIn profiles, and personal branding.</p>
   </section>
 
-  <nav class="blog-menu-block" aria-label="Blog quick navigation">
-    <p class="blog-menu-title">Quick read menu</p>
-    <div class="blog-menu-links">
-      <a class="blog-menu-link" *ngFor="let post of menuPosts" [routerLink]="['/blog', post.slug]">
-        {{ post.title }}
-      </a>
-    </div>
-  </nav>
+  <ng-container *ngIf="loading; else content">
+    <div class="blog-loading">Loading posts...</div>
+  </ng-container>
 
-  <section class="blog-grid">
-    <a class="post-card" *ngFor="let post of posts" [routerLink]="['/blog', post.slug]">
-      <div class="post-meta">
-        <time [attr.datetime]="post.dateIso">{{ post.dateIso | date: 'longDate' }}</time>
+  <ng-template #content>
+    <nav class="blog-menu-block" aria-label="Blog quick navigation" *ngIf="menuPosts.length > 0">
+      <p class="blog-menu-title">Quick read menu</p>
+      <div class="blog-menu-links">
+        <a class="blog-menu-link" *ngFor="let post of menuPosts" [routerLink]="['/blog', post.slug]">
+          {{ post.title }}
+        </a>
       </div>
-      <h2>{{ post.title }}</h2>
-      <p>{{ post.description }}</p>
-      <div class="tags">
-        <span class="tag" *ngFor="let tag of post.tags">{{ tag }}</span>
-      </div>
-      <span class="read-more">Read article -></span>
-    </a>
-  </section>
+    </nav>
+
+    <section class="blog-grid">
+      <a class="post-card" *ngFor="let post of posts" [routerLink]="['/blog', post.slug]">
+        <div class="post-meta">
+          <time [attr.datetime]="post.dateIso">{{ post.dateIso | date: 'longDate' }}</time>
+        </div>
+        <h2>{{ post.title }}</h2>
+        <p>{{ post.description }}</p>
+        <div class="tags">
+          <span class="tag" *ngFor="let tag of post.tags">{{ tag }}</span>
+        </div>
+        <span class="read-more">Read article -></span>
+      </a>
+    </section>
+  </ng-template>
 </main>
 
 <app-marketing-footer></app-marketing-footer>
