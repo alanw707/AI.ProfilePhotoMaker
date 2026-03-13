@@ -1,7 +1,8 @@
 import { CommonModule, DOCUMENT } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { RouterModule } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';
 import { MarketingFooterComponent } from '../../shared/marketing-footer/marketing-footer.component';
 import { MarketingHeaderComponent } from '../../shared/marketing-header/marketing-header.component';
 import { BlogService, BlogPostSummary } from '../../services/blog.service';
@@ -14,11 +15,12 @@ import { blogPosts } from './blog.data';
   templateUrl: './blog-list.component.html',
   styleUrls: ['./blog.sass'],
 })
-export class BlogListComponent implements OnInit {
+export class BlogListComponent implements OnInit, OnDestroy {
   posts: BlogPostSummary[] = [];
   menuPosts: BlogPostSummary[] = [];
   loading = true;
 
+  private readonly _destroy$ = new Subject<void>();
   private readonly _meta = inject(Meta);
   private readonly _title = inject(Title);
   private readonly _document = inject(DOCUMENT);
@@ -29,8 +31,13 @@ export class BlogListComponent implements OnInit {
     this.setMetaTags();
   }
 
+  ngOnDestroy(): void {
+    this._destroy$.next();
+    this._destroy$.complete();
+  }
+
   private loadPosts(): void {
-    this._blogService.getPosts().subscribe({
+    this._blogService.getPosts().pipe(takeUntil(this._destroy$)).subscribe({
       next: (data) => {
         this.posts = data;
         this.menuPosts = data.slice(0, 4);

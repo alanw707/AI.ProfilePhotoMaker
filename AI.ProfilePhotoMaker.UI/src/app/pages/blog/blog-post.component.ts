@@ -1,7 +1,8 @@
 import { CommonModule, DOCUMENT } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
-import { Meta, Title } from '@angular/platform-browser';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { DomSanitizer, Meta, SafeHtml, Title } from '@angular/platform-browser';
 import { ActivatedRoute, RouterModule } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';
 import { MarketingFooterComponent } from '../../shared/marketing-footer/marketing-footer.component';
 import { MarketingHeaderComponent } from '../../shared/marketing-header/marketing-header.component';
 import { BlogService, BlogPostDetail, BlogPostSummary } from '../../services/blog.service';
@@ -14,20 +15,20 @@ import { blogPosts, getBlogPost } from './blog.data';
   template: `
     <app-marketing-header></app-marketing-header>
 
-    <main class="blog-page" *ngIf="!loading && post as p; else loadingOrNotFound">
+    <main class="blog-page" *ngIf="!loading && post; else loadingOrNotFound">
       <article class="blog-post">
         <header class="blog-post-header">
           <a routerLink="/blog" class="back-link"><span aria-hidden="true">←</span> Back to blog</a>
-          <time [attr.datetime]="p.dateIso">{{ p.dateIso | date: 'longDate' }}</time>
-          <h1>{{ p.title }}</h1>
-          <p class="post-description">{{ p.description }}</p>
+          <time [attr.datetime]="post.dateIso">{{ post.dateIso | date: 'longDate' }}</time>
+          <h1>{{ post.title }}</h1>
+          <p class="post-description">{{ post.description }}</p>
           <div class="tags">
-            <span class="tag" *ngFor="let tag of p.tags">{{ tag }}</span>
+            <span class="tag" *ngFor="let tag of post.tags">{{ tag }}</span>
           </div>
         </header>
 
         <section class="blog-content-card">
-          <div class="post-content" [innerHTML]="p.contentHtml"></div>
+          <div class="post-content" [innerHTML]="safeContentHtml"></div>
         </section>
 
         <nav class="blog-menu-block blog-menu-block--footer" aria-label="More blog articles">
@@ -62,58 +63,92 @@ import { blogPosts, getBlogPost } from './blog.data';
   `,
   styleUrls: ['./blog.sass'],
 })
-export class BlogPostComponent implements OnInit {
+export class BlogPostComponent implements OnInit, OnDestroy {
   post?: BlogPostDetail;
+  safeContentHtml?: SafeHtml;
   menuPosts: BlogPostSummary[] = [];
   loading = true;
 
+  private readonly _destroy$ = new Subject<void>();
   private readonly _route = inject(ActivatedRoute);
   private readonly _meta = inject(Meta);
   private readonly _title = inject(Title);
   private readonly _document = inject(DOCUMENT);
   private readonly _blogService = inject(BlogService);
+  private readonly _sanitizer = inject(DomSanitizer);
 
   ngOnInit(): void {
     const slug = this._route.snapshot.paramMap.get('slug') ?? '';
 
-    this._blogService.getPost(slug).subscribe({
-      next: (data) => {
-        if (data) {
-          this.post = data;
-          this.setPostMeta(data);
-        } else {
-          this.setNotFoundMeta();
-        }
-        this.loading = false;
-      },
-      error: () => {
-        // Fallback to static data
-        const staticPost = getBlogPost(slug);
-        if (staticPost) {
-          this.post = {
-            slug: staticPost.slug,
-            title: staticPost.title,
-            description: staticPost.description,
-            dateIso: staticPost.dateIso,
-            author: staticPost.author,
-            tags: staticPost.tags,
-            contentHtml: staticPost.contentHtml,
-            contentMarkdown: '',
-          };
-          this.setPostMeta(this.post);
-        } else {
-          this.setNotFoundMeta();
-        }
-        this.loading = false;
-      },
-    });
+    this._blogService
+      .getPost(slug)
+      .pipe(takeUntil(this._destroy$))
+      .subscribe({
+        next: data => {
+          if (data) {
+            this.post = data;
+            this.safeContentHtml = this.sanitizeHtml(data.contentHtml);
+            this.setPostMeta(data);
+          } else {
+            this.setNotFoundMeta();
+          }
+          this.loading = false;
+        },
+        error: () => {
+          // Fallback to static data
+          const staticPost = getBlogPost(slug);
+          if (staticPost) {
+            this.post = {
+              slug: staticPost.slug,
+              title: staticPost.title,
+              description: staticPost.description,
+              dateIso: staticPost.dateIso,
+              author: staticPost.author,
+              tags: staticPost.tags,
+              contentHtml: staticPost.contentHtml,
+              contentMarkdown: '',
+            };
+            this.safeContentHtml = this.sanitizeHtml(staticPost.contentHtml);
+            this.setPostMeta(this.post);
+          } else {
+            this.setNotFoundMeta();
+          }
+          this.loading = false;
+        },
+      });
 
     // Load menu posts separately
-    this._blogService.getPosts().subscribe({
-      next: (posts) => {
-        this.menuPosts = posts.filter(p => p.slug !== slug).slice(0, 3);
-      },
-    });
+    this._blogService
+      .getPosts()
+      .pipe(takeUntil(this._destroy$))
+      .subscribe({
+        next: posts => {
+          this.menuPosts = posts.filter(p => p.slug !== slug).slice(0, 3);
+        },
+      });
+  }
+
+  ngOnDestroy(): void {
+    this._destroy$.next();
+    this._destroy$.complete();
+  }
+
+  /**
+   * Sanitize HTML content from the API.
+   * Angular's built-in sanitizer strips dangerous tags (script, iframe, object)
+   * and dangerous attributes (onerror, onclick, javascript: hrefs) automatically.
+   * We use bypassSecurityTrustHtml only AFTER stripping known-dangerous patterns
+   * so that safe markdown HTML (headings, lists, links, emphasis) renders correctly.
+   */
+  private sanitizeHtml(html: string): SafeHtml {
+    // Strip script tags, event handlers, and javascript: URIs before trusting
+    const cleaned = html
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/\son\w+\s*=\s*["'][^"']*["']/gi, '')
+      .replace(/javascript\s*:/gi, 'blocked:')
+      .replace(/data\s*:\s*text\/html/gi, 'blocked:');
+
+    return this._sanitizer.bypassSecurityTrustHtml(cleaned);
   }
 
   private setPostMeta(post: BlogPostDetail): void {

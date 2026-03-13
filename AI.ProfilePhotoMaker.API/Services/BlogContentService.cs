@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services.Storage;
 using Markdig;
@@ -57,6 +59,13 @@ public class BlogContentService : IBlogContentService
     public async Task<BlogPostDto?> GetPostBySlugAsync(string slug, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(slug))
+        {
+            return null;
+        }
+
+        // Sanitize slug to prevent path traversal attacks
+        slug = SanitizeSlug(slug);
+        if (string.IsNullOrEmpty(slug))
         {
             return null;
         }
@@ -192,7 +201,7 @@ public class BlogContentService : IBlogContentService
             : "AI Profile Photo Maker";
         var published = !meta.TryGetValue("published", out var publishedValue)
             || !publishedValue.Equals("false", StringComparison.OrdinalIgnoreCase);
-        var publishedAt = meta.TryGetValue("publishedAt", out var dateValue) && DateTime.TryParse(dateValue, out var parsedDate)
+        var publishedAt = meta.TryGetValue("publishedAt", out var dateValue) && DateTime.TryParse(dateValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate)
             ? DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc)
             : DateTime.UtcNow;
         if (meta.TryGetValue("slug", out var slugValue) && !string.IsNullOrWhiteSpace(slugValue))
@@ -259,6 +268,21 @@ public class BlogContentService : IBlogContentService
 
             meta[key] = value.Trim('"');
         }
+    }
+
+    /// <summary>
+    /// Strips path separators and directory traversal sequences from a slug.
+    /// Returns only the filename portion, lowercase, alphanumeric + hyphens.
+    /// </summary>
+    private static string SanitizeSlug(string slug)
+    {
+        // Take only the filename component (strips ../ etc.)
+        slug = Path.GetFileNameWithoutExtension(slug);
+
+        // Allow only alphanumeric, hyphens, underscores
+        slug = Regex.Replace(slug, @"[^a-zA-Z0-9\-_]", string.Empty);
+
+        return slug.ToLowerInvariant();
     }
 
     private static BlogPostSummaryDto ToSummaryDto(BlogPostParsed parsed) => new()
