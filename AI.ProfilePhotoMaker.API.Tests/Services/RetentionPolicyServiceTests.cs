@@ -41,7 +41,7 @@ public class RetentionPolicyServiceTests
         context.ProcessedImages.AddRange(inWindow, outWindow);
         await context.SaveChangesAsync();
 
-        var service = CreateService(context, timeProvider);
+        var service = CreateService(context, timeProvider: timeProvider);
         var results = await service.GetImagesApproachingDeletionAsync(14, windowSizeDays: 1);
 
         Assert.True(results.TryGetValue(user.UserId, out var entry));
@@ -74,13 +74,48 @@ public class RetentionPolicyServiceTests
         context.ProcessedImages.AddRange(inWindow, outWindow);
         await context.SaveChangesAsync();
 
-        var service = CreateService(context, timeProvider);
+        var service = CreateService(context, timeProvider: timeProvider);
         var results = await service.GetImagesApproachingDeletionAsync(7, windowSizeDays: 1);
 
         Assert.True(results.TryGetValue(user.UserId, out var entry));
         Assert.Equal("user7@example.com", entry.Email);
         Assert.Single(entry.Images);
         Assert.Equal(inWindow.Id, entry.Images[0].Id);
+    }
+
+    [Fact]
+    public async Task DeleteExpiredImagesAsync_WritesRetentionAuditLog()
+    {
+        using var context = CreateContext();
+        var user = await SeedUserAsync(context, "retention@example.com");
+        var timeProvider = new TestTimeProvider(new DateTimeOffset(2030, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+
+        var expiredImage = new ProcessedImage
+        {
+            UserProfile = user,
+            UserProfileId = user.Id,
+            OriginalImageUrl = "/uploads/user/expired.jpg",
+            ProcessedImageUrl = "/uploads/user/expired.jpg",
+            IsOriginalUpload = true,
+            ScheduledDeletionDate = now.AddDays(-1),
+            CreatedAt = now.AddDays(-30)
+        };
+
+        context.ProcessedImages.Add(expiredImage);
+        await context.SaveChangesAsync();
+
+        var storageService = new Mock<IStorageService>();
+        storageService.Setup(service => service.DeleteImageAsync(It.IsAny<string>())).ReturnsAsync(true);
+
+        var service = CreateService(context, storageService.Object, timeProvider);
+        var deletedCount = await service.DeleteExpiredImagesAsync();
+
+        Assert.Equal(1, deletedCount);
+        var auditLog = await context.AdminAuditLogs.SingleAsync();
+        Assert.Equal("system:retention", auditLog.AdminUserId);
+        Assert.Equal(user.UserId, auditLog.TargetUserId);
+        Assert.Equal("ImageDeletedByRetention", auditLog.Action);
     }
 
     private static ApplicationDbContext CreateContext()
@@ -91,9 +126,12 @@ public class RetentionPolicyServiceTests
         return new ApplicationDbContext(options);
     }
 
-    private static RetentionPolicyService CreateService(ApplicationDbContext context, TimeProvider? timeProvider = null)
+    private static RetentionPolicyService CreateService(
+        ApplicationDbContext context,
+        IStorageService? storageService = null,
+        TimeProvider? timeProvider = null)
     {
-        var storageService = new Mock<IStorageService>().Object;
+        storageService ??= new Mock<IStorageService>().Object;
         var replicateClient = new Mock<IReplicateApiClient>().Object;
         var environment = new Mock<IWebHostEnvironment>();
         environment.SetupGet(env => env.EnvironmentName).Returns("Testing");

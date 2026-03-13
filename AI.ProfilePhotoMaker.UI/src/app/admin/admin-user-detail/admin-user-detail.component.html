@@ -204,7 +204,7 @@
       </article>
 
       <article class="admin-panel">
-        <h2>Recent Admin Actions</h2>
+        <h2>Recent Account Actions</h2>
         <div *ngIf="diagnostics.recentAdminActions.length; else noAdminActions" class="admin-actions-list">
           <div class="admin-action-item" *ngFor="let action of diagnostics.recentAdminActions">
             <div class="panel-heading compact-heading">
@@ -216,7 +216,7 @@
           </div>
         </div>
         <ng-template #noAdminActions>
-          <div class="empty-state">No admin actions have been recorded for this user.</div>
+          <div class="empty-state">No account deletion or admin actions have been recorded for this user.</div>
         </ng-template>
       </article>
     </section>

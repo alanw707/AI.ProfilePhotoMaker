@@ -2,6 +2,7 @@ using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
 using AI.ProfilePhotoMaker.API.Services;
+using AI.ProfilePhotoMaker.API.Services.Storage;
 using AI.ProfilePhotoMaker.API.Tests.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -311,6 +312,34 @@ public class AdminServiceTests
         Assert.Contains(diagnostics.ActivityHistory, entry => entry.EventType == "admin");
     }
 
+    [Fact]
+    public async Task GetUserDiagnosticsAsync_ResolvesRetentionActorLabel()
+    {
+        using var context = CreateContext();
+        var userId = await SeedUserWithProfileAsync(context, credits: 0);
+        context.AdminAuditLogs.Add(new AdminAuditLog
+        {
+            AdminUserId = "system:retention",
+            TargetUserId = userId,
+            Action = "ImageDeletedByRetention",
+            Details = "Retention policy deleted upload image 25",
+            OldValue = "/uploads/test-user/image.jpg",
+            NewValue = "Deleted",
+            CreatedAt = DateTime.UtcNow.AddMinutes(-5)
+        });
+        await context.SaveChangesAsync();
+
+        var userManager = UserManagerMockFactory.Create();
+        userManager.Setup(m => m.GetRolesAsync(It.IsAny<ApplicationUser>())).ReturnsAsync(new List<string> { "User" });
+
+        var service = CreateService(context, userManager.Object);
+        var diagnostics = await service.GetUserDiagnosticsAsync(userId);
+
+        Assert.NotNull(diagnostics);
+        Assert.Contains(diagnostics!.RecentAdminActions, action => action.AdminEmail == "System (Retention Policy)");
+        Assert.Contains(diagnostics.ActivityHistory, entry => entry.Title == "Image Deleted By Retention");
+    }
+
     private static ApplicationDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
@@ -360,11 +389,17 @@ public class AdminServiceTests
             creditPackageService = creditPackageServiceMock.Object;
         }
 
+        var storageMock = new Mock<IStorageService>();
+        storageMock
+            .Setup(s => s.GetImageUrl(It.IsAny<string>()))
+            .Returns((string path) => "https://storage.example.com/" + path);
+
         return new AdminService(
             context,
             new UserProfileRepository(context),
             creditPackageService,
             userManager,
+            storageMock.Object,
             NullLogger<AdminService>.Instance);
     }
 }

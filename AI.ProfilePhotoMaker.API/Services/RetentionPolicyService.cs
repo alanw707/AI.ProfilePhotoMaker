@@ -11,6 +11,8 @@ namespace AI.ProfilePhotoMaker.API.Services;
 
 public class RetentionPolicyService : IRetentionPolicyService
 {
+    private const string RetentionActorId = "system:retention";
+
     private readonly ApplicationDbContext _context;
     private readonly IStorageService _storageService;
     private readonly StoragePathResolver _pathResolver;
@@ -43,6 +45,7 @@ public class RetentionPolicyService : IRetentionPolicyService
 
     public async Task<int> DeleteExpiredImagesAsync()
     {
+        var auditTimestamp = UtcNow;
         var expiredImages = await GetExpiredImagesForDeletion(includeUserProfile: true);
         var deletedCount = 0;
         var affectedUserIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -59,7 +62,21 @@ public class RetentionPolicyService : IRetentionPolicyService
                 // Delete physical files first
                 await DeletePhysicalFiles(image);
 
-                // Then remove from database
+                // Then remove from database and record the reason for the admin diagnostics view
+                if (image.UserProfile?.UserId is { Length: > 0 } targetUserId)
+                {
+                    _context.AdminAuditLogs.Add(new AdminAuditLog
+                    {
+                        AdminUserId = RetentionActorId,
+                        TargetUserId = targetUserId,
+                        Action = "ImageDeletedByRetention",
+                        Details = $"Retention policy deleted {GetImageType(image)} image {image.Id}",
+                        OldValue = image.IsOriginalUpload ? image.OriginalImageUrl : image.ProcessedImageUrl,
+                        NewValue = "Deleted",
+                        CreatedAt = auditTimestamp
+                    });
+                }
+
                 _context.ProcessedImages.Remove(image);
                 await _context.SaveChangesAsync();
 

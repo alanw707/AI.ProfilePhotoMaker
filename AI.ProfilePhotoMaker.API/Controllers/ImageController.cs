@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.IO.Compression;
+using System.Text.Json;
 
 namespace AI.ProfilePhotoMaker.API.Controllers
 {
@@ -576,6 +577,8 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
                 Logger.LogInformation("Database deletion verified - image {ImageId} successfully removed", imageId);
 
+                await WriteImageDeletionAuditLogAsync(userId, image);
+
                 // Invalidate user cache
                 await _userContextService.InvalidateUserCacheAsync(userId);
 
@@ -597,6 +600,40 @@ namespace AI.ProfilePhotoMaker.API.Controllers
 
 
         #region Helper Methods
+
+        private async Task WriteImageDeletionAuditLogAsync(string userId, ProcessedImage image)
+        {
+            if (Context == null)
+            {
+                return;
+            }
+
+            try
+            {
+                Context.AdminAuditLogs.Add(new AdminAuditLog
+                {
+                    AdminUserId = userId,
+                    TargetUserId = userId,
+                    Action = "ImageDeletedByUser",
+                    Details = JsonSerializer.Serialize(new
+                    {
+                        imageId = image.Id,
+                        imageType = image.IsOriginalUpload ? "upload" : image.IsGenerated ? "generated" : "image",
+                        imageStyle = image.Style,
+                        deletedBy = "user"
+                    }),
+                    OldValue = image.IsOriginalUpload ? image.OriginalImageUrl : image.ProcessedImageUrl,
+                    NewValue = "Deleted",
+                    CreatedAt = DateTime.UtcNow
+                });
+
+                await Context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to write image deletion audit log for image {ImageId}", image.Id);
+            }
+        }
 
         /// <summary>
         /// Validates if the uploaded file is a valid image
