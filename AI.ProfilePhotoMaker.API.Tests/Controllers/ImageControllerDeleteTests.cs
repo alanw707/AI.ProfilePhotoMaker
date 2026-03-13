@@ -205,6 +205,10 @@ namespace AI.ProfilePhotoMaker.API.Tests.Controllers
 
             // Verify image was removed from profile
             userProfile.ProcessedImages.Should().BeEmpty();
+
+            // Verify audit trail was written
+            _context.AdminAuditLogs.Should().ContainSingle();
+            _context.AdminAuditLogs.Single().Action.Should().Be("ImageDeletedByUser");
         }
 
         [Fact]

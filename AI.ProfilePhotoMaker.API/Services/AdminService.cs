@@ -3,6 +3,7 @@ using AI.ProfilePhotoMaker.API.Data;
 using AI.ProfilePhotoMaker.API.Infrastructure.Logging;
 using AI.ProfilePhotoMaker.API.Models;
 using AI.ProfilePhotoMaker.API.Models.DTOs;
+using AI.ProfilePhotoMaker.API.Services.Storage;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,6 +11,7 @@ namespace AI.ProfilePhotoMaker.API.Services;
 
 public class AdminService : IAdminService
 {
+    private const string RetentionActorId = "system:retention";
     private const int RecentPurchaseLimit = 8;
     private const int RecentImageLimit = 8;
     private const int ActivityHistoryLimit = 30;
@@ -18,6 +20,7 @@ public class AdminService : IAdminService
     private readonly IUserProfileRepository _userProfileRepository;
     private readonly ICreditPackageService _creditPackageService;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IStorageService _storageService;
     private readonly ILogger<AdminService> _logger;
 
     public AdminService(
@@ -25,12 +28,14 @@ public class AdminService : IAdminService
         IUserProfileRepository userProfileRepository,
         ICreditPackageService creditPackageService,
         UserManager<ApplicationUser> userManager,
+        IStorageService storageService,
         ILogger<AdminService> logger)
     {
         _context = context;
         _userProfileRepository = userProfileRepository;
         _creditPackageService = creditPackageService;
         _userManager = userManager;
+        _storageService = storageService;
         _logger = logger;
     }
 
@@ -163,7 +168,7 @@ public class AdminService : IAdminService
             .Select(log => new AdminUserAdminActionDto
             {
                 Id = log.Id,
-                AdminEmail = adminEmails.TryGetValue(log.AdminUserId, out var adminEmail) ? adminEmail : log.AdminUserId,
+                AdminEmail = ResolveAuditActorLabel(log.AdminUserId, adminEmails),
                 Action = log.Action,
                 Details = log.Details,
                 OldValue = log.OldValue,
@@ -610,7 +615,7 @@ public class AdminService : IAdminService
     {
         var adminIds = adminAuditLogs
             .Select(log => log.AdminUserId)
-            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Where(id => !string.IsNullOrWhiteSpace(id) && !IsSystemAuditActor(id))
             .Distinct()
             .ToList();
 
@@ -625,21 +630,52 @@ public class AdminService : IAdminService
             .ToDictionaryAsync(user => user.Id, user => user.Email ?? user.Id);
     }
 
-    private static string ResolveImageUrl(AI.ProfilePhotoMaker.API.Data.ProcessedImageDto image)
+    private static string ResolveAuditActorLabel(string actorId, IReadOnlyDictionary<string, string> resolvedEmails)
+    {
+        if (resolvedEmails.TryGetValue(actorId, out var email))
+        {
+            return email;
+        }
+
+        return actorId switch
+        {
+            RetentionActorId => "System (Retention Policy)",
+            _ => actorId
+        };
+    }
+
+    private static bool IsSystemAuditActor(string actorId) =>
+        actorId.StartsWith("system:", StringComparison.OrdinalIgnoreCase);
+
+    private string ResolveImageUrl(AI.ProfilePhotoMaker.API.Data.ProcessedImageDto image)
     {
         if (image.IsGenerated && !string.IsNullOrWhiteSpace(image.ProcessedImageUrl))
         {
-            return image.ProcessedImageUrl;
+            return ResolveStorageUrl(image.ProcessedImageUrl);
         }
 
         if (image.IsOriginalUpload && !string.IsNullOrWhiteSpace(image.OriginalImageUrl))
         {
-            return image.OriginalImageUrl;
+            return ResolveStorageUrl(image.OriginalImageUrl);
         }
 
-        return !string.IsNullOrWhiteSpace(image.ProcessedImageUrl)
+        var rawUrl = !string.IsNullOrWhiteSpace(image.ProcessedImageUrl)
             ? image.ProcessedImageUrl
             : image.OriginalImageUrl;
+
+        return string.IsNullOrWhiteSpace(rawUrl) ? string.Empty : ResolveStorageUrl(rawUrl);
+    }
+
+    private string ResolveStorageUrl(string storagePath)
+    {
+        if (string.IsNullOrWhiteSpace(storagePath))
+        {
+            return string.Empty;
+        }
+
+        return storagePath.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+            ? storagePath
+            : _storageService.GetImageUrl(storagePath);
     }
 
     private static List<AdminUserActivityDto> BuildActivityHistory(
