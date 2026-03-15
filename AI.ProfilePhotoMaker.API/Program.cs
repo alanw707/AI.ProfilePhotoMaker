@@ -254,15 +254,14 @@ builder.Services.AddScoped<IPendingGenerationService, PendingGenerationService>(
 builder.Services.Configure<LegacyCompatibilityOptions>(builder.Configuration.GetSection(LegacyCompatibilityOptions.SectionName));
 
 // Configure database services
-if (builder.Environment.IsEnvironment("Testing"))
+if (builder.Environment.IsEnvironment("Testing") || builder.Environment.IsEnvironment("LocalDev"))
 {
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
     {
-        options.UseInMemoryDatabase($"TestDb_{Guid.NewGuid()}");
+        options.UseInMemoryDatabase($"LocalDb_{Guid.NewGuid()}");
     });
 
-    // Program config expects health check middleware; in tests we register a minimal health checks service
-    // (without database/migration checks) so startup doesn't fail.
+    // No database/migration health checks in Testing or LocalDev
     builder.Services.AddHealthChecks();
 }
 else
@@ -478,6 +477,7 @@ var dpBuilder = builder.Services.AddDataProtection()
 
 if (!builder.Environment.IsDevelopment()
     && !builder.Environment.IsEnvironment("Testing")
+    && !builder.Environment.IsEnvironment("LocalDev")
     && !string.IsNullOrEmpty(azureStorageConnectionString))
 {
     // Persist Data Protection keys to Azure Blob so cookies survive pod/revision restarts
@@ -668,14 +668,14 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Validate environment configuration before starting (only enforce outside Development/Testing)
-if (!app.Environment.IsEnvironment("Testing") && !app.Environment.IsDevelopment())
+// Validate environment configuration before starting (only enforce outside Development/Testing/LocalDev)
+if (!app.Environment.IsEnvironment("Testing") && !app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("LocalDev"))
 {
     await app.UseEnvironmentValidationAsync();
 }
 
-// Apply database migrations using new architecture (only if enabled and not in Testing)
-if (!app.Environment.IsEnvironment("Testing"))
+// Apply database migrations using new architecture (only if enabled and not in Testing/LocalDev)
+if (!app.Environment.IsEnvironment("Testing") && !app.Environment.IsEnvironment("LocalDev"))
 {
     var autoMigrateOnStartup = app.Configuration.GetValue<bool>("Database:AutoMigrateOnStartup", true);
     if (autoMigrateOnStartup)
