@@ -251,7 +251,22 @@ public class BlogContentService : IBlogContentService
             }
 
             var key = line[..separator].Trim();
-            var value = line[(separator + 1)..].Trim();
+            // Use remainder after first colon; quoted values may contain colons (e.g. title: "Foo: Bar")
+            var rawValue = line[(separator + 1)..].Trim();
+            // If value is quoted, extract full quoted string to preserve inner colons
+            string value;
+            if (rawValue.StartsWith("\"") && rawValue.EndsWith("\"") && rawValue.Length >= 2)
+            {
+                value = rawValue[1..^1];
+            }
+            else if (rawValue.StartsWith("'") && rawValue.EndsWith("'") && rawValue.Length >= 2)
+            {
+                value = rawValue[1..^1];
+            }
+            else
+            {
+                value = rawValue;
+            }
             activeListKey = key;
 
             if (string.Equals(key, "tags", StringComparison.OrdinalIgnoreCase))
@@ -266,7 +281,7 @@ public class BlogContentService : IBlogContentService
                 continue;
             }
 
-            meta[key] = value.Trim('"');
+            meta[key] = value;
         }
     }
 
