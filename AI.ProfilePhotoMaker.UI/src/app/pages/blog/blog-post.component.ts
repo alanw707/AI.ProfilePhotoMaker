@@ -80,6 +80,38 @@ export class BlogPostComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     const slug = this._route.snapshot.paramMap.get('slug') ?? '';
 
+    // Render immediately from bundled static data — no spinner
+    const staticPost = getBlogPost(slug);
+    if (staticPost) {
+      this.post = {
+        slug: staticPost.slug,
+        title: staticPost.title,
+        description: staticPost.description,
+        dateIso: staticPost.dateIso,
+        author: staticPost.author,
+        tags: staticPost.tags,
+        contentHtml: staticPost.contentHtml,
+        contentMarkdown: '',
+      };
+      this.safeContentHtml = this.sanitizeHtml(staticPost.contentHtml);
+      this.setPostMeta(this.post);
+      this.loading = false;
+    }
+
+    // Load menu posts from static data immediately
+    this.menuPosts = blogPosts
+      .filter(p => p.slug !== slug)
+      .slice(0, 3)
+      .map(p => ({
+        slug: p.slug,
+        title: p.title,
+        description: p.description,
+        dateIso: p.dateIso,
+        author: p.author,
+        tags: p.tags,
+      }));
+
+    // Silently refresh from API (picks up new/updated content without redeploy)
     this._blogService
       .getPost(slug)
       .pipe(takeUntil(this._destroy$))
@@ -89,35 +121,20 @@ export class BlogPostComponent implements OnInit, OnDestroy {
             this.post = data;
             this.safeContentHtml = this.sanitizeHtml(data.contentHtml);
             this.setPostMeta(data);
-          } else {
+          } else if (!staticPost) {
             this.setNotFoundMeta();
           }
           this.loading = false;
         },
         error: () => {
-          // Fallback to static data
-          const staticPost = getBlogPost(slug);
-          if (staticPost) {
-            this.post = {
-              slug: staticPost.slug,
-              title: staticPost.title,
-              description: staticPost.description,
-              dateIso: staticPost.dateIso,
-              author: staticPost.author,
-              tags: staticPost.tags,
-              contentHtml: staticPost.contentHtml,
-              contentMarkdown: '',
-            };
-            this.safeContentHtml = this.sanitizeHtml(staticPost.contentHtml);
-            this.setPostMeta(this.post);
-          } else {
+          // Static data already rendered if available
+          if (!staticPost) {
             this.setNotFoundMeta();
           }
           this.loading = false;
         },
       });
 
-    // Load menu posts separately
     this._blogService
       .getPosts()
       .pipe(takeUntil(this._destroy$))

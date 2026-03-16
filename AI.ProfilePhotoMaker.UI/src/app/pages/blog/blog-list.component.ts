@@ -37,25 +37,28 @@ export class BlogListComponent implements OnInit, OnDestroy {
   }
 
   private loadPosts(): void {
+    // Render immediately from bundled static data — no spinner, no waiting
+    const staticData = blogPosts.map(p => ({
+      slug: p.slug,
+      title: p.title,
+      description: p.description,
+      dateIso: p.dateIso,
+      author: p.author,
+      tags: p.tags,
+    }));
+    this.posts = staticData;
+    this.menuPosts = staticData.slice(0, 4);
+    this.loading = false;
+
+    // Silently refresh from API in the background (picks up new posts without redeploy)
     this._blogService.getPosts().pipe(takeUntil(this._destroy$)).subscribe({
       next: (data) => {
-        this.posts = data;
-        this.menuPosts = data.slice(0, 4);
-        this.loading = false;
+        if (data && data.length > 0) {
+          this.posts = data;
+          this.menuPosts = data.slice(0, 4);
+        }
       },
-      error: () => {
-        // Fallback to static data already handled by service
-        this.posts = blogPosts.map(p => ({
-          slug: p.slug,
-          title: p.title,
-          description: p.description,
-          dateIso: p.dateIso,
-          author: p.author,
-          tags: p.tags,
-        }));
-        this.menuPosts = this.posts.slice(0, 4);
-        this.loading = false;
-      },
+      error: () => { /* static data already shown, nothing to do */ },
     });
   }
 
