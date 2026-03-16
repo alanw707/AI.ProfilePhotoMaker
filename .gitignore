@@ -245,3 +245,4 @@ deployment-secrets.env
 !/_bmad-output/
 !/_bmad-output/implementation-artifacts/
 !/_bmad-output/implementation-artifacts/**
+appsettings.Local.json
