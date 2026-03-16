@@ -63,7 +63,9 @@ describe('SeoPageComponent intent routing', () => {
     expect(component.getRouterLinkForHref('/pricing', 'headshots')).toBe('/auth/register');
   });
 
-  it('adds serialized signup intent to query params for register route', () => {
+  it('does not put signup intent in URL query params for register route', () => {
+    // Intent is stored in sessionStorage via onCtaClick, never in the URL
+    // (prevents Googlebot from crawling /auth/register?intent={...} URLs)
     const fixture = TestBed.createComponent(SeoPageComponent);
     const component = fixture.componentInstance;
     component.page = mockPage;
@@ -72,8 +74,7 @@ describe('SeoPageComponent intent routing', () => {
     const queryParams = component.getQueryParamsForHref('/pricing', 'headshots');
 
     expect(queryParams?.['utm_source']).toBe('google');
-    expect(queryParams?.['intent']).toContain('linkedin-headshots');
-    expect(queryParams?.['intent']).toContain('headshots');
+    expect(queryParams?.['intent']).toBeUndefined();
   });
 
   it('stores intent when CTA click leads to register', () => {
