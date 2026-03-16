@@ -1,5 +1,5 @@
 import { CommonModule, DOCUMENT } from '@angular/common';
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { RouterModule } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
@@ -25,6 +25,7 @@ export class BlogListComponent implements OnInit, OnDestroy {
   private readonly _title = inject(Title);
   private readonly _document = inject(DOCUMENT);
   private readonly _blogService = inject(BlogService);
+  private readonly _cdr = inject(ChangeDetectorRef);
 
   ngOnInit(): void {
     this.loadPosts();
@@ -37,28 +38,28 @@ export class BlogListComponent implements OnInit, OnDestroy {
   }
 
   private loadPosts(): void {
-    // Render immediately from bundled static data — no spinner, no waiting
-    const staticData = blogPosts.map(p => ({
-      slug: p.slug,
-      title: p.title,
-      description: p.description,
-      dateIso: p.dateIso,
-      author: p.author,
-      tags: p.tags,
-    }));
-    this.posts = staticData;
-    this.menuPosts = staticData.slice(0, 4);
-    this.loading = false;
-
-    // Silently refresh from API in the background (picks up new posts without redeploy)
     this._blogService.getPosts().pipe(takeUntil(this._destroy$)).subscribe({
       next: (data) => {
-        if (data && data.length > 0) {
-          this.posts = data;
-          this.menuPosts = data.slice(0, 4);
-        }
+        this.posts = data;
+        this.menuPosts = data.slice(0, 4);
+        this.loading = false;
+        this._cdr.detectChanges();
       },
-      error: () => { /* static data already shown, nothing to do */ },
+      error: () => {
+        // Fallback to bundled static data
+        const staticData = blogPosts.map(p => ({
+          slug: p.slug,
+          title: p.title,
+          description: p.description,
+          dateIso: p.dateIso,
+          author: p.author,
+          tags: p.tags,
+        }));
+        this.posts = staticData;
+        this.menuPosts = staticData.slice(0, 4);
+        this.loading = false;
+        this._cdr.detectChanges();
+      },
     });
   }
 

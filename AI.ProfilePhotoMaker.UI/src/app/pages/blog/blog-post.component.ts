@@ -1,5 +1,5 @@
 import { CommonModule, DOCUMENT } from '@angular/common';
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { DomSanitizer, Meta, SafeHtml, Title } from '@angular/platform-browser';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
@@ -76,42 +76,11 @@ export class BlogPostComponent implements OnInit, OnDestroy {
   private readonly _document = inject(DOCUMENT);
   private readonly _blogService = inject(BlogService);
   private readonly _sanitizer = inject(DomSanitizer);
+  private readonly _cdr = inject(ChangeDetectorRef);
 
   ngOnInit(): void {
     const slug = this._route.snapshot.paramMap.get('slug') ?? '';
 
-    // Render immediately from bundled static data — no spinner
-    const staticPost = getBlogPost(slug);
-    if (staticPost) {
-      this.post = {
-        slug: staticPost.slug,
-        title: staticPost.title,
-        description: staticPost.description,
-        dateIso: staticPost.dateIso,
-        author: staticPost.author,
-        tags: staticPost.tags,
-        contentHtml: staticPost.contentHtml,
-        contentMarkdown: '',
-      };
-      this.safeContentHtml = this.sanitizeHtml(staticPost.contentHtml);
-      this.setPostMeta(this.post);
-      this.loading = false;
-    }
-
-    // Load menu posts from static data immediately
-    this.menuPosts = blogPosts
-      .filter(p => p.slug !== slug)
-      .slice(0, 3)
-      .map(p => ({
-        slug: p.slug,
-        title: p.title,
-        description: p.description,
-        dateIso: p.dateIso,
-        author: p.author,
-        tags: p.tags,
-      }));
-
-    // Silently refresh from API (picks up new/updated content without redeploy)
     this._blogService
       .getPost(slug)
       .pipe(takeUntil(this._destroy$))
@@ -121,17 +90,33 @@ export class BlogPostComponent implements OnInit, OnDestroy {
             this.post = data;
             this.safeContentHtml = this.sanitizeHtml(data.contentHtml);
             this.setPostMeta(data);
-          } else if (!staticPost) {
+          } else {
             this.setNotFoundMeta();
           }
           this.loading = false;
+          this._cdr.detectChanges();
         },
         error: () => {
-          // Static data already rendered if available
-          if (!staticPost) {
+          // Fallback to bundled static data
+          const staticPost = getBlogPost(slug);
+          if (staticPost) {
+            this.post = {
+              slug: staticPost.slug,
+              title: staticPost.title,
+              description: staticPost.description,
+              dateIso: staticPost.dateIso,
+              author: staticPost.author,
+              tags: staticPost.tags,
+              contentHtml: staticPost.contentHtml,
+              contentMarkdown: '',
+            };
+            this.safeContentHtml = this.sanitizeHtml(staticPost.contentHtml);
+            this.setPostMeta(this.post);
+          } else {
             this.setNotFoundMeta();
           }
           this.loading = false;
+          this._cdr.detectChanges();
         },
       });
 
@@ -141,6 +126,7 @@ export class BlogPostComponent implements OnInit, OnDestroy {
       .subscribe({
         next: posts => {
           this.menuPosts = posts.filter(p => p.slug !== slug).slice(0, 3);
+          this._cdr.detectChanges();
         },
       });
   }
