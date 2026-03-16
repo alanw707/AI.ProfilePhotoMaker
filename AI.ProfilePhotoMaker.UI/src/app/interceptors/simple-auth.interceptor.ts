@@ -33,6 +33,7 @@ function isPublicEndpoint(url: string): boolean {
     '/health',
     '/api/public',
     '/swagger',
+    '/api/blog',
   ];
 
   return publicEndpoints.some(endpoint => url.includes(endpoint));

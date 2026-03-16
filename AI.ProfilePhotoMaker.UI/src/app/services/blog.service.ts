@@ -28,7 +28,7 @@ export class BlogService extends BaseHttpService {
    * Falls back to static data on API error.
    */
   getPosts(): Observable<BlogPostSummary[]> {
-    return this.get<BlogPostSummary[]>('api/blog').pipe(
+    return this.get<BlogPostSummary[]>('blog').pipe(
       catchError(err => {
         console.warn('Blog API unavailable, falling back to static data:', err?.message ?? err);
         return of(
@@ -50,7 +50,7 @@ export class BlogService extends BaseHttpService {
    * Falls back to static data on API error.
    */
   getPost(slug: string): Observable<BlogPostDetail | null> {
-    return this.get<BlogPostDetail>(`api/blog/${encodeURIComponent(slug)}`).pipe(
+    return this.get<BlogPostDetail>(`blog/${encodeURIComponent(slug)}`).pipe(
       catchError(err => {
         console.warn(`Blog API unavailable for slug "${slug}", falling back to static data:`, err?.message ?? err);
         const staticPost = getBlogPost(slug);
