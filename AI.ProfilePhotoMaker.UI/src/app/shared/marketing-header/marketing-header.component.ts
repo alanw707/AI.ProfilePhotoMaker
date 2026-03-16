@@ -209,9 +209,7 @@ export class MarketingHeaderComponent implements OnInit, OnDestroy {
   navigateToRegister(): void {
     this.intentTracking.storeIntent(this.getRegisterIntentPayload());
 
-    void this.router.navigate(['/auth/register'], {
-      queryParams: this.getRegisterQueryParams(),
-    });
+    void this.router.navigate(['/auth/register']);
     this.closeAllMenus();
   }
 
