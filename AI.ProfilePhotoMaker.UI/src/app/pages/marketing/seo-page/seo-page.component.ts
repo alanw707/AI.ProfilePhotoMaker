@@ -109,16 +109,9 @@ export class SeoPageComponent implements OnInit, OnDestroy {
       return null;
     }
 
-    const queryParams: Record<string, string> = { ...this.utmParams };
-    const routerLink = this.getRouterLinkForHref(href, ctaIntent);
-    const resolvedIntent = this.resolveCtaIntent(href, ctaIntent);
-    const signupIntent = this.buildSignupIntent(resolvedIntent);
-
-    // Intent is stored in sessionStorage on click — never put it in the URL
+    // Intent is stored in sessionStorage via onCtaClick — never put it in the URL
     // (avoids Googlebot crawling /auth/register?intent={...} URLs)
-    if (routerLink === '/auth/register' && signupIntent) {
-      this._intentTracking.storeIntent(signupIntent);
-    }
+    const queryParams: Record<string, string> = { ...this.utmParams };
 
     return Object.keys(queryParams).length > 0 ? queryParams : null;
   }
