@@ -104,7 +104,7 @@ export class SeoPageComponent implements OnInit, OnDestroy {
     image.src = fallbackSrc;
   }
 
-  getQueryParamsForHref(href?: string, ctaIntent?: SignupCtaType): Record<string, string> | null {
+  getQueryParamsForHref(href?: string, _ctaIntent?: SignupCtaType): Record<string, string> | null {
     if (!href) {
       return null;
     }

@@ -6,7 +6,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { MarketingFooterComponent } from '../../shared/marketing-footer/marketing-footer.component';
 import { MarketingHeaderComponent } from '../../shared/marketing-header/marketing-header.component';
 import { BlogService, BlogPostDetail, BlogPostSummary } from '../../services/blog.service';
-import { blogPosts, getBlogPost } from './blog.data';
+import { getBlogPost } from './blog.data';
 
 @Component({
   selector: 'app-blog-post',
