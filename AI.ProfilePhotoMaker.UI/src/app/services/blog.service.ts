@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { BaseHttpService } from './base-http.service';
-import { BlogPost } from '../pages/blog/blog.types';
 import { blogPosts, getBlogPost } from '../pages/blog/blog.data';
 
 export interface BlogPostSummary {
