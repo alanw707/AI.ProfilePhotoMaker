@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  inject,
   Injector,
   OnDestroy,
   OnInit,
@@ -136,6 +137,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Lazy-loaded service
   private _workflowService: WorkflowOrchestrationService | null = null;
+  private readonly _intentTracking = inject(IntentTrackingService);
 
   /** Guards duplicate "Continue in Background" clicks for the full training session.
    *  Reset in startTrainingWithStyles(). See also WorkflowOrchestrationService._backgroundGenerationQueued. */
@@ -222,8 +224,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private readonly _injector: Injector,
     private readonly _cdr: ChangeDetectorRef,
     private readonly _logger: LoggingService,
-    private readonly _fileUploadService: FileUploadService,
-    private readonly _intentTracking: IntentTrackingService
+    private readonly _fileUploadService: FileUploadService
   ) {
     this.state$ = this.stateService.state$;
     this.workflowProgress$ = this._workflowProgressSubject.asObservable();

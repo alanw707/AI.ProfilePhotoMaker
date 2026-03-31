@@ -86,9 +86,11 @@ describe('DashboardComponent intent personalization', () => {
       injector,
       cdr,
       logger,
-      fileUpload,
-      intentTracking
+      fileUpload
     );
+
+    // _intentTracking uses inject() — override the private field directly for testing
+    (component as any)['_intentTracking'] = intentTracking;
 
     return { component, intentTracking, navigation };
   };
