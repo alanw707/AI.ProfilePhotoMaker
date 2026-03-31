@@ -2,7 +2,6 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
-  inject,
   Injector,
   OnDestroy,
   OnInit,
@@ -137,7 +136,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Lazy-loaded service
   private _workflowService: WorkflowOrchestrationService | null = null;
-  private readonly _intentTracking = inject(IntentTrackingService);
 
   /** Guards duplicate "Continue in Background" clicks for the full training session.
    *  Reset in startTrainingWithStyles(). See also WorkflowOrchestrationService._backgroundGenerationQueued. */
@@ -209,6 +207,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this._navigation.goToPricingPlans();
   }
 
+  // eslint-disable-next-line max-params
   constructor(
     private readonly _authService: AuthService,
     private readonly _router: Router,
@@ -224,7 +223,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private readonly _injector: Injector,
     private readonly _cdr: ChangeDetectorRef,
     private readonly _logger: LoggingService,
-    private readonly _fileUploadService: FileUploadService
+    private readonly _fileUploadService: FileUploadService,
+    private readonly _intentTrackingSvc: IntentTrackingService
   ) {
     this.state$ = this.stateService.state$;
     this.workflowProgress$ = this._workflowProgressSubject.asObservable();
@@ -246,7 +246,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.signupIntent = this._intentTracking.getIntent();
+    this.signupIntent = this._intentTrackingSvc.getIntent();
 
     // Subscribe to state changes to update UI
     this._subscriptions.add(
@@ -275,7 +275,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this._updateCurrentStep();
 
         if (!this._intentCleared && this.signupIntent && this.isFirstTimeUser()) {
-          this._intentTracking.clearIntent();
+          this._intentTrackingSvc.clearIntent();
           this._intentCleared = true;
         }
 
