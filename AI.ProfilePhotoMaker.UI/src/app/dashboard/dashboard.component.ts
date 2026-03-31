@@ -502,6 +502,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return state.uploadedImages === 0 && state.generatedPhotosCount === 0;
   }
 
+  scrollToUpload(event: Event): void {
+    event.preventDefault();
+    const el = document.getElementById('step-1');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
   showPersonalizedGetStarted(): boolean {
     return !!this.signupIntent && this.isFirstTimeUser();
   }

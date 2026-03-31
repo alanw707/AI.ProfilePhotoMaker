@@ -159,12 +159,51 @@
 
       <!-- Workflow Steps -->
       <section class="workflow-section" *ngIf="isPremiumWorkflow()">
-        <h2>Create Your Professional Photos</h2>
-        <p class="workflow-subtitle">Follow these simple steps to generate stunning AI-powered profile photos</p>
+
+        <!-- First-Run Welcome Banner (shown only to brand-new users) -->
+        <div class="first-run-banner" *ngIf="isFirstTimeUser()">
+          <div class="first-run-banner__inner">
+            <div class="first-run-banner__left">
+              <div class="first-run-banner__badge">🎉 You're in!</div>
+              <h2 class="first-run-banner__title">Your free headshots are ready to create</h2>
+              <p class="first-run-banner__desc">
+                You have <strong>{{ getTotalAvailableCredits() }} free credits</strong> — enough for
+                {{ getTotalAvailableCredits() >= 2 ? '2 professional headshots' : 'a professional headshot' }}.
+                No card needed. Just upload a few selfies and we'll handle the rest.
+              </p>
+              <div class="first-run-banner__steps">
+                <span class="first-run-step">📸 Upload selfies</span>
+                <span class="first-run-step-arrow">→</span>
+                <span class="first-run-step">🎨 Pick a style</span>
+                <span class="first-run-step-arrow">→</span>
+                <span class="first-run-step">✨ Get headshots</span>
+              </div>
+              <a class="first-run-banner__cta" href="#step-1" (click)="scrollToUpload($event)">
+                Start — Upload Your Selfies
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                </svg>
+              </a>
+              <p class="first-run-banner__note">~15 min delivery · 100% money-back guarantee</p>
+            </div>
+            <div class="first-run-banner__right" aria-hidden="true">
+              <div class="first-run-banner__images">
+                <img src="assets/marketing/before-after/linkedin-before.jpeg" alt="" class="first-run-img first-run-img--before" loading="lazy" />
+                <div class="first-run-arrow-badge">→</div>
+                <img src="assets/marketing/before-after/linkedin-after.jpg" alt="" class="first-run-img first-run-img--after" loading="lazy" />
+              </div>
+              <p class="first-run-banner__caption">Real result — LinkedIn style</p>
+            </div>
+          </div>
+        </div>
+
+        <h2 *ngIf="!isFirstTimeUser()">Create Your Professional Photos</h2>
+        <p class="workflow-subtitle" *ngIf="!isFirstTimeUser()">Follow these simple steps to generate stunning AI-powered profile photos</p>
 
         <div class="workflow-steps">
           <!-- Step 1: Upload Selfies -->
           <div
+            id="step-1"
             class="step-card"
             [class.completed]="
               stateService.getState().uploadedImages > 0 || stateService.getState().uploadedImageThumbnails.length > 0

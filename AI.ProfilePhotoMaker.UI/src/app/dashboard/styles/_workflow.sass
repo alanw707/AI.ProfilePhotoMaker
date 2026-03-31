@@ -3,6 +3,178 @@
 @use 'variables'
 
 // =============================================================================
+// FIRST-RUN WELCOME BANNER
+// =============================================================================
+
+.first-run-banner
+  margin: 0 0 40px 0
+  border-radius: 20px
+  overflow: hidden
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0f2744 100%)
+  border: 1px solid rgba(125, 211, 216, 0.25)
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255,255,255,0.04)
+
+  @media (max-width: 768px)
+    border-radius: 14px
+    margin: 0 0 28px 0
+
+.first-run-banner__inner
+  display: grid
+  grid-template-columns: 1fr auto
+  gap: 32px
+  padding: 40px 44px
+  align-items: center
+
+  @media (max-width: 900px)
+    grid-template-columns: 1fr
+    padding: 32px 28px
+    gap: 28px
+
+  @media (max-width: 480px)
+    padding: 24px 20px
+    gap: 20px
+
+.first-run-banner__left
+  display: flex
+  flex-direction: column
+  gap: 16px
+
+.first-run-banner__badge
+  display: inline-flex
+  align-items: center
+  gap: 6px
+  background: rgba(94, 234, 212, 0.12)
+  border: 1px solid rgba(94, 234, 212, 0.3)
+  color: #5EEAD4
+  font-size: 13px
+  font-weight: 600
+  letter-spacing: 0.03em
+  padding: 5px 14px
+  border-radius: 100px
+  width: fit-content
+
+.first-run-banner__title
+  color: #f8fafc
+  font-family: 'Poppins', sans-serif
+  font-size: clamp(22px, 3.5vw, 32px)
+  font-weight: 700
+  line-height: 1.2
+  margin: 0
+  letter-spacing: -0.02em
+
+  // Override workflow h2 styles that would apply without *ngIf guard
+  text-align: left !important
+
+.first-run-banner__desc
+  color: #94a3b8
+  font-size: clamp(14px, 1.8vw, 16px)
+  line-height: 1.65
+  margin: 0
+
+  strong
+    color: #5EEAD4
+    font-weight: 600
+
+.first-run-banner__steps
+  display: flex
+  flex-wrap: wrap
+  align-items: center
+  gap: 8px
+  margin-top: 4px
+
+.first-run-step
+  background: rgba(255, 255, 255, 0.06)
+  border: 1px solid rgba(255, 255, 255, 0.1)
+  color: #e2e8f0
+  font-size: 13px
+  font-weight: 500
+  padding: 5px 12px
+  border-radius: 8px
+
+.first-run-step-arrow
+  color: #475569
+  font-size: 14px
+  font-weight: 400
+
+.first-run-banner__cta
+  display: inline-flex
+  align-items: center
+  gap: 8px
+  background: linear-gradient(135deg, #5EEAD4 0%, #7DD3D8 100%)
+  color: #0f172a
+  font-size: 15px
+  font-weight: 700
+  padding: 14px 26px
+  border-radius: 12px
+  text-decoration: none
+  border: none
+  cursor: pointer
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease
+  width: fit-content
+  margin-top: 4px
+  box-shadow: 0 4px 20px rgba(94, 234, 212, 0.3)
+
+  &:hover
+    transform: translateY(-2px)
+    box-shadow: 0 8px 28px rgba(94, 234, 212, 0.4)
+    filter: brightness(1.05)
+
+  &:active
+    transform: translateY(0)
+
+  svg
+    flex-shrink: 0
+
+.first-run-banner__note
+  color: #475569
+  font-size: 12px
+  margin: 0
+
+.first-run-banner__right
+  display: flex
+  flex-direction: column
+  align-items: center
+  gap: 10px
+
+  @media (max-width: 900px)
+    display: none
+
+.first-run-banner__images
+  display: flex
+  align-items: center
+  gap: 12px
+
+.first-run-img
+  width: 110px
+  height: 138px
+  object-fit: cover
+  border-radius: 12px
+  border: 2px solid rgba(255, 255, 255, 0.08)
+
+  &--before
+    filter: brightness(0.85) saturate(0.8)
+    transform: rotate(-2deg)
+
+  &--after
+    box-shadow: 0 8px 24px rgba(94, 234, 212, 0.25)
+    transform: rotate(2deg)
+    border-color: rgba(94, 234, 212, 0.4)
+
+.first-run-arrow-badge
+  font-size: 22px
+  color: #5EEAD4
+  font-weight: 700
+  flex-shrink: 0
+
+.first-run-banner__caption
+  color: #475569
+  font-size: 11px
+  text-align: center
+  margin: 0
+  letter-spacing: 0.04em
+  text-transform: uppercase
+
+// =============================================================================
 // WORKFLOW STYLES - Enhanced Visual Hierarchy & UX
 // =============================================================================
 
