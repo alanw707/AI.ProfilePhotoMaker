@@ -9,9 +9,11 @@ using AI.ProfilePhotoMaker.API.Models.Replicate;
 using AI.ProfilePhotoMaker.API.Services;
 using AI.ProfilePhotoMaker.API.Services.ImageProcessing;
 using AI.ProfilePhotoMaker.API.Services.Security;
+using AI.ProfilePhotoMaker.API.Services.Storage;
 using AI.ProfilePhotoMaker.API.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -33,50 +35,116 @@ public class ReplicateControllerAuthAndOwnershipTests
         return ctx;
     }
 
-    private static ReplicateController CreateController(
+    private static ClaimsPrincipal CreatePrincipal(string userId)
+    {
+        return new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId)
+        }, "TestAuth"));
+    }
+
+    private static Mock<UserManager<ApplicationUser>> CreateUserManagerMock()
+    {
+        var userManagerMock = UserManagerMockFactory.Create();
+        userManagerMock
+            .Setup(m => m.FindByIdAsync(It.IsAny<string>()))
+            .ReturnsAsync((string id) => new ApplicationUser { Id = id, Email = $"{id}@example.com", EmailConfirmed = true });
+        return userManagerMock;
+    }
+
+    private static TrainingController CreateTrainingController(
+        string userId,
+        ApplicationDbContext db,
+        Mock<IReplicateApiClient>? mockReplicate = null,
+        Mock<IBasicTierService>? mockBasic = null,
+        IConfiguration? configuration = null)
+    {
+        mockReplicate ??= new Mock<IReplicateApiClient>(MockBehavior.Strict);
+        mockBasic ??= new Mock<IBasicTierService>(MockBehavior.Strict);
+
+        var config = configuration ?? new Mock<IConfiguration>().Object;
+        var userManagerMock = CreateUserManagerMock();
+
+        var controller = new TrainingController(
+            mockReplicate.Object,
+            mockBasic.Object,
+            userManagerMock.Object,
+            db,
+            config,
+            new NullLogger<TrainingController>());
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = CreatePrincipal(userId) }
+        };
+        return controller;
+    }
+
+    private static GenerationController CreateGenerationController(
         string userId,
         ApplicationDbContext db,
         Mock<IReplicateApiClient>? mockReplicate = null,
         Mock<IBasicTierService>? mockBasic = null,
         Mock<IPendingGenerationService>? mockPending = null,
-        IConfiguration? configuration = null,
-        Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>? storage = null,
-        Mock<ITurnstileVerificationService>? mockTurnstile = null)
+        IConfiguration? configuration = null)
     {
         mockReplicate ??= new Mock<IReplicateApiClient>(MockBehavior.Strict);
         mockBasic ??= new Mock<IBasicTierService>(MockBehavior.Strict);
         mockPending ??= new Mock<IPendingGenerationService>(MockBehavior.Strict);
-        storage ??= new Mock<AI.ProfilePhotoMaker.API.Services.Storage.IStorageService>(MockBehavior.Strict);
+
+        var config = configuration ?? new Mock<IConfiguration>().Object;
+        var userManagerMock = CreateUserManagerMock();
+
+        var controller = new GenerationController(
+            mockReplicate.Object,
+            mockBasic.Object,
+            userManagerMock.Object,
+            db,
+            config,
+            new NullLogger<GenerationController>(),
+            mockPending.Object);
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = CreatePrincipal(userId) }
+        };
+        return controller;
+    }
+
+    private static PhotoEnhancementController CreatePhotoEnhancementController(
+        string userId,
+        ApplicationDbContext db,
+        Mock<IReplicateApiClient>? mockReplicate = null,
+        Mock<IBasicTierService>? mockBasic = null,
+        IConfiguration? configuration = null,
+        Mock<IStorageService>? storage = null,
+        Mock<ITurnstileVerificationService>? mockTurnstile = null)
+    {
+        mockReplicate ??= new Mock<IReplicateApiClient>(MockBehavior.Strict);
+        mockBasic ??= new Mock<IBasicTierService>(MockBehavior.Strict);
+        storage ??= new Mock<IStorageService>(MockBehavior.Strict);
         mockTurnstile ??= new Mock<ITurnstileVerificationService>(MockBehavior.Loose);
         mockTurnstile
             .Setup(s => s.VerifyAsync(It.IsAny<string?>(), It.IsAny<string?>()))
             .ReturnsAsync(true);
 
         var config = configuration ?? new Mock<IConfiguration>().Object;
-        var userManagerMock = UserManagerMockFactory.Create();
-        userManagerMock
-            .Setup(m => m.FindByIdAsync(It.IsAny<string>()))
-            .ReturnsAsync((string id) => new ApplicationUser { Id = id, Email = $"{id}@example.com", EmailConfirmed = true });
+        var userManagerMock = CreateUserManagerMock();
 
-        var controller = new ReplicateController(
+        var controller = new PhotoEnhancementController(
             mockReplicate.Object,
             mockBasic.Object,
             userManagerMock.Object,
             db,
             config,
-            new NullLogger<ReplicateController>(),
-            mockPending.Object,
+            new NullLogger<PhotoEnhancementController>(),
             storage.Object,
             mockTurnstile.Object);
 
-        var httpContext = new DefaultHttpContext
+        controller.ControllerContext = new ControllerContext
         {
-            User = new ClaimsPrincipal(new ClaimsIdentity(new[]
-            {
-                new Claim(ClaimTypes.NameIdentifier, userId)
-            }, "TestAuth"))
+            HttpContext = new DefaultHttpContext { User = CreatePrincipal(userId) }
         };
-        controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
         return controller;
     }
 
@@ -100,7 +168,7 @@ public class ReplicateControllerAuthAndOwnershipTests
         mockBasic.Setup(s => s.RefundCreditsAsync("user-123", It.IsAny<CreditConsumptionResult>()))
                  .ReturnsAsync(true);
 
-        var controller = CreateController("user-123", db, mockReplicate, mockBasic);
+        var controller = CreateTrainingController("user-123", db, mockReplicate, mockBasic);
 
         var dto = new TrainModelRequestDto
         {
@@ -125,7 +193,7 @@ public class ReplicateControllerAuthAndOwnershipTests
         mockBasic.Setup(s => s.GetAvailableCreditsAsync("user-123"))
                  .ReturnsAsync(999);
 
-        var controller = CreateController("user-123", db, mockReplicate, mockBasic);
+        var controller = CreateGenerationController("user-123", db, mockReplicate, mockBasic);
 
         var dto = new GenerateImagesRequestDto
         {
@@ -153,7 +221,7 @@ public class ReplicateControllerAuthAndOwnershipTests
         mockBasic.Setup(s => s.GetAvailableCreditsAsync("user-123"))
                  .ReturnsAsync(999);
 
-        var controller = CreateController("user-123", db, mockReplicate, mockBasic);
+        var controller = CreateGenerationController("user-123", db, mockReplicate, mockBasic);
 
         var dto = new GenerateBatchImagesRequestDto
         {
@@ -199,7 +267,7 @@ public class ReplicateControllerAuthAndOwnershipTests
                      .ReturnsAsync(new ReplicateTrainingResult { Id = "train-1", Status = "succeeded", CreatedAt = DateTime.UtcNow });
         var mockBasic = new Mock<IBasicTierService>(MockBehavior.Strict);
 
-        var controller = CreateController("user-123", db, mockReplicate, mockBasic);
+        var controller = CreateTrainingController("user-123", db, mockReplicate, mockBasic);
 
         // Owned -> OK
         var ok = await controller.GetTrainingStatus("train-1") as ObjectResult;
@@ -238,7 +306,7 @@ public class ReplicateControllerAuthAndOwnershipTests
                      .ReturnsAsync(new ReplicatePredictionResult { Id = "pred-1", Status = "succeeded", CreatedAt = DateTime.UtcNow });
         var mockBasic = new Mock<IBasicTierService>(MockBehavior.Strict);
 
-        var controller = CreateController("user-123", db, mockReplicate, mockBasic);
+        var controller = CreateGenerationController("user-123", db, mockReplicate, mockBasic);
 
         // Owned -> OK
         var ok = await controller.GetPredictionStatus("pred-1") as ObjectResult;
@@ -266,7 +334,7 @@ public class ReplicateControllerAuthAndOwnershipTests
         await db.SaveChangesAsync();
 
         var pending = new Mock<IPendingGenerationService>(MockBehavior.Strict);
-        var controller = CreateController("user-123", db, mockPending: pending);
+        var controller = CreateGenerationController("user-123", db, mockPending: pending);
 
         var badRequest = new QueueGenerationRequest
         {
@@ -298,7 +366,7 @@ public class ReplicateControllerAuthAndOwnershipTests
                .Returns(Task.CompletedTask)
                .Verifiable();
 
-        var controller = CreateController("user-123", db, mockPending: pending);
+        var controller = CreateGenerationController("user-123", db, mockPending: pending);
 
         var goodRequest = new QueueGenerationRequest
         {
@@ -333,12 +401,7 @@ public class ReplicateControllerAuthAndOwnershipTests
             })
             .Build();
 
-        var controller = CreateController(userId, db, mockReplicate, mockBasic, configuration: config);
-        var httpContext = new DefaultHttpContext
-        {
-            User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "TestAuth"))
-        };
-        controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
+        var controller = CreatePhotoEnhancementController(userId, db, mockReplicate, mockBasic, configuration: config);
 
         var dto = new EnhancePhotoRequestDto { ImageUrl = "https://example.com/img.png", EnhancementType = "professional" };
 
@@ -376,12 +439,7 @@ public class ReplicateControllerAuthAndOwnershipTests
             })
             .Build();
 
-        var controller = CreateController(userId, db, mockReplicate, mockBasic, configuration: config);
-        var httpContext = new DefaultHttpContext
-        {
-            User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "TestAuth"))
-        };
-        controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
+        var controller = CreatePhotoEnhancementController(userId, db, mockReplicate, mockBasic, configuration: config);
 
         var dto = new EnhancePhotoRequestDto { ImageUrl = "https://example.com/img.png", EnhancementType = "professional" };
 
