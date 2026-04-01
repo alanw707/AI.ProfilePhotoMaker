@@ -38,6 +38,11 @@ public static class ReplicateServiceExtensions
         if (enableReplicateMock)
         {
             services.AddScoped<IReplicateApiClient, MockReplicateApiClient>();
+            // Register sub-interfaces forwarding to the facade
+            services.AddScoped<IReplicateModelService>(sp => sp.GetRequiredService<IReplicateApiClient>());
+            services.AddScoped<IReplicateTrainingService>(sp => sp.GetRequiredService<IReplicateApiClient>());
+            services.AddScoped<IReplicatePredictionService>(sp => sp.GetRequiredService<IReplicateApiClient>());
+            services.AddScoped<IReplicateEnhancementService>(sp => sp.GetRequiredService<IReplicateApiClient>());
             Console.WriteLine("Mock mode enabled - skipping ModelDiscoveryService registration");
         }
         else
@@ -46,6 +51,11 @@ public static class ReplicateServiceExtensions
             {
                 client.Timeout = TimeSpan.FromMinutes(2);
             });
+            // Register sub-interfaces forwarding to the facade
+            services.AddScoped<IReplicateModelService>(sp => sp.GetRequiredService<IReplicateApiClient>());
+            services.AddScoped<IReplicateTrainingService>(sp => sp.GetRequiredService<IReplicateApiClient>());
+            services.AddScoped<IReplicatePredictionService>(sp => sp.GetRequiredService<IReplicateApiClient>());
+            services.AddScoped<IReplicateEnhancementService>(sp => sp.GetRequiredService<IReplicateApiClient>());
 
             services.AddHttpClient<OpenAIImageGenerationService>(client =>
             {
